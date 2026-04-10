@@ -1,7 +1,7 @@
 // src/routes/learning/learningRoutes.ts
 import { Router } from "express";
 import { learningService } from "../../services/learning/learningService";
-import { ok, notFound } from "../../utils/response";
+import { ok } from "../../utils/response";
 import { checkLearningReadiness } from "../../config/env";
 
 const router = Router();

@@ -1,4 +1,11 @@
-// Provider initialization summary
+import healthRouter from "./routes/health";
+import compsRouter from "./routes/comps";
+import universalRouter from "./routes/universal";
+import portfolioRouter from "./routes/portfolio";
+import protectedFeaturesRouter from "./routes/protectedFeatures";
+import meRouter from "./routes/me";
+import plansRouter from "./routes/plans";
+import notificationsRouter from "./routes/notifications";
 import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvider } from "./providers/factory";
 
 function logProviderInitSummary() {
@@ -10,11 +17,6 @@ function logProviderInitSummary() {
   console.log("- Supply Provider:", supply.constructor.name);
   console.log("- Player Performance Provider:", perf.constructor.name);
 }
-
-app.listen(PORT, () => {
-  logProviderInitSummary();
-  console.log(`[${new Date().toISOString()}] HobbyIQ API server ready on port ${PORT}`);
-});
 
 import express from "express";
 import cors from "cors";
@@ -82,7 +84,7 @@ app.use((req, res, next) => {
 });
 
 // Central error handler
-app.use((err, req, res, next) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error("[ERROR]", err);
   res.status(500).json({
     success: false,
@@ -96,7 +98,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT && !isNaN(Number(process.env.PORT)) ? Number(process.env.PORT) : 4000;
 console.log("\n==============================");
 console.log(`Starting HobbyIQ API (env: ${process.env.NODE_ENV || "development"})`);
-console.log(`Listening on http://localhost:${PORT}");
+console.log(`Listening on http://localhost:${PORT}`);
 console.log(`Frontend: ${process.env.CLIENT_APP_URL || "(not set)"}`);
 console.log(`AI Mode: ${process.env.AI_MODE || "mock"}`);
 console.log("==============================\n");

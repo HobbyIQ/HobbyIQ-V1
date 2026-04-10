@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { PLAN_DEFINITIONS } from "../constants/plans";
 import { PLAN_NOTIFICATION_LIMITS } from "../models/planTiers";
-import { FeatureKey } from "../constants/features";
+import * as FeatureKey from "../constants/features";
 
 const router = Router();
 

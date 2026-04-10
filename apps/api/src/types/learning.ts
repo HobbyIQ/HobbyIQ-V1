@@ -1,5 +1,5 @@
 // src/types/learning.ts
-import type { FeatureKey, PlanTier } from "./plans";
+import type { PlanTier } from "./plans";
 import type { MarketSegmentKey, ProviderMode } from "./providers";
 
 export type OutcomeDirection = "underpriced" | "overpriced" | "accurate";

@@ -15,12 +15,12 @@ export function requireFeature(feature: string) {
     if (!user.features || !user.features.includes(feature)) {
       // Find the lowest plan that unlocks this feature
       const { PLAN_DEFINITIONS } = require("../constants/plans");
-      const unlockPlan = PLAN_DEFINITIONS.find(p => p.features.includes(feature));
+      const unlockPlan = PLAN_DEFINITIONS.find((p: any) => p.features.includes(feature));
       return res.status(403).json({
         success: false,
         error: {
           code: "FEATURE_LOCKED",
-          message: `This feature requires a higher plan.",
+          message: `This feature requires a higher plan.`,
           requiredPlan: unlockPlan?.plan || "Prospect",
           feature,
         },

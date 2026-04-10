@@ -16,4 +16,3 @@ export function searchProviderFactory() {
   monitoring.logEvent?.("SearchProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }
-}

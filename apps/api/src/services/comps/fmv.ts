@@ -1,3 +1,4 @@
+import type { MarketSegmentKey } from "../../types/providers";
 import type { NormalizedComp, FmvSummary, GradeBucket } from "../../types/comps";
 import { filterExactMatches } from "./exactMatch";
 import type { ExactMatchOptions } from "./exactMatch";
@@ -214,7 +215,7 @@ export function calculateFmv(
     pricingSnapshotRepository.add({
       cardId: opts.cardId,
       playerId: opts.playerId,
-      marketSegment: opts.marketSegment,
+      marketSegment: opts.marketSegment as MarketSegmentKey,
       fmvEstimate: fmv,
       buyTarget: Math.round(fmv * 0.85),
       sellTarget: Math.round(fmv * 1.15),

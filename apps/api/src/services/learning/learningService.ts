@@ -14,7 +14,7 @@ import { storageProviderFactory } from "../../providers/factories/storageProvide
 import { monitoringProviderFactory } from "../../providers/factories/monitoringProviderFactory";
 import { cacheProviderFactory } from "../../providers/factories/cacheProviderFactory";
 import { getMarketSegment } from "../../utils/marketSegmentation";
-import { LearningCompObservation, PricingSnapshot, PricingOutcome, ModelWeightProfile, LearningAdjustmentLog, PromptExperimentRun, EvaluationMetricLog, AlertOutcomeLog, RecommendationOutcome } from "../../types/learning";
+import { PricingSnapshot, PricingOutcome, ModelWeightProfile, LearningAdjustmentLog, PromptExperimentRun, EvaluationMetricLog, AlertOutcomeLog, RecommendationOutcome } from "../../types/learning";
 
 export const learningService = {
   getCompObservations: compObservationRepository.getAll,

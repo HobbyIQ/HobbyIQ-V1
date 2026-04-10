@@ -16,4 +16,3 @@ export function storageProviderFactory() {
   monitoring.logEvent?.("StorageProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }
-}

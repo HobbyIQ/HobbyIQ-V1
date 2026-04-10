@@ -1,6 +1,7 @@
 // src/types/cards.ts
 export interface Card {
   id: string;
+  rookie?: boolean;
   playerId: string;
   set: string;
   brand: string;

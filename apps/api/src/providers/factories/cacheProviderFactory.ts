@@ -16,4 +16,3 @@ export function cacheProviderFactory() {
   monitoring.logEvent?.("CacheProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }
-}

@@ -13,4 +13,3 @@ export function monitoringProviderFactory() {
   console.log(`[MonitoringProviderFactory] Initialized Monitoring provider: ${provider.getProviderMode()}`);
   return provider;
 }
-}

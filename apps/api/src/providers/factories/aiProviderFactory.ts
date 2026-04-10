@@ -16,4 +16,3 @@ export function aiProviderFactory() {
   monitoring.logEvent?.("AIProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }
-}

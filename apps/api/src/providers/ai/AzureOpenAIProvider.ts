@@ -8,43 +8,19 @@ export class AzureOpenAIProvider implements AIProvider {
   // const client = new OpenAIClient(...)
   getProviderMode() { return "azure"; }
   getPromptVersion() { return "v1.0.0-azure"; }
-  async generateRationale(input: any) {
-    if (!env.AZURE_OPENAI_API_KEY) return {
-      output: "[Azure OpenAI not configured]",
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+  async generateRationale(input: any): Promise<string> {
+    if (!env.AZURE_OPENAI_API_KEY) return "[Azure OpenAI not configured]";
     // TODO: Integrate with Azure OpenAI SDK
-    return {
-      output: `Azure rationale for ${input?.cardId || "unknown card"}`,
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+    return `Azure rationale for ${input?.cardId || "unknown card"}`;
   }
-  async generateMarketSummary(input: any) {
-    if (!env.AZURE_OPENAI_API_KEY) return {
-      output: "[Azure OpenAI not configured]",
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+  async generateMarketSummary(input: any): Promise<string> {
+    if (!env.AZURE_OPENAI_API_KEY) return "[Azure OpenAI not configured]";
     // TODO: Integrate with Azure OpenAI SDK
-    return {
-      output: `Azure market summary for ${input?.segment || "unknown segment"}`,
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+    return `Azure market summary for ${input?.segment || "unknown segment"}`;
   }
-  async generateAlertExplanation(input: any) {
-    if (!env.AZURE_OPENAI_API_KEY) return {
-      output: "[Azure OpenAI not configured]",
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+  async generateAlertExplanation(input: any): Promise<string> {
+    if (!env.AZURE_OPENAI_API_KEY) return "[Azure OpenAI not configured]";
     // TODO: Integrate with Azure OpenAI SDK
-    return {
-      output: `Azure alert explanation for ${input?.alertId || "unknown alert"}`,
-      providerMode: this.getProviderMode(),
-      promptVersion: this.getPromptVersion(),
-    };
+    return `Azure alert explanation for ${input?.alertId || "unknown alert"}`;
   }
 }
