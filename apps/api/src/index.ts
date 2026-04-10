@@ -68,8 +68,30 @@ function roundTo2(val: number): number {
   return Math.round(val * 100) / 100;
 }
 
+// --- Serial scarcity multiplier helper ---
+function getSerialMultiplier(serial: string | number | undefined): number {
+  if (!serial) return 1.0;
+  const n = typeof serial === "string" ? parseInt(serial, 10) : serial;
+  if (isNaN(n)) return 1.0;
+  if (n >= 499) return 1.0;
+  if (n >= 299) return 1.1;
+  if (n >= 250) return 1.2;
+  if (n >= 199) return 1.3;
+  if (n >= 150) return 1.4;
+  if (n >= 125) return 1.5;
+  if (n >= 100) return 1.7;
+  if (n >= 99) return 1.8;
+  if (n >= 75) return 2.0;
+  if (n >= 50) return 2.5;
+  if (n >= 25) return 3.5;
+  if (n >= 10) return 5.0;
+  if (n >= 5) return 7.0;
+  if (n >= 1) return 12.0;
+  return 1.0;
+}
+
 app.get("/api/compiq/estimate", (req, res) => {
-  const { player, cardSet, parallel, rawPrice, isAuto } = req.query;
+  const { player, cardSet, parallel, rawPrice, isAuto, serial } = req.query;
   const price = Number(rawPrice);
   if (Number.isNaN(price)) {
     return res.status(400).json({
@@ -82,7 +104,8 @@ app.get("/api/compiq/estimate", (req, res) => {
   const isAutoBool = typeof isAuto === "string" ? isAuto.toLowerCase() === "true" : false;
   const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined, isAutoBool);
   const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel, isAutoBool);
-  const adjustedRaw = price * parallelMultiplier;
+  const serialMultiplier = getSerialMultiplier(serial);
+  const adjustedRaw = price * parallelMultiplier * serialMultiplier;
   let cardType = "Non-Auto";
   if (isAutoBool) cardType = "Auto";
 
@@ -97,6 +120,8 @@ app.get("/api/compiq/estimate", (req, res) => {
     cardType,
     rawPrice: roundTo2(price),
     parallelMultiplier: roundTo2(parallelMultiplier),
+    serial: serial ?? null,
+    serialMultiplier: roundTo2(serialMultiplier),
     adjustedRaw: roundTo2(adjustedRaw),
     estimatedPsa10: roundTo2(adjustedRaw * 2.25),
     estimatedPsa9: roundTo2(adjustedRaw * 1.15),
