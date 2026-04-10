@@ -1,3 +1,5 @@
+// (trend-test endpoint moved below app initialization)
+// (trend-test endpoint moved below app initialization)
 import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
@@ -90,6 +92,10 @@ function getSerialMultiplier(serial: string | number | undefined): number {
   return 1.0;
 }
 
+
+// --- Trend adjustment helper (modular) ---
+import { analyzeTrend, CompSale, TrendResult } from "./utils/trendEngine";
+
 app.get("/api/compiq/estimate", (req, res) => {
   const { player, cardSet, parallel, rawPrice, isAuto, serial } = req.query;
   const price = Number(rawPrice);
@@ -104,7 +110,13 @@ app.get("/api/compiq/estimate", (req, res) => {
   const isAutoBool = typeof isAuto === "string" ? isAuto.toLowerCase() === "true" : false;
   const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined, isAutoBool);
   const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel, isAutoBool);
-  const serialMultiplier = getSerialMultiplier(serial);
+  const serialValue =
+    typeof serial === "string"
+      ? serial
+      : Array.isArray(serial) && typeof serial[0] === "string"
+      ? serial[0]
+      : undefined;
+  const serialMultiplier = getSerialMultiplier(serialValue);
   const adjustedRaw = price * parallelMultiplier * serialMultiplier;
   let cardType = "Non-Auto";
   if (isAutoBool) cardType = "Auto";
@@ -156,7 +168,7 @@ app.use("/api/subscription", subscriptionsRouter);
 app.use("/api/provider-health", providerHealthRouter);
 app.use("/api/learning", learningRoutes);
 app.use("/api/app-config", appConfigRouter);
-
+app.use("/api/compiq", compiqRouter);
 
 // 404 handler (after all routes)
 app.use((req, res, next) => {
