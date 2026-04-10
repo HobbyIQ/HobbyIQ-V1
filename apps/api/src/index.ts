@@ -1,3 +1,4 @@
+import testRouter from "./routes/test";
 import healthRouter from "./routes/health";
 import compsRouter from "./routes/comps";
 import universalRouter from "./routes/universal";
@@ -51,6 +52,8 @@ app.use(cors());
 app.use(express.json());
 // Attach mockAuth middleware globally so all routes have req.user
 app.use(mockAuth);
+// Register /api/test route
+app.use("/api", testRouter);
 
 // Mount all routers
 app.use("/api/health", healthRouter);
