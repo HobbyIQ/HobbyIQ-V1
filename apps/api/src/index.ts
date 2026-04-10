@@ -20,6 +20,7 @@ import learningRoutes from "./routes/learning/learningRoutes";
 import appConfigRouter from "./routes/appConfig";
 import { mockAuth } from "./middleware/mockAuth";
 import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvider } from "./providers/factory";
+import { fetchSoldComps } from "./utils/apifySoldService";
 
 const app = express();
 app.use(express.json());
@@ -260,4 +261,45 @@ console.log(`AI Mode: ${process.env.AI_MODE || "mock"}`);
 console.log("==============================\n");
 app.listen(PORT, () => {
   console.log(`[${new Date().toISOString()}] HobbyIQ API server ready on port ${PORT}`);
+});
+
+// --- Public GET /api/compiq/live-estimate ---
+app.get("/api/compiq/live-estimate", async (req, res) => {
+  const { player, cardSet, parallel, isAuto, serial } = req.query;
+  if (!player || !cardSet) {
+    return res.status(400).json({ success: false, error: "player and cardSet are required" });
+  }
+  const isAutoBool = typeof isAuto === "string" ? isAuto.toLowerCase() === "true" : false;
+  const normalizedParallel = normalizeParallelName(typeof parallel === "string" ? parallel : undefined);
+  const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined, isAutoBool);
+  const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel, isAutoBool);
+  const serialValue = typeof serial === "string" ? serial : Array.isArray(serial) && typeof serial[0] === "string" ? serial[0] : undefined;
+  const serialMultiplier = getSerialMultiplier(serialValue);
+
+  // Fetch comps
+  let comps: CompSale[] = await fetchSoldComps({
+    player: String(player),
+    cardSet: String(cardSet),
+    parallel: typeof parallel === "string" ? parallel : undefined,
+    isAuto: isAutoBool,
+    serial: serialValue
+  });
+  // Trend
+  const trend = analyzeTrend(comps);
+  const trendMultiplier = trend.trendMultiplier;
+  const finalAdjustedFmv = trend.finalAdjustedFmv !== null ? roundTo2(trend.finalAdjustedFmv * parallelMultiplier * serialMultiplier) : null;
+  res.json({
+    success: true,
+    compCount: trend.compCount,
+    baseCompFmv: trend.baseCompFmv !== null ? roundTo2(trend.baseCompFmv) : null,
+    recentMedian: trend.recentMedian !== null ? roundTo2(trend.recentMedian) : null,
+    olderMedian: trend.olderMedian !== null ? roundTo2(trend.olderMedian) : null,
+    trendPct: trend.trendPct !== null ? roundTo2(trend.trendPct) : null,
+    trendDirection: trend.trendDirection,
+    trendMultiplier: roundTo2(trendMultiplier),
+    finalAdjustedFmv,
+    estimatedPsa10: finalAdjustedFmv !== null ? roundTo2(finalAdjustedFmv * 2.25) : null,
+    estimatedPsa9: finalAdjustedFmv !== null ? roundTo2(finalAdjustedFmv * 1.15) : null,
+    estimatedPsa8: finalAdjustedFmv !== null ? roundTo2(finalAdjustedFmv * 0.9) : null
+  });
 });
