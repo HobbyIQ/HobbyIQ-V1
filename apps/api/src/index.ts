@@ -129,7 +129,7 @@ function getSerialMultiplier(serial: string | number | undefined): number {
 import { analyzeTrend, CompSale, TrendResult } from "./utils/trendEngine";
 
 app.get("/api/compiq/estimate", (req, res) => {
-  const { player, cardSet, parallel, rawPrice, isAuto, serial } = req.query;
+  const { player, cardSet, parallel, rawPrice, isAuto, serial, compPrices, compDates, useTrend } = req.query;
   const price = Number(rawPrice);
   if (Number.isNaN(price)) {
     return res.status(400).json({
@@ -149,9 +149,34 @@ app.get("/api/compiq/estimate", (req, res) => {
       ? serial[0]
       : undefined;
   const serialMultiplier = getSerialMultiplier(serialValue);
-  const adjustedRaw = price * parallelMultiplier * serialMultiplier;
+  let adjustedRaw = price * parallelMultiplier * serialMultiplier;
   let cardType = "Non-Auto";
   if (isAutoBool) cardType = "Auto";
+
+  // Trend logic
+  let trendFields: any = {};
+  let useTrendBool = typeof useTrend === "string" && useTrend.toLowerCase() === "true";
+  let comps: CompSale[] = [];
+  if (useTrendBool && typeof compPrices === "string" && typeof compDates === "string") {
+    const pricesArr = compPrices.split(",");
+    const datesArr = compDates.split(",");
+    if (pricesArr.length === datesArr.length && pricesArr.length > 0) {
+      comps = pricesArr.map((p, i) => ({ price: Number(p), soldDate: String(datesArr[i]) }));
+      const trend = analyzeTrend(comps);
+      adjustedRaw = adjustedRaw * trend.trendMultiplier;
+      trendFields = {
+        useTrend: true,
+        compCount: trend.compCount,
+        baseCompFmv: trend.baseCompFmv !== null ? roundTo2(trend.baseCompFmv) : null,
+        recentMedian: trend.recentMedian !== null ? roundTo2(trend.recentMedian) : null,
+        olderMedian: trend.olderMedian !== null ? roundTo2(trend.olderMedian) : null,
+        trendPct: trend.trendPct !== null ? roundTo2(trend.trendPct) : null,
+        trendDirection: trend.trendDirection,
+        trendMultiplier: roundTo2(trend.trendMultiplier),
+        finalAdjustedFmv: trend.finalAdjustedFmv !== null ? roundTo2(trend.finalAdjustedFmv) : null
+      };
+    }
+  }
 
   return res.json({
     success: true,
@@ -170,6 +195,7 @@ app.get("/api/compiq/estimate", (req, res) => {
     estimatedPsa10: roundTo2(adjustedRaw * 2.25),
     estimatedPsa9: roundTo2(adjustedRaw * 1.15),
     estimatedPsa8: roundTo2(adjustedRaw * 0.9),
+    ...trendFields
   });
 });
 
