@@ -30,16 +30,25 @@ function normalizeParallelName(parallel: string | undefined): string {
   return (parallel || "base").toLowerCase().replace(/[^a-z0-9 ]/gi, "").replace(/\s+/g, " ").trim();
 }
 
-function detectProductFamily(cardSet: string | undefined): ProductFamily | undefined {
+function detectProductFamily(cardSet: string | undefined, isAuto: boolean): ProductFamily | undefined {
   if (!cardSet) return undefined;
   const set = cardSet.toLowerCase();
-  if (set.includes("chrome auto")) return "Bowman Chrome Auto";
-  if (set.includes("chrome update")) return "Topps Chrome Update";
-  if (set.includes("chrome")) {
-    if (set.includes("bowman")) return "Bowman Chrome";
-    return "Topps Chrome";
+  if (set.includes("chrome update")) {
+    if (isAuto) return "Topps Chrome Update Auto";
+    return "Topps Chrome Update Non-Auto";
   }
-  if (set.includes("draft")) return "Bowman Draft";
+  if (set.includes("chrome")) {
+    if (set.includes("bowman")) {
+      if (isAuto) return "Bowman Chrome Auto";
+      return "Bowman Chrome Non-Auto";
+    }
+    if (isAuto) return "Topps Chrome Auto";
+    return "Topps Chrome Non-Auto";
+  }
+  if (set.includes("draft")) {
+    if (isAuto) return "Bowman Draft Auto";
+    return "Bowman Draft Non-Auto";
+  }
   if (set.includes("bowman")) return "Bowman";
   if (set.includes("flagship")) return "Topps Flagship";
   if (set.includes("paper")) return "Topps Paper";
@@ -47,10 +56,10 @@ function detectProductFamily(cardSet: string | undefined): ProductFamily | undef
   return undefined;
 }
 
-function getParallelMultiplier(productFamily: ProductFamily | undefined, parallel: string): number {
+function getParallelMultiplier(productFamily: ProductFamily | undefined, parallel: string, isAuto: boolean): number {
   if (!productFamily) return 1.0;
   const famKey = productFamily.toLowerCase();
-  const config = parallelMultipliers[famKey];
+  const config = isAuto ? parallelMultipliers.auto[famKey] : parallelMultipliers.nonAuto[famKey];
   if (!config) return 1.0;
   return config[parallel] ?? 1.0;
 }
@@ -60,7 +69,7 @@ function roundTo2(val: number): number {
 }
 
 app.get("/api/compiq/estimate", (req, res) => {
-  const { player, cardSet, parallel, rawPrice } = req.query;
+  const { player, cardSet, parallel, rawPrice, isAuto } = req.query;
   const price = Number(rawPrice);
   if (Number.isNaN(price)) {
     return res.status(400).json({
@@ -70,9 +79,12 @@ app.get("/api/compiq/estimate", (req, res) => {
   }
 
   const normalizedParallel = normalizeParallelName(typeof parallel === "string" ? parallel : undefined);
-  const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined);
-  const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel);
+  const isAutoBool = typeof isAuto === "string" ? isAuto.toLowerCase() === "true" : false;
+  const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined, isAutoBool);
+  const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel, isAutoBool);
   const adjustedRaw = price * parallelMultiplier;
+  let cardType = "Non-Auto";
+  if (isAutoBool) cardType = "Auto";
 
   return res.json({
     success: true,
@@ -81,6 +93,8 @@ app.get("/api/compiq/estimate", (req, res) => {
     productFamily: productFamily || null,
     parallel,
     normalizedParallel,
+    isAuto: isAutoBool,
+    cardType,
     rawPrice: roundTo2(price),
     parallelMultiplier: roundTo2(parallelMultiplier),
     adjustedRaw: roundTo2(adjustedRaw),

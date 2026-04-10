@@ -3,11 +3,14 @@
 
 export type ProductFamily =
   | "Bowman"
-  | "Bowman Chrome"
-  | "Bowman Draft"
   | "Bowman Chrome Auto"
-  | "Topps Chrome"
-  | "Topps Chrome Update"
+  | "Bowman Chrome Non-Auto"
+  | "Bowman Draft Auto"
+  | "Bowman Draft Non-Auto"
+  | "Topps Chrome Auto"
+  | "Topps Chrome Non-Auto"
+  | "Topps Chrome Update Auto"
+  | "Topps Chrome Update Non-Auto"
   | "Topps"
   | "Topps Flagship"
   | "Topps Paper";
@@ -18,7 +21,85 @@ export interface ParallelConfig {
   };
 }
 
-export const parallelMultipliers: ParallelConfig = {
+export interface ParallelConfigAuto {
+  auto: ParallelConfig;
+  nonAuto: ParallelConfig;
+}
+
+export const parallelMultipliers: ParallelConfigAuto = {
+  auto: {
+    "bowman chrome auto": {
+      "base": 1.0,
+      "refractor": 1.3,
+      "blue": 1.7,
+      "green": 2.0,
+      "gold": 2.5,
+      "orange": 4.0,
+      "red": 7.0,
+      "superfractor": 25.0,
+      "printing plate": 12.0
+    },
+    "bowman draft auto": {
+      "base": 1.0,
+      "refractor": 1.3,
+      "blue": 1.7,
+      "green": 2.0,
+      "gold": 2.5,
+      "orange": 4.0,
+      "red": 7.0,
+      "superfractor": 25.0,
+      "printing plate": 12.0
+    },
+    "topps chrome auto": {
+      "base": 1.0,
+      "refractor": 1.3,
+      "blue": 1.7,
+      "green": 2.0,
+      "gold": 2.5,
+      "orange": 4.0,
+      "red": 7.0,
+      "superfractor": 25.0,
+      "printing plate": 12.0
+    },
+    "topps chrome update auto": {
+      "base": 1.0,
+      "refractor": 1.3,
+      "blue": 1.7,
+      "green": 2.0,
+      "gold": 2.5,
+      "orange": 4.0,
+      "red": 7.0,
+      "superfractor": 25.0,
+      "printing plate": 12.0
+    }
+  },
+  nonAuto: {
+    "bowman": {
+      ...existing code...
+    },
+    "bowman chrome non-auto": {
+      ...existing code from "bowman chrome"...
+    },
+    "bowman draft non-auto": {
+      ...existing code from "bowman draft"...
+    },
+    "topps chrome non-auto": {
+      ...existing code from "topps chrome"...
+    },
+    "topps chrome update non-auto": {
+      ...existing code from "topps chrome update"...
+    },
+    "topps": {
+      ...existing code...
+    },
+    "topps flagship": {
+      ...existing code...
+    },
+    "topps paper": {
+      ...existing code...
+    }
+  }
+};
   "bowman": {
     "base": 1.0,
     "refractor": 1.2,
