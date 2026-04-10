@@ -23,16 +23,29 @@ function logProviderInitSummary() {
 
 import express from "express";
 import cors from "cors";
+
+import express from "express";
+import cors from "cors";
 import * as dotenv from "dotenv";
 
-
+import testRouter from "./routes/test";
+import healthRouter from "./routes/health";
+import compsRouter from "./routes/comps";
+import compiqRouter from "./routes/compiq";
+import universalRouter from "./routes/universal";
+import portfolioRouter from "./routes/portfolio";
+import protectedFeaturesRouter from "./routes/protectedFeatures";
+import meRouter from "./routes/me";
+import plansRouter from "./routes/plans";
+import notificationsRouter from "./routes/notifications";
+import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvider } from "./providers/factory";
 
 const app = express();
 app.use(express.json());
 
+// Public GET /api/compiq/estimate (no user context, no middleware)
 app.get("/api/compiq/estimate", (req, res) => {
   const { player, cardSet, parallel, rawPrice } = req.query;
-
   const price = Number(rawPrice);
 
   if (Number.isNaN(price)) {
@@ -54,56 +67,21 @@ app.get("/api/compiq/estimate", (req, res) => {
   });
 });
 
-// Public GET /
-app.get("/", (req, res) => {
-  res.json({ success: true, message: "HobbyIQ API live" });
-});
-
-const app = express();
-app.use(express.json());
-
-// Public GET /api/compiq/estimate (no user context, no middleware)
-app.get("/api/compiq/estimate", (req, res) => {
-  const { player, cardSet, parallel, rawPrice } = req.query;
-  const rawPriceNumber = Number(rawPrice);
-  if (isNaN(rawPriceNumber)) {
-    return res.json({ success: false, error: "rawPrice must be a number" });
-  }
-  res.json({
+app.get("/health", (_req, res) => {
+  return res.json({
     success: true,
-    player,
-    cardSet,
-    parallel,
-    rawPrice: rawPriceNumber,
-    estimatedPsa10: rawPriceNumber * 2.25,
-    estimatedPsa9: rawPriceNumber * 1.15,
-    estimatedPsa8: rawPriceNumber * 0.9
+    status: "ok",
   });
 });
 
-// Public GET /
-// Public GET /health
-app.get("/health", (req, res) => {
-  res.json({ success: true, status: "ok" });
+app.get("/", (_req, res) => {
+  return res.json({
+    success: true,
+    message: "HobbyIQ API live",
+
 });
 
-
-// Public POST /api/compiq/estimate
-app.use("/api/compiq", compiqRouter);
-
-import dashboardRouter from "./routes/dashboard";
-import jobsRouter from "./routes/jobs";
-import subscriptionsRouter from "./routes/subscriptions";
-import providerHealthRouter from "./routes/providerHealth";
-import learningRoutes from "./routes/learning/learningRoutes";
-import appConfigRouter from "./routes/appConfig";
-import { mockAuth } from "./middleware/mockAuth";
-
-// All other routes require mockAuth
-app.use(mockAuth);
-
-// Mount all protected routers
-app.use("/api/comps", compsRouter);
+// Mount routers and middleware below public routes
 app.use("/api/universal", universalRouter);
 app.use("/api/portfolio", portfolioRouter);
 app.use("/api/protected", protectedFeaturesRouter);
@@ -114,13 +92,6 @@ app.use("/api/dashboard", dashboardRouter);
 app.use("/api/jobs", jobsRouter);
 app.use("/api/subscription", subscriptionsRouter);
 app.use("/api/provider-health", providerHealthRouter);
-app.use("/api/learning", learningRoutes);
-app.use("/api/app-config", appConfigRouter);
-
-app.use("/api/subscription", subscriptionsRouter);
-app.use("/api/provider-health", providerHealthRouter);
-
-
 app.use("/api/learning", learningRoutes);
 app.use("/api/app-config", appConfigRouter);
 
