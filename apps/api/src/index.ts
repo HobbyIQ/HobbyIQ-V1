@@ -1,6 +1,7 @@
 import testRouter from "./routes/test";
 import healthRouter from "./routes/health";
 import compsRouter from "./routes/comps";
+import compiqRouter from "./routes/compiq";
 import universalRouter from "./routes/universal";
 import portfolioRouter from "./routes/portfolio";
 import protectedFeaturesRouter from "./routes/protectedFeatures";
@@ -24,7 +25,9 @@ import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 
+
 const app = express();
+app.use(express.json());
 
 // Public GET /
 app.get("/", (req, res) => {
@@ -35,6 +38,9 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ success: true, status: "ok" });
 });
+
+// Public POST /api/compiq/estimate
+app.use("/api/compiq", compiqRouter);
 
 // ...existing code...
 
