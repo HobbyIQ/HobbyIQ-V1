@@ -39,35 +39,22 @@ app.get("/health", (req, res) => {
   res.json({ success: true, status: "ok" });
 });
 
+
 // Public POST /api/compiq/estimate
 app.use("/api/compiq", compiqRouter);
-
-// ...existing code...
 
 import dashboardRouter from "./routes/dashboard";
 import jobsRouter from "./routes/jobs";
 import subscriptionsRouter from "./routes/subscriptions";
 import providerHealthRouter from "./routes/providerHealth";
-
 import learningRoutes from "./routes/learning/learningRoutes";
 import appConfigRouter from "./routes/appConfig";
 import { mockAuth } from "./middleware/mockAuth";
 
-// Notification system setup (if needed)
-// import { NotificationService } from "./services/notifications/provider.js";
-// import { InAppNotificationProvider } from "./services/notifications/inAppProvider.js";
-// import { PushNotificationProvider } from "./services/notifications/pushProvider.js";
-// import { PLAN_NOTIFICATION_LIMITS } from "../models/planTiers.js";
-// const notificationService = new NotificationService(
-//   new InAppNotificationProvider(),
-//   new PushNotificationProvider()
-// );
-
 // All other routes require mockAuth
 app.use(mockAuth);
 
-// Mount all routers
-app.use("/api/health", healthRouter);
+// Mount all protected routers
 app.use("/api/comps", compsRouter);
 app.use("/api/universal", universalRouter);
 app.use("/api/portfolio", portfolioRouter);
@@ -77,6 +64,10 @@ app.use("/api/plans", plansRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/jobs", jobsRouter);
+app.use("/api/subscription", subscriptionsRouter);
+app.use("/api/provider-health", providerHealthRouter);
+app.use("/api/learning", learningRoutes);
+app.use("/api/app-config", appConfigRouter);
 
 app.use("/api/subscription", subscriptionsRouter);
 app.use("/api/provider-health", providerHealthRouter);
