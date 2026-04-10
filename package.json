@@ -1,5 +1,11 @@
 {
-  "devDependencies": {
-    "typescript": "^6.0.2"
+  "name": "hobbyiq",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
   }
 }
