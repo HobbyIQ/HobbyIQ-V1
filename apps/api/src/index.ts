@@ -34,6 +34,29 @@ app.get("/", (req, res) => {
   res.json({ success: true, message: "HobbyIQ API live" });
 });
 
+const app = express();
+app.use(express.json());
+
+// Public GET /api/compiq/estimate (no user context, no middleware)
+app.get("/api/compiq/estimate", (req, res) => {
+  const { player, cardSet, parallel, rawPrice } = req.query;
+  const rawPriceNumber = Number(rawPrice);
+  if (isNaN(rawPriceNumber)) {
+    return res.json({ success: false, error: "rawPrice must be a number" });
+  }
+  res.json({
+    success: true,
+    player,
+    cardSet,
+    parallel,
+    rawPrice: rawPriceNumber,
+    estimatedPsa10: rawPriceNumber * 2.25,
+    estimatedPsa9: rawPriceNumber * 1.15,
+    estimatedPsa8: rawPriceNumber * 0.9
+  });
+});
+
+// Public GET /
 // Public GET /health
 app.get("/health", (req, res) => {
   res.json({ success: true, status: "ok" });
