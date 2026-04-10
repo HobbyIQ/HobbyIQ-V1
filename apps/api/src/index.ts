@@ -1,5 +1,3 @@
-// (trend-test endpoint moved below app initialization)
-// (trend-test endpoint moved below app initialization)
 import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
@@ -25,6 +23,40 @@ import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvi
 
 const app = express();
 app.use(express.json());
+
+// --- Public GET /api/compiq/trend-test ---
+app.get("/api/compiq/trend-test", (req, res) => {
+  let { prices, dates } = req.query;
+  // Accept both comma-separated string or array
+  if (typeof prices === "string") prices = prices.split(",");
+  if (typeof dates === "string") dates = dates.split(",");
+  let comps: CompSale[] = [];
+  if (Array.isArray(prices) && Array.isArray(dates) && prices.length === dates.length && prices.length > 0) {
+    comps = prices.map((p, i) => ({ price: Number(p), soldDate: String(dates[i]) }));
+  } else {
+    // Default mock dataset
+    comps = [
+      { price: 100, soldDate: "2026-04-01" },
+      { price: 110, soldDate: "2026-04-03" },
+      { price: 125, soldDate: "2026-04-05" },
+      { price: 130, soldDate: "2026-04-07" },
+      { price: 145, soldDate: "2026-04-09" }
+    ];
+  }
+  const trend = analyzeTrend(comps);
+  res.json({
+    success: true,
+    comps,
+    compCount: trend.compCount,
+    baseCompFmv: trend.baseCompFmv,
+    recentMedian: trend.recentMedian,
+    olderMedian: trend.olderMedian,
+    trendPct: trend.trendPct,
+    trendDirection: trend.trendDirection,
+    trendMultiplier: trend.trendMultiplier,
+    finalAdjustedFmv: trend.finalAdjustedFmv
+  });
+});
 
 // Public GET /api/compiq/estimate (no user context, no middleware)
 // --- Helper functions for CompIQ parallel pricing ---
