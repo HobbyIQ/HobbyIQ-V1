@@ -26,8 +26,33 @@ import cors from "cors";
 import * as dotenv from "dotenv";
 
 
+
 const app = express();
 app.use(express.json());
+
+app.get("/api/compiq/estimate", (req, res) => {
+  const { player, cardSet, parallel, rawPrice } = req.query;
+
+  const price = Number(rawPrice);
+
+  if (Number.isNaN(price)) {
+    return res.status(400).json({
+      success: false,
+      error: "rawPrice must be a number",
+    });
+  }
+
+  return res.json({
+    success: true,
+    player,
+    cardSet,
+    parallel,
+    rawPrice: price,
+    estimatedPsa10: price * 2.25,
+    estimatedPsa9: price * 1.15,
+    estimatedPsa8: price * 0.9,
+  });
+});
 
 // Public GET /
 app.get("/", (req, res) => {
