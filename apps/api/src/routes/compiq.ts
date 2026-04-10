@@ -102,44 +102,6 @@ router.get("/trend-test", (req: Request, res: Response) => {
   });
 });
 
-// --- Public GET /api/compiq/live-estimate ---
-router.get("/live-estimate", async (req: Request, res: Response) => {
-  const { player, cardSet, parallel, isAuto, serial } = req.query;
-  if (!player || !cardSet) {
-    return res.status(400).json({ success: false, error: "player and cardSet are required" });
-  }
-  const isAutoBool = typeof isAuto === "string" ? isAuto.toLowerCase() === "true" : false;
-  const normalizedParallel = typeof parallel === "string" ? parallel.toLowerCase() : undefined;
-  // Multipliers (reuse logic if needed)
-  // For demo, just use 1.0
-  const parallelMultiplier = 1.0;
-  const serialMultiplier = 1.0;
-  // Fetch comps
-  let comps = await fetchSoldComps({
-    player: String(player),
-    cardSet: String(cardSet),
-    parallel: typeof parallel === "string" ? parallel : undefined,
-    isAuto: isAutoBool,
-    serial: serial as string | undefined
-  });
-  // Trend
-  const trend = analyzeTrend(comps);
-  const trendMultiplier = trend.trendMultiplier;
-  const finalAdjustedFmv = trend.finalAdjustedFmv !== null ? Math.round(trend.finalAdjustedFmv * parallelMultiplier * serialMultiplier * 100) / 100 : null;
-  res.json({
-    success: true,
-    compCount: trend.compCount,
-    baseCompFmv: trend.baseCompFmv !== null ? Math.round(trend.baseCompFmv * 100) / 100 : null,
-    recentMedian: trend.recentMedian !== null ? Math.round(trend.recentMedian * 100) / 100 : null,
-    olderMedian: trend.olderMedian !== null ? Math.round(trend.olderMedian * 100) / 100 : null,
-    trendPct: trend.trendPct !== null ? Math.round(trend.trendPct * 100) / 100 : null,
-    trendDirection: trend.trendDirection,
-    trendMultiplier: Math.round(trendMultiplier * 100) / 100,
-    finalAdjustedFmv,
-    estimatedPsa10: finalAdjustedFmv !== null ? Math.round(finalAdjustedFmv * 2.25 * 100) / 100 : null,
-    estimatedPsa9: finalAdjustedFmv !== null ? Math.round(finalAdjustedFmv * 1.15 * 100) / 100 : null,
-    estimatedPsa8: finalAdjustedFmv !== null ? Math.round(finalAdjustedFmv * 0.9 * 100) / 100 : null
-  });
-});
+// (Removed: /live-estimate route now handled in main app for exact /api/compiq/live-estimate path)
 
 export default router;
