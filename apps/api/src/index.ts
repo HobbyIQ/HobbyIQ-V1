@@ -1,33 +1,6 @@
-import testRouter from "./routes/test";
-import healthRouter from "./routes/health";
-import compsRouter from "./routes/comps";
-import compiqRouter from "./routes/compiq";
-import universalRouter from "./routes/universal";
-import portfolioRouter from "./routes/portfolio";
-import protectedFeaturesRouter from "./routes/protectedFeatures";
-import meRouter from "./routes/me";
-import plansRouter from "./routes/plans";
-import notificationsRouter from "./routes/notifications";
-import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvider } from "./providers/factory";
-
-function logProviderInitSummary() {
-  const comps = createCompsProvider();
-  const supply = createSupplyProvider();
-  const perf = createPlayerPerformanceProvider();
-  console.log("Provider initialization summary:");
-  console.log("- Comps Provider:", comps.constructor.name);
-  console.log("- Supply Provider:", supply.constructor.name);
-  console.log("- Player Performance Provider:", perf.constructor.name);
-}
-
-
-import express from "express";
-import cors from "cors";
-
 import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
-
 import testRouter from "./routes/test";
 import healthRouter from "./routes/health";
 import compsRouter from "./routes/comps";
@@ -38,6 +11,14 @@ import protectedFeaturesRouter from "./routes/protectedFeatures";
 import meRouter from "./routes/me";
 import plansRouter from "./routes/plans";
 import notificationsRouter from "./routes/notifications";
+// import removed (duplicate)
+import dashboardRouter from "./routes/dashboard";
+import jobsRouter from "./routes/jobs";
+import subscriptionsRouter from "./routes/subscriptions";
+import providerHealthRouter from "./routes/providerHealth";
+import learningRoutes from "./routes/learning/learningRoutes";
+import appConfigRouter from "./routes/appConfig";
+import { mockAuth } from "./middleware/mockAuth";
 import { createCompsProvider, createSupplyProvider, createPlayerPerformanceProvider } from "./providers/factory";
 
 const app = express();
@@ -78,7 +59,7 @@ app.get("/", (_req, res) => {
   return res.json({
     success: true,
     message: "HobbyIQ API live",
-
+  });
 });
 
 // Mount routers and middleware below public routes
