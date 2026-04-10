@@ -48,12 +48,13 @@ dotenv.config();
 
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-// Attach mockAuth middleware globally so all routes have req.user
+// Attach mockAuth only to routes that require authentication
+// Public routes: /api/health, /api/test
+app.use("/api/health", healthRouter);
+app.use("/api/test", testRouter);
+
+// All other routes require mockAuth
 app.use(mockAuth);
-// Register /api/test route
-app.use("/api", testRouter);
 
 // Mount all routers
 app.use("/api/health", healthRouter);
