@@ -11,7 +11,7 @@ import protectedFeaturesRouter from "./routes/protectedFeatures";
 import meRouter from "./routes/me";
 import plansRouter from "./routes/plans";
 import notificationsRouter from "./routes/notifications";
-// import removed (duplicate)
+import { parallelMultipliers, ProductFamily } from "./config/parallelMultipliers";
 import dashboardRouter from "./routes/dashboard";
 import jobsRouter from "./routes/jobs";
 import subscriptionsRouter from "./routes/subscriptions";
@@ -25,10 +25,43 @@ const app = express();
 app.use(express.json());
 
 // Public GET /api/compiq/estimate (no user context, no middleware)
+// --- Helper functions for CompIQ parallel pricing ---
+function normalizeParallelName(parallel: string | undefined): string {
+  return (parallel || "base").toLowerCase().replace(/[^a-z0-9 ]/gi, "").replace(/\s+/g, " ").trim();
+}
+
+function detectProductFamily(cardSet: string | undefined): ProductFamily | undefined {
+  if (!cardSet) return undefined;
+  const set = cardSet.toLowerCase();
+  if (set.includes("chrome auto")) return "Bowman Chrome Auto";
+  if (set.includes("chrome update")) return "Topps Chrome Update";
+  if (set.includes("chrome")) {
+    if (set.includes("bowman")) return "Bowman Chrome";
+    return "Topps Chrome";
+  }
+  if (set.includes("draft")) return "Bowman Draft";
+  if (set.includes("bowman")) return "Bowman";
+  if (set.includes("flagship")) return "Topps Flagship";
+  if (set.includes("paper")) return "Topps Paper";
+  if (set.includes("topps")) return "Topps";
+  return undefined;
+}
+
+function getParallelMultiplier(productFamily: ProductFamily | undefined, parallel: string): number {
+  if (!productFamily) return 1.0;
+  const famKey = productFamily.toLowerCase();
+  const config = parallelMultipliers[famKey];
+  if (!config) return 1.0;
+  return config[parallel] ?? 1.0;
+}
+
+function roundTo2(val: number): number {
+  return Math.round(val * 100) / 100;
+}
+
 app.get("/api/compiq/estimate", (req, res) => {
   const { player, cardSet, parallel, rawPrice } = req.query;
   const price = Number(rawPrice);
-
   if (Number.isNaN(price)) {
     return res.status(400).json({
       success: false,
@@ -36,19 +69,24 @@ app.get("/api/compiq/estimate", (req, res) => {
     });
   }
 
-  function round2(val: number) {
-    return Math.round(val * 100) / 100;
-  }
+  const normalizedParallel = normalizeParallelName(typeof parallel === "string" ? parallel : undefined);
+  const productFamily = detectProductFamily(typeof cardSet === "string" ? cardSet : undefined);
+  const parallelMultiplier = getParallelMultiplier(productFamily, normalizedParallel);
+  const adjustedRaw = price * parallelMultiplier;
 
   return res.json({
     success: true,
     player,
     cardSet,
+    productFamily: productFamily || null,
     parallel,
-    rawPrice: round2(price),
-    estimatedPsa10: round2(price * 2.25),
-    estimatedPsa9: round2(price * 1.15),
-    estimatedPsa8: round2(price * 0.9),
+    normalizedParallel,
+    rawPrice: roundTo2(price),
+    parallelMultiplier: roundTo2(parallelMultiplier),
+    adjustedRaw: roundTo2(adjustedRaw),
+    estimatedPsa10: roundTo2(adjustedRaw * 2.25),
+    estimatedPsa9: roundTo2(adjustedRaw * 1.15),
+    estimatedPsa8: roundTo2(adjustedRaw * 0.9),
   });
 });
 
