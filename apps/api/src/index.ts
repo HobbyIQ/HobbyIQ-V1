@@ -36,15 +36,19 @@ app.get("/api/compiq/estimate", (req, res) => {
     });
   }
 
+  function round2(val: number) {
+    return Math.round(val * 100) / 100;
+  }
+
   return res.json({
     success: true,
     player,
     cardSet,
     parallel,
-    rawPrice: price,
-    estimatedPsa10: price * 2.25,
-    estimatedPsa9: price * 1.15,
-    estimatedPsa8: price * 0.9,
+    rawPrice: round2(price),
+    estimatedPsa10: round2(price * 2.25),
+    estimatedPsa9: round2(price * 1.15),
+    estimatedPsa8: round2(price * 0.9),
   });
 });
 
