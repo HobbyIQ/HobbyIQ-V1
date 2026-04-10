@@ -19,11 +19,24 @@ function logProviderInitSummary() {
   console.log("- Player Performance Provider:", perf.constructor.name);
 }
 
+
 import express from "express";
 import cors from "cors";
 import * as dotenv from "dotenv";
 
+const app = express();
 
+// Public GET /
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "HobbyIQ API live" });
+});
+
+// Public GET /health
+app.get("/health", (req, res) => {
+  res.json({ success: true, status: "ok" });
+});
+
+// ...existing code...
 
 import dashboardRouter from "./routes/dashboard";
 import jobsRouter from "./routes/jobs";
