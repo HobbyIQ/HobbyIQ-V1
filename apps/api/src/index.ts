@@ -57,25 +57,6 @@ import { mockAuth } from "./middleware/mockAuth";
 //   new PushNotificationProvider()
 // );
 
-dotenv.config();
-
-
-
-const app = express();
-
-// Public root route
-app.get("/", (req, res) => {
-  res.json({
-    message: "Welcome to HobbyIQ API",
-    docs: "https://github.com/HobbyIQ/HobbyIQ-V1",
-    status: "ok"
-  });
-});
-
-// Public routes: /api/health, /api/test
-app.use("/api/health", healthRouter);
-app.use("/api/test", testRouter);
-
 // All other routes require mockAuth
 app.use(mockAuth);
 
