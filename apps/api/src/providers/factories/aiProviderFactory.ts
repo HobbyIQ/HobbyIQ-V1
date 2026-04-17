@@ -12,7 +12,7 @@ export function aiProviderFactory() {
   } else {
     provider = new MockAIProvider();
   }
-  console.log(`[AIProviderFactory] Initialized AI provider: ${provider.getProviderMode()}`);
+  // Beta: suppress AI provider init log
   monitoring.logEvent?.("AIProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }

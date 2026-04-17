@@ -1,0 +1,19 @@
+{
+  "decisionScore": 62,
+  "recommendation": "hold",
+  "confidenceScore": 99,
+  "targetEntryRange": [50, 59],
+  "targetExit": 68,
+  "holdRange": [59, 65],
+  "urgencyScore": 41,
+  "timeHorizon": "medium",
+  "explanation": [
+    "PlayerIQ contributed 25.5 points",
+    "DailyIQ contributed 13.0 points",
+    "Comp trend contributed 13.0 points",
+    "Supply/Scarcity contributed 7.5 points",
+    "Liquidity contributed 5.5 points",
+    "Negative Pressure penalty: -20.0 points"
+  ],
+  "majorDrivers": ["PlayerIQ", "Comp trend"]
+}

@@ -1,0 +1,76 @@
+.playeriq-page {
+  background: #101214;
+  min-height: 100vh;
+  color: #e6ffe6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 4rem 1rem;
+}
+.playeriq-form {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 540px;
+  margin-bottom: 2rem;
+}
+.playeriq-input {
+  flex: 1;
+  padding: 0.9em 1.2em;
+  border-radius: 10px;
+  border: 1.5px solid #1a3d1a;
+  background: #181c1f;
+  color: #e6ffe6;
+  font-size: 1.1em;
+  outline: none;
+  transition: border 0.2s;
+}
+.playeriq-input:focus {
+  border-color: #00ff7f;
+}
+.playeriq-btn {
+  background: linear-gradient(90deg, #00ff7f 0%, #007f3f 100%);
+  color: #101214;
+  border: none;
+  border-radius: 10px;
+  padding: 0 2em;
+  font-size: 1.1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.playeriq-btn:disabled {
+  background: #222;
+  color: #666;
+  cursor: not-allowed;
+}
+.playeriq-error {
+  color: #ff6666;
+  margin-bottom: 1.5rem;
+  font-size: 1.1em;
+}
+.playeriq-empty {
+  color: #7fff7f;
+  margin-bottom: 1.5rem;
+  font-size: 1.1em;
+}
+.playeriq-history {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 540px;
+}
+.playeriq-history h3 {
+  color: #aaffaa;
+  margin-bottom: 0.5rem;
+  font-size: 1.1em;
+}
+@media (max-width: 600px) {
+  .playeriq-form {
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+  .playeriq-history {
+    max-width: 100%;
+  }
+}

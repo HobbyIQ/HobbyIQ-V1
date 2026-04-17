@@ -42,7 +42,7 @@ export class NotificationService implements NotificationProvider {
         const count = this.inAppAlertCounts.get(payload.userId) || 0;
         if (count >= limits.maxInAppAlerts) {
           // Gated: skip sending
-          console.log(`[GATE][${payload.userId}] In-app alert limit reached for plan ${planTier}`);
+          // Beta: suppress in-app alert gate log
           return;
         }
         this.inAppAlertCounts.set(payload.userId, count + 1);
@@ -53,7 +53,7 @@ export class NotificationService implements NotificationProvider {
       const limits = PLAN_NOTIFICATION_LIMITS[planTier];
       if (payload.type === 'sell-signal' || payload.type === 'buy-signal') {
         if (!limits.premiumSignals) {
-          console.log(`[GATE][${payload.userId}] Push premium signal gated for plan ${planTier}`);
+          // Beta: suppress push premium signal gate log
           return;
         }
       }

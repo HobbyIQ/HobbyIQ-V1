@@ -7,7 +7,7 @@ function parseEnvVar(key: string, fallback: any, required = false): any {
   const val = process.env[key];
   if (val === undefined || val === "") {
     if (required && process.env.AI_MODE === "azure") {
-      console.warn(`[ENV][Azure] Missing required env var: ${key}`);
+      // Beta: suppress env var warning
     }
     return fallback;
   }

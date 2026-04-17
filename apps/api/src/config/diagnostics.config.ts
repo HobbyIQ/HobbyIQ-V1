@@ -1,0 +1,1 @@
+export const ADMIN_DIAGNOSTICS_ENABLED = process.env.ADMIN_DIAGNOSTICS_ENABLED === 'true';

@@ -1,5 +1,4 @@
+node_modules/
+app.zip
 .env
-.env.*
 node_modules
-dist
-build

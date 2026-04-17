@@ -5,7 +5,7 @@ export class PushNotificationProvider implements NotificationProvider {
   async send(payload: NotificationPayload, channel: NotificationChannel) {
     // TODO: Integrate with APNS/FCM here
     // Placeholder: Log to console
-    console.log(`[PUSH][${payload.userId}] ${payload.type}: ${payload.message}`);
+    // Beta: suppress push notification log
     // No-op: App remains executable without real push credentials
   }
 }

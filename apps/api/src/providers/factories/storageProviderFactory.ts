@@ -12,7 +12,7 @@ export function storageProviderFactory() {
   } else {
     provider = new MockStorageProvider();
   }
-  console.log(`[StorageProviderFactory] Initialized Storage provider: ${provider.getProviderMode()}`);
+  // Beta: suppress storage provider init log
   monitoring.logEvent?.("StorageProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }

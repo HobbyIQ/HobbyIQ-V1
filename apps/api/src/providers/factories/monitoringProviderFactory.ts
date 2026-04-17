@@ -10,6 +10,6 @@ export function monitoringProviderFactory() {
   } else {
     provider = new MockMonitoringProvider();
   }
-  console.log(`[MonitoringProviderFactory] Initialized Monitoring provider: ${provider.getProviderMode()}`);
+  // Beta: suppress monitoring provider init log
   return provider;
 }

@@ -1,0 +1,14 @@
+.hiq-input {
+  width: 100%;
+  padding: 0.9em 1.2em;
+  border-radius: 10px;
+  border: 1.5px solid #1a3d1a;
+  background: #181c1f;
+  color: #e6ffe6;
+  font-size: 1.1em;
+  outline: none;
+  transition: border 0.2s;
+}
+.hiq-input:focus {
+  border-color: #00ff7f;
+}

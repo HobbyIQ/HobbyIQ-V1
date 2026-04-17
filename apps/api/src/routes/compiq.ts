@@ -1,107 +1,71 @@
-import { Router, Request, Response } from "express";
-import { fetchSoldComps } from "../utils/apifySoldService";
-import { analyzeTrend } from "../utils/trendEngine";
 
-const router = Router();
+import express from "express";
+import { runCompIQ } from "../services/compiq";
+import type { CompIQRequest } from "../services/compiq/types";
 
-// POST /api/compiq/estimate
-router.post("/estimate", (req: Request, res: Response) => {
-  const { player, cardSet, parallel, rawPrice } = req.body || {};
-  if (
-    typeof player !== "string" ||
-    typeof cardSet !== "string" ||
-    typeof parallel !== "string" ||
-    typeof rawPrice !== "number"
-  ) {
-    return res.status(400).json({
-      success: false,
-      error: "Missing or invalid input. Required: player, cardSet, parallel, rawPrice (number)"
-    });
-  }
-  const estimatedPsa10 = rawPrice * 2.25;
-  const estimatedPsa9 = rawPrice * 1.15;
-  const estimatedPsa8 = rawPrice * 0.9;
-  res.json({
-    success: true,
-    player,
-    cardSet,
-    parallel,
-    rawPrice,
-    estimatedPsa10,
-    estimatedPsa9,
-    estimatedPsa8
-  });
-});
+const router = express.Router();
 
-// --- Public GET /api/compiq/trend-test ---
-router.get("/trend-test", (req: Request, res: Response) => {
-  let { prices, dates } = req.query;
-  if (typeof prices === "string") prices = prices.split(",");
-  if (typeof dates === "string") dates = dates.split(",");
-  let comps: { price: number; soldDate: string }[] = [];
-  if (Array.isArray(prices) && Array.isArray(dates) && prices.length === dates.length && prices.length > 0) {
-    comps = prices.map((p, i) => ({ price: Number(p), soldDate: String(dates[i]) }));
-  } else {
-    comps = [
-      { price: 100, soldDate: "2026-04-01" },
-      { price: 110, soldDate: "2026-04-03" },
-      { price: 125, soldDate: "2026-04-05" },
-      { price: 130, soldDate: "2026-04-07" },
-      { price: 145, soldDate: "2026-04-09" }
-    ];
-  }
-  // Simple trend analysis
-  const pricesArr = comps.map(c => c.price);
-  const compCount = comps.length;
-  const median = (arr: number[]) => {
-    const s = [...arr].sort((a, b) => a - b);
-    const mid = Math.floor(s.length / 2);
-    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-  };
-  const baseCompFmv = pricesArr.length ? Math.round(median(pricesArr) * 100) / 100 : null;
-  const recentMedian = pricesArr.length >= 3 ? Math.round(median(pricesArr.slice(-3)) * 100) / 100 : null;
-  const olderMedian = pricesArr.length >= 3 ? Math.round(median(pricesArr.slice(0, 3)) * 100) / 100 : null;
-  let trendPct = null, trendDirection = "flat", trendMultiplier = 1.0;
-  if (recentMedian && olderMedian && olderMedian !== 0) {
-    trendPct = Math.round(((recentMedian - olderMedian) / olderMedian) * 10000) / 100;
-    if (trendPct <= -20) {
-      trendMultiplier = 0.88;
-      trendDirection = "down";
-    } else if (trendPct > -20 && trendPct <= -10) {
-      trendMultiplier = 0.93;
-      trendDirection = "down";
-    } else if (trendPct > -10 && trendPct < 5) {
-      trendMultiplier = 1.0;
-      trendDirection = "flat";
-    } else if (trendPct >= 5 && trendPct < 10) {
-      trendMultiplier = 1.03;
-      trendDirection = "up";
-    } else if (trendPct >= 10 && trendPct < 20) {
-      trendMultiplier = 1.07;
-      trendDirection = "up";
-    } else if (trendPct >= 20 && trendPct < 35) {
-      trendMultiplier = 1.12;
-      trendDirection = "up";
-    } else if (trendPct >= 35) {
-      trendMultiplier = 1.18;
-      trendDirection = "up";
+// Utility: Basic request validation
+function validateCompIQInput(input: any): { valid: boolean; errors?: string[] } {
+  const errors = [];
+  if (!input || typeof input !== "object") errors.push("Missing request body");
+  if (!input.query && !input.player) errors.push("Missing required field: query or player");
+  return { valid: errors.length === 0, errors };
+}
+
+// POST /api/compiq/query
+
+router.post("/query", async (req, res) => {
+  const input: CompIQRequest = req.body;
+  const { valid, errors } = validateCompIQInput(input);
+  if (!valid) return res.status(400).json({ success: false, error: errors });
+  try {
+    // Mock/live provider toggle (env or query param)
+    const useMock = process.env.MOCK_COMPIQ === "true" || req.query.mock === "true";
+    let result;
+    if (useMock) {
+      // Use sample/mock data
+      const { sampleCompIQResponses } = await import("../data/sampleCompIQ");
+      result = sampleCompIQResponses[0];
+      result = { ...result, explanation: "(Mocked) " + result.explanation };
+    } else {
+      result = await runCompIQ(input);
     }
+    // Ensure collector-friendly output
+    result.explanation = result.explanation.replace(/liquidity|downside|constructive|pressure/gi, "");
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || "Unknown error" });
   }
-  const finalAdjustedFmv = baseCompFmv && trendMultiplier ? Math.round(baseCompFmv * trendMultiplier * 100) / 100 : null;
-  res.json({
-    success: true,
-    comps,
-    compCount,
-    baseCompFmv,
-    recentMedian,
-    olderMedian,
-    trendPct,
-    trendDirection,
-    trendMultiplier: Math.round(trendMultiplier * 100) / 100,
-    finalAdjustedFmv
-  });
 });
 
-// (Removed: /live-estimate route now handled in main app for exact /api/compiq/live-estimate path)
+// POST /api/compiq/estimate (alias for /query for now)
+
+router.post("/estimate", async (req, res) => {
+  const input: CompIQRequest = req.body;
+  const { valid, errors } = validateCompIQInput(input);
+  if (!valid) return res.status(400).json({ success: false, error: errors });
+  try {
+    // Mock/live provider toggle (env or query param)
+    const useMock = process.env.MOCK_COMPIQ === "true" || req.query.mock === "true";
+    let result;
+    if (useMock) {
+      const { sampleCompIQResponses } = await import("../data/sampleCompIQ");
+      result = sampleCompIQResponses[0];
+      result = { ...result, explanation: "(Mocked) " + result.explanation };
+    } else {
+      result = await runCompIQ(input);
+    }
+    result.explanation = result.explanation.replace(/liquidity|downside|constructive|pressure/gi, "");
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || "Unknown error" });
+  }
+});
+
+// GET /api/compiq/health
+router.get("/health", (_req, res) => {
+  res.json({ success: true, status: "ok", module: "CompIQ" });
+});
 
 export default router;

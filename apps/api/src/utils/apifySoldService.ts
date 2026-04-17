@@ -34,10 +34,10 @@ export async function fetchSoldComps({ player, cardSet, parallel, isAuto, serial
       .map((item: any) => {
         const price = Number(item.price) || Number(item.soldPrice) || null;
         const soldDate = item.soldDate || item.dateSold || item.sold_at || null;
-        if (!price || !soldDate) return null;
+        if (!price || !soldDate) return undefined;
         return { price, soldDate };
       })
-      .filter(Boolean);
+      .filter((x): x is CompSale => Boolean(x));
   } catch (e) {
     // Fallback to mock
     return [

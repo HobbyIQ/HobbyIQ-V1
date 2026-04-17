@@ -12,7 +12,7 @@ export function searchProviderFactory() {
   } else {
     provider = new MockSearchProvider();
   }
-  console.log(`[SearchProviderFactory] Initialized Search provider: ${provider.getProviderMode()}`);
+  // Beta: suppress search provider init log
   monitoring.logEvent?.("SearchProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }

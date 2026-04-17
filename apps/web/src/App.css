@@ -1,3 +1,147 @@
+/* HobbyIQ ChatGPT-style Search UI */
+.search-page {
+  min-height: 100vh;
+  padding: 0;
+  background: #f7f7fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.search-page.center {
+  justify-content: center;
+  min-height: 100vh;
+}
+.search-box-area {
+  margin-top: 64px;
+  margin-bottom: 32px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.search-form {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+}
+.search-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #ccc;
+  border-radius: 24px;
+  font-size: 1.1rem;
+  background: #fff;
+  outline: none;
+  transition: border 0.2s;
+}
+.search-input:focus {
+  border-color: #6c63ff;
+}
+.search-btn {
+  padding: 0 20px;
+  border: none;
+  border-radius: 24px;
+  background: #6c63ff;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.search-btn:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+}
+.example-chips {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.chip {
+  background: #e6e6f7;
+  color: #333;
+  border: none;
+  border-radius: 16px;
+  padding: 6px 16px;
+  font-size: 0.98rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.chip:hover:not(:disabled) {
+  background: #d1d1f7;
+}
+.chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.search-result {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.chat-bubble {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px 0 #0001;
+  padding: 28px 28px 20px 28px;
+  margin-top: 16px;
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bubble-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.user-query {
+  color: #444;
+  font-size: 1.05rem;
+}
+.intent-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: #6c63ff;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.intent-compiq { background: #ffb347; color: #222; }
+.intent-playeriq { background: #6c63ff; color: #fff; }
+.intent-compare { background: #4caf50; color: #fff; }
+.intent-buy_sell_decision { background: #e57373; color: #fff; }
+.intent-general_card_analysis { background: #2196f3; color: #fff; }
+.intent-unknown { background: #bbb; color: #fff; }
+.error {
+  color: #c00;
+  background: #ffeaea;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin: 16px 0;
+  font-size: 1.05rem;
+}
+.result-json {
+  background: #f4f4f4;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.98rem;
+  overflow-x: auto;
+}
+.next-actions {
+  margin-top: 10px;
+}
 .counter {
   font-size: 16px;
   padding: 5px 10px;

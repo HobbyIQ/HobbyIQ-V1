@@ -1,0 +1,7 @@
+{
+  "ebay": { "authConfigured": true, "syncEnabled": true, "dryRun": false },
+  "psa": { "authConfigured": true, "syncEnabled": true, "dryRun": false },
+  "redis": { "reachable": true },
+  "queue": { "reachable": true },
+  "encryption": { "keyConfigured": true }
+}

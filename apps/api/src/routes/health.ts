@@ -3,9 +3,9 @@ import type { Request, Response } from "express";
 
 const router = Router();
 
-// GET /api/health
-router.get("/health", (_req: Request, res: Response) => {
-  res.json({ status: "ok", uptime: process.uptime() });
+// GET /
+router.get("/", (_req: Request, res: Response) => {
+  res.json({ success: true, status: "ok" });
 });
 
 export default router;

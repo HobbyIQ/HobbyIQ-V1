@@ -12,7 +12,7 @@ export function cacheProviderFactory() {
   } else {
     provider = new InMemoryCacheProvider();
   }
-  console.log(`[CacheProviderFactory] Initialized Cache provider: ${provider.getProviderMode()}`);
+  // Beta: suppress cache provider init log
   monitoring.logEvent?.("CacheProviderInitialized", { mode: provider.getProviderMode() });
   return provider;
 }

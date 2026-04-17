@@ -11,7 +11,14 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "ignoreDeprecations": "6.0",
-    "types": ["node"]
+    "types": ["node"],
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "src",
+    "paths": {
+      "@engines/*": ["engines/*"],
+      "@root/*": ["../../*"],
+      "@types/*": ["../../types/*"]
+    }
   },
   "include": ["src"]
 }
