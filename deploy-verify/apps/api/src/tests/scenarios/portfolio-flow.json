@@ -1,0 +1,9 @@
+{
+  "steps": [
+    "portfolio position created",
+    "valuation calculated",
+    "action plan generated",
+    "recommendation bucket assigned"
+  ],
+  "expectedResult": "pass"
+}

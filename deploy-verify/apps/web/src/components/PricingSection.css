@@ -1,0 +1,112 @@
+.pricing-section {
+  max-width: 1100px;
+  margin: 2.5rem auto 2.5rem auto;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pricing-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #4fd1c5;
+  margin-bottom: 2.2rem;
+  letter-spacing: 0.01em;
+}
+.pricing-cards {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pricing-card {
+  background: #18203a;
+  border-radius: 18px;
+  box-shadow: 0 6px 32px #000a, 0 1.5px 8px #0ff2;
+  border: 1.5px solid #22304a;
+  color: #dbeafe;
+  min-width: 260px;
+  max-width: 320px;
+  padding: 36px 28px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.pricing-card.highlight {
+  border: 2.5px solid #4fd1c5;
+  box-shadow: 0 8px 36px #0ff4, 0 2px 12px #4fd1c5;
+  z-index: 2;
+  transform: scale(1.04);
+}
+.pricing-card.pro {
+  margin-top: -18px;
+}
+.pricing-card.all-star {
+  margin-top: 0;
+}
+.pricing-badge {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4fd1c5;
+  color: #0a1628;
+  font-weight: 700;
+  font-size: 1.01rem;
+  padding: 6px 18px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px #0ff2;
+  letter-spacing: 0.04em;
+}
+.pricing-badge.best-value {
+  background: #ffe066;
+  color: #0a1628;
+}
+.pricing-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  letter-spacing: 0.02em;
+}
+.pricing-price {
+  font-size: 2.1rem;
+  font-weight: 800;
+  color: #4fd1c5;
+  margin-bottom: 1.2rem;
+}
+.pricing-features {
+  list-style: disc inside;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+  color: #b5e3e8;
+  font-size: 1.08rem;
+  text-align: left;
+  width: 100%;
+}
+.pricing-features li {
+  margin-bottom: 0.5rem;
+}
+.pricing-upgrade-btn {
+  margin-top: 0.7rem;
+  padding: 12px 0;
+  width: 100%;
+  font-size: 1.08rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #4fd1c5 0%, #14213d 100%);
+  color: #0a1628;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0ff2;
+  letter-spacing: 0.04em;
+  opacity: 1;
+  transition: background 0.18s, color 0.18s, opacity 0.18s;
+}
+.pricing-upgrade-btn:disabled {
+  background: #22304a;
+  color: #6b7a99;
+  cursor: not-allowed;
+  opacity: 0.7;
+}

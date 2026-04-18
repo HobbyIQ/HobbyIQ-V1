@@ -1,0 +1,15 @@
+.hiq-section-header {
+  color: #00ff7f;
+  font-size: 1.5em;
+  font-weight: 800;
+  margin: 2.2rem 0 1.1rem 0;
+  letter-spacing: 0.01em;
+  text-align: left;
+  width: 100%;
+}
+.hiq-section-sub {
+  color: #4fff4f;
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 1.2rem 0 0.7rem 0;
+}

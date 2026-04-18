@@ -1,0 +1,11 @@
+.hiq-badge {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.2em 0.9em;
+  font-size: 1em;
+  margin-left: 0.5em;
+  color: #101214;
+  background: #00ff7f;
+  letter-spacing: 0.01em;
+}

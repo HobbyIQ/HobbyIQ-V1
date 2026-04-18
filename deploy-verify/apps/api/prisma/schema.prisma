@@ -1,0 +1,406 @@
+// Prisma schema for HobbyIQ backend
+// Includes User, Portfolio, PortfolioCard, PortfolioSnapshot, WatchlistItem, CardAnalysisSnapshot, Alert
+// Enums: Recommendation, GradeCompany, AlertType, AlertSeverity
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Recommendation {
+  STRONG_BUY
+  BUY
+  HOLD
+  SELL
+  STRONG_SELL
+}
+
+enum GradeCompany {
+  PSA
+  BGS
+  SGC
+  CSG
+  OTHER
+}
+
+enum AlertType {
+  BUY_TARGET_BREACH
+  SELL_TARGET_BREACH
+  RECOMMENDATION_SHIFT
+  CUSTOM
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  portfolios Portfolio[]
+  portfolioCards PortfolioCard[]
+  alerts    Alert[]
+  watchlistItems WatchlistItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Portfolio {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  name      String
+  cards     PortfolioCard[]
+  snapshots PortfolioSnapshot[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PortfolioCard {
+  id          String   @id @default(uuid())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  portfolioId String
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  player      String
+  year        Int
+  brand       String
+  setName     String
+  cardNumber  String?
+  parallel    String
+  serialNumber String?
+  printRun    Int?
+  isAuto      Boolean
+  gradeCompany GradeCompany?
+  gradeValue  Int?
+  purchasePrice Float
+  purchaseDate DateTime
+  quantity    Int
+  source      String?
+  notes       String?
+  imageUrl    String?
+  currentEstimatedValue Float
+  riskAdjustedValue Float?
+  quickExitValue Float?
+  gainLossDollar Float
+  gainLossPercent Float
+  currentRecommendation Recommendation
+  currentConfidenceScore Int
+  currentUrgencyScore Int?
+  currentDecisionScore Int?
+  liquidityScore Int?
+  negativePressureScore Int?
+  marketMomentumScore Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  analysisSnapshots CardAnalysisSnapshot[]
+}
+
+model PortfolioSnapshot {
+  id          String   @id @default(uuid())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
+  portfolioId String
+  snapshotDate DateTime
+  totalValue  Float
+  createdAt   DateTime @default(now())
+}
+
+model WatchlistItem {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  player    String
+  set       String
+  year      Int
+  cardNumber String
+  parallel  String?
+  targetBuyPrice  Float?
+  targetSellPrice Float?
+  createdAt DateTime @default(now())
+}
+
+model CardAnalysisSnapshot {
+  id          String   @id @default(uuid())
+  card        PortfolioCard @relation(fields: [cardId], references: [id])
+  cardId      String
+  analysisDate DateTime
+  recommendation Recommendation
+  confidenceScore Int
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      AlertType
+  severity  AlertSeverity
+  message   String
+  cardId    String?
+  isRead    Boolean  @default(false)
+  isDismissed Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, isRead, isDismissed])
+  @@index([cardId])
+}
+
+// ==================== Bronze Layer ====================
+model RawMarketEvent {
+  id             String   @id @default(uuid())
+  source         String
+  sourceRecordId String
+  sourceType     String // e.g., "sold_listing", "active_listing", etc.
+  entityType     String // e.g., "card", "player", etc.
+  entityKey      String
+  payloadJson    Json
+  payloadHash    String
+  ingestedAt     DateTime @default(now())
+  eventTimestamp DateTime?
+  status         String // "new", "processed", "duplicate", "error"
+  errorMessage   String?
+  metadataJson   Json?
+}
+
+// ==================== Silver Layer ====================
+model NormalizedPlayer {
+  playerId         String   @id
+  canonicalName    String
+  mlbOrg           String
+  bats             String
+  throws           String
+  positions        String
+  birthYear        Int?
+  eta              String?
+  externalIdsJson  Json?
+  normalizedAt     DateTime @default(now())
+}
+
+model NormalizedCard {
+  cardKey           String   @id
+  playerId          String
+  year              Int
+  brand             String
+  setName           String
+  subset            String
+  cardNumber        String?
+  isFirstBowman     Boolean?
+  isAuto            Boolean
+  parallel          String
+  serialText        String?
+  printRun          Int?
+  gradeCompany      String?
+  gradeValue        String?
+  canonicalLabel    String
+  normalizedAt      DateTime @default(now())
+}
+
+model NormalizedSale {
+  saleId                String   @id
+  cardKey               String
+  playerId              String
+  source                String
+  soldAt                DateTime
+  title                 String
+  price                 Float
+  originalPrice         Float?
+  shippingPrice         Float?
+  totalPrice            Float?
+  gradeCompany          String?
+  gradeValue            String?
+  listingType           String
+  acceptedOfferKnown    Boolean
+  sellerName            String?
+  normalizedScore       Float
+  contaminationFlagsJson Json?
+  isValidComp           Boolean
+  rawEventId            String?
+  normalizedAt          DateTime @default(now())
+}
+
+model NormalizedActiveListing {
+  listingId             String   @id
+  cardKey               String
+  playerId              String
+  source                String
+  observedAt            DateTime
+  title                 String
+  listPrice             Float
+  shippingPrice         Float?
+  totalAsk              Float?
+  sellerName            String?
+  sellerFeedbackPct     Float?
+  sellerFeedbackCount   Int?
+  acceptsReturns        Boolean?
+  listingType           String
+  normalizedScore       Float
+  contaminationFlagsJson Json?
+  isValidListing        Boolean
+  rawEventId            String?
+  normalizedAt          DateTime @default(now())
+}
+
+model SupplyDemandObservation {
+  id                  String   @id @default(uuid())
+  cardKey             String
+  playerId            String
+  observedAt          DateTime
+  activeCount         Int
+  soldCountWindow2w   Int
+  soldCountWindow4w   Int
+  soldCountWindow3m   Int
+  avgAsk              Float?
+  avgSalePrice        Float?
+  metadataJson        Json?
+}
+
+// ==================== Gold Layer ====================
+model CardMarketSnapshot {
+  snapshotId                String   @id @default(uuid())
+  cardKey                   String
+  playerId                  String
+  asOf                      DateTime
+  expiresAt                 DateTime
+  freshnessTier             String
+  confidenceScore           Float
+  sourceCount               Int
+  dataCompletenessScore     Float
+  buildVersion              String
+  methodologyVersion        String
+  pricingBandsJson          Json
+  marketSignalsJson         Json
+  supplyDemandTrendsJson    Json
+  marketLadderJson          Json
+  recentCompsJson           Json
+  calculationJson           Json
+  riskPanelJson             Json?
+  entryExitPlanJson         Json?
+  compQualityJson           Json?
+  timeHorizonViewsJson      Json?
+  liquidityProfileJson      Json?
+  liquidityLadderJson       Json?
+  marketTemperatureJson     Json?
+  guardrailFlagsJson        Json?
+  listingQualityAssessmentsJson Json?
+  actionPlanJson            Json?
+  aiThesisJson              Json?
+  featuresJson              Json?
+  inputSummaryJson          Json?
+  isStale                   Boolean
+  createdAt                 DateTime @default(now())
+}
+
+model PlayerMarketSnapshot {
+  snapshotId                String   @id @default(uuid())
+  playerId                  String
+  asOf                      DateTime
+  expiresAt                 DateTime
+  freshnessTier             String
+  confidenceScore           Float
+  sourceCount               Int
+  dataCompletenessScore     Float
+  buildVersion              String
+  methodologyVersion        String
+  playerScoreJson           Json?
+  playerMarketZoneJson      Json?
+  bestCardsToBuyNowJson     Json?
+  playerMarketLadderJson    Json?
+  playerMarketHealthJson    Json?
+  recentCompsSupportingViewJson Json?
+  aiThesisJson              Json?
+  riskPanelJson             Json?
+  catalystTrackerJson       Json?
+  portfolioFitJson          Json?
+  timeHorizonViewsJson      Json?
+  marketTemperatureJson     Json?
+  marketMaturityStageJson   Json?
+  recommendationSetJson     Json?
+  actionPlanJson            Json?
+  featuresJson              Json?
+  inputSummaryJson          Json?
+  isStale                   Boolean
+  createdAt                 DateTime @default(now())
+}
+
+model ComputationAudit {
+  auditId               String   @id @default(uuid())
+  entityType            String
+  entityKey             String
+  asOf                  DateTime
+  buildVersion          String
+  methodologyVersion    String
+  sourceInputsJson      Json
+  normalizedInputsJson  Json
+  featureValuesJson     Json
+  outputsJson           Json
+  confidenceScore       Float
+  notesJson             Json?
+  createdAt             DateTime @default(now())
+}
+
+// ==================== Orchestration/Event Models ====================
+model MarketDataEvent {
+  eventId         String   @id @default(uuid())
+  eventType       String
+  entityType      String
+  entityKey       String
+  playerId        String?
+  cardKey         String?
+  occurredAt      DateTime
+  source          String
+  payloadJson     Json
+  importanceScore Float?
+  dedupeKey       String?
+  createdAt       DateTime @default(now())
+}
+
+model SnapshotRefreshRequest {
+  requestId           String   @id @default(uuid())
+  entityType          String
+  entityKey           String
+  playerId            String?
+  cardKey             String?
+  reasonCodes         String
+  requestedAt         DateTime
+  priority            String
+  forceRefresh        Boolean
+  requestedBy         String
+  dependencyContextJson Json?
+  createdAt           DateTime @default(now())
+}
+
+model SnapshotRefreshResult {
+  resultId        String   @id @default(uuid())
+  requestId       String
+  entityType      String
+  entityKey       String
+  startedAt       DateTime
+  completedAt     DateTime?
+  status          String
+  refreshPath     String
+  snapshotId      String?
+  oldSnapshotId   String?
+  changeSummaryJson Json?
+  diagnosticsJson Json?
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+}
+
+model SnapshotChangeSummary {
+  changeId        String   @id @default(uuid())
+  entityType      String
+  entityKey       String
+  oldSnapshotId   String
+  newSnapshotId   String
+  changedFieldsJson Json
+  significanceScore Float
+  generatedAt     DateTime @default(now())
+}

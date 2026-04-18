@@ -1,0 +1,10 @@
+{
+  "compIQ": 78,
+  "playerIQ": 85,
+  "dailyIQ": 65,
+  "supplyScore": 40,
+  "scarcityScore": 60,
+  "liquidityScore": 55,
+  "negativePressureScore": 20,
+  "pricingTrend": 0.3
+}

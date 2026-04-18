@@ -1,0 +1,21 @@
+.hiq-card {
+  background: #181c1f;
+  color: #e6ffe6;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px #0f1a0f44;
+  padding: 2rem;
+  margin: 2rem 0;
+  width: 100%;
+  max-width: 540px;
+  border: 1.5px solid #1a3d1a;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+@media (max-width: 600px) {
+  .hiq-card {
+    padding: 1rem;
+    font-size: 0.97em;
+  }
+}

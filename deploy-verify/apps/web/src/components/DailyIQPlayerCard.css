@@ -1,0 +1,74 @@
+.dailyiq-card {
+  background: #181c1f;
+  color: #e6ffe6;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px #0f1a0f44;
+  padding: 1.5rem;
+  margin: 1.2rem 0;
+  max-width: 540px;
+  width: 100%;
+  border: 1.5px solid #1a3d1a;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.dailyiq-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.2rem;
+  align-items: center;
+  font-size: 1.1rem;
+  margin-bottom: 0.2rem;
+}
+.dailyiq-player {
+  font-weight: 700;
+  color: #7fff7f;
+  font-size: 1.2em;
+}
+.dailyiq-org {
+  color: #aaffaa;
+}
+.dailyiq-level {
+  color: #4fff4f;
+  font-style: italic;
+}
+.dailyiq-pos {
+  color: #00bfff;
+}
+.dailyiq-year {
+  color: #ffe066;
+  font-size: 0.98em;
+}
+.dailyiq-tag {
+  color: #101214;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.2em 0.9em;
+  font-size: 1em;
+  margin-left: auto;
+}
+.dailyiq-statline {
+  color: #00ffb3;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+.dailyiq-note {
+  color: #baffc9;
+  font-size: 1em;
+  font-style: italic;
+}
+.dailyiq-market {
+  color: #7fff7f;
+  font-size: 1em;
+}
+@media (max-width: 600px) {
+  .dailyiq-card {
+    padding: 1rem;
+    font-size: 0.97em;
+  }
+  .dailyiq-header {
+    gap: 0.5rem 0.7rem;
+    font-size: 1em;
+  }
+}

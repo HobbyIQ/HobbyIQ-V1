@@ -1,0 +1,27 @@
+// comp.js - Raw comp model for HobbyIQ Pricing Engine
+module.exports = {
+  source: String,
+  listingTitle: String,
+  salePrice: Number,
+  acceptedPrice: Number,
+  rawPrice: Number,
+  shipping: Number,
+  tax: Number,
+  totalPrice: Number,
+  soldDate: Date,
+  playerName: String,
+  year: Number,
+  brand: String,
+  product: String,
+  parallel: String,
+  serial: String,
+  gradeCompany: String,
+  gradeValue: String,
+  autoFlag: Boolean,
+  notes: String,
+  imageUrl: String,
+  listingUrl: String,
+  confidenceFlags: Array,
+  normalizedCardKey: String,
+  importedAt: Date
+};

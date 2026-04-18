@@ -1,0 +1,16 @@
+.hiq-btn {
+  background: linear-gradient(90deg, #00ff7f 0%, #007f3f 100%);
+  color: #101214;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7em 2em;
+  font-size: 1.1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.hiq-btn:disabled {
+  background: #222;
+  color: #666;
+  cursor: not-allowed;
+}

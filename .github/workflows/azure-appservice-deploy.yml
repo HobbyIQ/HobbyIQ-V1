@@ -1,17 +1,26 @@
+<<<<<<< HEAD
 name: Deploy HobbyIQ API to Azure App Service
+=======
+name: Deploy HobbyIQ Backend to Azure App Service
+>>>>>>> 15cb280 (Migrate Azure App Service deploy to service principal (azure/login), Node 22, and production-safe workflow. Remove publish-profile usage.)
 
 on:
   push:
     branches:
       - main
+<<<<<<< HEAD
 
 env:
   AZURE_WEBAPP_NAME: HobbyIQ
   NODE_VERSION: '22.x'
+=======
+  workflow_dispatch:
+>>>>>>> 15cb280 (Migrate Azure App Service deploy to service principal (azure/login), Node 22, and production-safe workflow. Remove publish-profile usage.)
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
 
     steps:
       # Checkout repo
@@ -47,3 +56,40 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: deploy
+=======
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Install dependencies
+        run: npm ci --prefix apps/api
+
+      - name: Build project
+        run: npm run build --prefix apps/api
+
+      - name: Zip build output
+        run: |
+          cd apps/api/dist
+          zip -r ../../hobbyiq-api.zip .
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: HobbyIQ
+          package: apps/hobbyiq-api.zip
+
+      - name: Post-deployment health check
+        run: |
+          sleep 20
+          curl -f https://HobbyIQ.azurewebsites.net/api/health
+>>>>>>> 15cb280 (Migrate Azure App Service deploy to service principal (azure/login), Node 22, and production-safe workflow. Remove publish-profile usage.)

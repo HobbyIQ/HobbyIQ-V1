@@ -1,0 +1,139 @@
+/* eBay Supply Intelligence Styling */
+.compiq-ebay-supply {
+  background: #111d13;
+  border-radius: 10px;
+  border: 1px solid #2e4;
+  margin: 1.5rem 0 1.5rem 0;
+  padding: 1.2rem 1.2rem 1rem 1.2rem;
+  color: #e6ffe6;
+  box-shadow: 0 2px 8px #0f1a0f33;
+}
+.ebay-supply-title {
+  font-weight: 700;
+  color: #7fff7f;
+  font-size: 1.1rem;
+  margin-bottom: 0.7rem;
+}
+.ebay-supply-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 1rem;
+}
+.supply-tightening {
+  color: #00ff7f;
+  font-weight: 700;
+}
+.supply-stable {
+  color: #aaffaa;
+}
+.supply-expanding {
+  color: #ffe066;
+  font-weight: 600;
+}
+.supply-unknown {
+  color: #aaa;
+}
+.compiq-card {
+  background: #181c1f;
+  color: #e6ffe6;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px #0f1a0f44;
+  padding: 2rem;
+  margin: 2rem 0;
+  max-width: 540px;
+  width: 100%;
+  border: 1.5px solid #1a3d1a;
+  font-family: 'Inter', sans-serif;
+}
+.compiq-header {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+.compiq-player {
+  font-weight: 700;
+  color: #7fff7f;
+}
+.compiq-set {
+  color: #aaffaa;
+}
+.compiq-parallel {
+  color: #4fff4f;
+  font-style: italic;
+}
+.compiq-parallel.auto {
+  color: #00ffb3;
+}
+.compiq-auto {
+  background: #003f2f;
+  color: #00ffb3;
+  border-radius: 6px;
+  padding: 0.1em 0.5em;
+  margin-left: 0.5em;
+  font-size: 0.95em;
+}
+.compiq-values {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+.compiq-confidence {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.confidence-label {
+  font-weight: 600;
+  padding: 0.2em 0.7em;
+  border-radius: 8px;
+  background: #1a3d1a;
+}
+.confidence-high {
+  color: #00ff7f;
+}
+.confidence-medium {
+  color: #ffe066;
+}
+.confidence-low {
+  color: #ff6666;
+}
+.confidence-score {
+  color: #7fff7f;
+  font-size: 1.1em;
+}
+.compiq-explanation {
+  background: #111;
+  color: #baffc9;
+  border-radius: 8px;
+  padding: 1em;
+  margin-bottom: 1rem;
+  font-size: 1em;
+  white-space: pre-wrap;
+}
+.compiq-warnings {
+  color: #ffe066;
+  margin-bottom: 0.5rem;
+}
+.compiq-next-actions {
+  color: #7fff7f;
+  font-size: 1em;
+}
+@media (max-width: 600px) {
+  .compiq-card {
+    padding: 1rem;
+    font-size: 0.97em;
+  }
+  .compiq-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .compiq-values {
+    gap: 1rem;
+  }
+}

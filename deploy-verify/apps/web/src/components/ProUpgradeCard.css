@@ -1,0 +1,72 @@
+.pro-upgrade-card {
+  max-width: 420px;
+  margin: 2.5rem auto 2rem auto;
+  padding: 32px 28px 24px 28px;
+  border-radius: 18px;
+  background: #18203a;
+  box-shadow: 0 6px 32px #000a, 0 1.5px 8px #0ff2;
+  border: 1.5px solid #22304a;
+  color: #dbeafe;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pro-upgrade-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4fd1c5;
+  margin-bottom: 1.2rem;
+  letter-spacing: 0.02em;
+}
+.pro-upgrade-tiers {
+  display: flex;
+  gap: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+.pro-upgrade-tier {
+  background: #14213d;
+  border-radius: 12px;
+  padding: 18px 22px 14px 22px;
+  box-shadow: 0 2px 8px #0ff2;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tier-label {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  color: #ffe066;
+}
+.pro-upgrade-tier.pro .tier-label {
+  color: #4fd1c5;
+}
+.pro-upgrade-tier ul {
+  list-style: disc inside;
+  padding: 0;
+  margin: 0;
+  color: #b5e3e8;
+  font-size: 1.01rem;
+}
+.pro-upgrade-btn {
+  margin-top: 1.2rem;
+  padding: 12px 0;
+  width: 100%;
+  font-size: 1.08rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #4fd1c5 0%, #14213d 100%);
+  color: #0a1628;
+  font-weight: 700;
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px #0ff2;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+.pro-upgrade-note {
+  margin-top: 0.7rem;
+  color: #b5e3e8;
+  font-size: 0.98rem;
+  text-align: center;
+}

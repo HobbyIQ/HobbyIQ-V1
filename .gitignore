@@ -1,4 +1,17 @@
 node_modules/
-app.zip
 .env
-node_modules
+app.zip
+dist/
+deploy.zip
+*.log
+*.tgz
+.DS_Store
+.idea/
+.vscode/
+coverage/
+# Azure
+.swa/
+# OS
+Thumbs.db
+# TypeScript
+*.tsbuildinfo
