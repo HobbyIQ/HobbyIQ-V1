@@ -1,7 +1,7 @@
 node_modules/
-.env
-app.zip
 dist/
+.env
+*.zip
 deploy.zip
 *.log
 *.tgz
