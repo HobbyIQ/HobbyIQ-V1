@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.makeDecision = makeDecision;
 function makeDecision({ payload, weighted, trends, supply, liquidityScore, absorptionRate, playerSignal, newsSignal, confidence, parallelInfo, comps, volatility, velocity, liquidityTier, usedInterpolation, marketImpact }) {
-    // Mock logic for recommendation
     const recommendation = weighted.estimatedValue > payload.askingPrice ? 'BUY' : 'HOLD';
     const urgency = trends.trendDirection === 'up' ? 'medium' : 'low';
     const riskLevel = 'moderate';

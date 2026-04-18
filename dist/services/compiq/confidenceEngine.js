@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.confidenceEngine = confidenceEngine;
 function confidenceEngine({ compCount, recencyScore, varianceScore, supplyScore, matchQualityScore }) {
-    // All scores 0-1
     const confidence = (compCount * 0.25) +
         (recencyScore * 0.25) +
         (varianceScore * 0.2) +

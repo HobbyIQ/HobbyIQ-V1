@@ -26,7 +26,6 @@ function projectPrice(payload, events) {
         eventConfidence = Math.max(eventConfidence, event.confidence);
         reasoning.push(`Event: ${event.eventType} (impact: ${event.impactScore}, confidence: ${event.confidence})`);
     });
-    // Supply/trend adjustments
     let supplyAdj = 1;
     if (payload.supplyTrend2W && payload.supplyTrend2W < 0)
         supplyAdj += 0.05;
@@ -39,7 +38,6 @@ function projectPrice(payload, events) {
         trendAdj -= 0.07;
     multiplierLow *= supplyAdj * trendAdj;
     multiplierHigh *= supplyAdj * trendAdj;
-    // Clamp
     multiplierLow = Math.max(0.4, Math.min(multiplierLow, 3.5));
     multiplierHigh = Math.max(0.4, Math.min(multiplierHigh, 4.0));
     const projectedValueLow = Math.round(base * multiplierLow);

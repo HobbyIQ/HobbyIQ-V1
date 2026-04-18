@@ -1,5 +1,4 @@
-// === Hardened Azure Startup (Minimal, Compiled Output Only) ===
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+"use strict";
 const express = require('express');
 console.log('=== HobbyIQ MINIMAL STARTUP ===');
 console.log('Node version:', process.version);
@@ -12,7 +11,6 @@ process.on('unhandledRejection', err => {
 });
 const app = express();
 app.use(express.json());
-// Health endpoint only
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'HobbyIQ running' });
 });

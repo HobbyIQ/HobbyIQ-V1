@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPlayerSummary = getPlayerSummary;
 async function getPlayerSummary(player) {
-    // Mocked data
     return {
         success: true,
         player,

@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAccelerationScore = getAccelerationScore;
-// Acceleration Engine
 function getAccelerationScore(comps) {
     if (!comps || comps.length < 6) {
         return { accelerationScore: 0, accelerationDirection: 'flat', notes: ['Not enough comps for acceleration analysis'] };

@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runFullAnalysis = runFullAnalysis;
 const cardDecisionHandler_1 = require("./cardDecisionHandler");
 const cardOutcomeHandler_1 = require("./cardOutcomeHandler");
-// Helper to extract CompIQ output from cardDecisionHandler result
 function extractCompIQ(decision) {
     return decision?.summary?.finalFMV ?? decision?.summary?.currentEstimatedValue ?? null;
 }

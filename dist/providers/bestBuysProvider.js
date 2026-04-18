@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBestBuys = getBestBuys;
 async function getBestBuys() {
-    // Mocked data
     return {
         success: true,
         bestBuys: [

@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPerformanceImpact = getPerformanceImpact;
 function getPerformanceImpact(stats) {
-    // Mocked logic: hot/cold streaks, promotions, etc.
     if (!stats) {
         return {
             type: 'performance_hot',
@@ -12,7 +11,6 @@ function getPerformanceImpact(stats) {
             reason: 'No recent performance data',
         };
     }
-    // Example: hot streak
     if (stats.recentGames && stats.recentGames > 5 && stats.avgPoints > 20) {
         return {
             type: 'performance_hot',
@@ -22,7 +20,6 @@ function getPerformanceImpact(stats) {
             reason: 'Player on a hot streak',
         };
     }
-    // Example: cold streak
     if (stats.recentGames && stats.recentGames > 5 && stats.avgPoints < 8) {
         return {
             type: 'performance_cold',

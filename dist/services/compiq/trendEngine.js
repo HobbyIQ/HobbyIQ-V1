@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.detectTrends = detectTrends;
 function detectTrends(comps) {
-    // Mock: compare last 2 vs previous 2
     if (comps.length < 4)
         return { trendDirection: 'neutral', trendStrength: 'low' };
     const last2 = comps.slice(-2).map(c => c.price);

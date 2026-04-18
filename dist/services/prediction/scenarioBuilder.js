@@ -6,7 +6,6 @@ const priceProjectionEngine_1 = require("./priceProjectionEngine");
 function buildScenarios(payload) {
     const { currentEstimatedValue, events = [] } = payload;
     const eventModels = events.map((e) => (0, eventModel_1.getEventModel)(e));
-    // For now, one scenario per event, plus a combined scenario
     const scenarios = eventModels.map(event => {
         const { projectedValueLow, projectedValueHigh, multiplierLow, multiplierHigh, probability, timelineDays, reasoning } = (0, priceProjectionEngine_1.projectPrice)(payload, [event]);
         return {
@@ -20,7 +19,6 @@ function buildScenarios(payload) {
             reasoning
         };
     });
-    // Combined scenario
     if (eventModels.length > 1) {
         const { projectedValueLow, projectedValueHigh, multiplierLow, multiplierHigh, probability, timelineDays, reasoning } = (0, priceProjectionEngine_1.projectPrice)(payload, eventModels);
         scenarios.push({
@@ -34,7 +32,6 @@ function buildScenarios(payload) {
             reasoning
         });
     }
-    // Summary
     const bestCase = Math.max(...scenarios.map(s => s.projectedValueHigh));
     const worstCase = Math.min(...scenarios.map(s => s.projectedValueLow));
     const mostLikely = Math.round(scenarios.reduce((sum, s) => sum + s.projectedValueLow * s.probability, 0) / scenarios.length);

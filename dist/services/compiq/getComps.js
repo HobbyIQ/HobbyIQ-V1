@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getComps = getComps;
 async function getComps(payload) {
-    // Mock: return fake comps
     return [
         { date: '2026-04-10', price: 385, grade: 'raw', source: 'eBay', notes: 'clean comp' },
         { date: '2026-04-08', price: 392, grade: 'raw', source: 'eBay', notes: '' },

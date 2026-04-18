@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getFreshnessScore = getFreshnessScore;
-// Freshness Engine
 function getFreshnessScore(comps) {
     if (!comps || comps.length === 0) {
         return { freshnessScore: 0, freshnessTier: 'low', notes: ['No comps available'] };

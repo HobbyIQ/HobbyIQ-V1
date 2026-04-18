@@ -31,7 +31,6 @@ function aggregateMarketImpact(signals) {
         pricePressure = 'downward';
     }
     const overallScore = Math.round(Math.min(score * 10, 100));
-    // Modest multipliers: 0.98-1.02 neutral, 0.95-1.05 max
     let marketImpactMultiplierLow = 0.98;
     let marketImpactMultiplierHigh = 1.02;
     if (overallDirection === 'positive') {

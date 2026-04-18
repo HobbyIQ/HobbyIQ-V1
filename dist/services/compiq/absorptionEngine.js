@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAbsorptionAnalysis = getAbsorptionAnalysis;
-// Absorption Engine
 function getAbsorptionAnalysis(listings, sold7d, newListings7d) {
     if (!newListings7d || newListings7d === 0) {
         return {

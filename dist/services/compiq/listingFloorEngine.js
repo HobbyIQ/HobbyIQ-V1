@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getListingFloorAnalysis = getListingFloorAnalysis;
-// Listing Floor Engine
 function getListingFloorAnalysis(listings, lastSale) {
     if (!listings || listings.length === 0 || !lastSale) {
         return {
