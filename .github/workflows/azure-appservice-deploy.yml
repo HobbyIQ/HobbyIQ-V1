@@ -1,0 +1,49 @@
+name: Deploy HobbyIQ API to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AZURE_WEBAPP_NAME: HobbyIQ
+  NODE_VERSION: '22.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Build TypeScript
+      - name: Build project
+        run: npm run build
+
+      # Prepare deploy package
+      - name: Prepare deployment package
+        run: |
+          mkdir deploy
+          cp package.json deploy/
+          cp package-lock.json deploy/
+          cp -r dist deploy/
+
+      # Deploy to Azure
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: deploy
