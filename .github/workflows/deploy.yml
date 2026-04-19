@@ -38,11 +38,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Disable Oryx build
+        run: |
+          az webapp config appsettings set \
+            --name HobbyIQ \
+            --resource-group rg-hobbyiq-dev \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false
+
       - name: Verify Azure
         run: az webapp list --query "[].name" -o table
 
       - name: Deploy to correct Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: hobbyiq-andjgvhgfbhfcuhv
-          package: .
+          app-name: HobbyIQ
+          package: ./deploy
