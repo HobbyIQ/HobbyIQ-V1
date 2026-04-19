@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.FEATURE_FLAGS = void 0;
+exports.FEATURE_FLAGS = {
+    EBAY_SYNC_ENABLED: process.env.EBAY_SYNC_ENABLED === 'true',
+    PSA_SYNC_ENABLED: process.env.PSA_SYNC_ENABLED === 'true',
+    LEARNING_ENABLED: process.env.LEARNING_ENABLED === 'true',
+    PORTFOLIO_ALERTS_ENABLED: process.env.PORTFOLIO_ALERTS_ENABLED === 'true',
+    DAILYIQ_ALERTS_ENABLED: process.env.DAILYIQ_ALERTS_ENABLED === 'true',
+    ADMIN_DIAGNOSTICS_ENABLED: process.env.ADMIN_DIAGNOSTICS_ENABLED === 'true',
+    DEMO_SEED_TOOLS_ENABLED: process.env.DEMO_SEED_TOOLS_ENABLED === 'true',
+    DRY_RUN_ALERTS_ENABLED: process.env.DRY_RUN_ALERTS_ENABLED === 'true',
+    DRY_RUN_LEARNING_ENABLED: process.env.DRY_RUN_LEARNING_ENABLED === 'true',
+    BETA_COHORT_FEATURES: process.env.BETA_COHORT_FEATURES === 'true',
+};

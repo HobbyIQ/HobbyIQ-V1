@@ -45,7 +45,8 @@ const marketMoversController = async (_req, res) => {
 exports.marketMoversController = marketMoversController;
 const playerSummaryController = async (req, res) => {
     try {
-        const result = await (0, marketHandlers_1.getPlayerSummary)(req.params.player);
+        const player = Array.isArray(req.params.player) ? req.params.player[0] : req.params.player;
+        const result = await (0, marketHandlers_1.getPlayerSummary)(player);
         res.json(result);
     }
     catch (err) {

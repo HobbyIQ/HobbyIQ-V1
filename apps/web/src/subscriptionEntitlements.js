@@ -1,0 +1,88 @@
+"use strict";
+/*
+App Store Connect Setup Guidance for HobbyIQ Subscriptions
+
+1. Create two auto-renewable subscription products in App Store Connect:
+   - Product ID: hobbyiq.pro
+   - Product ID: hobbyiq.allstar
+
+2. Both products must be in the same Subscription Group (e.g., "HobbyIQ Premium").
+
+3. Set durations, pricing, and localizations as needed for each product.
+
+4. Enable "Family Sharing" if desired (optional).
+
+5. In the app:
+   - Use StoreKit 2 to load and purchase these products.
+   - Implement and expose a "Restore Purchases" button (required by Apple).
+   - Unlock features based on the current StoreKit entitlement state (do not hardcode unlocks).
+
+6. Test subscriptions and restore flow using the App Store sandbox environment before release.
+
+7. Do not add Stripe or any other web-based billing for iOS users.
+*/
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ENTITLEMENTS = exports.STOREKIT_PRODUCT_IDS = void 0;
+exports.getTierFromProductId = getTierFromProductId;
+exports.getEntitlementForTier = getEntitlementForTier;
+// StoreKit product identifiers (example)
+exports.STOREKIT_PRODUCT_IDS = {
+    PRO: "com.hobbyiq.pro",
+    ALL_STAR: "com.hobbyiq.allstar"
+};
+// Entitlement mapping for each tier
+exports.ENTITLEMENTS = {
+    FREE: {
+        tier: "FREE",
+        searchesPerDay: 3,
+        portfolioEnabled: false,
+        alertsEnabled: false,
+        advancedAlertsEnabled: false,
+        dailyInsightsEnabled: false
+    },
+    PRO: {
+        tier: "PRO",
+        searchesPerDay: "unlimited",
+        portfolioEnabled: true,
+        alertsEnabled: true,
+        advancedAlertsEnabled: false,
+        dailyInsightsEnabled: false
+    },
+    ALL_STAR: {
+        tier: "ALL_STAR",
+        searchesPerDay: "unlimited",
+        portfolioEnabled: true,
+        alertsEnabled: true,
+        advancedAlertsEnabled: true,
+        dailyInsightsEnabled: true
+    }
+};
+// Utility: Map StoreKit product ID to tier
+function getTierFromProductId(productId) {
+    switch (productId) {
+        case exports.STOREKIT_PRODUCT_IDS.PRO:
+            return "PRO";
+        case exports.STOREKIT_PRODUCT_IDS.ALL_STAR:
+            return "ALL_STAR";
+        default:
+            return "FREE";
+    }
+}
+// Utility: Get entitlement for a given tier
+function getEntitlementForTier(tier) {
+    return exports.ENTITLEMENTS[tier];
+}
+// Example: Get entitlement from StoreKit purchase
+// const tier = getTierFromProductId(storeKitProductId);
+// const entitlement = getEntitlementForTier(tier);
+name: Workflow;
+Test;
+"on";
+workflow_dispatch: jobs: test: runs - on;
+ubuntu - latest;
+steps: -name;
+Confirm;
+workflow;
+loads;
+run: echo;
+"ok";

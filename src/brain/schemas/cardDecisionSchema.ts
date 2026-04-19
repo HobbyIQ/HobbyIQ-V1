@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi, { ValidationResult } from 'joi';
 
 export const cardDecisionSchema = Joi.object({
   player: Joi.string().required(),
@@ -13,6 +13,6 @@ export const cardDecisionSchema = Joi.object({
   userIntent: Joi.string().valid('buy', 'hold', 'sell').required(),
 });
 
-export function validateCardDecision(payload: any) {
+export function validateCardDecision(payload: unknown): ValidationResult {
   return cardDecisionSchema.validate(payload, { abortEarly: false });
 }

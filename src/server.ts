@@ -1,16 +1,16 @@
 
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (req: Request, res: Response) => {
   res.json({ status: "HobbyIQ running" });
 });
 
-const PORT = parseInt(process.env.PORT || "8080", 10);
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on ${PORT}`);
+const port = Number(process.env.PORT) || 8080;
+app.listen(port, "0.0.0.0", () => {
+  console.log(`HobbyIQ running on port ${port}`);
 });

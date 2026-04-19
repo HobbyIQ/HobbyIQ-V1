@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi, { ValidationResult } from 'joi';
 
 export const cardOutcomeSchema = Joi.object({
   player: Joi.string().required(),
@@ -11,6 +11,6 @@ export const cardOutcomeSchema = Joi.object({
   events: Joi.array().items(Joi.string()).required(),
 });
 
-export function validateCardOutcome(payload: any) {
+export function validateCardOutcome(payload: unknown): ValidationResult {
   return cardOutcomeSchema.validate(payload, { abortEarly: false });
 }

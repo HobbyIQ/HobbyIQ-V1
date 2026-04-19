@@ -8,10 +8,10 @@ const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (req, res) => {
     res.json({ status: "HobbyIQ running" });
 });
-const PORT = parseInt(process.env.PORT || "8080", 10);
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on ${PORT}`);
+const port = Number(process.env.PORT) || 8080;
+app.listen(port, "0.0.0.0", () => {
+    console.log(`HobbyIQ running on port ${port}`);
 });
