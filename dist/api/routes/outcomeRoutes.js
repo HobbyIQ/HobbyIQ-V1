@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const outcomeController_1 = require("../controllers/outcomeController");
+const outcomeController_1 = require("../../controllers/outcomeController");
 const router = express_1.default.Router();
 router.post('/card-outlook', outcomeController_1.cardOutcomeController);
 exports.default = router;

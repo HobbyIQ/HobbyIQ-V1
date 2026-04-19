@@ -1,6 +1,6 @@
 import express from 'express';
-import { cardDecisionController, healthController, bestBuysController, marketMoversController, playerSummaryController } from '../controllers/brainController';
-import { fullAnalysisController } from '../controllers/fullAnalysisController';
+import { cardDecisionController, healthController, bestBuysController, marketMoversController, playerSummaryController } from '../../controllers/brainController';
+import { fullAnalysisController } from '../../controllers/fullAnalysisController';
 
 const router = express.Router();
 

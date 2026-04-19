@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBestBuysProvider = getBestBuysProvider;
 exports.getMarketMoversProvider = getMarketMoversProvider;
 exports.getPlayerSummaryProvider = getPlayerSummaryProvider;
+// Mock providers for best-buys, market-movers, player-summary
 function getBestBuysProvider() {
     return [
         {

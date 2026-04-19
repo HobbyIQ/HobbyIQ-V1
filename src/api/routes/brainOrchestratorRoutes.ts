@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { fullAnalysisController } from '../controllers/brainOrchestratorController';
+import { fullAnalysisController } from '../../controllers/brainOrchestratorController';
 import { validateFullAnalysis } from '../middleware/validationMiddleware';
 
 const router = Router();

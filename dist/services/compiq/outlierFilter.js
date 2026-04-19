@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.filterOutliers = filterOutliers;
 function filterOutliers(comps) {
+    // Mock: remove comps > 2 stddev from mean
     if (!comps.length)
         return comps;
     const prices = comps.map(c => c.price);

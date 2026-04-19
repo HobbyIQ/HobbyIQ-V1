@@ -8,13 +8,13 @@ function getAccelerationScore(comps) {
     const sorted = comps.slice().sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const last3 = sorted.slice(-3).map(c => c.price);
     const prev3 = sorted.slice(-6, -3).map(c => c.price);
-    const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
     const last3avg = avg(last3);
     const prev3avg = avg(prev3);
     const accel = last3avg - prev3avg;
     let accelerationScore = 0;
     let accelerationDirection = 'flat';
-    let notes = [];
+    const notes = [];
     if (accel > 0) {
         accelerationScore = Math.min(1, accel / prev3avg);
         accelerationDirection = 'up';

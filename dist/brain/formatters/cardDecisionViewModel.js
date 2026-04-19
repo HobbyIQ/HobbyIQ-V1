@@ -11,10 +11,10 @@ function getVerdictLabel(recommendation) {
 }
 function getVerdictColor(recommendation) {
     switch (recommendation) {
-        case 'BUY': return '#2ecc40';
-        case 'HOLD': return '#f1c40f';
-        case 'SELL': return '#e74c3c';
-        default: return '#95a5a6';
+        case 'BUY': return '#2ecc40'; // green
+        case 'HOLD': return '#f1c40f'; // yellow
+        case 'SELL': return '#e74c3c'; // red
+        default: return '#95a5a6'; // gray
     }
 }
 function getShortAdvice(recommendation, summary) {

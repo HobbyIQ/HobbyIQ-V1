@@ -7,10 +7,10 @@ import { compQualityScore } from '../../services/compiq/compQualityScorer';
 import { filterOutliers } from '../../services/compiq/outlierEngine';
 import { weightedFMV } from '../../services/compiq/weightedFMVEngine';
 import { getFreshnessScore } from '../../services/compiq/freshnessEngine';
-import { getAccelerationScore } from '../../services/compiq/accelerationEngine';
-import { getListingFloorAnalysis } from '../../services/compiq/listingFloorEngine';
-import { getAbsorptionAnalysis } from '../../services/compiq/absorptionEngine';
-import { getClusterAnalysis } from '../../services/compiq/clusterEngine';
+import { getAccelerationScore } from '../../engines/accelerationEngine';
+import { getListingFloorAnalysis } from '../../engines/listingFloorEngine';
+import { getAbsorptionAnalysis } from '../../engines/absorptionEngine';
+import { getClusterAnalysis } from '../../engines/clusterEngine';
 import { getFMVBands } from '../../services/compiq/fmvBandsEngine';
 import { trendAnalysis } from '../../services/compiq/trendAnalysisEngine';
 import { volatilityEngine } from '../../services/compiq/volatilityEngine';
@@ -101,7 +101,13 @@ export async function cardDecisionHandler(payload: any) {
   const clusterResult = getClusterAnalysis(compsWithWeights.map(c => c.price));
 
   // 16. FMV Bands
-  const fmvBands = getFMVBands({ comps: compsWithWeights, blendedFMV: fmv, listingFloor: listingFloorResult.listingFloor });
+  const fmvBands = getFMVBands({
+    comps: compsWithWeights,
+    blendedFMV: fmv,
+    listingFloor: typeof listingFloorResult.listingFloor === 'number' && listingFloorResult.listingFloor !== null
+      ? listingFloorResult.listingFloor
+      : fmv // fallback to fmv if null
+  });
 
   // 17. Blended FMV (final adjustment)
   let blendedFMV = fmv;

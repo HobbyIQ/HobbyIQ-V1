@@ -1,5 +1,5 @@
 import express from 'express';
-import { fullAnalysisController } from '../controllers/fullAnalysisController';
+import { fullAnalysisController } from '../../controllers/fullAnalysisController';
 
 const router = express.Router();
 

@@ -10,7 +10,9 @@ const hobbyBuzzEngine_1 = require("../../services/marketImpact/hobbyBuzzEngine")
 const marketImpactAggregator_1 = require("../../services/marketImpact/marketImpactAggregator");
 const outcomeLogger_1 = require("../../services/learning/outcomeLogger");
 async function cardOutcomeHandler(payload) {
+    // Build scenarios
     const scenariosResult = (0, scenarioBuilder_1.buildScenarios)(payload);
+    // Market Impact Layer (mocked inputs for now)
     const perfImpact = (0, performanceImpactEngine_1.getPerformanceImpact)(payload?.stats || null);
     const rankingImpact = (0, rankingImpactEngine_1.getRankingImpact)(payload?.rankingData || null);
     const awardsImpact = (0, awardsImpactEngine_1.getAwardsImpact)(payload?.awardsData || null);
@@ -21,6 +23,8 @@ async function cardOutcomeHandler(payload) {
         awardsImpact,
         hobbyBuzzImpact
     ]);
+    // Log prediction
     (0, outcomeLogger_1.logOutcomePrediction)({ input: payload, ...scenariosResult, marketImpact, timestamp: new Date().toISOString() });
+    // Format for frontend
     return (0, cardOutcomeViewModel_1.formatCardOutcomeViewModel)(payload, { ...scenariosResult, marketImpact });
 }

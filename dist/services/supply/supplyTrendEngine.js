@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSupplyTrends = getSupplyTrends;
 exports.getLiquidity = getLiquidity;
 function getSupplyTrends(payload) {
+    // Mock: return supply trends
     return {
         supplyTrend2W: -14,
         supplyTrend4W: -20,
@@ -11,5 +12,6 @@ function getSupplyTrends(payload) {
     };
 }
 function getLiquidity(payload) {
+    // Mock: return liquidity
     return 'moderate';
 }

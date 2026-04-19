@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getEventModel = getEventModel;
 function getEventModel(eventType) {
+    // Deterministic, mock-safe event model
     switch (eventType) {
         case 'promotion':
             return { eventType, impactScore: 0.8, direction: 'positive', durationDays: 30, confidence: 0.85 };

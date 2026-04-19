@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.weightedPricing = weightedPricing;
 function weightedPricing(comps) {
+    // Mock: weight recent comps more
     if (!comps.length)
         return { estimatedValue: 0, priceRangeLow: 0, priceRangeHigh: 0 };
     const sorted = comps.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

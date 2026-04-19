@@ -16,7 +16,7 @@ function getListingFloorAnalysis(listings, lastSale) {
     const listingGap = sorted[1] ? sorted[1] - sorted[0] : 0;
     const floorVsLastSaleDelta = listingFloor - lastSale;
     const marketResetSignal = listingFloor > lastSale * 1.15;
-    let notes = [];
+    const notes = [];
     if (marketResetSignal)
         notes.push('Listing floor much higher than last sale (upward reset)');
     else if (listingFloor < lastSale * 0.85)

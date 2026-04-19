@@ -7,6 +7,7 @@ exports.envSchema = zod_1.z.object({
     NODE_ENV: zod_1.z.string().optional(),
     PORT: zod_1.z.string().optional(),
     AZURE_STORAGE_CONNECTION_STRING: zod_1.z.string().optional(),
+    // Add more required env vars as needed
 });
 function validateEnv(env) {
     const result = exports.envSchema.safeParse(env);

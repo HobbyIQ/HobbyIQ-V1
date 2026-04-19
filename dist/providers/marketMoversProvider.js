@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMarketMovers = getMarketMovers;
 async function getMarketMovers() {
+    // Mocked data
     return {
         success: true,
         marketMovers: [

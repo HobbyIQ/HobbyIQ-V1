@@ -55,7 +55,14 @@ app.post('/scarcity', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`);
+const PORT = parseInt(process.env.PORT, 10) || 8080;
+const HOST = '0.0.0.0';
+
+// Health endpoint for Azure
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'HobbyIQ running' });
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`API running on port ${PORT} (host: ${HOST})`);
 });

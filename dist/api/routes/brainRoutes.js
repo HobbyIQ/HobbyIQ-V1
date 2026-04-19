@@ -4,13 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const brainController_1 = require("../controllers/brainController");
-const fullAnalysisController_1 = require("../controllers/fullAnalysisController");
+const brainController_1 = require("../../controllers/brainController");
+const fullAnalysisController_1 = require("../../controllers/fullAnalysisController");
 const router = express_1.default.Router();
+// MCP HobbyIQ Brain health route (MCP standard)
 router.get('/health', (req, res) => res.json({ status: 'MCP HobbyIQ Brain running' }));
+// Legacy/other health controller (if needed, add as /health-legacy or similar)
+// router.get('/health-legacy', healthController);
 router.post('/card-decision', brainController_1.cardDecisionController);
 router.get('/best-buys', brainController_1.bestBuysController);
 router.get('/market-movers', brainController_1.marketMoversController);
 router.get('/player-summary/:player', brainController_1.playerSummaryController);
+// Unified full analysis endpoint
 router.post('/full-analysis', fullAnalysisController_1.fullAnalysisController);
 exports.default = router;

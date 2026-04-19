@@ -19,7 +19,7 @@ function parseEnvVar(key: string, fallback: any, required = false): any {
 export const env = {
   PORT: parseEnvVar("PORT", 4000),
   NODE_ENV: parseEnvVar("NODE_ENV", "development"),
-  CLIENT_APP_URL: parseEnvVar("CLIENT_APP_URL", "http://localhost:5173"),
+  CLIENT_APP_URL: parseEnvVar("CLIENT_APP_URL", "https://hobbyiq-andjgvhgfbhfcuhv.centralus-01.azurewebsites.net"),
   AI_MODE: parseEnvVar("AI_MODE", "mock"),
   AZURE_OPENAI_ENDPOINT: parseEnvVar("AZURE_OPENAI_ENDPOINT", "", true),
   AZURE_OPENAI_API_KEY: parseEnvVar("AZURE_OPENAI_API_KEY", "", true),

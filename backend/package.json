@@ -1,9 +1,11 @@
 {
   "name": "hobbyiq-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "zip": "zip -r deploy.zip . -x \"node_modules/*\" \".git/*\""
   },
   "engines": {
     "node": ">=18.x"

@@ -11,9 +11,9 @@ function getAbsorptionAnalysis(listings, sold7d, newListings7d) {
         };
     }
     const absorptionRate = sold7d / newListings7d;
-    let liquidityScore = Math.min(1, absorptionRate);
+    const liquidityScore = Math.min(1, absorptionRate);
     let supplyPressure = 'neutral';
-    let notes = [];
+    const notes = [];
     if (absorptionRate > 1.2) {
         supplyPressure = 'tightening';
         notes.push('Demand outpacing new supply');

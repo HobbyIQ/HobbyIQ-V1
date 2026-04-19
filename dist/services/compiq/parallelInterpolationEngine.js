@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parallelInterpolation = parallelInterpolation;
 function parallelInterpolation(comps, parallelCatalog, targetParallel) {
+    // Find nearby parallels and use their weighted FMV
     const nearby = Object.keys(parallelCatalog)
         .filter(p => p !== targetParallel)
         .map(p => ({
