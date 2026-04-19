@@ -1,0 +1,19 @@
+      docker:
+        remoteBuild: true
+name: hobbyiq-backend
+metadata:
+  template: custom
+services:
+  api:
+    project: .
+    language: js
+    host: containerapp
+    resourceName: hobbyiqbackendapi
+    azure:
+      kind: containerapp
+      location: centralus
+      sku: consumption
+      environmentVariables:
+        PORT: 8080
+      appInsights: true
+      logAnalytics: true
