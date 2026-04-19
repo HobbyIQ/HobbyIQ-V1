@@ -1,10 +1,58 @@
-name: Workflow Test
+name: Azure App Service Deploy
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: HobbyIQ
+  NODE_VERSION: "22"
+
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo ok
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install, build, and prune
+        run: |
+          npm ci
+          npm run build
+          npm prune --omit=dev
+
+      - name: Prepare deploy folder
+        run: |
+          rm -rf deploy
+          mkdir -p deploy
+          cp -r dist deploy/
+          cp -r node_modules deploy/
+          cp package.json deploy/
+          cp package-lock.json deploy/
+
+      - name: Verify deploy package
+        run: |
+          test -f deploy/dist/server.js
+          test -f deploy/package.json
+          test -f deploy/package-lock.json
+          test -d deploy/node_modules/express
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./deploy
