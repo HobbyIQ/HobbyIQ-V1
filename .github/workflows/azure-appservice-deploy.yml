@@ -24,18 +24,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Install, build, and prune
-        run: |
-          npm ci
-          npm run build
-          npm prune --omit=dev
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
 
       - name: Prepare deploy folder
         run: |
           rm -rf deploy
           mkdir -p deploy
           cp -r dist deploy/
-          cp -r node_modules deploy/
           cp package.json deploy/
           cp package-lock.json deploy/
 
@@ -44,7 +43,6 @@ jobs:
           test -f deploy/dist/server.js
           test -f deploy/package.json
           test -f deploy/package-lock.json
-          test -d deploy/node_modules/express
 
       - name: Azure Login
         uses: azure/login@v2
