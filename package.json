@@ -17,11 +17,7 @@
     "typescript": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/express": "^5.0.1",
-    "@types/cors": "^2.8.17"
-  },
-  "main": "dist/server.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js"
+    "@types/cors": "^2.8.17",
+    "@types/joi": "^17.2.3"
   }
 }
