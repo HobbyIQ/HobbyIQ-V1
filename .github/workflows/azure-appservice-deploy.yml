@@ -12,29 +12,17 @@ name: Workflow Test
 			name: Deploy HobbyIQ Backend
   workflow_dispatch:
 
-				test:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ok
-					runs-on: ubuntu-latest
-					steps:
-						- run: echo ok
 
-			name: Deploy HobbyIQ Backend
+		name: Workflow Test
 
-					cp package.json deploy/
-				push:
-					branches:
-						- main
-				workflow_dispatch:
-
-					cp package-lock.json deploy/
-				AZURE_WEBAPP_NAME: HobbyIQ
-				NODE_VERSION: "22"
-
+		on:
+			workflow_dispatch:
 
 				test:
+			test:
+				runs-on: ubuntu-latest
+				steps:
+					- run: echo ok
 					runs-on: ubuntu-latest
 					steps:
 						- run: echo "workflow is valid"
