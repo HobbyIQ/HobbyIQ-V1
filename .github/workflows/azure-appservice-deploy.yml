@@ -1,8 +1,12 @@
-name: Deploy HobbyIQ Backend to Azure App Service
 
+# ===============================
+# HobbyIQ Azure App Service Deploy
+# ===============================
 # This workflow builds and deploys the HobbyIQ backend to Azure App Service.
 # It does NOT use Azure Static Web Apps. Frontend is not deployed here.
 # Docs: https://docs.microsoft.com/azure/app-service/deploy-github-actions
+
+name: Deploy HobbyIQ Backend to Azure App Service
 
 on:
   push:
@@ -18,7 +22,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       # 1. Checkout code
       - name: Checkout code
@@ -69,15 +72,6 @@ jobs:
         run: |
           sleep 20
           curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health
-
-    workflow_dispatch:
-    NODE_VERSION: '22.x'
-name: Deploy HobbyIQ Backend to Azure App Service
-
-              - name: Install dependencies
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
                 run: npm ci
