@@ -6,7 +6,8 @@ on:
       - main
 
 env:
-  AZURE_WEBAPP_NAME: hobbyiq-andjgvhgfbhfcuhv
+  AZURE_WEBAPP_NAME: HobbyIQ
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-and-deploy:
@@ -19,20 +20,28 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm install
 
       - name: Build
         run: npm run build
 
+
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Web App
+      - name: Show Azure account
+        run: az account show
+
+      - name: List web apps visible to this login
+        run: az webapp list --query "[].{name:name, resourceGroup:resourceGroup, state:state}" -o table
+
+      - name: Deploy to existing Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: HobbyIQ
           package: .
