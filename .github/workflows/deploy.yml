@@ -1,3 +1,6 @@
+# AZURE_CREDENTIALS must be a Service Principal JSON.
+# It must include: clientId, clientSecret, subscriptionId, tenantId.
+# It must be stored in GitHub Secrets.
 name: Deploy HobbyIQ Backend
 
 on:
