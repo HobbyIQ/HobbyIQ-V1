@@ -1,8 +1,3 @@
-#
-# AZURE_CREDENTIALS must be a Service Principal JSON.
-# It must include: clientId, clientSecret, subscriptionId, tenantId.
-# It must be stored in GitHub Secrets.
-
 name: Deploy HobbyIQ Backend
 
 on:
@@ -12,44 +7,31 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: hobbyiq-andjgvhgfbhfcuhv
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Disable Oryx build
-        run: |
-          az webapp config appsettings set \
-            --name HobbyIQ \
-            --resource-group rg-hobbyiq-dev \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false
-
-      - name: Verify Azure
-        run: az webapp list --query "[].name" -o table
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: HobbyIQ
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: .
