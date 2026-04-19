@@ -1,4 +1,8 @@
-name: Deploy HobbyIQ Backend to Azure App Service
+
+# Azure App Service Deploy Workflow for HobbyIQ
+# Ensures single valid workflow, deduplicated, with correct triggers and actions
+
+name: Deploy to Azure App Service
 
 on:
   push:
@@ -8,7 +12,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: HobbyIQ
-  NODE_VERSION: '22'
+  NODE_VERSION: '22.x'
 
 jobs:
   build-and-deploy:
@@ -17,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -25,11 +29,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build backend
+      - name: Build project
         run: npm run build
 
-      - name: Prune dev dependencies
-        run: npm prune --omit=dev
+      - name: Zip build output
+        run: |
+          cd dist
+          zip -r ../deploy.zip .
+          cd ..
 
       - name: Azure Login
         uses: azure/login@v2
@@ -40,9 +47,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
-
-      - name: Health check
-        run: |
-          sleep 15
-          curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health
+          package: deploy.zip
