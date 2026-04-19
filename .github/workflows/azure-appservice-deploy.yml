@@ -1,125 +1,3 @@
-
-# ===============================
-# HobbyIQ Azure App Service Deploy
-# ===============================
-# This workflow builds and deploys the HobbyIQ backend to Azure App Service.
-# It does NOT use Azure Static Web Apps. Frontend is not deployed here.
-# Docs: https://docs.microsoft.com/azure/app-service/deploy-github-actions
-
-name: Deploy HobbyIQ Backend to Azure App Service
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-env:
-  AZURE_WEBAPP_NAME: hobbyiq-andjgvhgfbhfcuhv # Azure App Service name
-  NODE_VERSION: '22.x' # Node.js version for build
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Use Node 24 for actions
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      # 1. Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 2. Set up Node.js (22.x for build, Node 24 for actions)
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      # 3. Install dependencies
-      - name: Install dependencies
-        run: npm ci
-
-      # 4. Build TypeScript (outputs to dist/)
-      - name: Build project
-        run: npm run build
-
-      # 5. Prune dev dependencies for minimal deploy
-      - name: Prune dev dependencies
-        run: npm prune --omit=dev
-
-      # 6. Verify deployment contents
-      - name: Verify deployment contents
-        run: |
-          test -f package.json
-          test -f package-lock.json
-          test -f dist/server.js
-          test -d node_modules
-
-      # 7. Azure Login (requires AZURE_CREDENTIALS secret)
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # 8. Deploy to Azure App Service
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
-
-      # 9. Post-deployment health check (expects { "status": "HobbyIQ running" })
-      - name: Post-deployment health check
-        run: |
-          sleep 20
-          curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health
-  workflow_dispatch:
-
-                run: npm ci
-  AZURE_WEBAPP_NAME: HobbyIQ
-  NODE_VERSION: '22.x'
-
-
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: .
-
-      - name: Post-deployment health check
-        run: |
-          sleep 15
-          curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health
-              - name: Build TypeScript
-                run: npm run build
-
-              - name: Deploy to Azure Web App
-                uses: azure/webapps-deploy@v3
-                with:
-                  app-name: ${{ env.AZURE_WEBAPP_NAME }}
-                  package: .
-          cp package.json deploy/
 name: Deploy HobbyIQ Backend to Azure App Service
 
 on:
@@ -130,38 +8,28 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: hobbyiq-andjgvhgfbhfcuhv
-  NODE_VERSION: '22.x'
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: '22'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
+      - name: Build backend
         run: npm run build
 
       - name: Prune dev dependencies
         run: npm prune --omit=dev
-
-      - name: Verify deployment contents
-        run: |
-          test -f package.json
-          test -f package-lock.json
-          test -f dist/server.js
-          test -d node_modules
 
       - name: Azure Login
         uses: azure/login@v2
@@ -174,7 +42,7 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: .
 
-      - name: Post-deployment health check
+      - name: Health check
         run: |
-          sleep 20
+          sleep 15
           curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/api/health
