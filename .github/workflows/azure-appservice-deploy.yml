@@ -7,72 +7,19 @@ name: Workflow Test
 name: Deploy HobbyIQ Backend
 
 	NODE_VERSION: '22'
-	push:
-		branches:
-			- main
-	workflow_dispatch:
-
-
-	AZURE_WEBAPP_NAME: HobbyIQ
-	NODE_VERSION: "22"
-
-jobs:
-	build-and-deploy:
-		runs-on: ubuntu-latest
-		steps:
-			- name: Checkout code
-				uses: actions/checkout@v4
-
-			- name: Setup Node.js
-				uses: actions/setup-node@v4
-				with:
-					node-version: ${{ env.NODE_VERSION }}
-					cache: npm
-
-			- name: Install dependencies
-				run: npm ci
-
-			- name: Build project
-				run: npm run build
-
-			- name: Prepare deploy folder
-				run: |
-					rm -rf deploy
-					mkdir -p deploy
-					cp -r dist deploy/
-					cp package.json deploy/
-					cp package-lock.json deploy/
-
-			- name: Azure Login
-				uses: azure/login@v2
-				with:
-					creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-			- name: Deploy to Azure Web App
-				uses: azure/webapps-deploy@v3
-				with:
-					app-name: ${{ env.AZURE_WEBAPP_NAME }}
-					package: ./deploy
-	build-and-deploy:
-		runs-on: ubuntu-latest
-
-		steps:
-			- name: Checkout code
-				uses: actions/checkout@v4
-
-			- name: Setup Node.js
-				uses: actions/setup-node@v4
-				with:
-					node-version: ${{ env.NODE_VERSION }}
-					cache: npm
-
-			- name: Install dependencies
-				run: npm ci
-
-			- name: Build project
-				run: npm run build
+name: Workflow Test
 
 			name: Deploy HobbyIQ Backend
+  workflow_dispatch:
+
+				test:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok
+					runs-on: ubuntu-latest
+					steps:
+						- run: echo ok
 
 			name: Deploy HobbyIQ Backend
 
