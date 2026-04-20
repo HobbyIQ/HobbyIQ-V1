@@ -1,4 +1,4 @@
-name: Azure App Service Deploy
+name: Deploy HobbyIQ Backend to Azure App Service
 
 on:
   push:
@@ -6,51 +6,30 @@ on:
       - main
   workflow_dispatch:
 
-env:
-  AZURE_WEBAPP_NAME: HobbyIQ
-  NODE_VERSION: "22"
-
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          node-version: '22'
 
       - name: Install dependencies
+        working-directory: ./hobbyiq-backend
         run: npm ci
 
-      - name: Build project
-        run: npm run build
-
-      - name: Prepare deploy folder
-        run: |
-          rm -rf deploy
-          mkdir -p deploy
-          cp -r dist deploy/
-          cp package.json deploy/
-          cp package-lock.json deploy/
-
-      - name: Verify deploy package
-        run: |
-          test -f deploy/dist/server.js
-          test -f deploy/package.json
-          test -f deploy/package-lock.json
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Build
+        working-directory: ./hobbyiq-backend
+        run: npm run build --if-present
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          package: ./deploy
+          app-name: hobbyiq-andjgvhgfbhfcuhv
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./hobbyiq-backend
