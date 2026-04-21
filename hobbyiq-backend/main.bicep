@@ -8,7 +8,7 @@ param resourceGroupName string = 'rg-hobbyiq-dev'
   'B1'
   'F1'
 ])
-param skuName string = 'B1' // Will fallback to F1 (Free) if B1 quota is not available
+param skuName string = 'F1' // Changed default to F1 (Free) to avoid quota issues
 param nodeVersion string = '20-lts'
 
 resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {

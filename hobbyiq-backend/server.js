@@ -6,6 +6,15 @@ try {
   require('dotenv').config();
 } catch (err) {
   console.warn('dotenv not loaded, proceeding with process.env only');
+// Top-level error handlers for diagnostics
+process.on('uncaughtException', err => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', err => {
+  console.error('Unhandled Rejection:', err);
+  process.exit(1);
+});
 }
 const express = require('express');
 const cors = require('cors');
@@ -14,6 +23,7 @@ const app = express();
 
 const PORT = process.env.PORT || 8080;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+console.log('Starting server...');
 
 
 // Enable CORS for all origins and required methods/headers

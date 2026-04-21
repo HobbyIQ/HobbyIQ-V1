@@ -1,6 +1,11 @@
 // pricingEngine.js - Main pricing engine for HobbyIQ
+
 const { buildMarketSummary, buildPlayerInsight } = require('../services/marketIntelligenceService');
 const { getCachedResult, setCachedResult } = require('../repositories/cacheRepository');
+const { normalizeCardTitle } = require('./normalizationService');
+const { filterOutliers } = require('./outlierService');
+const { calculateTrend } = require('./trendService');
+const { calculateConfidence } = require('./confidenceService');
 
 function priceCard(query, compData, opts = {}) {
   // Caching (optional)
