@@ -8,6 +8,7 @@ exports.buildPersonalizedHighlights = buildPersonalizedHighlights;
 exports.getWatchPlayerFeed = getWatchPlayerFeed;
 exports.buildDailyIQSummary = buildDailyIQSummary;
 exports.refreshDailyRealData = refreshDailyRealData;
+exports.getDailyDataStatus = getDailyDataStatus;
 const portfolioRepository_1 = require("../repositories/portfolioRepository");
 const watchPlayersRepository_1 = require("../repositories/watchPlayersRepository");
 const mlbStatsApiService_1 = require("./mlbStatsApiService");
@@ -301,6 +302,13 @@ async function refreshDailyRealData(force = false) {
             source: "error",
         };
     }
+}
+function getDailyDataStatus() {
+    return {
+        dataDate: dailyLiveCache.date || getYesterdayDateStr(),
+        lastRefreshedAt: dailyLiveCache.lastRefreshIso,
+        source: dailyLiveCache.lastRefreshIso ? "live" : "fallback",
+    };
 }
 function performanceScore(stat) {
     let score = 0;

@@ -19,10 +19,12 @@ router.get("/health", (_req, res) => {
 });
 
 // GET /api/dailyiq/mlb
-router.get("/mlb", (_req, res) => {
+router.get("/mlb", async (_req, res) => {
     try {
+        await (0, dailyiqService_1.refreshDailyRealData)(false);
         const stats = (0, dailyiqService_1.getDailyMLB)();
-        res.json({ date: getYesterdayDateStr(), stats });
+        const meta = (0, dailyiqService_1.getDailyDataStatus)();
+        res.json({ date: getYesterdayDateStr(), stats, meta });
     }
     catch (err) {
         console.error("[dailyiq] /mlb error:", err);
@@ -31,10 +33,12 @@ router.get("/mlb", (_req, res) => {
 });
 
 // GET /api/dailyiq/milb
-router.get("/milb", (_req, res) => {
+router.get("/milb", async (_req, res) => {
     try {
+        await (0, dailyiqService_1.refreshDailyRealData)(false);
         const stats = (0, dailyiqService_1.getDailyMiLB)();
-        res.json({ date: getYesterdayDateStr(), stats });
+        const meta = (0, dailyiqService_1.getDailyDataStatus)();
+        res.json({ date: getYesterdayDateStr(), stats, meta });
     }
     catch (err) {
         console.error("[dailyiq] /milb error:", err);
@@ -71,7 +75,8 @@ router.get("/summary", async (req, res) => {
 
     try {
         const summary = await (0, dailyiqService_1.buildDailyIQSummary)(userId.trim());
-        res.json({ userId: userId.trim(), ...summary });
+        const meta = (0, dailyiqService_1.getDailyDataStatus)();
+        res.json({ userId: userId.trim(), ...summary, meta });
     }
     catch (err) {
         console.error("[dailyiq] /summary error:", err);
@@ -89,9 +94,11 @@ router.get("/watch", async (req, res) => {
     }
 
     try {
+        await (0, dailyiqService_1.refreshDailyRealData)(false);
         const feed = await (0, dailyiqService_1.getWatchPlayerFeed)(userId.trim());
         const watchList = watchPlayersRepository_1.watchPlayersRepository.getList(userId.trim());
-        res.json({ userId: userId.trim(), count: watchList.length, players: feed });
+        const meta = (0, dailyiqService_1.getDailyDataStatus)();
+        res.json({ userId: userId.trim(), count: watchList.length, players: feed, meta });
     }
     catch (err) {
         console.error("[dailyiq] /watch GET error:", err);
