@@ -485,10 +485,20 @@ async function fetchEbaySoldData(query: string): Promise<SoldComp[]> {
     const data = (await res.json()) as Array<Record<string, unknown>>;
     if (!Array.isArray(data)) return [];
 
+    const rawPrices = data
+      .map((item) => parseFloat(String(item.soldPrice ?? "0")))
+      .filter((p) => p > 0);
+
+    // Apify sometimes returns prices in cents (integers) instead of dollars.
+    // If the median parsed price is > $5000, treat all prices as cents and divide by 100.
+    const sortedRaw = [...rawPrices].sort((a, b) => a - b);
+    const medianRaw = sortedRaw.length ? sortedRaw[Math.floor(sortedRaw.length / 2)] : 0;
+    const inCents = medianRaw > 5000;
+
     return data
       .filter((item) => parseFloat(String(item.soldPrice ?? "0")) > 0)
       .map((item) => ({
-        price: parseFloat(String(item.soldPrice)),
+        price: parseFloat((parseFloat(String(item.soldPrice)) / (inCents ? 100 : 1)).toFixed(2)),
         title: (item.title as string) || "",
         date: (item.endedAt as string) || "",
         url: (item.url as string) || "",
