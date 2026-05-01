@@ -609,6 +609,31 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   // Apply trend adjustment
   const currentValue = applyTrendMultiplier(weightedBase, direction, changePercent);
 
+  // Overall market trend (computed early so it can blend into final value)
+  const overallTagged = overallRaw.map((c) => ({
+    ...c,
+    grade: detectGrade(c.title),
+    parallel: detectParallel(c.title),
+  }));
+  const overallBaseProfile: CardProfile = { grade: "raw", parallel: "chrome_base" };
+  const overallNormalized = overallTagged.map((c) => {
+    const compProfile: CardProfile = {
+      grade: (c.grade as GradeLabel) ?? "raw",
+      parallel: (c.parallel as ParallelLabel) ?? "chrome_base",
+    };
+    return {
+      ...c,
+      price: parseFloat(normalizeToTargetProfile(c.price, compProfile, overallBaseProfile).toFixed(2)),
+    };
+  });
+  const { clean: overallClean } = separateOutliers(overallNormalized);
+  const {
+    direction: overallDirection,
+    changePercent: overallChangePercent,
+    recentCluster: overallRecentCluster,
+    olderCluster: overallOlderCluster,
+  } = detectTrend(overallClean, now);
+
   // Historical median in normalized-target terms (sanity check only, not the primary value)
   const historicalMedian = medianOf(specificTrendPool.map((c) => c.price));
 
@@ -638,7 +663,11 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
         : 0.4;
 
   // Pricing tiers
-  const value = parseFloat((currentValue * 1.22).toFixed(2));
+  // Blend specific trend (75%) with overall market signal (25%) when overall has enough data
+  const overallAdjusted = applyTrendMultiplier(weightedBase, overallDirection, overallChangePercent);
+  const overallBlendWeight = overallClean.length >= 6 ? 0.25 : 0;
+  const blendedCurrentValue = currentValue * (1 - overallBlendWeight) + overallAdjusted * overallBlendWeight;
+  const value = parseFloat((blendedCurrentValue * 1.22).toFixed(2));
 
   // High: highest actual eBay sale price among recent clean comps (not normalized)
   const cleanUrls = new Set(clean.map((c) => c.url));
@@ -731,29 +760,6 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     },
   };
 
-  const overallTagged = overallRaw.map((c) => ({
-    ...c,
-    grade: detectGrade(c.title),
-    parallel: detectParallel(c.title),
-  }));
-  const overallBaseProfile: CardProfile = { grade: "raw", parallel: "chrome_base" };
-  const overallNormalized = overallTagged.map((c) => {
-    const compProfile: CardProfile = {
-      grade: (c.grade as GradeLabel) ?? "raw",
-      parallel: (c.parallel as ParallelLabel) ?? "chrome_base",
-    };
-    return {
-      ...c,
-      price: parseFloat(normalizeToTargetProfile(c.price, compProfile, overallBaseProfile).toFixed(2)),
-    };
-  });
-  const { clean: overallClean } = separateOutliers(overallNormalized);
-  const {
-    direction: overallDirection,
-    changePercent: overallChangePercent,
-    recentCluster: overallRecentCluster,
-    olderCluster: overallOlderCluster,
-  } = detectTrend(overallClean, now);
   const overallRecentAvg = overallRecentCluster.length ? avgOf(overallRecentCluster.map((c) => c.price)) : null;
   const overallOlderAvg = overallOlderCluster.length ? avgOf(overallOlderCluster.map((c) => c.price)) : null;
   const overallRecentPattern =
