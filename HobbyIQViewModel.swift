@@ -2,41 +2,31 @@ import Foundation
 
 @MainActor
 class HobbyIQViewModel: ObservableObject {
-    @Published var compResult: CompIQResponse?
-    @Published var playerResult: PlayerIQResponse?
+    @Published var searchResult: CardSearchResponse?
+    @Published var estimateResult: CompIQEstimateResponse?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    let api = APIService()
+    private let api = APIService.shared
 
-    func runCompIQ() async {
+    func search(query: String) async {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         isLoading = true
         errorMessage = nil
         do {
-            let request = CompIQRequest(
-                player: "Test Player",
-                cardType: "Bowman Chrome Auto",
-                parallel: "Gold /50",
-                grade: "PSA 10",
-                recentComps: [120, 140, 160]
-            )
-            compResult = try await api.analyzeCompIQ(request: request)
+            searchResult = try await api.searchCards(query: query)
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoading = false
     }
 
-    func runPlayerIQ() async {
+    func estimate(subject: CompIQSubject, comps: [CompIQComp] = [], context: CompIQContext = CompIQContext(activeListings: nil, soldCount30d: nil, playerTrendScore: nil, scarcityScore: nil)) async {
         isLoading = true
         errorMessage = nil
         do {
-            let request = PlayerIQRequest(
-                player: "Test Player",
-                level: "AA",
-                stats: .init(avg: 0.285, hr: 12, ops: 0.840)
-            )
-            playerResult = try await api.analyzePlayerIQ(request: request)
+            let request = CompIQEstimateRequest(subject: subject, comps: comps, context: context, debug: nil)
+            estimateResult = try await api.estimateCard(request: request)
         } catch {
             errorMessage = error.localizedDescription
         }
