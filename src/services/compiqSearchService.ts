@@ -10,6 +10,7 @@ export interface SoldComp {
   title: string;
   date: string;
   url: string;
+  grade?: string;
 }
 
 export interface TrendAnalysis {
@@ -47,11 +48,42 @@ export interface CardSearchResult {
   confidence: number;
   source: "live" | "mock";
   valuationMethod: "trend-based";
+  gradeTierUsed: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const DAY_MS = 86_400_000;
+
+type GradeLabel =
+  | "psa10"
+  | "psa9_5"
+  | "psa9"
+  | "psa8"
+  | "bgs9_5"
+  | "bgs9"
+  | "sgc10"
+  | "sgc9"
+  | "graded_other"
+  | "raw";
+
+/**
+ * Detect the grade of a card from its eBay listing title.
+ * Returns "raw" if no grading company + score is found.
+ */
+function detectGrade(text: string): GradeLabel {
+  const t = text.toLowerCase();
+  if (/psa[\s-]?10\b/.test(t)) return "psa10";
+  if (/psa[\s-]?9\.5\b/.test(t)) return "psa9_5";
+  if (/psa[\s-]?9\b/.test(t)) return "psa9";
+  if (/psa[\s-]?8\b/.test(t)) return "psa8";
+  if (/bgs[\s-]?9\.5\b/.test(t)) return "bgs9_5";
+  if (/bgs[\s-]?9\b/.test(t)) return "bgs9";
+  if (/sgc[\s-]?10\b/.test(t)) return "sgc10";
+  if (/sgc[\s-]?9\b/.test(t)) return "sgc9";
+  if (/\b(psa|bgs|sgc|cgc|hga|csg)\b/.test(t)) return "graded_other";
+  return "raw";
+}
 
 function medianOf(prices: number[]): number {
   if (!prices.length) return 0;
@@ -307,16 +339,31 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       confidence: 0,
       source: "live",
       valuationMethod: "trend-based",
+      gradeTierUsed: "none",
     };
   }
 
+  // Tag each comp with its detected grade
+  const taggedComps: SoldComp[] = rawComps.map((c) => ({
+    ...c,
+    grade: detectGrade(c.title),
+  }));
+
   // Sort newest first
-  const sorted = [...rawComps].sort(
+  const sorted = [...taggedComps].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
-  // Separate outliers from clean comps
-  const { clean, outliers } = separateOutliers(sorted);
+  // Detect the grade tier implied by the query ("raw" if no grade mentioned)
+  const targetGrade = detectGrade(query);
+
+  // Build a grade-specific pool; fall back to all comps if fewer than 3 match
+  const gradePool = sorted.filter((c) => c.grade === targetGrade);
+  const pricingPool = gradePool.length >= 3 ? gradePool : sorted;
+  const gradeTierUsed = gradePool.length >= 3 ? targetGrade : "mixed";
+
+  // Separate outliers from clean comps (within the grade-appropriate pool)
+  const { clean, outliers } = separateOutliers(pricingPool);
 
   // Trend detection on clean comps
   const { direction, changePercent, recentCluster, olderCluster } = detectTrend(clean, now);
@@ -327,8 +374,8 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   // Apply trend adjustment
   const currentValue = applyTrendMultiplier(weightedBase, direction, changePercent);
 
-  // Historical median (sanity check only, not the primary value)
-  const historicalMedian = medianOf(rawComps.map((c) => c.price));
+  // Historical median of the pricing pool (sanity check only, not the primary value)
+  const historicalMedian = medianOf(pricingPool.map((c) => c.price));
 
   // Window stats
   const w7 = windowFilter(clean, 7, now);
@@ -456,5 +503,6 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     confidence: displayConfidence,
     source: "live",
     valuationMethod: "trend-based",
+    gradeTierUsed,
   };
 }
