@@ -64,19 +64,29 @@ async function fetchEbaySoldData(query: string): Promise<SoldComp[]> {
   }
 
   try {
+    // Actor: caffein.dev/ebay-sold-listings
+    // Input schema: keywords[] (array), count, daysToScrape, ebaySite
+    // Output fields: soldPrice (string), title, url, endedAt
     const url =
-      "https://api.apify.com/v2/acts/caffein~ebay-sold-listings/run-sync-get-dataset-items" +
-      `?token=${token}&timeout=25&memory=256`;
+      "https://api.apify.com/v2/acts/caffein.dev~ebay-sold-listings/run-sync-get-dataset-items" +
+      `?token=${token}&timeout=55&memory=512`;
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, maxItems: 30, country: "US" }),
-      signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({
+        keywords: [query],
+        count: 30,
+        daysToScrape: 90,
+        ebaySite: "ebay.com",
+        sortOrder: "endedRecently",
+      }),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!res.ok) {
-      console.warn(`[compiqSearch] Apify responded ${res.status}`);
+      const text = await res.text().catch(() => "");
+      console.warn(`[compiqSearch] Apify responded ${res.status}: ${text.slice(0, 200)}`);
       return [];
     }
 
@@ -84,11 +94,14 @@ async function fetchEbaySoldData(query: string): Promise<SoldComp[]> {
     if (!Array.isArray(data)) return [];
 
     return data
-      .filter((item) => item && typeof item.price === "number" && (item.price as number) > 0)
+      .filter((item) => {
+        const price = parseFloat(String(item.soldPrice ?? "0"));
+        return item && price > 0;
+      })
       .map((item) => ({
-        price: item.price as number,
+        price: parseFloat(String(item.soldPrice)),
         title: (item.title as string) || "",
-        date: (item.soldDate as string) || (item.date as string) || "",
+        date: (item.endedAt as string) || "",
         url: (item.url as string) || "",
       }));
   } catch (err) {
