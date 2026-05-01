@@ -211,6 +211,32 @@ function toWholeMarketQuery(query: string): string {
   return q;
 }
 
+function isParallelComparable(target: ParallelLabel, candidate: ParallelLabel): boolean {
+  if (target === "chrome_base") return true;
+
+  // Keep the specific-card lane close in scarcity so trend isn't diluted by base autos.
+  if (target === "blue_150") {
+    return ["blue_150", "sapphire_199", "purple_250", "green_99"].includes(candidate);
+  }
+  if (target === "refractor_499") {
+    return ["refractor_499", "chrome_base", "purple_250"].includes(candidate);
+  }
+  if (target === "gold_50") {
+    return ["gold_50", "orange_25", "green_99"].includes(candidate);
+  }
+  if (target === "orange_25") {
+    return ["orange_25", "gold_50", "red_5"].includes(candidate);
+  }
+  if (target === "red_5") {
+    return ["red_5", "orange_25", "one_of_one"].includes(candidate);
+  }
+  if (target === "one_of_one") {
+    return candidate === "one_of_one";
+  }
+
+  return true;
+}
+
 function profileLabel(profile: CardProfile): string {
   const grade = profile.grade === "raw" ? "raw" : profile.grade.toUpperCase().replace("_", " ");
   const parallelMap: Record<ParallelLabel, string> = {
@@ -530,8 +556,21 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     };
   });
 
+  const targetExplicitParallel =
+    targetProfile.parallel !== "chrome_base" || /\/\s*\d+|\b(blue|gold|orange|red|green|purple|sapphire|refractor)\b/i.test(query);
+
+  const comparableLane = normalizedComps.filter((c) =>
+    isParallelComparable(
+      targetProfile.parallel,
+      ((c.parallel as ParallelLabel) ?? "chrome_base") as ParallelLabel,
+    ),
+  );
+
+  const specificTrendPool =
+    targetExplicitParallel && comparableLane.length >= 8 ? comparableLane : normalizedComps;
+
   // Separate outliers from normalized comp values
-  const { clean, outliers } = separateOutliers(normalizedComps);
+  const { clean, outliers } = separateOutliers(specificTrendPool);
 
   // Trend detection on clean comps
   const { direction, changePercent, recentCluster, olderCluster } = detectTrend(clean, now);
@@ -543,7 +582,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   const currentValue = applyTrendMultiplier(weightedBase, direction, changePercent);
 
   // Historical median in normalized-target terms (sanity check only, not the primary value)
-  const historicalMedian = medianOf(normalizedComps.map((c) => c.price));
+  const historicalMedian = medianOf(specificTrendPool.map((c) => c.price));
 
   // Window stats
   const w7 = windowFilter(clean, 7, now);
