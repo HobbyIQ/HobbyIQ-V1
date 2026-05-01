@@ -116,6 +116,9 @@ function detectParallel(text: string): ParallelLabel {
   if (/\bsapphire\b/.test(t) && /\/\s*199\b/.test(t)) return "sapphire_199";
   if (/\bpurple\b/.test(t) && /\/\s*250\b/.test(t)) return "purple_250";
   if (/\brefractor\b/.test(t) && /\/\s*499\b/.test(t)) return "refractor_499";
+  if (/\bblue\b/.test(t)) return "blue_150";
+  if (/\bsapphire\b/.test(t)) return "sapphire_199";
+  if (/\brefractor\b/.test(t)) return "refractor_499";
   return "chrome_base";
 }
 
@@ -186,7 +189,11 @@ function normalizeToTargetProfile(price: number, compProfile: CardProfile, targe
   const sourceMultiplier = profileMultiplier(compProfile);
   const targetMultiplier = profileMultiplier(targetProfile);
   if (sourceMultiplier <= 0 || targetMultiplier <= 0) return price;
-  return price * (targetMultiplier / sourceMultiplier);
+  const ratio = targetMultiplier / sourceMultiplier;
+
+  // Keep normalization in a realistic lane so one misclassified comp cannot explode valuation.
+  const boundedRatio = Math.max(0.6, Math.min(1.8, ratio));
+  return price * boundedRatio;
 }
 
 function profileLabel(profile: CardProfile): string {
