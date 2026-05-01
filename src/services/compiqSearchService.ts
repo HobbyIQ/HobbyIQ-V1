@@ -11,6 +11,8 @@ export interface SoldComp {
   date: string;
   url: string;
   grade?: string;
+  parallel?: string;
+  normalizedPrice?: number;
 }
 
 export interface TrendAnalysis {
@@ -67,6 +69,23 @@ type GradeLabel =
   | "graded_other"
   | "raw";
 
+type ParallelLabel =
+  | "one_of_one"
+  | "red_5"
+  | "orange_25"
+  | "gold_50"
+  | "green_99"
+  | "blue_150"
+  | "sapphire_199"
+  | "purple_250"
+  | "refractor_499"
+  | "chrome_base";
+
+interface CardProfile {
+  grade: GradeLabel;
+  parallel: ParallelLabel;
+}
+
 /**
  * Detect the grade of a card from its eBay listing title.
  * Returns "raw" if no grading company + score is found.
@@ -83,6 +102,108 @@ function detectGrade(text: string): GradeLabel {
   if (/sgc[\s-]?9\b/.test(t)) return "sgc9";
   if (/\b(psa|bgs|sgc|cgc|hga|csg)\b/.test(t)) return "graded_other";
   return "raw";
+}
+
+function detectParallel(text: string): ParallelLabel {
+  const t = text.toLowerCase();
+
+  if (/\b(1\/1|one of one|superfractor|true\s+1\/1)\b/.test(t)) return "one_of_one";
+  if (/\bred\b/.test(t) && /\/\s*5\b/.test(t)) return "red_5";
+  if (/\borange\b/.test(t) && /\/\s*25\b/.test(t)) return "orange_25";
+  if (/\bgold\b/.test(t) && /\/\s*50\b/.test(t)) return "gold_50";
+  if (/\bgreen\b/.test(t) && /\/\s*99\b/.test(t)) return "green_99";
+  if (/\bblue\b/.test(t) && /\/\s*150\b/.test(t)) return "blue_150";
+  if (/\bsapphire\b/.test(t) && /\/\s*199\b/.test(t)) return "sapphire_199";
+  if (/\bpurple\b/.test(t) && /\/\s*250\b/.test(t)) return "purple_250";
+  if (/\brefractor\b/.test(t) && /\/\s*499\b/.test(t)) return "refractor_499";
+  return "chrome_base";
+}
+
+function parseCardProfile(text: string): CardProfile {
+  return {
+    grade: detectGrade(text),
+    parallel: detectParallel(text),
+  };
+}
+
+function gradeMultiplier(grade: GradeLabel): number {
+  switch (grade) {
+    case "psa10":
+      return 1.55;
+    case "psa9_5":
+      return 1.32;
+    case "psa9":
+      return 1.18;
+    case "psa8":
+      return 0.92;
+    case "bgs9_5":
+      return 1.45;
+    case "bgs9":
+      return 1.15;
+    case "sgc10":
+      return 1.4;
+    case "sgc9":
+      return 1.08;
+    case "graded_other":
+      return 1.1;
+    case "raw":
+    default:
+      return 1.0;
+  }
+}
+
+function parallelMultiplier(parallel: ParallelLabel): number {
+  switch (parallel) {
+    case "one_of_one":
+      return 6.0;
+    case "red_5":
+      return 3.5;
+    case "orange_25":
+      return 2.2;
+    case "gold_50":
+      return 1.7;
+    case "green_99":
+      return 1.35;
+    case "blue_150":
+      return 1.15;
+    case "sapphire_199":
+      return 1.2;
+    case "purple_250":
+      return 1.0;
+    case "refractor_499":
+      return 0.88;
+    case "chrome_base":
+    default:
+      return 1.0;
+  }
+}
+
+function profileMultiplier(profile: CardProfile): number {
+  return gradeMultiplier(profile.grade) * parallelMultiplier(profile.parallel);
+}
+
+function normalizeToTargetProfile(price: number, compProfile: CardProfile, targetProfile: CardProfile): number {
+  const sourceMultiplier = profileMultiplier(compProfile);
+  const targetMultiplier = profileMultiplier(targetProfile);
+  if (sourceMultiplier <= 0 || targetMultiplier <= 0) return price;
+  return price * (targetMultiplier / sourceMultiplier);
+}
+
+function profileLabel(profile: CardProfile): string {
+  const grade = profile.grade === "raw" ? "raw" : profile.grade.toUpperCase().replace("_", " ");
+  const parallelMap: Record<ParallelLabel, string> = {
+    one_of_one: "1/1",
+    red_5: "Red /5",
+    orange_25: "Orange /25",
+    gold_50: "Gold /50",
+    green_99: "Green /99",
+    blue_150: "Blue /150",
+    sapphire_199: "Sapphire /199",
+    purple_250: "Purple /250",
+    refractor_499: "Refractor /499",
+    chrome_base: "Chrome base",
+  };
+  return `${grade} ${parallelMap[profile.parallel]}`;
 }
 
 function medianOf(prices: number[]): number {
@@ -343,10 +464,11 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     };
   }
 
-  // Tag each comp with its detected grade (for display/transparency only)
+  // Tag each comp with detected attributes
   const taggedComps: SoldComp[] = rawComps.map((c) => ({
     ...c,
     grade: detectGrade(c.title),
+    parallel: detectParallel(c.title),
   }));
 
   // Sort newest first
@@ -354,11 +476,28 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
-  // Note what grade the query implies (informational only)
-  const gradeTierUsed = detectGrade(query);
+  // Target profile inferred from query (used for normalization)
+  const targetProfile = parseCardProfile(query);
+  const gradeTierUsed = targetProfile.grade;
 
-  // Separate outliers from clean comps (all comps — grade is transparent in each comp's title)
-  const { clean, outliers } = separateOutliers(sorted);
+  // Normalize all comps into target-profile equivalents (single-card fair market lane)
+  const normalizedComps: SoldComp[] = sorted.map((c) => {
+    const compProfile: CardProfile = {
+      grade: (c.grade as GradeLabel) ?? "raw",
+      parallel: (c.parallel as ParallelLabel) ?? "chrome_base",
+    };
+    const normalizedPrice = parseFloat(
+      normalizeToTargetProfile(c.price, compProfile, targetProfile).toFixed(2),
+    );
+    return {
+      ...c,
+      normalizedPrice,
+      price: normalizedPrice,
+    };
+  });
+
+  // Separate outliers from normalized comp values
+  const { clean, outliers } = separateOutliers(normalizedComps);
 
   // Trend detection on clean comps
   const { direction, changePercent, recentCluster, olderCluster } = detectTrend(clean, now);
@@ -369,8 +508,8 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   // Apply trend adjustment
   const currentValue = applyTrendMultiplier(weightedBase, direction, changePercent);
 
-  // Historical median of the pricing pool (sanity check only, not the primary value)
-  const historicalMedian = medianOf(sorted.map((c) => c.price));
+  // Historical median in normalized-target terms (sanity check only, not the primary value)
+  const historicalMedian = medianOf(normalizedComps.map((c) => c.price));
 
   // Window stats
   const w7 = windowFilter(clean, 7, now);
@@ -455,15 +594,18 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   if (direction === "up" || direction === "down") {
     summary =
       `Recent sales show this card is ${dirWord} (${changeDesc}). ` +
+      `Comps were normalized to ${profileLabel(targetProfile)} equivalents before valuation. ` +
       `Historical median was $${historicalMedian.toFixed(0)}, but it is less useful here because recent sales are trending ${direction === "up" ? "higher" : "lower"}. ` +
       `Trend-adjusted current value: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   } else if (direction === "flat") {
     summary =
       `Market is ${dirWord} with ${recentPattern}. ` +
+      `Comps were normalized to ${profileLabel(targetProfile)} equivalents. ` +
       `Current value estimate: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   } else {
     summary =
       `Market is ${dirWord} across ${clean.length} clean comps. ` +
+      `Comps were normalized to ${profileLabel(targetProfile)} equivalents. ` +
       `Recency-weighted estimate: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   }
 
@@ -483,6 +625,15 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     },
   };
 
+  const cleanByUrl = new Map(clean.map((c) => [c.url, c]));
+  const recentComps = sorted
+    .filter((c) => cleanByUrl.has(c.url))
+    .slice(0, 10)
+    .map((c) => ({
+      ...c,
+      normalizedPrice: cleanByUrl.get(c.url)?.price,
+    }));
+
   return {
     success: true,
     query,
@@ -491,7 +642,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     buyZone,
     holdZone,
     sellZone,
-    recentComps: clean.slice(0, 10),
+    recentComps,
     outliers,
     trendAnalysis,
     supply: { activeListings: null, trend2w: null, trend4w: null, trend3m: null },
