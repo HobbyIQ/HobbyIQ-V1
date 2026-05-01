@@ -51,6 +51,11 @@ export interface CardSearchResult {
   source: "live" | "mock";
   valuationMethod: "trend-based";
   gradeTierUsed: string;
+  marketTrendOverall: {
+    queryUsed: string;
+    sampleSize: number;
+    trend: TrendAnalysis;
+  };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -194,6 +199,16 @@ function normalizeToTargetProfile(price: number, compProfile: CardProfile, targe
   // Keep normalization in a realistic lane so one misclassified comp cannot explode valuation.
   const boundedRatio = Math.max(0.6, Math.min(1.8, ratio));
   return price * boundedRatio;
+}
+
+function toWholeMarketQuery(query: string): string {
+  let q = query;
+  q = q.replace(/\/\s*\d+/g, " ");
+  q = q.replace(/\b(blue|red|orange|gold|green|purple|sapphire|wave|superfractor|true\s*1\/1|1\/1)\b/gi, " ");
+  q = q.replace(/\b(psa|bgs|sgc|cgc|hga|csg)\s*[-:]?\s*\d+(?:\.\d+)?\b/gi, " ");
+  q = q.replace(/\s+/g, " ").trim();
+  if (!/\bauto\b/i.test(q)) q = `${q} auto`;
+  return q;
 }
 
 function profileLabel(profile: CardProfile): string {
@@ -468,6 +483,11 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       source: "live",
       valuationMethod: "trend-based",
       gradeTierUsed: "none",
+      marketTrendOverall: {
+        queryUsed: toWholeMarketQuery(query),
+        sampleSize: 0,
+        trend: emptyTrend,
+      },
     };
   }
 
@@ -486,6 +506,13 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   // Target profile inferred from query (used for normalization)
   const targetProfile = parseCardProfile(query);
   const gradeTierUsed = targetProfile.grade;
+
+  // Whole-market lane: broaden query to capture overall player+set auto trend.
+  const overallQuery = toWholeMarketQuery(query);
+  const overallRaw =
+    overallQuery.toLowerCase() === query.toLowerCase()
+      ? rawComps
+      : await fetchEbaySoldData(overallQuery);
 
   // Normalize all comps into target-profile equivalents (single-card fair market lane)
   const normalizedComps: SoldComp[] = sorted.map((c) => {
@@ -632,6 +659,76 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     },
   };
 
+  const overallTagged = overallRaw.map((c) => ({
+    ...c,
+    grade: detectGrade(c.title),
+    parallel: detectParallel(c.title),
+  }));
+  const overallBaseProfile: CardProfile = { grade: "raw", parallel: "chrome_base" };
+  const overallNormalized = overallTagged.map((c) => {
+    const compProfile: CardProfile = {
+      grade: (c.grade as GradeLabel) ?? "raw",
+      parallel: (c.parallel as ParallelLabel) ?? "chrome_base",
+    };
+    return {
+      ...c,
+      price: parseFloat(normalizeToTargetProfile(c.price, compProfile, overallBaseProfile).toFixed(2)),
+    };
+  });
+  const { clean: overallClean } = separateOutliers(overallNormalized);
+  const {
+    direction: overallDirection,
+    changePercent: overallChangePercent,
+    recentCluster: overallRecentCluster,
+    olderCluster: overallOlderCluster,
+  } = detectTrend(overallClean, now);
+  const overallRecentAvg = overallRecentCluster.length ? avgOf(overallRecentCluster.map((c) => c.price)) : null;
+  const overallOlderAvg = overallOlderCluster.length ? avgOf(overallOlderCluster.map((c) => c.price)) : null;
+  const overallRecentPattern =
+    overallRecentCluster.length >= 2
+      ? `${overallRecentCluster.length} sales averaging $${overallRecentAvg!.toFixed(0)}`
+      : overallRecentCluster.length === 1
+        ? `1 recent sale at $${overallRecentCluster[0].price}`
+        : "No recent sales in comparison window";
+  const overallOlderPattern =
+    overallOlderCluster.length >= 2
+      ? `${overallOlderCluster.length} older sales averaging $${overallOlderAvg!.toFixed(0)}`
+      : overallOlderCluster.length === 1
+        ? `1 older sale at $${overallOlderCluster[0].price}`
+        : "No older sales in comparison window";
+  const overallChangeDesc =
+    overallDirection === "unclear" || !overallRecentAvg || !overallOlderAvg
+      ? "Insufficient data for trend comparison"
+      : `${overallChangePercent > 0 ? "+" : ""}${overallChangePercent.toFixed(1)}% vs older sales cluster`;
+  const overallLiquidity: "high" | "medium" | "low" =
+    overallClean.length >= 15 ? "high" : overallClean.length >= 6 ? "medium" : "low";
+  const overallHasBothClusters = overallRecentCluster.length >= 2 && overallOlderCluster.length >= 2;
+  const overallTrendConfidence = parseFloat(
+    Math.min(0.95, (Math.min(overallClean.length, 20) / 20) * 0.6 + (overallHasBothClusters ? 0.4 : 0.1)).toFixed(2),
+  );
+  const overallW7 = windowFilter(overallClean, 7, now);
+  const overallW14 = windowFilter(overallClean, 14, now);
+  const overallW30 = windowFilter(overallClean, 30, now);
+  const overallW60 = windowFilter(overallClean, 60, now);
+  const overallW90 = windowFilter(overallClean, 90, now);
+  const overallTrend: TrendAnalysis = {
+    market_direction: overallDirection,
+    recent_sales_pattern: overallRecentPattern,
+    older_sales_pattern: overallOlderPattern,
+    change_from_older_to_recent: overallChangeDesc,
+    liquidity: overallLiquidity,
+    trend_confidence: overallTrendConfidence,
+    windows: {
+      last7: { count: overallW7.length, avgPrice: overallW7.length ? parseFloat(avgOf(overallW7.map((c) => c.price)).toFixed(2)) : null },
+      last14: { count: overallW14.length, avgPrice: overallW14.length ? parseFloat(avgOf(overallW14.map((c) => c.price)).toFixed(2)) : null },
+      last30: { count: overallW30.length, avgPrice: overallW30.length ? parseFloat(avgOf(overallW30.map((c) => c.price)).toFixed(2)) : null },
+      last60: { count: overallW60.length, avgPrice: overallW60.length ? parseFloat(avgOf(overallW60.map((c) => c.price)).toFixed(2)) : null },
+      last90: { count: overallW90.length, avgPrice: overallW90.length ? parseFloat(avgOf(overallW90.map((c) => c.price)).toFixed(2)) : null },
+    },
+  };
+
+  summary += ` Overall market trend (${overallQuery}) is ${overallTrend.market_direction} (${overallTrend.change_from_older_to_recent}).`;
+
   const cleanByUrl = new Map(clean.map((c) => [c.url, c]));
   const recentComps = sorted
     .filter((c) => cleanByUrl.has(c.url))
@@ -657,5 +754,10 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     source: "live",
     valuationMethod: "trend-based",
     gradeTierUsed,
+    marketTrendOverall: {
+      queryUsed: overallQuery,
+      sampleSize: overallClean.length,
+      trend: overallTrend,
+    },
   };
 }
