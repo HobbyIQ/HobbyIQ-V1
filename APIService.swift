@@ -1,7 +1,7 @@
 ﻿import Foundation
 
 // MARK: - API Base URL
-let baseURL = "https://hobbyiq-andjgvhgfbhfcuhv.centralus-01.azurewebsites.net"
+let baseURL = "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net"
 
 // MARK: - Search / Price Models
 struct CardSearchRequest: Codable {
