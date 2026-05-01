@@ -384,10 +384,38 @@ function detectTrend(
   const olderMed = medianOf(olderCluster.map((c) => c.price));
   const changePercent = ((recentMed - olderMed) / olderMed) * 100;
 
+  // Short-term momentum check: detect reversals by comparing last 7d vs last 14d medians.
+  const last7 = windowFilter(clean, 7, now);
+  const last14 = windowFilter(clean, 14, now);
+  const momentumPercent =
+    last7.length >= 4 && last14.length >= 8
+      ? ((medianOf(last7.map((c) => c.price)) - medianOf(last14.map((c) => c.price))) /
+          Math.max(1, medianOf(last14.map((c) => c.price)))) *
+        100
+      : 0;
+
   let direction: "up" | "down" | "flat" | "volatile" | "unclear";
   if (changePercent > 10) direction = "up";
   else if (changePercent < -10) direction = "down";
   else direction = "flat";
+
+  // If 7-day momentum strongly conflicts with longer comparison, trust the momentum lane.
+  if (momentumPercent >= 8) {
+    return {
+      direction: "up",
+      changePercent: momentumPercent,
+      recentCluster: last7.length ? last7 : recentCluster,
+      olderCluster,
+    };
+  }
+  if (momentumPercent <= -8) {
+    return {
+      direction: "down",
+      changePercent: momentumPercent,
+      recentCluster: last7.length ? last7 : recentCluster,
+      olderCluster,
+    };
+  }
 
   return { direction, changePercent, recentCluster, olderCluster };
 }
