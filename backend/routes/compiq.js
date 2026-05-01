@@ -1,5 +1,6 @@
 const express = require('express');
 const { analyzeCompiq } = require('../services/compiqService');
+const { searchAndPrice } = require('../services/compiqSearchService');
 const router = express.Router();
 
 
@@ -14,8 +15,8 @@ router.post('/price', async (req, res, next) => {
         meta: { supportedInPhase1: true, usedMockData: true, timestamp: new Date().toISOString() }
       });
     }
-    const result = await analyzeCompiq({ query });
-    res.json({ ...result, meta: { supportedInPhase1: true, usedMockData: true, timestamp: new Date().toISOString() } });
+    const result = await searchAndPrice(query);
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -28,13 +29,11 @@ router.post('/search', async (req, res, next) => {
     if (!query || typeof query !== 'string' || !query.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Missing or invalid "query" field',
-        meta: { supportedInPhase1: true, usedMockData: true, timestamp: new Date().toISOString() }
+        error: 'Missing or invalid "query" field'
       });
     }
-    // For now, just return the same as /price (mock)
-    const result = await analyzeCompiq({ query });
-    res.json({ ...result, meta: { supportedInPhase1: true, usedMockData: true, timestamp: new Date().toISOString() } });
+    const result = await searchAndPrice(query);
+    res.json(result);
   } catch (err) {
     next(err);
   }
