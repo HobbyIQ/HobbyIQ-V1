@@ -39,7 +39,7 @@ export interface CardSearchResult {
   success: boolean;
   query: string;
   summary: string;
-  marketTier: { fair: number; premium: number };
+  marketTier: { value: number; high: number };
   buyZone: [number, number];
   holdZone: [number, number];
   sellZone: [number, number];
@@ -525,7 +525,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       success: true,
       query,
       summary: "No recent eBay sales found for this query. Try a more specific search.",
-      marketTier: { fair: 0, premium: 0 },
+      marketTier: { value: 0, high: 0 },
       buyZone: [0, 0],
       holdZone: [0, 0],
       sellZone: [0, 0],
@@ -638,21 +638,27 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
         : 0.4;
 
   // Pricing tiers
-  const fair = parseFloat(currentValue.toFixed(2));
-  const premium = parseFloat((currentValue * 1.22).toFixed(2));
+  const value = parseFloat((currentValue * 1.22).toFixed(2));
+
+  // High: highest actual eBay sale price among recent clean comps (not normalized)
+  const cleanUrls = new Set(clean.map((c) => c.url));
+  const recentCleanRaw = sorted.filter((c) => cleanUrls.has(c.url));
+  const high = recentCleanRaw.length
+    ? parseFloat(Math.max(...recentCleanRaw.map((c) => c.price)).toFixed(2))
+    : value;
 
   // Buy / hold / sell zones
   const buyZone: [number, number] = [
-    parseFloat((fair * 0.82).toFixed(2)),
-    parseFloat((fair * 0.94).toFixed(2)),
+    parseFloat((value * 0.82).toFixed(2)),
+    parseFloat((value * 0.94).toFixed(2)),
   ];
   const holdZone: [number, number] = [
-    parseFloat((fair * 0.94).toFixed(2)),
-    parseFloat((fair * 1.08).toFixed(2)),
+    parseFloat((value * 0.94).toFixed(2)),
+    parseFloat((value * 1.08).toFixed(2)),
   ];
   const sellZone: [number, number] = [
-    parseFloat((premium * 0.94).toFixed(2)),
-    parseFloat((premium * 1.18).toFixed(2)),
+    parseFloat((value * 0.94).toFixed(2)),
+    parseFloat((value * 1.18).toFixed(2)),
   ];
 
   // Narrative patterns
@@ -696,17 +702,17 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       `Recent sales show this card is ${dirWord} (${changeDesc}). ` +
       `Comps were normalized to ${profileLabel(targetProfile)} equivalents before valuation. ` +
       `Historical median was $${historicalMedian.toFixed(0)}, but it is less useful here because recent sales are trending ${direction === "up" ? "higher" : "lower"}. ` +
-      `Trend-adjusted current value: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
+      `Trend-adjusted current value: $${value.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   } else if (direction === "flat") {
     summary =
       `Market is ${dirWord} with ${recentPattern}. ` +
       `Comps were normalized to ${profileLabel(targetProfile)} equivalents. ` +
-      `Current value estimate: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
+      `Current value estimate: $${value.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   } else {
     summary =
       `Market is ${dirWord} across ${clean.length} clean comps. ` +
       `Comps were normalized to ${profileLabel(targetProfile)} equivalents. ` +
-      `Recency-weighted estimate: $${fair.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
+      `Recency-weighted estimate: $${value.toFixed(0)}. Confidence: ${displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low"}.`;
   }
 
   const trendAnalysis: TrendAnalysis = {
@@ -796,8 +802,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   summary += ` Overall market trend (${overallQuery}) is ${overallTrend.market_direction} (${overallTrend.change_from_older_to_recent}).`;
 
   const cleanByUrl = new Map(clean.map((c) => [c.url, c]));
-  const recentComps = sorted
-    .filter((c) => cleanByUrl.has(c.url))
+  const recentComps = recentCleanRaw
     .slice(0, 10)
     .map((c) => ({
       ...c,
@@ -808,7 +813,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     success: true,
     query,
     summary,
-    marketTier: { fair, premium },
+    marketTier: { value, high },
     buyZone,
     holdZone,
     sellZone,
