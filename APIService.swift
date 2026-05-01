@@ -1,4 +1,4 @@
-import Foundation
+﻿import Foundation
 
 // MARK: - API Base URL
 let baseURL = "https://hobbyiq-andjgvhgfbhfcuhv.centralus-01.azurewebsites.net"
@@ -32,6 +32,190 @@ struct CardSearchResponse: Codable {
     let confidence: Double?
     let source: String?
     let supply: MarketSupply?
+}
+
+// MARK: - CompIQ Bulk Estimate Models
+
+struct CompIQSalePoint: Codable {
+    let price: Double
+    let parallel: String?
+    let grade: String?
+    let date: String?
+}
+
+struct CompIQNeighborComp: Codable {
+    let price: Double
+    let date: String
+    let parallel: String?
+    let grade: String?
+    let serialNumber: Int?
+}
+
+struct CompIQCardInput: Codable {
+    let playerName: String
+    let cardName: String
+    let cost: Double
+    let parallel: String?
+    let grade: String?
+    let serialNumber: Int?
+    let recentComps: [CompIQSalePoint]?
+    let activeListings: Int?
+    let lowestActiveListingPrice: Double?
+    let avgActiveListingPrice: Double?
+    let recentSoldCount7d: Int?
+    let avgListingAgeDays: Int?
+    let playerEvent: String?
+    let recentSoldCount24h: Int?
+    let activeListings24hAgo: Int?
+    let lowestAsk24hAgo: Double?
+    let avgSoldPrice24h: Double?
+    let neighborComps: [CompIQNeighborComp]?
+}
+
+struct CompIQBulkRequest: Codable {
+    let cards: [CompIQCardInput]
+}
+
+struct CompIQEvidenceComp: Codable {
+    let salePrice: Double
+    let normalizedPrice: Double
+    let date: String?
+    let daysAgo: Int?
+    let parallel: String?
+    let grade: String?
+    let priority: Int
+    let priorityScore: Double
+    let reasonCodes: [String]
+    let trace: String
+}
+
+struct CompIQEstimateResult: Codable {
+    let value: Double
+    let suggestedListPrice: Double?
+    let minAcceptableOffer: Double?
+    let quickSaleValue: Double?
+    let sellFormat: String?
+    let sellFormatReason: String?
+    let fairValue: Double
+    let lowValue: Double
+    let highValue: Double
+    let confidence: Double
+    let confidenceScore: Double?
+    let method: String
+    let compCount: Int
+    let targetParallel: String
+    let anchorParallel: String?
+    let usedNeighboringComps: Bool?
+    let neighborCompReason: String?
+    let driftFactor: Double?
+    let todaySignalMultiplier: Double?
+    let todaySignalNotes: [String]?
+    let askSpreadPct: Double?
+    let velocityAcceleration: Double?
+    let playerEvent: String?
+    let dataFreshnessWarning: String?
+    let signal24hMultiplier: Double?
+    let signal24hNotes: [String]?
+    let signal24hMomentum: String?
+    let compTrendMultiplier: Double?
+    let compTrendSlopePerDay: Double?
+    let compTrendPctPerWeek: Double?
+    let compTrendRSquared: Double?
+    let compTrendConfidence: String?
+    let compTrendPredictedToday: Double?
+    let multiplierUsed: Double
+    let scarcityAdjustment: Double
+    let trendAdjustment: Double
+    let gradeAdjustment: Double
+    let learningAdjustment: Double?
+    let liquidityAdjustment: Double?
+    let mlCorrectionFactor: Double?
+    let mlSampleCount: Int?
+    let trending: Bool?
+    let trendDirection: String?
+    let trendStrength: String?
+    let trendVelocityPct: Double?
+    let newestCompAge: Int?
+    let forwardValue30d: Double?
+    let bearValue30d: Double?
+    let bullValue30d: Double?
+    let projectedValue: Double?
+    let momentumScore: Double?
+    let outlook: String?
+    let outlookNote: String?
+    let investmentScore: Double?
+    let investmentRating: String?
+    let investmentRatingKey: String?
+    let upside30d: Double?
+    let downside30d: Double?
+    let recommendedHoldDays: Int?
+    let evidenceQualityScore: Double?
+    let evidenceQualityLevel: String?
+    let evidenceReasons: [String]?
+    let recommendedAction: String?
+    let actionEntryMax: Double?
+    let actionTrimMin: Double?
+    let actionStopLoss: Double?
+    let actionRecheckDays: Int?
+    let actionRationale: String?
+    let evidenceComps: [CompIQEvidenceComp]?
+    let playerSignal: String?
+    let newsSignal: String?
+    let gemRateSignal: String?
+    let summary: String?
+    let explanation: String?
+    let pricingPath: [String]?
+    let derivedDemandScore: Double?
+    let derivedMarketHeat: Double?
+    let demandSignalNote: String?
+    let supplySignalNote: String?
+    let marketRegimeScore: Double?
+    let marketRegimeLabel: String?
+    let stalenessPenalty: Double?
+    let listingMarkupPct: Double?
+}
+
+struct CompIQBulkResponse: Codable {
+    let results: [CompIQEstimateResult]
+}
+
+// MARK: - Legacy CompIQ Models
+struct CompIQRequest: Codable {
+    let player: String
+    let cardType: String
+    let parallel: String?
+    let grade: String?
+    let recentComps: [Double]
+}
+
+struct CompIQResponse: Codable {
+    let weightedAverage: Double?
+    let min: Double?
+    let max: Double?
+    let trend: String?
+    let confidence: String?
+    let recommendation: String?
+    let error: String?
+}
+
+// MARK: - PlayerIQ Models
+struct PlayerIQRequest: Codable {
+    let player: String
+    let level: String?
+    let stats: PlayerStats
+}
+
+struct PlayerStats: Codable {
+    let avg: Double
+    let hr: Int
+    let ops: Double
+}
+
+struct PlayerIQResponse: Codable {
+    let score: Double?
+    let tier: String?
+    let cardStrategy: String?
+    let error: String?
 }
 
 // MARK: - CompIQ Estimate Models (structured pricing)
@@ -114,34 +298,42 @@ class APIService {
     static let shared = APIService()
     private init() {}
 
-    // Search cards by free-text query
     func searchCards(query: String) async throws -> CardSearchResponse {
         let url = URL(string: baseURL + "/api/compiq/search")!
         return try await postRequest(url: url, body: CardSearchRequest(query: query))
     }
 
-    // Price a card by free-text query
     func priceCard(query: String) async throws -> CardSearchResponse {
         let url = URL(string: baseURL + "/api/compiq/price")!
         return try await postRequest(url: url, body: CardSearchRequest(query: query))
     }
 
-    // Full structured estimate (for Add Card flow)
     func estimateCard(request: CompIQEstimateRequest) async throws -> CompIQEstimateResponse {
         let url = URL(string: baseURL + "/api/compiq/estimate")!
         return try await postRequest(url: url, body: request)
     }
 
-    // Generic POST
-    private func postRequest<T: Codable, U: Codable>(url: URL, body: T) async throws -> U {
+    func bulkEstimate(cards: [CompIQCardInput]) async throws -> CompIQBulkResponse {
+        let url = URL(string: baseURL + "/api/compiq/bulk-estimate")!
+        return try await postRequest(url: url, body: CompIQBulkRequest(cards: cards))
+    }
+
+    func analyzeCompIQ(request: CompIQRequest) async throws -> CompIQResponse {
+        let url = URL(string: baseURL + "/api/compiq/analyze")!
+        return try await postRequest(url: url, body: request)
+    }
+
+    private func postRequest<T: Encodable, U: Decodable>(url: URL, body: T) async throws -> U {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw APIServiceError.invalidResponse(status)
         }
