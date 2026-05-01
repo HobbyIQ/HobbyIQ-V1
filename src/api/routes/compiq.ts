@@ -1,10 +1,40 @@
 import { Router, Request, Response } from "express";
+import { searchAndPrice } from "../../services/compiqSearchService";
 
 const router = Router();
 
-
 router.get("/health", (req: Request, res: Response) => {
   res.json({ status: "CompIQ running" });
+});
+
+// POST /api/compiq/search — live eBay comps
+router.post("/search", async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body as { query?: string };
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ error: "Missing required field: query" });
+    }
+    const result = await searchAndPrice(query.trim());
+    return res.json(result);
+  } catch (err) {
+    console.error("[compiq/search] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/compiq/price — alias for search
+router.post("/price", async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body as { query?: string };
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ error: "Missing required field: query" });
+    }
+    const result = await searchAndPrice(query.trim());
+    return res.json(result);
+  } catch (err) {
+    console.error("[compiq/price] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // POST /api/compiq/query
