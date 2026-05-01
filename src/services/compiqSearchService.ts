@@ -39,7 +39,7 @@ export interface CardSearchResult {
   success: boolean;
   query: string;
   summary: string;
-  marketTier: { entry: number; fair: number; premium: number };
+  marketTier: { fair: number; premium: number };
   buyZone: [number, number];
   holdZone: [number, number];
   sellZone: [number, number];
@@ -525,7 +525,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       success: true,
       query,
       summary: "No recent eBay sales found for this query. Try a more specific search.",
-      marketTier: { entry: 0, fair: 0, premium: 0 },
+      marketTier: { fair: 0, premium: 0 },
       buyZone: [0, 0],
       holdZone: [0, 0],
       sellZone: [0, 0],
@@ -639,13 +639,12 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
 
   // Pricing tiers
   const fair = parseFloat(currentValue.toFixed(2));
-  const entry = parseFloat((currentValue * 0.82).toFixed(2));
   const premium = parseFloat((currentValue * 1.22).toFixed(2));
 
-  // Buy / hold / sell zones tighter than old model
+  // Buy / hold / sell zones
   const buyZone: [number, number] = [
-    parseFloat((entry * 0.88).toFixed(2)),
-    parseFloat((entry * 1.04).toFixed(2)),
+    parseFloat((fair * 0.82).toFixed(2)),
+    parseFloat((fair * 0.94).toFixed(2)),
   ];
   const holdZone: [number, number] = [
     parseFloat((fair * 0.94).toFixed(2)),
@@ -809,7 +808,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     success: true,
     query,
     summary,
-    marketTier: { entry, fair, premium },
+    marketTier: { fair, premium },
     buyZone,
     holdZone,
     sellZone,
