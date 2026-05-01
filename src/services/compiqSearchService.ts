@@ -343,7 +343,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     };
   }
 
-  // Tag each comp with its detected grade
+  // Tag each comp with its detected grade (for display/transparency only)
   const taggedComps: SoldComp[] = rawComps.map((c) => ({
     ...c,
     grade: detectGrade(c.title),
@@ -354,16 +354,11 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
-  // Detect the grade tier implied by the query ("raw" if no grade mentioned)
-  const targetGrade = detectGrade(query);
+  // Note what grade the query implies (informational only)
+  const gradeTierUsed = detectGrade(query);
 
-  // Build a grade-specific pool; fall back to all comps if fewer than 3 match
-  const gradePool = sorted.filter((c) => c.grade === targetGrade);
-  const pricingPool = gradePool.length >= 3 ? gradePool : sorted;
-  const gradeTierUsed = gradePool.length >= 3 ? targetGrade : "mixed";
-
-  // Separate outliers from clean comps (within the grade-appropriate pool)
-  const { clean, outliers } = separateOutliers(pricingPool);
+  // Separate outliers from clean comps (all comps — grade is transparent in each comp's title)
+  const { clean, outliers } = separateOutliers(sorted);
 
   // Trend detection on clean comps
   const { direction, changePercent, recentCluster, olderCluster } = detectTrend(clean, now);
@@ -375,7 +370,7 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   const currentValue = applyTrendMultiplier(weightedBase, direction, changePercent);
 
   // Historical median of the pricing pool (sanity check only, not the primary value)
-  const historicalMedian = medianOf(pricingPool.map((c) => c.price));
+  const historicalMedian = medianOf(sorted.map((c) => c.price));
 
   // Window stats
   const w7 = windowFilter(clean, 7, now);
