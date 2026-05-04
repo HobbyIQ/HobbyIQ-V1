@@ -1,0 +1,29 @@
+import { DynamicPricingOrchestrator } from '../../src/modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js';
+import { CardSubject } from '../../src/modules/compiq/models/pricing.types.js';
+import { CompInput } from '../../src/modules/compiq/models/comp.types.js';
+import { expect } from 'chai';
+// import { MarketContext } from '../../src/modules/compiq/models/intelligence.types';
+
+describe('DynamicPricingOrchestrator', () => {
+  it('returns fallback when no comps', () => {
+    const subject: CardSubject = { playerName: 'Test Player', setName: 'Test Set', cardYear: 2020 };
+    const comps: CompInput[] = [];
+    const context: any = { marketIndexTrend: 0, volatilityIndex: 50 };
+    const result = DynamicPricingOrchestrator.run(subject, comps, context, true);
+    expect(result.priceLanes.fairMarketValue).to.equal(0);
+    expect(result.observability.usedFallback).to.be.true;
+  });
+
+  it('returns valid output for basic comps', () => {
+    const subject: CardSubject = { playerName: 'Test Player', setName: 'Test Set', cardYear: 2020 };
+    const comps: CompInput[] = [
+      { price: 100, date: '2024-01-01', source: 'ebay' },
+      { price: 120, date: '2024-01-02', source: 'ebay' }
+    ];
+    const context: any = { marketIndexTrend: 1, volatilityIndex: 30 };
+    const result = DynamicPricingOrchestrator.run(subject, comps, context, true);
+    expect(result.priceLanes.fairMarketValue).to.be.greaterThan(0);
+    expect(result.observability.usedFallback).to.be.false;
+    expect(result.compSummary.length).to.be.greaterThan(0);
+  });
+});

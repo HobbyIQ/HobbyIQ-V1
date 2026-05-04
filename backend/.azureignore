@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+backend-deploy.zip
+coverage/
+test/
+tests/
+*.log
+*.tmp
+*.DS_Store

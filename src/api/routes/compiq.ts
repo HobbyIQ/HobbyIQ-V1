@@ -53,21 +53,83 @@ router.post("/query", (req: Request, res: Response) => {
   });
 });
 
-// POST /api/compiq/estimate
-router.post("/estimate", (req: Request, res: Response) => {
-  // Example: { player: "Aaron Judge", stat: "batting_average", games: 10 }
-  const { player, stat, games } = req.body;
-  if (!player || !stat || !games) {
-    return res.status(400).json({ error: "Missing required fields: player, stat, games" });
+// POST /api/compiq/estimate — structured card fields → real eBay pricing
+router.post("/estimate", async (req: Request, res: Response) => {
+  const { playerName, cardYear, product, parallel, grade, isAuto } = req.body as {
+    playerName?: string;
+    cardYear?: number;
+    product?: string;
+    parallel?: string;
+    grade?: string;
+    isAuto?: boolean;
+  };
+  if (!playerName || !product) {
+    return res.status(400).json({ error: "Missing required fields: playerName, product" });
   }
-  res.json({
-    player,
-    stat,
-    games,
-    estimate: 0.312, // mock value
-    confidence: 0.85,
-    source: "mock"
-  });
+  const parts = [
+    cardYear ? String(cardYear) : null,
+    product,
+    playerName,
+    parallel && parallel.toLowerCase() !== "base" ? parallel : null,
+    grade ? grade : null,
+    isAuto ? "auto" : null,
+  ].filter(Boolean);
+  const query = parts.join(" ");
+  try {
+    const result = await searchAndPrice(query);
+    const primaryParallel = result.recentComps.length > 0 ? result.recentComps[0].parallel ?? null : null;
+    const adjacentComps = result.recentComps.filter((c) => (c.parallel ?? null) !== primaryParallel);
+
+    return res.json({
+      fairMarketValue: result.marketTier.value,
+      quickSaleValue: result.buyZone[0],
+      premiumValue: result.marketTier.high,
+      lastDirectComp: result.lastDirectComp,
+      nextSaleEstimate: result.nextSaleEstimate,
+      anchorAnalysis: result.anchorAnalysis,
+      compRange: result.compRange,
+      recommendation: result.recommendation,
+      keyRisks: result.keyRisks,
+      marketDNA: {
+        trend: result.trendAnalysis.market_direction,
+        liquidity: result.trendAnalysis.liquidity,
+        trendConfidence: result.trendAnalysis.trend_confidence,
+        surroundingMovement: result.anchorAnalysis.surroundingMovement,
+        anchorAge: result.anchorAnalysis.anchorAge,
+      },
+      pricingAnalytics: {
+        projectedNextSale: result.nextSaleEstimate,
+        rSquared: result.trendAnalysis.trend_confidence,
+        compsUsed: result.recentComps.length,
+        gradeDetected: result.gradeTierUsed,
+        parallelDetected: primaryParallel,
+      },
+      marketContext: {
+        fullMarketQuery: result.marketTrendOverall.queryUsed,
+        fullMarketSampleSize: result.marketTrendOverall.sampleSize,
+        fullMarketTrend: result.marketTrendOverall.trend,
+      },
+      comps: {
+        used: result.recentComps,
+        outliers: result.outliers,
+      },
+      adjacentCards: {
+        count: adjacentComps.length,
+        comps: adjacentComps,
+      },
+      zones: {
+        buy: result.buyZone,
+        hold: result.holdZone,
+        sell: result.sellZone,
+      },
+      summary: result.summary,
+      confidence: result.confidence,
+      source: "live",
+    });
+  } catch (err) {
+    console.error("[compiq/estimate] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;

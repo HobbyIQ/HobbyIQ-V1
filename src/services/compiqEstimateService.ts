@@ -28,6 +28,15 @@ export async function runCompiqEstimate(input: EstimateInput): Promise<EstimateO
   // 5. Trend
   const trend = detectTrend(comps);
 
+  // 5b. Monotonic ascending check — if every successive sale is higher than the last
+  // (min 3 sales), the card is in a clear uptrend: skip all averaging, use most recent price.
+  const chronoComps = comps.slice().sort((a: any, b: any) =>
+    new Date(a.saleDate).getTime() - new Date(b.saleDate).getTime()
+  );
+  const recentN = chronoComps.slice(-Math.min(chronoComps.length, 5));
+  const isMonotonicallyIncreasing = recentN.length >= 3 &&
+    recentN.every((c: any, i: number) => i === 0 || c.price > recentN[i - 1].price);
+
   // 6. Liquidity
   const liquidity = assessLiquidity(comps, input.activeListings);
 
@@ -62,10 +71,19 @@ export async function runCompiqEstimate(input: EstimateInput): Promise<EstimateO
   else if (multiplierResult.parallelInferenceActive) pricingMode = 'parallel_inference';
 
   // 13. Output
+  // If sales are strictly ascending (each higher than previous), skip averaging —
+  // the most recent sale IS the market price for this card right now.
+  const mostRecentPrice = chronoComps.length > 0
+    ? Math.round(chronoComps[chronoComps.length - 1].price)
+    : stats.weightedMedian;
+  const fmv = isMonotonicallyIncreasing ? mostRecentPrice : stats.weightedMedian;
+
   return {
     quickSale: stats.weighted25th,
-    fairMarketValue: stats.weightedMedian,
-    premiumAsk: stats.weighted75th,
+    fairMarketValue: fmv,
+    premiumAsk: isMonotonicallyIncreasing
+      ? Math.round((mostRecentPrice ?? 0) * 1.1)  // 10% above recent for monotonic uptrend
+      : stats.weighted75th,
     pricingMode,
     confidenceScore,
     liquidity,

@@ -1,0 +1,60 @@
+# NOTE: For clean deployments, use scripts/deploy-backend-zip.ps1 instead of azd deploy.
+# azd provision is still recommended for infrastructure setup.
+
+docker:
+        remoteBuild: true
+name: hobbyiq-backend
+metadata:
+  template: custom
+
+services:
+  api:
+    project: ./backend/dist
+    language: js
+    host: appservice
+    resourceName: HobbyIQ
+    azure:
+      kind: appservice
+      location: centralus
+      environmentVariables:
+        PORT: 8080
+        KEY_VAULT_NAME: kv-hobbyiq-dev-01
+      appInsights: true
+      logAnalytics: true
+    startCommand: node dist/server.js
+
+  jobs:
+    project: .
+    language: js
+    host: function
+    resourceName: hobbyiqjobs
+    azure:
+      kind: function
+      location: centralus
+      sku: consumption
+      environmentVariables:
+        FUNCTIONS_WORKER_RUNTIME: node
+        AzureWebJobsStorage: '' # Will be set by Bicep output
+        DATABASE_URL: '' # Will be set by Bicep output
+        REDIS_URL: '' # Will be set by Bicep output
+        SERVICE_BUS_CONNECTION: '' # Will be set by Bicep output
+        APPLICATIONINSIGHTS_CONNECTION_STRING: '' # Will be set by Bicep output
+      appInsights: true
+      logAnalytics: true
+
+parameters:
+  environmentName:
+    type: string
+    default: prod
+  location:
+    type: string
+    default: centralus
+  enableAiSearch:
+    type: boolean
+    default: false
+  enableNotificationHubs:
+    type: boolean
+    default: false
+  enableApiManagement:
+    type: boolean
+    default: false

@@ -1,0 +1,45 @@
+name: Azure Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_ENV_NAME: hobbyiq-prod
+      AZURE_LOCATION: centralus
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+
+      - name: Set up Azure CLI
+        uses: azure/CLI@v2
+
+      - name: Set up Azure Developer CLI
+        uses: Azure/setup-azd@v1
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Provision and deploy with azd
+        run: |
+          azd up --no-prompt --environment $AZURE_ENV_NAME --location $AZURE_LOCATION
+
+      - name: Run smoke test
+        shell: pwsh
+        run: |
+          ./scripts/smoke-test-azure.ps1 -BaseUrl ${{ steps.deploy.outputs.api_url || 'https://<your-app-service-name>.azurewebsites.net' }}

@@ -1,0 +1,4 @@
+@baseUrl = https://hobbyiq-andjgvhgfbhfcuhv.azurewebsites.net/api/health
+
+GET {{baseUrl}}/
+Content-Type: application/json

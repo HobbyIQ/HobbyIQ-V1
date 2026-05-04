@@ -1,0 +1,12 @@
+# HobbyIQ backend ignore rules
+.env
+.env.local
+*.env
+node_modules/
+backend/node_modules/
+dist/
+backend/dist/
+coverage/
+backend/coverage/
+.azure/
+backend-deploy.zip

@@ -1,0 +1,13 @@
+# Azure App Service environment variables for HobbyIQ backend
+# Add these in Azure Portal > App Service > Configuration > Application settings
+
+PORT=8080
+KEY_VAULT_NAME=kv-hobbyiq-dev-01
+DATABASE_URL=
+REDIS_URL=
+SERVICE_BUS_CONNECTION=
+STORAGE_ACCOUNT_NAME=
+APPLICATIONINSIGHTS_CONNECTION_STRING=
+ENABLE_DEBUG_PRICING=false
+ENABLE_AI_SEARCH=false
+ENABLE_NOTIFICATIONS=false

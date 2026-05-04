@@ -173,10 +173,154 @@ struct CompIQEstimateResult: Codable {
     let marketRegimeLabel: String?
     let stalenessPenalty: Double?
     let listingMarkupPct: Double?
+    // Grade-aware fields (populated by priceCard)
+    let gradeDetected: String?
+    let parallelDetected: String?
 }
 
 struct CompIQBulkResponse: Codable {
     let results: [CompIQEstimateResult]
+}
+
+// MARK: - Simple Estimate (new flat endpoint)
+struct CompIQPriceRequest: Codable {
+    let playerName: String
+    let cardYear: Int?
+    let product: String
+    let parallel: String?
+    let grade: String?
+    let isAuto: Bool?
+}
+
+struct CompIQPricingAnalytics: Codable {
+    let projectedNextSale: Double?
+    let rSquared: Double?
+    let compsUsed: Int?
+    let gradeDetected: String?
+    let parallelDetected: String?
+}
+
+struct CompIQPriceMarketDNA: Codable {
+    let trend: String?
+    let liquidity: String?
+    let trendConfidence: Double?
+    let surroundingMovement: Double?
+    let anchorAge: Int?
+}
+
+struct CompIQPriceResponse: Codable {
+    let fairMarketValue: Double?
+    let quickSaleValue: Double?
+    let premiumValue: Double?
+    let recommendation: String?
+    let summary: String?
+    let confidence: Double?
+    let marketDNA: CompIQPriceMarketDNA?
+    let pricingAnalytics: CompIQPricingAnalytics?
+
+    /// Map to the rich CompIQEstimateResult that CompIQView uses.
+    func asEstimateResult(requestedParallel: String?) -> CompIQEstimateResult {
+        let fmv = fairMarketValue ?? 0
+        let qsv = quickSaleValue ?? (fmv * 0.85)
+        let pv  = premiumValue ?? (fmv * 1.15)
+        let conf = confidence ?? 0.5
+        let comps = pricingAnalytics?.compsUsed ?? 0
+        let parallel = pricingAnalytics?.parallelDetected ?? requestedParallel ?? "Base"
+        let action = recommendation ?? "hold"
+        let outlook: String
+        switch action.lowercased() {
+        case "strong-buy", "buy": outlook = "buy"
+        case "sell", "reduce":    outlook = "sell"
+        default:                  outlook = "hold"
+        }
+        return CompIQEstimateResult(
+            value: fmv,
+            suggestedListPrice: fmv * 1.05,
+            minAcceptableOffer: qsv,
+            quickSaleValue: qsv,
+            sellFormat: "eBay BIN w/ Best Offer",
+            sellFormatReason: nil,
+            fairValue: fmv,
+            lowValue: qsv,
+            highValue: pv,
+            confidence: conf,
+            confidenceScore: conf * 100,
+            method: comps > 0 ? "exact-recent-comps" : "baseline-multiplier-fallback",
+            compCount: comps,
+            targetParallel: parallel,
+            anchorParallel: nil,
+            usedNeighboringComps: nil,
+            neighborCompReason: nil,
+            driftFactor: nil,
+            todaySignalMultiplier: nil,
+            todaySignalNotes: nil,
+            askSpreadPct: nil,
+            velocityAcceleration: nil,
+            playerEvent: nil,
+            dataFreshnessWarning: nil,
+            signal24hMultiplier: nil,
+            signal24hNotes: nil,
+            signal24hMomentum: nil,
+            compTrendMultiplier: nil,
+            compTrendSlopePerDay: nil,
+            compTrendPctPerWeek: nil,
+            compTrendRSquared: nil,
+            compTrendConfidence: nil,
+            compTrendPredictedToday: nil,
+            multiplierUsed: 1.0,
+            scarcityAdjustment: 1.0,
+            trendAdjustment: 1.0,
+            gradeAdjustment: 1.0,
+            learningAdjustment: nil,
+            liquidityAdjustment: nil,
+            mlCorrectionFactor: nil,
+            mlSampleCount: nil,
+            trending: (marketDNA?.trend == "up" || marketDNA?.trend == "down") ? true : nil,
+            trendDirection: marketDNA?.trend,
+            trendStrength: nil,
+            trendVelocityPct: nil,
+            newestCompAge: marketDNA?.anchorAge,
+            forwardValue30d: nil,
+            bearValue30d: fmv * 0.85,
+            bullValue30d: pv,
+            projectedValue: pricingAnalytics?.projectedNextSale,
+            momentumScore: nil,
+            outlook: outlook,
+            outlookNote: nil,
+            investmentScore: nil,
+            investmentRating: nil,
+            investmentRatingKey: nil,
+            upside30d: nil,
+            downside30d: nil,
+            recommendedHoldDays: nil,
+            evidenceQualityScore: conf * 100,
+            evidenceQualityLevel: conf >= 0.72 ? "high" : conf >= 0.45 ? "medium" : "low",
+            evidenceReasons: nil,
+            recommendedAction: action,
+            actionEntryMax: qsv,
+            actionTrimMin: pv * 0.95,
+            actionStopLoss: fmv * 0.75,
+            actionRecheckDays: 7,
+            actionRationale: summary,
+            evidenceComps: nil,
+            playerSignal: nil,
+            newsSignal: nil,
+            gemRateSignal: nil,
+            summary: summary,
+            explanation: summary,
+            pricingPath: nil,
+            derivedDemandScore: nil,
+            derivedMarketHeat: nil,
+            demandSignalNote: nil,
+            supplySignalNote: marketDNA?.liquidity.map { "Liquidity: \($0)" },
+            marketRegimeScore: nil,
+            marketRegimeLabel: marketDNA?.trend.map { $0.capitalized + " market" },
+            stalenessPenalty: nil,
+            listingMarkupPct: 5.0,
+            gradeDetected: pricingAnalytics?.gradeDetected,
+            parallelDetected: pricingAnalytics?.parallelDetected
+        )
+    }
 }
 
 // MARK: - Legacy CompIQ Models
@@ -309,6 +453,11 @@ class APIService {
     }
 
     func estimateCard(request: CompIQEstimateRequest) async throws -> CompIQEstimateResponse {
+        let url = URL(string: baseURL + "/api/compiq/estimate")!
+        return try await postRequest(url: url, body: request)
+    }
+
+    func priceCardEstimate(request: CompIQPriceRequest) async throws -> CompIQPriceResponse {
         let url = URL(string: baseURL + "/api/compiq/estimate")!
         return try await postRequest(url: url, body: request)
     }

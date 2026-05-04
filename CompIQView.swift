@@ -361,6 +361,29 @@ struct CompIQView: View {
                 Text("Fair Market Value")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                // Grade + parallel context badges
+                if r.gradeDetected != nil || r.parallelDetected != nil {
+                    HStack(spacing: 6) {
+                        if let grade = r.gradeDetected {
+                            Text(grade.uppercased().replacingOccurrences(of: "_", with: " "))
+                                .font(.caption.weight(.bold))
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(Color.purple.opacity(0.13))
+                                .foregroundColor(.purple)
+                                .clipShape(Capsule())
+                        }
+                        if let par = r.parallelDetected {
+                            Text(par.capitalized)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.10))
+                                .foregroundColor(.blue)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
 
             HStack(spacing: 8) {

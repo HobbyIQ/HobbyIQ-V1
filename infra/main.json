@@ -1,0 +1,1244 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "2624631121214620041"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "defaultValue": "plan-hobbyiq-api-dev"
+    },
+    "webAppName": {
+      "type": "string",
+      "defaultValue": "app-hobbyiq-api-dev"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "appService",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "keyVaultName": {
+            "value": "kv-hobbyiq-dev-01"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
+          },
+          "appInsightsInstrumentationKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.appInsightsInstrumentationKey.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "postgresFqdn": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'postgres'), '2025-04-01').outputs.postgresFqdn.value]"
+          },
+          "redisHostName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redis'), '2025-04-01').outputs.redisHostName.value]"
+          },
+          "serviceBusNamespace": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.serviceBusNamespace.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "3168431116207545038"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string"
+            },
+            "storageAccountName": {
+              "type": "string"
+            },
+            "postgresFqdn": {
+              "type": "string"
+            },
+            "redisHostName": {
+              "type": "string"
+            },
+            "serviceBusNamespace": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "webAppName": "[format('app-{0}-api-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]",
+            "planName": "[format('plan-{0}-api-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2022-03-01",
+              "name": "[variables('planName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "B1",
+                "tier": "Basic"
+              },
+              "kind": "linux",
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2022-09-01",
+              "name": "[variables('webAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "app,linux",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|18-lts",
+                  "appSettings": [
+                    {
+                      "name": "NODE_ENV",
+                      "value": "production"
+                    },
+                    {
+                      "name": "WEBSITES_PORT",
+                      "value": "8080"
+                    },
+                    {
+                      "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                      "value": "[parameters('appInsightsInstrumentationKey')]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsInstrumentationKey')]"
+                    },
+                    {
+                      "name": "KEY_VAULT_NAME",
+                      "value": "[parameters('keyVaultName')]"
+                    },
+                    {
+                      "name": "STORAGE_ACCOUNT_NAME",
+                      "value": "[parameters('storageAccountName')]"
+                    },
+                    {
+                      "name": "POSTGRES_FQDN",
+                      "value": "[parameters('postgresFqdn')]"
+                    },
+                    {
+                      "name": "REDIS_HOSTNAME",
+                      "value": "[parameters('redisHostName')]"
+                    },
+                    {
+                      "name": "SERVICE_BUS_NAMESPACE",
+                      "value": "[parameters('serviceBusNamespace')]"
+                    },
+                    {
+                      "name": "CORS_ALLOWED_ORIGINS",
+                      "value": "*"
+                    },
+                    {
+                      "name": "ENABLE_AI_SEARCH",
+                      "value": "false"
+                    },
+                    {
+                      "name": "ENABLE_NOTIFICATIONS",
+                      "value": "false"
+                    },
+                    {
+                      "name": "ENABLE_DEBUG_PRICING",
+                      "value": "false"
+                    },
+                    {
+                      "name": "CACHE_TTL_ESTIMATE_SECONDS",
+                      "value": "900"
+                    },
+                    {
+                      "name": "CACHE_TTL_SEARCH_SECONDS",
+                      "value": "900"
+                    },
+                    {
+                      "name": "CACHE_TTL_PORTFOLIO_SECONDS",
+                      "value": "600"
+                    }
+                  ],
+                  "healthCheckPath": "/api/health"
+                }
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "tags": {
+                "environment": "[parameters('environmentName')]",
+                "app": "[parameters('appName')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "webAppName": {
+              "type": "string",
+              "value": "[variables('webAppName')]"
+            },
+            "planName": {
+              "type": "string",
+              "value": "[variables('planName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring')]",
+        "[resourceId('Microsoft.Resources/deployments', 'postgres')]",
+        "[resourceId('Microsoft.Resources/deployments', 'redis')]",
+        "[resourceId('Microsoft.Resources/deployments', 'serviceBus')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "postgres",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "keyVaultName": {
+            "value": "kv-hobbyiq-dev-01"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "7652995681790759158"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "keyVaultName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "pgServerName": "[format('pg-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]",
+            "pgDbName": "hobbyiq"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers",
+              "apiVersion": "2022-12-01",
+              "name": "[variables('pgServerName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "B_Standard_B1ms",
+                "tier": "Burstable",
+                "capacity": 1
+              },
+              "properties": {
+                "version": "14",
+                "administratorLogin": "hobbyiqadmin",
+                "administratorLoginPassword": "[listSecret(resourceId('Microsoft.KeyVault/vaults/secrets', parameters('keyVaultName'), 'pgAdminPassword'), '2023-07-01').value]",
+                "storage": {
+                  "storageSizeGB": 32
+                },
+                "highAvailability": {
+                  "mode": "Disabled"
+                },
+                "backup": {
+                  "backupRetentionDays": 7,
+                  "geoRedundantBackup": "Disabled"
+                },
+                "network": {
+                  "publicNetworkAccess": "Enabled"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
+              "apiVersion": "2022-12-01",
+              "name": "[format('{0}/{1}', variables('pgServerName'), variables('pgDbName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "postgresFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', variables('pgServerName')), '2022-12-01').fullyQualifiedDomainName]"
+            },
+            "postgresDbName": {
+              "type": "string",
+              "value": "[format('{0}/{1}', variables('pgServerName'), variables('pgDbName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "redis",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "keyVaultName": {
+            "value": "kv-hobbyiq-dev-01"
+          },
+          "redisSkuCapacity": {
+            "value": 0
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "18059960508867702055"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "redisSkuCapacity": {
+              "type": "int",
+              "defaultValue": 0
+            }
+          },
+          "variables": {
+            "redisName": "[format('redis-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Cache/redis",
+              "apiVersion": "2023-04-01",
+              "name": "[variables('redisName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "Basic",
+                  "family": "C",
+                  "capacity": "[parameters('redisSkuCapacity')]"
+                },
+                "enableNonSslPort": false,
+                "minimumTlsVersion": "1.2"
+              }
+            }
+          ],
+          "outputs": {
+            "redisHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Cache/redis', variables('redisName')), '2023-04-01').hostName]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14708365264562033110"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            }
+          },
+          "variables": {
+            "storageAccountName": "[toLower(format('stg{0}{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix')))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2022-09-01",
+              "name": "[variables('storageAccountName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2022-09-01",
+              "name": "[format('{0}/default/card-images', variables('storageAccountName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2022-09-01",
+              "name": "[format('{0}/default/slab-images', variables('storageAccountName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2022-09-01",
+              "name": "[format('{0}/default/imports', variables('storageAccountName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2022-09-01",
+              "name": "[format('{0}/default/dailyiq-assets', variables('storageAccountName'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountName": {
+              "type": "string",
+              "value": "[variables('storageAccountName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "serviceBus",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "keyVaultName": {
+            "value": "kv-hobbyiq-dev-01"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "16465472668723319150"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "keyVaultName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "sbNamespace": "[format('sb-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ServiceBus/namespaces",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[variables('sbNamespace')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+              },
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/queues",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/pricing-refresh', variables('sbNamespace'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', variables('sbNamespace'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/queues",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/alert-generation', variables('sbNamespace'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', variables('sbNamespace'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ServiceBus/namespaces/queues",
+              "apiVersion": "2022-10-01-preview",
+              "name": "[format('{0}/dailyiq-generation', variables('sbNamespace'))]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', variables('sbNamespace'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "serviceBusNamespace": {
+              "type": "string",
+              "value": "[variables('sbNamespace')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyVault",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14267062361556066594"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "keyVaultName": "[format('kv-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2022-07-01",
+              "name": "[variables('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "accessPolicies": [],
+                "enabledForDeployment": true,
+                "enabledForTemplateDeployment": true,
+                "enabledForDiskEncryption": true,
+                "enableRbacAuthorization": true
+              },
+              "tags": {
+                "environment": "[parameters('environmentName')]",
+                "app": "[parameters('appName')]"
+              }
+            }
+          ],
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[variables('keyVaultName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "prod"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5497639435378513428"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            }
+          },
+          "variables": {
+            "logAnalyticsName": "[format('log-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]",
+            "appInsightsName": "[format('appi-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2022-10-01",
+              "name": "[variables('logAnalyticsName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "PerGB2018"
+              },
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[variables('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logAnalyticsWorkspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": false,
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "functions",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "dev"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          },
+          "keyVaultName": {
+            "value": "kv-hobbyiq-dev-01"
+          },
+          "logAnalyticsWorkspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'monitoring'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage'), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "serviceBusNamespace": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.serviceBusNamespace.value]"
+          },
+          "postgresFqdn": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'postgres'), '2025-04-01').outputs.postgresFqdn.value]"
+          },
+          "redisHostName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'redis'), '2025-04-01').outputs.redisHostName.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5125380765617445276"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "keyVaultName": {
+              "type": "string"
+            },
+            "logAnalyticsWorkspaceId": {
+              "type": "string"
+            },
+            "storageAccountName": {
+              "type": "string"
+            },
+            "serviceBusNamespace": {
+              "type": "string"
+            },
+            "postgresFqdn": {
+              "type": "string"
+            },
+            "redisHostName": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "functionAppName": "[format('func-{0}-jobs-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2022-09-01",
+              "name": "[variables('functionAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp,linux",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('plan-{0}-jobs-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix')))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|18-lts",
+                  "appSettings": [
+                    {
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "node"
+                    },
+                    {
+                      "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                      "value": "true"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage",
+                      "value": "[parameters('storageAccountName')]"
+                    },
+                    {
+                      "name": "DATABASE_URL",
+                      "value": "[parameters('postgresFqdn')]"
+                    },
+                    {
+                      "name": "REDIS_URL",
+                      "value": "[parameters('redisHostName')]"
+                    },
+                    {
+                      "name": "SERVICE_BUS_CONNECTION",
+                      "value": "[parameters('serviceBusNamespace')]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('logAnalyticsWorkspaceId')]"
+                    }
+                  ]
+                }
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "tags": {
+                "environment": "[parameters('environmentName')]",
+                "app": "[parameters('appName')]"
+              }
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[variables('functionAppName')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'monitoring')]",
+        "[resourceId('Microsoft.Resources/deployments', 'postgres')]",
+        "[resourceId('Microsoft.Resources/deployments', 'redis')]",
+        "[resourceId('Microsoft.Resources/deployments', 'serviceBus')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage')]"
+      ]
+    },
+    {
+      "condition": false,
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "aiSearch",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "prod"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5014313726106244371"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            }
+          },
+          "variables": {
+            "aiSearchName": "[format('search-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Search/searchServices",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('aiSearchName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "basic"
+              },
+              "properties": {
+                "hostingMode": "default",
+                "partitionCount": 1,
+                "replicaCount": 1,
+                "publicNetworkAccess": "Enabled"
+              }
+            }
+          ],
+          "outputs": {
+            "aiSearchName": {
+              "type": "string",
+              "value": "[variables('aiSearchName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": false,
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "notificationHubs",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "prod"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "8138133215465888424"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            }
+          },
+          "variables": {
+            "nhNamespace": "[format('nh-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]",
+            "nhName": "[format('hub-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.NotificationHubs/namespaces",
+              "apiVersion": "2023-06-01",
+              "name": "[variables('nhNamespace')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+              },
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.NotificationHubs/namespaces/notificationHubs",
+              "apiVersion": "2023-06-01",
+              "name": "[format('{0}/{1}', variables('nhNamespace'), variables('nhName'))]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "notificationHubName": {
+              "type": "string",
+              "value": "[format('{0}/{1}', variables('nhNamespace'), variables('nhName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": false,
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "apiManagement",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appName": {
+            "value": "hobbyiq"
+          },
+          "environmentName": {
+            "value": "prod"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "resourceSuffix": {
+            "value": ""
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5128620340558946035"
+            }
+          },
+          "parameters": {
+            "appName": {
+              "type": "string"
+            },
+            "environmentName": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "resourceSuffix": {
+              "type": "string",
+              "defaultValue": ""
+            }
+          },
+          "variables": {
+            "apiMgmtName": "[format('apim-{0}-{1}{2}', parameters('appName'), parameters('environmentName'), parameters('resourceSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ApiManagement/service",
+              "apiVersion": "2022-08-01",
+              "name": "[variables('apiMgmtName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Consumption",
+                "capacity": 0
+              },
+              "properties": {
+                "publisherEmail": "admin@hobbyiq.com",
+                "publisherName": "HobbyIQ"
+              }
+            }
+          ],
+          "outputs": {
+            "apiManagementName": {
+              "type": "string",
+              "value": "[variables('apiMgmtName')]"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
