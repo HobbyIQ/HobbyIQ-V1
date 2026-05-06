@@ -1,13 +1,14 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - HobbyIQ3
+name: LEGACY (disabled) - Build and deploy Node.js app to Azure Web App - HobbyIQ3
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     permissions:
       contents: read #This is required for actions/checkout
@@ -33,6 +34,7 @@ jobs:
           path: .
 
   deploy:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     needs: build
     permissions:
