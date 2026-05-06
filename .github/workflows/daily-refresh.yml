@@ -17,10 +17,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
@@ -34,10 +34,18 @@ jobs:
         working-directory: backend
         run: npm run build
 
+      # Save compiled dist before pruning devDeps
+      - name: Save compiled dist
+        run: cp -r backend/dist /tmp/backend-dist
+
       # Trim to production deps for the zip (no @types, no devDeps)
       - name: Prune to production dependencies
         working-directory: backend
         run: npm ci --omit=dev
+
+      # Restore compiled dist (pruning deletes node_modules but not dist, this is a safety net)
+      - name: Restore compiled dist
+        run: cp -r /tmp/backend-dist backend/dist
 
       # Install archiver at root (needed by zip.js)
       - name: Install root zip dependencies
@@ -57,6 +65,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: HobbyIQ3
+          resource-group-name: rg-hobbyiq-dev
           package: deploy.zip
 
       # Wait for the app to finish restarting before warming cache
