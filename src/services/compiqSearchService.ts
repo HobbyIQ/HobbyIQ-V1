@@ -1680,12 +1680,12 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
 
   // Buy / hold / sell zones
   const buyZone: [number, number] = [
-    parseFloat((value * 0.82).toFixed(2)),
-    parseFloat((value * 0.93).toFixed(2)),
+    parseFloat((value * 0.75).toFixed(2)),
+    parseFloat((value * 0.85).toFixed(2)),
   ];
   const holdZone: [number, number] = [
-    parseFloat((value * 0.93).toFixed(2)),
-    parseFloat((value * 1.10).toFixed(2)),
+    parseFloat((value * 0.85).toFixed(2)),
+    parseFloat((value * 1.05).toFixed(2)),
   ];
   const sellZone: [number, number] = [
     parseFloat((value * 1.05).toFixed(2)),
@@ -1728,28 +1728,48 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       ? "Insufficient data for trend comparison"
       : `${changePercent > 0 ? "+" : ""}${changePercent.toFixed(1)}% vs older sales cluster`;
 
-  // Plain-English summary (trend-based, not median-based)
-  const confLabel = displayConfidence >= 0.8 ? "High" : displayConfidence >= 0.6 ? "Medium" : "Low";
-  const anchorAgeStr = anchorAge < 1 ? "today" : anchorAge < 2 ? "yesterday" : `${Math.round(anchorAge)}d ago`;
-  const hasAnchorNormalizationGap = Math.abs(anchorRawPrice - anchorPrice) >= 1;
-  const anchorSummary = hasAnchorNormalizationGap
-    ? `$${anchorRawPrice.toFixed(0)} raw ($${anchorPrice.toFixed(0)} normalized)`
-    : `$${anchorPrice.toFixed(0)}`;
-  const surroundingDirLabel = surroundingMovement === "flat"
-    ? "flat"
-    : `${surroundingMovement} ${Math.abs(surroundingChangePercent).toFixed(0)}%`;
-  const summary =
-    `Last direct comp: ${anchorSummary} (${anchorAgeStr}). ` +
-    `Clean comp range: $${compRange.low.toFixed(0)}–$${compRange.high.toFixed(0)} (median $${compRange.median.toFixed(0)}). ` +
-    `Related card trend: ${surroundingDirLabel} since last comp. ` +
-    `Market direction: ${direction}. ` +
-    `Most likely next sale: $${nextSaleEstimate.toFixed(0)}. ` +
-    `Buy below $${buyZone[1].toFixed(0)}, sell above $${sellZone[0].toFixed(0)}. ` +
-    `Recommendation: ${recommendation === "hold" ? "Hold" : "Move"}. ` +
-    `Confidence: ${confLabel}. ` +
-    (keyRisks.length ? `Key risk: ${keyRisks[0]}. ` : "") +
-    surroundingReasoning +
-    ` Overall market (${overallQuery}): ${overallDirection} (${overallChangePercent > 0 ? "+" : ""}${overallChangePercent.toFixed(1)}%).`;
+  // Plain-English summary — written for collectors, not analysts
+  const anchorAgeStr = anchorAge < 1 ? "today" : anchorAge < 2 ? "yesterday" : `${Math.round(anchorAge)} days ago`;
+
+  // Market heat sentence
+  const marketHeatLabel =
+    surroundingMovement === "up"
+      ? surroundingChangePercent >= 20
+        ? "heating up fast"
+        : "trending up"
+      : surroundingMovement === "down"
+        ? surroundingChangePercent <= -20
+          ? "cooling off quickly"
+          : "softening"
+        : "pretty stable";
+
+  // Anchor sentence — what actually sold and when
+  const anchorSentence = `The last sale for this card was $${anchorRawPrice.toFixed(0)}, ${anchorAgeStr}.`;
+
+  // Market context sentence
+  const marketSentence =
+    surroundingMovement !== "flat"
+      ? `Similar cards in this set are ${marketHeatLabel} — ${Math.abs(surroundingChangePercent).toFixed(0)}% ${surroundingMovement} since that sale.`
+      : `The surrounding market has been steady since that sale.`;
+
+  // Value sentence
+  const valueSentence = `Fair market value is around $${nextSaleEstimate.toFixed(0)}.`;
+
+  // Action sentence
+  const actionSentence =
+    recommendation === "move"
+      ? `The market suggests moving this card — list at $${sellZone[0].toFixed(0)} or higher.`
+      : `If you're selling, list at $${sellZone[0].toFixed(0)}+. If you're buying, aim for under $${buyZone[1].toFixed(0)}.`;
+
+  // Risk sentence (only if meaningful)
+  const riskSentence =
+    keyRisks.length > 0
+      ? `Keep in mind: ${keyRisks[0].toLowerCase()}.`
+      : "";
+
+  const summary = [anchorSentence, marketSentence, valueSentence, actionSentence, riskSentence]
+    .filter(Boolean)
+    .join(" ");
 
   const trendAnalysis: TrendAnalysis = {
     market_direction: direction,

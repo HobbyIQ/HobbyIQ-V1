@@ -23,7 +23,10 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/compiq", compiqRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
+app.use("/api/portfolio", portfolioiqRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
+app.use("/api/dailyIQ", dailyiqRoutes);
+app.use("/api/daily", dailyiqRoutes);
 app.use("/api/playeriq", playeriqRoutes);
 
 app.use(notFoundHandler);

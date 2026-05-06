@@ -1,5 +1,3 @@
-
-import React from "react";
 import Card from "./Card";
 import Button from "./Button";
 import SectionHeader from "./SectionHeader";
@@ -57,7 +55,7 @@ export default function PricingSection() {
     <div className="pricing-section">
       <SectionHeader>Choose Your HobbyIQ Plan</SectionHeader>
       <div className="pricing-cards">
-        {tiers.map((tier, idx) => (
+        {tiers.map((tier) => (
           <Card
             className={`pricing-card${tier.highlight ? " highlight" : ""} ${tier.name.toLowerCase()}`}
             key={tier.name}

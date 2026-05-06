@@ -55,23 +55,34 @@ router.post("/query", (req: Request, res: Response) => {
 
 // POST /api/compiq/estimate — structured card fields → real eBay pricing
 router.post("/estimate", async (req: Request, res: Response) => {
-  const { playerName, cardYear, product, parallel, grade, isAuto } = req.body as {
+  const { playerName, cardYear, product, parallel, grade, gradeCompany, gradeValue, isAuto } = req.body as {
     playerName?: string;
     cardYear?: number;
     product?: string;
     parallel?: string;
     grade?: string;
+    gradeCompany?: string;
+    gradeValue?: number | string;
     isAuto?: boolean;
   };
   if (!playerName || !product) {
     return res.status(400).json({ error: "Missing required fields: playerName, product" });
   }
+  // Resolve grade string: accept either a pre-formed string ("PSA 10") or
+  // separate gradeCompany + gradeValue fields sent by iOS ("PSA", 10).
+  // If no grade is supplied at all, default to "raw" so the eBay query
+  // targets ungraded listings and the pricing engine normalises accordingly.
+  const resolvedGrade =
+    grade ??
+    (gradeCompany && gradeValue != null
+      ? `${gradeCompany} ${gradeValue}`
+      : "raw");
   const parts = [
     cardYear ? String(cardYear) : null,
     product,
     playerName,
     parallel && parallel.toLowerCase() !== "base" ? parallel : null,
-    grade ? grade : null,
+    resolvedGrade,
     isAuto ? "auto" : null,
   ].filter(Boolean);
   const query = parts.join(" ");

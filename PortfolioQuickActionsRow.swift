@@ -5,6 +5,7 @@ struct PortfolioQuickActionsRow: View {
     var onRefresh: () -> Void
     var onSort: () -> Void
     var onFilter: () -> Void
+    var onDiversity: (() -> Void)? = nil
     var isRefreshing: Bool
     var body: some View {
         HStack(spacing: 18) {
@@ -30,6 +31,12 @@ struct PortfolioQuickActionsRow: View {
                 Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
             }
             .buttonStyle(QuickActionButtonStyle())
+            if let onDiversity {
+                Button(action: onDiversity) {
+                    Label("Diversity", systemImage: "chart.pie")
+                }
+                .buttonStyle(QuickActionButtonStyle())
+            }
         }
         .padding(.vertical, 4)
     }

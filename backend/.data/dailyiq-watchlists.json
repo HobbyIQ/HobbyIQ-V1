@@ -1,0 +1,22 @@
+{
+  "admin-testing-hobbyiq": {
+    "shohei-ohtani": {
+      "watchlistItemId": "3cc47859-e475-4079-ad65-7f4bcb3039a8",
+      "userId": "admin-testing-hobbyiq",
+      "playerId": "shohei-ohtani",
+      "createdAt": "2026-05-06T03:40:32.680Z"
+    },
+    "jackson-chourio": {
+      "watchlistItemId": "f82ca612-5265-4c08-b7ad-c9a7632e4ad6",
+      "userId": "admin-testing-hobbyiq",
+      "playerId": "jackson-chourio",
+      "createdAt": "2026-05-06T03:40:32.727Z"
+    },
+    "paul-skenes": {
+      "watchlistItemId": "f7af3546-92d4-4800-b252-f91636153197",
+      "userId": "admin-testing-hobbyiq",
+      "playerId": "paul-skenes",
+      "createdAt": "2026-05-06T03:40:32.757Z"
+    }
+  }
+}

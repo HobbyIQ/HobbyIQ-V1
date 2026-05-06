@@ -1,0 +1,23 @@
+{
+  "admin-testing-hobbyiq": [
+    {
+      "id": "1691ef56-855f-4f95-b925-c57c050f1962",
+      "userId": "admin-testing-hobbyiq",
+      "holdingId": "test-holding-1",
+      "playerName": "Paul Skenes",
+      "cardTitle": "2024 Bowman Chrome Auto",
+      "quantitySold": 2,
+      "unitSalePrice": 180,
+      "grossProceeds": 360,
+      "fees": 10,
+      "tax": 0,
+      "shipping": 5,
+      "netProceeds": 345,
+      "costBasisSold": 200,
+      "realizedProfitLoss": 145,
+      "realizedProfitLossPct": 72.5,
+      "soldAt": "2026-05-06T03:46:03.067Z",
+      "notes": "Test sell"
+    }
+  ]
+}

@@ -5,7 +5,6 @@ import { API_BASE_URL } from "../api";
 const API_URL = `${API_BASE_URL}/api/compiq`;
 
 const MAX_FREE_SEARCHES = 3;
-const TIERS = ["FREE", "PRO", "ALL-STAR"];
 
 const SearchChat = () => {
   const [query, setQuery] = useState("");

@@ -89,15 +89,3 @@ export function getEntitlementForTier(tier: HobbyIQTier): HobbyIQEntitlement {
 // Example: Get entitlement from StoreKit purchase
 // const tier = getTierFromProductId(storeKitProductId);
 // const entitlement = getEntitlementForTier(tier);
-
-name: Workflow Test
-
-"on":
-  workflow_dispatch:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Confirm workflow loads
-        run: echo "ok"

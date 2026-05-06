@@ -1,5 +1,5 @@
 import React from "react";
-import type { PlayerIQResponse, TopParallelToBuy } from "../types/playeriq";
+import type { PlayerIQResponse } from "../types/playeriq";
 import "./PlayerIQResultCard.css";
 
 interface Props {
@@ -47,10 +47,10 @@ const PlayerIQResultCard: React.FC<Props> = ({ result }) => {
               </div>
             )}
             {/* Top Parallels To Buy with eBay Supply */}
-            {result.topParallelsToBuy && result.topParallelsToBuy.length > 0 && (
+            {result.playerMarketSection?.bestCardsToBuyNow && result.playerMarketSection.bestCardsToBuyNow.length > 0 && (
               <div className="playeriq-top-parallels">
                 <div className="top-parallels-title">Top Parallels To Buy</div>
-                {result.topParallelsToBuy.map((tp, idx) => (
+                {result.playerMarketSection.bestCardsToBuyNow.map((tp, idx) => (
                   <div className="top-parallel-card" key={idx}>
                     <div className="tp-row"><strong>{tp.cardName}</strong> <span className="tp-parallel">[{tp.parallel}]</span></div>
                     <div className="tp-row">Market: <span>${tp.estimatedMarketPrice.toFixed(2)}</span> &nbsp; Fair Value: <span>${tp.estimatedFairValue.toFixed(2)}</span></div>

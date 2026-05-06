@@ -137,7 +137,6 @@ export interface ActionPlan {
   nextCatalystToWatch?: string;
   summary: string;
 }
-}
 
 export interface PlayerIQMarketSection {
   playerMarketZone: {

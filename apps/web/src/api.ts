@@ -1,5 +1,6 @@
+import { API_BASE_URL, apiFetch } from "./api/client";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export { API_BASE_URL };
 // import {
 //   PortfolioResponse,
 //   DecisionResponse,
@@ -8,34 +9,24 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 //   GemRateResponse,
 // } from "./types";
 
-const API_BASE = `${import.meta.env.VITE_API_BASE_URL}/api`;
+const API_BASE = "/api";
 
 export async function fetchPortfolio() {
-  const res = await fetch(`${API_BASE}/portfolio`);
-  if (!res.ok) throw new Error("Failed to fetch portfolio");
-  return res.json();
+  return apiFetch(`${API_BASE}/portfolio`, { auth: true });
 }
 
 export async function fetchDecision(cardId: string) {
-  const res = await fetch(`${API_BASE}/portfolio/${cardId}/decision`);
-  if (!res.ok) throw new Error("Failed to fetch decision");
-  return res.json();
+  return apiFetch(`${API_BASE}/portfolio/${cardId}/decision`, { auth: true });
 }
 
 export async function fetchScarcity(cardId: string) {
-  const res = await fetch(`${API_BASE}/portfolio/${cardId}/scarcity`);
-  if (!res.ok) throw new Error("Failed to fetch scarcity");
-  return res.json();
+  return apiFetch(`${API_BASE}/portfolio/${cardId}/scarcity`, { auth: true });
 }
 
 export async function fetchSupply(cardId: string) {
-  const res = await fetch(`${API_BASE}/portfolio/${cardId}/supply`);
-  if (!res.ok) throw new Error("Failed to fetch supply");
-  return res.json();
+  return apiFetch(`${API_BASE}/portfolio/${cardId}/supply`, { auth: true });
 }
 
 export async function fetchGemRate(cardId: string) {
-  const res = await fetch(`${API_BASE}/portfolio/${cardId}/gemrate`);
-  if (!res.ok) throw new Error("Failed to fetch gem rate");
-  return res.json();
+  return apiFetch(`${API_BASE}/portfolio/${cardId}/gemrate`, { auth: true });
 }

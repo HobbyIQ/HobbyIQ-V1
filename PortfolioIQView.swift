@@ -1,9 +1,14 @@
 
 import SwiftUI
+import UIKit
 
 struct PortfolioIQView: View {
     @StateObject private var vm = PortfolioIQViewModel()
+    @StateObject private var auth = AuthManager.shared
     @State private var showAccount = false
+    @State private var showDiversity = false
+    @State private var showLedger = false
+    @State private var sellHolding: PortfolioHolding? = nil
     var onAccount: (() -> Void)? = nil
 
     var body: some View {
@@ -42,10 +47,43 @@ struct PortfolioIQView: View {
                             profitPct: vm.holdings.isEmpty ? 0 : (vm.holdings.map { $0.totalProfitLoss }.reduce(0, +) / max(1, vm.holdings.map { $0.totalCostBasis }.reduce(0, +))) * 100,
                             cardCount: vm.holdings.count,
                             avgGainLoss: vm.holdings.isEmpty ? 0 : vm.holdings.map { $0.totalProfitLoss }.reduce(0, +) / Double(vm.holdings.count),
-                            lastRefresh: vm.lastRefresh
+                            lastRefresh: vm.lastRefresh,
+                            valueHistory: vm.valueHistory
                         )
                         .padding(.horizontal)
                         .padding(.top, 8)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Realized P/L Ledger")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                Spacer()
+                                Button("View All") {
+                                    showLedger = true
+                                }
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            }
+                            HStack {
+                                Text("Total Realized")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("\(vm.realizedProfitLoss >= 0 ? "+" : "")$\(vm.realizedProfitLoss, specifier: "%.2f")")
+                                    .font(.headline)
+                                    .foregroundColor(vm.realizedProfitLoss >= 0 ? .green : .red)
+                            }
+                            if let latest = vm.ledgerEntries.first {
+                                Text("Latest: \(latest.playerName) x\(latest.quantitySold)  •  \(latest.realizedProfitLoss >= 0 ? "+" : "")$\(latest.realizedProfitLoss, specifier: "%.2f")")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding(12)
+                        .background(Color(.secondarySystemBackground).opacity(0.65))
+                        .cornerRadius(14)
+                        .padding(.horizontal)
                     }
 
                     // Quick Actions
@@ -55,6 +93,7 @@ struct PortfolioIQView: View {
                             onRefresh: { vm.refreshPortfolio() },
                             onSort: { vm.showSortMenu = true },
                             onFilter: {},
+                            onDiversity: { showDiversity = true },
                             isRefreshing: vm.isRefreshing
                         )
                         .padding(.horizontal)
@@ -107,6 +146,9 @@ struct PortfolioIQView: View {
                             .padding(.horizontal)
                             .padding(.top, 8)
                         }
+                        .refreshable {
+                            await vm.refreshAll()
+                        }
                     }
                 }
                 // Sort Menu
@@ -121,9 +163,9 @@ struct PortfolioIQView: View {
             }
             // Add Card Flow
             .sheet(isPresented: $vm.showAddCard) {
-                AddCardFlow { holding in
+                AddCardFlow(onAdd: { holding in
                     vm.addHolding(holding)
-                }
+                }, isAuthenticated: auth.isAuthenticated)
                 .preferredColorScheme(.dark)
             }
             // Detail
@@ -132,14 +174,109 @@ struct PortfolioIQView: View {
                     get: { holding },
                     set: { updated in vm.updateHolding(updated) }
                 )
-                PortfolioHoldingDetailView(holding: binding)
+                PortfolioHoldingDetailView(
+                    holding: binding,
+                    onEdit: { vm.showEditCard = holding },
+                    onRefresh: { vm.repriceSingleHolding(id: holding.id) },
+                    onSell: {
+                        sellHolding = holding
+                        vm.showDetail = nil
+                    },
+                    onDelete: {
+                        vm.deleteHolding(holding)
+                        vm.showDetail = nil
+                    }
+                )
                     .preferredColorScheme(.dark)
             }
             .sheet(isPresented: $showAccount) {
                 AccountView()
                     .preferredColorScheme(.dark)
             }
+            .sheet(item: $sellHolding) { holding in
+                SellHoldingSheet(holding: holding) { quantity, salePrice, fees, tax, shipping, notes in
+                    vm.sellHolding(
+                        holding,
+                        quantity: quantity,
+                        salePrice: salePrice,
+                        fees: fees,
+                        tax: tax,
+                        shipping: shipping,
+                        notes: notes
+                    )
+                }
+                .preferredColorScheme(.dark)
+            }
+            .sheet(isPresented: $showLedger) {
+                PortfolioLedgerView(
+                    entries: vm.ledgerEntries,
+                    realizedProfitLoss: vm.realizedProfitLoss,
+                    grossProceeds: vm.ledgerGrossProceeds,
+                    netProceeds: vm.ledgerNetProceeds,
+                    costBasisSold: vm.ledgerCostBasisSold
+                )
+                    .preferredColorScheme(.dark)
+            }
+            // Diversity sheet
+            .sheet(isPresented: $showDiversity) {
+                PortfolioDiversityView(holdings: vm.holdings)
+                    .preferredColorScheme(.dark)
+            }
+            // Edit cost basis
+            .sheet(item: $vm.showEditCard) { holding in
+                EditCostBasisSheet(holding: holding) { newPrice, newQty, newNotes, newDate in
+                    vm.updateCostBasis(id: holding.id, newPurchasePrice: newPrice, newQuantity: newQty,
+                                       notes: newNotes, purchaseDate: newDate)
+                }
+                .preferredColorScheme(.dark)
+            }
+            .onAppear {
+                vm.loadPortfolio(sessionId: auth.activeSessionId)
+            }
+            .onChange(of: auth.currentUser?.userId) { _ in
+                vm.loadPortfolio(sessionId: auth.activeSessionId)
+            }
+            // Auto-reprice when app returns to foreground (if data is >4h stale)
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                if Date().timeIntervalSince(vm.lastRefresh) > 4 * 3600 {
+                    vm.refreshPortfolio()
+                }
+            }
+            // CSV Export toolbar button
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !vm.holdings.isEmpty {
+                        ShareLink(
+                            item: portfolioCSV,
+                            preview: SharePreview("HobbyIQ Portfolio.csv", image: Image(systemName: "tablecells"))
+                        ) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    private var portfolioCSV: String {
+        var rows = ["Player,Card Title,Year,Product,Parallel,Grade,Qty,Buy Price,Cost Basis,FMV,P&L,P&L %,Recommendation"]
+        for h in vm.holdings {
+            let parallel = h.parallel ?? "Base"
+            let grade = h.gradingCompany.isEmpty ? "Raw" : "\(h.gradingCompany) \(h.grade)"
+            let row = [
+                h.playerName, h.cardTitle, "\(h.cardYear)", h.product,
+                parallel, grade, "\(h.quantity)",
+                String(format: "%.2f", h.purchasePrice),
+                String(format: "%.2f", h.totalCostBasis),
+                String(format: "%.2f", h.currentValue),
+                String(format: "%.2f", h.totalProfitLoss),
+                String(format: "%.1f%%", h.totalProfitLossPct),
+                h.recommendation
+            ].map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
+            rows.append(row.joined(separator: ","))
+        }
+        return rows.joined(separator: "\n")
     }
 }
 

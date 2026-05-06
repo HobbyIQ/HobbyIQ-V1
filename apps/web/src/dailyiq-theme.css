@@ -1,0 +1,104 @@
+:root {
+  --dq-bg: #070b12;
+  --dq-surface: #121924;
+  --dq-surface-soft: #1a2230;
+  --dq-border: #2a3648;
+  --dq-text: #e7ecf4;
+  --dq-text-muted: #95a3b9;
+  --dq-accent: #3b82f6;
+  --dq-success: #22c55e;
+  --dq-danger: #ef4444;
+
+  --dq-level-aaa: #8b5cf6;
+  --dq-level-aa: #3b82f6;
+  --dq-level-higha: #22c55e;
+  --dq-level-a: #f59e0b;
+  --dq-level-rookie: #ec4899;
+}
+
+body {
+  background: radial-gradient(circle at 10% -20%, #17253a 0%, var(--dq-bg) 45%);
+  color: var(--dq-text);
+}
+
+.dq-card {
+  background: linear-gradient(180deg, var(--dq-surface) 0%, #101722 100%);
+  border: 1px solid var(--dq-border);
+  border-radius: 14px;
+  color: var(--dq-text);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.dq-subtitle {
+  color: var(--dq-text-muted);
+  font-size: 12px;
+}
+
+.dq-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dq-pill--aaa {
+  color: var(--dq-level-aaa);
+  background: color-mix(in srgb, var(--dq-level-aaa) 18%, transparent);
+}
+
+.dq-pill--aa {
+  color: var(--dq-level-aa);
+  background: color-mix(in srgb, var(--dq-level-aa) 18%, transparent);
+}
+
+.dq-pill--higha {
+  color: var(--dq-level-higha);
+  background: color-mix(in srgb, var(--dq-level-higha) 18%, transparent);
+}
+
+.dq-pill--a {
+  color: var(--dq-level-a);
+  background: color-mix(in srgb, var(--dq-level-a) 18%, transparent);
+}
+
+.dq-pill--rookie {
+  color: var(--dq-level-rookie);
+  background: color-mix(in srgb, var(--dq-level-rookie) 18%, transparent);
+}
+
+.dq-tab {
+  border: 1px solid var(--dq-border);
+  border-radius: 9px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dq-text);
+  background: var(--dq-surface-soft);
+}
+
+.dq-tab[data-active="true"] {
+  color: #0b1220;
+  background: var(--dq-accent);
+  border-color: var(--dq-accent);
+}
+
+.dq-action {
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--dq-accent);
+}
+
+.dq-action.danger {
+  background: var(--dq-danger);
+}
+
+.dq-action.success {
+  background: var(--dq-success);
+}

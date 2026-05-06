@@ -5,6 +5,7 @@ const archiver = require('archiver');
 
 // Always resolve paths relative to the project root
 const projectRoot = __dirname;
+const backendPath = path.join(projectRoot, 'backend');
 const outputPath = path.join(projectRoot, 'deploy.zip');
 const output = fs.createWriteStream(outputPath);
 const archive = archiver('zip', { zlib: { level: 9 } });
@@ -17,9 +18,10 @@ archive.on('error', err => { throw err; });
 
 archive.pipe(output);
 
-// Only include runtime essentials
-archive.file(path.join(projectRoot, 'package.json'), { name: 'package.json' });
-archive.file(path.join(projectRoot, 'package-lock.json'), { name: 'package-lock.json' });
-archive.directory(path.join(projectRoot, 'dist'), 'dist');
+// Include backend runtime essentials
+archive.file(path.join(backendPath, 'package.json'), { name: 'package.json' });
+archive.file(path.join(backendPath, 'package-lock.json'), { name: 'package-lock.json' });
+archive.directory(path.join(backendPath, 'dist'), 'dist');
+archive.directory(path.join(backendPath, 'node_modules'), 'node_modules');
 
 archive.finalize();

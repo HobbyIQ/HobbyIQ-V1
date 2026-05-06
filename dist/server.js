@@ -8,12 +8,18 @@ const cors_1 = __importDefault(require("cors"));
 const compiq_1 = __importDefault(require("./api/routes/compiq"));
 const playeriq_1 = __importDefault(require("./api/routes/playeriq"));
 const brain_1 = __importDefault(require("./api/routes/brain"));
+const auth_1 = __importDefault(require("./api/routes/auth"));
+const dailyiq_1 = __importDefault(require("./api/routes/dailyiq"));
+const portfolio_1 = __importDefault(require("./api/routes/portfolio"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.get("/api/health", (req, res) => {
     res.json({ status: "HobbyIQ running" });
 });
+app.use("/api/auth", auth_1.default);
+app.use("/api/dailyiq", dailyiq_1.default);
+app.use("/api/portfolio", portfolio_1.default);
 app.use("/api/compiq", compiq_1.default);
 app.use("/api/playeriq", playeriq_1.default);
 app.use("/api/brain", brain_1.default);

@@ -1,4 +1,3 @@
-import React from "react";
 import "./ProUpgradeCard.css";
 
 export default function ProUpgradeCard() {

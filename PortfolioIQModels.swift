@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Portfolio Holding Model
-struct PortfolioHolding: Identifiable, Hashable {
+struct PortfolioHolding: Identifiable, Hashable, Codable {
     let id: UUID
     var playerName: String
     var cardTitle: String
@@ -42,11 +42,51 @@ struct PortfolioHolding: Identifiable, Hashable {
     var marketPressure: String
     var expectedDaysToSell: Int?
     var confidence: Double?
+    var compsUsed: Int?
+    var parallelDetected: String?
     var explanationBullets: [String]
     var freshnessStatus: FreshnessStatus
     var lastUpdated: Date
     var statusCategory: StatusCategory
     var notes: String?
+
+    /// 0–100 sell urgency: combines ROI, trend direction, and days-to-sell.
+    var sellUrgency: Int {
+        var score = 0
+        // ROI contribution: caps at 40 pts
+        score += min(40, Int(max(0, totalProfitLossPct) * 0.8))
+        // Trend contribution
+        switch trend {
+        case .falling: score += 30
+        case .stable:  score += 5
+        case .rising:  score -= 10
+        }
+        // Days-to-sell urgency
+        if let days = expectedDaysToSell {
+            if days <= 7       { score += 30 }
+            else if days <= 14 { score += 20 }
+            else if days <= 30 { score += 10 }
+        }
+        return max(0, min(100, score))
+    }
+
+    var sellUrgencyLabel: String {
+        switch sellUrgency {
+        case 75...: return "Sell Now"
+        case 50...: return "Consider Selling"
+        case 25...: return "Watch"
+        default:    return "Hold"
+        }
+    }
+
+    var sellUrgencyColor: Color {
+        switch sellUrgency {
+        case 75...: return .red
+        case 50...: return .orange
+        case 25...: return .yellow
+        default:    return .green
+        }
+    }
 }
 
 enum PortfolioTrend: String, CaseIterable, Codable {

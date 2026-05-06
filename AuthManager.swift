@@ -22,6 +22,10 @@ final class AuthManager: ObservableObject {
         currentUser != nil
     }
 
+    var activeSessionId: String? {
+        sessionId
+    }
+
     var username: String {
         currentUser?.email ?? ""
     }

@@ -1,27 +1,38 @@
-// Intake API module for HobbyIQ web
-import axios from 'axios';
+import { apiFetch } from "./client";
 
-export async function importManual(rows: any[]) {
-  const res = await axios.post('/api/intake/manual', { rows });
-  return res.data;
+export async function importManual(rows: unknown[]) {
+  return apiFetch("/api/intake/manual", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ rows }),
+  });
 }
 
-export async function importCsv(rows: any[]) {
-  const res = await axios.post('/api/intake/csv', { rows });
-  return res.data;
+export async function importCsv(rows: unknown[]) {
+  return apiFetch("/api/intake/csv", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ rows }),
+  });
 }
 
 export async function getBatch(batchId: string) {
-  const res = await axios.get(`/api/intake/batch/${batchId}`);
-  return res.data;
+  return apiFetch(`/api/intake/batch/${batchId}`, {
+    method: "GET",
+    auth: true,
+  });
 }
 
 export async function reconcileBatch(batchId: string) {
-  const res = await axios.post(`/api/intake/reconcile/${batchId}`);
-  return res.data;
+  return apiFetch(`/api/intake/reconcile/${batchId}`, {
+    method: "POST",
+    auth: true,
+  });
 }
 
 export async function getDiagnostics(batchId: string) {
-  const res = await axios.get(`/api/intake/diagnostics/${batchId}`);
-  return res.data;
+  return apiFetch(`/api/intake/diagnostics/${batchId}`, {
+    method: "GET",
+    auth: true,
+  });
 }

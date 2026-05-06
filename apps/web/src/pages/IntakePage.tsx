@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useManualImport, useCsvImport, useBatch, useDiagnostics, useReconcileBatch } from '../hooks/useIntake';
 
 export default function IntakePage() {
@@ -12,8 +12,8 @@ export default function IntakePage() {
   const reconcile = useReconcileBatch();
 
   const handleManualImport = async () => {
-    const result = await manualImport.mutateAsync(rows);
-    setBatchId(result.batchId);
+    const result = await manualImport.mutateAsync(rows) as { batchId?: string };
+    setBatchId(result.batchId ?? null);
   };
 
   const handleCsvImport = async () => {
@@ -26,8 +26,8 @@ export default function IntakePage() {
       keys.forEach((k, i) => obj[k.trim()] = values[i]?.trim());
       return obj;
     });
-    const result = await csvImport.mutateAsync(parsedRows);
-    setBatchId(result.batchId);
+    const result = await csvImport.mutateAsync(parsedRows) as { batchId?: string };
+    setBatchId(result.batchId ?? null);
   };
 
   return (
