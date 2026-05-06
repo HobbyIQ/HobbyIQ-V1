@@ -1,10 +1,12 @@
-name: Daily 5AM EST Refresh & Deploy
+name: Daily 5AM ET Refresh & Deploy
 
 on:
   schedule:
-    # 9:00 UTC = 5:00 AM EDT (UTC-4, April–October)
-    # If you need strict EST (UTC-5, Nov–Mar), change to: '0 10 * * *'
+    # GitHub cron uses UTC. Use both UTC windows and gate by America/New_York time.
+    # 9:00 UTC maps to 5:00 AM during EDT.
     - cron: '0 9 * * *'
+    # 10:00 UTC maps to 5:00 AM during EST.
+    - cron: '0 10 * * *'
   workflow_dispatch: # allow manual trigger from GitHub UI
 
 jobs:
@@ -20,7 +22,26 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Run only at 5:00 AM America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          if [ "$ET_HOUR" = "05" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is 05; continuing workflow."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR; skipping this UTC trigger."
+          fi
+
       - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -29,37 +50,45 @@ jobs:
 
       # Install all deps (including devDependencies for tsc)
       - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
         run: npm ci
 
       # Compile TypeScript → dist/
       - name: Build backend
+        if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
         run: npm run build
 
       # Save compiled dist before pruning devDeps
       - name: Save compiled dist
+        if: steps.et-gate.outputs.should_run == 'true'
         run: cp -r backend/dist /tmp/backend-dist
 
       # Trim to production deps for the zip (no @types, no devDeps)
       - name: Prune to production dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
         working-directory: backend
         run: npm ci --omit=dev
 
       # Restore compiled dist (pruning deletes node_modules but not dist, this is a safety net)
       - name: Restore compiled dist
+        if: steps.et-gate.outputs.should_run == 'true'
         run: cp -r /tmp/backend-dist backend/dist
 
       # Install archiver at root (needed by zip.js)
       - name: Install root zip dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
         run: npm install archiver --no-save
 
       # Build deploy.zip via project's own zip.js (packages dist/ + node_modules)
       - name: Create deploy.zip
+        if: steps.et-gate.outputs.should_run == 'true'
         run: node zip.js
 
       # Login to Azure using OIDC service principal (more reliable than JSON creds parsing)
       - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
@@ -67,6 +96,7 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
       - name: Deploy to Azure App Service
+        if: steps.et-gate.outputs.should_run == 'true'
         uses: azure/webapps-deploy@v3
         with:
           app-name: HobbyIQ3
@@ -75,10 +105,12 @@ jobs:
 
       # Wait for the app to finish restarting before warming cache
       - name: Wait for app restart
+        if: steps.et-gate.outputs.should_run == 'true'
         run: sleep 30
 
       # Hit health check first
       - name: Health check
+        if: steps.et-gate.outputs.should_run == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health)
@@ -90,18 +122,21 @@ jobs:
 
       # Force a fresh DailyIQ pull from MLB Stats API — pre-warms cache for users
       - name: Warm DailyIQ cache (MLB)
+        if: steps.et-gate.outputs.should_run == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/mlb?limit=25&fresh=true")
           echo "MLB warm status: $STATUS"
 
       - name: Warm DailyIQ cache (MiLB)
+        if: steps.et-gate.outputs.should_run == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/milb?limit=25&fresh=true")
           echo "MiLB warm status: $STATUS"
 
       - name: Warm DailyIQ brief
+        if: steps.et-gate.outputs.should_run == 'true'
         run: |
           RESPONSE=$(curl -s \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief")
