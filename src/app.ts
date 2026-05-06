@@ -1,18 +1,24 @@
+import cors from "cors";
 import express from "express";
-import healthRouter from "./routes/health";
-import compiqRouter from "./routes/compiq";
 
-const app = express();
+import compIQRoutes from "./routes/compiq";
+import dailyIQRoutes from "./routes/dailyiq";
+import healthRoutes from "./routes/health";
+import playerIQRoutes from "./routes/playeriq";
+import portfolioIQRoutes from "./routes/portfolioiq";
+import { errorHandler } from "./middleware/errorHandler";
+import { notFound } from "./middleware/notFound";
 
-// Request logger
-app.use((req, res, next) => {
-	console.log(`${req.method} ${req.url}`);
-	next();
-});
+export const app = express();
 
+app.use(cors());
 app.use(express.json());
 
-app.use("/api", healthRouter);
-app.use("/api/compiq", compiqRouter);
+app.use("/api/health", healthRoutes);
+app.use("/api/compiq", compIQRoutes);
+app.use("/api/playeriq", playerIQRoutes);
+app.use("/api/dailyiq", dailyIQRoutes);
+app.use("/api/portfolioiq", portfolioIQRoutes);
 
-export default app;
+app.use(notFound);
+app.use(errorHandler);
