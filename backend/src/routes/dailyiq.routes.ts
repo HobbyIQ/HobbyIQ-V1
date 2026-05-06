@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { getMiLBBoxScoreStats, resolveCurrentPlayerAssignments, type ResolvedMiLBPlayerStats } from "../services/dailyiq/milbBoxScoreService.js";
 import {
+  getAllWatchCounts,
   getWatchlistEntries,
   getWatchlistSet,
   removeWatchlistEntry,
@@ -687,20 +688,58 @@ router.post("/watchlist", async (req, res) => {
   });
 });
 
-router.get("/watchlist/top", (req, res) => {
+router.get("/watchlist/top", async (req, res) => {
   const limit = clampLimit(req.query.limit);
-  const players = [..._watchCounts.values()]
-    .sort((left, right) => right.count - left.count)
-    .slice(0, limit)
-    .map((entry) => ({
-      playerId: entry.playerId,
-      playerName: entry.playerName,
-      teamName: entry.teamName,
-      teamAbbreviation: entry.teamAbbreviation,
-      team: entry.teamAbbreviation,
-      league: entry.league,
-      watchCount: entry.count,
-    }));
+  const persistedCounts = await getAllWatchCounts();
+
+  let players = [...persistedCounts.entries()]
+    .map(([playerId, count]) => {
+      const profile = findPlayerById(playerId);
+      if (!profile) return null;
+      return {
+        playerId: profile.playerId,
+        playerName: profile.playerName,
+        teamName: profile.teamName,
+        teamAbbreviation: profile.teamAbbreviation,
+        team: profile.teamAbbreviation,
+        league: profile.league,
+        watchCount: count,
+      };
+    })
+    .filter((value): value is {
+      playerId: string;
+      playerName: string;
+      teamName: string;
+      teamAbbreviation: string;
+      team: string;
+      league: League;
+      watchCount: number;
+    } => Boolean(value))
+    .sort((left, right) => right.watchCount - left.watchCount)
+    .slice(0, limit);
+
+  if (players.length === 0) {
+    const date = normalizeDate(req.query.date);
+    const lastUpdated = new Date().toISOString();
+    const [mlbRankedPlayers, milbRankedPlayers] = await Promise.all([
+      getRankedPlayers("MLB", date, 50, lastUpdated),
+      getRankedPlayers("MiLB", date, 50, lastUpdated),
+    ]);
+
+    players = [...mlbRankedPlayers, ...milbRankedPlayers]
+      .sort((left, right) => right.rankingScore - left.rankingScore)
+      .slice(0, limit)
+      .map((entry) => ({
+        playerId: entry.playerId,
+        playerName: entry.playerName,
+        teamName: entry.teamName,
+        teamAbbreviation: entry.teamAbbreviation,
+        team: entry.teamAbbreviation,
+        league: entry.league,
+        watchCount: 0,
+      }));
+  }
+
   res.json({ count: players.length, players });
 });
 

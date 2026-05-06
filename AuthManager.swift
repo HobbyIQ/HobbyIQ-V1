@@ -31,7 +31,7 @@ final class AuthManager: ObservableObject {
     }
 
     var isAdminTestingAccount: Bool {
-        username.caseInsensitiveCompare("HobbyIQ") == .orderedSame
+        username.caseInsensitiveCompare("drew@justtheboysandcards.com") == .orderedSame
     }
 
     var isOwnerPersonalAccount: Bool {
@@ -56,10 +56,10 @@ final class AuthManager: ObservableObject {
             .capitalized
     }
 
-    func signIn(username: String, password: String) async {
-        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedUsername.isEmpty, !password.isEmpty else {
-            errorMessage = "Username and password required"
+    func signIn(email: String, password: String) async {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedEmail.isEmpty, !password.isEmpty else {
+            errorMessage = "Email and password required"
             return
         }
 
@@ -67,7 +67,7 @@ final class AuthManager: ObservableObject {
         errorMessage = nil
 
         do {
-            let response = try await apiService.signIn(username: trimmedUsername, password: password)
+            let response = try await apiService.signIn(email: trimmedEmail, password: password)
             guard response.success, let user = response.user, let sessionId = response.sessionId else {
                 errorMessage = response.error ?? "Unable to sign in"
                 isLoading = false

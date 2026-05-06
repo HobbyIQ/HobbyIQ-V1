@@ -872,38 +872,6 @@ struct DailyIQView: View {
                         .foregroundColor(.red)
                 }
 
-                if !vm.topWatched.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Top Watched Players")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
-
-                        ForEach(vm.topWatched.prefix(5)) { player in
-                            HStack(spacing: 8) {
-                                Text(player.playerName)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                if let team = player.team, !team.isEmpty {
-                                    Text(team)
-                                        .font(.caption2)
-                                        .foregroundColor(.gray)
-                                }
-                                Spacer()
-                                Text("\(player.watchCount)")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundColor(.blue)
-                                Text("watchers")
-                                    .font(.caption2)
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    .padding(12)
-                    .background(Color(.tertiarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-
                 if let watchlist = vm.watchlist {
                     if !watchlist.watchlist.isEmpty {
                         VStack(spacing: 10) {
@@ -942,6 +910,38 @@ struct DailyIQView: View {
             .padding(16)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+
+        if !vm.topWatched.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Top Watched Players")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+
+                ForEach(vm.topWatched.prefix(5)) { player in
+                    HStack(spacing: 8) {
+                        Text(player.playerName)
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        if let team = player.team, !team.isEmpty {
+                            Text(team)
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                        }
+                        Spacer()
+                        Text("\(player.watchCount)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.blue)
+                        Text("watchers")
+                            .font(.caption2)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 

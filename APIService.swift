@@ -757,9 +757,9 @@ class APIService {
 
     // MARK: Auth
 
-    func signIn(username: String, password: String) async throws -> AuthSignInResponse {
+    func signIn(email: String, password: String) async throws -> AuthSignInResponse {
         let url = URL(string: baseURL + "/api/auth/signin")!
-        return try await postRequest(url: url, body: ["username": username, "password": password])
+        return try await postRequest(url: url, body: ["email": email, "username": email, "password": password])
     }
 
     func signOut(sessionId: String) async throws -> AuthSignOutResponse {

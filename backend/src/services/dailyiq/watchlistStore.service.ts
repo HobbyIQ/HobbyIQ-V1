@@ -59,6 +59,19 @@ export async function getWatchlistSet(userId: string): Promise<Set<string>> {
   return new Set(Object.keys(getUserStore(store, userId)));
 }
 
+export async function getAllWatchCounts(): Promise<Map<string, number>> {
+  const store = await readStore();
+  const counts = new Map<string, number>();
+
+  for (const userWatchlist of Object.values(store)) {
+    for (const entry of Object.values(userWatchlist)) {
+      counts.set(entry.playerId, (counts.get(entry.playerId) ?? 0) + 1);
+    }
+  }
+
+  return counts;
+}
+
 export async function upsertWatchlistEntry(userId: string, playerId: string): Promise<{ entry: WatchlistEntry; created: boolean }> {
   const store = await readStore();
   const userWatchlist = getUserStore(store, userId);

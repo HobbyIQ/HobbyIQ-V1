@@ -42,6 +42,16 @@ describe("DailyIQ routes", () => {
     expect(response.body.players.every((player: any) => player.level !== null)).toBe(true);
   });
 
+  it("returns non-empty watchlist top players for a large limit", async () => {
+    const response = await request(app).get("/api/dailyiq/watchlist/top?limit=50");
+
+    expect(response.status).toBe(200);
+    expect(response.body.count).toBeGreaterThan(0);
+    expect(response.body.count).toBeLessThanOrEqual(50);
+    expect(Array.isArray(response.body.players)).toBe(true);
+    expect(response.body.players.length).toBe(response.body.count);
+  });
+
   it("scopes watchlists by authenticated user", async () => {
     const firstSession = await signIn("HobbyIQ", "Baseball25");
     const secondSession = await signIn("JusttheBoysandCards", "Carolina23");

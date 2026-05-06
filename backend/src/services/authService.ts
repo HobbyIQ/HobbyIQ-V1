@@ -5,6 +5,7 @@ type SubscriptionPlan = "free" | "pro" | "all-star";
 interface AuthUserRecord {
   userId: string;
   email: string;
+  aliases: string[];
   passwordHash: string;
   plan: SubscriptionPlan;
   createdAt: string;
@@ -29,13 +30,15 @@ const users: Record<string, AuthUserRecord> = {};
 const SEEDED_USERS = [
   {
     userId: "admin-testing-hobbyiq",
-    email: "HobbyIQ",
+    email: "drew@justtheboysandcards.com",
+    aliases: ["HobbyIQ"],
     password: "Baseball25",
     plan: "all-star" as SubscriptionPlan,
   },
   {
     userId: "personal-justtheboysandcards",
-    email: "JusttheBoysandCards",
+    email: "justtheboysandcards@justtheboysandcards.com",
+    aliases: ["JusttheBoysandCards"],
     password: "Carolina23",
     plan: "all-star" as SubscriptionPlan,
   },
@@ -96,6 +99,7 @@ function seedUsers() {
     users[seededUser.userId] = {
       userId: seededUser.userId,
       email: seededUser.email,
+      aliases: seededUser.aliases,
       passwordHash: hashPassword(seededUser.password),
       plan: seededUser.plan,
       createdAt: new Date().toISOString(),
@@ -105,14 +109,18 @@ function seedUsers() {
 
 function findUser(identifier: string): AuthUserRecord | undefined {
   const normalized = identifier.trim().toLowerCase();
-  return Object.values(users).find((user) => user.email.trim().toLowerCase() === normalized);
+  return Object.values(users).find((user) => {
+    const normalizedEmail = user.email.trim().toLowerCase();
+    if (normalizedEmail === normalized) return true;
+    return user.aliases.some((alias) => alias.trim().toLowerCase() === normalized);
+  });
 }
 
 seedUsers();
 
 export async function signIn(identifier: string, password: string): Promise<AuthResult> {
   if (!identifier || !password) {
-    return { success: false, error: "Username and password required" };
+    return { success: false, error: "Email and password required" };
   }
 
   const user = findUser(identifier);

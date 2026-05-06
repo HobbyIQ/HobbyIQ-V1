@@ -3,12 +3,12 @@ import SwiftUI
 struct AccountView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var auth = AuthManager.shared
-    @State private var username = ""
+    @State private var email = "drew@justtheboysandcards.com"
     @State private var password = ""
     @FocusState private var focusedField: Field?
 
     private enum Field {
-        case username
+        case email
         case password
     }
 
@@ -44,13 +44,13 @@ struct AccountView: View {
                     }
                 } else {
                     Section(header: Text("Sign In")) {
-                        TextField("Email or Username", text: $username)
+                        TextField("Email", text: $email)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
-                            .textContentType(.username)
+                            .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .submitLabel(.next)
-                            .focused($focusedField, equals: .username)
+                            .focused($focusedField, equals: .email)
                             .onSubmit {
                                 focusedField = .password
                             }
@@ -61,14 +61,14 @@ struct AccountView: View {
                             .focused($focusedField, equals: .password)
                             .onSubmit {
                                 Task {
-                                    await auth.signIn(username: username, password: password)
+                                    await auth.signIn(email: email, password: password)
                                     if auth.isAuthenticated { password = "" }
                                 }
                             }
 
                         Button {
                             Task {
-                                await auth.signIn(username: username, password: password)
+                                await auth.signIn(email: email, password: password)
                                 if auth.isAuthenticated { password = "" }
                             }
                         } label: {
@@ -83,10 +83,10 @@ struct AccountView: View {
                             }
                         }
                         .disabled(auth.isLoading ||
-                                  username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                                  email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
                                   password.isEmpty)
 
-                        Text("Admin login: HobbyIQ / Baseball25")
+                        Text("Login: drew@justtheboysandcards.com / Baseball25")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

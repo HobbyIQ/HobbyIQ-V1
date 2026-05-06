@@ -9,6 +9,7 @@ struct AuthUser: Codable {
 }
 
 struct AuthSignInRequest: Codable {
+    let email: String
     let username: String
     let password: String
 }
@@ -24,13 +25,13 @@ struct AuthResponse: Codable {
 enum AuthAPI {
     private static let base = "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net"
 
-    static func signIn(username: String, password: String) async throws -> AuthResponse {
+    static func signIn(email: String, password: String) async throws -> AuthResponse {
         let url = URL(string: base + "/api/auth/signin")!
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.timeoutInterval = 30
-        req.httpBody = try JSONEncoder().encode(AuthSignInRequest(username: username, password: password))
+        req.httpBody = try JSONEncoder().encode(AuthSignInRequest(email: email, username: email, password: password))
         let (data, _) = try await URLSession.shared.data(for: req)
         return try JSONDecoder().decode(AuthResponse.self, from: data)
     }
@@ -78,7 +79,7 @@ final class AuthManager: ObservableObject {
     var username: String { currentUser?.email ?? "" }
 
     var isAdminTestingAccount: Bool {
-        username.caseInsensitiveCompare("HobbyIQ") == .orderedSame
+        username.caseInsensitiveCompare("drew@justtheboysandcards.com") == .orderedSame
     }
 
     var isOwnerPersonalAccount: Bool {
@@ -97,16 +98,16 @@ final class AuthManager: ObservableObject {
             .capitalized
     }
 
-    func signIn(username: String, password: String) async {
-        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+    func signIn(email: String, password: String) async {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !password.isEmpty else {
-            errorMessage = "Username and password required"
+            errorMessage = "Email and password required"
             return
         }
         isLoading = true
         errorMessage = nil
         do {
-            let response = try await AuthAPI.signIn(username: trimmed, password: password)
+            let response = try await AuthAPI.signIn(email: trimmed, password: password)
             guard response.success, let user = response.user, let sid = response.sessionId else {
                 errorMessage = response.error ?? "Invalid username or password"
                 isLoading = false
