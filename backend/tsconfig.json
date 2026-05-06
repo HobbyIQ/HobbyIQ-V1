@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "moduleResolution": "nodenext",
     
-    "types": ["mocha", "chai"]
+    "types": ["node", "express", "cors", "mocha", "chai"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["tests/**"]
