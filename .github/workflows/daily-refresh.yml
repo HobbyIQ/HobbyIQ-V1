@@ -47,12 +47,16 @@ jobs:
       - name: Create deploy.zip
         run: node zip.js
 
-      # Login to Azure using Publish Profile (simpler than service principal)
+      # Login to Azure using Service Principal
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: HobbyIQ3
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: deploy.zip
 
       # Wait for the app to finish restarting before warming cache
