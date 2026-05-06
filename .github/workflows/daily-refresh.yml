@@ -1,0 +1,92 @@
+name: Daily 5AM EST Refresh & Deploy
+
+on:
+  schedule:
+    # 9:00 UTC = 5:00 AM EDT (UTC-4, April–October)
+    # If you need strict EST (UTC-5, Nov–Mar), change to: '0 10 * * *'
+    - cron: '0 9 * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  deploy-and-refresh:
+    name: Build, Deploy & Warm DailyIQ Cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      # Install all deps (including devDependencies for tsc)
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      # Compile TypeScript → dist/
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      # Trim to production deps for the zip (no @types, no devDeps)
+      - name: Prune to production dependencies
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      # Install archiver at root (needed by zip.js)
+      - name: Install root zip dependencies
+        run: npm install archiver --no-save
+
+      # Build deploy.zip via project's own zip.js (packages dist/ + node_modules)
+      - name: Create deploy.zip
+        run: node zip.js
+
+      # Login to Azure using Publish Profile (simpler than service principal)
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: HobbyIQ3
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: deploy.zip
+
+      # Wait for the app to finish restarting before warming cache
+      - name: Wait for app restart
+        run: sleep 30
+
+      # Hit health check first
+      - name: Health check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health)
+          echo "Health status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed ($STATUS) — aborting cache warm"
+            exit 1
+          fi
+
+      # Force a fresh DailyIQ pull from MLB Stats API — pre-warms cache for users
+      - name: Warm DailyIQ cache (MLB)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/mlb?limit=25&fresh=true")
+          echo "MLB warm status: $STATUS"
+
+      - name: Warm DailyIQ cache (MiLB)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/milb?limit=25&fresh=true")
+          echo "MiLB warm status: $STATUS"
+
+      - name: Warm DailyIQ brief
+        run: |
+          RESPONSE=$(curl -s \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief")
+          MLB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('mlb',[])))" 2>/dev/null || echo "?")
+          MILB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('milb',[])))" 2>/dev/null || echo "?")
+          echo "Daily brief warmed — MLB: $MLB_COUNT performers, MiLB: $MILB_COUNT performers"
