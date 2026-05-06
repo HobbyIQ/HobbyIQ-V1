@@ -1,28 +1,112 @@
-import SwiftUI
+﻿import SwiftUI
 
-// MARK: - Models
+// MARK: - Response Models
 
-struct DailyPlayerStat: Identifiable, Decodable {
-    var id: String { "\(playerName)-\(team)-\(level)" }
-    let playerName: String
-    let team: String
-    let level: String
-    let position: String
-    let statLine: String
-    let performanceNote: String?
-    let trend: String
-    let hr: Int?
-    let hits: Int?
-    let rbi: Int?
-    let strikeouts: Int?
-    let era: Double?
-    let isProspect: Bool?
-    let buySignal: Bool?
+private struct DIQDailyStats: Decodable {
+    let hits: Int
+    let atBats: Int
+    let runs: Int
+    let rbis: Int
+    let homeRuns: Int
+    let strikeouts: Int
+    let walks: Int
+    let battingAverage: String
+    let ops: String
+    let dailyStatsStatus: String?
+
+    enum CodingKeys: String, CodingKey {
+        case hits
+        case atBats
+        case runs
+        case rbis
+        case rbi
+        case homeRuns
+        case strikeouts
+        case walks
+        case battingAverage
+        case ops
+        case dailyStatsStatus
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        hits = try container.decodeIfPresent(Int.self, forKey: .hits) ?? 0
+        atBats = try container.decodeIfPresent(Int.self, forKey: .atBats) ?? 0
+        runs = try container.decodeIfPresent(Int.self, forKey: .runs) ?? 0
+        let rbisValue = try container.decodeIfPresent(Int.self, forKey: .rbis)
+        let rbiValue = try container.decodeIfPresent(Int.self, forKey: .rbi)
+        rbis = rbisValue ?? rbiValue ?? 0
+        homeRuns = try container.decodeIfPresent(Int.self, forKey: .homeRuns) ?? 0
+        strikeouts = try container.decodeIfPresent(Int.self, forKey: .strikeouts) ?? 0
+        walks = try container.decodeIfPresent(Int.self, forKey: .walks) ?? 0
+        battingAverage = try container.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
+        ops = try container.decodeIfPresent(String.self, forKey: .ops) ?? ".000"
+        dailyStatsStatus = try container.decodeIfPresent(String.self, forKey: .dailyStatsStatus)
+    }
 }
 
-private struct DailyIQResponse: Decodable {
+private struct DIQSeasonStats: Decodable {
+    let battingAverage: String
+    let homeRuns: Int
+    let rbis: Int
+    let obp: String
+    let slg: String
+    let ops: String
+    let walks: Int
+    let strikeouts: Int
+    let walkToStrikeout: String?
+
+    enum CodingKeys: String, CodingKey {
+        case battingAverage
+        case homeRuns
+        case rbis
+        case rbi
+        case obp
+        case onBasePercentage
+        case slg
+        case sluggingPercentage
+        case ops
+        case walks
+        case strikeouts
+        case walkToStrikeout
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        battingAverage = try container.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
+        homeRuns = try container.decodeIfPresent(Int.self, forKey: .homeRuns) ?? 0
+        let rbisValue = try container.decodeIfPresent(Int.self, forKey: .rbis)
+        let rbiValue = try container.decodeIfPresent(Int.self, forKey: .rbi)
+        rbis = rbisValue ?? rbiValue ?? 0
+        obp = try container.decodeIfPresent(String.self, forKey: .obp)
+            ?? (try container.decodeIfPresent(String.self, forKey: .onBasePercentage))
+            ?? ".000"
+        slg = try container.decodeIfPresent(String.self, forKey: .slg)
+            ?? (try container.decodeIfPresent(String.self, forKey: .sluggingPercentage))
+            ?? ".000"
+        ops = try container.decodeIfPresent(String.self, forKey: .ops) ?? ".000"
+        walks = try container.decodeIfPresent(Int.self, forKey: .walks) ?? 0
+        strikeouts = try container.decodeIfPresent(Int.self, forKey: .strikeouts) ?? 0
+        walkToStrikeout = try container.decodeIfPresent(String.self, forKey: .walkToStrikeout)
+    }
+}
+
+private struct DIQPerformer: Decodable, Identifiable {
+    var id: String { playerId }
+    let playerId: String
+    let playerName: String
+    let team: String
+    let league: String
+    let level: String?
+    let dailyStats: DIQDailyStats
+    let seasonStats: DIQSeasonStats
+}
+
+private struct DIQBriefResponse: Decodable {
     let date: String
-    let stats: [DailyPlayerStat]
+    let generatedAt: String
+    let mlb: [DIQPerformer]
+    let milb: [DIQPerformer]
 }
 
 // MARK: - API
@@ -30,33 +114,35 @@ private struct DailyIQResponse: Decodable {
 private enum DailyIQAPI {
     static let baseURL = "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net"
 
-    static func fetchMLB() async -> [DailyPlayerStat] {
-        await fetchStats(path: "/api/dailyiq/mlb")
-    }
-
-    static func fetchMiLB() async -> [DailyPlayerStat] {
-        await fetchStats(path: "/api/dailyiq/milb")
-    }
-
-    private static func fetchStats(path: String) async -> [DailyPlayerStat] {
-        guard let url = URL(string: baseURL + path) else { return [] }
+    static func fetchBrief(fresh: Bool = false) async throws -> DIQBriefResponse {
+        var urlStr = baseURL + "/api/dailyiq/brief"
+        if fresh { urlStr += "?fresh=true" }
+        guard let url = URL(string: urlStr) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
-        guard let (data, _) = try? await URLSession.shared.data(for: request) else { return [] }
-        guard let response = try? JSONDecoder().decode(DailyIQResponse.self, from: data) else { return [] }
-        return response.stats
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(DIQBriefResponse.self, from: data)
     }
 }
 
 // MARK: - View
 
 struct DailyIQView: View {
-    @State private var mlbStats: [DailyPlayerStat] = []
-    @State private var milbStats: [DailyPlayerStat] = []
+    @State private var brief: DIQBriefResponse? = nil
     @State private var isLoading = false
     @State private var errorMessage: String?
 
-    private var hasData: Bool { !mlbStats.isEmpty || !milbStats.isEmpty }
+    private var hasData: Bool { brief != nil }
+    private var mlbPerformers: [DIQPerformer] {
+        brief?.mlb.filter { $0.league.caseInsensitiveCompare("MLB") == .orderedSame } ?? []
+    }
+
+    private var milbPerformers: [DIQPerformer] {
+        brief?.milb.filter { $0.league.caseInsensitiveCompare("MiLB") == .orderedSame } ?? []
+    }
 
     var body: some View {
         NavigationStack {
@@ -75,32 +161,42 @@ struct DailyIQView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                         Button("Retry") {
-                            Task { await loadStats() }
+                            Task { await loadBrief() }
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 } else {
                     List {
-                        if !mlbStats.isEmpty {
+                        if !mlbPerformers.isEmpty {
                             Section("MLB Top Performers") {
-                                ForEach(mlbStats) { stat in
-                                    PlayerStatRow(stat: stat)
+                                ForEach(mlbPerformers) { performer in
+                                    PerformerRow(performer: performer)
                                         .listRowBackground(Color.black)
                                 }
                             }
                         }
-                        if !milbStats.isEmpty {
+                        if !milbPerformers.isEmpty {
                             Section("MiLB Top Performers") {
-                                ForEach(milbStats) { stat in
-                                    PlayerStatRow(stat: stat)
+                                ForEach(milbPerformers) { performer in
+                                    PerformerRow(performer: performer)
                                         .listRowBackground(Color.black)
                                 }
+                            }
+                        }
+                        if mlbPerformers.isEmpty && milbPerformers.isEmpty {
+                            Section {
+                                let mlbCount = brief?.mlb.count ?? 0
+                                let milbCount = brief?.milb.count ?? 0
+                                Text("No performers loaded (API returned mlb:\(mlbCount) milb:\(milbCount))")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                                    .listRowBackground(Color.black)
                             }
                         }
                     }
                     .scrollContentBackground(.hidden)
                     .refreshable {
-                        await loadStats()
+                        await loadBrief(fresh: true)
                     }
                 }
             }
@@ -108,99 +204,87 @@ struct DailyIQView: View {
             .navigationTitle("DailyIQ")
             .task {
                 if !hasData {
-                    await loadStats()
+                    await loadBrief()
                 }
             }
         }
         .preferredColorScheme(.dark)
     }
 
-    private func loadStats() async {
+    private func loadBrief(fresh: Bool = false) async {
         isLoading = true
         errorMessage = nil
-
-        async let mlb = DailyIQAPI.fetchMLB()
-        async let milb = DailyIQAPI.fetchMiLB()
-        let (mlbResult, milbResult) = await (mlb, milb)
-
-        mlbStats = mlbResult
-        milbStats = milbResult
-
-        if mlbResult.isEmpty && milbResult.isEmpty {
-            errorMessage = "No games found for yesterday. Check back after games are played."
+        do {
+            brief = try await DailyIQAPI.fetchBrief(fresh: fresh)
+        } catch let decodingError as DecodingError {
+            switch decodingError {
+            case .keyNotFound(let key, _):
+                errorMessage = "Missing field: \(key.stringValue)"
+            case .typeMismatch(_, let ctx):
+                errorMessage = "Type mismatch: \(ctx.debugDescription)"
+            case .valueNotFound(_, let ctx):
+                errorMessage = "Null value: \(ctx.debugDescription)"
+            case .dataCorrupted(let ctx):
+                errorMessage = "Data error: \(ctx.debugDescription)"
+            @unknown default:
+                errorMessage = "Decode error: \(decodingError)"
+            }
+        } catch {
+            errorMessage = "Network error: \(error.localizedDescription)"
         }
         isLoading = false
     }
 }
 
-// MARK: - Player Row
+// MARK: - Performer Row
 
-private struct PlayerStatRow: View {
-    let stat: DailyPlayerStat
-
-    private var trendColor: Color {
-        switch stat.trend {
-        case "hot":  return .orange
-        case "up":   return .green
-        case "cold": return .blue
-        default:     return .gray
-        }
-    }
-
-    private var trendLabel: String {
-        switch stat.trend {
-        case "hot":  return "🔥 Hot"
-        case "up":   return "↑ Rising"
-        case "cold": return "❄️ Cold"
-        case "down": return "↓ Down"
-        default:     return "— Flat"
-        }
-    }
+private struct PerformerRow: View {
+    let performer: DIQPerformer
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
+            HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(stat.playerName)
+                    Text(performer.playerName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.white)
-                    Text("\(stat.team) · \(stat.position)")
+                    Text("\(performer.team) · \(performer.league)")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
                 Spacer()
-                HStack(spacing: 6) {
-                    if stat.buySignal == true {
-                        Text("Buy Signal")
-                            .font(.caption2.weight(.medium))
-                            .foregroundColor(.green)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Color.green.opacity(0.15))
-                            .clipShape(Capsule())
-                    }
-                    Text(trendLabel)
-                        .font(.caption2.weight(.medium))
-                        .foregroundColor(trendColor)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(trendColor.opacity(0.15))
-                        .clipShape(Capsule())
-                }
+                Text("BA \(performer.seasonStats.battingAverage)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.12))
+                    .clipShape(Capsule())
             }
 
-            Text(stat.statLine)
+            let s = performer.dailyStats
+            Text("\(s.hits)-\(s.atBats)  \(s.homeRuns) HR  \(s.rbis) RBI  \(s.walks) BB  \(s.strikeouts) K  OPS \(s.ops)")
                 .font(.caption.monospacedDigit())
                 .foregroundColor(.white.opacity(0.85))
 
-            if let note = stat.performanceNote, !note.isEmpty {
-                Text(note)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .lineLimit(2)
+            HStack(spacing: 12) {
+                statChip("HR", "\(performer.seasonStats.homeRuns)")
+                statChip("RBI", "\(performer.seasonStats.rbis)")
+                statChip("OPS", performer.seasonStats.ops)
             }
         }
         .padding(.vertical, 6)
+    }
+
+    private func statChip(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 3) {
+            Text(label)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white)
+        }
     }
 }
 

@@ -208,6 +208,12 @@ struct CompIQPriceMarketDNA: Codable {
     let anchorAge: Int?
 }
 
+struct CompIQPriceZones: Codable {
+    let buy: [Double]?
+    let hold: [Double]?
+    let sell: [Double]?
+}
+
 struct CompIQPriceResponse: Codable {
     let fairMarketValue: Double?
     let quickSaleValue: Double?
@@ -217,12 +223,18 @@ struct CompIQPriceResponse: Codable {
     let confidence: Double?
     let marketDNA: CompIQPriceMarketDNA?
     let pricingAnalytics: CompIQPricingAnalytics?
+    let zones: CompIQPriceZones?
 
     /// Map to the rich CompIQEstimateResult that CompIQView uses.
     func asEstimateResult(requestedParallel: String?) -> CompIQEstimateResult {
         let fmv = fairMarketValue ?? 0
-        let qsv = quickSaleValue ?? (fmv * 0.85)
-        let pv  = premiumValue ?? (fmv * 1.15)
+        // Use authoritative zone boundaries from server; fall back to percentages
+        let buyLow   = zones?.buy?.first  ?? (fmv * 0.82)   // quick-sale floor
+        let buyHigh  = zones?.buy?.last   ?? (fmv * 0.93)   // entry max (top of buy zone)
+        let sellLow  = zones?.sell?.first ?? (fmv * 1.05)   // trim min (bottom of sell zone)
+        let sellHigh = zones?.sell?.last  ?? (fmv * 1.25)   // premium ceiling
+        let qsv = buyLow
+        let pv  = sellHigh
         let conf = confidence ?? 0.5
         let comps = pricingAnalytics?.compsUsed ?? 0
         let parallel = pricingAnalytics?.parallelDetected ?? requestedParallel ?? "Base"
@@ -235,7 +247,7 @@ struct CompIQPriceResponse: Codable {
         }
         return CompIQEstimateResult(
             value: fmv,
-            suggestedListPrice: fmv * 1.05,
+            suggestedListPrice: sellLow,
             minAcceptableOffer: qsv,
             quickSaleValue: qsv,
             sellFormat: "eBay BIN w/ Best Offer",
@@ -297,8 +309,8 @@ struct CompIQPriceResponse: Codable {
             evidenceQualityLevel: conf >= 0.72 ? "high" : conf >= 0.45 ? "medium" : "low",
             evidenceReasons: nil,
             recommendedAction: action,
-            actionEntryMax: qsv,
-            actionTrimMin: pv * 0.95,
+            actionEntryMax: buyHigh,
+            actionTrimMin: sellLow,
             actionStopLoss: fmv * 0.75,
             actionRecheckDays: 7,
             actionRationale: summary,
@@ -321,6 +333,185 @@ struct CompIQPriceResponse: Codable {
             parallelDetected: pricingAnalytics?.parallelDetected
         )
     }
+}
+
+// MARK: - DailyIQ Models
+
+struct DailyBriefMarketDNA: Codable {
+    let demand: String?
+    let speed: String?
+    let risk: String?
+    let trend: String?
+}
+
+struct DailyStats: Codable {
+    let hits: Int
+    let atBats: Int
+    let runs: Int
+    let rbis: Int
+    let homeRuns: Int
+    let strikeouts: Int
+    let walks: Int
+    let battingAverage: String
+    let ops: String
+
+    enum CodingKeys: String, CodingKey {
+        case hits, atBats, runs, rbis, rbi, homeRuns, strikeouts, walks, battingAverage, ops
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        hits          = try c.decodeIfPresent(Int.self,    forKey: .hits)          ?? 0
+        atBats        = try c.decodeIfPresent(Int.self,    forKey: .atBats)        ?? 0
+        runs          = try c.decodeIfPresent(Int.self,    forKey: .runs)          ?? 0
+        rbis          = try c.decodeIfPresent(Int.self,    forKey: .rbis)          ?? c.decodeIfPresent(Int.self, forKey: .rbi) ?? 0
+        homeRuns      = try c.decodeIfPresent(Int.self,    forKey: .homeRuns)      ?? 0
+        strikeouts    = try c.decodeIfPresent(Int.self,    forKey: .strikeouts)    ?? 0
+        walks         = try c.decodeIfPresent(Int.self,    forKey: .walks)         ?? 0
+        battingAverage = try c.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
+        ops           = try c.decodeIfPresent(String.self, forKey: .ops)           ?? ".000"
+    }
+}
+
+struct SeasonStats: Codable {
+    let battingAverage: String
+    let homeRuns: Int
+    let rbis: Int
+    let obp: String
+    let slg: String
+    let ops: String
+    let walks: Int
+    let strikeouts: Int
+    let walkToStrikeout: String?
+
+    enum CodingKeys: String, CodingKey {
+        case battingAverage, homeRuns, rbis, rbi
+        case obp, onBasePercentage
+        case slg, sluggingPercentage
+        case ops, walks, strikeouts, walkToStrikeout
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        battingAverage = try c.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
+        homeRuns       = try c.decodeIfPresent(Int.self,    forKey: .homeRuns)       ?? 0
+        rbis           = try c.decodeIfPresent(Int.self,    forKey: .rbis)           ?? c.decodeIfPresent(Int.self, forKey: .rbi) ?? 0
+        obp            = try c.decodeIfPresent(String.self, forKey: .obp)            ?? c.decodeIfPresent(String.self, forKey: .onBasePercentage) ?? ".000"
+        slg            = try c.decodeIfPresent(String.self, forKey: .slg)            ?? c.decodeIfPresent(String.self, forKey: .sluggingPercentage) ?? ".000"
+        ops            = try c.decodeIfPresent(String.self, forKey: .ops)            ?? ".000"
+        walks          = try c.decodeIfPresent(Int.self,    forKey: .walks)          ?? 0
+        strikeouts     = try c.decodeIfPresent(Int.self,    forKey: .strikeouts)     ?? 0
+        walkToStrikeout = try c.decodeIfPresent(String.self, forKey: .walkToStrikeout)
+    }
+}
+
+struct DailyPerformer: Codable, Identifiable {
+    var id: String { playerId }
+    let playerId: String
+    let playerName: String
+    let team: String
+    let league: String
+    let level: String?
+    let dailyStats: DailyStats
+    let seasonStats: SeasonStats
+}
+
+struct DailyBriefResponse: Codable {
+    let date: String
+    let generatedAt: String
+    let mlb: [DailyPerformer]
+    let milb: [DailyPerformer]
+}
+
+struct DailyWatchPlayer: Codable, Identifiable {
+    var id: String { playerName.lowercased() }
+
+    let playerName: String
+    let battingAverage: String?
+    let homeRuns: Int?
+    let rbis: Int?
+    let obp: String?
+    let slg: String?
+    let ops: String?
+    let walks: Int?
+    let strikeouts: Int?
+    let walkToStrikeout: String?
+    let lastGameDate: String?
+    let statLine: String?
+    let played: Bool?
+    let trend: String?
+    let buySignal: Bool?
+    let performanceNote: String?
+    let team: String?
+    let position: String?
+    let level: String?
+    let noGameMessage: String?
+}
+
+struct DailyWatchlistItem: Codable, Identifiable {
+    let playerId: String
+    let playerName: String
+    let team: String?
+    let league: String?
+    let level: String?
+    let addedAt: String?
+    let dailyStats: DailyStats?
+    let seasonStats: SeasonStats?
+
+    var id: String { playerId }
+}
+
+struct DailyWatchlistResponse: Codable {
+    let userId: String
+    let count: Int
+    let watchlist: [DailyWatchlistItem]
+}
+
+struct DailyWatchlistUpsertRequest: Codable {
+    let playerId: String
+    let playerName: String
+    let team: String?
+    let league: String?
+}
+
+struct DailyWatchlistSearchRequest: Codable {
+    let query: String
+    let team: String?
+    let league: String?
+}
+
+struct DailyTopWatchedPlayer: Codable, Identifiable {
+    let playerId: String
+    let playerName: String
+    let team: String?
+    let league: String?
+    let watchCount: Int
+
+    var id: String { playerId }
+}
+
+struct DailyTopWatchedResponse: Codable {
+    let count: Int
+    let players: [DailyTopWatchedPlayer]
+}
+
+struct DailyWatchSuggestion: Codable, Identifiable {
+    let playerId: String
+    let playerName: String
+    let team: String?
+    let league: String?
+
+    var id: String { playerId }
+}
+
+struct DailyWatchSuggestionsResponse: Codable {
+    let query: String
+    let suggestions: [DailyWatchSuggestion]
+}
+
+struct APIMessageResponse: Codable {
+    let message: String?
+    let error: String?
 }
 
 // MARK: - Legacy CompIQ Models
@@ -437,10 +628,160 @@ struct CompIQEstimateResponse: Codable {
     let explanationBullets: [String]?
 }
 
+// MARK: - Auth Models
+struct AuthUser: Codable {
+    let userId: String?
+    let email: String?
+    let plan: String?
+}
+
+struct AuthSignInResponse: Codable {
+    let success: Bool
+    let user: AuthUser?
+    let sessionId: String?
+    let error: String?
+}
+
+struct AuthSignOutResponse: Codable {
+    let success: Bool
+    let error: String?
+}
+
+struct AuthSessionResponse: Codable {
+    let success: Bool
+    let user: AuthUser?
+    let error: String?
+}
+
+// MARK: - PortfolioIQ Models
+struct PortfolioHoldingsResponse: Codable {
+    let userId: String
+    let count: Int
+    let holdings: [PortfolioHolding]
+}
+
+struct PortfolioLedgerTotals: Codable {
+    let realizedProfitLoss: Double
+    let grossProceeds: Double
+    let netProceeds: Double
+    let costBasisSold: Double
+}
+
+struct PortfolioLedgerEntry: Codable, Identifiable {
+    let id: String
+    let userId: String
+    let holdingId: String
+    let playerName: String
+    let cardTitle: String
+    let quantitySold: Int
+    let unitSalePrice: Double
+    let grossProceeds: Double
+    let fees: Double
+    let tax: Double
+    let shipping: Double
+    let netProceeds: Double
+    let costBasisSold: Double
+    let realizedProfitLoss: Double
+    let realizedProfitLossPct: Double
+    let soldAt: String
+    let notes: String?
+}
+
+struct PortfolioLedgerResponse: Codable {
+    let userId: String
+    let count: Int
+    let totals: PortfolioLedgerTotals
+    let entries: [PortfolioLedgerEntry]
+}
+
+struct PortfolioSellRequest: Codable {
+    let quantity: Int
+    let salePrice: Double
+    let fees: Double?
+    let tax: Double?
+    let shipping: Double?
+    let soldAt: String?
+    let notes: String?
+}
+
+struct PortfolioSellResponse: Codable {
+    let message: String
+    let sold: PortfolioLedgerEntry
+    let holdingRemoved: Bool
+    let remainingQuantity: Int
+}
+
+// MARK: - API Service
+// MARK: - Card Estimate (flat — matches /api/compiq/estimate)
+struct CardEstimateRequest: Codable {
+    let playerName: String
+    let cardYear: Int?
+    let product: String?
+    let parallel: String?
+    let isAuto: Bool?
+    let gradeCompany: String?
+    let gradeValue: Int?
+}
+
+struct CardEstimateDNA: Codable {
+    let trend: String?
+    let liquidity: String?
+    let speed: String?
+    let marketCondition: String?
+}
+
+struct CardEstimatePricingAnalytics: Codable {
+    let compsUsed: Int?
+    let rSquared: Double?
+    let parallelDetected: String?
+    let projectedNextSale: Double?
+}
+
+struct CardEstimateResponse: Codable {
+    let fairMarketValue: Double?
+    let quickSaleValue: Double?
+    let premiumValue: Double?
+    let verdict: String?
+    let recommendation: String?
+    let action: String?
+    let marketDNA: CardEstimateDNA?
+    let exitStrategy: CompIQExitStrategy?
+    let explanation: [String]?
+    let pricingAnalytics: CardEstimatePricingAnalytics?
+}
+
 // MARK: - API Service
 class APIService {
     static let shared = APIService()
     private init() {}
+
+    // MARK: Auth
+
+    func signIn(username: String, password: String) async throws -> AuthSignInResponse {
+        let url = URL(string: baseURL + "/api/auth/signin")!
+        return try await postRequest(url: url, body: ["username": username, "password": password])
+    }
+
+    func signOut(sessionId: String) async throws -> AuthSignOutResponse {
+        let url = URL(string: baseURL + "/api/auth/signout")!
+        return try await postRequest(url: url, body: ["sessionId": sessionId], extraHeaders: ["x-session-id": sessionId])
+    }
+
+    func fetchSession(sessionId: String) async throws -> AuthSessionResponse {
+        let url = URL(string: baseURL + "/api/auth/session")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 15
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(AuthSessionResponse.self, from: data)
+    }
 
     func searchCards(query: String) async throws -> CardSearchResponse {
         let url = URL(string: baseURL + "/api/compiq/search")!
@@ -453,6 +794,12 @@ class APIService {
     }
 
     func estimateCard(request: CompIQEstimateRequest) async throws -> CompIQEstimateResponse {
+        let url = URL(string: baseURL + "/api/compiq/estimate")!
+        return try await postRequest(url: url, body: request)
+    }
+
+    // MARK: - Card Estimate (flat fields — matches /api/compiq/estimate directly)
+    func estimateCardDirect(request: CardEstimateRequest) async throws -> CardEstimateResponse {
         let url = URL(string: baseURL + "/api/compiq/estimate")!
         return try await postRequest(url: url, body: request)
     }
@@ -472,11 +819,210 @@ class APIService {
         return try await postRequest(url: url, body: request)
     }
 
-    private func postRequest<T: Encodable, U: Decodable>(url: URL, body: T) async throws -> U {
+    func fetchDailyBrief(fresh: Bool = false) async throws -> DailyBriefResponse {
+        let urlString = baseURL + "/api/dailyiq/brief" + (fresh ? "?fresh=true" : "")
+        let url = URL(string: urlString)!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Fresh requests wait longer — they run live eBay lookups for all 4 cards
+        request.timeoutInterval = fresh ? 60 : 30
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(DailyBriefResponse.self, from: data)
+    }
+
+    func fetchDailyWatchlist(sessionId: String) async throws -> DailyWatchlistResponse {
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(DailyWatchlistResponse.self, from: data)
+    }
+
+    func fetchDailyTopWatched(limit: Int = 10) async throws -> DailyTopWatchedResponse {
+        let boundedLimit = min(max(limit, 1), 50)
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist/top?limit=\(boundedLimit)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(DailyTopWatchedResponse.self, from: data)
+    }
+
+    func fetchDailyWatchSuggestions(query: String, limit: Int = 8) async throws -> DailyWatchSuggestionsResponse {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let boundedLimit = min(max(limit, 1), 20)
+        let encodedQuery = normalizedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? normalizedQuery
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist/suggest?q=\(encodedQuery)&limit=\(boundedLimit)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(DailyWatchSuggestionsResponse.self, from: data)
+    }
+
+    func addDailyWatchPlayer(request body: DailyWatchlistUpsertRequest, sessionId: String) async throws -> APIMessageResponse {
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist")!
+        return try await postRequest(
+            url: url,
+            body: body,
+            extraHeaders: ["x-session-id": sessionId]
+        )
+    }
+
+    func addDailyWatchPlayerBySearch(query: String, team: String?, league: String?, sessionId: String) async throws -> APIMessageResponse {
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist/search")!
+        return try await postRequest(
+            url: url,
+            body: DailyWatchlistSearchRequest(query: query, team: team, league: league),
+            extraHeaders: ["x-session-id": sessionId]
+        )
+    }
+
+    func fetchPortfolioHoldings(sessionId: String) async throws -> PortfolioHoldingsResponse {
+        let url = URL(string: baseURL + "/api/portfolio/holdings")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+
+        return try JSONDecoder().decode(PortfolioHoldingsResponse.self, from: data)
+    }
+
+    func addPortfolioHolding(_ holding: PortfolioHolding, sessionId: String) async throws -> APIMessageResponse {
+        let url = URL(string: baseURL + "/api/portfolio/holdings")!
+        return try await postRequest(
+            url: url,
+            body: holding,
+            extraHeaders: ["x-session-id": sessionId]
+        )
+    }
+
+    func updatePortfolioHolding(_ holding: PortfolioHolding, sessionId: String) async throws -> APIMessageResponse {
+        let holdingId = holding.id.uuidString.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? holding.id.uuidString
+        let url = URL(string: baseURL + "/api/portfolio/holdings/\(holdingId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+        request.httpBody = try JSONEncoder().encode(holding)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+
+        return try JSONDecoder().decode(APIMessageResponse.self, from: data)
+    }
+
+    func removePortfolioHolding(holdingId: UUID, sessionId: String) async throws -> APIMessageResponse {
+        let encodedHoldingId = holdingId.uuidString.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? holdingId.uuidString
+        let url = URL(string: baseURL + "/api/portfolio/holdings/\(encodedHoldingId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+
+        return try JSONDecoder().decode(APIMessageResponse.self, from: data)
+    }
+
+    func sellPortfolioHolding(holdingId: UUID, request body: PortfolioSellRequest, sessionId: String) async throws -> PortfolioSellResponse {
+        let encodedHoldingId = holdingId.uuidString.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? holdingId.uuidString
+        let url = URL(string: baseURL + "/api/portfolio/holdings/\(encodedHoldingId)/sell")!
+        return try await postRequest(
+            url: url,
+            body: body,
+            extraHeaders: ["x-session-id": sessionId]
+        )
+    }
+
+    func fetchPortfolioLedger(sessionId: String) async throws -> PortfolioLedgerResponse {
+        let url = URL(string: baseURL + "/api/portfolio/ledger")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+
+        return try JSONDecoder().decode(PortfolioLedgerResponse.self, from: data)
+    }
+
+    func removeDailyWatchPlayer(playerId: String, sessionId: String) async throws -> APIMessageResponse {
+        let encodedPlayerId = playerId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? playerId
+        let url = URL(string: baseURL + "/api/dailyiq/watchlist/\(encodedPlayerId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(sessionId, forHTTPHeaderField: "x-session-id")
+        request.timeoutInterval = 30
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIServiceError.invalidResponse(status)
+        }
+        return try JSONDecoder().decode(APIMessageResponse.self, from: data)
+    }
+
+    private func postRequest<T: Encodable, U: Decodable>(url: URL, body: T, extraHeaders: [String: String] = [:]) async throws -> U {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
+        for (key, value) in extraHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -495,7 +1041,22 @@ class APIService {
 }
 
 // MARK: - APIService Errors
-enum APIServiceError: Error {
+enum APIServiceError: Error, LocalizedError {
     case invalidResponse(Int)
     case decoding(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse(401):
+            return "Session expired. Please sign in again."
+        case .invalidResponse(403):
+            return "Access denied."
+        case .invalidResponse(404):
+            return "Not found."
+        case .invalidResponse(let status):
+            return "Request failed (status \(status))."
+        case .decoding(let err):
+            return "Couldn't read server response: \(err.localizedDescription)"
+        }
+    }
 }
