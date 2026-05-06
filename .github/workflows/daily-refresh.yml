@@ -12,6 +12,9 @@ jobs:
     name: Build, Deploy & Warm DailyIQ Cache
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout repo
@@ -55,11 +58,13 @@ jobs:
       - name: Create deploy.zip
         run: node zip.js
 
-      # Login to Azure using Service Principal
+      # Login to Azure using OIDC service principal (more reliable than JSON creds parsing)
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v3
