@@ -1,0 +1,71 @@
+name: CompIQ Pricing Regression Harness
+
+# IMPORTANT — path-filter maintenance contract:
+# Any PR that introduces a new top-level compiq directory (e.g. backend/src/config/compiq/,
+# backend/src/models/compiq/, backend/src/stages/, backend/src/pipeline/) MUST add that path
+# to the list below in the SAME PR. The failure mode is silent: a contract change ships,
+# the harness doesn't run because no included path matched, and a regression slips through
+# a green-by-default merge. Treat this list as part of the compiq module surface area.
+on:
+  pull_request:
+    paths:
+      - "backend/src/services/compiq/**"
+      - "backend/src/modules/compiq/**"
+      - "backend/src/routes/compiq.routes.ts"
+      - "backend/harness/**"
+      - "backend/vitest.config.ts"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - ".github/workflows/regression.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    name: Pricing Regression Harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check production sources
+        run: npx tsc --noEmit
+
+      - name: Run pricing regression harness (Tier 1 + Tier 2)
+        env:
+          # Tier 3 is sampled from production via Cosmos; opt-in via secret.
+          # Default: Tier 1 + Tier 2 only. Tier 3 ships in a follow-up PR.
+          HARNESS_TIERS: "1,2"
+          NODE_ENV: "test"
+        run: npm run test:harness
+
+      - name: Upload snapshot diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-snapshots-${{ github.run_id }}
+          path: |
+            backend/harness/__snapshots__/
+            backend/harness/diff-report.txt
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,19 +1,29 @@
 {
   "name": "hobbyiq-backend",
   "version": "1.0.0",
-  "main": "dist/server.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "build": "tsc",
-    "start": "node dist/server.js",
-    "zip": "zip -r deploy.zip . -x \"node_modules/*\" \".git/*\""
+    "zip": "node ../zip.js",
+    "ocr:report": "node scripts/ocr-quality-report.js",
+    "ocr:readiness": "node scripts/ocr-release-readiness.js",
+    "test": "vitest run",
+    "test:harness": "vitest run harness"
   },
   "engines": {
     "node": ">=18.x"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.9.3",
+    "@azure/identity": "^4.13.1",
+    "apn": "^2.2.0",
+    "applicationinsights": "^3.14.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.5.1",
+    "ioredis": "^5.10.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
