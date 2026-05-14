@@ -23,6 +23,79 @@ import { MarketDNAEngine as SimpleMarketDNAEngine } from '../../verdict/MarketDN
 
 export class PricingPipeline {
   static process(subject: any, comps: any, context: any, debug = false) {
+    // Velocity weights mirror computeWeightedMedian() in compiqEstimate.service —
+    // fresher sales count more so anchor/FMV math reflects where the market is
+    // TODAY, not the historical center of a 90-day window. Kept local to avoid
+    // a circular import back into the route service.
+    const velocityWeight = (date: unknown): number => {
+      if (!date) return 1.0;
+      const t = new Date(String(date)).getTime();
+      if (!Number.isFinite(t)) return 1.0;
+      const hoursAgo = (Date.now() - t) / (1000 * 60 * 60);
+      if (hoursAgo <= 48)  return 5.0;
+      if (hoursAgo <= 168) return 2.0;
+      if (hoursAgo <= 504) return 1.0;
+      if (hoursAgo <= 720) return 0.3;
+      return 0.1;
+    };
+
+    // Single median implementation used everywhere in the pipeline. When a
+    // sample carries a date the median is velocity-weighted; bare numbers
+    // (or dateless objects) collapse to a plain median so callers without
+    // timestamps still get a correct answer.
+    const medianOf = (arr: Array<number | { price: number; date?: unknown }>): number => {
+      if (!arr.length) return 0;
+      const samples = arr.map((x) => (typeof x === 'number' ? { price: x } : x))
+        .filter((s) => Number.isFinite(s.price) && s.price > 0);
+      if (!samples.length) return 0;
+      const hasDates = samples.some((s) => 'date' in s && (s as any).date);
+      if (!hasDates) {
+        const sorted = samples.map((s) => s.price).sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      }
+      const weighted = samples
+        .map((s) => ({ price: s.price, weight: velocityWeight((s as any).date) }))
+        .sort((a, b) => a.price - b.price);
+      const totalWeight = weighted.reduce((s, w) => s + w.weight, 0);
+      if (totalWeight <= 0) return weighted[weighted.length - 1].price;
+      const half = totalWeight / 2;
+      let cum = 0;
+      for (const item of weighted) {
+        cum += item.weight;
+        if (cum >= half) return item.price;
+      }
+      return weighted[weighted.length - 1].price;
+    };
+
+    const isoDateOrNull = (val: unknown): string | null => {
+      if (!val) return null;
+      const d = new Date(String(val));
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
+    const normalize = (s: unknown): string => String(s ?? '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const isLikelySameCard = (title: string, sub: any): boolean => {
+      const t = normalize(title);
+      if (!t) return false;
+      const player = normalize(sub.playerName);
+      const year = sub.cardYear ? String(sub.cardYear) : '';
+      const product = normalize(sub.product);
+      const parallel = normalize(sub.parallel);
+      const wantsAuto = Boolean(sub.isAuto);
+
+      // Strong same-card gating: player + year + product token(s) must match.
+      const productTokens = product.split(' ').filter((x: string) => x.length >= 4);
+      const hasProduct = productTokens.length > 0 ? productTokens.some((pt: string) => t.includes(pt)) : true;
+      const hasPlayer = player.length > 0 && t.includes(player);
+      const hasYear = year ? t.includes(year) : true;
+      const hasParallel = parallel ? t.includes(parallel) || parallel.split(' ').some((p: string) => p.length >= 4 && t.includes(p)) : true;
+      const hasAuto = wantsAuto ? /\bauto(graph)?\b/i.test(t) : true;
+
+      return hasPlayer && hasYear && hasProduct && hasParallel && hasAuto;
+    };
+
     // 1. Card identity
     const identity = CardIdentityEngine.normalize(subject);
 
@@ -129,11 +202,101 @@ export class PricingPipeline {
 
     let fairMarketValue = 0;
     let detectedTrend: 'up' | 'flat' | 'down' = 'flat';
+    let anchorPrice = 0;
+    let anchorDate: string | null = null;
+    let blendedTrendMultiplier = 1;
+    let shortTermMultiplier = 1;
+    let longTermMultiplier = 1;
+    let sameCardRecentCount = 0;
+    let sameCard7dCount = 0;
+    let sameCardMomentumPct = 0;
+    let sameCardBlendWeight = 0;
 
     if (validPrices.length > 0) {
-      const sorted = [...validPrices].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      // Velocity-weighted center of the whole comp pool (with dates when available).
+      const median = medianOf(pricedComps.map((c: any) => ({ price: Number(c.price), date: c.date })));
+
+      // Anchor model:
+      // Use an early-window median as the anchor and blend all recent matching sales
+      // into a recency-weighted multiplier from anchor date to now.
+      const trendSeries = (exactMatchComps.length >= 3 ? exactMatchComps : pricedComps)
+        .map((c: any) => ({
+          price: Number(c.price),
+          ts: c.date ? new Date(c.date).getTime() : NaN,
+          date: c.date,
+          title: String(c.title ?? ''),
+        }))
+        .filter((c: any) => Number.isFinite(c.price) && c.price > 0 && Number.isFinite(c.ts))
+        .sort((a: any, b: any) => a.ts - b.ts);
+
+      if (trendSeries.length >= 3) {
+        const anchorWindowSize = Math.max(3, Math.ceil(trendSeries.length * 0.4));
+        const anchorWindow = trendSeries.slice(0, anchorWindowSize);
+        anchorPrice = medianOf(anchorWindow.map((c: any) => ({ price: c.price, date: c.date })));
+        anchorDate = isoDateOrNull(anchorWindow[anchorWindow.length - 1]?.date);
+
+        if (anchorPrice > 0) {
+          const n = trendSeries.length;
+          const weights = trendSeries.map((_: any, i: number) => Math.exp((i / Math.max(1, n - 1)) * 2.5));
+          const totalWeight = weights.reduce((s: number, w: number) => s + w, 0) || 1;
+          const weightedRatio = trendSeries.reduce(
+            (s: number, c: any, i: number) => s + (c.price / anchorPrice) * weights[i],
+            0
+          ) / totalWeight;
+
+          const bucketSize = Math.max(2, Math.floor(n * 0.3));
+          const earlyBucket = trendSeries.slice(0, bucketSize).map((c: any) => ({ price: c.price, date: c.date }));
+          const lateBucket = trendSeries.slice(-bucketSize).map((c: any) => ({ price: c.price, date: c.date }));
+          const earlyMedian = medianOf(earlyBucket);
+          const lateMedian = medianOf(lateBucket);
+          shortTermMultiplier = earlyMedian > 0 ? lateMedian / earlyMedian : 1;
+
+          longTermMultiplier = weightedRatio;
+          blendedTrendMultiplier = Math.max(
+            0.5,
+            Math.min(2.5, 0.75 * longTermMultiplier + 0.25 * shortTermMultiplier)
+          );
+
+          // Same-card recent momentum boost:
+          // If we have multiple exact same-card sales in the last 14 days,
+          // blend their first->last move into the trend multiplier.
+          const nowTs = Date.now();
+          const recentSameCard = trendSeries
+            .filter((c: any) => nowTs - c.ts <= 14 * 24 * 60 * 60 * 1000)
+            .filter((c: any) => isLikelySameCard(c.title, subject));
+
+          if (recentSameCard.length >= 3) {
+            sameCardRecentCount = recentSameCard.length;
+            sameCard7dCount = recentSameCard.filter((c: any) => nowTs - c.ts <= 7 * 24 * 60 * 60 * 1000).length;
+            const first = recentSameCard[0].price;
+            const last = recentSameCard[recentSameCard.length - 1].price;
+            const sameCardRatio = first > 0 ? last / first : 1;
+            sameCardMomentumPct = Math.round((sameCardRatio - 1) * 1000) / 10;
+
+            // Dynamic weight for same-card momentum:
+            // - Base 0.35 for 14-day same-card run
+            // - Lift to 0.50+ when 3+ same-card sales happened in 7 days
+            // - Further bump if prices are strictly ascending in that recent run
+            const recentSameCard7d = recentSameCard.filter((c: any) => nowTs - c.ts <= 7 * 24 * 60 * 60 * 1000);
+            const rising7d = recentSameCard7d.length >= 3
+              && recentSameCard7d.every((p: any, i: number) => i === 0 || p.price > recentSameCard7d[i - 1].price);
+
+            if (sameCard7dCount >= 3) {
+              sameCardBlendWeight = rising7d ? 0.6 : 0.5;
+              if (sameCard7dCount >= 5) sameCardBlendWeight = Math.min(0.65, sameCardBlendWeight + 0.05);
+            } else {
+              sameCardBlendWeight = 0.35;
+            }
+
+            blendedTrendMultiplier = Math.max(
+              0.5,
+              Math.min(2.5, blendedTrendMultiplier * (1 - sameCardBlendWeight) + sameCardRatio * sameCardBlendWeight)
+            );
+          }
+
+          fairMarketValue = anchorPrice * blendedTrendMultiplier;
+        }
+      }
 
       // Detect trend using regression slope on exact-match comps.
       // Positive slope = up, negative slope = down
@@ -163,9 +326,6 @@ export class PricingPipeline {
           })()
         : median;
 
-      const p75 = sorted[Math.floor(sorted.length * 0.75)];
-      const p25 = sorted[Math.floor(sorted.length * 0.25)];
-
       // If the last 3+ sales are strictly ascending (each higher than the previous),
       // the card is in a clear uptrend — use the most recent sale directly, no averaging.
       const recentPrices = trendPrices.slice(-Math.min(trendPrices.length, 5)); // last 5 max
@@ -173,17 +333,27 @@ export class PricingPipeline {
         && recentPrices.every((p, i) => i === 0 || p > recentPrices[i - 1]);
       if (isStrictlyAscending) {
         detectedTrend = 'up';
-        fairMarketValue = recentPrices[recentPrices.length - 1]; // most recent sale is the market
+        fairMarketValue = fairMarketValue > 0
+          ? fairMarketValue * 0.85 + recentPrices[recentPrices.length - 1] * 0.15
+          : recentPrices[recentPrices.length - 1];
       } else if (detectedTrend === 'up') {
-        // Rising but not strictly ascending — use recency-weighted avg, no historical anchor
-        fairMarketValue = recencyWeightedAvg;
+        fairMarketValue = fairMarketValue > 0
+          ? fairMarketValue * 0.8 + recencyWeightedAvg * 0.2
+          : recencyWeightedAvg;
       } else if (detectedTrend === 'down') {
-        // Price is softening — median as anchor
-        fairMarketValue = median;
+        fairMarketValue = fairMarketValue > 0
+          ? fairMarketValue * 0.8 + median * 0.2
+          : median;
       } else {
         // Flat: 70% recency + 30% median
-        fairMarketValue = recencyWeightedAvg * 0.7 + median * 0.3;
+        const flatBlend = recencyWeightedAvg * 0.7 + median * 0.3;
+        fairMarketValue = fairMarketValue > 0
+          ? fairMarketValue * 0.85 + flatBlend * 0.15
+          : flatBlend;
       }
+
+      if (blendedTrendMultiplier >= 1.05) detectedTrend = 'up';
+      else if (blendedTrendMultiplier <= 0.95) detectedTrend = 'down';
     }
     fairMarketValue = Math.round(fairMarketValue);
     // Safety: if FMV is 0 but we had comps, something went wrong—fall back to median
@@ -255,6 +425,18 @@ export class PricingPipeline {
       totalNormalized: validPrices.length,
       exactMatchForTrend: trendPrices.length,
       usingFallbackPool: exactMatchComps.length < 3,
+    };
+    context.anchorModel = {
+      anchorPrice: Math.round(anchorPrice),
+      anchorDate,
+      longTermMultiplier: Math.round(longTermMultiplier * 1000) / 1000,
+      shortTermMultiplier: Math.round(shortTermMultiplier * 1000) / 1000,
+      netTrendMultiplier: Math.round(blendedTrendMultiplier * 1000) / 1000,
+      impliedTrendPct: Math.round((blendedTrendMultiplier - 1) * 1000) / 10,
+      sameCardRecentCount,
+      sameCard7dCount,
+      sameCardMomentumPct,
+      sameCardBlendWeight: Math.round(sameCardBlendWeight * 100) / 100,
     };
 
     // 5. Price lanes

@@ -36,7 +36,7 @@ export interface CardSearchResult {
     trend3m: null;
   };
   confidence: number;
-  source: "live" | "mock";
+  source: "live" | "empty";
   meta?: { timestamp: string };
 }
 
@@ -144,7 +144,7 @@ function getMedianPrice(items: SoldComp[]): number {
 
 export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   const comps = await fetchEbaySoldData(query);
-  const source: "live" | "mock" = comps.length > 0 ? "live" : "mock";
+  const source: "live" | "empty" = comps.length > 0 ? "live" : "empty";
 
   // Fall back to illustrative numbers when Apify is unavailable
   const medianPrice = comps.length > 0 ? getMedianPrice(comps) : 0;

@@ -25,9 +25,12 @@ export interface PortfolioHolding {
   feesPaid?: number;
   taxPaid?: number;
   shippingPaid?: number;
+  listingUrl?: string;
+  listingPrice?: number;
   currentValue?: number;
   quickSaleValue?: number;
   fairMarketValue?: number;
+  suggestedListPrice?: number;
   premiumValue?: number;
   netEstimatedValue?: number;
   totalProfitLoss?: number;

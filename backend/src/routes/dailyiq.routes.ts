@@ -1,6 +1,9 @@
 import { Request, Response, Router } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { getMiLBBoxScoreStats, resolveCurrentPlayerAssignments, type ResolvedMiLBPlayerStats } from "../services/dailyiq/milbBoxScoreService.js";
+import { getMLBBoxScoreStats, type ResolvedMLBPlayerStats } from "../services/dailyiq/mlbBoxScoreService.js";
+import { fetchRecentForm, type RecentForm } from "../services/dailyiq/recentFormService.js";
+import { fetchTomorrowProbablePitchers, getTomorrowDateUTC, type TomorrowMatchup } from "../services/dailyiq/probablePitchersService.js";
 import {
   getAllWatchCounts,
   getWatchlistEntries,
@@ -9,6 +12,48 @@ import {
   upsertWatchlistEntry,
   type WatchlistEntry,
 } from "../services/dailyiq/watchlistStore.service.js";
+import { getPersistedBriefByDate,
+  upsertPersistedBrief,
+  type PersistedBriefPayload,
+} from "../services/dailyiq/briefStore.service.js";
+import { getTopPlayers as cosmosGetTopPlayers } from "../repositories/dailyiq.repository.js";
+import { getPlayerScoreByName } from "../services/playerScore/playerScore.service.js";
+import { computeFantasyPoints } from "../services/dailyiq/fantasyScoring.service.js";
+import { searchMlbPerson, levelFromSport } from "../services/playerScore/mlbStats.service.js";
+
+type PlayerIQEnrichment = {
+  playerIQScore: number | null;
+  playerIQDirection: "rising" | "falling" | "stable" | null;
+  playerIQLabel: string | null;
+};
+
+/**
+ * Enrich a list of players with PlayerIQ scores in parallel. Every lookup is
+ * isolated in its own try/catch so a single failed read never blocks the
+ * DailyIQ response — missing scores fall through as null fields.
+ */
+async function enrichWithPlayerIQ<T extends { playerName: string }>(
+  players: T[],
+): Promise<Array<T & PlayerIQEnrichment>> {
+  return Promise.all(
+    players.map(async (p): Promise<T & PlayerIQEnrichment> => {
+      try {
+        const score = await getPlayerScoreByName(p.playerName);
+        if (!score) {
+          return { ...p, playerIQScore: null, playerIQDirection: null, playerIQLabel: null };
+        }
+        return {
+          ...p,
+          playerIQScore: score.playerIQScore,
+          playerIQDirection: score.playerIQDirection,
+          playerIQLabel: score.playerIQLabel,
+        };
+      } catch {
+        return { ...p, playerIQScore: null, playerIQDirection: null, playerIQLabel: null };
+      }
+    }),
+  );
+}
 
 type League = "MLB" | "MiLB";
 type MiLBLevel = "Triple-A" | "Double-A" | "High-A" | "Single-A" | "Rookie" | null;
@@ -39,6 +84,11 @@ interface PlayerDailyStats {
   battingAverage: string;
   ops: string;
   dailyStatsStatus: string;
+  // pitcher-only fields
+  statsType?: 'batting' | 'pitching';
+  inningsPitched?: string;
+  earnedRuns?: number;
+  pitchCount?: number;
 }
 
 interface PlayerSeasonStats {
@@ -58,12 +108,22 @@ interface PlayerSeasonStats {
   ops: string;
   obp: string;
   slg: string;
+  // pitcher-only fields
+  statsType?: 'batting' | 'pitching';
+  era?: string;
+  wins?: number;
+  losses?: number;
+  saves?: number;
+  gamesStarted?: number;
+  whip?: string;
 }
 
 interface BasePlayerResponse {
   playerId: string;
   rank: number;
   rankingScore: number;
+  /** DraftKings-style fantasy points for the day. Null when the player didn't play. */
+  fantasyPoints: number | null;
   league: League;
   level: MiLBLevel;
   playerName: string;
@@ -80,17 +140,20 @@ interface PlayerResponse extends BasePlayerResponse {
   isOnWatchlist: boolean;
 }
 
+type MiLBLevelKey = "Triple-A" | "Double-A" | "High-A" | "Single-A" | "Rookie";
+type ByLevelMap = Partial<Record<MiLBLevelKey, BasePlayerResponse[]>>;
+
 interface BriefCache {
   date: string;
   generatedAt: string;
   mlb: BasePlayerResponse[];
   milb: BasePlayerResponse[];
+  /** Top players bucketed by MiLB level (top 5 each). MLB sits in `mlb`. */
+  byLevel?: ByLevelMap;
   cachedAtMs: number;
 }
 
 const router = Router();
-
-const _watchCounts = new Map<string, { playerId: string; playerName: string; teamName: string; teamAbbreviation: string; league: League; count: number }>();
 
 const PLAYER_POOL: PlayerProfile[] = [
   // ── MLB (50) ──────────────────────────────────────────────────────────────
@@ -145,51 +208,42 @@ const PLAYER_POOL: PlayerProfile[] = [
   { playerId: "austin-riley",         playerName: "Austin Riley",          league: "MLB", level: null, teamName: "Atlanta Braves",          teamAbbreviation: "ATL", position: "3B",  isActive: true },
   { playerId: "michael-harris-ii",    playerName: "Michael Harris II",     league: "MLB", level: null, teamName: "Atlanta Braves",          teamAbbreviation: "ATL", position: "OF",  isActive: true },
   { playerId: "james-wood",           playerName: "James Wood",            league: "MLB", level: null, teamName: "Washington Nationals",    teamAbbreviation: "WSH", position: "OF",  isActive: true },
-  // ── MiLB (51) ─────────────────────────────────────────────────────────────
+  // 2026 call-ups (confirmed active MLB rosters as of May 2026):
+  { playerId: "marcelo-mayer",        playerName: "Marcelo Mayer",         league: "MLB", level: null, teamName: "Boston Red Sox",           teamAbbreviation: "BOS", position: "SS",  isActive: true },
+  { playerId: "chase-dollander",      playerName: "Chase Dollander",       league: "MLB", level: null, teamName: "Colorado Rockies",         teamAbbreviation: "COL", position: "SP",  isActive: true },
+  { playerId: "brady-house",          playerName: "Brady House",           league: "MLB", level: null, teamName: "Washington Nationals",     teamAbbreviation: "WSH", position: "SS",  isActive: true },
+  { playerId: "jace-jung",            playerName: "Jace Jung",             league: "MLB", level: null, teamName: "Detroit Tigers",           teamAbbreviation: "DET", position: "2B",  isActive: true },
+  { playerId: "noah-schultz",         playerName: "Noah Schultz",          league: "MLB", level: null, teamName: "Chicago White Sox",        teamAbbreviation: "CWS", position: "SP",  isActive: true },
+  { playerId: "bubba-chandler",       playerName: "Bubba Chandler",        league: "MLB", level: null, teamName: "Pittsburgh Pirates",       teamAbbreviation: "PIT", position: "SP",  isActive: true },
+  { playerId: "konnor-griffin",       playerName: "Konnor Griffin",        league: "MLB", level: null, teamName: "St. Louis Cardinals",      teamAbbreviation: "STL", position: "SS",  isActive: true },
+  { playerId: "bryce-eldridge",       playerName: "Bryce Eldridge",        league: "MLB", level: null, teamName: "San Francisco Giants",     teamAbbreviation: "SF",  position: "1B",  isActive: true },
+  { playerId: "rhett-lowder",         playerName: "Rhett Lowder",          league: "MLB", level: null, teamName: "Cincinnati Reds",          teamAbbreviation: "CIN", position: "SP",  isActive: true },
+  { playerId: "chase-meidroth",       playerName: "Chase Meidroth",        league: "MLB", level: null, teamName: "Boston Red Sox",           teamAbbreviation: "BOS", position: "2B",  isActive: true },
+  { playerId: "jac-caglianone",       playerName: "Jac Caglianone",        league: "MLB", level: null, teamName: "Kansas City Royals",       teamAbbreviation: "KC",  position: "1B",  isActive: true },
+  { playerId: "christian-scott",      playerName: "Christian Scott",       league: "MLB", level: null, teamName: "New York Mets",            teamAbbreviation: "NYM", position: "SP",  isActive: true },
+  // ── MiLB ──────────────────────────────────────────────────────────────────
   // NOTE: Verify uncertain call-up status periodically:
   //   ricky-tiedemann (TOR – back surgery 2025, may still be rehabbing)
-  //   christian-scott  (NYM – Tommy John 2024, likely starting 2026 in minors)
-  //   jace-jung        (DET – optioned/called up multiple times, confirm status)
   //   jackson-jobe     (DET – top pitching prospect, may have debuted)
   //   andrew-painter   (PHI – Tommy John 2023, confirm current level)
-  //   marcelo-mayer    (BOS – may have debuted in 2025/2026)
-  // Confirmed REMOVED (now on active MLB rosters):
-  //   chase-burns → CIN Reds (debuted 2025)
-  //   hurston-waldrep → ATL Braves (debuted 2024)
-  //   tink-hence → STL Cardinals (debuted 2025)
-  //   gavin-williams → CLE Guardians (debuted 2024)
-  //   colt-keith → DET Tigers (debuted 2024)
-  //   travis-bazzana → CLE Guardians (2024 AL ROY)
-  //   roman-anthony → BOS Red Sox (debuted 2025)
   // Triple-A
   { playerId: "spencer-jones",        playerName: "Spencer Jones",         league: "MiLB", level: "Triple-A",  teamName: "Scranton/WB RailRiders",  teamAbbreviation: "SWB", position: "OF",  isActive: true },
-  { playerId: "marcelo-mayer",        playerName: "Marcelo Mayer",         league: "MiLB", level: "Triple-A",  teamName: "Worcester Red Sox",        teamAbbreviation: "WOR", position: "SS",  isActive: true },
   { playerId: "ethan-salas",          playerName: "Ethan Salas",           league: "MiLB", level: "Triple-A",  teamName: "El Paso Chihuahuas",       teamAbbreviation: "ELP", position: "C",   isActive: true },
   { playerId: "jackson-jobe",         playerName: "Jackson Jobe",          league: "MiLB", level: "Triple-A",  teamName: "Toledo Mud Hens",          teamAbbreviation: "TOL", position: "SP",  isActive: true },
   { playerId: "andrew-painter",       playerName: "Andrew Painter",        league: "MiLB", level: "Triple-A",  teamName: "Lehigh Valley IronPigs",   teamAbbreviation: "LHV", position: "SP",  isActive: true },
-  { playerId: "brady-house",          playerName: "Brady House",           league: "MiLB", level: "Triple-A",  teamName: "Rochester Red Wings",      teamAbbreviation: "ROC", position: "SS",  isActive: true },
   { playerId: "marco-luciano",        playerName: "Marco Luciano",         league: "MiLB", level: "Triple-A",  teamName: "Sacramento River Cats",    teamAbbreviation: "SAC", position: "SS",  isActive: true },
   { playerId: "termarr-johnson",      playerName: "Termarr Johnson",       league: "MiLB", level: "Triple-A",  teamName: "Indianapolis Indians",     teamAbbreviation: "IND", position: "2B",  isActive: true },
   { playerId: "elijah-green",         playerName: "Elijah Green",          league: "MiLB", level: "Triple-A",  teamName: "Rochester Red Wings",      teamAbbreviation: "ROC", position: "OF",  isActive: true },
   { playerId: "emerson-hancock",      playerName: "Emerson Hancock",       league: "MiLB", level: "Triple-A",  teamName: "Tacoma Rainiers",          teamAbbreviation: "TAC", position: "SP",  isActive: true },
-  { playerId: "noah-schultz",         playerName: "Noah Schultz",          league: "MiLB", level: "Triple-A",  teamName: "Charlotte Knights",        teamAbbreviation: "CLT", position: "SP",  isActive: true },
   { playerId: "ricky-tiedemann",      playerName: "Ricky Tiedemann",       league: "MiLB", level: "Triple-A",  teamName: "Buffalo Bisons",           teamAbbreviation: "BUF", position: "SP",  isActive: true },
-  { playerId: "jace-jung",            playerName: "Jace Jung",             league: "MiLB", level: "Triple-A",  teamName: "Toledo Mud Hens",          teamAbbreviation: "TOL", position: "2B",  isActive: true },
   { playerId: "harry-ford",           playerName: "Harry Ford",            league: "MiLB", level: "Triple-A",  teamName: "Tacoma Rainiers",          teamAbbreviation: "TAC", position: "C",   isActive: true },
   { playerId: "kyle-teel",            playerName: "Kyle Teel",             league: "MiLB", level: "Triple-A",  teamName: "Worcester Red Sox",        teamAbbreviation: "WOR", position: "C",   isActive: true },
-  { playerId: "christian-scott",      playerName: "Christian Scott",       league: "MiLB", level: "Triple-A",  teamName: "Syracuse Mets",            teamAbbreviation: "SYR", position: "SP",  isActive: true },
-  { playerId: "chase-meidroth",       playerName: "Chase Meidroth",        league: "MiLB", level: "Triple-A",  teamName: "Worcester Red Sox",        teamAbbreviation: "WOR", position: "2B",  isActive: true },
-  { playerId: "chase-dollander",      playerName: "Chase Dollander",       league: "MiLB", level: "Triple-A",  teamName: "Albuquerque Isotopes",     teamAbbreviation: "ABQ", position: "SP",  isActive: true },
   { playerId: "emmanuel-rodriguez",   playerName: "Emmanuel Rodriguez",    league: "MiLB", level: "Triple-A",  teamName: "St. Paul Saints",          teamAbbreviation: "STP", position: "OF",  isActive: true },
   // Double-A
-  { playerId: "bryce-eldridge",       playerName: "Bryce Eldridge",        league: "MiLB", level: "Double-A",  teamName: "Richmond Flying Squirrels",teamAbbreviation: "RIC", position: "1B",  isActive: true },
-  { playerId: "bubba-chandler",       playerName: "Bubba Chandler",        league: "MiLB", level: "Double-A",  teamName: "Altoona Curve",            teamAbbreviation: "ALT", position: "SP",  isActive: true },
   { playerId: "hagen-smith",          playerName: "Hagen Smith",           league: "MiLB", level: "Double-A",  teamName: "Midland RockHounds",       teamAbbreviation: "MID", position: "SP",  isActive: true },
   { playerId: "noble-meyer",          playerName: "Noble Meyer",           league: "MiLB", level: "Double-A",  teamName: "Biloxi Shuckers",          teamAbbreviation: "BLX", position: "SP",  isActive: true },
   { playerId: "max-clark",            playerName: "Max Clark",             league: "MiLB", level: "Double-A",  teamName: "Erie SeaWolves",           teamAbbreviation: "ERI", position: "OF",  isActive: true },
-  { playerId: "konnor-griffin",       playerName: "Konnor Griffin",        league: "MiLB", level: "Double-A",  teamName: "Springfield Cardinals",    teamAbbreviation: "SFD", position: "SS",  isActive: true },
   { playerId: "cam-collier",          playerName: "Cam Collier",           league: "MiLB", level: "Double-A",  teamName: "Chattanooga Lookouts",     teamAbbreviation: "CHA", position: "3B",  isActive: true },
-  { playerId: "rhett-lowder",         playerName: "Rhett Lowder",          league: "MiLB", level: "Double-A",  teamName: "Chattanooga Lookouts",     teamAbbreviation: "CHA", position: "SP",  isActive: true },
   { playerId: "cole-carrigg",         playerName: "Cole Carrigg",          league: "MiLB", level: "Double-A",  teamName: "Arkansas Travelers",       teamAbbreviation: "ARK", position: "OF",  isActive: true },
   { playerId: "kevin-mcgonigle",      playerName: "Kevin McGonigle",       league: "MiLB", level: "Double-A",  teamName: "Mississippi Braves",       teamAbbreviation: "MIS", position: "SS",  isActive: true },
   { playerId: "blake-mitchell",       playerName: "Blake Mitchell",        league: "MiLB", level: "Double-A",  teamName: "NW Arkansas Naturals",     teamAbbreviation: "NWA", position: "C",   isActive: true },
@@ -201,7 +255,6 @@ const PLAYER_POOL: PlayerProfile[] = [
   // High-A
   { playerId: "tommy-troy",           playerName: "Tommy Troy",            league: "MiLB", level: "High-A",    teamName: "Asheville Tourists",       teamAbbreviation: "ASH", position: "SS",  isActive: true },
   { playerId: "aidan-miller",         playerName: "Aidan Miller",          league: "MiLB", level: "High-A",    teamName: "Jersey Shore BlueClaws",   teamAbbreviation: "JS",  position: "SS",  isActive: true },
-  { playerId: "jac-caglianone",       playerName: "Jac Caglianone",        league: "MiLB", level: "High-A",    teamName: "Quad Cities River Bandits",teamAbbreviation: "QC",  position: "1B",  isActive: true },
   { playerId: "dillon-head",          playerName: "Dillon Head",           league: "MiLB", level: "High-A",    teamName: "Winston-Salem Dash",       teamAbbreviation: "WS",  position: "OF",  isActive: true },
   { playerId: "colt-emerson",         playerName: "Colt Emerson",          league: "MiLB", level: "High-A",    teamName: "Everett AquaSox",          teamAbbreviation: "EVE", position: "SS",  isActive: true },
   { playerId: "brayden-taylor",       playerName: "Brayden Taylor",        league: "MiLB", level: "High-A",    teamName: "Vancouver Canadians",      teamAbbreviation: "VAN", position: "3B",  isActive: true },
@@ -221,6 +274,7 @@ const PLAYER_POOL: PlayerProfile[] = [
   { playerId: "slate-alford",         playerName: "Slate Alford",          league: "MiLB", level: "Single-A",  teamName: "Rancho Cucamonga Quakes",  teamAbbreviation: "RC",  position: "3B",  isActive: true },
   { playerId: "luis-almeyda",         playerName: "Luis Almeyda",          league: "MiLB", level: "Single-A",  teamName: "Delmarva Shorebirds",      teamAbbreviation: "DEL", position: "SS",  isActive: true },
   { playerId: "jeremy-almonte",       playerName: "Jeremy Almonte",        league: "MiLB", level: "Single-A",  teamName: "Jupiter Hammerheads",      teamAbbreviation: "JUP", position: "C",   isActive: true },
+  { playerId: "leo-de-vries",         playerName: "Leo De Vries",          league: "MiLB", level: "Single-A",  teamName: "Lake Elsinore Storm",       teamAbbreviation: "LE",  position: "SS",  isActive: true },
   // FCL – Florida Complex League (Rookie)
   { playerId: "george-lombard-jr",    playerName: "George Lombard Jr.",    league: "MiLB", level: "Rookie",    teamName: "FCL Dodgers",              teamAbbreviation: "FCL", position: "OF",  isActive: true },
   { playerId: "angel-abreu",          playerName: "Angel Abreu",           league: "MiLB", level: "Rookie",    teamName: "ACL Guardians",            teamAbbreviation: "A-GUA", position: "SS",  isActive: true },
@@ -239,6 +293,9 @@ const BRIEF_BACKGROUND_REFRESH_MS = Number(process.env.DAILYIQ_BACKGROUND_REFRES
 let _briefCache: BriefCache | null = null;
 let _briefRefreshPromise: Promise<void> | null = null;
 
+let _mlbSeasonStatsCache: { data: Map<string, PlayerSeasonStats>; season: number; cachedAtMs: number } | null = null;
+const MLB_SEASON_STATS_TTL_MS = 3_600_000; // 1 hour
+
 type PlayerStatsOverride = {
   dailyStats: PlayerDailyStats;
   seasonStats: PlayerSeasonStats;
@@ -256,15 +313,41 @@ function toThreeDecimal(value: number): string {
   return value.toFixed(3).replace(/^0/, "");
 }
 
+function inningsToDecimal(inningsPitched?: string): number {
+  if (!inningsPitched) return 0;
+  const match = inningsPitched.trim().match(/^(\d+)(?:\.(\d))?$/);
+  if (!match) return 0;
+  const fullInnings = Number(match[1]);
+  const outs = Math.min(2, Math.max(0, Number(match[2] ?? "0")));
+  return fullInnings + outs / 3;
+}
+
 function clampLimit(rawLimit: unknown): number {
   const parsed = Number(rawLimit ?? 50);
   if (!Number.isFinite(parsed) || parsed <= 0) return 50;
   return Math.min(Math.floor(parsed), 50);
 }
 
+// DailyIQ defaults to the previous calendar day in America/Los_Angeles
+// because the brief reports completed MLB / MiLB box scores. Today's games
+// have not been played yet when the brief is first generated at 06:00 PT,
+// so anchoring to "today" produces an empty board.
+function defaultBriefDate(): string {
+  const tz = process.env.DAILYIQ_JOB_TIMEZONE ?? "America/Los_Angeles";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
+}
+
 function normalizeDate(rawDate: unknown): string {
-  const fallback = new Date().toISOString().slice(0, 10);
-  if (typeof rawDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return fallback;
+  if (typeof rawDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return defaultBriefDate();
   return rawDate;
 }
 
@@ -285,8 +368,36 @@ function getOpponent(profile: PlayerProfile, date: string): string {
   return opponents[stableHash(`${profile.playerId}:${date}:opp`) % opponents.length];
 }
 
+const PITCHER_POSITIONS = ["SP", "RP", "CL"];
+
 function buildDailyStats(profile: PlayerProfile, date: string): PlayerDailyStats {
   const seed = stableHash(`${profile.playerId}:${date}:daily`);
+  const opponent = getOpponent(profile, date);
+
+  if (PITCHER_POSITIONS.includes(profile.position)) {
+    const fullInnings = 1 + (seed % 7); // 1–7 full innings
+    const partialOuts = (seed >> 3) % 3; // 0–2 partial outs
+    const inningsPitched = partialOuts === 0 ? `${fullInnings}.0` : `${fullInnings}.${partialOuts}`;
+    const strikeouts = 1 + (seed >> 4) % 9;
+    const walks = (seed >> 6) % 4;
+    const earnedRuns = (seed >> 8) % 5;
+    const pitchCount = 15 * fullInnings + 3 * strikeouts + 4 * walks + ((seed >> 10) % 10);
+    return {
+      gameDate: date,
+      opponent,
+      atBats: 0, runs: 0, hits: 0, homeRuns: 0, rbi: 0, rbis: 0, stolenBases: 0,
+      battingAverage: ".000",
+      ops: ".000",
+      dailyStatsStatus: "available",
+      statsType: "pitching",
+      strikeouts,
+      walks,
+      inningsPitched,
+      earnedRuns,
+      pitchCount,
+    };
+  }
+
   const atBats = 3 + (seed % 3);
   const hits = Math.min(atBats, 1 + ((seed >> 2) % atBats));
   const walks = (seed >> 4) % 2;
@@ -297,7 +408,7 @@ function buildDailyStats(profile: PlayerProfile, date: string): PlayerDailyStats
   const stolenBases = ["OF", "SS", "2B"].includes(profile.position) ? (seed >> 9) % 2 : 0;
   return {
     gameDate: date,
-    opponent: getOpponent(profile, date),
+    opponent,
     atBats,
     runs,
     hits,
@@ -310,11 +421,107 @@ function buildDailyStats(profile: PlayerProfile, date: string): PlayerDailyStats
     battingAverage: toThreeDecimal(hits / Math.max(atBats, 1)),
     ops: toThreeDecimal(0.55 + ((seed >> 10) % 650) / 1000),
     dailyStatsStatus: "available",
+    statsType: "batting",
   };
+}
+
+async function fetchMLBSeasonStatsForPool(profiles: PlayerProfile[]): Promise<void> {
+  const season = new Date().getFullYear();
+  if (_mlbSeasonStatsCache && _mlbSeasonStatsCache.season === season && Date.now() - _mlbSeasonStatsCache.cachedAtMs < MLB_SEASON_STATS_TTL_MS) return;
+
+  try {
+    const base = `https://statsapi.mlb.com/api/v1/stats?stats=season&playerPool=All&gameType=R&season=${season}&sportId=1`;
+    const headers = { "User-Agent": "HobbyIQ/1.0", Accept: "application/json" };
+    const signal = AbortSignal.timeout(8000);
+    const [hittingRes, pitchingRes] = await Promise.all([
+      fetch(`${base}&group=hitting`, { headers, signal }),
+      fetch(`${base}&group=pitching`, { headers, signal }),
+    ]);
+
+    type HittingSplit = { player?: { fullName?: string }; stat?: { gamesPlayed?: number; atBats?: number; runs?: number; hits?: number; homeRuns?: number; rbi?: number; baseOnBalls?: number; strikeOuts?: number; stolenBases?: number; avg?: string; obp?: string; slg?: string; ops?: string } };
+    type PitchingSplit = { player?: { fullName?: string }; stat?: { gamesPlayed?: number; gamesStarted?: number; wins?: number; losses?: number; saves?: number; strikeOuts?: number; baseOnBalls?: number; era?: string; whip?: string } };
+    type StatsApiResponse = { stats?: Array<{ splits?: unknown[] }> };
+
+    const hittingData = hittingRes.ok ? (await hittingRes.json() as StatsApiResponse) : null;
+    const pitchingData = pitchingRes.ok ? (await pitchingRes.json() as StatsApiResponse) : null;
+
+    const hittersByName = new Map<string, PlayerSeasonStats>();
+    for (const split of (hittingData?.stats?.[0]?.splits ?? []) as HittingSplit[]) {
+      const name = split.player?.fullName;
+      const s = split.stat;
+      if (!name || !s) continue;
+      hittersByName.set(name, {
+        gamesPlayed: s.gamesPlayed ?? 0, atBats: s.atBats ?? 0, runs: s.runs ?? 0,
+        hits: s.hits ?? 0, homeRuns: s.homeRuns ?? 0, rbi: s.rbi ?? 0, rbis: s.rbi ?? 0,
+        walks: s.baseOnBalls ?? 0, strikeouts: s.strikeOuts ?? 0, stolenBases: s.stolenBases ?? 0,
+        battingAverage: s.avg ?? ".000", onBasePercentage: s.obp ?? ".000",
+        sluggingPercentage: s.slg ?? ".000", ops: s.ops ?? ".000",
+        obp: s.obp ?? ".000", slg: s.slg ?? ".000", statsType: "batting",
+      });
+    }
+
+    const pitchersByName = new Map<string, PlayerSeasonStats>();
+    const blank = ".000";
+    for (const split of (pitchingData?.stats?.[0]?.splits ?? []) as PitchingSplit[]) {
+      const name = split.player?.fullName;
+      const s = split.stat;
+      if (!name || !s) continue;
+      pitchersByName.set(name, {
+        gamesPlayed: s.gamesPlayed ?? 0, gamesStarted: s.gamesStarted ?? 0,
+        wins: s.wins ?? 0, losses: s.losses ?? 0, saves: s.saves ?? 0,
+        strikeouts: s.strikeOuts ?? 0, walks: s.baseOnBalls ?? 0,
+        era: s.era ?? "0.00",
+        whip: s.whip != null ? toThreeDecimal(parseFloat(s.whip)) : "0.000",
+        statsType: "pitching",
+        atBats: 0, runs: 0, hits: 0, homeRuns: 0, rbi: 0, rbis: 0, stolenBases: 0,
+        battingAverage: blank, onBasePercentage: blank, sluggingPercentage: blank,
+        ops: blank, obp: blank, slg: blank,
+      });
+    }
+
+    const result = new Map<string, PlayerSeasonStats>();
+    for (const profile of profiles) {
+      if (profile.league !== "MLB") continue;
+      const isPitcher = PITCHER_POSITIONS.includes(profile.position);
+      const realStats = isPitcher ? pitchersByName.get(profile.playerName) : hittersByName.get(profile.playerName);
+      if (realStats) result.set(profile.playerId, realStats);
+    }
+    _mlbSeasonStatsCache = { data: result, season, cachedAtMs: Date.now() };
+  } catch {
+    // Keep previous cache on error; getResolvedStats will fall back to synthetic stats
+  }
 }
 
 function buildSeasonStats(profile: PlayerProfile): PlayerSeasonStats {
   const seed = stableHash(`${profile.playerId}:season`);
+
+  if (PITCHER_POSITIONS.includes(profile.position)) {
+    const gamesPlayed = 5 + (seed % 20);
+    const gamesStarted = profile.position === "SP" ? gamesPlayed : 0;
+    const wins = (seed >> 2) % (gamesStarted > 0 ? Math.min(gamesStarted, 10) : 5);
+    const losses = (seed >> 4) % Math.max(1, gamesStarted - wins + 3);
+    const saves = profile.position === "CL" ? 5 + (seed >> 6) % 20 : profile.position === "RP" ? (seed >> 6) % 5 : 0;
+    const strikeouts = gamesPlayed * (4 + (seed >> 8) % 5);
+    const walks = gamesPlayed * (1 + (seed >> 10) % 3);
+    const inningsFloat = gamesStarted > 0 ? gamesStarted * (5 + (seed >> 12) % 3) : gamesPlayed * (1 + (seed >> 12) % 1);
+    const earnedRuns = Math.max(1, Math.floor(inningsFloat * (0.3 + ((seed >> 14) % 40) / 100)));
+    const eraRaw = (earnedRuns * 9) / Math.max(inningsFloat, 1);
+    const era = toThreeDecimal(eraRaw);
+    const whipRaw = (walks + strikeouts * 0.35) / Math.max(inningsFloat, 1);
+    const whip = toThreeDecimal(Math.min(2.0, whipRaw));
+    const blank = ".000";
+    return {
+      gamesPlayed, gamesStarted,
+      wins, losses, saves,
+      strikeouts, walks,
+      era, whip,
+      statsType: "pitching",
+      // zero out batting fields
+      atBats: 0, runs: 0, hits: 0, homeRuns: 0, rbi: 0, rbis: 0, stolenBases: 0,
+      battingAverage: blank, onBasePercentage: blank, sluggingPercentage: blank, ops: blank, obp: blank, slg: blank,
+    };
+  }
+
   const gamesPlayed = 20 + (seed % 40);
   const atBats = gamesPlayed * (3 + (seed % 2));
   const hits = Math.max(1, Math.min(atBats, Math.floor(atBats * (0.24 + ((seed >> 3) % 90) / 1000))));
@@ -345,14 +552,16 @@ function buildSeasonStats(profile: PlayerProfile): PlayerSeasonStats {
     ops,
     obp: onBasePercentage,
     slg: sluggingPercentage,
+    statsType: "batting",
   };
 }
 
 function getResolvedStats(profile: PlayerProfile, date: string, statsOverride?: PlayerStatsOverride): PlayerStatsOverride {
   if (statsOverride) return statsOverride;
+  const realSeasonStats = profile.league === "MLB" ? _mlbSeasonStatsCache?.data.get(profile.playerId) : undefined;
   return {
     dailyStats: buildDailyStats(profile, date),
-    seasonStats: buildSeasonStats(profile),
+    seasonStats: realSeasonStats ?? buildSeasonStats(profile),
   };
 }
 
@@ -360,16 +569,70 @@ function scorePlayerForDay(profile: PlayerProfile, date: string, statsOverride?:
   const stats = getResolvedStats(profile, date, statsOverride);
   const daily = stats.dailyStats;
   const season = stats.seasonStats;
-  const levelBonus = profile.level === "Triple-A" ? 1.2 : profile.level === "Double-A" ? 0.8 : 0;
-  return Number((parseFloat(daily.ops) * 45 + parseFloat(season.ops) * 55 + daily.homeRuns * 2 + season.homeRuns * 0.35 + daily.hits + levelBonus).toFixed(1));
+  const levelBonus = profile.level === "Triple-A" ? 0.8 : profile.level === "Double-A" ? 0.5 : 0;
+  if (PITCHER_POSITIONS.includes(profile.position)) {
+    const ip = inningsToDecimal(daily.inningsPitched);
+    const strikeouts = daily.strikeouts ?? 0;
+    const walks = daily.walks ?? 0;
+    const earnedRuns = daily.earnedRuns ?? 0;
+    const qualityStart = ip >= 6 && earnedRuns <= 3 ? 1 : 0;
+
+    // Fantasy-style daily base for pitchers.
+    const dailyFantasyPoints = 3 * ip + 2 * strikeouts - 2 * earnedRuns - 0.5 * walks + 4 * qualityStart;
+
+    const gamesPlayed = Math.max(1, season.gamesPlayed || 1);
+    const seasonEra = Number.parseFloat(season.era ?? "4.5");
+    const seasonKPerGame = (season.strikeouts ?? 0) / gamesPlayed;
+    const seasonBBPerGame = (season.walks ?? 0) / gamesPlayed;
+    const seasonWPerGame = (season.wins ?? 0) / gamesPlayed;
+    const seasonSavePerGame = (season.saves ?? 0) / gamesPlayed;
+
+    // Stabilizer uses season rates so one outing does not over-rank low-volume lines.
+    const seasonProxy = Math.max(0, (5 - seasonEra) * 3) + seasonKPerGame * 2 - seasonBBPerGame * 0.6 + seasonWPerGame * 3 + seasonSavePerGame * 4;
+    const trend = dailyFantasyPoints - seasonProxy;
+    const confidence = Math.min(1, ip / 4);
+    const blended = confidence * (0.7 * dailyFantasyPoints + 0.2 * seasonProxy + 0.1 * trend) + (1 - confidence) * seasonProxy;
+    return Number((blended + levelBonus).toFixed(1));
+  }
+
+  const hits = daily.hits ?? 0;
+  const homeRuns = daily.homeRuns ?? 0;
+  const runs = daily.runs ?? 0;
+  const rbi = daily.rbi ?? daily.rbis ?? 0;
+  const walks = daily.walks ?? 0;
+  const stolenBases = daily.stolenBases ?? 0;
+  const strikeouts = daily.strikeouts ?? 0;
+
+  // Fantasy-style daily base for hitters.
+  const dailyFantasyPoints = 3 * Math.max(0, hits - homeRuns) + 10 * homeRuns + 2 * runs + 2 * rbi + 2 * walks + 5 * stolenBases - strikeouts;
+
+  const gamesPlayed = Math.max(1, season.gamesPlayed || 1);
+  const seasonSingles = Math.max(0, (season.hits ?? 0) - (season.homeRuns ?? 0));
+  const seasonRbi = season.rbi ?? season.rbis ?? 0;
+  const seasonFantasyPerGame =
+    (3 * seasonSingles + 10 * (season.homeRuns ?? 0) + 2 * (season.runs ?? 0) + 2 * seasonRbi + 2 * (season.walks ?? 0) + 5 * (season.stolenBases ?? 0) - (season.strikeouts ?? 0)) /
+    gamesPlayed;
+
+  const trend = dailyFantasyPoints - seasonFantasyPerGame;
+  const plateAppearances = (daily.atBats ?? 0) + walks;
+  const confidence = Math.min(1, plateAppearances / 4);
+  const blended = confidence * (0.7 * dailyFantasyPoints + 0.2 * seasonFantasyPerGame + 0.1 * trend) + (1 - confidence) * seasonFantasyPerGame;
+  return Number((blended + levelBonus).toFixed(1));
 }
 
 function buildBasePlayerResponse(profile: PlayerProfile, date: string, rank: number, rankingScore: number, lastUpdated: string, statsOverride?: PlayerStatsOverride): BasePlayerResponse {
   const stats = getResolvedStats(profile, date, statsOverride);
+  // DK-style fantasy points are best-effort: only computed when an override
+  // exists (i.e. real stats were resolved). Synthetic daily lines stay null
+  // so the iOS app can hide the badge when the player didn't actually play.
+  const fantasyPoints = statsOverride
+    ? computeFantasyPoints(profile.position, stats.dailyStats as unknown as Parameters<typeof computeFantasyPoints>[1])
+    : null;
   return {
     playerId: profile.playerId,
     rank,
     rankingScore,
+    fantasyPoints,
     league: profile.league,
     level: profile.level,
     playerName: profile.playerName,
@@ -401,14 +664,19 @@ async function getPlayerPool(league: League, level: MiLBLevel | "All" = "All"): 
 
   return basePlayers.filter((player) => {
     const assignment = assignments.get(player.playerId);
-    const effectiveLeague = assignment?.league ?? player.league;
+    // Static MLB players are never demoted to MiLB by API assignments.
+    // Name collisions, rehab assignments, and IL absences can cause the real-time
+    // API to return a MiLB team for an active MLB player — ignore those overrides.
+    const effectiveLeague = player.league === "MLB" ? "MLB" : (assignment?.league ?? player.league);
     if (effectiveLeague !== league) return false;
     const effectiveLevel = assignment?.league === "MiLB" ? assignment.level : player.level;
     if (league === "MiLB" && level !== "All" && effectiveLevel !== level) return false;
     return true;
   }).map((player) => {
     const assignment = assignments.get(player.playerId);
-    if (!assignment || assignment.league !== league) return { ...player, league };
+    // Only apply assignment overrides for MiLB players (level/team updates for transfers or promotions).
+    // Never overwrite an MLB player's team info with a minor-league assignment.
+    if (!assignment || player.league === "MLB" || assignment.league !== league) return { ...player, league };
     return {
       ...player,
       league,
@@ -429,13 +697,66 @@ async function getMiLBStatsOverrides(date: string, profiles: PlayerProfile[]): P
   }
 }
 
+async function getMLBTeamsPlayingOnDate(date: string): Promise<Set<string>> {
+  try {
+    const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}`;
+    const response = await fetch(url, { headers: { "User-Agent": "HobbyIQ/1.0", Accept: "application/json" } });
+    if (!response.ok) return new Set<string>();
+    const data = await response.json() as { dates?: Array<{ games?: Array<{ teams?: { away?: { team?: { abbreviation?: string } }, home?: { team?: { abbreviation?: string } } } }> }> };
+    const teams = new Set<string>();
+    for (const dateObj of data.dates ?? []) {
+      for (const game of dateObj.games ?? []) {
+        const away = game.teams?.away?.team?.abbreviation;
+        const home = game.teams?.home?.team?.abbreviation;
+        if (away) teams.add(away);
+        if (home) teams.add(home);
+      }
+    }
+    return teams;
+  } catch {
+    return new Set<string>(); // empty = don't filter (safe fallback)
+  }
+}
+
 async function getRankedPlayers(league: League, date: string, limit: number, lastUpdated: string, level: MiLBLevel | "All" = "All"): Promise<BasePlayerResponse[]> {
   const profiles = await getPlayerPool(league, level);
   const milbStats = league === "MiLB" ? await getMiLBStatsOverrides(date, profiles) : new Map<string, ResolvedMiLBPlayerStats>();
+  let mlbStats: Map<string, ResolvedMLBPlayerStats> = new Map();
 
-  return profiles
+  let filteredProfiles = profiles;
+  if (league === "MLB") {
+    const [playingTeams, realDaily] = await Promise.all([
+      getMLBTeamsPlayingOnDate(date),
+      // Pull real daily MLB box-score stats for the pool so the scoring engine
+      // ranks players by their actual day instead of synthetic data.
+      getMLBBoxScoreStats(date, profiles).catch(() => new Map<string, ResolvedMLBPlayerStats>()),
+      // Warm real season stats cache; await on first load, background-refresh thereafter
+      _mlbSeasonStatsCache ? fetchMLBSeasonStatsForPool(profiles).catch(() => undefined) : fetchMLBSeasonStatsForPool(profiles),
+    ]);
+    mlbStats = realDaily;
+    // Prefer players who actually appeared in a boxscore today. The synthetic
+    // daily stats are seed-hashed and identical day-to-day, so ranking against
+    // them surfaces players who did not play. Falling through to schedule-only
+    // (teams playing) only happens when no boxscore matches resolved at all —
+    // that keeps the brief non-empty when the API is unhappy.
+    const withRealStats = profiles.filter((p) => mlbStats.has(p.playerId));
+    if (withRealStats.length > 0) {
+      filteredProfiles = withRealStats;
+    } else if (playingTeams.size > 0) {
+      filteredProfiles = profiles.filter((p) => playingTeams.has(p.teamAbbreviation));
+    }
+  } else {
+    // MiLB: only show players with real box score stats from that day
+    const withRealStats = profiles.filter((p) => milbStats.has(p.playerId));
+    // Fall back to all profiles only if the box score API returned nothing at all
+    filteredProfiles = withRealStats.length > 0 ? withRealStats : profiles;
+  }
+
+  return filteredProfiles
     .map((profile) => {
-      const statsOverride = milbStats.get(profile.playerId);
+      const statsOverride: PlayerStatsOverride | undefined = profile.league === "MLB"
+        ? (mlbStats.get(profile.playerId) as PlayerStatsOverride | undefined)
+        : (milbStats.get(profile.playerId) as PlayerStatsOverride | undefined);
       return { profile, rankingScore: scorePlayerForDay(profile, date, statsOverride), statsOverride };
     })
     .sort((left, right) => right.rankingScore - left.rankingScore)
@@ -453,6 +774,135 @@ function findPlayerByQuery(query: string, league?: League | "All"): PlayerProfil
     if (league && league !== "All" && player.league !== league) return false;
     return [player.playerId, player.playerName, player.teamName, player.teamAbbreviation].some((value) => value.toLowerCase().includes(normalized));
   });
+}
+
+function slugifyPlayerId(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizeLevelValue(raw: string | null | undefined): MiLBLevel {
+  if (!raw) return null;
+  const v = raw.trim();
+  if (v === "Triple-A" || v === "Double-A" || v === "High-A" || v === "Single-A" || v === "Rookie") return v;
+  return null;
+}
+
+/**
+ * Build a synthetic PlayerProfile from a hydrated MLB Stats /people record.
+ * Returns null when the record is missing enough data to be useful.
+ */
+function profileFromMlbPerson(person: any, fallbackName: string): { profile: PlayerProfile; mlbPersonId: number | null } | null {
+  if (!person) return null;
+  const playerName = (person.fullName ?? fallbackName ?? "").trim();
+  if (!playerName) return null;
+
+  const sportId = person?.currentTeam?.sport?.id ?? null;
+  const level = normalizeLevelValue(levelFromSport(sportId));
+  const league: League = sportId === 1 ? "MLB" : level ? "MiLB" : "MLB";
+  const teamName = person?.currentTeam?.name ?? "";
+  const teamAbbreviation = person?.currentTeam?.abbreviation ?? teamName.slice(0, 3).toUpperCase();
+  const position = person?.primaryPosition?.abbreviation ?? "";
+  const isActive = person?.active !== false;
+  const mlbPersonId = typeof person?.id === "number" ? person.id : Number(person?.id) || null;
+
+  return {
+    profile: {
+      playerId: slugifyPlayerId(playerName),
+      playerName,
+      league,
+      level,
+      teamName,
+      teamAbbreviation,
+      position,
+      isActive,
+    },
+    mlbPersonId,
+  };
+}
+
+/**
+ * Synthesize a PlayerProfile from a persisted WatchlistEntry's stored metadata.
+ * Used by GET /watchlist when the player isn't part of the curated PLAYER_POOL.
+ */
+function profileFromWatchlistEntry(entry: WatchlistEntry): PlayerProfile | null {
+  const playerName = (entry.playerName ?? "").trim();
+  if (!playerName) return null;
+  const league: League = entry.league === "MiLB" ? "MiLB" : "MLB";
+  return {
+    playerId: entry.playerId,
+    playerName,
+    league,
+    level: normalizeLevelValue(entry.level),
+    teamName: entry.teamName ?? "",
+    teamAbbreviation: entry.teamAbbreviation ?? "",
+    position: entry.position ?? "",
+    isActive: true,
+  };
+}
+
+/**
+ * Resolve a player to a profile + metadata to persist. Order of preference:
+ *   1. PLAYER_POOL by id, then by query.
+ *   2. MLB Stats API live search (covers MLB + MiLB rosters).
+ *   3. Fall back to a freeform profile built from the caller-supplied name
+ *      so the user can still add anyone they want (e.g. retired players or
+ *      names the API doesn't recognize).
+ */
+async function resolveAddablePlayer(args: {
+  playerId?: string;
+  playerName?: string;
+  query?: string;
+  league?: League | "All";
+}): Promise<{ profile: PlayerProfile; mlbPersonId?: number; resolvedVia: "pool" | "mlb-api" | "freeform" } | null> {
+  const requestedPlayerId = (args.playerId ?? "").trim();
+  const requestedName = (args.playerName ?? args.query ?? "").trim();
+  const league = args.league ?? "All";
+
+  if (requestedPlayerId) {
+    const hit = findPlayerById(requestedPlayerId);
+    if (hit) return { profile: hit, resolvedVia: "pool" };
+  }
+  if (requestedName) {
+    const hit = findPlayerByQuery(requestedName, league);
+    if (hit) return { profile: hit, resolvedVia: "pool" };
+  }
+
+  const searchTerm = requestedName || requestedPlayerId.replace(/-/g, " ");
+  if (!searchTerm) return null;
+
+  try {
+    const person = await searchMlbPerson(searchTerm);
+    const built = profileFromMlbPerson(person, searchTerm);
+    if (built) {
+      return {
+        profile: built.profile,
+        mlbPersonId: built.mlbPersonId ?? undefined,
+        resolvedVia: "mlb-api",
+      };
+    }
+  } catch (err) {
+    console.warn("[dailyiq.routes] searchMlbPerson failed:", (err as Error)?.message ?? err);
+  }
+
+  // Freeform fallback — only when we have at least a name.
+  if (!requestedName) return null;
+  return {
+    profile: {
+      playerId: requestedPlayerId || slugifyPlayerId(requestedName),
+      playerName: requestedName,
+      league: league === "MiLB" ? "MiLB" : "MLB",
+      level: null,
+      teamName: "",
+      teamAbbreviation: "",
+      position: "",
+      isActive: true,
+    },
+    resolvedVia: "freeform",
+  };
 }
 
 async function getOptionalUserId(req: Request): Promise<string | null> {
@@ -478,33 +928,84 @@ async function requireUserId(req: Request, res: Response): Promise<string | null
   return user.userId;
 }
 
-function bumpWatchCount(profile: PlayerProfile): void {
-  const existing = _watchCounts.get(profile.playerId);
-  if (existing) {
-    existing.count += 1;
-    return;
-  }
 
-  _watchCounts.set(profile.playerId, {
-    playerId: profile.playerId,
-    playerName: profile.playerName,
-    teamName: profile.teamName,
-    teamAbbreviation: profile.teamAbbreviation,
-    league: profile.league,
-    count: 1,
-  });
+function buildByLevelMap(milbPlayers: BasePlayerResponse[]): ByLevelMap {
+  // milbPlayers is already sorted by rankingScore desc — preserve that order
+  // and slice the top 5 per level. Levels not present in the response are
+  // omitted entirely so the iOS app can hide empty sections.
+  const levels: MiLBLevelKey[] = ["Triple-A", "Double-A", "High-A", "Single-A", "Rookie"];
+  const map: ByLevelMap = {};
+  for (const level of levels) {
+    const bucket = milbPlayers.filter((p) => p.level === level).slice(0, 5);
+    if (bucket.length > 0) map[level] = bucket;
+  }
+  return map;
 }
 
 async function buildBriefPayload(date: string): Promise<BriefCache> {
   const generatedAt = new Date().toISOString();
+  const mlb = await getRankedPlayers("MLB", date, 50, generatedAt);
+  const milb = await getRankedPlayers("MiLB", date, 50, generatedAt);
   return {
     date,
     generatedAt,
-    mlb: await getRankedPlayers("MLB", date, 50, generatedAt),
-    milb: await getRankedPlayers("MiLB", date, 50, generatedAt),
+    mlb,
+    milb,
+    byLevel: buildByLevelMap(milb),
     cachedAtMs: Date.now(),
   };
 }
+
+function toPersistedPayload(payload: BriefCache): PersistedBriefPayload<BasePlayerResponse> {
+  return {
+    date: payload.date,
+    generatedAt: payload.generatedAt,
+    mlb: payload.mlb,
+    milb: payload.milb,
+  };
+}
+
+function hydrateBriefCache(payload: PersistedBriefPayload<BasePlayerResponse>): BriefCache {
+  return {
+    ...payload,
+    // Persisted payloads written before byLevel existed won't have it — rebuild
+    // on the fly so older Cosmos rows still surface the level breakdown.
+    byLevel: buildByLevelMap(payload.milb),
+    cachedAtMs: Date.now(),
+  };
+}
+
+async function buildAndPersistBriefPayload(date: string): Promise<BriefCache> {
+  const payload = await buildBriefPayload(date);
+  await upsertPersistedBrief(toPersistedPayload(payload));
+  return payload;
+}
+
+// Exported wrapper so the scheduled daily job can drive a fresh build
+// from src/jobs/dailyiq.job.ts without duplicating the route logic.
+export async function buildDailyBrief(date: string): Promise<BriefCache> {
+  return buildAndPersistBriefPayload(date);
+}
+
+// POST /admin/run-job  — manual trigger for smoke testing the daily push.
+// Guarded by DAILYIQ_ADMIN_TOKEN header (x-admin-token).
+router.post("/admin/run-job", async (req: Request, res: Response) => {
+  const expected = process.env.DAILYIQ_ADMIN_TOKEN;
+  if (!expected) {
+    return res.status(503).json({ success: false, error: "DAILYIQ_ADMIN_TOKEN not configured" });
+  }
+  if (String(req.headers["x-admin-token"] ?? "") !== expected) {
+    return res.status(401).json({ success: false, error: "Invalid admin token" });
+  }
+  try {
+    const { runDailyIQJob } = await import("../jobs/dailyiq.job.js");
+    const result = await runDailyIQJob({ force: true });
+    return res.json({ success: true, result });
+  } catch (err: any) {
+    console.error("[dailyiq.admin] runDailyIQJob failed:", err?.message ?? err);
+    return res.status(500).json({ success: false, error: err?.message ?? "Job failed" });
+  }
+});
 
 function currentBriefCache(): BriefCache | null {
   return _briefCache;
@@ -513,7 +1014,7 @@ function currentBriefCache(): BriefCache | null {
 function refreshBriefCache(date: string): Promise<void> {
   if (_briefRefreshPromise) return _briefRefreshPromise;
   _briefRefreshPromise = (async () => {
-    _briefCache = await buildBriefPayload(date);
+    _briefCache = await buildAndPersistBriefPayload(date);
   })().finally(() => {
     _briefRefreshPromise = null;
   });
@@ -533,7 +1034,8 @@ async function respondWithTopPlayers(req: Request, res: Response, league: League
   const lastUpdated = new Date().toISOString();
   const rankedPlayers = await getRankedPlayers(league, date, limit, lastUpdated, level);
   const players = decorateWithWatchlistStatus(rankedPlayers, watchlist);
-  res.json({ league, level: league === "MiLB" ? level : null, date, lastUpdated, limit, count: players.length, players });
+  const enriched = await enrichWithPlayerIQ(players);
+  res.json({ league, level: league === "MiLB" ? level : null, date, lastUpdated, limit, count: enriched.length, players: enriched });
 }
 
 router.get("/players/top/mlb", async (req, res) => {
@@ -592,39 +1094,75 @@ const handleBriefRequest = async (req: Request, res: Response) => {
   try {
     if (wantFresh) {
       meta.cacheStatus = "fresh";
-      _briefCache = await buildBriefPayload(date);
-    } else if (_briefCache) {
-      const isToday = _briefCache.date === date;
+      _briefCache = await buildAndPersistBriefPayload(date);
+    } else if (_briefCache?.date === date) {
+      const isToday = date === defaultBriefDate();
       const isStale = Date.now() - _briefCache.cachedAtMs >= BRIEF_BACKGROUND_REFRESH_MS;
-      if (!isToday || isStale) {
-        meta.cacheStatus = isStale ? "stale" : "expired";
+      if (isToday && isStale) {
+        meta.cacheStatus = "stale";
         refreshBriefCache(date).catch(() => undefined);
       } else {
         meta.cacheStatus = "hit";
       }
     } else {
-      meta.cacheStatus = "cold";
-      _briefCache = await buildBriefPayload(date);
+      // Prefer Cosmos (written by the scheduled daily job); fall back to the
+      // file-based persisted brief if Cosmos isn't configured / unavailable.
+      let persisted: PersistedBriefPayload<BasePlayerResponse> | null = null;
+      try {
+        const cosmosBrief = await cosmosGetTopPlayers(date);
+        if (cosmosBrief) {
+          persisted = {
+            date,
+            generatedAt: cosmosBrief.generatedAt,
+            mlb: cosmosBrief.mlb as unknown as BasePlayerResponse[],
+            milb: cosmosBrief.milb as unknown as BasePlayerResponse[],
+          };
+        }
+      } catch (err: any) {
+        console.warn("[dailyiq.routes] cosmos brief read failed; falling back to file:", err?.message ?? err);
+      }
+      if (!persisted) {
+        persisted = await getPersistedBriefByDate<BasePlayerResponse>(date);
+      }
+      if (persisted) {
+        meta.cacheStatus = "persisted-hit";
+        _briefCache = hydrateBriefCache(persisted);
+      } else {
+        meta.cacheStatus = "cold";
+        _briefCache = await buildAndPersistBriefPayload(date);
+      }
     }
 
-    const payload = currentBriefCache() ?? await buildBriefPayload(date);
+    const payload = currentBriefCache() ?? await buildAndPersistBriefPayload(date);
+    const [mlbEnriched, milbEnriched] = await Promise.all([
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(payload.mlb, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(payload.milb, watchlist)),
+    ]);
+    // Rebuild byLevel from the watchlist-decorated + IQ-enriched MiLB list so
+    // per-level buckets carry the same flags (isOnWatchlist, playerIQ*) as the
+    // top-level milb array. buildByLevelMap is order-preserving so the top-5
+    // per level remains stable.
+    const byLevel = buildByLevelMap(milbEnriched as unknown as BasePlayerResponse[]);
     return res.json({
       date: payload.date,
       generatedAt: payload.generatedAt,
       lastUpdated: payload.generatedAt,
-      mlb: decorateWithWatchlistStatus(payload.mlb, watchlist),
-      milb: decorateWithWatchlistStatus(payload.milb, watchlist),
+      mlb: mlbEnriched,
+      milb: milbEnriched,
+      byLevel,
       _meta: meta,
     });
   } catch (error: any) {
     const payload = currentBriefCache();
     if (payload) {
+      const decoratedMilb = decorateWithWatchlistStatus(payload.milb, watchlist);
       return res.json({
         date: payload.date,
         generatedAt: payload.generatedAt,
         lastUpdated: payload.generatedAt,
         mlb: decorateWithWatchlistStatus(payload.mlb, watchlist),
-        milb: decorateWithWatchlistStatus(payload.milb, watchlist),
+        milb: decoratedMilb,
+        byLevel: buildByLevelMap(decoratedMilb as unknown as BasePlayerResponse[]),
         _meta: { ...meta, cacheStatus: "error-fallback" },
       });
     }
@@ -642,22 +1180,70 @@ router.get("/watchlist", async (req, res) => {
   const watchlistEntries = await getWatchlistEntries(userId);
   const watchlistSet = await getWatchlistSet(userId);
   const entries = watchlistEntries
-    .map((entry) => ({ entry, profile: findPlayerById(entry.playerId) }))
-    .filter((value): value is { entry: WatchlistEntry; profile: PlayerProfile } => Boolean(value.profile));
-  const milbWatchlistOverrides = await getMiLBStatsOverrides(
-    date,
-    entries.filter(({ profile }) => profile.league === "MiLB").map(({ profile }) => profile),
+    .map((entry) => {
+      const pooled = findPlayerById(entry.playerId);
+      const profile = pooled ?? profileFromWatchlistEntry(entry);
+      return profile ? { entry, profile } : null;
+    })
+    .filter((value): value is { entry: WatchlistEntry; profile: PlayerProfile } => Boolean(value));
+
+  const milbProfiles = entries.filter(({ profile }) => profile.league === "MiLB").map(({ profile }) => profile);
+  const allProfiles = entries.map(({ profile }) => profile);
+
+  // Resolve numeric MLB person IDs (for game-log / recent form lookups)
+  // and tomorrow's probable pitchers (MLB schedule only) in parallel.
+  const tomorrow = getTomorrowDateUTC();
+  const [milbWatchlistOverrides, assignmentsByPlayerId, probableByTeam] = await Promise.all([
+    getMiLBStatsOverrides(date, milbProfiles),
+    allProfiles.length > 0
+      ? resolveCurrentPlayerAssignments(allProfiles).catch(() => new Map<string, { mlbPersonId?: number }>())
+      : Promise.resolve(new Map<string, { mlbPersonId?: number }>()),
+    fetchTomorrowProbablePitchers(tomorrow).catch(() => new Map<string, TomorrowMatchup>()),
+  ]);
+
+  const season = new Date().getUTCFullYear();
+  const PITCHER_POSITIONS = new Set(["SP", "RP", "CL", "P"]);
+
+  // Fetch recent form (last 7 / last 15) for each watched player in parallel.
+  const recentFormByPlayerId = new Map<string, RecentForm | null>();
+  await Promise.all(
+    entries.map(async ({ profile }) => {
+      const assignment = assignmentsByPlayerId.get(profile.playerId) as { mlbPersonId?: number } | undefined;
+      const personId = assignment?.mlbPersonId;
+      if (!personId) {
+        recentFormByPlayerId.set(profile.playerId, null);
+        return;
+      }
+      const isPitcher = PITCHER_POSITIONS.has(profile.position);
+      try {
+        const form = await fetchRecentForm(personId, isPitcher, season);
+        recentFormByPlayerId.set(profile.playerId, form);
+      } catch {
+        recentFormByPlayerId.set(profile.playerId, null);
+      }
+    }),
   );
+
   const items = entries
     .map(({ entry, profile }) => {
       const statsOverride = profile.league === "MiLB" ? milbWatchlistOverrides.get(profile.playerId) : undefined;
+      const base = decorateWithWatchlistStatus([
+        buildBasePlayerResponse(profile, date, 0, scorePlayerForDay(profile, date, statsOverride), entry.createdAt, statsOverride),
+      ], watchlistSet)[0];
+
+      const recentForm = recentFormByPlayerId.get(profile.playerId) ?? null;
+      // Tomorrow matchup: MLB only (probable pitchers come from sportId=1 schedule).
+      const tomorrowMatchup = profile.league === "MLB"
+        ? probableByTeam.get(profile.teamAbbreviation) ?? null
+        : null;
+
       return {
         watchlistItemId: entry.watchlistItemId,
         userId,
         createdAt: entry.createdAt,
-        ...decorateWithWatchlistStatus([
-          buildBasePlayerResponse(profile, date, 0, scorePlayerForDay(profile, date, statsOverride), entry.createdAt, statsOverride),
-        ], watchlistSet)[0],
+        ...base,
+        recentForm,
+        tomorrowMatchup,
       };
     });
   res.json({ userId, date, count: items.length, watchlist: items });
@@ -668,15 +1254,32 @@ router.post("/watchlist", async (req, res) => {
   if (!userId) return;
   const requestedPlayerId = String(req.body?.playerId ?? "").trim();
   const requestedPlayerName = String(req.body?.playerName ?? "").trim();
-  const profile = requestedPlayerId ? findPlayerById(requestedPlayerId) : findPlayerByQuery(requestedPlayerName, "All");
-  if (!profile) {
-    return res.status(404).json({ error: "Player not found" });
+  const requestedLeague = typeof req.body?.league === "string" && ["MLB", "MiLB"].includes(req.body.league)
+    ? (req.body.league as League)
+    : "All";
+  if (!requestedPlayerId && !requestedPlayerName) {
+    return res.status(400).json({ error: "playerId or playerName is required" });
   }
 
-  const { entry, created } = await upsertWatchlistEntry(userId, profile.playerId);
-  if (created) {
-    bumpWatchCount(profile);
+  const resolved = await resolveAddablePlayer({
+    playerId: requestedPlayerId,
+    playerName: requestedPlayerName,
+    league: requestedLeague,
+  });
+  if (!resolved) {
+    return res.status(404).json({ error: "Player not found" });
   }
+  const { profile, mlbPersonId } = resolved;
+
+  const { entry, created } = await upsertWatchlistEntry(userId, profile.playerId, {
+    playerName: profile.playerName,
+    teamName: profile.teamName || undefined,
+    teamAbbreviation: profile.teamAbbreviation || undefined,
+    league: profile.league,
+    level: profile.level,
+    position: profile.position || undefined,
+    mlbPersonId,
+  });
 
   return res.status(created ? 201 : 200).json({
     message: "Added to watchlist",
@@ -685,6 +1288,9 @@ router.post("/watchlist", async (req, res) => {
     playerId: profile.playerId,
     playerName: profile.playerName,
     league: profile.league,
+    team: profile.teamName,
+    level: profile.level,
+    resolvedVia: resolved.resolvedVia,
   });
 });
 
@@ -775,17 +1381,23 @@ router.post("/watchlist/search", async (req, res) => {
   const requestedLeague = typeof req.body?.league === "string" && ["MLB", "MiLB"].includes(req.body.league)
     ? req.body.league as League
     : "All";
-  const profile = findPlayerByQuery(query, requestedLeague);
-  if (!profile) {
+  const resolved = await resolveAddablePlayer({ query, league: requestedLeague });
+  if (!resolved) {
     return res.status(404).json({ error: "No player found for that query", query });
   }
-  const { entry, created } = await upsertWatchlistEntry(userId, profile.playerId);
-  if (created) {
-    bumpWatchCount(profile);
-  }
+  const { profile, mlbPersonId } = resolved;
+  const { entry, created } = await upsertWatchlistEntry(userId, profile.playerId, {
+    playerName: profile.playerName,
+    teamName: profile.teamName || undefined,
+    teamAbbreviation: profile.teamAbbreviation || undefined,
+    league: profile.league,
+    level: profile.level,
+    position: profile.position || undefined,
+    mlbPersonId,
+  });
   return res.json({
     message: "Added to watchlist",
-    resolvedFrom: "search",
+    resolvedFrom: resolved.resolvedVia === "pool" ? "search" : resolved.resolvedVia,
     item: {
       watchlistItemId: entry.watchlistItemId,
       userId,
@@ -809,6 +1421,52 @@ router.delete("/watchlist/:playerId", async (req, res) => {
     return res.status(404).json({ error: "Player not in watchlist" });
   }
   return res.json({ message: "Removed from watchlist", playerId, userId });
+});
+
+// GET /search?q=<name>&limit=<n>
+// Server-side proxy for the MLB Stats API people search. Mobile clients
+// must NEVER hit statsapi.mlb.com directly — proxying keeps observability,
+// lets us swap providers later, and avoids leaking a User-Agent we don't
+// control. We deliberately do NOT cache here: the volume is low and the
+// search index changes whenever rosters move.
+router.get("/search", async (req, res) => {
+  const query = String(req.query.q ?? "").trim();
+  if (query.length < 2) {
+    return res.status(400).json({ error: "q must be at least 2 characters" });
+  }
+  const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? "10"), 10) || 10, 1), 25);
+  const url = `https://statsapi.mlb.com/api/v1/people/search?names=${encodeURIComponent(query)}&limit=${limit}&active=true`;
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "HobbyIQ/1.0", Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return res.status(502).json({ error: `MLB Stats API returned ${response.status}` });
+    }
+    const data = (await response.json()) as {
+      people?: Array<{
+        id?: number;
+        fullName?: string;
+        primaryNumber?: string;
+        primaryPosition?: { abbreviation?: string; name?: string };
+        currentTeam?: { id?: number; name?: string };
+        active?: boolean;
+      }>;
+    };
+    const results = (data.people ?? []).map((person) => ({
+      mlbPersonId: person.id ?? null,
+      playerName: person.fullName ?? "",
+      position: person.primaryPosition?.abbreviation ?? null,
+      positionName: person.primaryPosition?.name ?? null,
+      teamId: person.currentTeam?.id ?? null,
+      teamName: person.currentTeam?.name ?? null,
+      jersey: person.primaryNumber ?? null,
+      active: person.active ?? null,
+    }));
+    return res.json({ query, count: results.length, results });
+  } catch (err: any) {
+    return res.status(502).json({ error: err?.message ?? "MLB search proxy failed" });
+  }
 });
 
 export default router;
