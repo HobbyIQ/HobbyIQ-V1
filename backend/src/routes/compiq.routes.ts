@@ -10,6 +10,8 @@ import {
   type ParsedCardQuery,
 } from "../services/compiq/cardQueryParser.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
+import { writeCorpusEntry } from "../services/corpus/writeCorpusEntry.js";
+import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.js";
 
 // Build a structured CompIQEstimateRequest from a parsed free-text query.
 // The parser fills in every field the estimate service needs (year, brand,
@@ -148,6 +150,7 @@ router.post("/cardsearch", async (req, res, next) => {
 // POST /api/compiq/search
 // Accepts { query: string } — used by DashboardView free-text search
 router.post("/search", async (req, res, next) => {
+  const handlerStart = Date.now();
   try {
     const { query } = req.body || {};
     if (!query || typeof query !== "string" || !query.trim()) {
@@ -273,6 +276,17 @@ router.post("/search", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
+    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
+    void writeCorpusEntry(
+      corpusEntryFromPricingResult({
+        query: query.trim(),
+        querySource: "free_text",
+        endpoint: "/api/compiq/search",
+        durationMs: Date.now() - handlerStart,
+        result,
+      }),
+    );
   } catch (err) {
     next(err);
   }
@@ -280,6 +294,7 @@ router.post("/search", async (req, res, next) => {
 
 // POST /api/compiq/price  (alias for /search — same contract)
 router.post("/price", async (req, res, next) => {
+  const handlerStart = Date.now();
   try {
     const { query } = req.body || {};
     if (!query || typeof query !== "string" || !query.trim()) {
@@ -321,6 +336,10 @@ router.post("/price", async (req, res, next) => {
         buyZone: isThin ? [null, null] : [quick * 0.9, quick],
         holdZone: isThin ? [null, null] : [quick, fmv],
         sellZone: isThin ? [null, null] : [fmv, premium],
+        // Live FMV emitted at top level for engine-emission symmetry with
+        // /search (Option X). Mirrors marketTier.value's null-when-thin
+        // semantic so both fields agree within a response.
+        fairMarketValueLive: isThin ? null : fmv,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
@@ -358,6 +377,17 @@ router.post("/price", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
+    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
+    void writeCorpusEntry(
+      corpusEntryFromPricingResult({
+        query: query.trim(),
+        querySource: "free_text",
+        endpoint: "/api/compiq/price",
+        durationMs: Date.now() - handlerStart,
+        result,
+      }),
+    );
   } catch (err) {
     next(err);
   }
@@ -482,6 +512,7 @@ router.post("/search-list", async (req, res, next) => {
 });
 
 router.post("/price-by-id", async (req, res, next) => {
+  const handlerStart = Date.now();
   try {
     const { cardHedgeCardId, query, gradeCompany, gradeValue } = req.body || {};
     if (!cardHedgeCardId || typeof cardHedgeCardId !== "string") {
@@ -519,6 +550,9 @@ router.post("/price-by-id", async (req, res, next) => {
         buyZone: isThin ? [null, null] : [quick * 0.9, quick],
         holdZone: isThin ? [null, null] : [quick, fmv],
         sellZone: isThin ? [null, null] : [fmv, premium],
+        // Live FMV emitted at top level for engine-emission symmetry
+        // with /search and /price (Option X). null when thin market.
+        fairMarketValueLive: isThin ? null : fmv,
         confidence,
         source,
         trendAnalysis: {
@@ -537,6 +571,27 @@ router.post("/price-by-id", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
+    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
+    // carried a non-empty free-text `query`, store that with
+    // querySource="free_text"; otherwise store cardHedgeCardId in the
+    // query slot with querySource="card_id" (self-describing semantics).
+    {
+      const trimmedQuery =
+        typeof query === "string" ? query.trim() : "";
+      const queryForCorpus = trimmedQuery.length > 0 ? trimmedQuery : cardHedgeCardId;
+      const querySource: "free_text" | "card_id" =
+        trimmedQuery.length > 0 ? "free_text" : "card_id";
+      void writeCorpusEntry(
+        corpusEntryFromPricingResult({
+          query: queryForCorpus,
+          querySource,
+          endpoint: "/api/compiq/price-by-id",
+          durationMs: Date.now() - handlerStart,
+          result,
+        }),
+      );
+    }
   } catch (err) {
     next(err);
   }
@@ -545,6 +600,7 @@ router.post("/price-by-id", async (req, res, next) => {
 // POST /api/compiq/bulk
 // Accepts { queries: string[] } — used by PortfolioIQViewModel.refreshPortfolio()
 router.post("/bulk", async (req, res, next) => {
+  const handlerStart = Date.now();
   try {
     const { queries } = req.body || {};
     if (!Array.isArray(queries) || queries.length === 0) {
@@ -558,21 +614,41 @@ router.post("/bulk", async (req, res, next) => {
         const fmv = (est.fairMarketValue as number) ?? 0;
         const premium = (est.premiumValue as number) ?? fmv * 1.15;
         const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";
+        const data = {
+          ...buildEngineMeta(),
+          success: true,
+          query,
+          summary: est.verdict,
+          marketTier: { value: fmv, high: premium },
+          // Engine-emission symmetry with /search, /price, /price-by-id
+          // (Option X). null when the engine produced no usable FMV.
+          fairMarketValueLive: fmv > 0 ? fmv : null,
+          confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
+          trendAnalysis: {
+            market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
+          },
+          source: est.source ?? "live",
+          // Comp counts emitted per-item for symmetry with /search and
+          // /price; corpus sampleSize maps from compsUsed.
+          compsUsed: (est as any).compsUsed ?? 0,
+          compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
+        };
+        // Per-item corpus write — fire-and-forget. writeCorpusEntry rolls
+        // its sample-rate gate independently per call, so a 20-item bulk
+        // request produces up to 20 independent sampling rolls.
+        void writeCorpusEntry(
+          corpusEntryFromPricingResult({
+            query,
+            querySource: "free_text",
+            endpoint: "/api/compiq/bulk",
+            durationMs: Date.now() - handlerStart,
+            result: data,
+          }),
+        );
         return {
           query,
           status: "ok" as const,
-          data: {
-            ...buildEngineMeta(),
-            success: true,
-            query,
-            summary: est.verdict,
-            marketTier: { value: fmv, high: premium },
-            confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
-            trendAnalysis: {
-              market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
-            },
-            source: est.source ?? "live",
-          },
+          data,
           error: null,
         };
       })
