@@ -8,7 +8,12 @@ router.get(["/", ""], (req, res) => {
     brand: "HobbyIQ",
     port: Number(process.env.PORT || 8080),
     environment: process.env.NODE_ENV || "production",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    services: {
+      cosmos: !!process.env.COSMOS_ENDPOINT ? "configured" : "fallback",
+      redis: !!process.env.REDIS_HOST ? "configured" : "fallback",
+      appInsights: !!process.env.APPLICATIONINSIGHTS_CONNECTION_STRING ? "active" : "off",
+    },
   });
 });
 

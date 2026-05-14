@@ -20,3 +20,6 @@ Thumbs.db
 backend/harness/corpus/tier3.jsonl
 backend/harness/__snapshots__/tier3/
 backend/harness/fixtures/cardhedge/
+
+# Azure App Service env var dump — contains live secrets; never commit (see PR #2.5)
+backend/azure-app-env-vars.txt

@@ -6,6 +6,8 @@ export interface CompIQEstimateRequest {
   gradeCompany?: string;
   gradeValue?: number;
   isAuto?: boolean;
+  /** Pin pricing to a specific Card Hedge card_id (skips text identification). */
+  cardHedgeCardId?: string;
 }
 
 export interface CompIQEstimateResponse {

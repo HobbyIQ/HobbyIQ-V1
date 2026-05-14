@@ -1,0 +1,469 @@
+// PlayerScoreService — combines card market trend + MLB performance into a
+// single 0-100 PlayerIQ score per player.
+//
+// playerIQScore = market.marketScore * 0.60 + performance.performanceScore * 0.40
+//
+// Reads cardSnapshots from trend_history (partition /cardId, written
+// fire-and-forget on every estimate). Writes to player_trends (partition
+// /playerId) as one upserted document per player.
+//
+// Also fires a fire-and-forget per-update history snapshot to
+// player_trend_history (partition /playerId, doc id = {playerId}_{ts}).
+
+import { CosmosClient, type Container } from "@azure/cosmos";
+import { DefaultAzureCredential } from "@azure/identity";
+import {
+  deriveLabel,
+  playerNameSlug,
+  type Confidence,
+  type MarketScore,
+  type PerformanceScore,
+  type PlayerIQDirection,
+  type PlayerIQScore,
+  type PlayerScore,
+  type TrendSnapshot,
+} from "../../types/playerScore.js";
+import { getMlbMomentum } from "./mlbStats.service.js";
+import { getRecentSnapshotsByPlayer } from "./trendHistory.service.js";
+
+const DB_NAME = process.env.COSMOS_DB ?? process.env.COSMOS_DATABASE ?? "hobbyiq";
+const TRENDS_CONTAINER =
+  process.env.COSMOS_PLAYER_TRENDS_CONTAINER ?? "player_trends";
+const HISTORY_CONTAINER =
+  process.env.COSMOS_PLAYER_TREND_HISTORY_CONTAINER ?? "player_trend_history";
+
+const UPDATE_RATE_LIMIT_MS = 30 * 60 * 1000; // 30 min per player
+const lastUpdateByPlayer = new Map<string, number>();
+
+let trendsContainer: Container | null = null;
+let historyContainer: Container | null = null;
+let initPromise: Promise<void> | null = null;
+
+async function initContainers(): Promise<void> {
+  if (trendsContainer && historyContainer) return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      const conn = process.env.COSMOS_CONNECTION_STRING;
+      const endpoint = process.env.COSMOS_ENDPOINT;
+      const key = process.env.COSMOS_KEY;
+      let client: CosmosClient | null = null;
+      if (conn) client = new CosmosClient(conn);
+      else if (endpoint && key) client = new CosmosClient({ endpoint, key });
+      else if (endpoint) client = new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential() });
+      else return;
+
+      const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
+      const { container: tc } = await database.containers.createIfNotExists({
+        id: TRENDS_CONTAINER,
+        partitionKey: { paths: ["/playerId"] },
+      });
+      const { container: hc } = await database.containers.createIfNotExists({
+        id: HISTORY_CONTAINER,
+        partitionKey: { paths: ["/playerId"] },
+      });
+      trendsContainer = tc;
+      historyContainer = hc;
+    } catch (err) {
+      console.warn("[playerScore] init failed:", (err as Error).message);
+    }
+  })();
+  return initPromise;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Score computation
+// ──────────────────────────────────────────────────────────────────────────
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/**
+ * Convert trend_history snapshots for a player into a MarketScore.
+ *
+ * Scoring math:
+ *   - Use only the latest snapshot per cardId (one row per card).
+ *   - avgTrendPct = median of impliedTrendPct across cards, capped ±60.
+ *   - marketScore = 50 + avgTrendPct * 0.8   (12% trend → 59.6, +25% → 70, +50% → 90)
+ *                   clamped to [0, 100].
+ *   - direction:  >  3 → rising, <  -3 → falling, else stable.
+ *   - confidence: cardCount >=3 → high, 1-2 → medium, 0 → low.
+ */
+export function computeMarketScore(
+  playerName: string,
+  cardSnapshots: TrendSnapshot[],
+): MarketScore {
+  // Latest snapshot per cardId
+  const latestByCard = new Map<string, TrendSnapshot>();
+  for (const s of cardSnapshots) {
+    const prev = latestByCard.get(s.cardId);
+    if (!prev || Date.parse(s.timestamp) > Date.parse(prev.timestamp)) {
+      latestByCard.set(s.cardId, s);
+    }
+  }
+  const cards = Array.from(latestByCard.values());
+
+  if (cards.length === 0) {
+    return {
+      marketScore: 50,
+      marketDirection: "stable",
+      avgTrendPct: 0,
+      totalSamples: 0,
+      cardCount: 0,
+      topCardName: null,
+      confidence: "low",
+    };
+  }
+
+  const trendPcts = cards.map((c) => c.impliedTrendPct);
+  const avgTrendPct = Math.round(median(trendPcts) * 10) / 10;
+  const marketScore = Math.round(clamp(50 + avgTrendPct * 0.8, 0, 100));
+  const direction: PlayerIQDirection =
+    avgTrendPct > 3 ? "rising" : avgTrendPct < -3 ? "falling" : "stable";
+  const totalSamples = cards.reduce((a, c) => a + (c.totalSamples ?? 0), 0);
+
+  // Top card by absolute trend magnitude
+  let topCard: TrendSnapshot | null = null;
+  let topMag = -Infinity;
+  for (const c of cards) {
+    const m = Math.abs(c.impliedTrendPct ?? 0);
+    if (m > topMag) {
+      topMag = m;
+      topCard = c;
+    }
+  }
+  const topCardName = topCard
+    ? [topCard.year, topCard.set, topCard.cardNumber ? `#${topCard.cardNumber}` : null]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || null
+    : null;
+
+  const cardCount = cards.length;
+  const confidence: Confidence =
+    cardCount >= 3 ? "high" : cardCount >= 1 ? "medium" : "low";
+
+  return {
+    marketScore,
+    marketDirection: direction,
+    avgTrendPct,
+    totalSamples,
+    cardCount,
+    topCardName,
+    confidence,
+  };
+}
+
+/**
+ * Compute PerformanceScore from MLB Stats API momentum.
+ *
+ *   performanceScore = 50 + (momentumRatio - 1.0) * 100
+ *                      clamped to [0, 100].
+ *
+ * Examples: 1.00 → 50,  1.10 → 60,  1.30 → 80,  0.85 → 35.
+ * MiLB or unknown players → 50 / "low" confidence.
+ */
+export async function computePerformanceScore(
+  playerName: string,
+): Promise<PerformanceScore & { mlbPlayerId: number | null; team: string | null; position: string | null }> {
+  const mom = await getMlbMomentum(playerName);
+  if (mom.status !== "ok") {
+    return {
+      performanceScore: 50,
+      performanceDirection: "stable",
+      momentumRatio: 1.0,
+      statLine: mom.statLine,
+      statGroup: mom.statGroup,
+      milestone: mom.milestone,
+      confidence: "low",
+      mlbPlayerId: mom.mlbPlayerId,
+      team: mom.team,
+      position: mom.position,
+    };
+  }
+  const performanceScore = Math.round(clamp(50 + (mom.momentumRatio - 1.0) * 100, 0, 100));
+  const performanceDirection: PlayerIQDirection =
+    mom.direction === "hot" ? "rising" : mom.direction === "cold" ? "falling" : "stable";
+  return {
+    performanceScore,
+    performanceDirection,
+    momentumRatio: mom.momentumRatio,
+    statLine: mom.statLine,
+    statGroup: mom.statGroup,
+    milestone: mom.milestone,
+    confidence: "high",
+    mlbPlayerId: mom.mlbPlayerId,
+    team: mom.team,
+    position: mom.position,
+  };
+}
+
+/**
+ * Blend market and performance into the combined PlayerIQ score.
+ * playerIQScore = market * 0.60 + performance * 0.40
+ */
+export function computePlayerIQScore(
+  market: MarketScore,
+  performance: PerformanceScore,
+): PlayerIQScore {
+  const playerIQScore = Math.round(market.marketScore * 0.6 + performance.performanceScore * 0.4);
+
+  // Direction = whichever signal dominates the blended movement.
+  // If both agree, use that. If they disagree, lean on whichever has
+  // the larger deviation from "stable" (50).
+  const mDev = market.marketScore - 50;
+  const pDev = performance.performanceScore - 50;
+  let dir: PlayerIQDirection = "stable";
+  if (Math.abs(mDev) >= Math.abs(pDev)) dir = market.marketDirection;
+  else dir = performance.performanceDirection;
+
+  // If the combined score itself is very flat, override to stable.
+  if (playerIQScore >= 45 && playerIQScore <= 55 && Math.abs(mDev) < 5 && Math.abs(pDev) < 5) {
+    dir = "stable";
+  }
+
+  return {
+    playerIQScore,
+    playerIQLabel: deriveLabel(playerIQScore, dir),
+    playerIQDirection: dir,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Cosmos read / write
+// ──────────────────────────────────────────────────────────────────────────
+
+function overallConfidence(market: Confidence, performance: Confidence): Confidence {
+  const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
+  // Take the lower of the two as the overall confidence floor.
+  return rank[market] <= rank[performance] ? market : performance;
+}
+
+/** Build a full PlayerScore doc from its parts. */
+export function buildPlayerScore(
+  playerName: string,
+  market: MarketScore,
+  performance: PerformanceScore & { mlbPlayerId: number | null; team: string | null; position: string | null },
+  dataSource: PlayerScore["dataSource"] = "realtime_estimate",
+): PlayerScore {
+  const blended = computePlayerIQScore(market, performance);
+  const playerId =
+    performance.mlbPlayerId != null
+      ? String(performance.mlbPlayerId)
+      : playerNameSlug(playerName);
+  return {
+    id: playerId,
+    playerId,
+    playerName,
+    mlbPlayerId: performance.mlbPlayerId,
+    team: performance.team,
+    position: performance.position,
+    league: performance.mlbPlayerId ? "MLB" : "unknown",
+    level: null,
+    market,
+    performance: {
+      performanceScore: performance.performanceScore,
+      performanceDirection: performance.performanceDirection,
+      momentumRatio: performance.momentumRatio,
+      statLine: performance.statLine,
+      statGroup: performance.statGroup,
+      milestone: performance.milestone,
+      confidence: performance.confidence,
+    },
+    playerIQScore: blended.playerIQScore,
+    playerIQLabel: blended.playerIQLabel,
+    playerIQDirection: blended.playerIQDirection,
+    updatedAt: new Date().toISOString(),
+    dataSource,
+    confidence: overallConfidence(market.confidence, performance.confidence),
+  };
+}
+
+/**
+ * Upsert a PlayerScore document. Also fires a fire-and-forget write to
+ * `player_trend_history` so the PlayerIQView score chart has data over time.
+ *
+ * Never throws.
+ */
+export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
+  try {
+    await initContainers();
+    if (!trendsContainer) return;
+    await trendsContainer.items.upsert(score);
+  } catch (err) {
+    console.warn("[playerScore] upsert failed:", (err as Error).message);
+    return;
+  }
+
+  // Fire-and-forget history write
+  void (async () => {
+    try {
+      if (!historyContainer) return;
+      const historyDoc = {
+        ...score,
+        id: `${score.playerId}_${Date.now()}`,
+        playerId: score.playerId, // partition key
+        snapshotAt: score.updatedAt,
+      };
+      await historyContainer.items.create(historyDoc);
+    } catch (err) {
+      console.warn("[playerScore] history write failed:", (err as Error).message);
+    }
+  })();
+}
+
+/** Read by playerId (preferred — single-partition lookup). */
+export async function getPlayerScore(playerId: string): Promise<PlayerScore | null> {
+  try {
+    await initContainers();
+    if (!trendsContainer) return null;
+    const { resource } = await trendsContainer.item(playerId, playerId).read<PlayerScore>();
+    return resource ?? null;
+  } catch (err) {
+    const status = (err as { code?: number }).code;
+    if (status !== 404) {
+      console.warn("[playerScore] read failed:", (err as Error).message);
+    }
+    return null;
+  }
+}
+
+/** Read by playerName (case-insensitive). Cross-partition query. */
+export async function getPlayerScoreByName(playerName: string): Promise<PlayerScore | null> {
+  try {
+    await initContainers();
+    if (!trendsContainer) return null;
+    const { resources } = await trendsContainer.items
+      .query<PlayerScore>({
+        query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
+        parameters: [{ name: "@name", value: playerName.trim().toLowerCase() }],
+      })
+      .fetchAll();
+    return resources?.[0] ?? null;
+  } catch (err) {
+    console.warn("[playerScore] getByName failed:", (err as Error).message);
+    return null;
+  }
+}
+
+/** Top players by playerIQScore, optionally filtered by direction. */
+export async function getTopPlayersByScore(
+  limit = 25,
+  direction?: PlayerIQDirection,
+): Promise<PlayerScore[]> {
+  try {
+    await initContainers();
+    if (!trendsContainer) return [];
+
+    const safeLimit = Math.max(1, Math.min(100, limit));
+    const where = direction ? 'WHERE c["playerIQDirection"] = @dir' : "";
+    const params = direction ? [{ name: "@dir", value: direction }] : [];
+    const { resources } = await trendsContainer.items
+      .query<PlayerScore>({
+        query: `SELECT TOP ${safeLimit} * FROM c ${where} ORDER BY c["playerIQScore"] DESC`,
+        parameters: params,
+      })
+      .fetchAll();
+    return resources ?? [];
+  } catch (err) {
+    console.warn("[playerScore] top query failed:", (err as Error).message);
+    return [];
+  }
+}
+
+/** Read player_trend_history snapshots for the PlayerIQView score chart. */
+export async function getPlayerTrendHistory(
+  playerId: string,
+  limit = 30,
+): Promise<PlayerScore[]> {
+  try {
+    await initContainers();
+    if (!historyContainer) return [];
+    const safeLimit = Math.max(1, Math.min(200, limit));
+    const { resources } = await historyContainer.items
+      .query<PlayerScore>({
+        query: `SELECT TOP ${safeLimit} * FROM c WHERE c["playerId"] = @id ORDER BY c["updatedAt"] DESC`,
+        parameters: [{ name: "@id", value: playerId }],
+      }, { partitionKey: playerId })
+      .fetchAll();
+    return resources ?? [];
+  } catch (err) {
+    console.warn("[playerScore] history read failed:", (err as Error).message);
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Real-time update from /api/compiq/estimate
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Refresh a player's PlayerScore from the latest trend_history snapshots
+ * plus a fresh MLB momentum read. Fire-and-forget — never blocks the
+ * triggering estimate response.
+ *
+ * Rate-limited to one update per playerName per 30 minutes (in-memory).
+ *
+ * @returns the upserted PlayerScore on success, null when rate-limited or
+ *          on any error.
+ */
+export async function updatePlayerScoreFromEstimate(
+  playerName: string,
+): Promise<PlayerScore | null> {
+  if (!playerName || !playerName.trim()) return null;
+  const key = playerName.trim().toLowerCase();
+  const now = Date.now();
+  const last = lastUpdateByPlayer.get(key);
+  if (last && now - last < UPDATE_RATE_LIMIT_MS) return null;
+  lastUpdateByPlayer.set(key, now);
+
+  try {
+    const snapshots = await getRecentSnapshotsByPlayer(playerName, 7);
+    const market = computeMarketScore(playerName, snapshots);
+    const performance = await computePerformanceScore(playerName);
+    const score = buildPlayerScore(playerName, market, performance, "realtime_estimate");
+    await upsertPlayerScore(score);
+    return score;
+  } catch (err) {
+    console.warn(
+      `[playerScore] updatePlayerScoreFromEstimate(${playerName}) failed:`,
+      (err as Error).message
+    );
+    // Roll back rate limiter so the next call can retry
+    lastUpdateByPlayer.delete(key);
+    return null;
+  }
+}
+
+/**
+ * Same as `updatePlayerScoreFromEstimate` but marked `dataSource: "nightly_job"`.
+ * Bypasses the 30-min rate limiter (the nightly batch is the source of truth).
+ */
+export async function refreshPlayerScoreForJob(
+  playerName: string,
+): Promise<PlayerScore | null> {
+  if (!playerName || !playerName.trim()) return null;
+  try {
+    const snapshots = await getRecentSnapshotsByPlayer(playerName, 7);
+    const market = computeMarketScore(playerName, snapshots);
+    const performance = await computePerformanceScore(playerName);
+    const score = buildPlayerScore(playerName, market, performance, "nightly_job");
+    await upsertPlayerScore(score);
+    return score;
+  } catch (err) {
+    console.warn(
+      `[playerScore] refreshPlayerScoreForJob(${playerName}) failed:`,
+      (err as Error).message
+    );
+    return null;
+  }
+}
