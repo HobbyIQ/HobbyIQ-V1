@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
+import { buildEngineMeta } from "./engineMeta.js";
 
 // ---------------------------------------------------------------------------
 // Apify eBay comp fetch
@@ -232,5 +233,8 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
 
 export async function compiqEstimate(req: Request, res: Response) {
   const data = await computeEstimate(req.body || {});
-  res.json(data);
+  // PR #2a marker: stamp engine identity on every pricing response. Spread
+  // last so an unexpected field collision favors the marker — pricingEngine,
+  // engineVersion, computedAt are reserved names for this telemetry shape.
+  res.json({ ...data, ...buildEngineMeta() });
 }

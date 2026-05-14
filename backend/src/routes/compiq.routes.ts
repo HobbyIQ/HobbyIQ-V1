@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { compiqEstimate, computeEstimate } from "../services/compiq/compiqEstimate.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
+import { buildEngineMeta } from "../services/compiq/engineMeta.js";
 const router = Router();
 
 router.get("/health", (req, res) => {
@@ -32,6 +33,7 @@ router.post("/search", async (req, res, next) => {
     const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
 
     res.json({
+      ...buildEngineMeta(),
       success: true,
       query: query.trim(),
       summary: est.verdict ?? "Estimate based on available market data.",
@@ -71,6 +73,7 @@ router.post("/price", async (req, res, next) => {
     const direction = trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat";
     const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
     res.json({
+      ...buildEngineMeta(),
       success: true,
       query: query.trim(),
       summary: est.verdict ?? "Estimate based on available market data.",
@@ -110,6 +113,7 @@ router.post("/bulk", async (req, res, next) => {
           query,
           status: "ok" as const,
           data: {
+            ...buildEngineMeta(),
             success: true,
             query,
             summary: est.verdict,
