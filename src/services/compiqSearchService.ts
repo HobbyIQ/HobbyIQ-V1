@@ -651,6 +651,13 @@ function isTitleMatchForQuery(title: string, signals: QuerySignals): boolean {
     return false;
   }
 
+  // If the user did NOT type "auto", assume base/non-auto card (~99% rule):
+  // autos trade at a large premium and would corrupt the prediction. Reject
+  // any comp whose title is an autograph.
+  if (!signals.requiresAuto && /\b(auto|autograph|autographed|on[-\s]?card auto|sticker auto)\b/.test(t)) {
+    return false;
+  }
+
   if (signals.playerTokens.length) {
     const playerMatches = signals.playerTokens.filter((token) =>
       new RegExp(`\\b${token}\\b`).test(t),
@@ -697,7 +704,142 @@ function gradeMultiplier(grade: GradeLabel): number {
   }
 }
 
-function parallelMultiplier(parallel: ParallelLabel): number {
+// ── Bowman era multiplier ──────────────────────────────────────────────────
+// Bowman Chrome Prospect Autos (and Bowman Draft / Bowman Chrome) trade with
+// steeper scarcity premiums in older years vs the current saturated era.
+// Drivers:
+//  - Pre-2014: smaller print runs, fewer parallels, vintage status, locked-in
+//    star players. Red /5 of 2011 Trout trades at 60×+ base auto.
+//  - 2015-2019: heavy collector demand era (Acuna/Soto/Tatis/Vlad/Wander).
+//    Numbered parallels 1.4-1.6× the modern premium curve.
+//  - 2020-2022: post-pandemic flood; premium curve compresses.
+//  - 2023+ (current): saturated; the table above is calibrated to this era.
+//
+// Era multiplier (E) amplifies the PREMIUM portion of the parallel multiplier:
+//   effective = 1 + (parallelMult - 1) * E
+// So base auto (mult 1.0) is unchanged across eras — only the scarcity
+// premium of /N parallels scales. This matches how the market actually moves:
+// base autos trade on player heat; numbered parallels trade on scarcity.
+//
+// Only applies to Bowman-family products (chrome / draft / sterling /
+// platinum). Topps flagship, Heritage, A&G, etc. keep era = 1.0.
+function bowmanEraMultiplier(year: string | null, family: ProductFamily): number {
+  const bowmanFamilies = new Set<ProductFamily>([
+    "bowman_chrome",
+    "bowman_paper",
+  ]);
+  if (!bowmanFamilies.has(family)) return 1.0;
+  if (!year) return 1.0;
+  const y = parseInt(year, 10);
+  if (!Number.isFinite(y)) return 1.0;
+  if (y <= 2009) return 1.8;   // Strasburg/Posey/Heyward — vintage tier
+  if (y <= 2011) return 1.7;   // 2010-2011 Trout/Harper era
+  if (y <= 2014) return 1.55;  // Bryant/Lindor/Correa era
+  if (y <= 2017) return 1.4;   // Judge/Bregman/Bellinger
+  if (y <= 2019) return 1.3;   // Acuna/Soto/Tatis/Vlad
+  if (y <= 2021) return 1.15;  // Wander/Witt/CJ Abrams — post-pandemic flood
+  if (y <= 2023) return 1.05;  // Holliday/Crews early prospect era
+  return 1.0;                  // 2024+ current saturated baseline
+}
+
+// Apply era amplification to a parallel multiplier. Premium portion scales;
+// the 1.0 base anchor never moves.
+function effectiveParallelMultiplier(
+  parallel: ParallelLabel,
+  isAuto: boolean,
+  year: string | null,
+  family: ProductFamily,
+): number {
+  const base = parallelMultiplier(parallel, isAuto);
+  const era = bowmanEraMultiplier(year, family);
+  if (era === 1.0 || base === 1.0) return base;
+  return 1 + (base - 1) * era;
+}
+
+function parallelMultiplier(parallel: ParallelLabel, isAuto: boolean = false): number {
+  // ── Auto-context overrides ────────────────────────────────────────────────
+  // Numbered Bowman Chrome Prospect Auto parallels carry FAR steeper premiums
+  // than raw refractor /N because the autograph amplifies scarcity and the
+  // print-run drop hits a smaller, hotter buyer pool. Calibrated against
+  // modern Card Hedger comps for mid-tier prospects (base auto $30–$80):
+  //   Refractor /499     → 1.5×    Sky Blue /499 → 1.5×
+  //   Aqua /125          → 1.85×
+  //   Blue Wave /150     → 2.4×    Blue /150 → 2.3×    HTA Choice /150 → 2.3×
+  //   Sapphire /199      → 2.0×    Purple Pattern /199 → 1.8×
+  //   Green /99          → 2.9×    Black Refractor /99 → 3.2×
+  //   Yellow /75         → 3.4×    Pack Fractor /89 → 2.9×
+  //   Bowman Logo /35    → 4.5×    Gold /50 → 4.5×
+  //   Orange /25         → 7.0×    Red Ice /25 → 7.0×
+  //   Black /10, Pearl /10, Rose Gold /10 → 12.0×
+  //   Pearl /15, Rose Gold /15 → 8.5×
+  //   Red /5             → 16.0×   Food Fractor /5 → 16.0×
+  //   Fire Fractor /3    → 22.0×
+  //   Superfractor 1/1   → 30.0×
+  // Top-tier hyped prospects (Holliday, Sasaki tier) can exceed these by
+  // another 1.5–2×; that heat is layered on later via signal multipliers,
+  // not baked into the parallel table.
+  if (isAuto) {
+    switch (parallel) {
+      case "one_of_one":         return 30.0;
+      case "fire_fractor_3":     return 22.0;
+      case "food_fractor_5":     return 16.0;
+      case "red_5":              return 16.0;
+      case "rose_gold_10":       return 12.0;
+      case "pearl_10":           return 12.0;
+      case "black_10":           return 12.0;
+      case "gold_ink_15":        return 9.0;
+      case "rose_gold_15":       return 8.5;
+      case "pearl_15":           return 8.5;
+      case "black_and_white_15": return 8.0;
+      case "chartreuse_15":      return 8.0;
+      case "black_paper_15":     return 8.0;
+      case "orange_25":          return 7.0;
+      case "red_ice_25":         return 7.0;
+      case "bowman_logo_35":     return 4.5;
+      case "gold_50":            return 4.5;
+      case "yellow_75":          return 3.4;
+      case "pack_fractor_89":    return 2.9;
+      case "green_99":           return 2.9;
+      case "black_refractor_99": return 3.2;
+      case "atomic_100":         return 2.7;
+      case "mini_diamond_100":   return 2.7;
+      case "steel_metal_100":    return 2.9;
+      case "aqua_125":           return 1.85;
+      case "blue_wave_150":      return 2.4;
+      case "blue_150":           return 2.3;
+      case "hta_choice_150":     return 2.3;
+      case "pink_175":           return 1.8;
+      case "fuchsia_199":        return 1.85;
+      case "purple_pattern_199": return 1.8;
+      case "sapphire_199":       return 2.0;
+      case "purple_refractor_199": return 1.85;
+      case "purple_250":         return 1.6;
+      case "blue_refractor_250": return 1.7;
+      case "speckle_299":        return 1.5;
+      case "fuchsia_paper_299":  return 1.5;
+      case "wave_350":           return 1.45;
+      case "lava_399":           return 1.45;
+      case "neon_green_399":     return 1.45;
+      case "sky_blue_499":       return 1.5;
+      case "refractor_499":      return 1.5;
+      case "raywave":            return 6.0;
+      case "logo_fractor":       return 3.2;
+      case "x_fractor":          return 1.25;
+      // Unnumbered / texture-driven parallels: modest auto bump
+      case "reptilian_base":     return 1.15;
+      case "mini_diamond_base":  return 1.15;
+      case "lunar_glow":         return 1.15;
+      case "camo":               return 1.05;
+      case "retro_logo_foil":    return 1.05;
+      // Auto base = chrome_base auto = 1.0× (the anchor for all auto math)
+      case "chrome_base":
+      default:
+        // Fall through to raw table for any parallel we haven't auto-tuned
+        break;
+    }
+  }
+
+  // ── Raw / non-auto multipliers ────────────────────────────────────────────
   switch (parallel) {
     case "one_of_one":         return 6.0;
     case "fire_fractor_3":     return 5.0;
@@ -785,18 +927,34 @@ function parallelMultiplier(parallel: ParallelLabel): number {
   }
 }
 
-function profileMultiplier(profile: CardProfile): number {
-  return gradeMultiplier(profile.grade) * parallelMultiplier(profile.parallel);
+function profileMultiplier(
+  profile: CardProfile,
+  isAuto: boolean = false,
+  year: string | null = null,
+  family: ProductFamily = "unknown",
+): number {
+  return gradeMultiplier(profile.grade) * effectiveParallelMultiplier(profile.parallel, isAuto, year, family);
 }
 
-function normalizeToTargetProfile(price: number, compProfile: CardProfile, targetProfile: CardProfile): number {
-  const sourceMultiplier = profileMultiplier(compProfile);
-  const targetMultiplier = profileMultiplier(targetProfile);
+function normalizeToTargetProfile(
+  price: number,
+  compProfile: CardProfile,
+  targetProfile: CardProfile,
+  isAuto: boolean = false,
+  year: string | null = null,
+  family: ProductFamily = "unknown",
+): number {
+  const sourceMultiplier = profileMultiplier(compProfile, isAuto, year, family);
+  const targetMultiplier = profileMultiplier(targetProfile, isAuto, year, family);
   if (sourceMultiplier <= 0 || targetMultiplier <= 0) return price;
   const ratio = targetMultiplier / sourceMultiplier;
 
-  // Keep normalization in a realistic lane so one misclassified comp cannot explode valuation.
-  const boundedRatio = Math.max(0.6, Math.min(1.8, ratio));
+  // Keep normalization in a realistic lane so one misclassified comp cannot
+  // explode valuation. Auto context needs a much wider band because numbered
+  // BCP auto parallels can legitimately trade at 10–50× base auto in vintage eras.
+  const lower = isAuto ? 0.3 : 0.6;
+  const upper = isAuto ? 60.0 : 1.8;
+  const boundedRatio = Math.max(lower, Math.min(upper, ratio));
   return price * boundedRatio;
 }
 
@@ -1466,13 +1624,16 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
       : await fetchEbaySoldData(overallQuery);
 
   // Normalize all comps into target-profile equivalents (single-card fair market lane)
+  const isAutoContext = querySignals.requiresAuto;
+  const queryYear = querySignals.year;
+  const queryFamily = querySignals.productFamily;
   const normalizedComps: SoldComp[] = sorted.map((c) => {
     const compProfile: CardProfile = {
       grade: (c.grade as GradeLabel) ?? "raw",
       parallel: (c.parallel as ParallelLabel) ?? "chrome_base",
     };
     const normalizedPrice = parseFloat(
-      normalizeToTargetProfile(c.price, compProfile, targetProfile).toFixed(2),
+      normalizeToTargetProfile(c.price, compProfile, targetProfile, isAutoContext, queryYear, queryFamily).toFixed(2),
     );
     return {
       ...c,
@@ -1494,6 +1655,20 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   const exactParallelLane = normalizedComps.filter(
     (c) => (((c.parallel as ParallelLabel) ?? "chrome_base") as ParallelLabel) === targetProfile.parallel,
   );
+
+  // ── Parallel extrapolation tracking ───────────────────────────────────────
+  // When the user asks about a specific parallel (e.g. Blue /150) and there
+  // are <3 exact-parallel comps in 90d, we fall back to comparable parallels
+  // or the full normalized pool. Those prices are derived via parallelMultiplier
+  // (e.g. Base auto × 1.15 → Blue /150). That's better than no price, but the
+  // confidence must be capped and the result must carry a risk flag so the
+  // UI / model can disclose that the prediction is extrapolated, not observed.
+  const exactParallelWindow90 = windowFilter(exactParallelLane, 90, now);
+  const usedExactParallel = targetExplicitParallel && exactParallelLane.length >= 4;
+  const usedComparableParallel =
+    targetExplicitParallel && !usedExactParallel && comparableLane.length >= 8;
+  const priceExtrapolatedFromBase =
+    targetExplicitParallel && exactParallelWindow90.length < 3;
 
   const specificTrendPool = targetExplicitParallel
     ? exactParallelLane.length >= 4
@@ -1530,7 +1705,9 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
     };
     return {
       ...c,
-      price: parseFloat(normalizeToTargetProfile(c.price, compProfile, overallBaseProfile).toFixed(2)),
+      price: parseFloat(
+        normalizeToTargetProfile(c.price, compProfile, overallBaseProfile, isAutoContext, queryYear, queryFamily).toFixed(2),
+      ),
     };
   });
   const { clean: overallClean } = separateOutliers(overallNormalized);
@@ -1562,12 +1739,21 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   const trendConfidence = parseFloat(Math.min(0.95, rawTrendConf).toFixed(2));
 
   // Confidence for the iOS display value
-  const displayConfidence =
+  const baseDisplayConfidence =
     liquidity === "high" && hasBothClusters
       ? 0.85
       : liquidity === "medium" || hasBothClusters
         ? 0.65
         : 0.4;
+
+  // Cap confidence when the price was extrapolated from base/comparable parallels
+  // rather than observed for the exact parallel. Full extrapolation (no exact
+  // comps in 90d): hard cap at 0.55. Partial (used comparable lane): cap at 0.70.
+  const displayConfidence = priceExtrapolatedFromBase
+    ? Math.min(baseDisplayConfidence, 0.55)
+    : usedComparableParallel
+      ? Math.min(baseDisplayConfidence, 0.7)
+      : baseDisplayConfidence;
 
   // Pricing tiers
   // ── Last direct comp (anchor) ─────────────────────────────────────────────
@@ -1704,6 +1890,15 @@ export async function searchAndPrice(query: string): Promise<CardSearchResult> {
   if (liquidity === "low") keyRisks.push("Low liquidity — may need aggressive pricing to sell");
   if (surroundingMovement === "down") keyRisks.push("Surrounding card market declining — next sale may undershoot anchor");
   if (overallClean.length < 4) keyRisks.push("Limited surrounding market data — trend signal is weak");
+  if (priceExtrapolatedFromBase) {
+    keyRisks.push(
+      `Price extrapolated from base/comparable parallels (only ${exactParallelWindow90.length} exact-parallel sales in 90d) — derived via parallel multiplier, not observed`,
+    );
+  } else if (usedComparableParallel) {
+    keyRisks.push(
+      `Pricing leaned on comparable parallels (${exactParallelLane.length} exact-parallel comps total) — small extrapolation applied`,
+    );
+  }
 
   // Narrative patterns
   const recentAvg = recentCluster.length ? avgOf(recentCluster.map((c) => c.price)) : null;

@@ -50,6 +50,7 @@ export interface CurrentPlayerAssignment {
   level: MiLBLevel;
   teamName: string;
   teamAbbreviation: string;
+  mlbPersonId?: number;
 }
 
 export interface ResolvedMiLBPlayerStats {
@@ -80,6 +81,7 @@ interface TeamsResponse {
 }
 
 interface SportPlayerSummary {
+  id?: number;
   fullName: string;
   currentTeam?: { id?: number };
 }
@@ -268,6 +270,7 @@ async function getAssignmentsByName(): Promise<Map<string, CurrentPlayerAssignme
         level: definition.level,
         teamName: team.name,
         teamAbbreviation: team.abbreviation,
+        mlbPersonId: typeof person.id === "number" ? person.id : undefined,
       });
     }
   }

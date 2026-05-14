@@ -41,7 +41,9 @@ export const marketMoversController = async (_req: Request, res: Response) => {
 
 export const playerSummaryController = async (req: Request, res: Response) => {
   try {
-    const result = await getPlayerSummary(req.params.player);
+    const playerParam = req.params.player;
+    const player = Array.isArray(playerParam) ? playerParam[0] : playerParam;
+    const result = await getPlayerSummary(player);
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: 'Internal server error' });

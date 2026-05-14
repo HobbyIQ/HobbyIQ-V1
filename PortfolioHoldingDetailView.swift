@@ -7,24 +7,44 @@ struct PortfolioHoldingDetailView: View {
     var onSell: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var router: AppRouter
 
     @State private var gradedEstimate: CardEstimateResponse? = nil
     @State private var isLoadingGraded = false
     @State private var gradedError: String? = nil
 
+    // Grade premium state
+    @State private var gradePremium: CompIQGradePremiumResponse? = nil
+    @State private var gradePremiumLoading = false
+    @State private var gradePremiumError: String? = nil
+
+    // Sell window state
+    @State private var sellWindow: CompIQSellWindowResponse? = nil
+    @State private var sellWindowLoading = false
+    @State private var sellWindowError: String? = nil
+
+    // eBay listing state
+    @State private var showEbayDraft = false
+    @StateObject private var ebayStore = EbayAccountStore.shared
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HoldingDetailHeader(holding: holding, onEdit: onEdit, onRefresh: onRefresh)
+                priceThisNowBar
+                listOnEbayBar
                 PositionSummarySection(holding: holding)
                 ProfitViewSection(holding: holding)
                 RecommendationSection(holding: holding)
                 MarketActivitySection(holding: holding)
                 ExitPlanSection(holding: holding)
                 WhyThisMattersSection(holding: holding)
+                // Sell window
+                sellWindowSection
                 // What if graded?
                 let isRaw = holding.gradingCompany.lowercased() == "raw" || holding.gradingCompany.trimmingCharacters(in: .whitespaces).isEmpty
                 if isRaw {
+                    gradePremiumSection
                     WhatIfGradedSection(
                         holding: holding,
                         estimate: gradedEstimate,
@@ -45,6 +65,9 @@ struct PortfolioHoldingDetailView: View {
                             .cornerRadius(14)
                     }
                 }
+                if let forecast = holding.forecast {
+                    ForecastSection(forecast: forecast)
+                }
                 Spacer(minLength: 20)
             }
             .padding(.horizontal, 16)
@@ -52,6 +75,7 @@ struct PortfolioHoldingDetailView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .navigationTitle(holding.playerName)
+        .onAppear { Task { await loadSellWindow() } }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Done") { dismiss() }
@@ -92,6 +116,233 @@ struct PortfolioHoldingDetailView: View {
             gradedError = "Could not fetch estimate."
         }
         isLoadingGraded = false
+    }
+
+    // MARK: — Price This Now bar
+
+    private var priceThisNowBar: some View {
+        Button {
+            let query = [
+                holding.playerName,
+                holding.cardYear > 0 ? String(holding.cardYear) : nil,
+                holding.product.isEmpty ? nil : holding.product,
+                holding.parallel.flatMap { $0.isEmpty ? nil : $0 },
+                holding.gradingCompany.lowercased() == "raw" ? nil : "\(holding.gradingCompany) \(holding.grade)",
+                holding.isAuto ? "Auto" : nil
+            ].compactMap { $0 }.joined(separator: " ")
+            dismiss()
+            router.jumpToDashboard(query: query, mode: .price)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkle").font(.system(size: 13, weight: .semibold))
+                Text("Price This Now").font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.blue.opacity(0.7))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.blue.opacity(0.10))
+            .foregroundColor(.blue)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.blue.opacity(0.25), lineWidth: 1))
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: — List on eBay bar
+
+    private var listOnEbayBar: some View {
+        Button { showEbayDraft = true } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "cart.fill").font(.system(size: 13, weight: .semibold))
+                Text("List on eBay").font(.system(size: 14, weight: .semibold))
+                if ebayStore.isConnected {
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.green.opacity(0.7))
+                } else {
+                    Text("· Connect first").font(.system(size: 11)).foregroundColor(.orange.opacity(0.8))
+                    Spacer()
+                    Image(systemName: "link.badge.plus").font(.system(size: 11)).foregroundColor(.orange.opacity(0.7))
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.green.opacity(0.10))
+            .foregroundColor(.green)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.green.opacity(0.25), lineWidth: 1))
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showEbayDraft) {
+            EbayListingDraftView(holding: holding) { listingUrl, listingPrice in
+                if let url = listingUrl {
+                    holding.listingUrl = url
+                    holding.listingPrice = listingPrice
+                }
+            }
+        }
+        .task { await ebayStore.refresh() }
+    }
+
+    // MARK: — Sell Window section (auto-loaded on appear)
+
+    private var sellWindowSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "Sell Window")
+            if sellWindowLoading {
+                HStack {
+                    ProgressView().tint(.gray)
+                    Text("Checking seasonal signals…").font(.caption).foregroundColor(.gray)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else if let sw = sellWindow {
+                let color: Color = sw.inWindowNow ? .green : .orange
+                let icon = sw.inWindowNow ? "checkmark.seal.fill" : "clock.fill"
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: icon).foregroundColor(color).font(.system(size: 16))
+                        Text(sw.inWindowNow ? "In Sell Window Now" : "Next Window in \(sw.monthsUntilNext)mo")
+                            .font(.subheadline.weight(.semibold)).foregroundColor(color)
+                    }
+                    if let active = sw.activeWindow {
+                        Text(active.label).font(.caption.weight(.semibold)).foregroundColor(.white.opacity(0.85))
+                        Text(active.reason).font(.caption).foregroundColor(.gray)
+                    } else if let next = sw.nextWindow {
+                        Text(next.label).font(.caption.weight(.semibold)).foregroundColor(.white.opacity(0.85))
+                        Text(next.reason).font(.caption).foregroundColor(.gray)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(color.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(color.opacity(0.2), lineWidth: 1))
+            } else if let err = sellWindowError {
+                Text(err).font(.caption).foregroundColor(.red)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.red.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    private func loadSellWindow() async {
+        guard sellWindow == nil else { return }
+        sellWindowLoading = true
+        defer { sellWindowLoading = false }
+        do {
+            let req = CompIQSellWindowRequest(
+                playerName: holding.playerName,
+                cardYear: holding.cardYear > 0 ? holding.cardYear : nil,
+                isRookie: holding.isRookie ? true : nil,
+                sport: holding.sport
+            )
+            sellWindow = try await APIService.shared.fetchSellWindow(request: req)
+        } catch {
+            sellWindowError = "Could not load sell window."
+        }
+    }
+
+    // MARK: — Grade Premium section (raw cards only)
+
+    private var gradePremiumSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "Grade Premium (PSA 10)")
+            if gradePremiumLoading {
+                HStack {
+                    ProgressView().tint(.gray)
+                    Text("Calculating premium…").font(.caption).foregroundColor(.gray)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.04))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else if let gp = gradePremium {
+                let color: Color = gp.worthGrading ? .green : .orange
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 16) {
+                        gradePremiumTile(label: "Raw FMV", value: gp.rawFmv, color: .gray)
+                        Image(systemName: "arrow.right").foregroundColor(.gray)
+                        gradePremiumTile(label: "PSA 10", value: gp.psa10Fmv, color: .white)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("+\(gp.premiumDollars.currencyFormatted)")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .foregroundColor(color)
+                            Text("+\(String(format: "%.0f", gp.premiumPct))%")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(color.opacity(0.8))
+                        }
+                    }
+                    HStack(spacing: 6) {
+                        Image(systemName: gp.worthGrading ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .foregroundColor(color).font(.system(size: 12))
+                        Text(gp.verdict).font(.caption).foregroundColor(.gray)
+                    }
+                }
+                .padding(14)
+                .background(color.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(color.opacity(0.18), lineWidth: 1))
+            } else {
+                Button {
+                    Task { await runGradePremium() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "rosette").font(.system(size: 13))
+                        Text("Does PSA 10 pencil out?")
+                            .font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 11)).foregroundColor(.purple.opacity(0.7))
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 12)
+                    .background(Color.purple.opacity(0.10))
+                    .foregroundColor(.purple)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.purple.opacity(0.25), lineWidth: 1))
+                }
+                .buttonStyle(PlainButtonStyle())
+                if let err = gradePremiumError {
+                    Text(err).font(.caption).foregroundColor(.red).padding(.top, 4)
+                }
+            }
+        }
+    }
+
+    private func gradePremiumTile(label: String, value: Double, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(label).font(.caption2).foregroundColor(.gray)
+            Text(value.currencyFormatted).font(.system(size: 14, weight: .semibold)).foregroundColor(color)
+        }
+    }
+
+    private func runGradePremium() async {
+        gradePremiumLoading = true
+        gradePremiumError = nil
+        defer { gradePremiumLoading = false }
+        do {
+            let req = CompIQGradePremiumRequest(
+                playerName: holding.playerName,
+                cardYear: holding.cardYear > 0 ? holding.cardYear : nil,
+                product: holding.product.isEmpty ? nil : holding.product,
+                parallel: holding.parallel.flatMap { $0.isEmpty ? nil : $0 },
+                isAuto: holding.isAuto ? true : nil
+            )
+            gradePremium = try await APIService.shared.fetchGradePremium(request: req)
+        } catch {
+            gradePremiumError = "Could not fetch grade premium."
+        }
     }
 }
 
@@ -483,6 +734,119 @@ struct WhatIfGradedSection: View {
     }
 }
 
+// MARK: - Forecast Section
+struct ForecastSection: View {
+    let forecast: PriceForecast
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(title: "Price Forecast")
+            VStack(spacing: 10) {
+                // Confidence header
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Model Confidence")
+                            .font(.caption)
+                            .foregroundColor(Color(.systemGray2))
+                        Text(forecast.volatilityRating + " Volatility · " + forecast.liquidityRating + " Liquidity")
+                            .font(.caption2)
+                            .foregroundColor(Color(.systemGray3))
+                    }
+                    Spacer()
+                    Text("\(Int(forecast.modelConfidence * 100))%")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(confidenceColor)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+
+                // Confidence bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color(.systemGray5)).frame(height: 5)
+                        Capsule()
+                            .fill(confidenceColor)
+                            .frame(width: geo.size.width * min(forecast.modelConfidence, 1.0), height: 5)
+                    }
+                }
+                .frame(height: 5)
+                .padding(.horizontal, 14)
+
+                Divider().background(Color(.systemGray6))
+
+                // Forecast tiles
+                HStack(spacing: 0) {
+                    forecastTile(label: "30 Day",  value: forecast.forecast30Day)
+                    Divider().frame(width: 1, height: 44).background(Color(.systemGray5))
+                    forecastTile(label: "90 Day",  value: forecast.forecast90Day)
+                    Divider().frame(width: 1, height: 44).background(Color(.systemGray5))
+                    forecastTile(label: "12 Month", value: forecast.forecast12Month)
+                }
+                .padding(.horizontal, 14)
+
+                Divider().background(Color(.systemGray6))
+
+                // Range
+                HStack(spacing: 0) {
+                    rangeTile(label: "Low", value: forecast.lowEstimate, color: .red)
+                    Divider().frame(width: 1, height: 36).background(Color(.systemGray5))
+                    rangeTile(label: "Expected", value: forecast.forecast90Day, color: .white)
+                    Divider().frame(width: 1, height: 36).background(Color(.systemGray5))
+                    rangeTile(label: "High", value: forecast.highEstimate, color: .green)
+                }
+                .padding(.horizontal, 14)
+
+                // Summary
+                if !forecast.reasoningSummary.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        Text(forecast.reasoningSummary)
+                            .font(.caption)
+                            .foregroundColor(Color(.systemGray2))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                }
+            }
+            .background(Color(.secondarySystemBackground).opacity(0.65))
+            .cornerRadius(14)
+        }
+    }
+
+    private var confidenceColor: Color {
+        forecast.modelConfidence >= 0.75 ? .green : forecast.modelConfidence >= 0.50 ? .yellow : .orange
+    }
+
+    private func forecastTile(label: String, value: Double) -> some View {
+        VStack(spacing: 3) {
+            Text("$\(Int(value))")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
+    private func rangeTile(label: String, value: Double, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text("$\(Int(value))")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+    }
+}
+
+// MARK: - Previews
 struct PortfolioHoldingDetailView_Previews: PreviewProvider {
     static var previews: some View {
         PortfolioHoldingDetailView(holding: .constant(PortfolioHolding.mockHoldings[0]))

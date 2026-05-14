@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { API_BASE_URL } from "../api";
+import "./SearchChat.css";
 
 const API_URL = `${API_BASE_URL}/api/compiq`;
 
@@ -55,7 +56,7 @@ const SearchChat = () => {
       let data;
       try {
         data = await res.json();
-      } catch (jsonErr) {
+      } catch {
         if (isMounted.current) {
           if (error !== "Invalid response from server.") setError("Invalid response from server.");
           if (result !== null) setResult(null);
@@ -80,7 +81,7 @@ const SearchChat = () => {
         localStorage.setItem("hobbyiq_search_count", newCount.toString());
       }
       if (isMounted.current) setResult(data);
-    } catch (err: any) {
+    } catch {
       if (isMounted.current) {
         if (error !== "Network error. Please check your connection and try again.") setError("Network error. Please check your connection and try again.");
         if (result !== null) setResult(null);
@@ -91,35 +92,35 @@ const SearchChat = () => {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto", fontFamily: "sans-serif" }}>
+    <div className="search-chat-analyzer">
       <h2>HobbyIQ Analyzer</h2>
-      <form onSubmit={handleSearch} style={{ marginBottom: 24, display: "flex", gap: 8 }}>
+      <form onSubmit={handleSearch} className="search-chat-analyzer-form">
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search player or card"
-          style={{ flex: 1, padding: 10, fontSize: 16, borderRadius: 4, border: "1px solid #ccc" }}
+          className="search-chat-analyzer-input"
         />
         <button
           type="submit"
-          style={{ padding: "10px 22px", fontSize: 16, borderRadius: 4, border: "none", background: isSearchAllowed ? "#1976d2" : "#888", color: "#fff", cursor: loading || !isSearchAllowed ? "not-allowed" : "pointer", opacity: loading || !isSearchAllowed ? 0.7 : 1 }}
+          className={`search-chat-analyzer-button ${isSearchAllowed ? "" : "search-chat-analyzer-button-disabled"}`.trim()}
           disabled={loading || !isSearchAllowed}
         >
           {loading ? "Analyzing..." : "Analyze"}
         </button>
       </form>
       {userTier === "FREE" && !isSearchAllowed && (
-        <div style={{ color: "#ff4d4f", marginBottom: 16, textAlign: "center", fontWeight: 600, fontSize: 16 }}>
+        <div className="search-chat-analyzer-upgrade">
           Upgrade to Pro or All-Star for unlimited access
         </div>
       )}
-      {error && <div style={{ color: "red", marginBottom: 16, textAlign: "center" }}>{error}</div>}
-      {loading && <div style={{ color: "#1976d2", marginBottom: 16, textAlign: "center" }}>Loading...</div>}
+      {error && <div className="search-chat-analyzer-error">{error}</div>}
+      {loading && <div className="search-chat-analyzer-loading">Loading...</div>}
       {result && (
-        <div ref={resultRef} style={{ border: "1px solid #1976d2", background: "#f5faff", padding: 20, borderRadius: 8, marginBottom: 28 }}>
-          <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>{result.title || result.directAnswer || "Result"}</div>
+        <div ref={resultRef} className="search-chat-analyzer-result-card">
+          <div className="search-chat-analyzer-result-title">{result.title || result.directAnswer || "Result"}</div>
           {result.keyNumbers && typeof result.keyNumbers === "object" && Object.keys(result.keyNumbers).length > 0 && (
-            <div style={{ marginBottom: 8 }}>
+            <div className="search-chat-analyzer-keynumbers">
               <div><b>Median:</b> {result.keyNumbers.FMV !== undefined && result.keyNumbers.FMV !== null && result.keyNumbers.FMV !== '' ? `$${result.keyNumbers.FMV}` : 'N/A'}</div>
               <div><b>Range:</b> {
                 result.keyNumbers.Range && typeof result.keyNumbers.Range === 'object' && result.keyNumbers.Range.low !== undefined && result.keyNumbers.Range.high !== undefined
@@ -146,24 +147,24 @@ const SearchChat = () => {
             </div>
           )}
           {result.why && Array.isArray(result.why) && result.why.length > 0 && (
-            <ul style={{ margin: "8px 0 0 0", padding: 0, listStyle: "disc inside", color: "#1976d2" }}>
+            <ul className="search-chat-analyzer-why-list">
               {result.why.map((w: string, i: number) => <li key={i}>{w}</li>)}
             </ul>
           )}
           {result.tags && Array.isArray(result.tags) && result.tags.length > 0 && (
-            <div style={{ marginTop: 8 }}>
+            <div className="search-chat-analyzer-tags">
               {result.tags.map((tag: string, i: number) => (
-                <span key={i} style={{ background: "#e3f2fd", color: "#1976d2", borderRadius: 12, padding: "2px 10px", marginRight: 6, fontSize: 13 }}>{tag}</span>
+                <span key={i} className="search-chat-analyzer-tag">{tag}</span>
               ))}
             </div>
           )}
           {result.expandable && result.expandable.comps && Array.isArray(result.expandable.comps) && result.expandable.comps.length > 0 && (
-            <div style={{ marginTop: 16 }}>
+            <div className="search-chat-analyzer-comps">
               <b>Recent Comps:</b>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              <ul className="search-chat-analyzer-comps-list">
                 {result.expandable.comps.map((comp: any, i: number) => (
-                  <li key={i} style={{ marginBottom: 4 }}>
-                    ${comp.price} <span style={{ color: "#888" }}>{comp.date}</span>
+                  <li key={i} className="search-chat-analyzer-comp-row">
+                    ${comp.price} <span className="search-chat-analyzer-comp-date">{comp.date}</span>
                   </li>
                 ))}
               </ul>

@@ -1,0 +1,121 @@
+﻿[
+  {
+    "details_url": null,
+    "id": "d03f8089-1982-4238-91a9-e570fab963af",
+    "log_time": "2026-05-10T14:23:11.9696927Z",
+    "message": "Updating submodules.",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "b731fa0d-bba4-4fff-a11d-bb2cc51938bf",
+    "log_time": "2026-05-10T14:23:13.0977296Z",
+    "message": "Preparing deployment for commit id '33cb4369-b'.",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "f57684a0-d078-4360-b5c4-385ac25c4f04",
+    "log_time": "2026-05-10T14:23:13.5454613Z",
+    "message": "PreDeployment: context.CleanOutputPath False",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "c5ea9189-9d1c-4fab-bf4b-b790f6156522",
+    "log_time": "2026-05-10T14:23:13.7298694Z",
+    "message": "PreDeployment: context.OutputPath /home/site/wwwroot",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "e4690144-8c82-40c7-8559-53eed5c1aede",
+    "log_time": "2026-05-10T14:23:13.9125041Z",
+    "message": "Repository path is /tmp/zipdeploy/extracted",
+    "type": 0
+  },
+  {
+    "details_url": "https://compiq-mcp.scm.azurewebsites.net/api/deployments/33cb4369-b5d7-48ba-9761-ea8f90dfeb7e/log/fa2352a2-684a-4e1b-a36e-6e577077d368",
+    "id": "fa2352a2-684a-4e1b-a36e-6e577077d368",
+    "log_time": "2026-05-10T14:23:14.0400612Z",
+    "message": "Running oryx build...",
+    "type": 2
+  },
+  {
+    "details_url": null,
+    "id": "23dc8ee9-e4e6-472f-8c29-57feaf5ab251",
+    "log_time": "2026-05-10T14:24:08.2218241Z",
+    "message": "",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "87e75043-91f3-419e-b579-a4b572e1cf5c",
+    "log_time": "2026-05-10T14:24:08.4919366Z",
+    "message": "Generating summary of Oryx build",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "45029954-b373-45c8-853f-afefeba561f3",
+    "log_time": "2026-05-10T14:24:08.8936902Z",
+    "message": "Parsing the build logs",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "05d266a4-e545-4cfc-84be-930f7153a90f",
+    "log_time": "2026-05-10T14:24:09.2238308Z",
+    "message": "Found 0 issue(s)",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "6e58de4b-c719-486b-b1c8-dd8108d89bd3",
+    "log_time": "2026-05-10T14:24:09.4240757Z",
+    "message": "",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "bc2cbe92-311e-4a8d-b6b9-4ec15070f308",
+    "log_time": "2026-05-10T14:24:09.6164651Z",
+    "message": "Build Summary :",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "27732f40-36fe-4fe4-a439-55a0f7990d19",
+    "log_time": "2026-05-10T14:24:09.7650536Z",
+    "message": "===============",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "d0d5b2e6-fa70-4599-943f-94a60edc88df",
+    "log_time": "2026-05-10T14:24:09.9154919Z",
+    "message": "Errors (0)",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "7a8bff90-3eea-4184-a7e8-f7d16d9afd7c",
+    "log_time": "2026-05-10T14:24:10.0656599Z",
+    "message": "Warnings (0)",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "cc24b728-76c5-4d37-9b2f-785607251014",
+    "log_time": "2026-05-10T14:24:10.1993458Z",
+    "message": "",
+    "type": 0
+  },
+  {
+    "details_url": null,
+    "id": "b0f63076-ab2e-4ead-943a-8df432db45fe",
+    "log_time": "2026-05-10T14:24:10.5297068Z",
+    "message": "Deployment Failed. deployer = OneDeploy deploymentPath = OneDeploy",
+    "type": 0
+  }
+]

@@ -28,8 +28,121 @@ class PortfolioIQViewModel: ObservableObject {
     @Published var ledgerNetProceeds: Double = 0
     @Published var ledgerCostBasisSold: Double = 0
 
+    // Grading pipeline
+    @Published var gradingSubmissions: [GradingSubmission] = GradingSubmission.mockSubmissions
+
+    // Sales records
+    @Published var saleRecords: [SaleRecord] = SaleRecord.mockSales
+
+    // AI recommendations
+    @Published var aiRecommendations: [AIRecommendation] = []
+    @Published var dailyIQPerformerHitCounts: [String: Int] = [:]
+    @Published var portfolioAlerts: [PortfolioAlert] = []
+    @Published var portfolioHealth: PortfolioHealthResponse? = nil
+    @Published var holdingPriceHistory: [UUID: [PortfolioPricePoint]] = [:]
+    @Published var calibrationReport: PortfolioCalibrationResponse? = nil
+    @Published var weeklyBrief: PortfolioWeeklyBriefResponse? = nil
+
     private var activeSessionId: String? = nil
     private var snapshotKey: String { "portfolio.snapshots.\(activeSessionId ?? "anon")" }
+    private let dailyIQBriefCacheKey = "dailyiq.brief.cache.v1"
+    private let dailyIQTrendWindowDays = 21
+    private let dailyIQTrendMinRepeatsHitter = 6
+    private let dailyIQTrendMinRepeatsPitcher = 2
+    private let minConfidenceGate: Double = 0.55
+    private let minCompsGate: Int = 3
+
+    private func confidenceToPercent(_ value: Double?) -> Double {
+        guard let value else { return 0 }
+        return value <= 1.0 ? value * 100 : value
+    }
+
+    private func shouldApplyConfidenceGate(confidencePercent: Double, compsUsed: Int?) -> Bool {
+        if let compsUsed, compsUsed > 0 {
+            return confidencePercent >= minConfidenceGate * 100 && compsUsed >= minCompsGate
+        }
+        return confidencePercent >= minConfidenceGate * 100
+    }
+
+    private func normalizePlayerKey(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func recalculateDailyIQTrendSignals() {
+        guard let data = UserDefaults.standard.data(forKey: dailyIQBriefCacheKey),
+              let briefByDay = try? JSONDecoder().decode([String: DailyBriefResponse].self, from: data)
+        else {
+            dailyIQPerformerHitCounts = [:]
+            return
+        }
+
+        let cutoff = Calendar.current.date(byAdding: .day, value: -dailyIQTrendWindowDays, to: Date()) ?? .distantPast
+        var dayBucketsByPlayer: [String: Set<String>] = [:]
+
+        for (dayKey, brief) in briefByDay {
+            if let briefDate = ISO8601DateFormatter().date(from: brief.date), briefDate < cutoff {
+                continue
+            }
+
+            let uniquePlayersForDay = Set((brief.mlb + brief.milb)
+                .map { normalizePlayerKey($0.playerName) }
+                .filter { !$0.isEmpty })
+
+            for playerKey in uniquePlayersForDay {
+                dayBucketsByPlayer[playerKey, default: []].insert(dayKey)
+            }
+        }
+
+        var counts: [String: Int] = [:]
+        for (playerKey, dayKeys) in dayBucketsByPlayer {
+            let count = dayKeys.count
+            if count >= dailyIQTrendMinRepeatsPitcher {
+                counts[playerKey] = count
+            }
+        }
+        dailyIQPerformerHitCounts = counts
+    }
+
+    func dailyIQRepeatCount(for playerName: String) -> Int {
+        dailyIQPerformerHitCounts[normalizePlayerKey(playerName)] ?? 0
+    }
+
+    private func isLikelyPitcher(_ holding: PortfolioHolding) -> Bool {
+        let haystack = [
+            holding.playerName,
+            holding.cardTitle,
+            holding.product,
+            holding.setName,
+            holding.notes ?? "",
+            holding.tags.joined(separator: " ")
+        ]
+            .joined(separator: " ")
+            .lowercased()
+
+        // Keep the heuristic conservative to avoid misclassifying hitters.
+        let pitcherSignals = ["pitcher", "starting pitcher", "relief pitcher", "closer"]
+        if pitcherSignals.contains(where: { haystack.contains($0) }) {
+            return true
+        }
+
+        let rolePattern = #"\b(lhp|rhp|sp|rp)\b"#
+        if haystack.range(of: rolePattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        return false
+    }
+
+    func isDailyIQTrending(_ holding: PortfolioHolding) -> Bool {
+        let repeats = dailyIQRepeatCount(for: holding.playerName)
+        let threshold = isLikelyPitcher(holding) ? dailyIQTrendMinRepeatsPitcher : dailyIQTrendMinRepeatsHitter
+        return repeats >= threshold
+    }
 
     // MARK: - Snapshot helpers
     func loadSnapshots() {
@@ -142,7 +255,9 @@ class PortfolioIQViewModel: ObservableObject {
                     applyRoiRecommendation(to: &holdings[index])
                 }
                 await fetchLedger(sessionId: sessionId)
+                await fetchAlertsAndHealth(sessionId: sessionId)
                 loadSnapshots()
+                recalculateDailyIQTrendSignals()
             } catch {
                 self.error = error.localizedDescription
             }
@@ -156,7 +271,12 @@ class PortfolioIQViewModel: ObservableObject {
         }
     }
 
-    /// Pull-to-refresh: reload holdings list from backend, then reprice all.
+    /// Pull-to-refresh: ask the server to reprice every holding (persists fresh
+    /// fair-market-value, P&L $ and %, alerts, and price-history to Cosmos),
+    /// then re-fetch the persisted holdings so the inventory tab shows the
+    /// updated profit/loss. Falls back to a client-side bulk reprice if the
+    /// server-side batch endpoint fails so users on older API builds still
+    /// get a refresh.
     func refreshAll() async {
         guard let sessionId = activeSessionId, !sessionId.isEmpty else { return }
         isRefreshing = true
@@ -164,17 +284,39 @@ class PortfolioIQViewModel: ObservableObject {
             isRefreshing = false
             lastRefresh = Date()
         }
+
+        // 1) Server-side batch reprice (persists to Cosmos). Best-effort —
+        // if it fails we still try to fetch and locally reprice below.
+        var serverRepriced = false
+        do {
+            _ = try await APIService.shared.runPortfolioBatchReprice(sessionId: sessionId)
+            serverRepriced = true
+        } catch {
+            print("[PortfolioIQ] batch reprice failed, falling back to local: \(error)")
+        }
+
+        // 2) Pull the freshly-priced holdings back from the server.
         do {
             let response = try await APIService.shared.fetchPortfolioHoldings(sessionId: sessionId)
             holdings = response.holdings
             for index in holdings.indices {
                 applyRoiRecommendation(to: &holdings[index])
             }
+            recalculateDailyIQTrendSignals()
         } catch {
             self.error = error.localizedDescription
             return
         }
-        await refreshPortfolioAsync()
+
+        // 3) Refresh alerts + health snapshots so badges/sell-watch reflect the
+        // new values.
+        await fetchAlertsAndHealth(sessionId: sessionId)
+
+        // 4) If the server reprice failed (older deploy or transient outage),
+        // fall back to a local bulk reprice so the UI still updates.
+        if !serverRepriced {
+            await refreshPortfolioAsync()
+        }
     }
 
     @MainActor
@@ -212,6 +354,16 @@ class PortfolioIQViewModel: ObservableObject {
                       let idx = holdings.firstIndex(where: { $0.id == orderedIDs[position] })
                 else { continue }
 
+                let confidencePercent = confidenceToPercent(data.confidence)
+                let confidencePass = shouldApplyConfidenceGate(confidencePercent: confidencePercent, compsUsed: nil)
+                if !confidencePass {
+                    holdings[idx].freshnessStatus = .needsRefresh
+                    holdings[idx].statusCategory = .needsAttention
+                    holdings[idx].recommendation = "Needs Review"
+                    holdings[idx].verdict = "Confidence too low for auto-repricing."
+                    continue
+                }
+
                 let fmv = data.marketTier?.value ?? holdings[idx].currentValue
                 let high = data.marketTier?.high
                 let direction = data.trendAnalysis?.market_direction ?? "unclear"
@@ -236,6 +388,7 @@ class PortfolioIQViewModel: ObservableObject {
                 }
                 holdings[idx].freshnessStatus = .live
                 holdings[idx].lastUpdated = Date()
+                holdings[idx].confidence = confidencePercent
                 let basis = holdings[idx].totalCostBasis
                 holdings[idx].totalProfitLoss = fmv - basis
                 holdings[idx].totalProfitLossPct = basis > 0 ? ((fmv - basis) / basis) * 100 : 0
@@ -246,6 +399,9 @@ class PortfolioIQViewModel: ObservableObject {
                 for holding in holdings {
                     try? await APIService.shared.updatePortfolioHolding(holding, sessionId: sessionId)
                 }
+            }
+            if let sessionId = activeSessionId, !sessionId.isEmpty {
+                await fetchAlertsAndHealth(sessionId: sessionId)
             }
             recordSnapshot()
         } catch {
@@ -298,6 +454,38 @@ class PortfolioIQViewModel: ObservableObject {
         do {
             let est = try await APIService.shared.estimateCardDirect(request: req)
             guard let idx2 = holdings.firstIndex(where: { $0.id == id }) else { return }
+            // Pricing Accuracy v2: never overwrite currentValue with a fake
+            // number when the backend couldn't gather enough recent comps.
+            // Surface the thin-data state so PortfolioIQ shows it instead.
+            if let ds = est.dataSufficiency, !ds.sufficient {
+                holdings[idx2].freshnessStatus = .needsRefresh
+                holdings[idx2].statusCategory = .needsAttention
+                holdings[idx2].recommendation = "Awaiting comps"
+                holdings[idx2].verdict = ds.message
+                if let pa = est.pricingAnalytics { holdings[idx2].compsUsed = pa.compsUsed }
+                #if DEBUG
+                print("CompIQ thin-data: \(id) — \(ds.message)")
+                #endif
+                return
+            }
+            // pricingAnalytics: comp pool, confidence, parallel detection
+            if let pa = est.pricingAnalytics {
+                let confidencePercent = confidenceToPercent(pa.rSquared)
+                if !shouldApplyConfidenceGate(confidencePercent: confidencePercent, compsUsed: pa.compsUsed) {
+                    holdings[idx2].freshnessStatus = .needsRefresh
+                    holdings[idx2].statusCategory = .needsAttention
+                    holdings[idx2].recommendation = "Needs Review"
+                    holdings[idx2].verdict = "Confidence too low for auto-apply."
+                    holdings[idx2].confidence = confidencePercent
+                    holdings[idx2].compsUsed = pa.compsUsed
+                    holdings[idx2].parallelDetected = pa.parallelDetected
+                    return
+                }
+                holdings[idx2].compsUsed = pa.compsUsed
+                holdings[idx2].confidence = confidencePercent
+                holdings[idx2].parallelDetected = pa.parallelDetected
+            }
+
             let fmv = est.fairMarketValue ?? holdings[idx2].currentValue
             holdings[idx2].currentValue = fmv
             holdings[idx2].fairMarketValue = fmv
@@ -315,12 +503,6 @@ class PortfolioIQViewModel: ObservableObject {
             if let bullets = est.explanation, !bullets.isEmpty {
                 holdings[idx2].explanationBullets = bullets
             }
-            // pricingAnalytics: comp pool, confidence, parallel detection
-            if let pa = est.pricingAnalytics {
-                holdings[idx2].compsUsed = pa.compsUsed
-                holdings[idx2].confidence = pa.rSquared
-                holdings[idx2].parallelDetected = pa.parallelDetected
-            }
             let basis = holdings[idx2].totalCostBasis
             holdings[idx2].totalProfitLoss = fmv - basis
             holdings[idx2].totalProfitLossPct = basis > 0 ? ((fmv - basis) / basis) * 100 : 0
@@ -329,6 +511,10 @@ class PortfolioIQViewModel: ObservableObject {
             holdings[idx2].lastUpdated = Date()
             if let sessionId = activeSessionId, !sessionId.isEmpty {
                 _ = try? await APIService.shared.updatePortfolioHolding(holdings[idx2], sessionId: sessionId)
+                if let history = try? await APIService.shared.fetchHoldingPriceHistory(holdingId: id, sessionId: sessionId) {
+                    holdingPriceHistory[id] = history.points
+                }
+                await fetchAlertsAndHealth(sessionId: sessionId)
             }
         } catch {
             print("[PortfolioIQ] Auto-estimate failed for \(h.playerName): \(error)")
@@ -428,10 +614,61 @@ class PortfolioIQViewModel: ObservableObject {
                 for index in self.holdings.indices {
                     applyRoiRecommendation(to: &self.holdings[index])
                 }
+                recalculateDailyIQTrendSignals()
                 await fetchLedger(sessionId: sessionId)
+                await fetchAlertsAndHealth(sessionId: sessionId)
             } catch {
                 self.error = error.localizedDescription
             }
+        }
+    }
+
+    func runBatchReprice() {
+        guard let sessionId = activeSessionId, !sessionId.isEmpty else { return }
+        Task {
+            do {
+                _ = try await APIService.shared.runPortfolioBatchReprice(sessionId: sessionId)
+                let response = try await APIService.shared.fetchPortfolioHoldings(sessionId: sessionId)
+                holdings = response.holdings
+                await fetchAlertsAndHealth(sessionId: sessionId)
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    func submitRecommendationFeedback(holding: PortfolioHolding, actionTaken: String, notes: String? = nil) {
+        guard let sessionId = activeSessionId, !sessionId.isEmpty else { return }
+        Task {
+            do {
+                let req = RecommendationFeedbackRequest(
+                    holdingId: holding.id.uuidString,
+                    recommendation: holding.recommendation,
+                    actionTaken: actionTaken,
+                    notes: notes
+                )
+                _ = try await APIService.shared.submitRecommendationFeedback(request: req, sessionId: sessionId)
+                if let brief = try? await APIService.shared.fetchPortfolioWeeklyBrief(sessionId: sessionId) {
+                    self.weeklyBrief = brief
+                }
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func fetchAlertsAndHealth(sessionId: String) async {
+        if let alerts = try? await APIService.shared.fetchPortfolioAlerts(sessionId: sessionId, limit: 30) {
+            self.portfolioAlerts = alerts.alerts
+        }
+        if let health = try? await APIService.shared.fetchPortfolioHealth(sessionId: sessionId) {
+            self.portfolioHealth = health
+        }
+        if let calibration = try? await APIService.shared.fetchPortfolioCalibration(sessionId: sessionId) {
+            self.calibrationReport = calibration
+        }
+        if let brief = try? await APIService.shared.fetchPortfolioWeeklyBrief(sessionId: sessionId) {
+            self.weeklyBrief = brief
         }
     }
 

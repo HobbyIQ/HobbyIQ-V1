@@ -1,0 +1,27 @@
+.portfolio-screen {
+  padding: 24px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.portfolio-screen__title {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.portfolio-screen__panel {
+  background: #222;
+  border-radius: 24px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.portfolio-screen__subtitle {
+  font-weight: 600;
+}
+
+.portfolio-screen__loading {
+  color: #aaa;
+  margin-top: 32px;
+}

@@ -59,6 +59,7 @@ function toAuthUser(user) {
     email: user.email,
     plan: user.plan,
     createdAt: user.createdAt,
+    displayName: user.displayName || '',
   };
 }
 
@@ -107,4 +108,42 @@ async function getUserBySession(sessionId) {
   return user ? toAuthUser(user) : null;
 }
 
-module.exports = { signIn, signOut, getUserBySession };
+/**
+ * Upsert (or create) a user keyed on Apple's stable `sub` claim and return a
+ * fresh session token. Apple only sends `email`/`fullName` on the FIRST
+ * sign-in for a given app; we persist whatever we get on first contact and
+ * never overwrite a stored email with null on subsequent calls.
+ */
+async function signInWithApple({ sub, email, displayName }) {
+  if (!sub || typeof sub !== 'string') {
+    return { success: false, error: 'apple_sub_required' };
+  }
+
+  const userId = `apple:${sub}`;
+  let user = users[userId];
+  if (!user) {
+    user = {
+      userId,
+      email: email || `${userId}@apple.local`,
+      passwordHash: '',
+      plan: 'free',
+      createdAt: new Date().toISOString(),
+      displayName: displayName || '',
+      provider: 'apple',
+      appleSub: sub,
+    };
+    users[userId] = user;
+  } else {
+    if (email && (!user.email || user.email.endsWith('@apple.local'))) {
+      user.email = email;
+    }
+    if (displayName && !user.displayName) {
+      user.displayName = displayName;
+    }
+  }
+
+  const sessionId = createSessionToken(user.userId);
+  return { success: true, user: toAuthUser(user), sessionId };
+}
+
+module.exports = { signIn, signOut, getUserBySession, signInWithApple };

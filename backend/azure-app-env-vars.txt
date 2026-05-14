@@ -1,13 +1,50 @@
 # Azure App Service environment variables for HobbyIQ backend
-# Add these in Azure Portal > App Service > Configuration > Application settings
+# Set in Azure Portal > App Service > Configuration > Application settings
+# OR via: az webapp config appsettings set --resource-group rg-hobbyiq-dev --name HobbyIQ3 --settings KEY=VALUE
 
+# ── Core ──────────────────────────────────────────────────────────────────────
 PORT=8080
+NODE_ENV=production
+
+# ── Cosmos DB ─────────────────────────────────────────────────────────────────
+# Endpoint is set by Bicep automatically via COSMOS_ENDPOINT app setting.
+# The backend uses Managed Identity (no key needed in prod).
+# For local dev only, set COSMOS_CONNECTION_STRING with the full connection string.
+COSMOS_ENDPOINT=https://hobbyiq-comps.documents.azure.com:443/
+COSMOS_DATABASE=hobbyiq
+# COSMOS_KEY=<only needed if not using managed identity>
+# COSMOS_CONNECTION_STRING=<local dev only>
+
+# ── Redis Cache ───────────────────────────────────────────────────────────────
+# REDIS_HOST and REDIS_PORT are set by Bicep automatically.
+REDIS_HOST=hobbyiq-cache.redis.cache.windows.net
+REDIS_PORT=6380
+REDIS_TLS=true
+# REDIS_KEY=<get from Portal > Redis > Access keys>
+
+# ── Application Insights ──────────────────────────────────────────────────────
+# Set by Bicep automatically via APPLICATIONINSIGHTS_CONNECTION_STRING app setting.
+APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=...;IngestionEndpoint=...
+ApplicationInsightsAgent_EXTENSION_VERSION=~3
+
+# ── Key Vault ─────────────────────────────────────────────────────────────────
 KEY_VAULT_NAME=kv-hobbyiq-dev-01
-DATABASE_URL=
-REDIS_URL=
-SERVICE_BUS_CONNECTION=
-STORAGE_ACCOUNT_NAME=
-APPLICATIONINSIGHTS_CONNECTION_STRING=
+
+# ── External APIs ─────────────────────────────────────────────────────────────
+APIFY_TOKEN=<your apify token>
+PSA_API_BEARER_TOKEN=<psa bearer token>
+# Optional override; default is https://api.psacard.com/publicapi
+# PSA_API_BASE_URL=https://api.psacard.com/publicapi
+# Optional timeout in milliseconds (default 15000)
+# PSA_API_TIMEOUT_MS=15000
+
+# ── Feature Flags ─────────────────────────────────────────────────────────────
 ENABLE_DEBUG_PRICING=false
 ENABLE_AI_SEARCH=false
 ENABLE_NOTIFICATIONS=false
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+AUTH_SESSION_SECRET=<generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+
+# ── CompIQ Alpha Model ────────────────────────────────────────────────────────
+COMPIQ_ALPHA_NEW_MODEL_WEIGHT=1.0

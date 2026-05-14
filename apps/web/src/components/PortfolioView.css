@@ -1,0 +1,91 @@
+.portfolio-view {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 16px;
+}
+
+.portfolio-view__form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.portfolio-view__form--add {
+  flex-wrap: wrap;
+}
+
+.portfolio-view__refresh {
+  margin-bottom: 12px;
+}
+
+.portfolio-view__empty-state {
+  text-align: center;
+  color: #888;
+  margin: 1.2rem 0 0.5rem 0;
+}
+
+.portfolio-view__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.portfolio-view__table-head-row {
+  background: #f0f0f0;
+}
+
+.portfolio-view__table-row--sell {
+  background: #fff3f0;
+}
+
+.portfolio-view__table-cell {
+  border: 1px solid #ddd;
+  padding: 6px;
+}
+
+.portfolio-view__table-cell--profit {
+  color: #43a047;
+  font-weight: 600;
+}
+
+.portfolio-view__table-cell--loss {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.portfolio-view__table-cell--muted {
+  color: #888;
+  font-weight: 400;
+}
+
+.portfolio-view__table-cell--sell {
+  font-weight: 700;
+  color: #d32f2f;
+}
+
+.portfolio-view__table-cell--buy {
+  font-weight: 500;
+  color: #1976d2;
+}
+
+.portfolio-view__error {
+  color: red;
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .portfolio-view {
+    margin: 1rem auto;
+    padding: 12px;
+  }
+
+  .portfolio-view__form {
+    flex-direction: column;
+  }
+
+  .portfolio-view__table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

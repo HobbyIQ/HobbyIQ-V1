@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "name": "expire-compiq-scans-1d",
+      "enabled": true,
+      "type": "Lifecycle",
+      "definition": {
+        "actions": {
+          "baseBlob": {
+            "delete": { "daysAfterModificationGreaterThan": 1 }
+          }
+        },
+        "filters": {
+          "blobTypes": ["blockBlob"],
+          "prefixMatch": ["compiq-scans/"]
+        }
+      }
+    }
+  ]
+}

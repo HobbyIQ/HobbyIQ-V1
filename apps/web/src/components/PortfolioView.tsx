@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { API_BASE_URL } from "../api";
+import "./PortfolioView.css";
 
 type Card = {
   id: string;
@@ -82,7 +83,7 @@ export default function PortfolioView() {
   };
 
   // Fetch summary
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     if (!portfolioId) return;
     setLoading(true);
     setError(null);
@@ -96,18 +97,18 @@ export default function PortfolioView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [portfolioId]);
 
   // Auto-fetch summary when portfolioId changes
   React.useEffect(() => {
     if (portfolioId) fetchSummary();
-  }, [portfolioId]);
+  }, [portfolioId, fetchSummary]);
 
   return (
-    <div style={{ maxWidth: 700, margin: "2rem auto", padding: 16 }}>
+    <div className="portfolio-view">
       <h2>Portfolio</h2>
       {!portfolioId ? (
-        <form onSubmit={handleCreatePortfolio} style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <form onSubmit={handleCreatePortfolio} className="portfolio-view__form portfolio-view__form--create">
           <input
             type="text"
             placeholder="Portfolio Name"
@@ -119,7 +120,7 @@ export default function PortfolioView() {
         </form>
       ) : (
         <>
-          <form onSubmit={handleAddCard} style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <form onSubmit={handleAddCard} className="portfolio-view__form portfolio-view__form--add">
             <input name="player" placeholder="Player" value={cardInput.player} onChange={e => setCardInput({ ...cardInput, player: e.target.value })} required />
             <input name="year" type="number" placeholder="Year" value={cardInput.year} onChange={e => setCardInput({ ...cardInput, year: e.target.value })} required />
             <input name="brand" placeholder="Brand" value={cardInput.brand} onChange={e => setCardInput({ ...cardInput, brand: e.target.value })} required />
@@ -130,22 +131,22 @@ export default function PortfolioView() {
             <input name="quantity" type="number" placeholder="Qty" value={cardInput.quantity} onChange={e => setCardInput({ ...cardInput, quantity: e.target.value })} required />
             <button type="submit" disabled={loading}>{loading ? "Evaluating..." : "Add Card"}</button>
           </form>
-          <button onClick={fetchSummary} style={{ marginBottom: 12 }} disabled={loading}>{loading ? "Evaluating..." : "Refresh"}</button>
+          <button onClick={fetchSummary} className="portfolio-view__refresh" disabled={loading}>{loading ? "Evaluating..." : "Refresh"}</button>
           {loading ? (
-            <div style={{ textAlign: "center", color: "#888", margin: "1.2rem 0 0.5rem 0" }}>Evaluating...</div>
+            <div className="portfolio-view__empty-state">Evaluating...</div>
           ) : cards.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#888", margin: "1.2rem 0 0.5rem 0" }}>No cards yet. Add your first card to get started!</div>
+            <div className="portfolio-view__empty-state">No cards yet. Add your first card to get started!</div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff" }}>
+            <table className="portfolio-view__table">
               <thead>
-                <tr style={{ background: "#f0f0f0" }}>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Player</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Parallel</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Grade</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Purchase Price</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Current Value</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>ROI</th>
-                  <th style={{ border: "1px solid #ddd", padding: 6 }}>Decision</th>
+                <tr className="portfolio-view__table-head-row">
+                  <th className="portfolio-view__table-cell">Player</th>
+                  <th className="portfolio-view__table-cell">Parallel</th>
+                  <th className="portfolio-view__table-cell">Grade</th>
+                  <th className="portfolio-view__table-cell">Purchase Price</th>
+                  <th className="portfolio-view__table-cell">Current Value</th>
+                  <th className="portfolio-view__table-cell">ROI</th>
+                  <th className="portfolio-view__table-cell">Decision</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,16 +158,16 @@ export default function PortfolioView() {
                   const isProfit = roi !== undefined && roi >= 0;
                   const isSell = card.currentRecommendation && card.currentRecommendation.toUpperCase().includes("SELL");
                   return (
-                    <tr key={card.id} style={isSell ? { background: '#fff3f0' } : {}}>
-                      <td style={{ border: "1px solid #ddd", padding: 6 }}>{card.player}</td>
-                      <td style={{ border: "1px solid #ddd", padding: 6 }}>{card.parallel || '-'}</td>
-                      <td style={{ border: "1px solid #ddd", padding: 6 }}>{card.grade || '-'}</td>
-                      <td style={{ border: "1px solid #ddd", padding: 6 }}>${card.purchasePrice !== undefined ? card.purchasePrice.toLocaleString("en-US", { maximumFractionDigits: 0 }) : '-'}</td>
-                      <td style={{ border: "1px solid #ddd", padding: 6 }}>${card.currentEstimatedValue !== undefined ? card.currentEstimatedValue.toLocaleString("en-US", { maximumFractionDigits: 0 }) : '-'}</td>
-                      <td style={{ border: "1px solid #ddd", padding: 6, color: roi !== undefined ? (isProfit ? '#43a047' : '#d32f2f') : '#888', fontWeight: roi !== undefined ? 600 : 400 }}>
+                    <tr key={card.id} className={isSell ? "portfolio-view__table-row portfolio-view__table-row--sell" : "portfolio-view__table-row"}>
+                      <td className="portfolio-view__table-cell">{card.player}</td>
+                      <td className="portfolio-view__table-cell">{card.parallel || '-'}</td>
+                      <td className="portfolio-view__table-cell">{card.grade || '-'}</td>
+                      <td className="portfolio-view__table-cell">${card.purchasePrice !== undefined ? card.purchasePrice.toLocaleString("en-US", { maximumFractionDigits: 0 }) : '-'}</td>
+                      <td className="portfolio-view__table-cell">${card.currentEstimatedValue !== undefined ? card.currentEstimatedValue.toLocaleString("en-US", { maximumFractionDigits: 0 }) : '-'}</td>
+                      <td className={roi !== undefined ? `portfolio-view__table-cell portfolio-view__table-cell--${isProfit ? "profit" : "loss"}` : "portfolio-view__table-cell portfolio-view__table-cell--muted"}>
                         {roi !== undefined ? `${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%` : '-'}
                       </td>
-                      <td style={{ border: "1px solid #ddd", padding: 6, fontWeight: isSell ? 700 : 500, color: isSell ? '#d32f2f' : '#1976d2' }}>
+                      <td className={isSell ? "portfolio-view__table-cell portfolio-view__table-cell--sell" : "portfolio-view__table-cell portfolio-view__table-cell--buy"}>
                         {card.currentRecommendation || '-'}
                       </td>
                     </tr>
@@ -177,7 +178,7 @@ export default function PortfolioView() {
           )}
         </>
       )}
-      {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
+      {error && <div className="portfolio-view__error">{error}</div>}
     </div>
   );
 }

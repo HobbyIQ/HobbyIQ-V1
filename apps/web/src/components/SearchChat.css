@@ -260,6 +260,120 @@
   cursor: not-allowed;
 }
 
+.search-chat-analyzer {
+  max-width: 600px;
+  margin: 40px auto;
+  font-family: sans-serif;
+}
+
+.search-chat-analyzer-form {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 8px;
+}
+
+.search-chat-analyzer-input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.search-chat-analyzer-button {
+  padding: 10px 22px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: none;
+  background: #1976d2;
+  color: #fff;
+  cursor: pointer;
+  opacity: 1;
+}
+
+.search-chat-analyzer-button:disabled,
+.search-chat-analyzer-button-disabled {
+  background: #888;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.search-chat-analyzer-upgrade {
+  color: #ff4d4f;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.search-chat-analyzer-error {
+  color: red;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.search-chat-analyzer-loading {
+  color: #1976d2;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.search-chat-analyzer-result-card {
+  border: 1px solid #1976d2;
+  background: #f5faff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 28px;
+}
+
+.search-chat-analyzer-result-title {
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.search-chat-analyzer-keynumbers {
+  margin-bottom: 8px;
+}
+
+.search-chat-analyzer-why-list {
+  margin: 8px 0 0 0;
+  padding: 0;
+  list-style: disc inside;
+  color: #1976d2;
+}
+
+.search-chat-analyzer-tags {
+  margin-top: 8px;
+}
+
+.search-chat-analyzer-tag {
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 12px;
+  padding: 2px 10px;
+  margin-right: 6px;
+  font-size: 13px;
+}
+
+.search-chat-analyzer-comps {
+  margin-top: 16px;
+}
+
+.search-chat-analyzer-comps-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.search-chat-analyzer-comp-row {
+  margin-bottom: 4px;
+}
+
+.search-chat-analyzer-comp-date {
+  color: #888;
+}
+
 .search-chat-welcome {
   text-align: center;
   margin-top: 0;

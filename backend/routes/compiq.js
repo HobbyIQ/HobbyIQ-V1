@@ -1,5 +1,4 @@
 const express = require('express');
-const { analyzeCompiq } = require('../services/compiqService');
 const { searchAndPrice } = require('../services/compiqSearchService');
 const router = express.Router();
 
@@ -11,8 +10,7 @@ router.post('/price', async (req, res, next) => {
     if (!query || typeof query !== 'string' || !query.trim()) {
       return res.status(400).json({
         success: false,
-        error: 'Missing or invalid "query" field',
-        meta: { supportedInPhase1: true, usedMockData: true, timestamp: new Date().toISOString() }
+        error: 'Missing or invalid "query" field'
       });
     }
     const result = await searchAndPrice(query);
@@ -39,14 +37,5 @@ router.post('/search', async (req, res, next) => {
   }
 });
 
-// Legacy endpoint for compatibility
-router.post('/analyze', async (req, res, next) => {
-  try {
-    const result = await analyzeCompiq(req.body);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-});
-
 module.exports = router;
+

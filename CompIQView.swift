@@ -17,7 +17,7 @@ struct CompIQView: View {
     private let grades = ["Raw", "PSA 9", "PSA 10", "BGS 9.5", "BGS 10", "SGC 10", "CGC 10"]
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     inputFormAndButton
@@ -153,6 +153,10 @@ struct CompIQView: View {
             fairValueCard(r)
             // Decision policy
             actionPolicyCard(r)
+            // Buy Window Score (1–10)
+            if r.buyWindowScore != nil {
+                buyWindowCard(r)
+            }
             // Evidence ledger
             if let evidence = r.evidenceComps, !evidence.isEmpty {
                 evidenceLedgerCard(evidence)
@@ -355,12 +359,44 @@ struct CompIQView: View {
 
             // ── 1. Value — hero number ───────────────────────────────────
             VStack(spacing: 4) {
-                Text((r.value).currencyFormatted)
-                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text("Fair Market Value")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                if let ds = r.dataSufficiency, !ds.sufficient {
+                    // Not enough usable comps — never publish a fake number
+                    Text("Not enough recent sales")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.orange)
+                        .multilineTextAlignment(.center)
+                    Text(ds.message)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                } else if let ci = r.confidenceInterval {
+                    Text("\(ci.low.currencyFormatted) — \(ci.high.currencyFormatted)")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(confidenceIntervalColor(ci.width))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("Estimated \(r.value.currencyFormatted) · \(ci.width) confidence")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text(ci.explanation)
+                        .font(.caption)
+                        .foregroundColor(confidenceIntervalColor(ci.width))
+                        .multilineTextAlignment(.center)
+                    if let cq = r.compQuality {
+                        Text("Based on \(cq.usedComps) of \(cq.totalComps) sales (\(cq.excluded) removed for quality)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                } else {
+                    Text((r.value).currencyFormatted)
+                        .font(.system(size: 52, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                    Text("Fair Market Value")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
                 // Grade + parallel context badges
                 if r.gradeDetected != nil || r.parallelDetected != nil {
                     HStack(spacing: 6) {
@@ -396,6 +432,30 @@ struct CompIQView: View {
                 Spacer()
             }
 
+            // Grader-premium attribution — shows the user that the FMV was
+            // normalized off a graded anchor with a known premium multiplier.
+            if let gp = r.graderPremium,
+               gp.applied != 1.0,
+               let company = gp.company,
+               let grade = gp.grade {
+                HStack(spacing: 8) {
+                    Image(systemName: "rosette")
+                        .font(.caption)
+                        .foregroundColor(.purple)
+                    let mult = String(format: "%.2fx", gp.applied)
+                    if let raw = gp.normalizedAnchor {
+                        Text("Raw-equivalent: \(raw.currencyFormatted) · \(company) \(grade) premium: \(mult)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("\(company) \(grade) premium applied: \(mult)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+            }
+
             // ── 2. Market pulse: regime + 24h momentum + trend ───────────
             if r.marketRegimeLabel != nil || r.signal24hMomentum != nil ||
                (r.compTrendPctPerWeek.map { abs($0) >= 0.01 } ?? false) {
@@ -420,6 +480,15 @@ struct CompIQView: View {
                     }
                     Spacer()
                 }
+            }
+
+            // ── 2b. Broader-pool trend pill ───────────────────────────────
+            // Shown only when the server confirms the direction signal is
+            // backed by similar-card sales (basedOn == "broader_pool"), so
+            // the user sees explicitly that the trend reflects the wider
+            // market — not just this card's own thin comp history.
+            if let bt = vm.broaderTrend, bt.isBroaderPool {
+                BroaderTrendPill(trend: bt)
             }
 
             // ── 3. Freshness warning ──────────────────────────────────────
@@ -799,11 +868,192 @@ struct CompIQView: View {
         default: return method.replacingOccurrences(of: "-", with: " ").capitalized
         }
     }
+
+    // MARK: - Buy Window Card
+
+    @State private var showBuyWindowInfo = false
+
+    private func buyWindowCard(_ r: CompIQEstimateResult) -> some View {
+        let score = r.buyWindowScore ?? 5
+        let ring = buyWindowRingColor(score)
+        return Button {
+            showBuyWindowInfo = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Buy Window")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .stroke(ring.opacity(0.18), lineWidth: 8)
+                            .frame(width: 76, height: 76)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(min(max(score, 1), 10)) / 10.0)
+                            .stroke(ring, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 76, height: 76)
+                        VStack(spacing: 0) {
+                            Text("\(score)")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(ring)
+                            Text("/10")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(r.buyWindowLabel ?? "Buy Window")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        if let reasons = r.buyWindowReasons, !reasons.isEmpty {
+                            ForEach(Array(reasons.prefix(3).enumerated()), id: \.offset) { _, reason in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text("•").foregroundColor(.secondary)
+                                    Text(reason)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.leading)
+                                }
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showBuyWindowInfo) {
+            BuyWindowInfoSheet()
+        }
+    }
+
+    private func buyWindowRingColor(_ score: Int) -> Color {
+        switch score {
+        case 8...10: return .green
+        case 4...7:  return .yellow
+        default:     return .red
+        }
+    }
+
+    private func confidenceIntervalColor(_ width: String) -> Color {
+        switch width.lowercased() {
+        case "narrow":   return .green
+        case "moderate": return .primary
+        case "wide":     return .orange
+        default:         return .primary
+        }
+    }
 }
+
+// MARK: - Buy Window Info Sheet
+
+private struct BuyWindowInfoSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Buy Window Score measures how favorable conditions are for buying this card right now — on a 1–10 scale.")
+                        .font(.body)
+                    Group {
+                        Text("How it's calculated").font(.headline)
+                        Text("• Recent price trend direction & magnitude")
+                        Text("• Market depth (number of recent comps)")
+                        Text("• Live demand signals (social, search, news)")
+                        Text("• Seasonality (peak / off-season for baseball)")
+                        Text("• Scarcity (print run, /25, /99 etc.)")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    Group {
+                        Text("Score bands").font(.headline)
+                        Text("9–10  Strong Buy Window — conditions strongly favor entering now")
+                        Text("7–8    Good Time to Buy — most signals positive")
+                        Text("5–6    Fair — mixed signals, no urgency")
+                        Text("3–4    Weak — wait for better setup")
+                        Text("1–2    Poor — avoid; conditions unfavorable")
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                }
+                .padding()
+            }
+            .navigationTitle("Buy Window")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 
 // MARK: - Rebuilt Body (solves SwiftUI inputSection / button placement issue)
 
 // MARK: - Supporting Components
+
+/// Pill that shows the broader-pool trend signal from pricing engine v3.
+/// Renders e.g. "Rising ↑ (based on 8 similar cards)" so the user knows
+/// the direction reflects the wider market, not just this card's comps.
+struct BroaderTrendPill: View {
+    let trend: CompIQBroaderTrend
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "chart.line.uptrend.xyaxis")
+                .font(.caption2)
+                .foregroundColor(color)
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(color)
+            if let context = contextLabel {
+                Text(context)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private var label: String {
+        let dir = trend.directionLabel
+        let arrow = trend.directionArrow
+        if let pct = trend.impliedTrendPct, abs(pct) >= 1 {
+            return "\(dir) \(arrow) \(Int(abs(pct)))%"
+        }
+        return "\(dir) \(arrow)"
+    }
+
+    private var contextLabel: String? {
+        guard let n = trend.similarCardsScanned, n > 0 else { return nil }
+        let noun = n == 1 ? "similar card" : "similar cards"
+        return "(based on \(n) \(noun))"
+    }
+
+    private var color: Color {
+        switch (trend.direction ?? "").lowercased() {
+        case "up", "rising":    return .green
+        case "down", "falling": return .red
+        default:                return .secondary
+        }
+    }
+}
 
 struct OutlookPill: View {
     let outlook: String

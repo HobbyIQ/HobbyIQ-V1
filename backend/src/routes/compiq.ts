@@ -1,7 +1,6 @@
 
 
 import express from 'express';
-import { analyzeCompiq } from '../services/compiqService.js';
 import { searchAndPrice } from '../services/compiq/compiqSearch.service.js';
 import { DynamicPricingOrchestrator } from '../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js';
 import { EstimateRequestSchema } from './compiq.zod.js';
@@ -82,16 +81,6 @@ router.post('/search', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Missing or invalid "query" field' });
     }
     const result = await searchAndPrice(query.trim());
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// Legacy endpoint for compatibility
-router.post('/analyze', async (req, res, next) => {
-  try {
-    const result = await analyzeCompiq(req.body);
     res.json(result);
   } catch (err) {
     next(err);

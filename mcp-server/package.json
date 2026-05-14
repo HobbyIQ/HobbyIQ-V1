@@ -1,0 +1,27 @@
+{
+  "name": "compiq-mcp-pricing",
+  "version": "1.0.0",
+  "description": "CompIQ MCP server — predictive pricing module",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node --enable-source-maps dist/server.js",
+    "test:smoke": "node --enable-source-maps dist/smoke.js"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.9.3",
+    "@azure/storage-blob": "^12.24.0",
+    "express": "^4.21.0",
+    "openai": "^4.73.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.16.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

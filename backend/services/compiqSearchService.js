@@ -2,6 +2,13 @@
  * Live search + pricing via Apify eBay sold listings actor.
  */
 
+const cache = require('./cacheService');
+
+const CACHE_TTL_SECONDS = 900; // 15 minutes — eBay prices don't change that fast
+
+function cacheKey(query) {
+  return `compiq:${query.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+}
 function getMedianPrice(items) {
   if (!items.length) return 0;
   const sorted = [...items].map((i) => i.price).sort((a, b) => a - b);
@@ -71,6 +78,25 @@ async function fetchEbaySoldData(query) {
 }
 
 async function searchAndPrice(query) {
+  const key = cacheKey(query);
+
+  // Cache hit — return instantly without calling Apify
+  const cached = await cache.get(key);
+  if (cached) {
+    return { ...cached, source: 'cache' };
+  }
+
+  const result = await _searchAndPriceLive(query);
+
+  // Only cache successful results with actual data
+  if (result && result.confidence > 0) {
+    await cache.set(key, result, CACHE_TTL_SECONDS);
+  }
+
+  return result;
+}
+
+async function _searchAndPriceLive(query) {
   const comps = await fetchEbaySoldData(query);
   const salesCount = comps.length;
   const medianPrice = getMedianPrice(comps);
@@ -123,6 +149,6 @@ async function searchAndPrice(query) {
     confidence: confidenceNum,
     source: 'live',
   };
-}
+} // end _searchAndPriceLive
 
 module.exports = { searchAndPrice };
