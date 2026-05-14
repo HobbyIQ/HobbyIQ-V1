@@ -2240,8 +2240,14 @@ export async function simulateWhatIf(body: {
 export async function compiqEstimate(req: Request, res: Response) {
   const data = await computeEstimate(req.body || {});
   // Stamp engine identity marker (pricingEngine / engineVersion / computedAt).
-  // Non-breaking: existing clients ignore unknown JSON fields. The Tier 3
-  // collector (PR #2b) keys on `pricingEngine` to bucket traffic during the
-  // monolith → module cutover soak.
+  // Non-breaking: existing clients ignore unknown JSON fields.
+  //
+  // Corpus wiring status: the Tier 3 collector (PR #2b) wires the free-text
+  // query endpoints (/search, /price, /price-by-id, /bulk). /estimate is
+  // deferred pending schema support for structured-input corpus rows
+  // (querySource: "structured" — separate PR). See followup queue. The
+  // synthesize-free-text approach was rejected because it would pollute
+  // the training set with fake free-text rows that don't represent real
+  // user input.
   res.json({ ...data, ...buildEngineMeta() });
 }
