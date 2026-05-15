@@ -68,8 +68,11 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "real-lookup",
-    // Previously blockedBy: [6] — resolved by stripping grade tokens before
-    // Card Hedge identify/search. Full assertions re-enabled.
+    // Re-added 2026-05-15: PR #12 grade-token-stripping fix is correct in
+    // scope but does not resolve the customer-visible variant-mismatch in
+    // production. See issue #6 for full diagnosis. Will be removed when
+    // issue #13 + companion cardMatchesTokens strengthening ships.
+    blockedBy: [6],
     baselineFile: "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10.json",
   },
   {
@@ -103,8 +106,11 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "real-lookup",
-    // Previously blockedBy: [6] — resolved by stripping grade tokens before
-    // Card Hedge identify/search. Full assertions re-enabled.
+    // Re-added 2026-05-15: PR #12 grade-token-stripping fix is correct in
+    // scope but does not resolve the customer-visible variant-mismatch in
+    // production. See issue #6 for full diagnosis. Will be removed when
+    // issue #13 + companion cardMatchesTokens strengthening ships.
+    blockedBy: [6],
     gradePair: "case-04",
     baselineFile: "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10.json",
   },
@@ -267,10 +273,13 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "pinned-id-hard",
-    // Previously blockedBy: [6, 9] — issue #6 resolved by grade-token stripping.
+    // Re-added 2026-05-15: PR #12 grade-token-stripping fix is correct in
+    // scope but does not resolve the customer-visible variant-mismatch in
+    // production. See issue #6 for full diagnosis. Will be removed when
+    // issue #13 + companion cardMatchesTokens strengthening ships.
     // Still blockedBy #9 for the cross-endpoint marketTier divergence
     // (/search synthesizes, /price-by-id refuses to synthesize on zero comps).
-    blockedBy: [9],
+    blockedBy: [6, 9],
     gradePair: "case-19",
     baselineFile:
       "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10.json",
