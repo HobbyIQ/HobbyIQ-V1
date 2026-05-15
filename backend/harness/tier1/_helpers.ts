@@ -68,7 +68,8 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "real-lookup",
-    blockedBy: [6],
+    // Previously blockedBy: [6] — resolved by stripping grade tokens before
+    // Card Hedge identify/search. Full assertions re-enabled.
     baselineFile: "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10.json",
   },
   {
@@ -102,7 +103,8 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "real-lookup",
-    blockedBy: [6],
+    // Previously blockedBy: [6] — resolved by stripping grade tokens before
+    // Card Hedge identify/search. Full assertions re-enabled.
     gradePair: "case-04",
     baselineFile: "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10.json",
   },
@@ -265,7 +267,10 @@ export const CASES: TestCase[] = [
     grade: "PSA 10",
     sport: "MLB",
     category: "pinned-id-hard",
-    blockedBy: [6, 9],
+    // Previously blockedBy: [6, 9] — issue #6 resolved by grade-token stripping.
+    // Still blockedBy #9 for the cross-endpoint marketTier divergence
+    // (/search synthesizes, /price-by-id refuses to synthesize on zero comps).
+    blockedBy: [9],
     gradePair: "case-19",
     baselineFile:
       "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10.json",
