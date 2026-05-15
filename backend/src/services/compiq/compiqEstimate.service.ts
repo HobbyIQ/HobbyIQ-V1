@@ -110,6 +110,13 @@ interface FetchedComps {
     variant: string | null;
   } | null;
   variantWarning: string[];
+  /**
+   * Sport category from Card Hedge's AI match (e.g. "Baseball",
+   * "Basketball"). Null when no AI match, low confidence, or pinned-id
+   * path (where category is not resolved). Consumed by the unsupported-
+   * sport guard in computeEstimate.
+   */
+  aiCategory: string | null;
 }
 
 /**
@@ -644,7 +651,7 @@ async function fetchComps(
 ): Promise<FetchedComps> {
   if (!process.env.CARD_HEDGE_API_KEY) {
     console.warn("[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []");
-    return { comps: [], card: null, variantWarning: [] };
+    return { comps: [], card: null, variantWarning: [], aiCategory: null };
   }
 
   // ----- Card-Ladder-style pinned card_id path --------------------------
@@ -682,7 +689,7 @@ async function fetchComps(
 
     if (sales.length === 0) {
       console.warn(`[compiq.fetchComps] pinned card_id=${pinnedCardId} returned 0 comps`);
-      return { comps: [], card: identity, variantWarning: [] };
+      return { comps: [], card: identity, variantWarning: [], aiCategory: null };
     }
 
     const mapped: RawComp[] = sales
@@ -694,14 +701,14 @@ async function fetchComps(
       .filter((c) => c.price > 0);
 
     console.log(`[compiq.fetchComps] pinned card_id=${pinnedCardId} comps=${mapped.length}`);
-    return { comps: mapped, card: identity, variantWarning: [] };
+    return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
-  const { card, sales, variantWarning } = await findCompsByQuery(query, { grade, limit: 25 });
+  const { card, sales, variantWarning, aiCategory } = await findCompsByQuery(query, { grade, limit: 25 });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
-    return { comps: [], card: null, variantWarning: [] };
+    return { comps: [], card: null, variantWarning: [], aiCategory };
   }
 
   const identity = {
@@ -718,7 +725,7 @@ async function fetchComps(
     console.warn(
       `[compiq.fetchComps] Card Hedge returned 0 comps for card_id=${card.card_id} query="${query}" grade=${grade}`
     );
-    return { comps: [], card: identity, variantWarning };
+    return { comps: [], card: identity, variantWarning, aiCategory };
   }
 
   const mapped: RawComp[] = sales
@@ -732,7 +739,7 @@ async function fetchComps(
   console.log(
     `[compiq.fetchComps] Card Hedge: query="${query}" card_id=${card.card_id} comps=${mapped.length}`
   );
-  return { comps: mapped, card: identity, variantWarning };
+  return { comps: mapped, card: identity, variantWarning, aiCategory };
 }
 
 /**
@@ -996,6 +1003,58 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   const cardHedgeGrade = explicitGrade ?? inferredGrade ?? "Raw";
   let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId);
 
+  // ── Sport-scope guard ────────────────────────────────────────────────────
+  // CompIQ currently supports baseball only (issue #7). If Card Hedge's AI
+  // confidently identified this card as a different sport, short-circuit
+  // BEFORE any pricing math runs. We return a stub with source=
+  // "unsupported_sport" rather than silently mis-pricing (e.g. case-15:
+  // "1986 Fleer Michael Jordan PSA 8" was pricing as a 1991 UD Baseball
+  // novelty at ~$46 because identifyCard returned the Basketball Jordan at
+  // confidence 0.96). Multi-sport is future scope — when CompIQ adds a
+  // sport, expand SUPPORTED_SPORTS rather than removing this gate.
+  //
+  // Note: this guard fires only when `aiCategory` is populated, which is
+  // only the free-text query path (findCompsByQuery → identifyCard). The
+  // pinned-card-id path never sets aiCategory because category is not
+  // resolved there; that path is gated upstream by the iOS picker, which
+  // is fed by /search-list → searchCards (Baseball-locked).
+  const SUPPORTED_SPORTS = new Set(["baseball"]);
+  const detectedCategory = fetched.aiCategory;
+  if (detectedCategory && !SUPPORTED_SPORTS.has(detectedCategory.toLowerCase())) {
+    console.log(
+      `[compiq.computeEstimate] unsupported-sport short-circuit: query="${cardTitle}" detected="${detectedCategory}"`
+    );
+    const sportLower = detectedCategory.toLowerCase();
+    const unsupportedReason = `CompIQ currently supports baseball cards only. This appears to be a ${sportLower} card.`;
+    return {
+      source: "unsupported_sport",
+      unsupportedSportReason: unsupportedReason,
+      detectedSport: detectedCategory,
+      cardIdentity: fetched.card
+        ? {
+            card_id: fetched.card.card_id,
+            title: fetched.card.title ?? null,
+            player: fetched.card.player ?? null,
+            set: fetched.card.set ?? null,
+            year: fetched.card.year ?? null,
+            number: fetched.card.number ?? null,
+            variant: fetched.card.variant ?? null,
+          }
+        : null,
+      fairMarketValue: 0,
+      quickSaleValue: 0,
+      premiumValue: 0,
+      compsUsed: 0,
+      compsAvailable: 0,
+      recentComps: [],
+      variantWarning: [],
+      confidence: { pricingConfidence: 0 },
+      verdict: `Unsupported sport (${detectedCategory}). CompIQ currently prices baseball cards only.`,
+      gradeUsed: cardHedgeGrade,
+      marketDNA: { trend: "flat", speed: "Normal" },
+    } as Record<string, unknown>;
+  }
+
   // ── Player-identity guard ────────────────────────────────────────────────
   // Card Hedge `/cards/card-search` is a fuzzy match — a query for "Cooper
   // Bonemer" can resolve to "Cooper Pratt" if Bonemer isn't in the catalog.
@@ -1032,6 +1091,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         comps: [],
         card: null,
         variantWarning: [...(fetched.variantWarning ?? []), "player_mismatch"],
+        aiCategory: fetched.aiCategory,
       };
     }
   }

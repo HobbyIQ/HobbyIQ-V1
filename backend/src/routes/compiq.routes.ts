@@ -171,6 +171,63 @@ router.post("/search", async (req, res, next) => {
       );
       const est = await computeEstimate(body);
 
+      // Unsupported-sport short-circuit (issue #7). computeEstimate returns
+      // source="unsupported_sport" when CH's AI identified the query as a
+      // non-baseball card. Emit a fully-shaped response with all standard
+      // pricing fields nulled out and the new unsupportedSportReason /
+      // detectedSport fields populated so iOS clients can present a clean
+      // message instead of receiving a silently mis-priced result.
+      if (est.source === "unsupported_sport") {
+        return {
+          ...buildEngineMeta(),
+          success: true,
+          query: query.trim(),
+          summary: (est.verdict as string) ?? "Unsupported sport.",
+          marketTier: { value: null, high: null },
+          buyZone: [null, null],
+          holdZone: [null, null],
+          sellZone: [null, null],
+          fairMarketValueLive: null,
+          confidence: 0,
+          source: "unsupported_sport",
+          unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
+          detectedSport: (est.detectedSport as string) ?? null,
+          trendAnalysis: {
+            market_direction: "flat",
+            change_from_older_to_recent: null,
+            liquidity: "Normal",
+          },
+          supply: null,
+          recentComps: [],
+          cardIdentity: (est.cardIdentity as any) ?? null,
+          gradeUsed: (est.gradeUsed as any) ?? null,
+          compsUsed: 0,
+          compsAvailable: 0,
+          daysSinceNewestComp: null,
+          variantWarning: [],
+          neighborSynthesis: null,
+          neighborSynthesisDebug: null,
+          crossParallelAnchor: null,
+          buySignal: null,
+          parsedQuery: {
+            playerName: parsed.playerName,
+            year: parsed.year,
+            brand: parsed.brand,
+            set: parsed.set,
+            parallel: parsed.parallel,
+            isAuto: parsed.isAuto,
+            isPatch: parsed.isPatch,
+            isRookie: parsed.isRookie,
+            printRun: parsed.printRun,
+            cardNumber: parsed.cardNumber,
+            grade: parsed.grade,
+            gradingCompany: parsed.gradingCompany,
+            confidence: parsed.confidence,
+          },
+          searchQuery,
+        };
+      }
+
       const fmv = (est.fairMarketValue as number) ?? 0;
       const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
       const premium = (est.premiumValue as number) ?? fmv * 1.15;
@@ -313,6 +370,59 @@ router.post("/price", async (req, res, next) => {
         `[compiq.price] parsed query="${query}" → player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
       const est = await computeEstimate(body);
+
+      // Unsupported-sport short-circuit — mirrors /search response shape so
+      // iOS clients receive identical behavior across the two endpoints.
+      if (est.source === "unsupported_sport") {
+        return {
+          ...buildEngineMeta(),
+          success: true,
+          query: query.trim(),
+          summary: (est.verdict as string) ?? "Unsupported sport.",
+          marketTier: { value: null, high: null },
+          buyZone: [null, null],
+          holdZone: [null, null],
+          sellZone: [null, null],
+          fairMarketValueLive: null,
+          confidence: 0,
+          source: "unsupported_sport",
+          unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
+          detectedSport: (est.detectedSport as string) ?? null,
+          trendAnalysis: {
+            market_direction: "flat",
+            change_from_older_to_recent: null,
+          },
+          supply: null,
+          recentComps: [],
+          cardIdentity: (est.cardIdentity as any) ?? null,
+          gradeUsed: (est.gradeUsed as any) ?? null,
+          compsUsed: 0,
+          compsAvailable: 0,
+          daysSinceNewestComp: null,
+          variantWarning: [],
+          neighborSynthesis: null,
+          neighborSynthesisDebug: null,
+          crossParallelAnchor: null,
+          buySignal: null,
+          parsedQuery: {
+            playerName: parsed.playerName,
+            year: parsed.year,
+            brand: parsed.brand,
+            set: parsed.set,
+            parallel: parsed.parallel,
+            isAuto: parsed.isAuto,
+            isPatch: parsed.isPatch,
+            isRookie: parsed.isRookie,
+            printRun: parsed.printRun,
+            cardNumber: parsed.cardNumber,
+            grade: parsed.grade,
+            gradingCompany: parsed.gradingCompany,
+            confidence: parsed.confidence,
+          },
+          searchQuery,
+        };
+      }
+
       const fmv = (est.fairMarketValue as number) ?? 0;
       const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
       const premium = (est.premiumValue as number) ?? fmv * 1.15;
@@ -535,6 +645,43 @@ router.post("/price-by-id", async (req, res, next) => {
       };
       const est = await computeEstimate(body);
 
+      // Unsupported-sport short-circuit — defensive guard for /price-by-id.
+      // UI normally only pins card_ids surfaced via /search-list (which is
+      // Baseball-locked via _searchCards), so this branch should never fire
+      // in practice. But if a non-baseball card_id ever leaks through, we
+      // return the same shape as /search / /price rather than silently
+      // mis-pricing.
+      if (est.source === "unsupported_sport") {
+        return {
+          ...buildEngineMeta(),
+          success: true,
+          cardHedgeCardId,
+          summary: (est.verdict as string) ?? "Unsupported sport.",
+          marketTier: { value: null, high: null },
+          buyZone: [null, null],
+          holdZone: [null, null],
+          sellZone: [null, null],
+          fairMarketValueLive: null,
+          confidence: 0,
+          source: "unsupported_sport",
+          unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
+          detectedSport: (est.detectedSport as string) ?? null,
+          trendAnalysis: {
+            market_direction: "flat",
+            change_from_older_to_recent: null,
+            liquidity: "Normal",
+            broaderTrend: null,
+          },
+          recentComps: [],
+          cardIdentity: (est.cardIdentity as any) ?? null,
+          gradeUsed: (est.gradeUsed as any) ?? null,
+          compsUsed: 0,
+          compsAvailable: 0,
+          daysSinceNewestComp: null,
+          broaderTrend: null,
+        };
+      }
+
       const fmv = (est.fairMarketValue as number) ?? 0;
       const quick = (est.quickSaleValue as number) ?? fmv * 0.88;
       const premium = (est.premiumValue as number) ?? fmv * 1.15;
@@ -615,6 +762,44 @@ router.post("/bulk", async (req, res, next) => {
     const settled = await Promise.allSettled(
       safeQueries.map(async (query) => {
         const est = await computeEstimate({ playerName: query.trim() });
+
+        // Unsupported-sport short-circuit — per-item. Bulk responses can
+        // include a mix of baseball + non-baseball queries; each item gets
+        // its own well-formed response so the iOS client can render every
+        // row consistently.
+        if (est.source === "unsupported_sport") {
+          const unsupportedData = {
+            ...buildEngineMeta(),
+            success: true,
+            query,
+            summary: (est.verdict as string) ?? "Unsupported sport.",
+            marketTier: { value: null, high: null },
+            fairMarketValueLive: null,
+            confidence: 0,
+            trendAnalysis: { market_direction: "flat" },
+            source: "unsupported_sport",
+            unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
+            detectedSport: (est.detectedSport as string) ?? null,
+            compsUsed: 0,
+            compsAvailable: 0,
+          };
+          void writeCorpusEntry(
+            corpusEntryFromPricingResult({
+              query,
+              querySource: "free_text",
+              endpoint: "/api/compiq/bulk",
+              durationMs: Date.now() - handlerStart,
+              result: unsupportedData,
+            }),
+          );
+          return {
+            query,
+            status: "ok" as const,
+            data: unsupportedData,
+            error: null,
+          };
+        }
+
         const fmv = (est.fairMarketValue as number) ?? 0;
         const premium = (est.premiumValue as number) ?? fmv * 1.15;
         const trendRaw = ((est.marketDNA as any)?.trend as string | undefined)?.toLowerCase() ?? "flat";

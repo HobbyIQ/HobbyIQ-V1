@@ -407,6 +407,9 @@ const ALLOWED_SOURCES = new Set([
   "no-recent-comps",
   "variant-mismatch",
   "neighbor-synthesis",
+  // Issue #7 fix: free-text queries that CH's AI identified as non-baseball
+  // short-circuit to this source with all pricing fields nulled out.
+  "unsupported_sport",
 ]);
 
 export function expectWellFormed(
