@@ -92,18 +92,22 @@ router.post("/what-if", async (req, res, next) => {
 
 // POST /api/compiq/cardsearch
 // Lightweight catalog lookup used by the iOS Search picker — returns up to
-// `limit` candidate cards (default 8) so the user can visually verify they
-// picked the right card. Proxies Card Hedge `/cards/card-search` with the
-// server-side API key (the iOS app must NEVER hold that key) and normalizes
-// the response so the client gets a single `image_url` per hit no matter
-// which image field Card Hedge populated.
+// `limit` candidate cards (default 50, hard cap 50) so users can find
+// less-common variants/parallels in a single page. The ceiling matches
+// Card Hedge's per-page maximum enforced in cardhedge.client.ts. Proxies
+// Card Hedge `/cards/card-search` with the server-side API key (the iOS
+// app must NEVER hold that key) and normalizes the response so the client
+// gets a single `image_url` per hit no matter which image field Card
+// Hedge populated.
 router.post("/cardsearch", async (req, res, next) => {
   try {
     const { query, limit } = req.body || {};
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "query" field' });
     }
-    const cap = Math.max(1, Math.min(Number(limit) || 8, 20));
+    // Variant picker uses one Card Hedge page (max 50). Lower defaults
+    // would silently clamp clients that ask for more.
+    const cap = Math.max(1, Math.min(Number(limit) || 50, 50));
     const raw = await searchCards(query.trim(), cap);
     const hits = raw.map((c: any) => {
       const imageCandidates: unknown[] = [
