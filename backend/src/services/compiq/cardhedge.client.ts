@@ -364,10 +364,23 @@ export async function findCompsByQuery(
   const limit = opts.limit ?? 20;
   if (!query?.trim()) return { card: null, sales: [], variantWarning: [] };
 
+  // Strip grade tokens (PSA 10, BGS 9.5, SGC 10, "Gem Mint", bare "Raw") from
+  // the query before any Card Hedge call. CH card_ids are grade-agnostic —
+  // grading lives on individual sales under a SKU, never in the SKU title —
+  // so leaving "PSA 10" in the query lowers identifyCard confidence below
+  // MIN_IDENTITY_CONFIDENCE (0.80) and skews searchCards ranking. On
+  // strict-variant queries (auto + color + parallel) this drops every
+  // candidate that would pass cardMatchesTokens, falling through to a wrong-
+  // variant fallback and emitting a spurious "autograph" variantWarning that
+  // trips the variant-mismatch guard in compiqEstimate.service.ts. Grade is
+  // already passed separately via opts.grade where it correctly filters
+  // sales by grade tier in getCardSales(). See issue #6 for full diagnosis.
+  const skuQuery = stripGradingTokens(query);
+
   const tokens = extractRequiredTokens(query);
 
   // Try high-confidence AI match first.
-  const matched = await identifyCard(query);
+  const matched = await identifyCard(skuQuery);
   const aiCandidate: CardHedgeCard | null = matched
     ? {
         card_id: matched.card_id,
@@ -389,14 +402,14 @@ export async function findCompsByQuery(
   // 2. Fall back to searchCards filtered by exact tokens.
   let searchHits: CardHedgeCard[] = [];
   if (!card) {
-    searchHits = await searchCards(query, 25);
+    searchHits = await searchCards(skuQuery, 25);
     card = searchHits.find((h) => cardMatchesTokens(h, tokens)) ?? null;
   }
 
   // 3. Try simplified query for exact tokens.
   if (!card) {
-    const simplified = simplifyQuery(query);
-    if (simplified && simplified !== query) {
+    const simplified = simplifyQuery(skuQuery);
+    if (simplified && simplified !== skuQuery) {
       const hits = await searchCards(simplified, 25);
       searchHits = [...searchHits, ...hits];
       card = hits.find((h) => cardMatchesTokens(h, tokens)) ?? null;
@@ -410,7 +423,7 @@ export async function findCompsByQuery(
     if (fallback) {
       variantWarning = tokenMismatches(fallback, tokens);
       console.warn(
-        `[cardhedge.client] No exact match for "${query}" — using fallback variant="${fallback.variant}" (missing: ${variantWarning.join(", ")})`
+        `[cardhedge.client] No exact match for "${skuQuery}" (original: "${query}") — using fallback variant="${fallback.variant}" (missing: ${variantWarning.join(", ")})`
       );
       card = fallback;
     }
@@ -452,6 +465,36 @@ function simplifyQuery(q: string): string {
   return q
     .replace(/#\s*\d+/g, "")
     .replace(/\b(rookie|rc|card|psa|bgs|sgc|gem mint|mint)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Strip grading tokens (PSA 10, BGS 9.5, SGC 10, "Gem Mint", bare "Raw")
+ * before sending a query to Card Hedge's AI card-match or card-search.
+ *
+ * Grading lives on individual sales under a card_id, never on the SKU
+ * itself — leaving these tokens in the query lowers identifyCard
+ * confidence below MIN_IDENTITY_CONFIDENCE (0.80) and skews searchCards
+ * ranking, which on strict-variant queries (auto + color + refractor)
+ * falls through to a wrong-variant fallback and emits a spurious
+ * variant-mismatch warning. The numeric tail of the grade ("10", "9.5")
+ * MUST be stripped together with the company keyword — leaving the bare
+ * digit behind still confuses CH search ranking.
+ *
+ * Companion to `simplifyQuery` (which strips broader noise like "rookie",
+ * "rc", "card", "#nnn" for the step-3 retry path). Both are kept separate
+ * so each has a single responsibility; `stripGradingTokens` runs once at
+ * the top of `findCompsByQuery` so every CH call downstream is already
+ * grade-free.
+ *
+ * Exported for unit testing.
+ */
+export function stripGradingTokens(q: string): string {
+  return q
+    .replace(/\b(psa|bgs|sgc|cgc|hga|beckett)\s*\d+(?:\.\d)?\b/gi, " ")
+    .replace(/\bgem\s*mint\b/gi, " ")
+    .replace(/\braw\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
