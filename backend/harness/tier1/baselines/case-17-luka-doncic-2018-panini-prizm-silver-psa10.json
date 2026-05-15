@@ -1,16 +1,16 @@
-﻿{
+{
     "caseId":  "case-17-luka-doncic-2018-panini-prizm-silver-psa10",
     "category":  "nonBaseball",
     "query":  "2018 Panini Prizm Silver Luka Doncic PSA 10",
     "grade":  "PSA 10",
-    "capturedAt":  "2026-05-15T13:03:39.4055527Z",
+    "capturedAt":  "2026-05-15T18:33:31.1032680Z",
     "search":  {
                    "pricingEngine":  "monolith",
-                   "engineVersion":  "99bb447",
-                   "computedAt":  "2026-05-15T13:02:37.058Z",
+                   "engineVersion":  "1989cb8",
+                   "computedAt":  "2026-05-15T18:24:05.454Z",
                    "success":  true,
                    "query":  "2018 Panini Prizm Silver Luka Doncic PSA 10",
-                   "summary":  "No exact match for requested variant (missing: player_mismatch). Showing closest available comp. Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "summary":  "Unsupported sport (Basketball). CompIQ currently prices baseball cards only.",
                    "marketTier":  {
                                       "value":  null,
                                       "high":  null
@@ -29,23 +29,33 @@
                                 ],
                    "fairMarketValueLive":  null,
                    "confidence":  0,
-                   "source":  "no-recent-comps",
+                   "source":  "unsupported_sport",
+                   "unsupportedSportReason":  "CompIQ currently supports baseball cards only. This appears to be a basketball card.",
+                   "detectedSport":  "Basketball",
                    "trendAnalysis":  {
                                          "market_direction":  "flat",
-                                         "change_from_older_to_recent":  0,
-                                         "liquidity":  "Unknown"
+                                         "change_from_older_to_recent":  null,
+                                         "liquidity":  "Normal"
                                      },
                    "supply":  null,
                    "recentComps":  [
 
                                    ],
-                   "cardIdentity":  null,
+                   "cardIdentity":  {
+                                        "card_id":  "1585927856600x724268501592440800",
+                                        "title":  "Luka Doncic 2018 Panini Prizm Basketball",
+                                        "player":  "Luka Doncic",
+                                        "set":  "2018 Panini Prizm Basketball",
+                                        "year":  null,
+                                        "number":  "280",
+                                        "variant":  "Base"
+                                    },
                    "gradeUsed":  "PSA 10",
                    "compsUsed":  0,
                    "compsAvailable":  0,
                    "daysSinceNewestComp":  null,
                    "variantWarning":  [
-                                          "player_mismatch"
+
                                       ],
                    "neighborSynthesis":  null,
                    "neighborSynthesisDebug":  null,
@@ -69,10 +79,193 @@
                    "searchQuery":  "2018 Luka Doncic Panini Prizm Silver PSA 10"
                },
     "searchError":  null,
-    "cardHedgeCardId":  null,
-    "priceById":  null,
+    "cardHedgeCardId":  "1585927856600x724268501592440800",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "1989cb8",
+                      "computedAt":  "2026-05-15T18:33:32.090Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1585927856600x724268501592440800",
+                      "summary":  "No comps found for this exact variant (missing: all 27 fetched comps rejected by variant filter (parallel_mismatch×27)). Card Hedge doesn\u0027t have sold data for this card yet.",
+                      "marketTier":  {
+                                         "value":  0,
+                                         "high":  0
+                                     },
+                      "buyZone":  [
+                                      0,
+                                      0
+                                  ],
+                      "holdZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "sellZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "fairMarketValueLive":  0,
+                      "confidence":  0,
+                      "source":  "variant-mismatch",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  210,
+                                              "title":  "Luka Doncic 2018 Panini Prizm RC #280 PSA 10 GEM MINT - Mavericks, Lakers",
+                                              "soldDate":  "2026-05-15T02:49:00.000Z"
+                                          },
+                                          {
+                                              "price":  198.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-15T02:22:00.000Z"
+                                          },
+                                          {
+                                              "price":  185,
+                                              "title":  "2018 Panini Prizm Luka Doncic ROOKIE #280 PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-14T04:44:18.000Z"
+                                          },
+                                          {
+                                              "price":  187.23,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic #280 Rookie PSA 10 Dallas Mavericks",
+                                              "soldDate":  "2026-05-13T23:59:00.000Z"
+                                          },
+                                          {
+                                              "price":  200,
+                                              "title":  "Panini Prizm 2018-19 Luka Doncic #280 Rookie PSA 10 Dallas Mavericks",
+                                              "soldDate":  "2026-05-13T23:11:00.000Z"
+                                          },
+                                          {
+                                              "price":  214.99,
+                                              "title":  "2018-19 Luka Doncic Panini Prizm #280 Dallas Mavericks RC Rookie PSA 10 MINT",
+                                              "soldDate":  "2026-05-13T21:55:00.000Z"
+                                          },
+                                          {
+                                              "price":  175,
+                                              "title":  "2018 Panini Prizm Luka Doncic #280 PSA 10",
+                                              "soldDate":  "2026-05-13T02:41:00.000Z"
+                                          },
+                                          {
+                                              "price":  214.99,
+                                              "title":  "2018-19 Luka Doncic Panini Prizm #280 Dallas Mavericks RC Rookie PSA 10 MINT",
+                                              "soldDate":  "2026-05-13T01:32:00.000Z"
+                                          },
+                                          {
+                                              "price":  214.99,
+                                              "title":  "2018-19 Luka Doncic Panini Prizm #280 Dallas Mavericks RC Rookie PSA 10 MINT",
+                                              "soldDate":  "2026-05-12T20:43:00.000Z"
+                                          },
+                                          {
+                                              "price":  218.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-12T02:20:00.000Z"
+                                          },
+                                          {
+                                              "price":  234.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-12T02:10:00.000Z"
+                                          },
+                                          {
+                                              "price":  185,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic #280 PSA 10 GEM MINT RC ROOKIE",
+                                              "soldDate":  "2026-05-11T23:17:00.000Z"
+                                          },
+                                          {
+                                              "price":  210.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic #280 PSA 10 GEM MINT RC ROOKIE",
+                                              "soldDate":  "2026-05-09T02:23:00.000Z"
+                                          },
+                                          {
+                                              "price":  198,
+                                              "title":  "2018 Panini Prizm Luka Doncic ROOKIE #280 PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-08T19:59:29.000Z"
+                                          },
+                                          {
+                                              "price":  225,
+                                              "title":  "2018 Panini Prizm Luka Doncic ROOKIE RC #280 PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-08T19:46:11.000Z"
+                                          },
+                                          {
+                                              "price":  229.99,
+                                              "title":  "2018-19 Luka Doncic Panini Prizm #280 Dallas Mavericks RC Rookie PSA 10 MINT",
+                                              "soldDate":  "2026-05-08T03:24:00.000Z"
+                                          },
+                                          {
+                                              "price":  202.5,
+                                              "title":  "LUKA DONCIC PSA 10 2018-19 PANINI PRIZM #280 ROOKIE RC MAVERICKS 2302",
+                                              "soldDate":  "2026-05-08T02:04:00.000Z"
+                                          },
+                                          {
+                                              "price":  185,
+                                              "title":  "Luka Doncic 2018 Panini Prizm RC #280 PSA 10 GEM MINT - Mavericks, Lakers",
+                                              "soldDate":  "2026-05-08T02:04:00.000Z"
+                                          },
+                                          {
+                                              "price":  224.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-08T01:24:00.000Z"
+                                          },
+                                          {
+                                              "price":  224.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-08T01:24:00.000Z"
+                                          },
+                                          {
+                                              "price":  210,
+                                              "title":  "Luka Doncic 2018 Panini Prizm RC #280 PSA 10 GEM MINT - Mavericks, Lakers",
+                                              "soldDate":  "2026-05-07T17:40:00.000Z"
+                                          },
+                                          {
+                                              "price":  223,
+                                              "title":  "2018-19 Panini Prizm #280 Luka Doncic Mavericks RC Rookie PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-07T03:22:00.000Z"
+                                          },
+                                          {
+                                              "price":  258.59,
+                                              "title":  "2018 Panini Prizm LUKA DONCIC ROOKIE RC Card #280 - PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-06T14:24:00.000Z"
+                                          },
+                                          {
+                                              "price":  205,
+                                              "title":  "2018 Panini Prizm Basketball #280 Luka Doncic Rookie RC PSA 10",
+                                              "soldDate":  "2026-05-06T12:59:00.000Z"
+                                          },
+                                          {
+                                              "price":  198.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-06T02:44:00.000Z"
+                                          },
+                                          {
+                                              "price":  227.5,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-06T01:55:00.000Z"
+                                          },
+                                          {
+                                              "price":  178,
+                                              "title":  "2018-19 Panini Prizm Luka Doncic RC Rookie #280 Mavericks PSA 10 GEM MINT",
+                                              "soldDate":  "2026-05-06T00:40:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1585927856600x724268501592440800",
+                                           "title":  null,
+                                           "player":  null,
+                                           "set":  null,
+                                           "year":  null,
+                                           "number":  null,
+                                           "variant":  null
+                                       },
+                      "gradeUsed":  "PSA 10",
+                      "compsUsed":  0,
+                      "compsAvailable":  27,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
     "priceByIdError":  null,
     "notes":  [
-                  "no cardHedgeCardId found in search response"
+
               ]
 }

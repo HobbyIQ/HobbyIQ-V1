@@ -1,105 +1,58 @@
-﻿{
+{
     "caseId":  "case-15-michael-jordan-1986-fleer-psa8",
     "category":  "vintage",
     "query":  "1986 Fleer Michael Jordan PSA 8",
     "grade":  "PSA 8",
-    "capturedAt":  "2026-05-15T13:03:37.9846128Z",
+    "capturedAt":  "2026-05-15T18:33:30.2020565Z",
     "search":  {
                    "pricingEngine":  "monolith",
-                   "engineVersion":  "99bb447",
-                   "computedAt":  "2026-05-15T13:02:23.609Z",
+                   "engineVersion":  "1989cb8",
+                   "computedAt":  "2026-05-15T18:24:05.308Z",
                    "success":  true,
                    "query":  "1986 Fleer Michael Jordan PSA 8",
-                   "summary":  "Buy — good value and market signals are positive.",
+                   "summary":  "Unsupported sport (Basketball). CompIQ currently prices baseball cards only.",
                    "marketTier":  {
-                                      "value":  46,
-                                      "high":  52.9
+                                      "value":  null,
+                                      "high":  null
                                   },
                    "buyZone":  [
-                                   35.19,
-                                   39.099999999999994
+                                   null,
+                                   null
                                ],
                    "holdZone":  [
-                                    39.099999999999994,
-                                    46
+                                    null,
+                                    null
                                 ],
                    "sellZone":  [
-                                    46,
-                                    52.9
+                                    null,
+                                    null
                                 ],
-                   "fairMarketValueLive":  46,
-                   "confidence":  0.55,
-                   "source":  "live",
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "unsupported_sport",
+                   "unsupportedSportReason":  "CompIQ currently supports baseball cards only. This appears to be a basketball card.",
+                   "detectedSport":  "Basketball",
                    "trendAnalysis":  {
-                                         "market_direction":  "up",
-                                         "change_from_older_to_recent":  -30.9,
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  null,
                                          "liquidity":  "Normal"
                                      },
                    "supply":  null,
                    "recentComps":  [
-                                       {
-                                           "price":  33.04347826086957,
-                                           "title":  "1994 Upper Deck #8 Michael Jordan Next Generation Rookie PSA 8",
-                                           "soldDate":  "2026-04-07T03:38:00.000Z"
-                                       },
-                                       {
-                                           "price":  60.86086956521739,
-                                           "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
-                                           "soldDate":  "2026-03-27T13:09:00.000Z"
-                                       },
-                                       {
-                                           "price":  19.1304347826087,
-                                           "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
-                                           "soldDate":  "2026-01-11T21:03:00.000Z"
-                                       },
-                                       {
-                                           "price":  73.91304347826087,
-                                           "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
-                                           "soldDate":  "2025-11-27T13:33:00.000Z"
-                                       },
-                                       {
-                                           "price":  52.16521739130435,
-                                           "title":  "Michael Jordan Holo PSA 8 - 1994 Upper Deck Next Generation #8 NM-MT White Sox",
-                                           "soldDate":  "2025-09-17T18:04:00.000Z"
-                                       },
-                                       {
-                                           "price":  47.82608695652174,
-                                           "title":  "*BRAND NEW* 1994 Upper Deck Next Generation #8 Michael Jordan PSA 8 NM-MT",
-                                           "soldDate":  "2025-09-16T21:08:00.000Z"
-                                       },
-                                       {
-                                           "price":  40,
-                                           "title":  "🔥 Beautiful 1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT GOAT",
-                                           "soldDate":  "2025-08-08T00:58:00.000Z"
-                                       },
-                                       {
-                                           "price":  39.130434782608695,
-                                           "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
-                                           "soldDate":  "2025-06-29T10:32:00.000Z"
-                                       },
-                                       {
-                                           "price":  23.382608695652177,
-                                           "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
-                                           "soldDate":  "2025-06-06T20:08:18.000Z"
-                                       },
-                                       {
-                                           "price":  34.78260869565218,
-                                           "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
-                                           "soldDate":  "2025-05-14T21:01:20.000Z"
-                                       }
+
                                    ],
                    "cardIdentity":  {
-                                        "card_id":  "1669440831426x801099209903811700",
-                                        "title":  null,
+                                        "card_id":  "1586038977359x685970805780906000",
+                                        "title":  "Michael Jordan 1986 Fleer Basketball",
                                         "player":  "Michael Jordan",
-                                        "set":  "1994 Upper Deck Baseball",
+                                        "set":  "1986 Fleer Basketball",
                                         "year":  null,
-                                        "number":  "8",
+                                        "number":  "57",
                                         "variant":  "Base"
                                     },
                    "gradeUsed":  "PSA 8",
-                   "compsUsed":  27,
-                   "compsAvailable":  27,
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
                    "daysSinceNewestComp":  null,
                    "variantWarning":  [
 
@@ -126,36 +79,36 @@
                    "searchQuery":  "1986 Michael Jordan PSA 8"
                },
     "searchError":  null,
-    "cardHedgeCardId":  "1669440831426x801099209903811700",
+    "cardHedgeCardId":  "1586038977359x685970805780906000",
     "priceById":  {
                       "pricingEngine":  "monolith",
-                      "engineVersion":  "99bb447",
-                      "computedAt":  "2026-05-15T13:03:38.680Z",
+                      "engineVersion":  "1989cb8",
+                      "computedAt":  "2026-05-15T18:33:31.137Z",
                       "success":  true,
-                      "cardHedgeCardId":  "1669440831426x801099209903811700",
+                      "cardHedgeCardId":  "1586038977359x685970805780906000",
                       "summary":  "Buy — good value and market signals are positive.",
                       "marketTier":  {
-                                         "value":  46,
-                                         "high":  52.9
+                                         "value":  15506.599999999999,
+                                         "high":  17833.05
                                      },
                       "buyZone":  [
-                                      35.19,
-                                      39.099999999999994
+                                      11862.135,
+                                      13180.15
                                   ],
                       "holdZone":  [
-                                       39.099999999999994,
-                                       46
+                                       13180.15,
+                                       15506.599999999999
                                    ],
                       "sellZone":  [
-                                       46,
-                                       52.9
+                                       15506.599999999999,
+                                       17833.05
                                    ],
-                      "fairMarketValueLive":  46,
-                      "confidence":  0.55,
+                      "fairMarketValueLive":  15506.599999999999,
+                      "confidence":  0.95,
                       "source":  "live",
                       "trendAnalysis":  {
                                             "market_direction":  "up",
-                                            "change_from_older_to_recent":  59.9,
+                                            "change_from_older_to_recent":  7,
                                             "liquidity":  "Normal",
                                             "broaderTrend":  {
                                                                  "impliedTrendPct":  0,
@@ -173,58 +126,58 @@
                                         },
                       "recentComps":  [
                                           {
-                                              "price":  33.04347826086957,
-                                              "title":  "1994 Upper Deck #8 Michael Jordan Next Generation Rookie PSA 8",
-                                              "soldDate":  "2026-04-07T03:38:00.000Z"
+                                              "price":  12913.04347826087,
+                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
+                                              "soldDate":  "2026-05-14T05:44:00.000Z"
                                           },
                                           {
-                                              "price":  60.86086956521739,
-                                              "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
-                                              "soldDate":  "2026-03-27T13:09:00.000Z"
+                                              "price":  13913.04347826087,
+                                              "title":  "1986-87 Fleer - Michael Jordan #57 PSA 8",
+                                              "soldDate":  "2026-05-14T05:14:00.000Z"
                                           },
                                           {
-                                              "price":  19.1304347826087,
-                                              "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
-                                              "soldDate":  "2026-01-11T21:03:00.000Z"
+                                              "price":  13217.391304347828,
+                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
+                                              "soldDate":  "2026-05-14T02:11:00.000Z"
                                           },
                                           {
-                                              "price":  73.91304347826087,
-                                              "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
-                                              "soldDate":  "2025-11-27T13:33:00.000Z"
+                                              "price":  11956.521739130436,
+                                              "title":  "1986 Fleer Basketball Michael Jordan ROOKIE #57 PSA 8 NM-MT",
+                                              "soldDate":  "2026-05-13T23:20:27.000Z"
                                           },
                                           {
-                                              "price":  52.16521739130435,
-                                              "title":  "Michael Jordan Holo PSA 8 - 1994 Upper Deck Next Generation #8 NM-MT White Sox",
-                                              "soldDate":  "2025-09-17T18:04:00.000Z"
+                                              "price":  11826.956521739132,
+                                              "title":  "1986 Fleer Premier Michael Jordan #57 57 Of 132 PSA 8",
+                                              "soldDate":  "2026-05-11T03:59:00.000Z"
                                           },
                                           {
-                                              "price":  47.82608695652174,
-                                              "title":  "*BRAND NEW* 1994 Upper Deck Next Generation #8 Michael Jordan PSA 8 NM-MT",
-                                              "soldDate":  "2025-09-16T21:08:00.000Z"
+                                              "price":  8860,
+                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
+                                              "soldDate":  "2026-05-10T19:45:00.000Z"
                                           },
                                           {
-                                              "price":  40,
-                                              "title":  "🔥 Beautiful 1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT GOAT",
-                                              "soldDate":  "2025-08-08T00:58:00.000Z"
+                                              "price":  11697.391304347828,
+                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
+                                              "soldDate":  "2026-05-10T13:05:00.000Z"
                                           },
                                           {
-                                              "price":  39.130434782608695,
-                                              "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
-                                              "soldDate":  "2025-06-29T10:32:00.000Z"
+                                              "price":  11775.652173913044,
+                                              "title":  "1986-87 Fleer #57 Michael Jordan Rookie Card - PSA 8 - Raw 10",
+                                              "soldDate":  "2026-05-10T02:30:00.000Z"
                                           },
                                           {
-                                              "price":  23.382608695652177,
-                                              "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
-                                              "soldDate":  "2025-06-06T20:08:18.000Z"
+                                              "price":  12739.13043478261,
+                                              "title":  "1986-87 Fleer - Michael Jordan #57 (RC) - GOAT - PSA 8 NEAR MINT-MINT",
+                                              "soldDate":  "2026-05-09T15:50:00.000Z"
                                           },
                                           {
-                                              "price":  34.78260869565218,
-                                              "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
-                                              "soldDate":  "2025-05-14T21:01:20.000Z"
+                                              "price":  12521.739130434784,
+                                              "title":  "MICHAEL JORDAN PSA 8 1986-87 FLEER BASKETBALL #57 ROOKIE CARD RC BULLS NM-MT HOF",
+                                              "soldDate":  "2026-05-08T23:14:00.000Z"
                                           }
                                       ],
                       "cardIdentity":  {
-                                           "card_id":  "1669440831426x801099209903811700",
+                                           "card_id":  "1586038977359x685970805780906000",
                                            "title":  null,
                                            "player":  null,
                                            "set":  null,
@@ -233,8 +186,8 @@
                                            "variant":  null
                                        },
                       "gradeUsed":  "PSA 8",
-                      "compsUsed":  27,
-                      "compsAvailable":  27,
+                      "compsUsed":  24,
+                      "compsAvailable":  24,
                       "daysSinceNewestComp":  null,
                       "broaderTrend":  {
                                            "impliedTrendPct":  0,
