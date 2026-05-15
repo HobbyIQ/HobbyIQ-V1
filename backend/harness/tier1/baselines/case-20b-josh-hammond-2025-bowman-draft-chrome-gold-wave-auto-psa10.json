@@ -1,0 +1,195 @@
+﻿{
+    "caseId":  "case-20b-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-psa10",
+    "category":  "pinnedIdHard",
+    "query":  "2025 Bowman Draft Chrome Gold Wave Auto Josh Hammond PSA 10",
+    "grade":  "PSA 10",
+    "capturedAt":  "2026-05-15T13:03:43.1024127Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:50.967Z",
+                   "success":  true,
+                   "query":  "2025 Bowman Draft Chrome Gold Wave Auto Josh Hammond PSA 10",
+                   "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  3911.11,
+                                      "high":  4497.7765
+                                  },
+                   "buyZone":  [
+                                   3097.5991200000003,
+                                   3441.7768
+                               ],
+                   "holdZone":  [
+                                    3441.7768,
+                                    3911.11
+                                ],
+                   "sellZone":  [
+                                    3911.11,
+                                    4497.7765
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1769295240288x636569204885266400",
+                                        "title":  null,
+                                        "player":  "Josh Hammond",
+                                        "set":  "2025 Bowman Draft Chrome Baseball",
+                                        "year":  null,
+                                        "number":  "CPA-JH",
+                                        "variant":  "Gold Wave"
+                                    },
+                   "gradeUsed":  "PSA 10",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  {
+                                               "fmv":  3911.11,
+                                               "neighborsUsed":  3,
+                                               "neighborsConsidered":  3,
+                                               "parallelTier":  null,
+                                               "confidenceCap":  28,
+                                               "anchor":  null,
+                                               "trend":  {
+                                                             "slopePctPerWeek":  74.95,
+                                                             "direction":  "rising",
+                                                             "weeklySamples":  2,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "no-direct-comps",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2025 BOWMAN DRAFT CHROME PROSPECT AUTOS #CPA-JH JOSH HAMMOND 198/250 PSA 10",
+                                                                  "neighborPrice":  240,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  250,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  16.296296296296294,
+                                                                  "syntheticPrice":  3911.1111111111104,
+                                                                  "stepsRelaxed":  3,
+                                                                  "soldDate":  "2026-04-30T03:09:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2025 BOWMAN DRAFT CHROME PROSPECT AUTOS #CPA-JH JOSH HAMMOND 89/99 PSA 10",
+                                                                  "neighborPrice":  369.99,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  99,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  4069.8900000000003,
+                                                                  "stepsRelaxed":  3,
+                                                                  "soldDate":  "2026-04-28T20:57:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "JOSH HAMMOND 2025 Bowman Draft #CPA-JH 1st Chrome Auto PSA 10 Kansas City Royals",
+                                                                  "neighborPrice":  165,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  1815,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-22T14:27:00.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Josh Hammond",
+                                       "year":  2025,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Gold Wave",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "10",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2025 Josh Hammond Bowman Draft auto Gold Wave PSA 10"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1769295240288x636569204885266400",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:44.250Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1769295240288x636569204885266400",
+                      "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                      "marketTier":  {
+                                         "value":  null,
+                                         "high":  null
+                                     },
+                      "buyZone":  [
+                                      null,
+                                      null
+                                  ],
+                      "holdZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "sellZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "fairMarketValueLive":  null,
+                      "confidence":  0,
+                      "source":  "no-recent-comps",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1769295240288x636569204885266400",
+                                           "title":  null,
+                                           "player":  "Josh Hammond",
+                                           "set":  "2025 Bowman Draft Chrome Baseball",
+                                           "year":  null,
+                                           "number":  "CPA-JH",
+                                           "variant":  "Gold Wave"
+                                       },
+                      "gradeUsed":  "PSA 10",
+                      "compsUsed":  0,
+                      "compsAvailable":  0,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

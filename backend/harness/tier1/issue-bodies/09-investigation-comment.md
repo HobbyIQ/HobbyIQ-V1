@@ -1,0 +1,5 @@
+Investigation report (post-filing): the variant-mismatch label on /search comes from parseCardQuery extracting isAuto=true plus the variant-warning token emission (the same family as issue #6). /price-by-id never calls parseCardQuery for pinned-id lookups (intentional asymmetry — pinning by card_id defines identity authoritatively, similar to the PR #4 player-identity guard skip). The "different verdict" between endpoints is downstream of issue #6's parser/variant-warning behavior.
+
+A local patch in compiqEstimate.service.ts (e.g. gating the variant-mismatch guard on !body.cardHedgeCardId) was investigated and REJECTED — the primary affected callers (DashboardView free-text /search) don't supply cardHedgeCardId, so the patch would do nothing for them and would only mask the issue for /price-by-id users.
+
+Action: BLOCKED-BY #6. Fix issue #6 first, then re-run case 19b cross-endpoint check. If divergence persists after #6 is fixed, reopen with new investigation. The harness will encode case 19b with soft assertions referencing #9 and #6.

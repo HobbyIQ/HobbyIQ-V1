@@ -1,0 +1,257 @@
+﻿{
+    "caseId":  "case-16-ken-griffey-jr-1989-upper-deck-rc-psa9",
+    "category":  "vintage",
+    "query":  "1989 Upper Deck Ken Griffey Jr RC PSA 9",
+    "grade":  "PSA 9",
+    "capturedAt":  "2026-05-15T13:03:38.6887647Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:35.045Z",
+                   "success":  true,
+                   "query":  "1989 Upper Deck Ken Griffey Jr RC PSA 9",
+                   "summary":  "Hold — fair value, but momentum is improving.",
+                   "marketTier":  {
+                                      "value":  426.7,
+                                      "high":  491.3
+                                  },
+                   "buyZone":  [
+                                   325.89,
+                                   362.09999999999997
+                               ],
+                   "holdZone":  [
+                                    362.09999999999997,
+                                    426.7
+                                ],
+                   "sellZone":  [
+                                    426.7,
+                                    491.3
+                                ],
+                   "fairMarketValueLive":  426.7,
+                   "confidence":  0.95,
+                   "source":  "live",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Normal"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  247.64705882352942,
+                                           "title":  "1989 Upper Deck Star Rookie #1 Ken Griffey Jr RC HOF PSA 9 PERFECTLY CENTERED",
+                                           "soldDate":  "2026-05-15T03:12:00.000Z"
+                                       },
+                                       {
+                                           "price":  258.8176470588235,
+                                           "title":  "PSA 9 1989 Upper Deck Star Rookie Ken Griffey Jr #1",
+                                           "soldDate":  "2026-05-15T00:11:00.000Z"
+                                       },
+                                       {
+                                           "price":  250,
+                                           "title":  "1989 Star Upper Deck Ken Griffey Jr #1 PSA 9 Rookie, Small Crack On Case Edge",
+                                           "soldDate":  "2026-05-14T23:48:00.000Z"
+                                       },
+                                       {
+                                           "price":  244.11764705882354,
+                                           "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9 MINT",
+                                           "soldDate":  "2026-05-14T02:44:00.000Z"
+                                       },
+                                       {
+                                           "price":  264.70588235294116,
+                                           "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9 MINT",
+                                           "soldDate":  "2026-05-13T17:51:00.000Z"
+                                       },
+                                       {
+                                           "price":  279.4117647058824,
+                                           "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9",
+                                           "soldDate":  "2026-05-13T02:01:00.000Z"
+                                       },
+                                       {
+                                           "price":  264.70588235294116,
+                                           "title":  "1989 Upper Deck Ken Griffey JR #1 Star Rookie RC PSA 9",
+                                           "soldDate":  "2026-05-12T17:18:00.000Z"
+                                       },
+                                       {
+                                           "price":  264.70588235294116,
+                                           "title":  "Ken Griffey Jr 1989 Upper Deck #1 Star Rookie PSA 9 MINT (RC) HOF Legend",
+                                           "soldDate":  "2026-05-12T17:15:00.000Z"
+                                       },
+                                       {
+                                           "price":  264.70588235294116,
+                                           "title":  "Ken Griffey Jr 1989 Upper Deck #1 Star Rookie PSA 9 MINT (RC) HOF Legend",
+                                           "soldDate":  "2026-05-12T17:15:00.000Z"
+                                       },
+                                       {
+                                           "price":  264.7,
+                                           "title":  "1989 UPPER DECK #1 KEN GRIFFEY JR STAR ROOKE RC HOF PSA 9 74209521",
+                                           "soldDate":  "2026-05-12T16:00:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1587446850514x224832321163624450",
+                                        "title":  null,
+                                        "player":  "Ken Griffey Jr.",
+                                        "set":  "1989 Upper Deck Baseball",
+                                        "year":  null,
+                                        "number":  "1",
+                                        "variant":  "Base"
+                                    },
+                   "gradeUsed":  "PSA 9",
+                   "compsUsed":  26,
+                   "compsAvailable":  26,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Ken Griffey Jr",
+                                       "year":  1989,
+                                       "brand":  "Upper Deck",
+                                       "set":  "Upper Deck",
+                                       "parallel":  null,
+                                       "isAuto":  false,
+                                       "isPatch":  false,
+                                       "isRookie":  true,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "9",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  0.8
+                                   },
+                   "searchQuery":  "1989 Ken Griffey Jr Upper Deck PSA 9"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1587446850514x224832321163624450",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:39.390Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1587446850514x224832321163624450",
+                      "summary":  "Hold — fair value, but momentum is improving.",
+                      "marketTier":  {
+                                         "value":  448.8,
+                                         "high":  516.8
+                                     },
+                      "buyZone":  [
+                                      342.72,
+                                      380.8
+                                  ],
+                      "holdZone":  [
+                                       380.8,
+                                       448.8
+                                   ],
+                      "sellZone":  [
+                                       448.8,
+                                       516.8
+                                   ],
+                      "fairMarketValueLive":  448.8,
+                      "confidence":  0.95,
+                      "source":  "live",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Normal",
+                                            "broaderTrend":  {
+                                                                 "impliedTrendPct":  0,
+                                                                 "direction":  "flat",
+                                                                 "recentMedian":  437,
+                                                                 "olderMedian":  null,
+                                                                 "recentCount":  27,
+                                                                 "olderCount":  0,
+                                                                 "similarCardsScanned":  0,
+                                                                 "totalSamples":  27,
+                                                                 "windowRecentDays":  14,
+                                                                 "windowOlderDays":  45,
+                                                                 "basedOn":  "exact"
+                                                             }
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  247.64705882352942,
+                                              "title":  "1989 Upper Deck Star Rookie #1 Ken Griffey Jr RC HOF PSA 9 PERFECTLY CENTERED",
+                                              "soldDate":  "2026-05-15T03:12:00.000Z"
+                                          },
+                                          {
+                                              "price":  258.8176470588235,
+                                              "title":  "PSA 9 1989 Upper Deck Star Rookie Ken Griffey Jr #1",
+                                              "soldDate":  "2026-05-15T00:11:00.000Z"
+                                          },
+                                          {
+                                              "price":  250,
+                                              "title":  "1989 Star Upper Deck Ken Griffey Jr #1 PSA 9 Rookie, Small Crack On Case Edge",
+                                              "soldDate":  "2026-05-14T23:48:00.000Z"
+                                          },
+                                          {
+                                              "price":  244.11764705882354,
+                                              "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9 MINT",
+                                              "soldDate":  "2026-05-14T02:44:00.000Z"
+                                          },
+                                          {
+                                              "price":  264.70588235294116,
+                                              "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9 MINT",
+                                              "soldDate":  "2026-05-13T17:51:00.000Z"
+                                          },
+                                          {
+                                              "price":  279.4117647058824,
+                                              "title":  "1989 Upper Deck - Star Rookie Ken Griffey Jr #1 (RC) PSA 9",
+                                              "soldDate":  "2026-05-13T02:01:00.000Z"
+                                          },
+                                          {
+                                              "price":  264.70588235294116,
+                                              "title":  "1989 Upper Deck Ken Griffey JR #1 Star Rookie RC PSA 9",
+                                              "soldDate":  "2026-05-12T17:18:00.000Z"
+                                          },
+                                          {
+                                              "price":  264.70588235294116,
+                                              "title":  "Ken Griffey Jr 1989 Upper Deck #1 Star Rookie PSA 9 MINT (RC) HOF Legend",
+                                              "soldDate":  "2026-05-12T17:15:00.000Z"
+                                          },
+                                          {
+                                              "price":  264.70588235294116,
+                                              "title":  "Ken Griffey Jr 1989 Upper Deck #1 Star Rookie PSA 9 MINT (RC) HOF Legend",
+                                              "soldDate":  "2026-05-12T17:15:00.000Z"
+                                          },
+                                          {
+                                              "price":  264.7,
+                                              "title":  "1989 UPPER DECK #1 KEN GRIFFEY JR STAR ROOKE RC HOF PSA 9 74209521",
+                                              "soldDate":  "2026-05-12T16:00:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1587446850514x224832321163624450",
+                                           "title":  null,
+                                           "player":  "Ken Griffey Jr.",
+                                           "set":  "1989 Upper Deck Baseball",
+                                           "year":  null,
+                                           "number":  "1",
+                                           "variant":  "Base"
+                                       },
+                      "gradeUsed":  "PSA 9",
+                      "compsUsed":  26,
+                      "compsAvailable":  26,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  {
+                                           "impliedTrendPct":  0,
+                                           "direction":  "flat",
+                                           "recentMedian":  437,
+                                           "olderMedian":  null,
+                                           "recentCount":  27,
+                                           "olderCount":  0,
+                                           "similarCardsScanned":  0,
+                                           "totalSamples":  27,
+                                           "windowRecentDays":  14,
+                                           "windowOlderDays":  45,
+                                           "basedOn":  "exact"
+                                       }
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

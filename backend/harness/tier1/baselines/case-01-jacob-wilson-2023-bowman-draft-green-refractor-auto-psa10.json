@@ -1,0 +1,296 @@
+﻿{
+    "caseId":  "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10",
+    "category":  "realLookups",
+    "query":  "2023 Bowman Draft Green Refractor Auto Jacob Wilson PSA 10",
+    "grade":  "PSA 10",
+    "capturedAt":  "2026-05-15T13:03:20.9317852Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:01:24.238Z",
+                   "success":  true,
+                   "query":  "2023 Bowman Draft Green Refractor Auto Jacob Wilson PSA 10",
+                   "summary":  "No exact match for requested variant (missing: autograph). Showing closest available comp. Indicative price ($382.47) synthesized from 54 sibling-parallel sales — Card Hedge has no direct comps for this exact variant yet.",
+                   "marketTier":  {
+                                      "value":  382.47,
+                                      "high":  439.8405
+                                  },
+                   "buyZone":  [
+                                   302.91624,
+                                   336.5736
+                               ],
+                   "holdZone":  [
+                                    336.5736,
+                                    382.47
+                                ],
+                   "sellZone":  [
+                                    382.47,
+                                    439.8405
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "variant-mismatch",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  107.5,
+                                           "title":  "2023 Bowman Draft Jacob Wilson #BDC121 RC Green Grass Ref 87/99 GEM MINT PSA 10",
+                                           "soldDate":  "2026-04-29T01:12:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1702843628240x889441068775949600",
+                                        "title":  null,
+                                        "player":  "Jacob Wilson",
+                                        "set":  "2023 Bowman Draft Baseball",
+                                        "year":  null,
+                                        "number":  "BDC-121",
+                                        "variant":  "Green Grass Refractor"
+                                    },
+                   "gradeUsed":  "PSA 10",
+                   "compsUsed":  0,
+                   "compsAvailable":  1,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+                                          "autograph"
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  {
+                                                  "error":  "insufficient_neighbor_pool comps=1"
+                                              },
+                   "crossParallelAnchor":  {
+                                               "fmv":  382.47,
+                                               "neighborsUsed":  54,
+                                               "neighborsConsidered":  56,
+                                               "parallelTier":  null,
+                                               "confidenceCap":  33,
+                                               "anchor":  null,
+                                               "trend":  {
+                                                             "slopePctPerWeek":  13.1,
+                                                             "direction":  "rising",
+                                                             "weeklySamples":  9,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "variant-mismatch",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2023 BOWMAN DRAFT CHROME PROSPECT AUTO #CDAJWI JACOB WILSON /250 PSA 10 GEM MINT",
+                                                                  "neighborPrice":  460,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  250,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  4.0740740740740735,
+                                                                  "syntheticPrice":  1874.074074074074,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-14T19:27:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 Bowman Draft Jacob Wilson Chrome Auto 1st #CDA-JWI Athletics PSA 10",
+                                                                  "neighborPrice":  279.99,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1539.9450000000002,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-05-13T05:16:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 Bowman Draft Jacob Wilson Chrome Auto 1st #CDA-JWI Athletics PSA 10",
+                                                                  "neighborPrice":  224.05,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1232.275,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-05-06T02:45:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 Bowman Draft Jacob Wilson Chrome Auto 1st #CDA-JWI Athletics PSA 10",
+                                                                  "neighborPrice":  214.05,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1177.275,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-30T02:32:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 Bowman Draft Jacob Wilson Chrome Auto 1st #CDA-JWI Athletics PSA 10 Auto 10",
+                                                                  "neighborPrice":  285,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1567.5,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-26T02:38:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 Topps Bowman Draft Chrome Auto Jacob Wilson PSA 10 Athletics 1st Rookie",
+                                                                  "neighborPrice":  245,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1347.5,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-20T05:31:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 BOWMAN DRAFT CHROME PROSPECT AUTO #CDAJWI JACOB WILSON PSA 10",
+                                                                  "neighborPrice":  240,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  5.5,
+                                                                  "syntheticPrice":  1320,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-20T02:44:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2023 BOWMAN DRAFT CHROME #BDC121 JACOB WILSON PSA 10",
+                                                                  "neighborPrice":  39.11,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  430.21,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-24T02:32:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Jacob Wilson 2023 BOWMAN DRAFT BASEBALL CHROME #BDC121 PSA 10 Athletics",
+                                                                  "neighborPrice":  34.55,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  380.04999999999995,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-10T19:02:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Jacob Wilson 2023 BOWMAN DRAFT BASEBALL CHROME #BDC121 PSA 10 A’s",
+                                                                  "neighborPrice":  39.99,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2023,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  439.89000000000004,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-04T02:25:00.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Jacob Wilson",
+                                       "year":  2023,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Green Refractor",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "10",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2023 Jacob Wilson Bowman Draft auto Green Refractor PSA 10"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1702843628240x889441068775949600",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:22.962Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1702843628240x889441068775949600",
+                      "summary":  "No comps found for this exact variant (missing: all 1 fetched comps rejected by variant filter (comp_missing_auto×1)). Card Hedge doesn\u0027t have sold data for this card yet.",
+                      "marketTier":  {
+                                         "value":  0,
+                                         "high":  0
+                                     },
+                      "buyZone":  [
+                                      0,
+                                      0
+                                  ],
+                      "holdZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "sellZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "fairMarketValueLive":  0,
+                      "confidence":  0,
+                      "source":  "variant-mismatch",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  107.5,
+                                              "title":  "2023 Bowman Draft Jacob Wilson #BDC121 RC Green Grass Ref 87/99 GEM MINT PSA 10",
+                                              "soldDate":  "2026-04-29T01:12:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1702843628240x889441068775949600",
+                                           "title":  null,
+                                           "player":  "Jacob Wilson",
+                                           "set":  "2023 Bowman Draft Baseball",
+                                           "year":  null,
+                                           "number":  "BDC-121",
+                                           "variant":  "Green Grass Refractor"
+                                       },
+                      "gradeUsed":  "PSA 10",
+                      "compsUsed":  0,
+                      "compsAvailable":  1,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

@@ -2,6 +2,15 @@
  * Tier runner. Engine invocation is injected so the harness mechanics
  * can be exercised without touching the live pricing engine (PR #1)
  * and the same machinery can drive real cases when PR #3 ships Tier 1.
+ *
+ * NOTE — Tier 1 production-data tests run as a SEPARATE phase from the
+ * in-memory mechanics tests below. The Tier 1 path lives under
+ * `backend/harness/tier1/` and is invoked via `npm run test:harness:tier1`.
+ * Tier 1 hits the live production API directly (no EngineInvoker indirection)
+ * and reports its own per-case section headers + final summary via
+ * `_helpers.ts:beginCase` and `_helpers.ts:printFinalSummary`. The runner
+ * machinery in THIS file is intentionally untouched so the mechanics
+ * harness contract stays stable.
  */
 import fs from "node:fs";
 import path from "node:path";

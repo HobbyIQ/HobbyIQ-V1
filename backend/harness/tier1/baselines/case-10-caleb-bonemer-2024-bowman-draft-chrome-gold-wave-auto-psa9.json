@@ -1,0 +1,351 @@
+﻿{
+    "caseId":  "case-10-caleb-bonemer-2024-bowman-draft-chrome-gold-wave-auto-psa9",
+    "category":  "realLookups",
+    "query":  "2024 Bowman Draft Chrome Gold Wave Auto Caleb Bonemer PSA 9",
+    "grade":  "PSA 9",
+    "capturedAt":  "2026-05-15T13:03:33.6574568Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:00.468Z",
+                   "success":  true,
+                   "query":  "2024 Bowman Draft Chrome Gold Wave Auto Caleb Bonemer PSA 9",
+                   "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  836,
+                                      "high":  961.4
+                                  },
+                   "buyZone":  [
+                                   662.112,
+                                   735.68
+                               ],
+                   "holdZone":  [
+                                    735.68,
+                                    836
+                                ],
+                   "sellZone":  [
+                                    836,
+                                    961.4
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1736806089284x299374493557942800",
+                                        "title":  null,
+                                        "player":  "Caleb Bonemer",
+                                        "set":  "2024 Bowman Draft Chrome Baseball",
+                                        "year":  null,
+                                        "number":  "CPA-CBO",
+                                        "variant":  "Gold Wave Refractor"
+                                    },
+                   "gradeUsed":  "PSA 9",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  {
+                                               "fmv":  836,
+                                               "neighborsUsed":  15,
+                                               "neighborsConsidered":  17,
+                                               "parallelTier":  null,
+                                               "confidenceCap":  28,
+                                               "anchor":  null,
+                                               "trend":  {
+                                                             "slopePctPerWeek":  1.31,
+                                                             "direction":  "flat",
+                                                             "weeklySamples":  5,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "no-direct-comps",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN DRAFT CHROME PROSPECT AUTO #CPACBO CALEB BONEMER PSA 9",
+                                                                  "neighborPrice":  124.55,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  1370.05,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-05-02T02:18:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 CALEB BONEMER BOWMAN DRAFT CHROME PRSPCT AUTOS #CPACBO PSA 9!",
+                                                                  "neighborPrice":  115,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  22,
+                                                                  "syntheticPrice":  2530,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-29T14:52:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 CALEB BONEMER BOWMAN DRAFT CHROME PRSPCT AUTOS #CPACBO PSA 9!",
+                                                                  "neighborPrice":  110,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  22,
+                                                                  "syntheticPrice":  2420,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-29T04:01:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 CALEB BONEMER BOWMAN DRAFT CHROME PRSPCT AUTOS #CPACBO PSA 9!",
+                                                                  "neighborPrice":  110,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  22,
+                                                                  "syntheticPrice":  2420,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-29T04:01:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 CALEB BONEMER BOWMAN DRAFT CHROME PRSPCT AUTOS #CPACBO PSA 9!",
+                                                                  "neighborPrice":  110,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  22,
+                                                                  "syntheticPrice":  2420,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-28T21:03:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN DRAFT CHROME PROSPECT AUTOS #CPACBO CALEB BONEMER PSA 9",
+                                                                  "neighborPrice":  105,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  22,
+                                                                  "syntheticPrice":  2310,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-22T18:46:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN DRAFT CHROME PROSPECT AUTO #CPACBO CALEB BONEMER PSA 9",
+                                                                  "neighborPrice":  88,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  968,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-11T22:32:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft #CPA-CBO CALEB BONEMER Chrome Prospect Auto - PSA 9",
+                                                                  "neighborPrice":  76,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  11,
+                                                                  "syntheticPrice":  836,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-04T01:36:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "CALEB BONEMER 2024 BOWMAN CHROME DRAFT CLASS OF 2024 AUTO /250 PSA 9 Q3948",
+                                                                  "neighborPrice":  17.5,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  250,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  8.148148148148147,
+                                                                  "syntheticPrice":  142.59259259259258,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2025-05-28T19:38:45.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Caleb Bonemer Chrome Refractor 1st #BDC-31 PSA 9",
+                                                                  "neighborPrice":  13.49,
+                                                                  "neighborParallel":  "Refractor",
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  14.666666666666666,
+                                                                  "syntheticPrice":  197.85333333333332,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-05T02:32:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN DRAFT CHROME-REFRACTOR #BDC31 CALEB BONEMER PSA 9",
+                                                                  "neighborPrice":  28,
+                                                                  "neighborParallel":  "Refractor",
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  14.666666666666666,
+                                                                  "syntheticPrice":  410.66666666666663,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-30T01:51:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Caleb Bonemer Chrome Refractor 1st #BDC-31 PSA 9",
+                                                                  "neighborPrice":  15.73,
+                                                                  "neighborParallel":  "Refractor",
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  14.666666666666666,
+                                                                  "syntheticPrice":  230.70666666666668,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-28T02:04:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN DRAFT SKY BLUE #BD31 CALEB BONEMER 35/499 PSA 9",
+                                                                  "neighborPrice":  26,
+                                                                  "neighborParallel":  "Sky Blue",
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  499,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  6.65859564164649,
+                                                                  "syntheticPrice":  173.12348668280873,
+                                                                  "stepsRelaxed":  3,
+                                                                  "soldDate":  "2026-05-06T02:12:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "CALEB BONEMER 2024 BOWMAN CHROME DRAFT 1ST HTA CHOICE AUTO /150 PSA 9 Q4230",
+                                                                  "neighborPrice":  58,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  6.666666666666668,
+                                                                  "syntheticPrice":  386.66666666666674,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2025-06-12T22:15:57.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft #CPACBO Caleb Bonemer RC 1st Chrome Refractor Auto /499 PSA 9",
+                                                                  "neighborPrice":  79.99,
+                                                                  "neighborParallel":  "Refractor",
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  499,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  6.214689265536723,
+                                                                  "syntheticPrice":  497.11299435028246,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2025-09-15T19:26:00.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Caleb Bonemer",
+                                       "year":  2024,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Gold Wave",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "9",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2024 Caleb Bonemer Bowman Draft auto Gold Wave PSA 9"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1736806089284x299374493557942800",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:34.830Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1736806089284x299374493557942800",
+                      "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                      "marketTier":  {
+                                         "value":  null,
+                                         "high":  null
+                                     },
+                      "buyZone":  [
+                                      null,
+                                      null
+                                  ],
+                      "holdZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "sellZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "fairMarketValueLive":  null,
+                      "confidence":  0,
+                      "source":  "no-recent-comps",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1736806089284x299374493557942800",
+                                           "title":  null,
+                                           "player":  "Caleb Bonemer",
+                                           "set":  "2024 Bowman Draft Chrome Baseball",
+                                           "year":  null,
+                                           "number":  "CPA-CBO",
+                                           "variant":  "Gold Wave Refractor"
+                                       },
+                      "gradeUsed":  "PSA 9",
+                      "compsUsed":  0,
+                      "compsAvailable":  0,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

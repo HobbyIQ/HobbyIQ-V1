@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "description": "Tier 1 regression corpus — 25 test cases across 20 baseball/sports cards. Each case captures /api/compiq/search + (if cardHedgeCardId resolves) /api/compiq/price-by-id. Grade-paired cases (suffix a/b) test the same card body at Raw and PSA 10.",
+  "cases": [
+    {
+      "id": "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10",
+      "category": "realLookups",
+      "player": "Jacob Wilson",
+      "year": 2023,
+      "set": "Bowman Draft",
+      "parallel": "Green Refractor Auto",
+      "grade": "PSA 10",
+      "query": "2023 Bowman Draft Green Refractor Auto Jacob Wilson PSA 10"
+    },
+    {
+      "id": "case-02-leo-de-vries-2024-bowman-chrome-blue-raywave-auto-psa10",
+      "category": "realLookups",
+      "player": "Leo De Vries",
+      "year": 2024,
+      "set": "Bowman Chrome",
+      "parallel": "Blue Raywave Auto",
+      "grade": "PSA 10",
+      "query": "2024 Bowman Chrome Blue Raywave Auto Leo De Vries PSA 10"
+    },
+    {
+      "id": "case-03-gage-wood-2025-bowman-draft-chrome-gold-auto-psa9",
+      "category": "realLookups",
+      "player": "Gage Wood",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Auto",
+      "grade": "PSA 9",
+      "query": "2025 Bowman Draft Chrome Gold Auto Gage Wood PSA 9"
+    },
+    {
+      "id": "case-04a-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-raw",
+      "category": "realLookups",
+      "player": "Nick Kurtz",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Refractor Auto",
+      "grade": "Raw",
+      "gradePair": "case-04",
+      "query": "2024 Bowman Draft Chrome Refractor Auto Nick Kurtz"
+    },
+    {
+      "id": "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10",
+      "category": "realLookups",
+      "player": "Nick Kurtz",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Refractor Auto",
+      "grade": "PSA 10",
+      "gradePair": "case-04",
+      "query": "2024 Bowman Draft Chrome Refractor Auto Nick Kurtz PSA 10"
+    },
+    {
+      "id": "case-05-shohei-ohtani-2025-topps-transcendent-25-auto-raw",
+      "category": "realLookups",
+      "player": "Shohei Ohtani",
+      "year": 2025,
+      "set": "Topps Transcendent",
+      "parallel": "/25 Auto",
+      "grade": "Raw",
+      "query": "2025 Topps Transcendent Auto Shohei Ohtani /25"
+    },
+    {
+      "id": "case-06a-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-raw",
+      "category": "realLookups",
+      "player": "Caden Bodine",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "X-Fractor Auto",
+      "grade": "Raw",
+      "gradePair": "case-06",
+      "query": "2024 Bowman Draft Chrome X-Fractor Auto Caden Bodine"
+    },
+    {
+      "id": "case-06b-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-psa10",
+      "category": "realLookups",
+      "player": "Caden Bodine",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "X-Fractor Auto",
+      "grade": "PSA 10",
+      "gradePair": "case-06",
+      "query": "2024 Bowman Draft Chrome X-Fractor Auto Caden Bodine PSA 10"
+    },
+    {
+      "id": "case-07-josiah-hartshorn-2025-bowman-draft-chrome-red-lava-auto-psa9",
+      "category": "realLookups",
+      "player": "Josiah Hartshorn",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Red Lava Auto",
+      "grade": "PSA 9",
+      "query": "2025 Bowman Draft Chrome Red Lava Auto Josiah Hartshorn PSA 9"
+    },
+    {
+      "id": "case-08a-josh-hammond-2025-bowman-draft-chrome-blue-auto-raw",
+      "category": "realLookups",
+      "player": "Josh Hammond",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Auto",
+      "grade": "Raw",
+      "gradePair": "case-08",
+      "query": "2025 Bowman Draft Chrome Blue Auto Josh Hammond"
+    },
+    {
+      "id": "case-08b-josh-hammond-2025-bowman-draft-chrome-blue-auto-psa10",
+      "category": "realLookups",
+      "player": "Josh Hammond",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Auto",
+      "grade": "PSA 10",
+      "gradePair": "case-08",
+      "query": "2025 Bowman Draft Chrome Blue Auto Josh Hammond PSA 10"
+    },
+    {
+      "id": "case-09-caleb-bonemer-2024-bowman-draft-chrome-blue-auto-raw",
+      "category": "realLookups",
+      "player": "Caleb Bonemer",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Auto",
+      "grade": "Raw",
+      "query": "2024 Bowman Draft Chrome Blue Auto Caleb Bonemer"
+    },
+    {
+      "id": "case-10-caleb-bonemer-2024-bowman-draft-chrome-gold-wave-auto-psa9",
+      "category": "realLookups",
+      "player": "Caleb Bonemer",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Wave Auto",
+      "grade": "PSA 9",
+      "query": "2024 Bowman Draft Chrome Gold Wave Auto Caleb Bonemer PSA 9"
+    },
+    {
+      "id": "case-11-aaron-judge-2017-topps-chrome-catching-rc-psa10",
+      "category": "realLookups",
+      "player": "Aaron Judge",
+      "year": 2017,
+      "set": "Topps Chrome",
+      "parallel": "Catching RC",
+      "grade": "PSA 10",
+      "query": "2017 Topps Chrome Aaron Judge Catching RC PSA 10"
+    },
+    {
+      "id": "case-12-paul-skenes-2024-topps-chrome-rc-raw",
+      "category": "popularBaseline",
+      "player": "Paul Skenes",
+      "year": 2024,
+      "set": "Topps Chrome",
+      "parallel": "RC",
+      "grade": "Raw",
+      "query": "2024 Topps Chrome Paul Skenes RC"
+    },
+    {
+      "id": "case-13-elly-de-la-cruz-2023-topps-update-rc-raw",
+      "category": "popularBaseline",
+      "player": "Elly De La Cruz",
+      "year": 2023,
+      "set": "Topps Update",
+      "parallel": "RC",
+      "grade": "Raw",
+      "query": "2023 Topps Update Elly De La Cruz RC"
+    },
+    {
+      "id": "case-14-wander-franco-2018-bowman-chrome-1st-auto-raw",
+      "category": "popularBaseline",
+      "player": "Wander Franco",
+      "year": 2018,
+      "set": "Bowman Chrome",
+      "parallel": "1st Auto",
+      "grade": "Raw",
+      "query": "2018 Bowman Chrome Wander Franco 1st Auto"
+    },
+    {
+      "id": "case-15-michael-jordan-1986-fleer-psa8",
+      "category": "vintage",
+      "player": "Michael Jordan",
+      "year": 1986,
+      "set": "Fleer",
+      "parallel": "",
+      "grade": "PSA 8",
+      "query": "1986 Fleer Michael Jordan PSA 8"
+    },
+    {
+      "id": "case-16-ken-griffey-jr-1989-upper-deck-rc-psa9",
+      "category": "vintage",
+      "player": "Ken Griffey Jr",
+      "year": 1989,
+      "set": "Upper Deck",
+      "parallel": "RC",
+      "grade": "PSA 9",
+      "query": "1989 Upper Deck Ken Griffey Jr RC PSA 9"
+    },
+    {
+      "id": "case-17-luka-doncic-2018-panini-prizm-silver-psa10",
+      "category": "nonBaseball",
+      "sport": "NBA",
+      "player": "Luka Doncic",
+      "year": 2018,
+      "set": "Panini Prizm",
+      "parallel": "Silver",
+      "grade": "PSA 10",
+      "query": "2018 Panini Prizm Silver Luka Doncic PSA 10"
+    },
+    {
+      "id": "case-18-justin-herbert-2020-panini-prizm-psa10",
+      "category": "nonBaseball",
+      "sport": "NFL",
+      "player": "Justin Herbert",
+      "year": 2020,
+      "set": "Panini Prizm",
+      "parallel": "",
+      "grade": "PSA 10",
+      "query": "2020 Panini Prizm Justin Herbert PSA 10"
+    },
+    {
+      "id": "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw",
+      "category": "pinnedIdHard",
+      "player": "Eli Willits",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Refractor Auto",
+      "grade": "Raw",
+      "gradePair": "case-19",
+      "query": "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits"
+    },
+    {
+      "id": "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10",
+      "category": "pinnedIdHard",
+      "player": "Eli Willits",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Refractor Auto",
+      "grade": "PSA 10",
+      "gradePair": "case-19",
+      "query": "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits PSA 10"
+    },
+    {
+      "id": "case-20a-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-raw",
+      "category": "pinnedIdHard",
+      "player": "Josh Hammond",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Wave Auto",
+      "grade": "Raw",
+      "gradePair": "case-20",
+      "query": "2025 Bowman Draft Chrome Gold Wave Auto Josh Hammond"
+    },
+    {
+      "id": "case-20b-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-psa10",
+      "category": "pinnedIdHard",
+      "player": "Josh Hammond",
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Wave Auto",
+      "grade": "PSA 10",
+      "gradePair": "case-20",
+      "query": "2025 Bowman Draft Chrome Gold Wave Auto Josh Hammond PSA 10"
+    }
+  ]
+}

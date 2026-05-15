@@ -1,0 +1,195 @@
+﻿{
+    "caseId":  "case-03-gage-wood-2025-bowman-draft-chrome-gold-auto-psa9",
+    "category":  "realLookups",
+    "query":  "2025 Bowman Draft Chrome Gold Auto Gage Wood PSA 9",
+    "grade":  "PSA 9",
+    "capturedAt":  "2026-05-15T13:03:23.3510374Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:01:30.732Z",
+                   "success":  true,
+                   "query":  "2025 Bowman Draft Chrome Gold Auto Gage Wood PSA 9",
+                   "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  1012.5,
+                                      "high":  1164.375
+                                  },
+                   "buyZone":  [
+                                   801.9,
+                                   891
+                               ],
+                   "holdZone":  [
+                                    891,
+                                    1012.5
+                                ],
+                   "sellZone":  [
+                                    1012.5,
+                                    1164.375
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1769295282056x560403074021780700",
+                                        "title":  null,
+                                        "player":  "Gage Wood",
+                                        "set":  "2025 Bowman Draft Chrome Baseball",
+                                        "year":  null,
+                                        "number":  "CPA-GW",
+                                        "variant":  "Gold Wave"
+                                    },
+                   "gradeUsed":  "PSA 9",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  {
+                                               "fmv":  1012.5,
+                                               "neighborsUsed":  3,
+                                               "neighborsConsidered":  3,
+                                               "parallelTier":  null,
+                                               "confidenceCap":  35,
+                                               "anchor":  null,
+                                               "trend":  {
+                                                             "slopePctPerWeek":  -24.67,
+                                                             "direction":  "falling",
+                                                             "weeklySamples":  3,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "no-direct-comps",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2025 Bowman Draft Gage Wood Chrome Auto 1st Prospect #CPA-GW Phillies PSA 9",
+                                                                  "neighborPrice":  112.5,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  9,
+                                                                  "syntheticPrice":  1012.5,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-26T02:33:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2025 Bowman Draft Sapphire Gage Wood Chrome 1st Prospect #BDC-4 Phillies PSA 9",
+                                                                  "neighborPrice":  27,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  18,
+                                                                  "syntheticPrice":  486,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-11T02:54:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "GAGE WOOD 2025 BOWMAN CHROME DRAFT 1ST SAPPHIRE MINT AUTO /199 PSA 9 Q6991",
+                                                                  "neighborPrice":  165.5,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 9",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  199,
+                                                                  "neighborYear":  2025,
+                                                                  "relativeMultiplier":  6.666666666666666,
+                                                                  "syntheticPrice":  1103.3333333333333,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-04-18T01:07:00.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Gage Wood",
+                                       "year":  2025,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Gold",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "9",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2025 Gage Wood Bowman Draft auto Gold PSA 9"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1769295282056x560403074021780700",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:24.646Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1769295282056x560403074021780700",
+                      "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                      "marketTier":  {
+                                         "value":  null,
+                                         "high":  null
+                                     },
+                      "buyZone":  [
+                                      null,
+                                      null
+                                  ],
+                      "holdZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "sellZone":  [
+                                       null,
+                                       null
+                                   ],
+                      "fairMarketValueLive":  null,
+                      "confidence":  0,
+                      "source":  "no-recent-comps",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1769295282056x560403074021780700",
+                                           "title":  null,
+                                           "player":  "Gage Wood",
+                                           "set":  "2025 Bowman Draft Chrome Baseball",
+                                           "year":  null,
+                                           "number":  "CPA-GW",
+                                           "variant":  "Gold Wave"
+                                       },
+                      "gradeUsed":  "PSA 9",
+                      "compsUsed":  0,
+                      "compsAvailable":  0,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}
