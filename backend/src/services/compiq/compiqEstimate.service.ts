@@ -1002,7 +1002,14 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   // Verify that the user's surname(s) appear in the resolved card's player
   // or title. If not, discard the entire comp pool so downstream paths fall
   // through to the eBay-sold-listing fallback (which uses the literal query).
-  if (fetched.card && body.playerName) {
+  //
+  // Skip the guard on the pinned-card-id path: comps were fetched
+  // authoritatively by Card Hedge `card_id` (no fuzzy-match ambiguity to
+  // defend against), and the guard's haystack relies on identity metadata
+  // that the pinned path can't always populate (the card_id may not appear
+  // in the top-20 `searchCards` hits used for the cosmetic identity lookup),
+  // which would otherwise wipe valid comps.
+  if (fetched.card && body.playerName && !body.cardHedgeCardId) {
     const wanted = body.playerName
       .toLowerCase()
       .split(/\s+/)
