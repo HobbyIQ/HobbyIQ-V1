@@ -124,15 +124,34 @@ async function _identifyCard(query: string, h: Record<string, string>): Promise<
     const res = await fetch(`${BASE_URL}/cards/card-match`, {
       method: "POST",
       headers: h,
-      body: JSON.stringify({ query, category: "Baseball" }),
+      // No category hint — CH's AI ignores it anyway (case-15 probe: with
+      // hint=Baseball the AI still returned a Basketball Jordan match at
+      // confidence 0.96, which the engine then mis-priced as a 1991 UD
+      // Baseball novelty). We instead read `match.category` from the
+      // response and let computeEstimate's unsupported-sport guard reject
+      // non-baseball results cleanly. The fallback path (_searchCards)
+      // remains hard-locked to category="Baseball", so even if identifyCard
+      // returns null, no non-baseball card can leak through.
+      body: JSON.stringify({ query }),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const body: any = await res.json();
-    const confidence = Number(body?.confidence ?? 0);
+    // CH /cards/card-match returns { match: {card_id, confidence, …} | null,
+    // candidates_evaluated, search_query_used }. The actual card payload is
+    // nested under `match`; `match: null` means CH's AI declined to commit
+    // to a candidate (low confidence or no candidates). Reading top-level
+    // body.confidence/body.card_id (the previous bug) made every call return
+    // null, silently disabling the AI-match fast path in production.
+    const match = body?.match;
+    if (!match || typeof match !== "object") return null;
+    const confidence = Number(match.confidence ?? 0);
     if (!Number.isFinite(confidence) || confidence < MIN_IDENTITY_CONFIDENCE) return null;
-    if (!body?.card_id) return null;
-    return body;
+    if (!match.card_id) return null;
+    // CH calls the human-readable label `description`; downstream code
+    // (cardMatchesTokens → candidateText) reads `title`. Mirror the field
+    // so token-checks see the AI's full descriptor.
+    return { ...match, title: match.title ?? match.description ?? null };
   } catch (err: any) {
     console.warn("[cardhedge.client] identify threw:", err?.message ?? err);
     return null;
@@ -359,10 +378,24 @@ export function tokenMismatches(c: CardHedgeCard, tokens: RequiredTokens): strin
 export async function findCompsByQuery(
   query: string,
   opts: { grade?: string; limit?: number } = {}
-): Promise<{ card: CardHedgeCard | null; sales: CardHedgeSale[]; variantWarning: string[] }> {
+): Promise<{
+  card: CardHedgeCard | null;
+  sales: CardHedgeSale[];
+  variantWarning: string[];
+  /**
+   * Sport category as identified by Card Hedge's AI match (e.g. "Baseball",
+   * "Basketball", "Football"). Populated when identifyCard returned a
+   * high-confidence match that carried a `category` field; null otherwise
+   * (no AI match, low confidence, or category field absent). Consumed by
+   * compiqEstimate.service.ts's unsupported-sport guard so non-baseball
+   * cards short-circuit to source="unsupported_sport" instead of being
+   * silently mis-priced.
+   */
+  aiCategory: string | null;
+}> {
   const grade = opts.grade ?? "Raw";
   const limit = opts.limit ?? 20;
-  if (!query?.trim()) return { card: null, sales: [], variantWarning: [] };
+  if (!query?.trim()) return { card: null, sales: [], variantWarning: [], aiCategory: null };
 
   // Strip grade tokens (PSA 10, BGS 9.5, SGC 10, "Gem Mint", bare "Raw") from
   // the query before any Card Hedge call. CH card_ids are grade-agnostic —
@@ -392,6 +425,14 @@ export async function findCompsByQuery(
         title: matched.title,
       }
     : null;
+  // Sport category from the AI match payload — surfaced to the caller so
+  // computeEstimate can short-circuit non-baseball queries. CH returns
+  // strings like "Baseball", "Basketball", "Football". null when no
+  // high-confidence match or when the category field is missing.
+  const aiCategory: string | null =
+    matched && typeof matched.category === "string" && matched.category.trim()
+      ? matched.category.trim()
+      : null;
 
   // 1. Prefer an exact-token match from the AI result.
   let card: CardHedgeCard | null = null;
@@ -429,7 +470,7 @@ export async function findCompsByQuery(
     }
   }
 
-  if (!card?.card_id) return { card: null, sales: [], variantWarning: [] };
+  if (!card?.card_id) return { card: null, sales: [], variantWarning: [], aiCategory };
   const allSales = await getCardSales(card.card_id, grade, limit);
 
   // Post-filter sales by required tokens (only when we had an exact card match;
@@ -454,7 +495,7 @@ export async function findCompsByQuery(
     sales = filteredSales.length >= 1 ? filteredSales : allSales;
   }
 
-  return { card, sales, variantWarning };
+  return { card, sales, variantWarning, aiCategory };
 }
 
 /**
