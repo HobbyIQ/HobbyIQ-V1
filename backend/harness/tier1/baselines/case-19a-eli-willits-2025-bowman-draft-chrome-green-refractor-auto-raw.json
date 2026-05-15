@@ -1,0 +1,347 @@
+﻿{
+    "caseId":  "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw",
+    "category":  "pinnedIdHard",
+    "query":  "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits",
+    "grade":  "Raw",
+    "capturedAt":  "2026-05-15T13:03:39.9963916Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:41.498Z",
+                   "success":  true,
+                   "query":  "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits",
+                   "summary":  "No exact match for requested variant (missing: autograph). Showing closest available comp. Indicative price ($62.00) synthesized from 8 neighbor sales — no direct comps yet for this exact variant.",
+                   "marketTier":  {
+                                      "value":  62,
+                                      "high":  71.3
+                                  },
+                   "buyZone":  [
+                                   49.104000000000006,
+                                   54.56
+                               ],
+                   "holdZone":  [
+                                    54.56,
+                                    62
+                                ],
+                   "sellZone":  [
+                                    62,
+                                    71.3
+                                ],
+                   "fairMarketValueLive":  62,
+                   "confidence":  0.33,
+                   "source":  "neighbor-synthesis",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  62,
+                                           "title":  "2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS 1st RC GREEN GRASS #/99🔥 - Raw",
+                                           "soldDate":  "2026-04-17T03:06:00.000Z"
+                                       },
+                                       {
+                                           "price":  76.5,
+                                           "title":  "2025 Topps Bowman Draft Chrome Green Grass #BDC-1 Eli Willits 1st 22/99 - Raw",
+                                           "soldDate":  "2026-04-17T01:39:00.000Z"
+                                       },
+                                       {
+                                           "price":  59.99,
+                                           "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 C /99 - Raw",
+                                           "soldDate":  "2026-02-19T01:53:00.000Z"
+                                       },
+                                       {
+                                           "price":  51.5,
+                                           "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 B /99 Q3855 - Raw",
+                                           "soldDate":  "2026-02-05T03:46:00.000Z"
+                                       },
+                                       {
+                                           "price":  56.69,
+                                           "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 A /99 Q3855 - Raw",
+                                           "soldDate":  "2026-02-05T03:43:00.000Z"
+                                       },
+                                       {
+                                           "price":  60,
+                                           "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                           "soldDate":  "2026-01-30T23:17:00.000Z"
+                                       },
+                                       {
+                                           "price":  60,
+                                           "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                           "soldDate":  "2026-01-30T23:15:00.000Z"
+                                       },
+                                       {
+                                           "price":  60,
+                                           "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                           "soldDate":  "2026-01-30T23:15:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1768694490310x994446741982091500",
+                                        "title":  null,
+                                        "player":  "Eli Willits",
+                                        "set":  "2025 Bowman Draft Chrome Baseball",
+                                        "year":  null,
+                                        "number":  "BDC-1",
+                                        "variant":  "Green Grass Refractor"
+                                    },
+                   "gradeUsed":  "Raw",
+                   "compsUsed":  0,
+                   "compsAvailable":  8,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+                                          "autograph"
+                                      ],
+                   "neighborSynthesis":  {
+                                             "stepsRelaxedMax":  3,
+                                             "detail":  [
+                                                            {
+                                                                "neighborTitle":  "2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS 1st RC GREEN GRASS #/99🔥 - Raw",
+                                                                "neighborPrice":  62,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  62,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-04-17T03:06:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "2025 Topps Bowman Draft Chrome Green Grass #BDC-1 Eli Willits 1st 22/99 - Raw",
+                                                                "neighborPrice":  76.5,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  76.5,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-04-17T01:39:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 C /99 - Raw",
+                                                                "neighborPrice":  59.99,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  59.99,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-02-19T01:53:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 B /99 Q3855 - Raw",
+                                                                "neighborPrice":  51.5,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  51.5,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-02-05T03:46:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 A /99 Q3855 - Raw",
+                                                                "neighborPrice":  56.69,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  56.69,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-02-05T03:43:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                                                "neighborPrice":  60,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  60,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-01-30T23:17:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                                                "neighborPrice":  60,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  60,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-01-30T23:15:00.000Z"
+                                                            },
+                                                            {
+                                                                "neighborTitle":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                                                "neighborPrice":  60,
+                                                                "neighborParallel":  "Green",
+                                                                "neighborGrade":  "Raw",
+                                                                "neighborIsAuto":  false,
+                                                                "neighborPrintRun":  99,
+                                                                "neighborYear":  2025,
+                                                                "relativeMultiplier":  1,
+                                                                "syntheticPrice":  60,
+                                                                "stepsRelaxed":  3,
+                                                                "soldDate":  "2026-01-30T23:15:00.000Z"
+                                                            }
+                                                        ],
+                                             "anchor":  {
+                                                            "price":  62,
+                                                            "neighborsUsed":  3,
+                                                            "parallelTier":  "green",
+                                                            "sources":  [
+                                                                            {
+                                                                                "title":  "2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS 1st RC GREEN GRASS #/99🔥 - Raw",
+                                                                                "rawPrice":  62,
+                                                                                "syntheticPrice":  62,
+                                                                                "soldDate":  "2026-04-17T03:06:00.000Z"
+                                                                            },
+                                                                            {
+                                                                                "title":  "2025 Topps Bowman Draft Chrome Green Grass #BDC-1 Eli Willits 1st 22/99 - Raw",
+                                                                                "rawPrice":  76.5,
+                                                                                "syntheticPrice":  76.5,
+                                                                                "soldDate":  "2026-04-17T01:39:00.000Z"
+                                                                            },
+                                                                            {
+                                                                                "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 C /99 - Raw",
+                                                                                "rawPrice":  59.99,
+                                                                                "syntheticPrice":  59.99,
+                                                                                "soldDate":  "2026-02-19T01:53:00.000Z"
+                                                                            }
+                                                                        ]
+                                                        },
+                                             "trend":  null
+                                         },
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Eli Willits",
+                                       "year":  2025,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Green Refractor",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  null,
+                                       "gradingCompany":  null,
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2025 Eli Willits Bowman Draft auto Green Refractor"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1768694490310x994446741982091500",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:40.681Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1768694490310x994446741982091500",
+                      "summary":  "Indicative price ($62.00) synthesized from 8 neighbor sales — no direct comps yet for this exact variant.",
+                      "marketTier":  {
+                                         "value":  62,
+                                         "high":  71.3
+                                     },
+                      "buyZone":  [
+                                      49.104000000000006,
+                                      54.56
+                                  ],
+                      "holdZone":  [
+                                       54.56,
+                                       62
+                                   ],
+                      "sellZone":  [
+                                       62,
+                                       71.3
+                                   ],
+                      "fairMarketValueLive":  62,
+                      "confidence":  0.33,
+                      "source":  "neighbor-synthesis",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  62,
+                                              "title":  "2025 BOWMAN DRAFT CHROME #BDC-1 ELI WILLITS 1st RC GREEN GRASS #/99🔥 - Raw",
+                                              "soldDate":  "2026-04-17T03:06:00.000Z"
+                                          },
+                                          {
+                                              "price":  76.5,
+                                              "title":  "2025 Topps Bowman Draft Chrome Green Grass #BDC-1 Eli Willits 1st 22/99 - Raw",
+                                              "soldDate":  "2026-04-17T01:39:00.000Z"
+                                          },
+                                          {
+                                              "price":  59.99,
+                                              "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 C /99 - Raw",
+                                              "soldDate":  "2026-02-19T01:53:00.000Z"
+                                          },
+                                          {
+                                              "price":  51.5,
+                                              "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 B /99 Q3855 - Raw",
+                                              "soldDate":  "2026-02-05T03:46:00.000Z"
+                                          },
+                                          {
+                                              "price":  56.69,
+                                              "title":  "ELI WILLITS 2025 BOWMAN CHROME DRAFT 1ST GREEN GRASS #BDC-1 A /99 Q3855 - Raw",
+                                              "soldDate":  "2026-02-05T03:43:00.000Z"
+                                          },
+                                          {
+                                              "price":  60,
+                                              "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                              "soldDate":  "2026-01-30T23:17:00.000Z"
+                                          },
+                                          {
+                                              "price":  60,
+                                              "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                              "soldDate":  "2026-01-30T23:15:00.000Z"
+                                          },
+                                          {
+                                              "price":  60,
+                                              "title":  "2025 Bowman Draft #BDC-1 Eli Willits 1st Prospect Green Grass Chrome 54/99 - Raw",
+                                              "soldDate":  "2026-01-30T23:15:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1768694490310x994446741982091500",
+                                           "title":  null,
+                                           "player":  "Eli Willits",
+                                           "set":  "2025 Bowman Draft Chrome Baseball",
+                                           "year":  null,
+                                           "number":  "BDC-1",
+                                           "variant":  "Green Grass Refractor"
+                                       },
+                      "gradeUsed":  "Raw",
+                      "compsUsed":  0,
+                      "compsAvailable":  8,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

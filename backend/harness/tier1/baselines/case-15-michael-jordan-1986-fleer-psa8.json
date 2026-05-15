@@ -1,0 +1,257 @@
+﻿{
+    "caseId":  "case-15-michael-jordan-1986-fleer-psa8",
+    "category":  "vintage",
+    "query":  "1986 Fleer Michael Jordan PSA 8",
+    "grade":  "PSA 8",
+    "capturedAt":  "2026-05-15T13:03:37.9846128Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:23.609Z",
+                   "success":  true,
+                   "query":  "1986 Fleer Michael Jordan PSA 8",
+                   "summary":  "Buy — good value and market signals are positive.",
+                   "marketTier":  {
+                                      "value":  46,
+                                      "high":  52.9
+                                  },
+                   "buyZone":  [
+                                   35.19,
+                                   39.099999999999994
+                               ],
+                   "holdZone":  [
+                                    39.099999999999994,
+                                    46
+                                ],
+                   "sellZone":  [
+                                    46,
+                                    52.9
+                                ],
+                   "fairMarketValueLive":  46,
+                   "confidence":  0.55,
+                   "source":  "live",
+                   "trendAnalysis":  {
+                                         "market_direction":  "up",
+                                         "change_from_older_to_recent":  -30.9,
+                                         "liquidity":  "Normal"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  33.04347826086957,
+                                           "title":  "1994 Upper Deck #8 Michael Jordan Next Generation Rookie PSA 8",
+                                           "soldDate":  "2026-04-07T03:38:00.000Z"
+                                       },
+                                       {
+                                           "price":  60.86086956521739,
+                                           "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
+                                           "soldDate":  "2026-03-27T13:09:00.000Z"
+                                       },
+                                       {
+                                           "price":  19.1304347826087,
+                                           "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
+                                           "soldDate":  "2026-01-11T21:03:00.000Z"
+                                       },
+                                       {
+                                           "price":  73.91304347826087,
+                                           "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
+                                           "soldDate":  "2025-11-27T13:33:00.000Z"
+                                       },
+                                       {
+                                           "price":  52.16521739130435,
+                                           "title":  "Michael Jordan Holo PSA 8 - 1994 Upper Deck Next Generation #8 NM-MT White Sox",
+                                           "soldDate":  "2025-09-17T18:04:00.000Z"
+                                       },
+                                       {
+                                           "price":  47.82608695652174,
+                                           "title":  "*BRAND NEW* 1994 Upper Deck Next Generation #8 Michael Jordan PSA 8 NM-MT",
+                                           "soldDate":  "2025-09-16T21:08:00.000Z"
+                                       },
+                                       {
+                                           "price":  40,
+                                           "title":  "🔥 Beautiful 1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT GOAT",
+                                           "soldDate":  "2025-08-08T00:58:00.000Z"
+                                       },
+                                       {
+                                           "price":  39.130434782608695,
+                                           "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
+                                           "soldDate":  "2025-06-29T10:32:00.000Z"
+                                       },
+                                       {
+                                           "price":  23.382608695652177,
+                                           "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
+                                           "soldDate":  "2025-06-06T20:08:18.000Z"
+                                       },
+                                       {
+                                           "price":  34.78260869565218,
+                                           "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
+                                           "soldDate":  "2025-05-14T21:01:20.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1669440831426x801099209903811700",
+                                        "title":  null,
+                                        "player":  "Michael Jordan",
+                                        "set":  "1994 Upper Deck Baseball",
+                                        "year":  null,
+                                        "number":  "8",
+                                        "variant":  "Base"
+                                    },
+                   "gradeUsed":  "PSA 8",
+                   "compsUsed":  27,
+                   "compsAvailable":  27,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Michael Jordan",
+                                       "year":  1986,
+                                       "brand":  null,
+                                       "set":  null,
+                                       "parallel":  null,
+                                       "isAuto":  false,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "8",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  0.6000000000000001
+                                   },
+                   "searchQuery":  "1986 Michael Jordan PSA 8"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1669440831426x801099209903811700",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:38.680Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1669440831426x801099209903811700",
+                      "summary":  "Buy — good value and market signals are positive.",
+                      "marketTier":  {
+                                         "value":  46,
+                                         "high":  52.9
+                                     },
+                      "buyZone":  [
+                                      35.19,
+                                      39.099999999999994
+                                  ],
+                      "holdZone":  [
+                                       39.099999999999994,
+                                       46
+                                   ],
+                      "sellZone":  [
+                                       46,
+                                       52.9
+                                   ],
+                      "fairMarketValueLive":  46,
+                      "confidence":  0.55,
+                      "source":  "live",
+                      "trendAnalysis":  {
+                                            "market_direction":  "up",
+                                            "change_from_older_to_recent":  59.9,
+                                            "liquidity":  "Normal",
+                                            "broaderTrend":  {
+                                                                 "impliedTrendPct":  0,
+                                                                 "direction":  "flat",
+                                                                 "recentMedian":  null,
+                                                                 "olderMedian":  null,
+                                                                 "recentCount":  0,
+                                                                 "olderCount":  0,
+                                                                 "similarCardsScanned":  0,
+                                                                 "totalSamples":  0,
+                                                                 "windowRecentDays":  14,
+                                                                 "windowOlderDays":  45,
+                                                                 "basedOn":  "insufficient"
+                                                             }
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  33.04347826086957,
+                                              "title":  "1994 Upper Deck #8 Michael Jordan Next Generation Rookie PSA 8",
+                                              "soldDate":  "2026-04-07T03:38:00.000Z"
+                                          },
+                                          {
+                                              "price":  60.86086956521739,
+                                              "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
+                                              "soldDate":  "2026-03-27T13:09:00.000Z"
+                                          },
+                                          {
+                                              "price":  19.1304347826087,
+                                              "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
+                                              "soldDate":  "2026-01-11T21:03:00.000Z"
+                                          },
+                                          {
+                                              "price":  73.91304347826087,
+                                              "title":  "1994 MICHAEL JORDAN ROOKIE CARD UPPER DECK #8 NEXT GENERATION PSA 8 NM-MT",
+                                              "soldDate":  "2025-11-27T13:33:00.000Z"
+                                          },
+                                          {
+                                              "price":  52.16521739130435,
+                                              "title":  "Michael Jordan Holo PSA 8 - 1994 Upper Deck Next Generation #8 NM-MT White Sox",
+                                              "soldDate":  "2025-09-17T18:04:00.000Z"
+                                          },
+                                          {
+                                              "price":  47.82608695652174,
+                                              "title":  "*BRAND NEW* 1994 Upper Deck Next Generation #8 Michael Jordan PSA 8 NM-MT",
+                                              "soldDate":  "2025-09-16T21:08:00.000Z"
+                                          },
+                                          {
+                                              "price":  40,
+                                              "title":  "🔥 Beautiful 1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT GOAT",
+                                              "soldDate":  "2025-08-08T00:58:00.000Z"
+                                          },
+                                          {
+                                              "price":  39.130434782608695,
+                                              "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
+                                              "soldDate":  "2025-06-29T10:32:00.000Z"
+                                          },
+                                          {
+                                              "price":  23.382608695652177,
+                                              "title":  "1994 UPPER DECK NEXT GENERATION #8 MICHAEL JORDAN PSA 8",
+                                              "soldDate":  "2025-06-06T20:08:18.000Z"
+                                          },
+                                          {
+                                              "price":  34.78260869565218,
+                                              "title":  "1994 Upper Deck Michael Jordan Next Generation #8 PSA 8 NM-MT",
+                                              "soldDate":  "2025-05-14T21:01:20.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1669440831426x801099209903811700",
+                                           "title":  null,
+                                           "player":  null,
+                                           "set":  null,
+                                           "year":  null,
+                                           "number":  null,
+                                           "variant":  null
+                                       },
+                      "gradeUsed":  "PSA 8",
+                      "compsUsed":  27,
+                      "compsAvailable":  27,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  {
+                                           "impliedTrendPct":  0,
+                                           "direction":  "flat",
+                                           "recentMedian":  null,
+                                           "olderMedian":  null,
+                                           "recentCount":  0,
+                                           "olderCount":  0,
+                                           "similarCardsScanned":  0,
+                                           "totalSamples":  0,
+                                           "windowRecentDays":  14,
+                                           "windowOlderDays":  45,
+                                           "basedOn":  "insufficient"
+                                       }
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

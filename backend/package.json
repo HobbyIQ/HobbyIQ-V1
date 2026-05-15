@@ -8,8 +8,9 @@
     "zip": "node ../zip.js",
     "ocr:report": "node scripts/ocr-quality-report.js",
     "ocr:readiness": "node scripts/ocr-release-readiness.js",
-    "test": "vitest run",
-    "test:harness": "vitest run harness"
+    "test": "vitest run --exclude \"**/harness/tier1/**\"",
+    "test:harness": "vitest run harness --exclude \"**/harness/tier1/**\"",
+    "test:harness:tier1": "vitest run harness/tier1"
   },
   "engines": {
     "node": ">=18.x"

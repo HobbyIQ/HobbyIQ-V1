@@ -1,0 +1,78 @@
+﻿{
+    "caseId":  "case-07-josiah-hartshorn-2025-bowman-draft-chrome-red-lava-auto-psa9",
+    "category":  "realLookups",
+    "query":  "2025 Bowman Draft Chrome Red Lava Auto Josiah Hartshorn PSA 9",
+    "grade":  "PSA 9",
+    "capturedAt":  "2026-05-15T13:03:28.9997267Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:01:49.069Z",
+                   "success":  true,
+                   "query":  "2025 Bowman Draft Chrome Red Lava Auto Josiah Hartshorn PSA 9",
+                   "summary":  "No exact match for requested variant (missing: player_mismatch). Showing closest available comp. Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  null,
+                                      "high":  null
+                                  },
+                   "buyZone":  [
+                                   null,
+                                   null
+                               ],
+                   "holdZone":  [
+                                    null,
+                                    null
+                                ],
+                   "sellZone":  [
+                                    null,
+                                    null
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  null,
+                   "gradeUsed":  "PSA 9",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+                                          "player_mismatch"
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Lava Josiah Hartshorn",
+                                       "year":  2025,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Red",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "9",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2025 Lava Josiah Hartshorn Bowman Draft auto Red PSA 9"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  null,
+    "priceById":  null,
+    "priceByIdError":  null,
+    "notes":  [
+                  "no cardHedgeCardId found in search response"
+              ]
+}

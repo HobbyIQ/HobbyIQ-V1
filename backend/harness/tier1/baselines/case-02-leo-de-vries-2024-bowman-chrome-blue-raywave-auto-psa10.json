@@ -1,0 +1,227 @@
+﻿{
+    "caseId":  "case-02-leo-de-vries-2024-bowman-chrome-blue-raywave-auto-psa10",
+    "category":  "realLookups",
+    "query":  "2024 Bowman Chrome Blue Raywave Auto Leo De Vries PSA 10",
+    "grade":  "PSA 10",
+    "capturedAt":  "2026-05-15T13:03:23.0383660Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:01:26.834Z",
+                   "success":  true,
+                   "query":  "2024 Bowman Chrome Blue Raywave Auto Leo De Vries PSA 10",
+                   "summary":  "No exact match for requested variant (missing: player_mismatch). Showing closest available comp. Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  776.36,
+                                      "high":  892.814
+                                  },
+                   "buyZone":  [
+                                   614.8771200000001,
+                                   683.1968
+                               ],
+                   "holdZone":  [
+                                    683.1968,
+                                    776.36
+                                ],
+                   "sellZone":  [
+                                    776.36,
+                                    892.814
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  null,
+                   "gradeUsed":  "PSA 10",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+                                          "player_mismatch"
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  {
+                                               "fmv":  776.36,
+                                               "neighborsUsed":  8,
+                                               "neighborsConsidered":  9,
+                                               "parallelTier":  "blue",
+                                               "confidenceCap":  45,
+                                               "anchor":  {
+                                                              "price":  776.3636363636364,
+                                                              "neighborsUsed":  3,
+                                                              "parallelTier":  "blue",
+                                                              "sources":  [
+                                                                              {
+                                                                                  "title":  "2024 Bowman Chrome Leo De Vries Prospect AUTO Blue RayWave /150 PSA 10 Oakland",
+                                                                                  "rawPrice":  1300,
+                                                                                  "syntheticPrice":  787.8787878787879,
+                                                                                  "soldDate":  "2026-05-12T01:12:00.000Z"
+                                                                              },
+                                                                              {
+                                                                                  "title":  "Leo De Vries 2024 Bowman Chrome Prospect AUTO Blue RayWave /150 PSA 10",
+                                                                                  "rawPrice":  1199.99,
+                                                                                  "syntheticPrice":  727.2666666666667,
+                                                                                  "soldDate":  "2026-04-01T09:50:00.000Z"
+                                                                              },
+                                                                              {
+                                                                                  "title":  "2024 BOWMAN CHROME PROSPECT AUTO BLUE RAYWAVE #CPALD LEO DE VRIES 83/150 PSA 10",
+                                                                                  "rawPrice":  1281,
+                                                                                  "syntheticPrice":  776.3636363636364,
+                                                                                  "soldDate":  "2026-03-30T02:52:00.000Z"
+                                                                              }
+                                                                          ]
+                                                          },
+                                               "trend":  {
+                                                             "slopePctPerWeek":  2.66,
+                                                             "direction":  "rising",
+                                                             "weeklySamples":  3,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "no-direct-comps",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Chrome Leo De Vries Prospect AUTO Blue RayWave /150 PSA 10 Oakland",
+                                                                  "neighborPrice":  1300,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  787.8787878787879,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-05-12T01:12:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Leo De Vries 2024 Bowman Chrome Prospect AUTO Blue RayWave /150 PSA 10",
+                                                                  "neighborPrice":  1199.99,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  727.2666666666667,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-04-01T09:50:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 BOWMAN CHROME PROSPECT AUTO BLUE RAYWAVE #CPALD LEO DE VRIES 83/150 PSA 10",
+                                                                  "neighborPrice":  1281,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  776.3636363636364,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-03-30T02:52:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Leo De Vries 2024 Bowman Chrome Prospect AUTO Blue RayWave /150 PSA 10 RARE",
+                                                                  "neighborPrice":  999.99,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  606.0545454545455,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2026-03-21T01:52:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "LEO DE VRIES PSA 10 2024 BOWMAN CHROME 1ST BLUE RAYWAVE REFRACTOR AUTO 83/150",
+                                                                  "neighborPrice":  786.66,
+                                                                  "neighborParallel":  "Wave Refractor",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  1.4141414141414144,
+                                                                  "syntheticPrice":  1112.448484848485,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2025-11-24T03:38:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "LEO DE VRIES 2024 BOWMAN CHROME 1ST BLUE RAYWAVE AUTO /150 PSA 10 Q4835",
+                                                                  "neighborPrice":  845,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  512.1212121212121,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2025-09-12T03:42:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Leo De Vries 2024 Bowman Chrome 1st Blue Raywave Refractor AUTO / 150 PSA 10",
+                                                                  "neighborPrice":  815.37,
+                                                                  "neighborParallel":  "Wave Refractor",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  1.4141414141414144,
+                                                                  "syntheticPrice":  1153.048484848485,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2025-09-01T02:57:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Chrome Prospect Blue Raywave Leo De Vries Auto #128/150 PSA 10",
+                                                                  "neighborPrice":  890,
+                                                                  "neighborParallel":  "Blue",
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  true,
+                                                                  "neighborPrintRun":  150,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  0.6060606060606061,
+                                                                  "syntheticPrice":  539.3939393939394,
+                                                                  "stepsRelaxed":  1,
+                                                                  "soldDate":  "2025-06-16T15:36:46.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Raywave Leo De Vries",
+                                       "year":  2024,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Chrome",
+                                       "parallel":  "Blue",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "10",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2024 Raywave Leo De Vries Bowman Chrome auto Blue PSA 10"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  null,
+    "priceById":  null,
+    "priceByIdError":  null,
+    "notes":  [
+                  "no cardHedgeCardId found in search response"
+              ]
+}

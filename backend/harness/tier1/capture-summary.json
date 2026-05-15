@@ -1,0 +1,221 @@
+﻿{
+    "flags":  [
+                  {
+                      "caseId":  "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "variant-mismatch"
+                  },
+                  {
+                      "caseId":  "case-01-jacob-wilson-2023-bowman-draft-green-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "variant-mismatch"
+                  },
+                  {
+                      "caseId":  "case-02-leo-de-vries-2024-bowman-chrome-blue-raywave-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-02-leo-de-vries-2024-bowman-chrome-blue-raywave-auto-psa10"
+                  },
+                  {
+                      "caseId":  "case-03-gage-wood-2025-bowman-draft-chrome-gold-auto-psa9",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-03-gage-wood-2025-bowman-draft-chrome-gold-auto-psa9"
+                  },
+                  {
+                      "caseId":  "case-03-gage-wood-2025-bowman-draft-chrome-gold-auto-psa9",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-04a-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-04a-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-raw"
+                  },
+                  {
+                      "caseId":  "case-04a-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-raw",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "variant-mismatch"
+                  },
+                  {
+                      "caseId":  "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "variant-mismatch"
+                  },
+                  {
+                      "caseId":  "case-05-shohei-ohtani-2025-topps-transcendent-25-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-05-shohei-ohtani-2025-topps-transcendent-25-auto-raw"
+                  },
+                  {
+                      "caseId":  "case-06a-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-06a-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-raw"
+                  },
+                  {
+                      "caseId":  "case-06b-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-06b-caden-bodine-2024-bowman-draft-chrome-x-fractor-auto-psa10"
+                  },
+                  {
+                      "caseId":  "case-07-josiah-hartshorn-2025-bowman-draft-chrome-red-lava-auto-psa9",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-07-josiah-hartshorn-2025-bowman-draft-chrome-red-lava-auto-psa9"
+                  },
+                  {
+                      "caseId":  "case-08a-josh-hammond-2025-bowman-draft-chrome-blue-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-08a-josh-hammond-2025-bowman-draft-chrome-blue-auto-raw"
+                  },
+                  {
+                      "caseId":  "case-08a-josh-hammond-2025-bowman-draft-chrome-blue-auto-raw",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-08b-josh-hammond-2025-bowman-draft-chrome-blue-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-08b-josh-hammond-2025-bowman-draft-chrome-blue-auto-psa10"
+                  },
+                  {
+                      "caseId":  "case-08b-josh-hammond-2025-bowman-draft-chrome-blue-auto-psa10",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-10-caleb-bonemer-2024-bowman-draft-chrome-gold-wave-auto-psa9",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-10-caleb-bonemer-2024-bowman-draft-chrome-gold-wave-auto-psa9"
+                  },
+                  {
+                      "caseId":  "case-10-caleb-bonemer-2024-bowman-draft-chrome-gold-wave-auto-psa9",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-11-aaron-judge-2017-topps-chrome-catching-rc-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-11-aaron-judge-2017-topps-chrome-catching-rc-psa10"
+                  },
+                  {
+                      "caseId":  "case-17-luka-doncic-2018-panini-prizm-silver-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-17-luka-doncic-2018-panini-prizm-silver-psa10"
+                  },
+                  {
+                      "caseId":  "case-18-justin-herbert-2020-panini-prizm-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-18-justin-herbert-2020-panini-prizm-psa10"
+                  },
+                  {
+                      "caseId":  "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "neighbor-synthesis"
+                  },
+                  {
+                      "caseId":  "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "neighbor-synthesis"
+                  },
+                  {
+                      "caseId":  "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "variant-mismatch"
+                  },
+                  {
+                      "caseId":  "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-20a-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-raw",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-20a-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-raw"
+                  },
+                  {
+                      "caseId":  "case-20a-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-raw",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "caseId":  "case-20b-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-psa10",
+                      "flag":  "compsUsed=0 in /search",
+                      "source":  "no-recent-comps"
+                  },
+                  {
+                      "flag":  "source=no-recent-comps in /search",
+                      "caseId":  "case-20b-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-psa10"
+                  },
+                  {
+                      "caseId":  "case-20b-josh-hammond-2025-bowman-draft-chrome-gold-wave-auto-psa10",
+                      "flag":  "compsUsed=0 in /price-by-id",
+                      "source":  "no-recent-comps"
+                  }
+              ],
+    "priceByIdCaptured":  17,
+    "withCardId":  17,
+    "total":  25,
+    "errors":  [
+
+               ],
+    "captured":  25
+}

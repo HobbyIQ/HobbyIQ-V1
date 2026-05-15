@@ -1,0 +1,320 @@
+﻿{
+    "caseId":  "case-04b-nick-kurtz-2024-bowman-draft-chrome-refractor-auto-psa10",
+    "category":  "realLookups",
+    "query":  "2024 Bowman Draft Chrome Refractor Auto Nick Kurtz PSA 10",
+    "grade":  "PSA 10",
+    "capturedAt":  "2026-05-15T13:03:26.6860464Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:01:36.640Z",
+                   "success":  true,
+                   "query":  "2024 Bowman Draft Chrome Refractor Auto Nick Kurtz PSA 10",
+                   "summary":  "Indicative price ($285.14) synthesized from 45 sibling-parallel sales — Card Hedge has no direct comps for this exact variant yet.",
+                   "marketTier":  {
+                                      "value":  285.14,
+                                      "high":  327.91099999999994
+                                  },
+                   "buyZone":  [
+                                   225.83087999999998,
+                                   250.92319999999998
+                               ],
+                   "holdZone":  [
+                                    250.92319999999998,
+                                    285.14
+                                ],
+                   "sellZone":  [
+                                    285.14,
+                                    327.91099999999994
+                                ],
+                   "fairMarketValueLive":  null,
+                   "confidence":  0,
+                   "source":  "variant-mismatch",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  2550,
+                                           "title":  "2024 BOWMAN DRAFT CHROME PROSPECT AUTO GREEN LAVA #CPANK NICK KURTZ 10/99 PSA 10",
+                                           "soldDate":  "2025-08-31T02:47:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1736804710503x733182095750814300",
+                                        "title":  null,
+                                        "player":  "Nick Kurtz",
+                                        "set":  "2024 Bowman Draft Chrome Baseball",
+                                        "year":  null,
+                                        "number":  "CPA-NK",
+                                        "variant":  "Green Lava Refractor"
+                                    },
+                   "gradeUsed":  "PSA 10",
+                   "compsUsed":  0,
+                   "compsAvailable":  1,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  {
+                                                  "error":  "insufficient_neighbor_pool comps=1"
+                                              },
+                   "crossParallelAnchor":  {
+                                               "fmv":  285.14,
+                                               "neighborsUsed":  45,
+                                               "neighborsConsidered":  45,
+                                               "parallelTier":  null,
+                                               "confidenceCap":  33,
+                                               "anchor":  {
+                                                              "price":  285.14,
+                                                              "neighborsUsed":  3,
+                                                              "parallelTier":  "refractor",
+                                                              "sources":  [
+                                                                              {
+                                                                                  "title":  "2024 Bowman Draft Nick Kurtz Chrome Refractor 1st #BDC-56 Athletics PSA 10",
+                                                                                  "rawPrice":  106.43,
+                                                                                  "syntheticPrice":  212.86,
+                                                                                  "soldDate":  "2026-05-13T02:09:00.000Z"
+                                                                              },
+                                                                              {
+                                                                                  "title":  "2024 Bowman Draft Nick Kurtz Chrome Refractor 1st #BDC-56 Athletics PSA 10",
+                                                                                  "rawPrice":  142.57,
+                                                                                  "syntheticPrice":  285.14,
+                                                                                  "soldDate":  "2026-05-12T02:44:00.000Z"
+                                                                              },
+                                                                              {
+                                                                                  "title":  "2024 Bowman Draft Nick Kurtz Chrome Refractor 1st #BDC-56 Athletics PSA 10",
+                                                                                  "rawPrice":  167.5,
+                                                                                  "syntheticPrice":  335,
+                                                                                  "soldDate":  "2026-05-05T02:13:00.000Z"
+                                                                              }
+                                                                          ]
+                                                          },
+                                               "trend":  {
+                                                             "slopePctPerWeek":  -20.46,
+                                                             "direction":  "falling",
+                                                             "weeklySamples":  7,
+                                                             "windowDays":  60
+                                                         },
+                                               "triggerReason":  "variant-mismatch",
+                                               "detail":  [
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft - Nick Kurtz #BD-56 (RC) PSA 10",
+                                                                  "neighborPrice":  59.99,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  179.97,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-12T18:48:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "Nick Kurtz PSA 10 2024 Bowman Draft Oakland Athletics #BD-56 6868",
+                                                                  "neighborPrice":  36.03,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  108.09,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-12T04:27:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Nick Kurtz 1st Prospect #BD-56 Athletics PSA 10 GEM MINT",
+                                                                  "neighborPrice":  40,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  120,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-12T02:33:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Nick Kurtz 1st Prospect #BD-56 Athletics PSA 10 GEM MINT",
+                                                                  "neighborPrice":  47,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  141,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-12T01:39:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Nick Kurtz 1st Prospect #BD-56 Athletics PSA 10 GEM MINT",
+                                                                  "neighborPrice":  36,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  108,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-06T03:07:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft - Nick Kurtz Bowman 1st - PSA 10 - #BD-56 PSA 10",
+                                                                  "neighborPrice":  59.95,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  179.85000000000002,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-05T03:15:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Nick Kurtz 1st Prospect #BD-56 Athletics PSA 10 GEM MINT",
+                                                                  "neighborPrice":  35,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  105,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-05T01:43:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft Nick Kurtz 1st Prospect #BD-56 Athletics PSA 10 GEM MINT",
+                                                                  "neighborPrice":  51,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  153,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-05T01:43:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Topps CHROME Bowman Draft #BDC-56 NICK KURTZ (Athletics) GEM MT PSA 10",
+                                                                  "neighborPrice":  95,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  285,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-07T16:12:00.000Z"
+                                                              },
+                                                              {
+                                                                  "neighborTitle":  "2024 Bowman Draft - Chrome Nick Kurtz #BDC-56 (RC) PSA 10 / Oakland Athletics",
+                                                                  "neighborPrice":  90,
+                                                                  "neighborParallel":  null,
+                                                                  "neighborGrade":  "PSA 10",
+                                                                  "neighborIsAuto":  false,
+                                                                  "neighborPrintRun":  null,
+                                                                  "neighborYear":  2024,
+                                                                  "relativeMultiplier":  3,
+                                                                  "syntheticPrice":  270,
+                                                                  "stepsRelaxed":  2,
+                                                                  "soldDate":  "2026-05-04T00:44:00.000Z"
+                                                              }
+                                                          ],
+                                               "momentumAdjustedFmv":  null,
+                                               "momentumPctApplied":  null,
+                                               "weeksStale":  null,
+                                               "effectiveWeeksApplied":  null,
+                                               "momentumSource":  null
+                                           },
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Nick Kurtz",
+                                       "year":  2024,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Draft",
+                                       "parallel":  "Refractor",
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  "10",
+                                       "gradingCompany":  "PSA",
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2024 Nick Kurtz Bowman Draft auto Refractor PSA 10"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1736804710503x733182095750814300",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:28.078Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1736804710503x733182095750814300",
+                      "summary":  "No comps found for this exact variant (missing: all 1 fetched comps rejected by variant filter (parallel_mismatch×1)). Card Hedge doesn\u0027t have sold data for this card yet.",
+                      "marketTier":  {
+                                         "value":  0,
+                                         "high":  0
+                                     },
+                      "buyZone":  [
+                                      0,
+                                      0
+                                  ],
+                      "holdZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "sellZone":  [
+                                       0,
+                                       0
+                                   ],
+                      "fairMarketValueLive":  0,
+                      "confidence":  0,
+                      "source":  "variant-mismatch",
+                      "trendAnalysis":  {
+                                            "market_direction":  "flat",
+                                            "change_from_older_to_recent":  0,
+                                            "liquidity":  "Unknown",
+                                            "broaderTrend":  null
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  2550,
+                                              "title":  "2024 BOWMAN DRAFT CHROME PROSPECT AUTO GREEN LAVA #CPANK NICK KURTZ 10/99 PSA 10",
+                                              "soldDate":  "2025-08-31T02:47:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1736804710503x733182095750814300",
+                                           "title":  null,
+                                           "player":  "Nick Kurtz",
+                                           "set":  "2024 Bowman Draft Chrome Baseball",
+                                           "year":  null,
+                                           "number":  "CPA-NK",
+                                           "variant":  "Green Lava Refractor"
+                                       },
+                      "gradeUsed":  "PSA 10",
+                      "compsUsed":  0,
+                      "compsAvailable":  1,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  null
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

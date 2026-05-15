@@ -1,0 +1,217 @@
+﻿{
+    "caseId":  "case-13-elly-de-la-cruz-2023-topps-update-rc-raw",
+    "category":  "popularBaseline",
+    "query":  "2023 Topps Update Elly De La Cruz RC",
+    "grade":  "Raw",
+    "capturedAt":  "2026-05-15T13:03:35.8434307Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:10.515Z",
+                   "success":  true,
+                   "query":  "2023 Topps Update Elly De La Cruz RC",
+                   "summary":  "Hold — fair value, but momentum is improving.",
+                   "marketTier":  {
+                                      "value":  3,
+                                      "high":  3
+                                  },
+                   "buyZone":  [
+                                   2.7,
+                                   3
+                               ],
+                   "holdZone":  [
+                                    3,
+                                    3
+                                ],
+                   "sellZone":  [
+                                    3,
+                                    3
+                                ],
+                   "fairMarketValueLive":  3,
+                   "confidence":  0.8,
+                   "source":  "live",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  49.5,
+                                         "liquidity":  "Normal"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  3.99,
+                                           "title":  "2023 Topps Now - Call-Up Elly De La Cruz #541 /30759 (RC) - Raw",
+                                           "soldDate":  "2026-05-14T22:17:00.000Z"
+                                       },
+                                       {
+                                           "price":  5,
+                                           "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati Steals Three Bases in PA - Raw",
+                                           "soldDate":  "2026-05-11T22:03:00.000Z"
+                                       },
+                                       {
+                                           "price":  5,
+                                           "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati Steals Three Bases in PA - Raw",
+                                           "soldDate":  "2026-05-09T14:39:00.000Z"
+                                       },
+                                       {
+                                           "price":  6.7,
+                                           "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati - Raw",
+                                           "soldDate":  "2026-05-01T22:10:00.000Z"
+                                       },
+                                       {
+                                           "price":  3.25,
+                                           "title":  "2023 Topps Now Elly De La Cruz #541 - Raw",
+                                           "soldDate":  "2026-04-27T00:40:00.000Z"
+                                       },
+                                       {
+                                           "price":  3.01,
+                                           "title":  "2023 Topps Now Elly De La Cruz #541 - Raw",
+                                           "soldDate":  "2026-04-27T00:22:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1691687475502x763823666520391700",
+                                        "title":  null,
+                                        "player":  "Elly De La Cruz",
+                                        "set":  "2023 Topps Now Baseball",
+                                        "year":  null,
+                                        "number":  "541",
+                                        "variant":  "Base"
+                                    },
+                   "gradeUsed":  "Raw",
+                   "compsUsed":  6,
+                   "compsAvailable":  6,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Elly De La Cruz",
+                                       "year":  2023,
+                                       "brand":  "Topps",
+                                       "set":  "Topps Update",
+                                       "parallel":  null,
+                                       "isAuto":  false,
+                                       "isPatch":  false,
+                                       "isRookie":  true,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  null,
+                                       "gradingCompany":  null,
+                                       "confidence":  0.9
+                                   },
+                   "searchQuery":  "2023 Elly De La Cruz Topps Update"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1691687475502x763823666520391700",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:36.641Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1691687475502x763823666520391700",
+                      "summary":  "Buy — good value and market signals are positive.",
+                      "marketTier":  {
+                                         "value":  4,
+                                         "high":  5
+                                     },
+                      "buyZone":  [
+                                      2.7,
+                                      3
+                                  ],
+                      "holdZone":  [
+                                       3,
+                                       4
+                                   ],
+                      "sellZone":  [
+                                       4,
+                                       5
+                                   ],
+                      "fairMarketValueLive":  4,
+                      "confidence":  0.8,
+                      "source":  "live",
+                      "trendAnalysis":  {
+                                            "market_direction":  "up",
+                                            "change_from_older_to_recent":  38.7,
+                                            "liquidity":  "Normal",
+                                            "broaderTrend":  {
+                                                                 "impliedTrendPct":  0,
+                                                                 "direction":  "flat",
+                                                                 "recentMedian":  null,
+                                                                 "olderMedian":  null,
+                                                                 "recentCount":  0,
+                                                                 "olderCount":  0,
+                                                                 "similarCardsScanned":  0,
+                                                                 "totalSamples":  0,
+                                                                 "windowRecentDays":  14,
+                                                                 "windowOlderDays":  45,
+                                                                 "basedOn":  "insufficient"
+                                                             }
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  3.99,
+                                              "title":  "2023 Topps Now - Call-Up Elly De La Cruz #541 /30759 (RC) - Raw",
+                                              "soldDate":  "2026-05-14T22:17:00.000Z"
+                                          },
+                                          {
+                                              "price":  5,
+                                              "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati Steals Three Bases in PA - Raw",
+                                              "soldDate":  "2026-05-11T22:03:00.000Z"
+                                          },
+                                          {
+                                              "price":  5,
+                                              "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati Steals Three Bases in PA - Raw",
+                                              "soldDate":  "2026-05-09T14:39:00.000Z"
+                                          },
+                                          {
+                                              "price":  6.7,
+                                              "title":  "2023 Topps Now #541 Elly De La Cruz Cincinnati - Raw",
+                                              "soldDate":  "2026-05-01T22:10:00.000Z"
+                                          },
+                                          {
+                                              "price":  3.25,
+                                              "title":  "2023 Topps Now Elly De La Cruz #541 - Raw",
+                                              "soldDate":  "2026-04-27T00:40:00.000Z"
+                                          },
+                                          {
+                                              "price":  3.01,
+                                              "title":  "2023 Topps Now Elly De La Cruz #541 - Raw",
+                                              "soldDate":  "2026-04-27T00:22:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1691687475502x763823666520391700",
+                                           "title":  null,
+                                           "player":  null,
+                                           "set":  null,
+                                           "year":  null,
+                                           "number":  null,
+                                           "variant":  null
+                                       },
+                      "gradeUsed":  "Raw",
+                      "compsUsed":  6,
+                      "compsAvailable":  6,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  {
+                                           "impliedTrendPct":  0,
+                                           "direction":  "flat",
+                                           "recentMedian":  null,
+                                           "olderMedian":  null,
+                                           "recentCount":  0,
+                                           "olderCount":  0,
+                                           "similarCardsScanned":  0,
+                                           "totalSamples":  0,
+                                           "windowRecentDays":  14,
+                                           "windowOlderDays":  45,
+                                           "basedOn":  "insufficient"
+                                       }
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}

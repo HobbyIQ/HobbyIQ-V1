@@ -1,0 +1,257 @@
+﻿{
+    "caseId":  "case-12-paul-skenes-2024-topps-chrome-rc-raw",
+    "category":  "popularBaseline",
+    "query":  "2024 Topps Chrome Paul Skenes RC",
+    "grade":  "Raw",
+    "capturedAt":  "2026-05-15T13:03:35.1431491Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "99bb447",
+                   "computedAt":  "2026-05-15T13:02:07.218Z",
+                   "success":  true,
+                   "query":  "2024 Topps Chrome Paul Skenes RC",
+                   "summary":  "Buy — good value and market signals are positive.",
+                   "marketTier":  {
+                                      "value":  12,
+                                      "high":  14
+                                  },
+                   "buyZone":  [
+                                   9,
+                                   10
+                               ],
+                   "holdZone":  [
+                                    10,
+                                    12
+                                ],
+                   "sellZone":  [
+                                    12,
+                                    14
+                                ],
+                   "fairMarketValueLive":  12,
+                   "confidence":  0.95,
+                   "source":  "live",
+                   "trendAnalysis":  {
+                                         "market_direction":  "up",
+                                         "change_from_older_to_recent":  -60,
+                                         "liquidity":  "Normal"
+                                     },
+                   "supply":  null,
+                   "recentComps":  [
+                                       {
+                                           "price":  10.5,
+                                           "title":  "2024 Topps Chrome Update Paul Skenes RC Rookie #USC88 Pirates - Raw",
+                                           "soldDate":  "2026-05-14T23:57:00.000Z"
+                                       },
+                                       {
+                                           "price":  15,
+                                           "title":  "TOPPS CHROME UPDATE SERIES 2024 ROOKIE PAUL SKENES PIRATES USC88 BASEBALL CARD - Raw",
+                                           "soldDate":  "2026-05-14T02:51:00.000Z"
+                                       },
+                                       {
+                                           "price":  14.99,
+                                           "title":  "Paul Skenes 2024 Topps Chrome Update Rookie #USC88 - Raw",
+                                           "soldDate":  "2026-05-14T01:43:00.000Z"
+                                       },
+                                       {
+                                           "price":  15,
+                                           "title":  "2024 Topps Chrome Update Paul Skenes #USC88 RC Rookie Pirates - Raw",
+                                           "soldDate":  "2026-05-13T18:45:00.000Z"
+                                       },
+                                       {
+                                           "price":  15,
+                                           "title":  "2024 Topps Chrome Update #USC88 Paul Skenes - Raw",
+                                           "soldDate":  "2026-05-13T14:34:00.000Z"
+                                       },
+                                       {
+                                           "price":  8.5,
+                                           "title":  "2024 Topps Chrome Update Paul Skenes RC Rookie #USC88 Pirates - Raw",
+                                           "soldDate":  "2026-05-13T01:58:00.000Z"
+                                       },
+                                       {
+                                           "price":  9.99,
+                                           "title":  "2024 Topps Chrome Update #USC88 Paul Skenes RC - Raw",
+                                           "soldDate":  "2026-05-13T00:34:00.000Z"
+                                       },
+                                       {
+                                           "price":  8.5,
+                                           "title":  "2024 Topps Chrome Update Series - Paul Skenes #USC88 (RC) - Raw",
+                                           "soldDate":  "2026-05-12T20:51:00.000Z"
+                                       },
+                                       {
+                                           "price":  5.25,
+                                           "title":  "2024 Topps Chrome Update Series Paul Skenes #USC88 Rookie RC NM-MT? - Raw",
+                                           "soldDate":  "2026-05-12T05:09:00.000Z"
+                                       },
+                                       {
+                                           "price":  10,
+                                           "title":  "2024 Topps Chrome Update #USC88 Paul Skenes - Raw",
+                                           "soldDate":  "2026-05-12T02:54:00.000Z"
+                                       }
+                                   ],
+                   "cardIdentity":  {
+                                        "card_id":  "1733687840609x910533527660592800",
+                                        "title":  null,
+                                        "player":  "Paul Skenes",
+                                        "set":  "2024 Topps Chrome Update Baseball",
+                                        "year":  null,
+                                        "number":  "USC88",
+                                        "variant":  "Base"
+                                    },
+                   "gradeUsed":  "Raw",
+                   "compsUsed":  26,
+                   "compsAvailable":  26,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "neighborSynthesisDebug":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Paul Skenes",
+                                       "year":  2024,
+                                       "brand":  "Topps",
+                                       "set":  "Topps Chrome",
+                                       "parallel":  null,
+                                       "isAuto":  false,
+                                       "isPatch":  false,
+                                       "isRookie":  true,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  null,
+                                       "gradingCompany":  null,
+                                       "confidence":  0.9
+                                   },
+                   "searchQuery":  "2024 Paul Skenes Topps Chrome"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  "1733687840609x910533527660592800",
+    "priceById":  {
+                      "pricingEngine":  "monolith",
+                      "engineVersion":  "99bb447",
+                      "computedAt":  "2026-05-15T13:03:35.813Z",
+                      "success":  true,
+                      "cardHedgeCardId":  "1733687840609x910533527660592800",
+                      "summary":  "Buy — good value and market signals are positive.",
+                      "marketTier":  {
+                                         "value":  13,
+                                         "high":  15
+                                     },
+                      "buyZone":  [
+                                      9.9,
+                                      11
+                                  ],
+                      "holdZone":  [
+                                       11,
+                                       13
+                                   ],
+                      "sellZone":  [
+                                       13,
+                                       15
+                                   ],
+                      "fairMarketValueLive":  13,
+                      "confidence":  0.95,
+                      "source":  "live",
+                      "trendAnalysis":  {
+                                            "market_direction":  "up",
+                                            "change_from_older_to_recent":  -60,
+                                            "liquidity":  "Normal",
+                                            "broaderTrend":  {
+                                                                 "impliedTrendPct":  -60,
+                                                                 "direction":  "down",
+                                                                 "recentMedian":  10,
+                                                                 "olderMedian":  30,
+                                                                 "recentCount":  79,
+                                                                 "olderCount":  9,
+                                                                 "similarCardsScanned":  8,
+                                                                 "totalSamples":  123,
+                                                                 "windowRecentDays":  14,
+                                                                 "windowOlderDays":  45,
+                                                                 "basedOn":  "broader"
+                                                             }
+                                        },
+                      "recentComps":  [
+                                          {
+                                              "price":  10.5,
+                                              "title":  "2024 Topps Chrome Update Paul Skenes RC Rookie #USC88 Pirates - Raw",
+                                              "soldDate":  "2026-05-14T23:57:00.000Z"
+                                          },
+                                          {
+                                              "price":  15,
+                                              "title":  "TOPPS CHROME UPDATE SERIES 2024 ROOKIE PAUL SKENES PIRATES USC88 BASEBALL CARD - Raw",
+                                              "soldDate":  "2026-05-14T02:51:00.000Z"
+                                          },
+                                          {
+                                              "price":  14.99,
+                                              "title":  "Paul Skenes 2024 Topps Chrome Update Rookie #USC88 - Raw",
+                                              "soldDate":  "2026-05-14T01:43:00.000Z"
+                                          },
+                                          {
+                                              "price":  15,
+                                              "title":  "2024 Topps Chrome Update Paul Skenes #USC88 RC Rookie Pirates - Raw",
+                                              "soldDate":  "2026-05-13T18:45:00.000Z"
+                                          },
+                                          {
+                                              "price":  15,
+                                              "title":  "2024 Topps Chrome Update #USC88 Paul Skenes - Raw",
+                                              "soldDate":  "2026-05-13T14:34:00.000Z"
+                                          },
+                                          {
+                                              "price":  8.5,
+                                              "title":  "2024 Topps Chrome Update Paul Skenes RC Rookie #USC88 Pirates - Raw",
+                                              "soldDate":  "2026-05-13T01:58:00.000Z"
+                                          },
+                                          {
+                                              "price":  9.99,
+                                              "title":  "2024 Topps Chrome Update #USC88 Paul Skenes RC - Raw",
+                                              "soldDate":  "2026-05-13T00:34:00.000Z"
+                                          },
+                                          {
+                                              "price":  8.5,
+                                              "title":  "2024 Topps Chrome Update Series - Paul Skenes #USC88 (RC) - Raw",
+                                              "soldDate":  "2026-05-12T20:51:00.000Z"
+                                          },
+                                          {
+                                              "price":  5.25,
+                                              "title":  "2024 Topps Chrome Update Series Paul Skenes #USC88 Rookie RC NM-MT? - Raw",
+                                              "soldDate":  "2026-05-12T05:09:00.000Z"
+                                          },
+                                          {
+                                              "price":  10,
+                                              "title":  "2024 Topps Chrome Update #USC88 Paul Skenes - Raw",
+                                              "soldDate":  "2026-05-12T02:54:00.000Z"
+                                          }
+                                      ],
+                      "cardIdentity":  {
+                                           "card_id":  "1733687840609x910533527660592800",
+                                           "title":  null,
+                                           "player":  "Paul Skenes",
+                                           "set":  "2024 Topps Chrome Update Baseball",
+                                           "year":  null,
+                                           "number":  "USC88",
+                                           "variant":  "Base"
+                                       },
+                      "gradeUsed":  "Raw",
+                      "compsUsed":  26,
+                      "compsAvailable":  26,
+                      "daysSinceNewestComp":  null,
+                      "broaderTrend":  {
+                                           "impliedTrendPct":  -60,
+                                           "direction":  "down",
+                                           "recentMedian":  10,
+                                           "olderMedian":  30,
+                                           "recentCount":  79,
+                                           "olderCount":  9,
+                                           "similarCardsScanned":  8,
+                                           "totalSamples":  123,
+                                           "windowRecentDays":  14,
+                                           "windowOlderDays":  45,
+                                           "basedOn":  "broader"
+                                       }
+                  },
+    "priceByIdError":  null,
+    "notes":  [
+
+              ]
+}
