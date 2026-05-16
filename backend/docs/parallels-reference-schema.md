@@ -111,7 +111,7 @@ CH's `variant` text is inconsistent — for the same parallel we see both `"Blue
 | `player` | string | yes | CH `player` | CH | `"Paul Skenes"` |
 | `rookie` | boolean | optional | from CH search-row `rookie` | CH (search rows) | `false` |
 | `attributeKey` | string \| null | yes (nullable) | foreign key into `parallel_attributes.id`; null = unresolved | computed by resolver (§5) | `"2024 Bowman Chrome Baseball|Blue Refractor|base"` |
-| `attributeResolution` | string | yes | enum: `"matched"`, `"unmatched-variant"`, `"unmatched-auto-prefix"`, `"manual-override"` | computed | `"matched"` |
+| `attributeResolution` | string | yes | enum: `"matched"`, `"unmatched-variant"`, `"unmatched-auto-prefix"`, `"unmatched_pending_insert_curation"`, `"manual-override"` | computed | `"matched"` |
 | `printRun` | number \| null | optional | denormalized from `parallel_attributes` for fast Q1 reads | denormalized | `150` |
 | `tierWithinSet` | number \| null | optional | denormalized from `parallel_attributes` | denormalized | `3` |
 | `isAutograph` | boolean \| null | optional | denormalized | denormalized | `false` |
@@ -121,6 +121,71 @@ CH's `variant` text is inconsistent — for the same parallel we see both `"Blue
 #### Denormalization policy
 
 The three denormalized fields (`printRun`, `tierWithinSet`, `isAutograph`) are written by ingestion at index-build time. When `parallel_attributes` changes, a rebuild job re-walks `ch_card_index` and refreshes them. **Reads never join across collections at runtime** — Q1 is a single point-read.
+
+---
+
+## 2A. Insert sets and hierarchy namespacing
+
+**Added 2026-05-16 — Phase 2b-i schema iteration. Locked by owner. Not negotiable in Phase 2.**
+
+### 2A.1 The problem this section fixes
+
+Phase 2b-i (PR #36) discovered that CH's `variantRaw = "Base"` is overloaded: it applies both to the main-set base card (Skenes 2024 Bowman Chrome `number="31"`) *and* to the base card of every insert set inside that product (Skenes `BC25-18`, `GOTD-10`, `OOG-5`, `M1B-36`, `GDA-PS`). CH also returns `set = "2024 Bowman Chrome Baseball"` and `set_type = "Bowman Chrome Baseball"` on every one of those rows — CH does **not** distinguish insert sets via its `set` field. A naive matcher therefore conflates main-set base cards with five different insert-set base variants under the single `parallel_attributes` document `2024 Bowman Chrome Baseball|Base|base`, which is wrong: an insert is its own product with its own scarcity ladder, parallels, and market.
+
+### 2A.2 Resolution — Option A (locked)
+
+**`parallelName = "Base"` means the main set's standard hierarchy base, nothing else.** It never refers to the base card of an insert set. CH's `variantRaw = "Base"` on an insert-set row is *not* a signal to match against the main-set Base record.
+
+### 2A.3 Resolution — Option A.i (locked)
+
+**Insert sets get their own distinct `set` values in Cosmos.** Each insert set is a first-class logical set with its own `/set` partition in both `parallel_attributes` and `ch_card_index`. It is **not** a sub-field, sub-collection, or nested document on the parent product's records.
+
+Consequences:
+- The insert set has its own `parallel_attributes` row for `parallelName = "Base"` with `parentVariant = null` and its own `tierWithinSet = 1`.
+- The insert set has its own refractor / color parallel chain hanging off *its* Base — not off the parent product's Refractor.
+- `parentVariant` cross-document references are **scoped within a single `set` value**. A `parentVariant = "Refractor"` on an insert-set row points at the insert set's Refractor, never at the parent product's Refractor.
+- Catalog queries (Q3 in §1.1: enumerate parallels for a set) never cross insert-set boundaries — they return only the parallels that share the queried `set` string.
+
+Why this shape:
+- It matches the collector mental model: a 25th Anniversary card is not "a Bowman Chrome base card with extra flair," it's its own insert with its own rarity scale.
+- It keeps Cosmos partitioning natural — `/set` continues to work; no special-case query logic.
+- Runtime resolution is one point-read on a partition keyed by an unambiguous string.
+- It avoids polluting `parallel_attributes.id` and `parentVariant` semantics with an extra discriminator that would otherwise have to be threaded everywhere.
+
+### 2A.4 Naming convention for insert-set `set` values
+
+**Default (used whenever CH does not supply a distinct `set` value for the insert):**
+
+```
+{Year} {Brand} {Sport} - {Insert Name}
+```
+
+Examples:
+```
+2024 Bowman Chrome Baseball - 25th Anniversary
+2024 Bowman Chrome Baseball - Greatness on the Diamond
+2024 Bowman Chrome Baseball - Origins of Greatness
+2024 Bowman Chrome Baseball - Mt. 1B
+2024 Bowman Chrome Baseball - Glass Dynasty Autos
+```
+
+Rules:
+- The hyphen-space-hyphen-space separator (` - `) is the convention. Curator MUST NOT introduce additional ` - ` substrings inside `{Insert Name}`.
+- `{Insert Name}` is the marketing name as it appears on the card / packaging / Topps checklist. Title case.
+- **If CH ever does supply a distinct `set` value for the insert (a future CH change), use it verbatim and skip the default — no transformation, no normalization.** Phase 2b-iii ingestion code must detect this and prefer CH's value.
+- The `set` field is the literal string Cosmos partitions on. Whatever the curator writes here is the partition key — typos break ingestion.
+
+### 2A.5 Effect on identifiers
+
+The `parallel_attributes.id` formula from §4 is unchanged. Insert-set Base becomes a regular, well-formed id under a different `set`:
+
+```
+2024 Bowman Chrome Baseball - 25th Anniversary|Base|base
+2024 Bowman Chrome Baseball - 25th Anniversary|Refractor|base
+2024 Bowman Chrome Baseball - 25th Anniversary|Gold Refractor|base
+```
+
+No new delimiter, no new field. The pipe-character lint check from §4 already covers this (curator must not introduce `|` inside any insert name).
 
 ---
 
@@ -236,6 +301,40 @@ If `variantRaw == ""` and `number` has no auto prefix → canonical = `"Base"`. 
 ### 5.5 Why this lives in the catalog and not in CH
 
 CH owns identity (`cardId` ↔ raw fields). The catalog owns the semantic interpretation of identity (this raw row is the Blue Refractor /150). The resolver is the only place these two worlds meet.
+
+### 5.6 Insert-set identification rules
+
+**Added 2026-05-16 — Phase 2b-i schema iteration. See §2A for the design rationale.**
+
+Before the resolver from §5.1 can pick the right `parallel_attributes` document, it must first decide *which set* the CH row belongs to. For inserts this is non-trivial because CH does not distinguish them via its `set` field (see §2A.1 — verified empirically: a CH `card-search` for "2024 Bowman Chrome 25th Anniversary" returns 150 rows all carrying `set = "2024 Bowman Chrome Baseball"`).
+
+Resolution order:
+
+1. **PRIMARY — CH's `set` field.** If CH ever supplies a distinct insert-set value (e.g., a future row arrives with `set = "2024 Bowman Chrome Baseball - 25th Anniversary"`), trust it and use it verbatim. Skip step 2.
+2. **SECONDARY — card `number` prefix.** When the CH `set` field is the parent product (the current observed state for Bowman Chrome inserts), inspect the `number` field:
+   - **Alphabetic prefix** before a hyphen and trailing digits (e.g., `BC25-`, `GOTD-`, `OOG-`, `M1B-`, `GDA-`) → insert set. The prefix selects which insert.
+   - **Pure numeric** (e.g., `31`, `85`, `186`) → main set base hierarchy.
+   - **Mixed / ambiguous** (e.g., `BCP-186` on `2024 Bowman Chrome Prospects Baseball` where the prefix is the *whole product*, not an insert) → relies on the curated lookup table to decide whether the prefix is an insert marker for this set or just the product's normal numbering scheme.
+3. **Lookup table** mapping (`set`, `numberPrefix`) → insert `set` value. This is curated reference data. **Concrete shape (Cosmos collection vs config file) is deferred to Phase 2b-iii implementation.** What is fixed here: the lookup table is owned by the catalog (not CH), is keyed by parent `set` + alphabetic prefix, and resolves to the insert's full `set` string per the naming convention in §2A.4.
+4. Only after a `set` is chosen does the §5.1 algorithm run — `normalizeVariant` and `parallel_attributes` lookup proceed against that resolved insert set, not the parent product.
+
+### 5.7 Ingestion implications
+
+**Added 2026-05-16 — Phase 2b-i schema iteration.**
+
+The ingestion job (Phase 2b-iii and forward) MUST:
+
+- For every CH row, run §5.6 *before* §5.1.
+- When §5.6 identifies an insert, write the `ch_card_index` document under the insert's `set` partition, not the parent product's. The `set`, `printRun`, `tierWithinSet`, and `attributeKey` denormalized values all derive from the insert's `parallel_attributes` row.
+- When §5.6 identifies an insert but no curated insert set yet exists in `parallel_attributes`, write the `ch_card_index` row with:
+  - `attributeKey = null`
+  - `attributeResolution = "unmatched_pending_insert_curation"` (new resolution state — see §2.2 enum)
+  - `set` set to the *parent product* value (so the row remains queryable) plus the raw prefix logged for the admin-curation backlog
+  - The card_id logged to the curator triage queue.
+- **Never** match an insert card to a main-set parallel record via `variantRaw` text alone. `variantRaw = "Base"` on a row with an alphabetic-prefix number is *not* the main-set Base — §5.6 must run first to redirect it (or quarantine it under `unmatched_pending_insert_curation`).
+- Treat `unmatched_pending_insert_curation` rows as benign backlog, not as ingestion failures. The admin tool surfaces them grouped by prefix so the curator can stand up the insert set in one batch.
+
+*Code update for `attributeResolution` and the matcher itself ships in a follow-up PR — this section documents the contract that PR must satisfy.*
 
 ---
 
@@ -392,3 +491,12 @@ Phase 1a noted CH `prices[]` can be used to compute cross-parallel ratios (Blue 
 | Version | Date | Change |
 |---|---|---|
 | 1 | 2026-05-16 | Initial schema design (Phase 1b). |
+
+## Changelog
+
+### 2026-05-16 (Phase 2b-i schema iteration)
+- Added 'Insert Sets and Hierarchy Namespacing' section to address Phase 2b-i finding that CH's variantRaw='Base' applies to both main-set base cards and insert-set base variants.
+- Locked Option A: parallelName 'Base' means main set hierarchy only. Inserts get their own set values.
+- Locked Option A.i: insert sets get distinct `set` values in Cosmos, not a new field on parent set's records.
+- Naming convention default: '{Year} {Brand} {Sport} - {Insert Name}' when CH doesn't provide its own distinct value.
+- Reference: PR #36 cold review, issue #33
