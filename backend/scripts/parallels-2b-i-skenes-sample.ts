@@ -22,6 +22,7 @@ import * as url from "node:url";
 
 import {
   buildCosmosClient,
+  detectInsertStatus,
   getParallelsContainers,
   parallelAttributesId,
   upsertChCardIndex,
@@ -362,17 +363,27 @@ async function main(): Promise<void> {
       `(dropped wrong-set=${droppedWrongSet}, wrong-player=${droppedWrongPlayer}, auto=${droppedAuto})`
   );
 
-  // 5. Match each in-scope row to one of the 5 owner records.
+  // 5. Bucket each in-scope row: insert-quarantine vs main-set match attempt.
+  // Per schema §5.7: insert rows MUST NOT be matched to main-set parallels via
+  // variantRaw text. They are quarantined as `unmatched_pending_insert_curation`
+  // pending Phase 2b-iii curation.
   const aliasIdx = buildAliasIndex();
   const matchedPairs: Array<{ row: ChSearchRow; owner: OwnerRecord }> = [];
   const unmatchedRows: ChSearchRow[] = [];
+  const insertQuarantineRows: Array<{ row: ChSearchRow; insertPrefix: string | null }> = [];
   for (const row of inScopeRows) {
+    const insertStatus = detectInsertStatus({ set: row.set, number: row.number });
+    if (insertStatus.isInsert) {
+      insertQuarantineRows.push({ row, insertPrefix: insertStatus.insertPrefix });
+      continue;
+    }
     const owner = matchRowToOwnerRecord(row, aliasIdx);
     if (owner) matchedPairs.push({ row, owner });
     else unmatchedRows.push(row);
   }
   console.log(`[2b-i] Matched to one of the 5 parallels: ${matchedPairs.length}`);
-  console.log(`[2b-i] Unmatched in-scope rows: ${unmatchedRows.length}`);
+  console.log(`[2b-i] Unmatched in-scope rows (variant alias miss): ${unmatchedRows.length}`);
+  console.log(`[2b-i] Quarantined as unmatched_pending_insert_curation: ${insertQuarantineRows.length}`);
   if (unmatchedRows.length > 0) {
     const sample = unmatchedRows.slice(0, 5).map((r) => ({
       cardId: r.card_id,
@@ -381,6 +392,16 @@ async function main(): Promise<void> {
       title: r.title,
     }));
     console.log("[2b-i] Sample unmatched variantRaw values:");
+    for (const s of sample) console.log("   ", JSON.stringify(s));
+  }
+  if (insertQuarantineRows.length > 0) {
+    const sample = insertQuarantineRows.slice(0, 10).map((q) => ({
+      cardId: q.row.card_id,
+      number: q.row.number,
+      variantRaw: q.row.variant,
+      insertPrefix: q.insertPrefix,
+    }));
+    console.log("[2b-i] Sample insert-quarantine rows:");
     for (const s of sample) console.log("   ", JSON.stringify(s));
   }
 
@@ -402,6 +423,7 @@ async function main(): Promise<void> {
       printRun: owner.printRun,
       tierWithinSet: owner.tierWithinSet,
       isAutograph: false,
+      detectedInsertPrefix: null,
       lastSeenAt: new Date().toISOString(),
       schemaVersion: SCHEMA_VERSION,
     };
@@ -430,6 +452,54 @@ async function main(): Promise<void> {
     );
   }
 
+  // 6b. Quarantine insert rows under the parent product set so they remain
+  // queryable. Per schema §5.7 they MUST carry attributeKey=null, no
+  // denormalized parallel fields, and the detected prefix for curator triage.
+  const writtenQuarantine: WrittenChIndexReport[] = [];
+  for (const { row, insertPrefix } of insertQuarantineRows) {
+    const rec: ChCardIndexRecord = {
+      id: String(row.card_id),
+      cardId: String(row.card_id),
+      set: TARGET_SET,
+      setType: String(row.set_type ?? "Bowman Chrome Baseball"),
+      number: String(row.number ?? ""),
+      variantRaw: String(row.variant ?? ""),
+      player: String(row.player ?? TARGET_PLAYER),
+      rookie: typeof row.rookie === "boolean" ? row.rookie : undefined,
+      attributeKey: null,
+      attributeResolution: "unmatched_pending_insert_curation",
+      printRun: null,
+      tierWithinSet: null,
+      isAutograph: false,
+      detectedInsertPrefix: insertPrefix,
+      lastSeenAt: new Date().toISOString(),
+      schemaVersion: SCHEMA_VERSION,
+    };
+    validateChCardIndexRecord(rec);
+    const res = await upsertChCardIndex(chCardIndex, rec);
+    const readBack = await chCardIndex.item(rec.id, rec.set).read<ChCardIndexRecord>();
+    const ok =
+      readBack.resource != null &&
+      readBack.resource.cardId === rec.cardId &&
+      readBack.resource.attributeResolution === "unmatched_pending_insert_curation" &&
+      readBack.resource.attributeKey === null;
+    if (!ok) {
+      throw new Error(
+        `[2b-i] read-back verification failed for ch_card_index quarantine id='${rec.id}'`
+      );
+    }
+    writtenQuarantine.push({
+      id: rec.id,
+      record: rec,
+      upsertStatus: res.statusCode,
+      readBackOk: ok,
+    });
+    console.log(
+      `[2b-i] ch_card_index upsert ${res.statusCode} id='${rec.id}' ` +
+        `number='${rec.number}' → quarantined (prefix=${insertPrefix ?? "<none>"})`
+    );
+  }
+
   // 7. Final report.
   console.log("");
   console.log("════════════════════════════════════════════════════════════════════");
@@ -444,10 +514,16 @@ async function main(): Promise<void> {
     console.log(`  ${JSON.stringify(r.record)}`);
   }
   console.log("");
-  console.log(`ch_card_index records written (${writtenIndex.length}):`);
+  console.log(`ch_card_index records written (${writtenIndex.length} matched + ${writtenQuarantine.length} quarantined):`);
   for (const r of writtenIndex) {
     console.log("");
     console.log(`  id: ${r.id}`);
+    console.log(`  status: ${r.upsertStatus}    read-back: ${r.readBackOk ? "OK" : "FAIL"}`);
+    console.log(`  ${JSON.stringify(r.record)}`);
+  }
+  for (const r of writtenQuarantine) {
+    console.log("");
+    console.log(`  id: ${r.id}  [QUARANTINED]`);
     console.log(`  status: ${r.upsertStatus}    read-back: ${r.readBackOk ? "OK" : "FAIL"}`);
     console.log(`  ${JSON.stringify(r.record)}`);
   }
@@ -459,7 +535,8 @@ async function main(): Promise<void> {
   );
   console.log(`  in-scope rows: ${inScopeRows.length}`);
   console.log(`  matched to one of 5 parallels: ${matchedPairs.length}`);
-  console.log(`  unmatched in-scope rows: ${unmatchedRows.length}`);
+  console.log(`  unmatched in-scope rows (variant alias miss): ${unmatchedRows.length}`);
+  console.log(`  unmatched_pending_insert_curation (quarantined): ${insertQuarantineRows.length}`);
   console.log("");
   console.log("Done.");
 }
