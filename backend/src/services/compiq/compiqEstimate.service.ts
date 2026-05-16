@@ -7,6 +7,7 @@ import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
 import { classifyRegime } from "./regimeClassifier.js";
+import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
 
 // ---------------------------------------------------------------------------
 // Card Hedge AI comp fetch (primary sold-data source — replaces Apify/eBay)
@@ -2167,6 +2168,25 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     );
   }
 
+  // Issue #25 Phase 2 — compute regime + predicted range (read-only).
+  // No pricing math reads from these fields.
+  const regimeClassificationResult = classifyRegime(
+    comps.map((c) => ({ price: c.originalPrice, date: c.date ?? null })),
+  );
+  const predictedRangeResultLocal: PredictedRangeResult = computePredictedRange({
+    comps: comps.map((c) => ({
+      price: c.originalPrice,
+      title: c.title,
+      date: c.date ?? null,
+    })),
+    targetGrade:
+      normalizedGradeCompany && body.gradeValue !== undefined
+        ? `${normalizedGradeCompany} ${body.gradeValue}`
+        : "Raw",
+    regimeResult: regimeClassificationResult,
+    source: "live",
+  });
+
   return {
     cardTitle,
     verdict: result.verdict ?? "Hold",
@@ -2188,9 +2208,10 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     marketRegime: regime,
     // Issue #25 Phase 1 — read-only regime classifier. NO pricing math reads
     // from this field; it is surfaced on the API response only.
-    regimeClassification: classifyRegime(
-      comps.map((c) => ({ price: c.originalPrice, date: c.date ?? null })),
-    ),
+    regimeClassification: regimeClassificationResult,
+    // Issue #25 Phase 2 — read-only predicted range. NO pricing math reads
+    // from this field; it is surfaced on the API response only.
+    predictedRangeResult: predictedRangeResultLocal,
     normalization: {
       parallelInput: body.parallel ?? null,
       parallelCanonical: normalizedParallel ?? null,
