@@ -22,6 +22,19 @@ import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.j
 // the FULL 90-day comp pool). Falls back to classifying whatever
 // `recentComps` happens to be on the response (truncated/empty paths) and
 // finally to insufficient_data so every route emits the field uniformly.
+//
+// Phase 1 deploy follow-up: when `est.source` is a non-live fallback
+// (neighbor-synthesis, no-recent-comps, unsupported_sport, variant-mismatch)
+// the comp pool the classifier sees does NOT characterize the queried card's
+// own market. Force regime → insufficient_data / low in that case so the
+// emitted field stays honest. The classifier itself is unchanged.
+const NON_LIVE_SOURCES_FOR_REGIME: ReadonlySet<string> = new Set([
+  "neighbor-synthesis",
+  "no-recent-comps",
+  "unsupported_sport",
+  "variant-mismatch",
+]);
+
 function regimeFieldsFromEstimate(est: Record<string, unknown>): {
   regime: RegimeResult["regime"];
   regimeConfidence: RegimeResult["confidence"];
@@ -38,6 +51,19 @@ function regimeFieldsFromEstimate(est: Record<string, unknown>): {
         date?: string | null;
       }>,
     );
+
+  const source = typeof est.source === "string" ? est.source : null;
+  if (source && NON_LIVE_SOURCES_FOR_REGIME.has(source)) {
+    return {
+      regime: "insufficient_data",
+      regimeConfidence: "low",
+      regimeDiagnostics: {
+        ...result.diagnostics,
+        classificationReason: `skipped_classification: source=${source} (classifier output discarded: ${result.diagnostics.classificationReason})`,
+      },
+    };
+  }
+
   return {
     regime: result.regime,
     regimeConfidence: result.confidence,
@@ -1044,5 +1070,9 @@ router.post("/sell-window", async (req, res, next) => {
     next(err);
   }
 });
+
+// Test-only export — keeps `regimeFieldsFromEstimate` reachable from unit
+// tests without exposing it on the public router surface.
+export const __testing__ = { regimeFieldsFromEstimate };
 
 export default router;
