@@ -263,6 +263,12 @@ export const CASES: TestCase[] = [
     grade: "Raw",
     sport: "MLB",
     category: "pinned-id-hard",
+    // Issue #18 — parallel disambiguation: /search and /price-by-id pick
+    // different sibling parallels for this card (Green Refractor vs
+    // Green Grass Refractor), causing marketTier to legitimately diverge
+    // across endpoints. The cross-endpoint drift assertion in
+    // pinnedIdHard.test.ts soft-skips until #18 ships.
+    blockedBy: [18],
     gradePair: "case-19",
     baselineFile:
       "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw.json",
