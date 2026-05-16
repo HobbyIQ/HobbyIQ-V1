@@ -14,10 +14,14 @@ import {
   classifyRegime,
   type RegimeResult,
 } from "../services/compiq/regimeClassifier.js";
+import {
+  computePredictedRange,
+  type PredictedRangeResult,
+} from "../services/compiq/predictedRange.js";
 import { writeCorpusEntry } from "../services/corpus/writeCorpusEntry.js";
 import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.js";
 
-// Issue #25 Phase 1 — read-only regime fields. Prefers the estimate's
+// Issue #25 Phase 1 â€” read-only regime fields. Prefers the estimate's
 // embedded `regimeClassification` (computed inside computeEstimate against
 // the FULL 90-day comp pool). Falls back to classifying whatever
 // `recentComps` happens to be on the response (truncated/empty paths) and
@@ -26,7 +30,7 @@ import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.j
 // Phase 1 deploy follow-up: when `est.source` is a non-live fallback
 // (neighbor-synthesis, no-recent-comps, unsupported_sport, variant-mismatch)
 // the comp pool the classifier sees does NOT characterize the queried card's
-// own market. Force regime → insufficient_data / low in that case so the
+// own market. Force regime â†’ insufficient_data / low in that case so the
 // emitted field stays honest. The classifier itself is unchanged.
 const NON_LIVE_SOURCES_FOR_REGIME: ReadonlySet<string> = new Set([
   "neighbor-synthesis",
@@ -71,9 +75,76 @@ function regimeFieldsFromEstimate(est: Record<string, unknown>): {
   };
 }
 
+// Issue #25 Phase 2 â€” read-only predicted range fields. Prefers the
+// estimate's embedded `predictedRangeResult` (computed inside computeEstimate
+// against the FULL comp pool with grade filter). Falls back to null+sentinel
+// math on non-live source or absent embedded result so every route emits the
+// field uniformly.
+const NON_LIVE_SOURCES_FOR_PREDICTED_RANGE: ReadonlySet<string> = new Set([
+  "neighbor-synthesis",
+  "no-recent-comps",
+  "unsupported_sport",
+  "variant-mismatch",
+]);
+
+function predictedRangeFieldsFromEstimate(est: Record<string, unknown>): {
+  predictedRange: PredictedRangeResult["predictedRange"];
+  predictedRangeDiagnostics: PredictedRangeResult["diagnostics"];
+  predictedRangeAdjustedConfidence: PredictedRangeResult["adjustedConfidence"];
+  regimeConfidence?: RegimeResult["confidence"];
+} {
+  const source = typeof est.source === "string" ? est.source : null;
+  if (source && NON_LIVE_SOURCES_FOR_PREDICTED_RANGE.has(source)) {
+    return {
+      predictedRange: { low: null, high: null },
+      predictedRangeDiagnostics: {
+        windowAppliedDays: null,
+        compsAfterFilter: 0,
+        mathApplied: "null_non_live_source",
+        sanityCapsApplied: [],
+        weightedPercentileBuckets: null,
+      },
+      predictedRangeAdjustedConfidence: null,
+    };
+  }
+
+  const embedded = est.predictedRangeResult as PredictedRangeResult | undefined;
+  if (embedded) {
+    const out: {
+      predictedRange: PredictedRangeResult["predictedRange"];
+      predictedRangeDiagnostics: PredictedRangeResult["diagnostics"];
+      predictedRangeAdjustedConfidence: PredictedRangeResult["adjustedConfidence"];
+      regimeConfidence?: RegimeResult["confidence"];
+    } = {
+      predictedRange: embedded.predictedRange,
+      predictedRangeDiagnostics: embedded.diagnostics,
+      predictedRangeAdjustedConfidence: embedded.adjustedConfidence,
+    };
+    if (
+      embedded.adjustedConfidence !== null &&
+      embedded.diagnostics.sanityCapsApplied.length > 0
+    ) {
+      out.regimeConfidence = embedded.adjustedConfidence;
+    }
+    return out;
+  }
+
+  return {
+    predictedRange: { low: null, high: null },
+    predictedRangeDiagnostics: {
+      windowAppliedDays: null,
+      compsAfterFilter: 0,
+      mathApplied: "null_insufficient_data",
+      sanityCapsApplied: [],
+      weightedPercentileBuckets: null,
+    },
+    predictedRangeAdjustedConfidence: null,
+  };
+}
+
 // Build a structured CompIQEstimateRequest from a parsed free-text query.
 // The parser fills in every field the estimate service needs (year, brand,
-// parallel, isAuto, grade), so downstream filters can fire — instead of the
+// parallel, isAuto, grade), so downstream filters can fire â€” instead of the
 // whole query string being shoved into playerName.
 function requestFromParsed(parsed: ParsedCardQuery): CompIQEstimateRequest {
   return {
@@ -110,7 +181,7 @@ router.get("/normalization-dictionary", (req, res) => {
 });
 
 // GET /api/compiq/parse?q=2024+bowman+blue+auto+Caleb+Bonemer
-// Debug/preview endpoint — returns ParsedCardQuery and the comp search
+// Debug/preview endpoint â€” returns ParsedCardQuery and the comp search
 // string the engine would issue. No comps fetched, no pricing run.
 router.get("/parse", (req, res) => {
   const q = typeof req.query.q === "string" ? req.query.q : "";
@@ -149,7 +220,7 @@ router.post("/what-if", async (req, res, next) => {
 });
 
 // POST /api/compiq/cardsearch
-// Lightweight catalog lookup used by the iOS Search picker — returns up to
+// Lightweight catalog lookup used by the iOS Search picker â€” returns up to
 // `limit` candidate cards (default 50, hard cap 50) so users can find
 // less-common variants/parallels in a single page. The ceiling matches
 // Card Hedge's per-page maximum enforced in cardhedge.client.ts. Proxies
@@ -210,7 +281,7 @@ router.post("/cardsearch", async (req, res, next) => {
 });
 
 // POST /api/compiq/search
-// Accepts { query: string } — used by DashboardView free-text search
+// Accepts { query: string } â€” used by DashboardView free-text search
 router.post("/search", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
@@ -220,12 +291,12 @@ router.post("/search", async (req, res, next) => {
     }
     const cacheKey = normalizeCacheKey("compiq:search", query);
     const result = await cacheWrap(cacheKey, async () => {
-      // Parse free-text → structured fields so downstream filters fire.
+      // Parse free-text â†’ structured fields so downstream filters fire.
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
       const searchQuery = buildCompSearchQuery(parsed);
       console.log(
-        `[compiq.search] parsed query="${query}" → player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence} searchQuery="${searchQuery}"`
+        `[compiq.search] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence} searchQuery="${searchQuery}"`
       );
       const est = await computeEstimate(body);
 
@@ -256,6 +327,7 @@ router.post("/search", async (req, res, next) => {
             liquidity: "Normal",
           },
           ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+          ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
           supply: null,
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
@@ -366,6 +438,7 @@ router.post("/search", async (req, res, next) => {
           liquidity: (est.marketDNA as any)?.speed ?? "Normal",
         },
         ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+        ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
@@ -397,7 +470,7 @@ router.post("/search", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
-    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
     void writeCorpusEntry(
       corpusEntryFromPricingResult({
@@ -413,7 +486,7 @@ router.post("/search", async (req, res, next) => {
   }
 });
 
-// POST /api/compiq/price  (alias for /search — same contract)
+// POST /api/compiq/price  (alias for /search â€” same contract)
 router.post("/price", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
@@ -427,11 +500,11 @@ router.post("/price", async (req, res, next) => {
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
       const searchQuery = buildCompSearchQuery(parsed);
       console.log(
-        `[compiq.price] parsed query="${query}" → player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
+        `[compiq.price] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
       const est = await computeEstimate(body);
 
-      // Unsupported-sport short-circuit — mirrors /search response shape so
+      // Unsupported-sport short-circuit â€” mirrors /search response shape so
       // iOS clients receive identical behavior across the two endpoints.
       if (est.source === "unsupported_sport") {
         return {
@@ -453,6 +526,7 @@ router.post("/price", async (req, res, next) => {
             change_from_older_to_recent: null,
           },
           ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+          ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
           supply: null,
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
@@ -522,6 +596,7 @@ router.post("/price", async (req, res, next) => {
           change_from_older_to_recent: Number.isFinite(trendDeltaPct) ? trendDeltaPct : null,
         },
         ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+        ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
@@ -553,7 +628,7 @@ router.post("/price", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
-    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
     void writeCorpusEntry(
       corpusEntryFromPricingResult({
@@ -573,10 +648,10 @@ router.post("/price", async (req, res, next) => {
 // Card-Ladder-style two-step search
 //
 // 1. POST /api/compiq/search-list { query }
-//      → returns up to 20 matching card variants (player, set, year, #, variant)
+//      â†’ returns up to 20 matching card variants (player, set, year, #, variant)
 //        with no comps/pricing. The iOS client renders this as a picker.
 // 2. POST /api/compiq/price-by-id { cardHedgeCardId, query?, gradeCompany?, gradeValue? }
-//      → returns the full CompIQ estimate pinned to that exact card_id.
+//      â†’ returns the full CompIQ estimate pinned to that exact card_id.
 // ---------------------------------------------------------------------------
 
 router.post("/search-list", async (req, res, next) => {
@@ -707,7 +782,7 @@ router.post("/price-by-id", async (req, res, next) => {
       };
       const est = await computeEstimate(body);
 
-      // Unsupported-sport short-circuit — defensive guard for /price-by-id.
+      // Unsupported-sport short-circuit â€” defensive guard for /price-by-id.
       // UI normally only pins card_ids surfaced via /search-list (which is
       // Baseball-locked via _searchCards), so this branch should never fire
       // in practice. But if a non-baseball card_id ever leaks through, we
@@ -735,6 +810,7 @@ router.post("/price-by-id", async (req, res, next) => {
             broaderTrend: null,
           },
           ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+          ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
           gradeUsed: (est.gradeUsed as any) ?? null,
@@ -776,6 +852,7 @@ router.post("/price-by-id", async (req, res, next) => {
           broaderTrend: (est as any).broaderTrend ?? null,
         },
         ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+        ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
@@ -786,7 +863,7 @@ router.post("/price-by-id", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
-    // Corpus collector — fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
+    // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
     // carried a non-empty free-text `query`, store that with
     // querySource="free_text"; otherwise store cardHedgeCardId in the
@@ -813,7 +890,7 @@ router.post("/price-by-id", async (req, res, next) => {
 });
 
 // POST /api/compiq/bulk
-// Accepts { queries: string[] } — used by PortfolioIQViewModel.refreshPortfolio()
+// Accepts { queries: string[] } â€” used by PortfolioIQViewModel.refreshPortfolio()
 router.post("/bulk", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
@@ -827,7 +904,7 @@ router.post("/bulk", async (req, res, next) => {
       safeQueries.map(async (query) => {
         const est = await computeEstimate({ playerName: query.trim() });
 
-        // Unsupported-sport short-circuit — per-item. Bulk responses can
+        // Unsupported-sport short-circuit â€” per-item. Bulk responses can
         // include a mix of baseball + non-baseball queries; each item gets
         // its own well-formed response so the iOS client can render every
         // row consistently.
@@ -845,6 +922,7 @@ router.post("/bulk", async (req, res, next) => {
             unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
             detectedSport: (est.detectedSport as string) ?? null,
             ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+            ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
             compsUsed: 0,
             compsAvailable: 0,
           };
@@ -882,13 +960,14 @@ router.post("/bulk", async (req, res, next) => {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
           },
           ...regimeFieldsFromEstimate(est as Record<string, unknown>),
+          ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
           source: est.source ?? "live",
           // Comp counts emitted per-item for symmetry with /search and
           // /price; corpus sampleSize maps from compsUsed.
           compsUsed: (est as any).compsUsed ?? 0,
           compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         };
-        // Per-item corpus write — fire-and-forget. writeCorpusEntry rolls
+        // Per-item corpus write â€” fire-and-forget. writeCorpusEntry rolls
         // its sample-rate gate independently per call, so a 20-item bulk
         // request produces up to 20 independent sampling rolls.
         void writeCorpusEntry(
@@ -936,7 +1015,7 @@ router.post("/grade-premium", async (req, res, next) => {
 
     const base = req.body as CompIQEstimateRequest;
 
-    // Run two estimates in parallel — raw and PSA 10
+    // Run two estimates in parallel â€” raw and PSA 10
     const [rawResult, psa10Result] = await Promise.all([
       computeEstimate({ ...base, gradeCompany: undefined, gradeValue: undefined }),
       computeEstimate({ ...base, gradeCompany: "PSA", gradeValue: 10 }),
@@ -960,8 +1039,8 @@ router.post("/grade-premium", async (req, res, next) => {
       premiumPct: Math.round(premiumPct * 10) / 10,
       worthGrading,
       verdict: worthGrading
-        ? `PSA 10 adds ~$${Math.round(premiumDollars)} over raw — likely worth grading.`
-        : `PSA 10 only adds ~$${Math.round(premiumDollars)} over raw — grading may not pencil out.`,
+        ? `PSA 10 adds ~$${Math.round(premiumDollars)} over raw â€” likely worth grading.`
+        : `PSA 10 only adds ~$${Math.round(premiumDollars)} over raw â€” grading may not pencil out.`,
     });
   } catch (err) {
     next(err);
@@ -997,37 +1076,37 @@ router.post("/sell-window", async (req, res, next) => {
     if (isBaseball) {
       if (isRookie) {
         windows = [
-          { startMonth: 6, endMonth: 8, label: "Post-Draft Hype (Jun–Aug)", reason: "Rookie cards peak after the draft when prospect hype is highest." },
-          { startMonth: 10, endMonth: 11, label: "Playoff Run (Oct–Nov)", reason: "Postseason exposure drives spikes for players on contending teams." },
+          { startMonth: 6, endMonth: 8, label: "Post-Draft Hype (Junâ€“Aug)", reason: "Rookie cards peak after the draft when prospect hype is highest." },
+          { startMonth: 10, endMonth: 11, label: "Playoff Run (Octâ€“Nov)", reason: "Postseason exposure drives spikes for players on contending teams." },
         ];
       } else {
         windows = [
-          { startMonth: 3, endMonth: 5, label: "Opening Day Buzz (Mar–May)", reason: "Veteran cards see renewed interest at the start of the season." },
-          { startMonth: 9, endMonth: 10, label: "Late Season / Playoffs (Sep–Oct)", reason: "Award race narratives and playoff push drive collector demand." },
+          { startMonth: 3, endMonth: 5, label: "Opening Day Buzz (Marâ€“May)", reason: "Veteran cards see renewed interest at the start of the season." },
+          { startMonth: 9, endMonth: 10, label: "Late Season / Playoffs (Sepâ€“Oct)", reason: "Award race narratives and playoff push drive collector demand." },
         ];
       }
     } else if (isFootball) {
       if (isRookie) {
         windows = [
-          { startMonth: 4, endMonth: 5, label: "NFL Draft Window (Apr–May)", reason: "Rookie selections drive immediate hype for top picks." },
-          { startMonth: 9, endMonth: 11, label: "Regular Season Breakout (Sep–Nov)", reason: "Strong early performances push rookie values to their seasonal peak." },
+          { startMonth: 4, endMonth: 5, label: "NFL Draft Window (Aprâ€“May)", reason: "Rookie selections drive immediate hype for top picks." },
+          { startMonth: 9, endMonth: 11, label: "Regular Season Breakout (Sepâ€“Nov)", reason: "Strong early performances push rookie values to their seasonal peak." },
         ];
       } else {
         windows = [
-          { startMonth: 8, endMonth: 9, label: "Preseason Optimism (Aug–Sep)", reason: "Offseason moves and training camp buzz lift veterans before the season." },
-          { startMonth: 1, endMonth: 2, label: "Super Bowl Run (Jan–Feb)", reason: "Playoff participants see sharp spikes as national interest peaks." },
+          { startMonth: 8, endMonth: 9, label: "Preseason Optimism (Augâ€“Sep)", reason: "Offseason moves and training camp buzz lift veterans before the season." },
+          { startMonth: 1, endMonth: 2, label: "Super Bowl Run (Janâ€“Feb)", reason: "Playoff participants see sharp spikes as national interest peaks." },
         ];
       }
     } else if (isBasketball) {
       if (isRookie) {
         windows = [
-          { startMonth: 6, endMonth: 7, label: "NBA Draft Hype (Jun–Jul)", reason: "Top picks peak in the days immediately after draft night." },
-          { startMonth: 1, endMonth: 3, label: "All-Star Season (Jan–Mar)", reason: "All-Star selections and award races drive mid-season peaks." },
+          { startMonth: 6, endMonth: 7, label: "NBA Draft Hype (Junâ€“Jul)", reason: "Top picks peak in the days immediately after draft night." },
+          { startMonth: 1, endMonth: 3, label: "All-Star Season (Janâ€“Mar)", reason: "All-Star selections and award races drive mid-season peaks." },
         ];
       } else {
         windows = [
-          { startMonth: 10, endMonth: 12, label: "Season Opener Buzz (Oct–Dec)", reason: "Renewed interest at the start of a new NBA season." },
-          { startMonth: 4, endMonth: 5, label: "Playoff Push (Apr–May)", reason: "Playoff performers see sharp demand from casual collectors." },
+          { startMonth: 10, endMonth: 12, label: "Season Opener Buzz (Octâ€“Dec)", reason: "Renewed interest at the start of a new NBA season." },
+          { startMonth: 4, endMonth: 5, label: "Playoff Push (Aprâ€“May)", reason: "Playoff performers see sharp demand from casual collectors." },
         ];
       }
     } else {
@@ -1049,9 +1128,9 @@ router.post("/sell-window", async (req, res, next) => {
 
     const cardAgeNote =
       cardAge !== null && cardAge <= 2
-        ? " This is a recent card — collectors are still actively tracking this player."
+        ? " This is a recent card â€” collectors are still actively tracking this player."
         : cardAge !== null && cardAge > 10
-        ? " This is a vintage card — prices are driven more by condition than season."
+        ? " This is a vintage card â€” prices are driven more by condition than season."
         : null;
 
     res.json({
@@ -1071,8 +1150,8 @@ router.post("/sell-window", async (req, res, next) => {
   }
 });
 
-// Test-only export — keeps `regimeFieldsFromEstimate` reachable from unit
+// Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
-export const __testing__ = { regimeFieldsFromEstimate };
+export const __testing__ = { regimeFieldsFromEstimate, predictedRangeFieldsFromEstimate };
 
 export default router;
