@@ -6,6 +6,7 @@ import { findCompsByQuery, getCardSales, searchCards, type CardHedgeCard } from 
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
+import { classifyRegime } from "./regimeClassifier.js";
 
 // ---------------------------------------------------------------------------
 // Card Hedge AI comp fetch (primary sold-data source — replaces Apify/eBay)
@@ -2185,6 +2186,11 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       marketCondition: pressureMap[marketPressure] ?? "Balanced Market",
     },
     marketRegime: regime,
+    // Issue #25 Phase 1 — read-only regime classifier. NO pricing math reads
+    // from this field; it is surfaced on the API response only.
+    regimeClassification: classifyRegime(
+      comps.map((c) => ({ price: c.originalPrice, date: c.date ?? null })),
+    ),
     normalization: {
       parallelInput: body.parallel ?? null,
       parallelCanonical: normalizedParallel ?? null,

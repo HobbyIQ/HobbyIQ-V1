@@ -10,8 +10,40 @@ import {
   type ParsedCardQuery,
 } from "../services/compiq/cardQueryParser.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
+import {
+  classifyRegime,
+  type RegimeResult,
+} from "../services/compiq/regimeClassifier.js";
 import { writeCorpusEntry } from "../services/corpus/writeCorpusEntry.js";
 import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.js";
+
+// Issue #25 Phase 1 — read-only regime fields. Prefers the estimate's
+// embedded `regimeClassification` (computed inside computeEstimate against
+// the FULL 90-day comp pool). Falls back to classifying whatever
+// `recentComps` happens to be on the response (truncated/empty paths) and
+// finally to insufficient_data so every route emits the field uniformly.
+function regimeFieldsFromEstimate(est: Record<string, unknown>): {
+  regime: RegimeResult["regime"];
+  regimeConfidence: RegimeResult["confidence"];
+  regimeDiagnostics: RegimeResult["diagnostics"];
+} {
+  const embedded = est.regimeClassification as RegimeResult | undefined;
+  const result: RegimeResult =
+    embedded ??
+    classifyRegime(
+      ((est.recentComps as Array<{ price: number; soldDate?: string | null; date?: string | null }>) ??
+        []) as ReadonlyArray<{
+        price: number;
+        soldDate?: string | null;
+        date?: string | null;
+      }>,
+    );
+  return {
+    regime: result.regime,
+    regimeConfidence: result.confidence,
+    regimeDiagnostics: result.diagnostics,
+  };
+}
 
 // Build a structured CompIQEstimateRequest from a parsed free-text query.
 // The parser fills in every field the estimate service needs (year, brand,
@@ -197,6 +229,7 @@ router.post("/search", async (req, res, next) => {
             change_from_older_to_recent: null,
             liquidity: "Normal",
           },
+          ...regimeFieldsFromEstimate(est as Record<string, unknown>),
           supply: null,
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
@@ -306,6 +339,7 @@ router.post("/search", async (req, res, next) => {
           change_from_older_to_recent: Number.isFinite(trendDeltaPct) ? trendDeltaPct : null,
           liquidity: (est.marketDNA as any)?.speed ?? "Normal",
         },
+        ...regimeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
@@ -392,6 +426,7 @@ router.post("/price", async (req, res, next) => {
             market_direction: "flat",
             change_from_older_to_recent: null,
           },
+          ...regimeFieldsFromEstimate(est as Record<string, unknown>),
           supply: null,
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
@@ -460,6 +495,7 @@ router.post("/price", async (req, res, next) => {
           market_direction: direction,
           change_from_older_to_recent: Number.isFinite(trendDeltaPct) ? trendDeltaPct : null,
         },
+        ...regimeFieldsFromEstimate(est as Record<string, unknown>),
         supply: null,
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
@@ -672,6 +708,7 @@ router.post("/price-by-id", async (req, res, next) => {
             liquidity: "Normal",
             broaderTrend: null,
           },
+          ...regimeFieldsFromEstimate(est as Record<string, unknown>),
           recentComps: [],
           cardIdentity: (est.cardIdentity as any) ?? null,
           gradeUsed: (est.gradeUsed as any) ?? null,
@@ -712,6 +749,7 @@ router.post("/price-by-id", async (req, res, next) => {
           liquidity: (est.marketDNA as any)?.speed ?? "Normal",
           broaderTrend: (est as any).broaderTrend ?? null,
         },
+        ...regimeFieldsFromEstimate(est as Record<string, unknown>),
         recentComps: (est as any).recentComps ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
@@ -780,6 +818,7 @@ router.post("/bulk", async (req, res, next) => {
             source: "unsupported_sport",
             unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
             detectedSport: (est.detectedSport as string) ?? null,
+            ...regimeFieldsFromEstimate(est as Record<string, unknown>),
             compsUsed: 0,
             compsAvailable: 0,
           };
@@ -816,6 +855,7 @@ router.post("/bulk", async (req, res, next) => {
           trendAnalysis: {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
           },
+          ...regimeFieldsFromEstimate(est as Record<string, unknown>),
           source: est.source ?? "live",
           // Comp counts emitted per-item for symmetry with /search and
           // /price; corpus sampleSize maps from compsUsed.
