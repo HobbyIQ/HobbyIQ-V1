@@ -239,6 +239,14 @@ export const CASES: TestCase[] = [
   },
 
   // ── non-baseball (cases 17-18) ─────────────────────────────────────────
+  // case-17 depends on CH AI choosing a basketball card for the Luka query.
+  // CH AI may flip to a baseball Luka card (2018 Donruss Optic Baseball) on
+  // ch:match Redis cache miss, producing transient source="no-recent-comps"
+  // instead of the baseline's source="unsupported_sport" with
+  // detectedSport="Basketball". This is upstream CH variance, not a CompIQ
+  // code regression. Treat fatal snapshot diffs on this case as known-flake;
+  // do not auto-regenerate the baseline. Tracked for deterministic pinning
+  // via cardHedgeCardId follow-up.
   {
     id: "case-17-luka-doncic-2018-panini-prizm-silver-psa10",
     query: "2018 Panini Prizm Silver Luka Doncic PSA 10",
