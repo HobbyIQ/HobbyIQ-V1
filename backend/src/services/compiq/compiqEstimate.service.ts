@@ -330,6 +330,22 @@ export function detectGradeFromTitle(title: string): { company: string; grade: s
 }
 
 /**
+ * Format a comp title's detected grade as a display label
+ * (e.g. "PSA 7", "BGS 9.5"). Returns "Raw" when no grading
+ * company is detectable from the title — this matches the
+ * convention used elsewhere in the engine where unknown /
+ * undetectable grade is treated as Raw (premium 1.0).
+ *
+ * Used by `recentComps` display so the iOS UI can label each
+ * comp's grade explicitly without parsing the title client-side.
+ * See issue #24 for the design decision.
+ */
+export function formatGradeLabel(title: string): string {
+  const d = detectGradeFromTitle(title);
+  return d ? `${d.company} ${d.grade}` : "Raw";
+}
+
+/**
  * Normalize a graded comp price back to its raw equivalent so PSA10 sales,
  * BGS9.5 sales, and raw sales can pool into one anchor.
  */
@@ -1249,7 +1265,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
             recentComps: fetched.comps
               .slice()
               .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate })),
+              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
             gradeUsed: cardHedgeGrade,
             source: "neighbor-synthesis",
             daysSinceNewestComp: null,
@@ -1398,7 +1414,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       recentComps: fetched.comps
         .slice()
         .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate })),
+        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
       gradeUsed: cardHedgeGrade,
       source: "variant-mismatch",
       daysSinceNewestComp: null,
@@ -1559,7 +1575,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
             recentComps: fetched.comps
               .slice()
               .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate })),
+              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
             gradeUsed: cardHedgeGrade,
             source: "neighbor-synthesis",
             daysSinceNewestComp: daysSinceNewest,
@@ -1687,7 +1703,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       recentComps: fetched.comps
         .slice()
         .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate })),
+        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
       gradeUsed: cardHedgeGrade,
       source: "no-recent-comps",
       daysSinceNewestComp: daysSinceNewest,
@@ -1785,14 +1801,22 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   // PSA10 + BGS9.5 + raw sales contribute to a single anchor. After the
   // pipeline computes the raw anchor we re-apply the target card's grader
   // premium below.
+  //
+  // `originalPrice` preserves the ORIGINAL Card Hedge sale price for each
+  // comp so the user-facing `recentComps` payload can surface what each
+  // card actually sold for instead of the engine's internal raw-equivalent
+  // intermediate value. Internal anchor math continues to use the
+  // normalized `price`. See issue #24.
   const targetPremium = getGraderPremium(normalizedGradeCompany, body.gradeValue?.toString());
-  const normalizedRefinedPool: RawComp[] = refinedPool.map((c) => ({
+  const normalizedRefinedPool: (RawComp & { originalPrice: number })[] = refinedPool.map((c) => ({
     ...c,
+    originalPrice: c.price,
     price: normalizeCompToRaw(c),
   }));
 
   const comps = normalizedRefinedPool.map((c) => ({
     price: c.price,
+    originalPrice: c.originalPrice,
     title: c.title,
     date: c.soldDate,
     source: "ebay",
@@ -2215,7 +2239,14 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         return tb - ta;
       })
       .slice(0, 10)
-      .map((c) => ({ price: c.price, title: c.title, soldDate: c.date })),
+      .map((c) => ({
+        // Display the ORIGINAL Card Hedge sale price (not the post-
+        // normalizeCompToRaw raw-equivalent intermediate). See issue #24.
+        price: c.originalPrice,
+        title: c.title,
+        soldDate: c.date,
+        grade: formatGradeLabel(c.title),
+      })),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     variantWarning: fetched.variantWarning,
