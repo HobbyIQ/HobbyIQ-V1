@@ -341,7 +341,6 @@ router.post("/search", async (req, res, next) => {
           daysSinceNewestComp: null,
           variantWarning: [],
           neighborSynthesis: null,
-          neighborSynthesisDebug: null,
           crossParallelAnchor: null,
           buySignal: null,
           parsedQuery: {
@@ -456,7 +455,6 @@ router.post("/search", async (req, res, next) => {
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
-        neighborSynthesisDebug: null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
         buySignal: null,
         parsedQuery: {
@@ -548,7 +546,6 @@ router.post("/price", async (req, res, next) => {
           daysSinceNewestComp: null,
           variantWarning: [],
           neighborSynthesis: null,
-          neighborSynthesisDebug: null,
           crossParallelAnchor: null,
           buySignal: null,
           parsedQuery: {
@@ -622,7 +619,6 @@ router.post("/price", async (req, res, next) => {
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
-        neighborSynthesisDebug: null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
         buySignal: null,
         parsedQuery: {

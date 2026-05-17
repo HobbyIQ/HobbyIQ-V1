@@ -1309,7 +1309,6 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         level: "none" as const,
         message: `Variant not found (missing: ${missing}).`,
       },
-      neighborSynthesisDebug: null,
     };
   }
 
