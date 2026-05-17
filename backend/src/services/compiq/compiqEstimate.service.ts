@@ -1092,6 +1092,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       fairMarketValue: 0,
       marketValue: null,
       predictedPrice: null,
+      predictedPriceRange: null,
       predictedPriceAttribution: null,
       quickSaleValue: 0,
       premiumValue: 0,
@@ -1308,7 +1309,6 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         level: "none" as const,
         message: `Variant not found (missing: ${missing}).`,
       },
-      neighborSynthesisDebug: null,
     };
   }
 
@@ -1845,6 +1845,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     fairMarketValue,
     marketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
     predictedPrice: null,
+    predictedPriceRange: null,
     predictedPriceAttribution: null,
     premiumValue,
     explanation: result.explanationBullets?.length
