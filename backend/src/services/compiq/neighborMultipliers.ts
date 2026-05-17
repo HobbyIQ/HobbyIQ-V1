@@ -66,7 +66,7 @@ export const PARALLEL_MULTIPLIERS: Record<string, number> = {
   // The CompIQ normalization layer collapses some human labels to snake_case
   // canonical keys (e.g. "Blue Wave" → "raywave_blue") before passing them
   // through the pricing pipeline. Map those canonical keys to the same
-  // multipliers as the human labels so the neighbor-synthesis target
+  // multipliers as the human labels so the pricing target
   // doesn't end up "unclassifiable" purely because of the rename.
   raywave_blue: 4.0,
   prism_silver: 1.5,

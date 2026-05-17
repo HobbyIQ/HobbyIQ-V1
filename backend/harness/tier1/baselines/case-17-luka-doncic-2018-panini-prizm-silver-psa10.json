@@ -29,9 +29,7 @@
                                 ],
                    "fairMarketValueLive":  null,
                    "confidence":  0,
-                   "source":  "unsupported_sport",
-                   "unsupportedSportReason":  "CompIQ currently supports baseball cards only. This appears to be a basketball card.",
-                   "detectedSport":  "Basketball",
+                   "source":  "no-recent-comps",
                    "trendAnalysis":  {
                                          "market_direction":  "flat",
                                          "change_from_older_to_recent":  null,

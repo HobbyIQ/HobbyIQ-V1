@@ -28,7 +28,7 @@ import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.j
 // finally to insufficient_data so every route emits the field uniformly.
 //
 // Phase 1 deploy follow-up: when `est.source` is a non-live fallback
-// (neighbor-synthesis, no-recent-comps, unsupported_sport, variant-mismatch)
+// (including legacy values plus no-recent-comps/unsupported_sport/variant-mismatch)
 // the comp pool the classifier sees does NOT characterize the queried card's
 // own market. Force regime â†’ insufficient_data / low in that case so the
 // emitted field stays honest. The classifier itself is unchanged.
@@ -317,6 +317,9 @@ router.post("/search", async (req, res, next) => {
           holdZone: [null, null],
           sellZone: [null, null],
           fairMarketValueLive: null,
+          marketValue: null,
+          predictedPrice: null,
+          predictedPriceAttribution: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -430,6 +433,9 @@ router.post("/search", async (req, res, next) => {
             ? [null, null]
             : [effectiveFmv, effPremium],
         fairMarketValueLive: noUsableLiveFmv ? null : fmv,
+        marketValue: noUsableLiveFmv ? null : fmv,
+        predictedPrice: null,
+        predictedPriceAttribution: null,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
@@ -448,7 +454,7 @@ router.post("/search", async (req, res, next) => {
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
-        neighborSynthesisDebug: (est as any).neighborSynthesisDebug ?? null,
+        neighborSynthesisDebug: null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
         buySignal: null,
         parsedQuery: {
@@ -517,6 +523,9 @@ router.post("/price", async (req, res, next) => {
           holdZone: [null, null],
           sellZone: [null, null],
           fairMarketValueLive: null,
+          marketValue: null,
+          predictedPrice: null,
+          predictedPriceAttribution: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -589,6 +598,9 @@ router.post("/price", async (req, res, next) => {
         // /search (Option X). Mirrors marketTier.value's null-when-thin
         // semantic so both fields agree within a response.
         fairMarketValueLive: isThin ? null : fmv,
+        marketValue: isThin ? null : fmv,
+        predictedPrice: null,
+        predictedPriceAttribution: null,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
@@ -606,7 +618,7 @@ router.post("/price", async (req, res, next) => {
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
-        neighborSynthesisDebug: (est as any).neighborSynthesisDebug ?? null,
+        neighborSynthesisDebug: null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
         buySignal: null,
         parsedQuery: {
@@ -799,6 +811,9 @@ router.post("/price-by-id", async (req, res, next) => {
           holdZone: [null, null],
           sellZone: [null, null],
           fairMarketValueLive: null,
+          marketValue: null,
+          predictedPrice: null,
+          predictedPriceAttribution: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -843,6 +858,9 @@ router.post("/price-by-id", async (req, res, next) => {
         // Live FMV emitted at top level for engine-emission symmetry
         // with /search and /price (Option X). null when thin market.
         fairMarketValueLive: isThin ? null : fmv,
+        marketValue: isThin ? null : fmv,
+        predictedPrice: null,
+        predictedPriceAttribution: null,
         confidence,
         source,
         trendAnalysis: {
@@ -916,6 +934,9 @@ router.post("/bulk", async (req, res, next) => {
             summary: (est.verdict as string) ?? "Unsupported sport.",
             marketTier: { value: null, high: null },
             fairMarketValueLive: null,
+            marketValue: null,
+            predictedPrice: null,
+            predictedPriceAttribution: null,
             confidence: 0,
             trendAnalysis: { market_direction: "flat" },
             source: "unsupported_sport",
@@ -955,6 +976,9 @@ router.post("/bulk", async (req, res, next) => {
           // Engine-emission symmetry with /search, /price, /price-by-id
           // (Option X). null when the engine produced no usable FMV.
           fairMarketValueLive: fmv > 0 ? fmv : null,
+          marketValue: fmv > 0 ? fmv : null,
+          predictedPrice: null,
+          predictedPriceAttribution: null,
           confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
           trendAnalysis: {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",

@@ -4,13 +4,17 @@
 // When Card Hedge has zero or thin comps for a card_id, we still need a
 // signal. This module pulls eBay sold listings via Apify (already used by
 // compiqSearch.service.ts) and converts them into `NeighborComp[]` so the
-// existing neighbor-synthesis engine can reprice from real market sales.
+// existing pricing fallbacks can consume a consistent comp shape.
 //
 // Returns up to `maxResults` sold listings from the last `daysBack` window,
 // filtered to non-trivial sales (>$5) with valid sold dates.
 // ---------------------------------------------------------------------------
 
-import type { NeighborComp } from "./neighborSynthesis.js";
+export interface NeighborComp {
+  price: number;
+  title: string;
+  soldDate?: string;
+}
 
 const APIFY_ENDPOINT =
   "https://api.apify.com/v2/acts/caffein~ebay-sold-listings/run-sync-get-dataset-items";
