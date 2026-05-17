@@ -10,7 +10,8 @@
 // Authoritative design: issue #25 comment 4467241460 (Phase 2 design).
 //
 // High-level contract:
-//   • Non-live source paths (neighbor-synthesis, no-recent-comps,
+//   • Non-live source paths (legacy + current non-live values, e.g.
+//     no-recent-comps,
 //     unsupported_sport, variant-mismatch) → predictedRange = null.
 //   • Regime "insufficient_data"            → predictedRange = null.
 //   • Filter comps to same-grade pool, then apply the regime's window.
@@ -69,7 +70,7 @@ export interface PredictedRangeInput {
    */
   targetGrade: string | null | undefined;
   regimeResult: Pick<RegimeResult, "regime" | "confidence">;
-  /** Estimate source string (e.g. "live", "neighbor-synthesis"). */
+  /** Estimate source string (e.g. "live"). */
   source: string | null | undefined;
 }
 

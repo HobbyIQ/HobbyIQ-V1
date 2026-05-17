@@ -8,6 +8,36 @@ import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.servic
 import { buildEngineMeta } from "./engineMeta.js";
 import { classifyRegime } from "./regimeClassifier.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
+// Issue #25 Phase 3 — tier-anchored predicted-range fallback (default OFF).
+// Activated by env flag COMPIQ_PHASE3_TIER_ANCHORED=true. NEVER replaces the
+// Phase 2 result; only augments when Phase 2 returns { low: null, high: null }.
+import { computeTierAnchoredRange, type TierAnchoredResult } from "./predictedRangeTierAnchored.js";
+import { buildPeerPool } from "./peerPoolBuilder.js";
+import { getParallelAttributesLookup } from "./parallelAttributesLookup.js";
+// Issue #25 Phase 3 REBUILD — multiplier-anchored predictedRange. Fires
+// inside the variant-mismatch cross-parallel synthesis branch when sibling
+// comps for the same player/year/set are available. Never replaces
+// effectiveFmv; ADDS a forward-looking range alongside the synthesized FMV.
+import {
+  computeMultiplierAnchoredRange,
+  type MultiplierAnchoredResult,
+} from "./predictedRangeMultiplierAnchored.js";
+import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplierAnchoredPredictedPrice.js";
+
+// Issue #25 Phase 3 — trim peer-pool diagnostics for the wire response.
+// We keep counts only; sample comp data is not surfaced to the client.
+function __extractPhase3Diags(
+  d: Awaited<ReturnType<typeof buildPeerPool>>["diagnostics"],
+) {
+  return {
+    primarySetCount: d.primarySetCount,
+    fallbackSetsUsed: d.fallbackSetsUsed,
+    fallbackPeerCount: d.fallbackPeerCount,
+    totalCompsConsidered: d.totalCompsConsidered,
+    dropCounts: d.dropCounts,
+    nullReason: d.nullReason,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Card Hedge AI comp fetch (primary sold-data source — replaces Apify/eBay)
@@ -1060,6 +1090,9 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
           }
         : null,
       fairMarketValue: 0,
+      marketValue: null,
+      predictedPrice: null,
+      predictedPriceAttribution: null,
       quickSaleValue: 0,
       premiumValue: 0,
       compsUsed: 0,
@@ -1172,6 +1205,22 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     (effectiveIsAuto && variantWarningTokens.some((t) => /(auto|autograph|signed|signature)/.test(t))) ||
     variantWarningTokens.some((t) => /^\/\d/.test(t)); // missing /serial token
   if (variantMismatchCritical) {
+    const mechanism1 = computeMultiplierAnchoredPredictedPrice({
+      subject: {
+        playerName: body.playerName ?? fetched.card?.player ?? "",
+        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+        product: (body.product?.includes("Draft") ? "Bowman Draft" : "Bowman Chrome") as "Bowman Chrome" | "Bowman Draft",
+        subset: "Chrome Prospect Autographs",
+        parallelName: normalizedParallel ?? body.parallel ?? "",
+        isAutograph: effectiveIsAuto,
+      },
+      comps: fetched.comps.map((c) => ({
+        title: c.title,
+        price: c.price,
+        soldDate: c.soldDate,
+      })),
+    });
+
     const guardReasons: string[] = [];
     if (variantWarningTokens.length > 0) guardReasons.push(...variantWarningTokens);
     if (everythingFilteredOut) {
@@ -1182,190 +1231,20 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     }
     const missing = guardReasons.join("; ") || "variant tokens";
     console.warn(
-      `[compiq.computeEstimate] variant-mismatch guard tripped: query="${cardTitle}" reason="${missing}" — attempting neighbor synthesis`
+      `[compiq.computeEstimate] variant-mismatch guard tripped: query="${cardTitle}" reason="${missing}"`
     );
-
-    // Capture last neighbor-synthesis attempt for debug visibility in the
-    // null-FMV variant-mismatch response. iOS doesn't surface this — it's
-    // a console/API debugging aid only.
-    let neighborDebug: any = null;
-    if (process.env.COMPIQ_NEIGHBOR_SYNTHESIS !== "false") {
-      try {
-        const { synthesizeFromNeighbors } = await import("./neighborSynthesis.js");
-        // Augment Card Hedge neighbor pool with eBay sold-listing fallback
-        // when CH is thin. This is the primary fix for /150-print parallels
-        // and other low-volume cards where CH has 0 backing comps.
-        const { fetchEbayNeighborComps } = await import("./ebayFallback.js");
-        const ebayComps =
-          fetched.comps.length < 5 ? await fetchEbayNeighborComps(cardTitle, { daysBack: 60 }) : [];
-        const combinedComps = [...fetched.comps, ...ebayComps];
-        if (combinedComps.length < 2) {
-          throw new Error(`insufficient_neighbor_pool comps=${combinedComps.length}`);
-        }
-        const neighborResult = synthesizeFromNeighbors(parsedForGuard, combinedComps, { trendWindowDays: 60 });
-        if (neighborResult.syntheticFmv != null && neighborResult.neighborsUsed >= 2) {
-          const fmv = neighborResult.syntheticFmv;
-          console.log(
-            `[compiq.computeEstimate] neighbor-synthesis success: fmv=$${fmv.toFixed(2)} from ${neighborResult.neighborsUsed} neighbors (steps=${neighborResult.stepsRelaxedMax}, cap=${neighborResult.confidenceCap})`
-          );
-          return {
-            cardTitle,
-            verdict: `Indicative price ($${fmv.toFixed(2)}) synthesized from ${neighborResult.neighborsUsed} neighbor sales — no direct comps yet for this exact variant.`,
-            action: "Hold",
-            dealScore: null,
-            quickSaleValue: fmv * 0.88,
-            fairMarketValue: fmv,
-            premiumValue: fmv * 1.15,
-            explanation: [
-              `No direct comps for ${effectiveIsAuto ? "this autograph " : ""}variant (missing: ${missing}).`,
-              `Built indicative FMV from ${neighborResult.neighborsUsed} of ${neighborResult.neighborsConsidered} related Card Hedge sales using parallel/grade/auto multipliers.`,
-              `Confidence is capped at ${neighborResult.confidenceCap}/100 — treat this as a directional estimate, not a firm market price.`,
-            ],
-            marketDNA: {
-              demand: "Unknown",
-              speed: "Unknown",
-              risk: "High",
-              trend: "Flat",
-              marketCondition: "Neighbor-Synthesized",
-            },
-            marketRegime: {
-              regime: "illiquid",
-              volatilityPct: 0,
-              slopePctPerComp: 0,
-              confidence: 0.2,
-              note: "Neighbor-synthesized price — no direct comps for this variant.",
-            },
-            normalization: {
-              parallelInput: body.parallel ?? null,
-              parallelCanonical: normalizedParallel ?? null,
-              gradeCompanyInput: body.gradeCompany ?? null,
-              gradeCompanyCanonical: normalizedGradeCompany ?? null,
-            },
-            confidence: {
-              pricingConfidence: neighborResult.confidenceCap,
-              liquidityConfidence: 0,
-              timingConfidence: 0,
-            },
-            exitStrategy: {
-              recommendedMethod: "wait",
-              expectedDaysToSell: null,
-              timingRecommendation: "Hold — wait for direct comps before pricing aggressively.",
-            },
-            freshness: { status: "Stale" as const, lastUpdated: null },
-            pricingAnalytics: null,
-            estimate: null,
-            compsUsed: 0,
-            compsAvailable: fetched.comps.length,
-            neighborsUsed: neighborResult.neighborsUsed,
-            neighborSynthesis: {
-              stepsRelaxedMax: neighborResult.stepsRelaxedMax,
-              detail: neighborResult.detail.slice(0, 10),
-              anchor: neighborResult.anchor,
-              trend: neighborResult.trend,
-            },
-            cardIdentity: fetched.card,
-            recentComps: fetched.comps
-              .slice()
-              .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
-            gradeUsed: cardHedgeGrade,
-            source: "neighbor-synthesis",
-            daysSinceNewestComp: null,
-            variantWarning: fetched.variantWarning,
-            compQuality: { totalComps: 0, usedComps: 0, excluded: 0, reasons: {} },
-            dataSufficiency: {
-              sufficient: false,
-              level: "low" as const,
-              message: `Neighbor-synthesized from ${neighborResult.neighborsUsed} related sales.`,
-            },
-            risk_flags: neighborResult.riskFlags,
-          } as any;
-        }
-        console.log(
-          `[compiq.computeEstimate] neighbor-synthesis insufficient: used=${neighborResult.neighborsUsed}/${neighborResult.neighborsConsidered} flags=${neighborResult.riskFlags.join(",")}`
-        );
-        neighborDebug = {
-          neighborsUsed: neighborResult.neighborsUsed,
-          neighborsConsidered: neighborResult.neighborsConsidered,
-          riskFlags: neighborResult.riskFlags,
-          syntheticFmv: neighborResult.syntheticFmv,
-          stepsRelaxedMax: neighborResult.stepsRelaxedMax,
-          detail: neighborResult.detail.slice(0, 5),
-        };
-      } catch (err) {
-        console.warn(`[compiq.computeEstimate] neighbor-synthesis failed: ${(err as Error).message}`);
-        neighborDebug = { error: (err as Error).message };
-      }
-    }
-
-    // ── Cross-parallel sibling synthesis (variant-mismatch fallback) ────────
-    // The within-card neighbor synthesis above failed. As a last resort,
-    // try synthesizing a price from sibling parallels of the same player +
-    // year + set (e.g. price a Blue Wave /150 from the Refractor /150 +
-    // Atomic /250 + Gold /50 trend). This gives the user a directional
-    // FMV plus a fresh trend instead of a blank card.
-    let xpCrossParallelAnchor: any = null;
-    let xpEffectiveFmv: number | null = null;
-    let xpVerdict: string | null = null;
-    try {
-      const { fetchSiblingParallelComps } = await import("./cardhedge.client.js");
-      const siblings = await fetchSiblingParallelComps({
-        playerName: body.playerName ?? "",
-        year: body.cardYear ?? fetched.card?.year ?? null,
-        set: body.product ?? fetched.card?.set ?? null,
-        excludeCardId: fetched.card?.card_id ?? null,
-        grade: cardHedgeGrade,
-        perSiblingLimit: 6,
-        maxSiblings: 12,
-      });
-      if (siblings.length >= 3) {
-        const { synthesizeFromNeighbors } = await import("./neighborSynthesis.js");
-        const { parseCardQuery: parseFn } = await import("./cardQueryParser.js");
-        const targetParsed = parseFn(cardTitle);
-        if (effectiveIsAuto) targetParsed.isAuto = true;
-        if (normalizedParallel) targetParsed.parallel = normalizedParallel;
-        if (body.cardYear) targetParsed.year = body.cardYear;
-        const synth = synthesizeFromNeighbors(
-          targetParsed,
-          siblings.map((s) => ({ title: s.title, price: s.price, soldDate: s.soldDate ?? undefined })),
-          { trendWindowDays: 60 }
-        );
-        if (synth.syntheticFmv != null && synth.neighborsUsed >= 3) {
-          const synthFmv = Math.round(synth.syntheticFmv * 100) / 100;
-          xpCrossParallelAnchor = {
-            fmv: synthFmv,
-            neighborsUsed: synth.neighborsUsed,
-            neighborsConsidered: synth.neighborsConsidered,
-            parallelTier: (synth as any).parallelTier ?? null,
-            confidenceCap: synth.confidenceCap,
-            anchor: synth.anchor,
-            trend: synth.trend,
-            triggerReason: "variant-mismatch",
-            detail: synth.detail.slice(0, 10),
-            momentumAdjustedFmv: null,
-            momentumPctApplied: null,
-            weeksStale: null,
-            effectiveWeeksApplied: null,
-            momentumSource: null,
-          };
-          xpEffectiveFmv = synthFmv;
-          xpVerdict = `Indicative price ($${synthFmv.toFixed(2)}) synthesized from ${synth.neighborsUsed} sibling-parallel sales — Card Hedge has no direct comps for this exact variant yet.`;
-          console.log(
-            `[compiq.computeEstimate] variant-mismatch cross-parallel synthesis: fmv=$${synthFmv} from ${synth.neighborsUsed} siblings (trend=${synth.trend?.direction})`
-          );
-        }
-      }
-    } catch (err) {
-      console.warn(`[compiq.computeEstimate] variant-mismatch cross-parallel synthesis failed: ${(err as Error).message}`);
-    }
 
     return {
       cardTitle,
-      verdict: xpVerdict ?? `No comps found for this exact variant (missing: ${missing}). Card Hedge doesn't have sold data for this card yet.`,
+      verdict: `No comps found for this exact variant (missing: ${missing}). Card Hedge doesn't have sold data for this card yet.`,
       action: "Hold",
-      dealScore: null,
+      dealScore: 0,
       quickSaleValue: null,
       fairMarketValue: null,
+      marketValue: null,
+      predictedPrice: mechanism1.predictedPrice,
+      predictedPriceRange: mechanism1.predictedPriceRange,
+      predictedPriceAttribution: mechanism1.predictedPriceAttribution,
       premiumValue: null,
       explanation: [
         `Requested ${effectiveIsAuto ? "autograph " : ""}variant not found in Card Hedge's sold database.`,
@@ -1422,14 +1301,14 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       daysSinceNewestComp: null,
       variantWarning: fetched.variantWarning,
       compQuality: { totalComps: 0, usedComps: 0, excluded: 0, reasons: {} },
-      crossParallelAnchor: xpCrossParallelAnchor,
-      effectiveFmv: xpEffectiveFmv,
+      crossParallelAnchor: null,
+      effectiveFmv: null,
       dataSufficiency: {
         sufficient: false,
         level: "none" as const,
         message: `Variant not found (missing: ${missing}).`,
       },
-      neighborSynthesisDebug: neighborDebug,
+      neighborSynthesisDebug: null,
     };
   }
 
@@ -1482,6 +1361,22 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     (compCount >= 3 && (daysSinceNewest == null || daysSinceNewest > 365));
 
   if (insufficient) {
+    const mechanism1 = computeMultiplierAnchoredPredictedPrice({
+      subject: {
+        playerName: body.playerName ?? fetched.card?.player ?? "",
+        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+        product: (body.product?.includes("Draft") ? "Bowman Draft" : "Bowman Chrome") as "Bowman Chrome" | "Bowman Draft",
+        subset: "Chrome Prospect Autographs",
+        parallelName: normalizedParallel ?? body.parallel ?? "",
+        isAutograph: effectiveIsAuto,
+      },
+      comps: fetched.comps.map((c) => ({
+        title: c.title,
+        price: c.price,
+        soldDate: c.soldDate,
+      })),
+    });
+
     const ageNote =
       daysSinceNewest != null
         ? `last comp was ${daysSinceNewest} days ago`
@@ -1491,177 +1386,17 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       `[compiq.computeEstimate] thin-data short-circuit: comps=${fetched.comps.length} daysSinceNewest=${daysSinceNewest} query="${cardTitle}"`
     );
 
-    // ── Neighbor-Comp Synthesis (Phase 1) — stale/thin direct comps path ─
-    // The card has SOME comps on file but they're too few or too old to
-    // price directly. Try synthesizing from them with a low confidence cap
-    // so the iOS UI gets an indicative number instead of an empty screen.
-    if (process.env.COMPIQ_NEIGHBOR_SYNTHESIS !== "false") {
-      try {
-        const { synthesizeFromNeighbors } = await import("./neighborSynthesis.js");
-        // Augment thin/stale CH comp pool with eBay sold listings.
-        const { fetchEbayNeighborComps } = await import("./ebayFallback.js");
-        const ebayComps =
-          fetched.comps.length < 5 ? await fetchEbayNeighborComps(cardTitle, { daysBack: 60 }) : [];
-        const combinedComps = [...fetched.comps, ...ebayComps];
-        if (combinedComps.length < 2) {
-          throw new Error(`insufficient_neighbor_pool comps=${combinedComps.length}`);
-        }
-        const neighborResult = synthesizeFromNeighbors(parsedForGuard, combinedComps, { trendWindowDays: 60 });
-        if (neighborResult.syntheticFmv != null && neighborResult.neighborsUsed >= 2) {
-          const fmv = neighborResult.syntheticFmv;
-          // Stale-data extra penalty on top of the cap: 1 step further when
-          // newest comp >180d, 2 steps when >365d. Floor at 15.
-          let stalePenalty = 1.0;
-          if (daysSinceNewest != null && daysSinceNewest > 365) stalePenalty = 0.64;
-          else if (daysSinceNewest != null && daysSinceNewest > 180) stalePenalty = 0.8;
-          const adjustedCap = Math.max(15, Math.round(neighborResult.confidenceCap * stalePenalty));
-          console.log(
-            `[compiq.computeEstimate] neighbor-synthesis (stale-path) success: fmv=$${fmv.toFixed(2)} from ${neighborResult.neighborsUsed} neighbors steps=${neighborResult.stepsRelaxedMax} daysSinceNewest=${daysSinceNewest} cap=${adjustedCap}`
-          );
-          return {
-            cardTitle,
-            verdict: `Indicative price ($${fmv.toFixed(2)}) synthesized from ${neighborResult.neighborsUsed} ${ageNote}. Confidence ${adjustedCap}/100.`,
-            action: "Hold",
-            dealScore: null,
-            quickSaleValue: fmv * 0.88,
-            fairMarketValue: fmv,
-            premiumValue: fmv * 1.15,
-            explanation: [
-              `Direct comps are thin (${fetched.comps.length} on file, ${ageNote}).`,
-              `Built indicative FMV from ${neighborResult.neighborsUsed} synthesized sales using parallel/grade/auto multipliers.`,
-              `Confidence is capped at ${adjustedCap}/100 — treat as directional, not firm.`,
-            ],
-            marketDNA: {
-              demand: "Unknown",
-              speed: "Unknown",
-              risk: "High",
-              trend: "Flat",
-              marketCondition: "Neighbor-Synthesized (Stale Comps)",
-            },
-            marketRegime: {
-              regime: "illiquid",
-              volatilityPct: 0,
-              slopePctPerComp: 0,
-              confidence: 0.2,
-              note: "Neighbor-synthesized price — direct comps too thin or stale.",
-            },
-            normalization: {
-              parallelInput: body.parallel ?? null,
-              parallelCanonical: normalizedParallel ?? null,
-              gradeCompanyInput: body.gradeCompany ?? null,
-              gradeCompanyCanonical: normalizedGradeCompany ?? null,
-            },
-            confidence: {
-              pricingConfidence: adjustedCap,
-              liquidityConfidence: 0,
-              timingConfidence: 0,
-            },
-            exitStrategy: {
-              recommendedMethod: "wait",
-              expectedDaysToSell: null,
-              timingRecommendation: "Hold — wait for fresh direct comps.",
-            },
-            freshness: { status: "Stale" as const, lastUpdated: null },
-            pricingAnalytics: null,
-            estimate: null,
-            compsUsed: fetched.comps.length,
-            compsAvailable: fetched.comps.length,
-            neighborsUsed: neighborResult.neighborsUsed,
-            neighborSynthesis: {
-              stepsRelaxedMax: neighborResult.stepsRelaxedMax,
-              detail: neighborResult.detail.slice(0, 10),
-              anchor: neighborResult.anchor,
-              trend: neighborResult.trend,
-            },
-            cardIdentity,
-            recentComps: fetched.comps
-              .slice()
-              .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-              .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
-            gradeUsed: cardHedgeGrade,
-            source: "neighbor-synthesis",
-            daysSinceNewestComp: daysSinceNewest,
-            variantWarning: fetched.variantWarning,
-            compQuality: { totalComps: fetched.comps.length, usedComps: 0, excluded: 0, reasons: {} },
-            dataSufficiency: {
-              sufficient: false,
-              level: "low" as const,
-              message: `Neighbor-synthesized from ${neighborResult.neighborsUsed} stale/thin sales.`,
-            },
-            risk_flags: [...neighborResult.riskFlags, "stale_comps"],
-          } as any;
-        }
-        console.log(
-          `[compiq.computeEstimate] neighbor-synthesis (stale-path) insufficient: used=${neighborResult.neighborsUsed}/${neighborResult.neighborsConsidered}`
-        );
-      } catch (err) {
-        console.warn(`[compiq.computeEstimate] neighbor-synthesis (stale-path) failed: ${(err as Error).message}`);
-      }
-    }
-
-    // ── Cross-parallel synthesis (no-direct-comps path) ────────────────────
-    // No live comps for this card at all (or all extremely stale). Fall back
-    // to sibling-parallel comps of the same player+year+set so we can still
-    // give the user a defensible price + trend signal instead of "$null".
-    let noCompCrossParallelAnchor: any = null;
-    let noCompEffectiveFmv: number | null = null;
-    try {
-      const { fetchSiblingParallelComps } = await import("./cardhedge.client.js");
-      const siblings = await fetchSiblingParallelComps({
-        playerName: body.playerName ?? "",
-        year: body.cardYear ?? cardIdentity?.year ?? null,
-        set: body.product ?? cardIdentity?.set ?? null,
-        excludeCardId: cardIdentity?.card_id ?? null,
-        grade: cardHedgeGrade,
-        perSiblingLimit: 6,
-        maxSiblings: 12,
-      });
-      if (siblings.length >= 3) {
-        const { synthesizeFromNeighbors } = await import("./neighborSynthesis.js");
-        const { parseCardQuery: parseFn } = await import("./cardQueryParser.js");
-        const targetParsed = parseFn(cardTitle);
-        if (effectiveIsAuto) targetParsed.isAuto = true;
-        if (normalizedParallel) targetParsed.parallel = normalizedParallel;
-        if (body.cardYear) targetParsed.year = body.cardYear;
-        const synth = synthesizeFromNeighbors(
-          targetParsed,
-          siblings.map((s) => ({ title: s.title, price: s.price, soldDate: s.soldDate ?? undefined })),
-          { trendWindowDays: 60 }
-        );
-        if (synth.syntheticFmv != null && synth.neighborsUsed >= 3) {
-          noCompCrossParallelAnchor = {
-            fmv: Math.round(synth.syntheticFmv * 100) / 100,
-            neighborsUsed: synth.neighborsUsed,
-            neighborsConsidered: synth.neighborsConsidered,
-            parallelTier: synth.anchor?.parallelTier ?? null,
-            confidenceCap: synth.confidenceCap,
-            anchor: synth.anchor,
-            trend: synth.trend,
-            triggerReason: "no-direct-comps",
-            detail: synth.detail,
-            momentumAdjustedFmv: null,
-            momentumPctApplied: null,
-            weeksStale: null,
-            effectiveWeeksApplied: null,
-            momentumSource: null,
-          };
-          noCompEffectiveFmv = Math.round(synth.syntheticFmv * 100) / 100;
-          console.log(
-            `[compiq.computeEstimate] no-comp cross-parallel anchor: fmv=$${synth.syntheticFmv} from ${synth.neighborsUsed}/${synth.neighborsConsidered} sibling comps`
-          );
-        }
-      }
-    } catch (err: any) {
-      console.warn(`[compiq.computeEstimate] no-comp cross-parallel synthesis failed:`, err?.message ?? err);
-    }
-
     return {
       cardTitle,
       verdict,
       action: "Hold",
-      dealScore: null,
+      dealScore: 0,
       quickSaleValue: null,
       fairMarketValue: null,
+      marketValue: null,
+      predictedPrice: mechanism1.predictedPrice,
+      predictedPriceRange: mechanism1.predictedPriceRange,
+      predictedPriceAttribution: mechanism1.predictedPriceAttribution,
       premiumValue: null,
       explanation: [verdict],
       marketDNA: {
@@ -1710,8 +1445,13 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       source: "no-recent-comps",
       daysSinceNewestComp: daysSinceNewest,
       variantWarning: fetched.variantWarning,
-      crossParallelAnchor: noCompCrossParallelAnchor,
-      effectiveFmv: noCompEffectiveFmv,
+      crossParallelAnchor: null,
+      effectiveFmv: null,
+      dataSufficiency: {
+        sufficient: false,
+        level: "none" as const,
+        message: ageNote,
+      },
     };
   }
 
@@ -2012,161 +1752,11 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     demand: dna.demand ?? null,
   });
 
-  // ── Cross-parallel synthesis (companion FMV) ─────────────────────────────
-  // When direct CH comps are thin (<5) OR stale (newest > 45 days), pull
-  // comps from sibling parallels of the same player+year+set and run the
-  // neighbor-synthesis engine. This does NOT replace the live FMV — it's
-  // exposed as `crossParallelAnchor` so the iOS UI can show both:
-  //   "$36 from 3 direct comps / $80 implied from related parallels"
-  let crossParallelAnchor: {
-    fmv: number;
-    neighborsUsed: number;
-    neighborsConsidered: number;
-    parallelTier: string | null;
-    confidenceCap: number;
-    anchor: any;
-    trend: any;
-    triggerReason: string;
-    detail: any[];
-    momentumAdjustedFmv: number | null;
-    momentumPctApplied: number | null;
-    weeksStale: number | null;
-    effectiveWeeksApplied: number | null;
-    momentumSource: string | null;
-  } | null = null;
-  let effectiveFmv: number | null = typeof fairMarketValue === "number" ? fairMarketValue : null;
-  try {
-    const newestCompMs = comps.reduce<number>((m, c) => {
-      const t = c.date ? Date.parse(c.date) : NaN;
-      return Number.isFinite(t) && t > m ? t : m;
-    }, 0);
-    const ageDays = newestCompMs > 0 ? (Date.now() - newestCompMs) / (24 * 3600 * 1000) : Infinity;
-    const isThin = comps.length < 5;
-    const isStale = ageDays > 45;
-    if (isThin || isStale) {
-      const triggerReason = [
-        isThin ? `thin(${comps.length}<5)` : null,
-        isStale ? `stale(newest=${Number.isFinite(ageDays) ? ageDays.toFixed(0) : "∞"}d)` : null,
-      ]
-        .filter(Boolean)
-        .join("+");
-      const { fetchSiblingParallelComps } = await import("./cardhedge.client.js");
-      const siblings = await fetchSiblingParallelComps({
-        playerName: body.playerName ?? "",
-        year: body.cardYear ?? cardIdentity?.year ?? null,
-        set: body.product ?? cardIdentity?.set ?? null,
-        excludeCardId: cardIdentity?.card_id ?? null,
-        grade: cardHedgeGrade,
-        perSiblingLimit: 6,
-        maxSiblings: 12,
-      });
-      if (siblings.length >= 3) {
-        const { synthesizeFromNeighbors } = await import("./neighborSynthesis.js");
-        const { parseCardQuery: parseFn } = await import("./cardQueryParser.js");
-        const targetParsed = parseFn(cardTitle);
-        if (effectiveIsAuto) targetParsed.isAuto = true;
-        if (normalizedParallel) targetParsed.parallel = normalizedParallel;
-        if (body.cardYear) targetParsed.year = body.cardYear;
-        const synth = synthesizeFromNeighbors(
-          targetParsed,
-          siblings.map((s) => ({ title: s.title, price: s.price, soldDate: s.soldDate ?? undefined })),
-          { trendWindowDays: 60 }
-        );
-        if (synth.syntheticFmv != null && synth.neighborsUsed >= 3) {
-          // ── Momentum lift on the stale live FMV ────────────────────────
-          // The cross-parallel synthesis gives us (a) an absolute synthetic
-          // price from parallel multipliers — which is only reliable when
-          // the neighbor parallel tier is classified — and (b) a temporal
-          // trend on the player's adjacent market, which is reliable even
-          // when absolute multipliers are uncertain (it's just measuring
-          // sibling prices over time, not absolute level).
-          //
-          // We use the TREND signal to lift the live (stale) FMV forward
-          // in time. Caps prevent extrapolating a noisy weekly slope across
-          // many months.
-          let momentumAdjustedFmv: number | null = null;
-          let momentumPctApplied: number | null = null;
-          let weeksStaleVal: number | null = null;
-          let effectiveWeeksApplied: number | null = null;
-          let momentumSource: string | null = null;
-          const liveFmv =
-            typeof fairMarketValue === "number" && fairMarketValue > 0
-              ? fairMarketValue
-              : null;
-          const slopePct =
-            typeof synth.trend?.slopePctPerWeek === "number"
-              ? synth.trend.slopePctPerWeek
-              : null;
-          const weeklySamples =
-            typeof synth.trend?.weeklySamples === "number"
-              ? synth.trend.weeklySamples
-              : 0;
-          if (
-            liveFmv != null &&
-            slopePct != null &&
-            Number.isFinite(slopePct) &&
-            weeklySamples >= 3 &&
-            Number.isFinite(ageDays) &&
-            ageDays > 0
-          ) {
-            weeksStaleVal = ageDays / 7;
-            // Never extrapolate beyond ~2× the sample window we actually
-            // observed; never beyond 12 weeks regardless. Floor at 1 week.
-            const maxExtrapolationWeeks = Math.max(
-              1,
-              Math.min(12, weeklySamples * 2)
-            );
-            effectiveWeeksApplied = Math.min(
-              weeksStaleVal,
-              maxExtrapolationWeeks
-            );
-            // Clamp cumulative move to ±35% so a noisy slope can't
-            // double or halve the price.
-            const rawMomentumPct = (effectiveWeeksApplied * slopePct) / 100;
-            momentumPctApplied = Math.max(-0.35, Math.min(0.35, rawMomentumPct));
-            momentumAdjustedFmv =
-              Math.round(liveFmv * (1 + momentumPctApplied) * 100) / 100;
-            momentumSource = `sibling-trend(${synth.trend!.direction},${slopePct.toFixed(2)}%/wk,n=${weeklySamples})`;
-            console.log(
-              `[compiq.computeEstimate] momentum lift: liveFmv=$${liveFmv} × (1 + ${(momentumPctApplied * 100).toFixed(1)}%) = $${momentumAdjustedFmv} ` +
-                `(weeksStale=${weeksStaleVal.toFixed(1)}, applied=${effectiveWeeksApplied.toFixed(1)}wks, slope=${slopePct.toFixed(2)}%/wk, n=${weeklySamples})`
-            );
-            // Only swap the displayed FMV when the lift is meaningful and
-            // we have a healthy sibling trend signal — the live anchor is
-            // ALWAYS preserved in `fairMarketValue` so the UI can show both.
-            if (Math.abs(momentumPctApplied) >= 0.05 && weeklySamples >= 4) {
-              effectiveFmv = momentumAdjustedFmv;
-            }
-          }
-
-          crossParallelAnchor = {
-            fmv: Math.round(synth.syntheticFmv * 100) / 100,
-            neighborsUsed: synth.neighborsUsed,
-            neighborsConsidered: synth.neighborsConsidered,
-            parallelTier: synth.anchor?.parallelTier ?? null,
-            confidenceCap: synth.confidenceCap,
-            anchor: synth.anchor,
-            trend: synth.trend,
-            triggerReason,
-            detail: synth.detail,
-            momentumAdjustedFmv,
-            momentumPctApplied,
-            weeksStale: weeksStaleVal,
-            effectiveWeeksApplied,
-            momentumSource,
-          };
-          console.log(
-            `[compiq.computeEstimate] cross-parallel anchor: fmv=$${synth.syntheticFmv} from ${synth.neighborsUsed}/${synth.neighborsConsidered} sibling comps (reason=${triggerReason})`
-          );
-        }
-      }
-    }
-  } catch (err: any) {
-    console.warn(
-      `[compiq.computeEstimate] cross-parallel synthesis failed:`,
-      err?.message ?? err
-    );
-  }
+  // ADR-0003 (Phase 3.2 option 3): neighbor synthesis removed.
+  // Keep placeholders for compatibility until routes/clients stop reading
+  // companion fields.
+  const crossParallelAnchor = null;
+  const effectiveFmv: number | null = typeof fairMarketValue === "number" ? fairMarketValue : null;
 
   // Issue #25 Phase 2 — compute regime + predicted range (read-only).
   // No pricing math reads from these fields.
@@ -2187,6 +1777,65 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     source: "live",
   });
 
+  // ─── Issue #25 Phase 3 — tier-anchored fallback predicted range ──────────
+  // Runs ONLY when:
+  //   1. COMPIQ_PHASE3_TIER_ANCHORED=true (default OFF for safe rollout)
+  //   2. Phase 2 returned a null range (no usable direct-parallel comps)
+  //   3. The subject card has a `set` from Card Hedge identity
+  // This block is purely ADDITIVE — surfaces as a separate response field
+  // `predictedRangePhase3`; it never mutates `predictedRangeResult`.
+  let predictedRangePhase3: (TierAnchoredResult & {
+    peerPoolDiagnostics: ReturnType<typeof __extractPhase3Diags>;
+  }) | null = null;
+  try {
+    const phase3Enabled = String(process.env.COMPIQ_PHASE3_TIER_ANCHORED ?? "")
+      .trim()
+      .toLowerCase() === "true";
+    const phase2NullRange =
+      predictedRangeResultLocal.predictedRange.low === null &&
+      predictedRangeResultLocal.predictedRange.high === null;
+    const subjectSet = (cardIdentity?.set ?? "").trim();
+    if (phase3Enabled && phase2NullRange && subjectSet) {
+      const subjectIsAuto = body.isAuto === true || (normalizedParallel ?? "").toLowerCase().includes("auto");
+      const lookup = getParallelAttributesLookup();
+      const peerPoolResult = await buildPeerPool({
+        subjectPlayer: cardIdentity?.player ?? body.playerName ?? "",
+        subjectSet,
+        subjectParallelName: normalizedParallel ?? body.parallel ?? null,
+        subjectIsAutograph: subjectIsAuto,
+        comps: (fetched.comps ?? []).map((s) => ({
+          price: s.price,
+          title: s.title ?? "",
+          soldDate: s.soldDate ?? null,
+        })),
+        lookup,
+      });
+      const tierResult = computeTierAnchoredRange({
+        subjectTier: peerPoolResult.subjectTier,
+        subjectRegime: regimeClassificationResult.regime ?? null,
+        peerPool: peerPoolResult.peerPool,
+      });
+      predictedRangePhase3 = {
+        ...tierResult,
+        peerPoolDiagnostics: __extractPhase3Diags(peerPoolResult.diagnostics),
+      };
+      console.log(
+        `[compiq.computeEstimate] Phase 3 tier-anchored fallback: ` +
+          `subject="${subjectSet}" parallel="${normalizedParallel ?? "Base"}" ` +
+          `subjectTier=${peerPoolResult.subjectTier} peers=${peerPoolResult.peerPool.length} ` +
+          `range=${tierResult.predictedRange === null ? "null" : `$${tierResult.predictedRange.low}-$${tierResult.predictedRange.high}`} ` +
+          `nullReason=${tierResult.diagnostics.nullReason ?? "none"}`,
+      );
+    }
+  } catch (phase3Err) {
+    // Defensive: never let Phase 3 block a price prediction.
+    console.warn(
+      `[compiq.computeEstimate] Phase 3 fallback failed:`,
+      (phase3Err as Error)?.message ?? phase3Err,
+    );
+    predictedRangePhase3 = null;
+  }
+
   return {
     cardTitle,
     verdict: result.verdict ?? "Hold",
@@ -2194,6 +1843,9 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
     fairMarketValue,
+    marketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+    predictedPrice: null,
+    predictedPriceAttribution: null,
     premiumValue,
     explanation: result.explanationBullets?.length
       ? result.explanationBullets
@@ -2212,6 +1864,10 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     // Issue #25 Phase 2 — read-only predicted range. NO pricing math reads
     // from this field; it is surfaced on the API response only.
     predictedRangeResult: predictedRangeResultLocal,
+    // Issue #25 Phase 3 — tier-anchored fallback range. Populated ONLY when
+    // env flag COMPIQ_PHASE3_TIER_ANCHORED=true AND Phase 2 returned a null
+    // range. Null in all other cases. NO pricing math reads from this field.
+    predictedRangePhase3,
     normalization: {
       parallelInput: body.parallel ?? null,
       parallelCanonical: normalizedParallel ?? null,
