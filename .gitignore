@@ -28,3 +28,9 @@ backend/harness/fixtures/cardhedge/
 
 # Azure App Service env var dump � contains live secrets; never commit (see PR #2.5)
 backend/azure-app-env-vars.txt
+# Root cleanup artifact-heavy folders (Phase 2.5)
+webapp-logs/
+logdownload_hotfix/
+logdownload_2f6c9d/
+logdownload_*/
+tmp/
