@@ -189,6 +189,72 @@ No new delimiter, no new field. The pipe-character lint check from §4 already c
 
 ---
 
+## 2.3 `printRun` as an optional enhancement field (Phase 3, issue #25)
+
+**Status:** Locked 2026-05-17 alongside the issue #25 Phase 3 predictive-engine reframe.
+
+### 2.3.1 Statement
+
+`printRun` on `parallel_attributes` is **optional** and **may legitimately be `null` indefinitely** for any row. A `null` print run is **not** a signal of incomplete curation. It is the persisted value when:
+
+- The print run is unknown (no public source, no manufacturer disclosure)
+- The print run is undefined by design (base / unnumbered Refractor)
+- The print run only exists in upstream HTML layers and cannot be acquired structurally (the SportsCardsPro API probe of 2026-05-17 confirmed PriceCharting / SCP do not expose print runs in any API field; see [tmp/scp/probe_printrun.txt](../../tmp/scp/probe_printrun.txt) and [tmp/scp/product-7383658.json](../../tmp/scp/product-7383658.json))
+
+### 2.3.2 Primary scarcity input — multiplier table (REBUILD 2026-05-17)
+
+The predictive engine reads **`parallelName`** as the primary scarcity input. `parallelName` must use the owner-curated naming convention from the Chrome/Draft multiplier table ([chromeDraftMultipliers.ts](../src/services/compiq/chromeDraftMultipliers.ts) — 54 entries). The Phase 3 multiplier-anchored predicted-range fallback ([predictedRangeMultiplierAnchored.ts](../src/services/compiq/predictedRangeMultiplierAnchored.ts)) consumes `parallelName` directly and derives the value multiplier via direct lookup.
+
+Naming convention for `parallelName` (locked):
+
+- Color parallels: use the bare color name without trailing " Refractor" — e.g. `"Blue"` not `"Blue Refractor"`, `"Gold"` not `"Gold Refractor"`. The engine accepts either form on input and normalizes.
+- Sub-parallels keep their qualifier: `"Blue Wave"`, `"Gold Sapphire"`, `"Green Reptilian"`, `"HTA Choice Gold"`.
+- The unnumbered Refractor anchor row is exactly `"Refractor"`.
+- The unnumbered base autograph row is exactly `"Base Auto"`.
+- The Auto / Autograph suffix is stripped during lookup; `parallel_attributes.isAutograph` carries the auto/non-auto distinction.
+
+`tierWithinSet` remains on the schema as an **informational color-tier bucket label** (`"Base" | "Early Color" | "Blue Tier" | "Green Tier" | "Yellow Tier" | "Gold Tier" | "Orange Tier" | "Black Tier" | "Red Tier" | "1/1 Tier" | "HTA"`) for UI grouping and analytics. The predictive engine **no longer consumes `tierWithinSet` for multiplier math**. The legacy 8-tier integer system ([tierMultipliers.ts](../src/services/compiq/tierMultipliers.ts) / [predictedRangeTierAnchored.ts](../src/services/compiq/predictedRangeTierAnchored.ts)) is superseded by the multiplier table but retained for unit-test traceability of the prior approach.
+
+### 2.3.3 When `printRun` is populated
+
+When the curator has a print run available, populate it. It serves as:
+
+- Audit documentation (alongside `sourceCitation`) for *why* a tier was assigned
+- Future-optional input to a more granular pricing model (not in v1)
+- UI surface for collector-facing displays (`"/150"` is more recognizable than "Tier 4")
+
+It is **never** the primary input to the predictive engine and the engine **never** falls back to `printRun` when `tierWithinSet` is present.
+
+### 2.3.4 §2.2 cross-reference
+
+`ch_card_index.printRun` is denormalized from `parallel_attributes.printRun` and inherits the same nullability semantics. A `null` value in either collection is a valid persisted state — not a "pending fill-in".
+
+### 2.3.5 Phase 3 design dependency
+
+The Phase 3 predictive engine (REBUILD 2026-05-17) ships against the owner-curated multiplier table:
+
+- [predictedRangeMultiplierAnchored.ts](../src/services/compiq/predictedRangeMultiplierAnchored.ts) takes a peer pool of `{ parallelName, price, daysOld? }` records — no `printRun` field exists in its input contract
+- [chromeDraftMultipliers.ts](../src/services/compiq/chromeDraftMultipliers.ts) defines a fixed 54-entry lookup keyed strictly on `parallelName` (canonical Title-Case)
+- The fallback activates inside the `variant-mismatch cross-parallel synthesis` branch of [compiqEstimate.service.ts](../src/services/compiq/compiqEstimate.service.ts) when sibling-parallel comps for the same player+year+set are available
+- The fallback emits `source: "multiplier-anchored"` so consumers can distinguish it from `source: "live"` (Phase 2) and the legacy `source: "tier-anchored"` (superseded Phase 3 path)
+- The fallback runs **alongside** the existing FMV computation — never replaces it. `predictedRange` is added as a new field; FMV behavior is unchanged.
+
+This decoupling is permanent: any future re-introduction of print-run-derived scarcity ratios MUST go through a new schema-version bump (per §7.3) and a documented Phase 4 design.
+
+---
+
+## 2.5 Multiplier table reference (Chrome/Draft family)
+
+The authoritative source for Chrome/Draft parallel value multipliers is [chromeDraftMultipliers.ts](../src/services/compiq/chromeDraftMultipliers.ts).
+
+- 54 entries covering the full Bowman Chrome / Bowman Draft Chrome parallel rainbow (Base Auto through Superfractor Sapphire) plus the HTA Choice subset.
+- Each entry exposes `baseMultiplier` (Base-Auto-anchored, unnumbered = 1.000) and `refractorMultiplier` (Refractor-anchored, /499 = 1.000). Phase 3 math uses `baseMultiplier`.
+- Values were derived by the owner from observed 2024 market data and are **frozen**. Any change is a Phase 4 design decision requiring a schema-version bump.
+- The same multipliers apply to both autograph and non-autograph variants of the same parallel name; the auto/non-auto distinction lives on `parallel_attributes.isAutograph`.
+- `parallel_attributes` records for Chrome/Draft sets MUST use the exact `parallelName` values from the multiplier table (Title-Case, no trailing " Refractor" on color parallels).
+
+---
+
 ## 3. Partition key recommendation (not committed)
 
 ### 3.1 `parallel_attributes` — recommend `/set`
@@ -516,3 +582,10 @@ Phase 1a noted CH `prices[]` can be used to compute cross-parallel ratios (Blue 
 - Locked Option A.i: insert sets get distinct `set` values in Cosmos, not a new field on parent set's records.
 - Naming convention default: '{Year} {Brand} {Sport} - {Insert Name}' when CH doesn't provide its own distinct value.
 - Reference: PR #36 cold review, issue #33
+
+### 2026-05-17 (Issue #25 Phase 3 — predictive engine reframe)
+- Added §2.3 documenting `printRun` as an optional enhancement field that may legitimately be `null` indefinitely.
+- Documented that `tierWithinSet` is the **primary** scarcity input for the predictive engine; `printRun` is informational only.
+- Documented the Phase 3 design dependency: tier-anchored predicted-range fallback ships with zero print-run dependency.
+- Schema field shapes are unchanged (printRun was already `number | null` in §2.1 and §2.2). The change is solely policy and prose: `null` is a valid persisted state, not a curation incompleteness signal.
+- Reference: SCP API probe 2026-05-17 confirmed print runs are not exposed via the SportsCardsPro / PriceCharting API; issue #25 Phase 3 prompt.
