@@ -120,14 +120,39 @@ function isRefractor499(comp: ParsedComp): boolean {
   return /refractor/i.test(comp.parallelName) && comp.printRun === 499;
 }
 
+function toTitleCase(input: string): string {
+  return input
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function canonicalizeParallelForLookup(parallelName: string): string {
+  const cleaned = parallelName
+    .toLowerCase()
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\b(auto|autograph|autographed|signed)\b/g, " ")
+    .replace(/#\s*\/\s*\d{1,4}\b/g, " ")
+    .replace(/\/\s*\d{1,4}\b/g, " ")
+    .replace(/\b\d{1,4}\b/g, " ")
+    .replace(/[^a-z&\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return parallelName.trim();
+  return toTitleCase(cleaned);
+}
+
 function normalizeSubjectParallel(parallelName: string): string {
   const trimmed = parallelName.trim();
   if (!trimmed) return trimmed;
+  const canonical = canonicalizeParallelForLookup(trimmed);
   // Curator table has no "Blue Refractor" CPA row for Bowman Chrome in 2022.
   // Owner-approved fallback for this subject maps to HTA Choice Refractor (/150)
   // which carries the requested 3.0-4.4 range.
-  if (/^blue\s+refractor$/i.test(trimmed)) return "HTA Choice Refractor";
-  return trimmed;
+  if (/^blue\s+refractor$/i.test(canonical)) return "HTA Choice Refractor";
+  return canonical;
 }
 
 function resolveSubjectEntry(subject: MultiplierAnchoredSubject): BowmanFamilyEntry | null {
