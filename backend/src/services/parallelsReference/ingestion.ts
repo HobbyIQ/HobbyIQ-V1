@@ -22,7 +22,36 @@ export type SourceCitation =
   | { type: "ch-derived"; cardIdsSampled: string[]; date: string }
   | { type: "web-research"; url: string; siteName: string; date: string; note?: string }
   | { type: "manufacturer-spec"; document: string; date: string; note?: string }
-  | { type: "manual-override"; note: string; date: string };
+  | { type: "manual-override"; note: string; date: string }
+  /**
+   * Phase B curation pipeline (rewrite, 2026-05-16). Facts (parallel existence,
+   * print run, autograph flag) were derived from the Beckett S3 checklist for
+   * the stated (year, brand) tuple under documented permission — see
+   * `backend/docs/data-sources.md` for the authorization trail. Curator-supplied
+   * fields (tier, parent variant, color, review stamp) were filled by the owner
+   * via the curation worksheet harness in `backend/src/curation/`. The
+   * `beckettSourceUrl` preserves the S3 location for audit; `worksheetPath`
+   * points back at the finalized worksheet that produced this record.
+   */
+  | {
+      type: "beckett-checklist+owner-curation";
+      date: string;
+      beckettSourceUrl: string;
+      worksheetPath: string;
+      note?: string;
+    }
+  /**
+   * Phase A.4/B extension. Facts were derived from Cardboard Connection's
+   * WordPress-hosted checklist workbook under owner-attested permission.
+   * See `backend/docs/data-sources.md` for source authorization.
+   */
+  | {
+      type: "cardboard-connection-checklist+owner-curation";
+      date: string;
+      cardboardConnectionSourceUrl: string;
+      worksheetPath: string;
+      note?: string;
+    };
 
 export interface ParallelAttributesRecord {
   id: string;
@@ -122,7 +151,19 @@ export function validateParallelAttributesRecord(r: ParallelAttributesRecord): v
   if (!r.sourceCitation || typeof r.sourceCitation !== "object" || !(r.sourceCitation as any).type) {
     throw new Error("[parallels-ingestion] 'sourceCitation.type' is required");
   }
-  assertIsoDate((r.sourceCitation as any).date, "sourceCitation.date");
+  const citation = r.sourceCitation as SourceCitation;
+  assertIsoDate((citation as any).date, "sourceCitation.date");
+  if (citation.type === "beckett-checklist+owner-curation") {
+    assertNonEmpty(citation.beckettSourceUrl, "sourceCitation.beckettSourceUrl");
+    assertNonEmpty(citation.worksheetPath, "sourceCitation.worksheetPath");
+  }
+  if (citation.type === "cardboard-connection-checklist+owner-curation") {
+    assertNonEmpty(
+      citation.cardboardConnectionSourceUrl,
+      "sourceCitation.cardboardConnectionSourceUrl",
+    );
+    assertNonEmpty(citation.worksheetPath, "sourceCitation.worksheetPath");
+  }
   assertIsoDate(r.lastReviewedAt, "lastReviewedAt");
   assertNonEmpty(r.reviewedBy, "reviewedBy");
   if (!(Number.isInteger(r.schemaVersion) && r.schemaVersion >= 1)) {
