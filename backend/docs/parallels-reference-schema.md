@@ -398,10 +398,26 @@ type SourceCitation =
   | { type: "ch-derived"; cardIdsSampled: string[]; date: string }
   | { type: "web-research"; url: string; siteName: string; date: string; note?: string }
   | { type: "manufacturer-spec"; document: string; date: string; note?: string }
-  | { type: "manual-override"; note: string; date: string };
+  | { type: "manual-override"; note: string; date: string }
+  | {
+      type: "beckett-checklist+owner-curation";
+      date: string;
+      beckettSourceUrl: string;
+      worksheetPath: string;
+      note?: string;
+    }
+  | {
+      type: "cardboard-connection-checklist+owner-curation";
+      date: string;
+      cardboardConnectionSourceUrl: string;
+      worksheetPath: string;
+      note?: string;
+    };
 ```
 
 Required on every `parallel_attributes` document. The discriminator drives downstream audit queries ("which parallels still rely on owner-knowledge and need a citation?").
+
+The two `*+owner-curation` variants are the audit trail for worksheet-backed curation batches. They require both the upstream source URL and the finalized worksheet path so each record can be traced back to the exact source artifact and owner-reviewed output.
 
 ### 7.2 Review fields
 
