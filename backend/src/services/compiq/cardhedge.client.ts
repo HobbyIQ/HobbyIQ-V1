@@ -457,6 +457,29 @@ export async function findCompsByQuery(
     }
   }
 
+  // 3b. Autograph-prospect taxonomy retry. Card Hedge stores Bowman/Topps
+  // Chrome autograph prospects under bare "Bowman Chrome Baseball" /
+  // "Topps Chrome Baseball" set names with the autograph-ness encoded only
+  // in a CPA-/BCPA-/CRA- number prefix. CompIQ requests routinely arrive
+  // using the collector-convention "Bowman Chrome Prospects Autograph"
+  // phrasing, which CH's lexical search never ranks the CPA-* cards into
+  // the top results for — so the search above returns only the non-auto
+  // BCP-* Prospects rainbow, none of which pass cardMatchesTokens(isAuto).
+  // Stripping the literal phrase "Prospect(s) Autograph|Auto" lets CH
+  // surface the actual auto SKUs; hasAutoSignal() / AUTO_NUMBER_PREFIXES
+  // already accepts them via the CPA- number prefix.
+  if (!card && tokens.isAuto) {
+    const stripped = stripAutoSetPhrases(skuQuery);
+    if (stripped && stripped !== skuQuery) {
+      console.log(
+        `[cardhedge.client] auto-phrase retry: "${skuQuery}" -> "${stripped}" (tokens.isAuto=true, prior attempts found no auto candidate)`,
+      );
+      const hits = await searchCards(stripped, 25);
+      searchHits = [...searchHits, ...hits];
+      card = hits.find((h) => cardMatchesTokens(h, tokens)) ?? null;
+    }
+  }
+
   // 4. No exact match — fall back to the best candidate and emit a warning.
   let variantWarning: string[] = [];
   if (!card) {
@@ -505,7 +528,29 @@ export async function findCompsByQuery(
 function simplifyQuery(q: string): string {
   return q
     .replace(/#\s*\d+/g, "")
-    .replace(/\b(rookie|rc|card|psa|bgs|sgc|gem mint|mint)\b/gi, "")
+    .replace(/\b(rookie|rc|card|psa|bgs|sgc|gem mint|mint|prospects?|autograph)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Strip the collector-convention phrase "Prospect(s) Autograph|Auto" from a
+ * query so Card Hedge's lexical search can surface the actual autograph SKUs.
+ *
+ * CH stores Bowman/Topps Chrome autograph prospects under bare set names
+ * ("2024 Bowman Chrome Baseball", "2024 Topps Chrome Baseball") with the
+ * autograph-ness encoded only in a CPA-/BCPA-/CRA- number prefix. Queries
+ * built from collector convention ("2024 Bowman Chrome Prospects Autograph")
+ * never lexically match CH's set names, so its search ranks the non-auto
+ * BCP-* Prospects rainbow above the auto cards and the auto SKUs fall off
+ * the top page. Removing the phrase lets the CPA-* cards rank correctly;
+ * hasAutoSignal() / AUTO_NUMBER_PREFIXES already accepts them downstream.
+ *
+ * Exported for unit testing.
+ */
+export function stripAutoSetPhrases(q: string): string {
+  return q
+    .replace(/\bprospects?\s+(?:autograph|auto)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
