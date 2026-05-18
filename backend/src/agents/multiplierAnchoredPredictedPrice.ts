@@ -120,14 +120,50 @@ function isRefractor499(comp: ParsedComp): boolean {
   return /refractor/i.test(comp.parallelName) && comp.printRun === 499;
 }
 
-function normalizeSubjectParallel(parallelName: string): string {
-  const trimmed = parallelName.trim();
-  if (!trimmed) return trimmed;
+function toTitleCase(value: string): string {
+  return value.replace(/(^|[\s\-\d])([a-z])/g, (_full, prefix: string, letter: string) => {
+    return `${prefix}${letter.toUpperCase()}`;
+  });
+}
+
+/**
+ * Canonicalize subject parallel text for multiplier-table lookup while preserving
+ * meaningful tokens used by real Bowman/Chrome parallel names.
+ *
+ * Key safety constraints:
+ * - Serial digits are stripped only for hash/slash-delimited forms and for
+ *   trailing serials on hyphenated parallels (e.g., "X-Fractor 100").
+ *   This preserves meaningful year/ordinal/product-number tokens such as
+ *   "1989", "1st", or "206".
+ * - Step 7 preserves ASCII hyphen so names like "X-Fractor" remain intact.
+ */
+function canonicalizeParallelForLookup(name: string): string {
+  const normalized = name
+    .toLowerCase()
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\b(auto|autograph|autographed|signed)\b/g, " ")
+    .replace(/#\s*\/\s*\d{1,4}\b/g, " ")
+    .replace(/\/\s*\d{1,4}\b/g, " ")
+    .replace(/(?<=[#/])\d{1,4}(?=\b)/g, " ")
+    .replace(/(?<=\b[a-z]+-[a-z]+\s)\d{1,4}(?=\b)/g, " ")
+    .replace(/[^a-z0-9&\s-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/^\d+$/.test(normalized)) return "";
+
+  return toTitleCase(normalized);
+}
+
+export function normalizeSubjectParallel(parallelName: string): string {
+  const canonical = canonicalizeParallelForLookup(parallelName);
+  if (!canonical) return canonical;
+
   // Curator table has no "Blue Refractor" CPA row for Bowman Chrome in 2022.
   // Owner-approved fallback for this subject maps to HTA Choice Refractor (/150)
   // which carries the requested 3.0-4.4 range.
-  if (/^blue\s+refractor$/i.test(trimmed)) return "HTA Choice Refractor";
-  return trimmed;
+  if (/^blue\s+refractor$/i.test(canonical)) return "HTA Choice Refractor";
+  return canonical;
 }
 
 function resolveSubjectEntry(subject: MultiplierAnchoredSubject): BowmanFamilyEntry | null {

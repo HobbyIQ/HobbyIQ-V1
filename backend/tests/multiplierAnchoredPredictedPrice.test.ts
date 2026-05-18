@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeMultiplierAnchoredPredictedPrice } from "../src/agents/multiplierAnchoredPredictedPrice.js";
+import {
+  computeMultiplierAnchoredPredictedPrice,
+  normalizeSubjectParallel,
+} from "../src/agents/multiplierAnchoredPredictedPrice.js";
 
 const NOW = new Date("2026-05-17T12:00:00.000Z");
 
@@ -139,5 +142,45 @@ describe("computeMultiplierAnchoredPredictedPrice", () => {
 
     expect(result.predictedPrice).toBeNull();
     expect(result.predictedPriceAttribution.failureReason).toBe("subject-is-anchor");
+  });
+});
+
+describe("canonicalizeParallelForLookup regression coverage", () => {
+  it("preserves hyphenated parallel names", () => {
+    expect(normalizeSubjectParallel("X-Fractor")).toBe("X-Fractor");
+  });
+
+  it("preserves year-prefixed names", () => {
+    expect(normalizeSubjectParallel("1989 Retro")).toBe("1989 Retro");
+  });
+
+  it("preserves ordinal tokens", () => {
+    // Intentional: step 10 title-cases tokens, so 1st becomes 1St in canonical form.
+    expect(normalizeSubjectParallel("1st Bowman Chrome")).toBe("1St Bowman Chrome");
+  });
+
+  it("preserves product-number token names", () => {
+    expect(normalizeSubjectParallel("Topps 206")).toBe("Topps 206");
+  });
+
+  it("retains Blue Refractor alias behavior after canonicalization", () => {
+    expect(normalizeSubjectParallel("Blue Refractor Auto /25")).toBe("HTA Choice Refractor");
+  });
+
+  it("strips serial fragments from #/ forms", () => {
+    expect(normalizeSubjectParallel("Refractor #25/99")).toBe("Refractor");
+  });
+
+  it("strips trailing serial on hyphenated parallels", () => {
+    expect(normalizeSubjectParallel("X-Fractor 100")).toBe("X-Fractor");
+  });
+
+  it("handles empty string safely", () => {
+    expect(normalizeSubjectParallel("")).toBe("");
+  });
+
+  it("handles all-digits input safely", () => {
+    // All-digit input is normalized to empty to avoid non-parallel numeric-only lookup keys.
+    expect(normalizeSubjectParallel("1234")).toBe("");
   });
 });
