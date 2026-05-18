@@ -1161,7 +1161,10 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   // structured /estimate path (which doesn't run the route-level parser) still
   // gets correct variant info.
   if (effectiveIsAuto) parsedForGuard.isAuto = true;
-  if (normalizedParallel) parsedForGuard.parallel = normalizedParallel;
+  // "base" means no distinguishing parallel token — comp titles don't contain
+  // the word "base", so injecting it here would cause isCompVariantMatch to
+  // reject every valid base comp and trigger the variant-mismatch guard.
+  if (normalizedParallel && normalizedParallel !== "base") parsedForGuard.parallel = normalizedParallel;
   if (body.cardYear) parsedForGuard.year = body.cardYear;
 
   const variantFiltered: typeof recencyFilteredComps = [];
@@ -1530,7 +1533,9 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   }
 
   let refinedPool = compsPool;
-  if (normalizedParallel) refinedPool = applyParallelFilter(refinedPool, normalizedParallel);
+  // Skip applyParallelFilter for "base" — base card comps don't carry the
+  // word "base" as a variant token, so filtering on it drops all valid comps.
+  if (normalizedParallel && normalizedParallel !== "base") refinedPool = applyParallelFilter(refinedPool, normalizedParallel);
   if (effectiveIsAuto) refinedPool = applyAutoFilter(refinedPool);
   if (normalizedGradeCompany && body.gradeValue !== undefined) {
     refinedPool = applyGradeFilter(refinedPool, `${normalizedGradeCompany} ${body.gradeValue}`);
