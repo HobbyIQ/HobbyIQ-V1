@@ -1,210 +1,107 @@
 {
-    "caseId":  "case-18-justin-herbert-2020-panini-prizm-psa10",
-    "category":  "nonBaseball",
-    "query":  "2020 Panini Prizm Justin Herbert PSA 10",
-    "grade":  "PSA 10",
-    "capturedAt":  "2026-05-15T18:33:32.0503388Z",
-    "search":  {
-                   "pricingEngine":  "monolith",
-                   "engineVersion":  "1989cb8",
-                   "computedAt":  "2026-05-15T18:24:05.571Z",
-                   "success":  true,
-                   "query":  "2020 Panini Prizm Justin Herbert PSA 10",
-                   "summary":  "Unsupported sport (Football). CompIQ currently prices baseball cards only.",
-                   "marketTier":  {
-                                      "value":  null,
-                                      "high":  null
-                                  },
-                   "buyZone":  [
-                                   null,
-                                   null
-                               ],
-                   "holdZone":  [
-                                    null,
-                                    null
-                                ],
-                   "sellZone":  [
-                                    null,
-                                    null
-                                ],
-                   "fairMarketValueLive":  null,
-                   "confidence":  0,
-                   "source":  "unsupported_sport",
-                   "unsupportedSportReason":  "CompIQ currently supports baseball cards only. This appears to be a football card.",
-                   "detectedSport":  "Football",
-                   "trendAnalysis":  {
-                                         "market_direction":  "flat",
-                                         "change_from_older_to_recent":  null,
-                                         "liquidity":  "Normal"
-                                     },
-                   "supply":  null,
-                   "recentComps":  [
-
-                                   ],
-                   "cardIdentity":  {
-                                        "card_id":  "1610945033944x496171059364495360",
-                                        "title":  "Justin Herbert 2020 Panini Prizm Football",
-                                        "player":  "Justin Herbert",
-                                        "set":  "2020 Panini Prizm Football",
-                                        "year":  null,
-                                        "number":  "325",
-                                        "variant":  "Base"
-                                    },
-                   "gradeUsed":  "PSA 10",
-                   "compsUsed":  0,
-                   "compsAvailable":  0,
-                   "daysSinceNewestComp":  null,
-                   "variantWarning":  [
-
-                                      ],
-                   "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  null,
-                   "crossParallelAnchor":  null,
-                   "buySignal":  null,
-                   "parsedQuery":  {
-                                       "playerName":  "Justin Herbert",
-                                       "year":  2020,
-                                       "brand":  "Panini",
-                                       "set":  "Prizm",
-                                       "parallel":  null,
-                                       "isAuto":  false,
-                                       "isPatch":  false,
-                                       "isRookie":  false,
-                                       "printRun":  null,
-                                       "cardNumber":  null,
-                                       "grade":  "10",
-                                       "gradingCompany":  "PSA",
-                                       "confidence":  0.9
-                                   },
-                   "searchQuery":  "2020 Justin Herbert Panini Prizm PSA 10"
-               },
-    "searchError":  null,
-    "cardHedgeCardId":  "1610945033944x496171059364495360",
-    "priceById":  {
-                      "pricingEngine":  "monolith",
-                      "engineVersion":  "1989cb8",
-                      "computedAt":  "2026-05-15T18:33:32.590Z",
-                      "success":  true,
-                      "cardHedgeCardId":  "1610945033944x496171059364495360",
-                      "summary":  "Buy — good value and market signals are positive.",
-                      "marketTier":  {
-                                         "value":  60,
-                                         "high":  68
-                                     },
-                      "buyZone":  [
-                                      46.800000000000004,
-                                      52
-                                  ],
-                      "holdZone":  [
-                                       52,
-                                       60
-                                   ],
-                      "sellZone":  [
-                                       60,
-                                       68
-                                   ],
-                      "fairMarketValueLive":  60,
-                      "confidence":  0.95,
-                      "source":  "live",
-                      "trendAnalysis":  {
-                                            "market_direction":  "up",
-                                            "change_from_older_to_recent":  19.2,
-                                            "liquidity":  "Normal",
-                                            "broaderTrend":  {
-                                                                 "impliedTrendPct":  0,
-                                                                 "direction":  "flat",
-                                                                 "recentMedian":  null,
-                                                                 "olderMedian":  null,
-                                                                 "recentCount":  0,
-                                                                 "olderCount":  0,
-                                                                 "similarCardsScanned":  0,
-                                                                 "totalSamples":  0,
-                                                                 "windowRecentDays":  14,
-                                                                 "windowOlderDays":  45,
-                                                                 "basedOn":  "insufficient"
-                                                             }
-                                        },
-                      "recentComps":  [
-                                          {
-                                              "price":  17.5,
-                                              "title":  "2020 Panini Prizm Justin Herbert Rookie RC #325 PSA 10",
-                                              "soldDate":  "2026-05-15T05:28:00.000Z"
-                                          },
-                                          {
-                                              "price":  13.22,
-                                              "title":  "2020 Panini Prizm #325 Justin Herbert RC Rookie Gem Mint PSA 10",
-                                              "soldDate":  "2026-05-15T04:32:00.000Z"
-                                          },
-                                          {
-                                              "price":  12,
-                                              "title":  "2020 Panini Prizm #325 Justin Herbert RC Rookie Gem Mint PSA 10",
-                                              "soldDate":  "2026-05-15T04:13:00.000Z"
-                                          },
-                                          {
-                                              "price":  15,
-                                              "title":  "2020 PANINI PRIZM JUSTIN HERBERT #325 PSA 10",
-                                              "soldDate":  "2026-05-14T23:21:00.000Z"
-                                          },
-                                          {
-                                              "price":  23.5075,
-                                              "title":  "2020 PANINI PRIZM VAR #325 JUSTIN HERBERT ROOKIE RC PSA 10",
-                                              "soldDate":  "2026-05-14T23:09:00.000Z"
-                                          },
-                                          {
-                                              "price":  12.5,
-                                              "title":  "2020 Panini Prizm Justin Herbert #325 PSA 10 RC Chargers",
-                                              "soldDate":  "2026-05-14T05:02:00.000Z"
-                                          },
-                                          {
-                                              "price":  17.4225,
-                                              "title":  "2020 Justin Herbert RC #325 Panini Prizm Base Psa 10 Gem Mint *",
-                                              "soldDate":  "2026-05-12T02:01:00.000Z"
-                                          },
-                                          {
-                                              "price":  12.5,
-                                              "title":  "2020 Panini Prizm Justin Herbert ROOKIE #325 PSA 10 GEM MINT",
-                                              "soldDate":  "2026-05-11T02:02:20.000Z"
-                                          },
-                                          {
-                                              "price":  13.75,
-                                              "title":  "2020 Panini Prizm Rookie Justin Herbert #325 PSA 10 GEM MT Rookie RC Chargers",
-                                              "soldDate":  "2026-05-11T01:42:00.000Z"
-                                          },
-                                          {
-                                              "price":  16.25,
-                                              "title":  "2020 Prizm Justin Herbert RC PSA 10 #325 Chargers Rookie",
-                                              "soldDate":  "2026-05-09T10:21:00.000Z"
-                                          }
-                                      ],
-                      "cardIdentity":  {
-                                           "card_id":  "1610945033944x496171059364495360",
-                                           "title":  null,
-                                           "player":  null,
-                                           "set":  null,
-                                           "year":  null,
-                                           "number":  null,
-                                           "variant":  null
-                                       },
-                      "gradeUsed":  "PSA 10",
-                      "compsUsed":  22,
-                      "compsAvailable":  22,
-                      "daysSinceNewestComp":  null,
-                      "broaderTrend":  {
-                                           "impliedTrendPct":  0,
-                                           "direction":  "flat",
-                                           "recentMedian":  null,
-                                           "olderMedian":  null,
-                                           "recentCount":  0,
-                                           "olderCount":  0,
-                                           "similarCardsScanned":  0,
-                                           "totalSamples":  0,
-                                           "windowRecentDays":  14,
-                                           "windowOlderDays":  45,
-                                           "basedOn":  "insufficient"
-                                       }
-                  },
-    "priceByIdError":  null,
-    "notes":  [
-
-              ]
+  "caseId": "case-18",
+  "category": "other",
+  "query": "2020 Panini Prizm Justin Herbert PSA 10",
+  "grade": "PSA 10",
+  "capturedAt": "2026-05-18T18:02:07.943Z",
+  "search": {
+    "pricingEngine": "monolith",
+    "engineVersion": "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+    "computedAt": "2026-05-18T17:56:49.653Z",
+    "success": true,
+    "query": "2020 Panini Prizm Justin Herbert PSA 10",
+    "summary": "Unsupported sport (Football). CompIQ currently prices baseball cards only.",
+    "marketTier": {
+      "value": null,
+      "high": null
+    },
+    "buyZone": [
+      null,
+      null
+    ],
+    "holdZone": [
+      null,
+      null
+    ],
+    "sellZone": [
+      null,
+      null
+    ],
+    "fairMarketValueLive": null,
+    "marketValue": null,
+    "predictedPrice": null,
+    "predictedPriceRange": null,
+    "predictedPriceAttribution": null,
+    "confidence": 0,
+    "source": "unsupported_sport",
+    "unsupportedSportReason": "CompIQ currently supports baseball cards only. This appears to be a football card.",
+    "detectedSport": "Football",
+    "trendAnalysis": {
+      "market_direction": "flat",
+      "change_from_older_to_recent": null,
+      "liquidity": "Normal"
+    },
+    "regime": "insufficient_data",
+    "regimeConfidence": "low",
+    "regimeDiagnostics": {
+      "compsUsedForClassification": 0,
+      "windowDays": 90,
+      "slopePctPerMonth": null,
+      "r2": null,
+      "coefficientOfVariation": null,
+      "recentMeanLast14d": null,
+      "olderMean14to90d": null,
+      "pctChangeRecentVsOlder": null,
+      "classificationReason": "skipped_classification: source=unsupported_sport (classifier output discarded: Only 0 usable comp(s) in last 90 days (need >= 5).)"
+    },
+    "predictedRange": {
+      "low": null,
+      "high": null
+    },
+    "predictedRangeDiagnostics": {
+      "windowAppliedDays": null,
+      "compsAfterFilter": 0,
+      "mathApplied": "null_non_live_source",
+      "sanityCapsApplied": [],
+      "weightedPercentileBuckets": null
+    },
+    "predictedRangeAdjustedConfidence": null,
+    "supply": null,
+    "recentComps": [],
+    "cardIdentity": {
+      "card_id": "1610945033944x496171059364495360",
+      "title": "Justin Herbert 2020 Panini Prizm Football",
+      "player": "Justin Herbert",
+      "set": "2020 Panini Prizm Football",
+      "year": null,
+      "number": "325",
+      "variant": "Base"
+    },
+    "gradeUsed": "PSA 10",
+    "compsUsed": 0,
+    "compsAvailable": 0,
+    "daysSinceNewestComp": null,
+    "variantWarning": [],
+    "neighborSynthesis": null,
+    "crossParallelAnchor": null,
+    "buySignal": null,
+    "parsedQuery": {
+      "playerName": "Justin Herbert",
+      "year": 2020,
+      "brand": "Panini",
+      "set": "Prizm",
+      "parallel": null,
+      "isAuto": false,
+      "isPatch": false,
+      "isRookie": false,
+      "printRun": null,
+      "cardNumber": null,
+      "grade": "10",
+      "gradingCompany": "PSA",
+      "confidence": 0.9
+    },
+    "searchQuery": "2020 Justin Herbert Panini Prizm PSA 10"
+  },
+  "cardHedgeCardId": null,
+  "priceById": null
 }

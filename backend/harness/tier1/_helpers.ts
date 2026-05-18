@@ -207,7 +207,7 @@ export const CASES: TestCase[] = [
     grade: "Raw",
     sport: "MLB",
     category: "popular-baseline",
-    blockedBy: [8],
+    blockedBy: [8, 55],
     baselineFile: "case-13-elly-de-la-cruz-2023-topps-update-rc-raw.json",
   },
   {
@@ -216,6 +216,7 @@ export const CASES: TestCase[] = [
     grade: "Raw",
     sport: "MLB",
     category: "popular-baseline",
+    blockedBy: [55],
     baselineFile: "case-14-wander-franco-2018-bowman-chrome-1st-auto-raw.json",
   },
 
@@ -276,7 +277,7 @@ export const CASES: TestCase[] = [
     // Green Grass Refractor), causing marketTier to legitimately diverge
     // across endpoints. The cross-endpoint drift assertion in
     // pinnedIdHard.test.ts soft-skips until #18 ships.
-    blockedBy: [18],
+    blockedBy: [18, 9],
     gradePair: "case-19",
     baselineFile:
       "case-19a-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-raw.json",

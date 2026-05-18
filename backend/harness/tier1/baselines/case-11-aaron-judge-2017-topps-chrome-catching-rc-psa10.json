@@ -48,7 +48,6 @@
                                           "player_mismatch"
                                       ],
                    "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  null,
                    "crossParallelAnchor":  null,
                    "buySignal":  null,
                    "parsedQuery":  {

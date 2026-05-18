@@ -48,7 +48,6 @@
                                           "player_mismatch"
                                       ],
                    "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  null,
                    "crossParallelAnchor":  {
                                                "fmv":  776.36,
                                                "neighborsUsed":  8,
