@@ -56,7 +56,6 @@
 
                                       ],
                    "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  null,
                    "crossParallelAnchor":  {
                                                "fmv":  1012.5,
                                                "neighborsUsed":  3,

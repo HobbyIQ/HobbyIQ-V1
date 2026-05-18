@@ -1,288 +1,107 @@
-﻿{
-    "caseId":  "case-19b-eli-willits-2025-bowman-draft-chrome-green-refractor-auto-psa10",
-    "category":  "pinnedIdHard",
-    "query":  "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits PSA 10",
-    "grade":  "PSA 10",
-    "capturedAt":  "2026-05-15T13:03:40.6982852Z",
-    "search":  {
-                   "pricingEngine":  "monolith",
-                   "engineVersion":  "99bb447",
-                   "computedAt":  "2026-05-15T13:02:46.747Z",
-                   "success":  true,
-                   "query":  "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits PSA 10",
-                   "summary":  "No exact match for requested variant (missing: autograph). Showing closest available comp. Indicative price ($1512.50) synthesized from 15 sibling-parallel sales — Card Hedge has no direct comps for this exact variant yet.",
-                   "marketTier":  {
-                                      "value":  1512.5,
-                                      "high":  1739.3749999999998
-                                  },
-                   "buyZone":  [
-                                   1197.9,
-                                   1331
-                               ],
-                   "holdZone":  [
-                                    1331,
-                                    1512.5
-                                ],
-                   "sellZone":  [
-                                    1512.5,
-                                    1739.3749999999998
-                                ],
-                   "fairMarketValueLive":  null,
-                   "confidence":  0,
-                   "source":  "variant-mismatch",
-                   "trendAnalysis":  {
-                                         "market_direction":  "flat",
-                                         "change_from_older_to_recent":  0,
-                                         "liquidity":  "Unknown"
-                                     },
-                   "supply":  null,
-                   "recentComps":  [
-
-                                   ],
-                   "cardIdentity":  {
-                                        "card_id":  "1768694490310x994446741982091500",
-                                        "title":  null,
-                                        "player":  "Eli Willits",
-                                        "set":  "2025 Bowman Draft Chrome Baseball",
-                                        "year":  null,
-                                        "number":  "BDC-1",
-                                        "variant":  "Green Grass Refractor"
-                                    },
-                   "gradeUsed":  "PSA 10",
-                   "compsUsed":  0,
-                   "compsAvailable":  0,
-                   "daysSinceNewestComp":  null,
-                   "variantWarning":  [
-                                          "autograph"
-                                      ],
-                   "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  {
-                                                  "error":  "insufficient_neighbor_pool comps=0"
-                                              },
-                   "crossParallelAnchor":  {
-                                               "fmv":  1512.5,
-                                               "neighborsUsed":  15,
-                                               "neighborsConsidered":  16,
-                                               "parallelTier":  null,
-                                               "confidenceCap":  40,
-                                               "anchor":  null,
-                                               "trend":  {
-                                                             "slopePctPerWeek":  7.64,
-                                                             "direction":  "rising",
-                                                             "weeklySamples":  6,
-                                                             "windowDays":  60
-                                                         },
-                                               "triggerReason":  "variant-mismatch",
-                                               "detail":  [
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Chrome Draft Sapphire #BDC1 Eli Willits 1st ROOKIE PSA 10 GEM",
-                                                                  "neighborPrice":  137.5,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  false,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  11,
-                                                                  "syntheticPrice":  1512.5,
-                                                                  "stepsRelaxed":  2,
-                                                                  "soldDate":  "2026-03-19T04:47:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Sapphire Eli Willits Chrome 1st #BDC-1 Nationals PSA 10",
-                                                                  "neighborPrice":  137.5,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  false,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  11,
-                                                                  "syntheticPrice":  1512.5,
-                                                                  "stepsRelaxed":  2,
-                                                                  "soldDate":  "2026-03-19T04:05:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Sapphire Eli Willits Chrome 1st #BDC-1 Nationals PSA 10",
-                                                                  "neighborPrice":  127.5,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  false,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  11,
-                                                                  "syntheticPrice":  1402.5,
-                                                                  "stepsRelaxed":  2,
-                                                                  "soldDate":  "2026-03-19T04:02:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Sapphire Eli Willits Chrome 1st #BDC-1 Nationals PSA 10",
-                                                                  "neighborPrice":  152.38,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  false,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  11,
-                                                                  "syntheticPrice":  1676.1799999999998,
-                                                                  "stepsRelaxed":  2,
-                                                                  "soldDate":  "2026-03-04T03:14:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Chrome Eli Willits Auto 1st Prospect #CPA-EW Nationals PSA 10",
-                                                                  "neighborPrice":  525,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  true,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  5.5,
-                                                                  "syntheticPrice":  2887.5,
-                                                                  "stepsRelaxed":  1,
-                                                                  "soldDate":  "2026-05-14T13:44:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Chrome Eli Willits Auto 1st Prospect #CPA-EW Nationals PSA 10",
-                                                                  "neighborPrice":  525,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  true,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  5.5,
-                                                                  "syntheticPrice":  2887.5,
-                                                                  "stepsRelaxed":  1,
-                                                                  "soldDate":  "2026-04-24T03:25:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Chrome Eli Willits Auto 1st Prospect #CPA-EW Nationals PSA 10",
-                                                                  "neighborPrice":  380,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  true,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  5.5,
-                                                                  "syntheticPrice":  2090,
-                                                                  "stepsRelaxed":  1,
-                                                                  "soldDate":  "2026-04-23T01:37:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Chrome Eli Willits Auto 1st Prospect #CPA-EW Nationals PSA 10",
-                                                                  "neighborPrice":  550,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  true,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  5.5,
-                                                                  "syntheticPrice":  3025,
-                                                                  "stepsRelaxed":  1,
-                                                                  "soldDate":  "2026-04-21T03:35:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 Bowman Draft Chrome Eli Willits Auto 1st Prospect #CPA-EW Nationals PSA 10",
-                                                                  "neighborPrice":  550,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  true,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  5.5,
-                                                                  "syntheticPrice":  3025,
-                                                                  "stepsRelaxed":  1,
-                                                                  "soldDate":  "2026-01-31T23:14:00.000Z"
-                                                              },
-                                                              {
-                                                                  "neighborTitle":  "2025 BOWMAN DRAFT #BD-1 ELI WILLITS PSA 10",
-                                                                  "neighborPrice":  39,
-                                                                  "neighborParallel":  null,
-                                                                  "neighborGrade":  "PSA 10",
-                                                                  "neighborIsAuto":  false,
-                                                                  "neighborPrintRun":  null,
-                                                                  "neighborYear":  2025,
-                                                                  "relativeMultiplier":  11,
-                                                                  "syntheticPrice":  429,
-                                                                  "stepsRelaxed":  2,
-                                                                  "soldDate":  "2026-05-03T03:04:00.000Z"
-                                                              }
-                                                          ],
-                                               "momentumAdjustedFmv":  null,
-                                               "momentumPctApplied":  null,
-                                               "weeksStale":  null,
-                                               "effectiveWeeksApplied":  null,
-                                               "momentumSource":  null
-                                           },
-                   "buySignal":  null,
-                   "parsedQuery":  {
-                                       "playerName":  "Eli Willits",
-                                       "year":  2025,
-                                       "brand":  "Bowman",
-                                       "set":  "Bowman Draft",
-                                       "parallel":  "Green Refractor",
-                                       "isAuto":  true,
-                                       "isPatch":  false,
-                                       "isRookie":  false,
-                                       "printRun":  null,
-                                       "cardNumber":  null,
-                                       "grade":  "10",
-                                       "gradingCompany":  "PSA",
-                                       "confidence":  1
-                                   },
-                   "searchQuery":  "2025 Eli Willits Bowman Draft auto Green Refractor PSA 10"
-               },
-    "searchError":  null,
-    "cardHedgeCardId":  "1768694490310x994446741982091500",
-    "priceById":  {
-                      "pricingEngine":  "monolith",
-                      "engineVersion":  "99bb447",
-                      "computedAt":  "2026-05-15T13:03:41.931Z",
-                      "success":  true,
-                      "cardHedgeCardId":  "1768694490310x994446741982091500",
-                      "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
-                      "marketTier":  {
-                                         "value":  null,
-                                         "high":  null
-                                     },
-                      "buyZone":  [
-                                      null,
-                                      null
-                                  ],
-                      "holdZone":  [
-                                       null,
-                                       null
-                                   ],
-                      "sellZone":  [
-                                       null,
-                                       null
-                                   ],
-                      "fairMarketValueLive":  null,
-                      "confidence":  0,
-                      "source":  "no-recent-comps",
-                      "trendAnalysis":  {
-                                            "market_direction":  "flat",
-                                            "change_from_older_to_recent":  0,
-                                            "liquidity":  "Unknown",
-                                            "broaderTrend":  null
-                                        },
-                      "recentComps":  [
-
-                                      ],
-                      "cardIdentity":  {
-                                           "card_id":  "1768694490310x994446741982091500",
-                                           "title":  null,
-                                           "player":  "Eli Willits",
-                                           "set":  "2025 Bowman Draft Chrome Baseball",
-                                           "year":  null,
-                                           "number":  "BDC-1",
-                                           "variant":  "Green Grass Refractor"
-                                       },
-                      "gradeUsed":  "PSA 10",
-                      "compsUsed":  0,
-                      "compsAvailable":  0,
-                      "daysSinceNewestComp":  null,
-                      "broaderTrend":  null
-                  },
-    "priceByIdError":  null,
-    "notes":  [
-
-              ]
+{
+  "caseId": "case-19b",
+  "category": "other",
+  "query": "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits PSA 10",
+  "grade": "PSA 10",
+  "capturedAt": "2026-05-18T18:02:08.037Z",
+  "search": {
+    "pricingEngine": "monolith",
+    "engineVersion": "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+    "computedAt": "2026-05-18T17:56:49.742Z",
+    "success": true,
+    "query": "2025 Bowman Draft Chrome Green Refractor Auto Eli Willits PSA 10",
+    "summary": "No exact match for requested variant (missing: autograph). Showing closest available comp. No comps found for this exact variant (missing: autograph). Card Hedge doesn't have sold data for this card yet.",
+    "marketTier": {
+      "value": null,
+      "high": null
+    },
+    "buyZone": [
+      null,
+      null
+    ],
+    "holdZone": [
+      null,
+      null
+    ],
+    "sellZone": [
+      null,
+      null
+    ],
+    "fairMarketValueLive": null,
+    "marketValue": null,
+    "predictedPrice": null,
+    "predictedPriceRange": null,
+    "predictedPriceAttribution": null,
+    "confidence": 0,
+    "source": "variant-mismatch",
+    "trendAnalysis": {
+      "market_direction": "flat",
+      "change_from_older_to_recent": 0,
+      "liquidity": "Unknown"
+    },
+    "regime": "insufficient_data",
+    "regimeConfidence": "low",
+    "regimeDiagnostics": {
+      "compsUsedForClassification": 0,
+      "windowDays": 90,
+      "slopePctPerMonth": null,
+      "r2": null,
+      "coefficientOfVariation": null,
+      "recentMeanLast14d": null,
+      "olderMean14to90d": null,
+      "pctChangeRecentVsOlder": null,
+      "classificationReason": "skipped_classification: source=variant-mismatch (classifier output discarded: Only 0 usable comp(s) in last 90 days (need >= 5).)"
+    },
+    "predictedRange": {
+      "low": null,
+      "high": null
+    },
+    "predictedRangeDiagnostics": {
+      "windowAppliedDays": null,
+      "compsAfterFilter": 0,
+      "mathApplied": "null_non_live_source",
+      "sanityCapsApplied": [],
+      "weightedPercentileBuckets": null
+    },
+    "predictedRangeAdjustedConfidence": null,
+    "supply": null,
+    "recentComps": [],
+    "cardIdentity": {
+      "card_id": "1768694490310x994446741982091500",
+      "title": null,
+      "player": "Eli Willits",
+      "set": "2025 Bowman Draft Chrome Baseball",
+      "year": null,
+      "number": "BDC-1",
+      "variant": "Green Grass Refractor"
+    },
+    "gradeUsed": "PSA 10",
+    "compsUsed": 0,
+    "compsAvailable": 0,
+    "daysSinceNewestComp": null,
+    "variantWarning": [
+      "autograph"
+    ],
+    "neighborSynthesis": null,
+    "crossParallelAnchor": null,
+    "buySignal": null,
+    "parsedQuery": {
+      "playerName": "Eli Willits",
+      "year": 2025,
+      "brand": "Bowman",
+      "set": "Bowman Draft",
+      "parallel": "Green Refractor",
+      "isAuto": true,
+      "isPatch": false,
+      "isRookie": false,
+      "printRun": null,
+      "cardNumber": null,
+      "grade": "10",
+      "gradingCompany": "PSA",
+      "confidence": 1
+    },
+    "searchQuery": "2025 Eli Willits Bowman Draft auto Green Refractor PSA 10"
+  },
+  "cardHedgeCardId": null,
+  "priceById": null
 }

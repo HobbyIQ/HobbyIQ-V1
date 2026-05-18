@@ -60,9 +60,6 @@
 
                                       ],
                    "neighborSynthesis":  null,
-                   "neighborSynthesisDebug":  {
-                                                  "error":  "insufficient_neighbor_pool comps=1"
-                                              },
                    "crossParallelAnchor":  {
                                                "fmv":  285.14,
                                                "neighborsUsed":  45,
