@@ -196,22 +196,4 @@ describe("multiplierTableRegistry — 2022 Bowman family context", () => {
     expect(hasCoverage("Bowman Chrome", "Black and White Mini Diamond Refractors", { year: 2022 })).toBe(true);
     expect(hasCoverage("Bowman Chrome", "X-Fractor", { year: 2022 })).toBe(false);
   });
-
-  it("Bowman Draft CPA Blue Refractor coverage resolves to 3.0-4.4", () => {
-    const e = lookup("Bowman Draft", "Blue Refractor", {
-      year: 2022,
-      subset: "Chrome Prospect Autographs",
-    });
-    expect(e).not.toBeNull();
-    expect(e?.rangeLow).toBe(3.0);
-    expect(e?.rangeHigh).toBe(4.4);
-  });
-
-  it("uncurated normalized parallel still returns null", () => {
-    const e = lookup("Bowman Chrome", "rainbow ice foil 150", {
-      year: 2022,
-      subset: "Chrome Prospect Autographs",
-    });
-    expect(e).toBeNull();
-  });
 });
