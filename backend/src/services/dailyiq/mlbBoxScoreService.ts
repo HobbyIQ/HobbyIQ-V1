@@ -20,9 +20,19 @@ export interface MLBDailyStats {
   ops: string;
   dailyStatsStatus: string;
   statsType?: "batting" | "pitching";
+  // Pitcher-only fields. All optional so the iOS Codable can default to nil.
   inningsPitched?: string;
   earnedRuns?: number;
   pitchCount?: number;
+  hitsAllowed?: number;     // boxscore.pitching.hits
+  runsAllowed?: number;     // boxscore.pitching.runs
+  homeRunsAllowed?: number; // boxscore.pitching.homeRuns
+  decision?: "W" | "L" | "SV" | "HLD" | "BS" | null;
+  qualityStart?: boolean;
+  pitched?: boolean;        // true when IP > 0
+  // Two-way (Ohtani-style): hitter line attached to a pitcher day so the
+  // iOS row can render both lines stacked under the primary pitcher card.
+  secondaryStats?: MLBDailyStats;
 }
 
 export interface MLBSeasonStats {
@@ -95,6 +105,9 @@ interface BoxStatPitching {
   gamesStarted?: string | number;
   inningsPitched?: string;
   earnedRuns?: string | number;
+  runs?: string | number;
+  hits?: string | number;
+  homeRuns?: string | number;
   baseOnBalls?: string | number;
   strikeOuts?: string | number;
   pitchesThrown?: string | number;
@@ -102,11 +115,34 @@ interface BoxStatPitching {
   wins?: string | number;
   losses?: string | number;
   saves?: string | number;
+  holds?: string | number;
+  blownSaves?: string | number;
   era?: string;
   whip?: string;
+  // The MLB API exposes the decision as a parenthetical note string on the
+  // player entry (e.g. "(W, 3-1)", "(S, 12)"). We don't get the parsed
+  // decision directly — see parsePitcherNote below.
+  note?: string;
+}
+
+// Decision parsing: the boxscore entry usually carries a `note` field on the
+// player itself ("(W, 3-1)"). Some seasons surface it on stats.pitching.note
+// instead. We check both.
+function parsePitcherNote(
+  noteOnEntry: string | undefined,
+  noteOnPitching: string | undefined,
+): "W" | "L" | "SV" | "HLD" | "BS" | null {
+  const haystack = `${noteOnEntry ?? ""} ${noteOnPitching ?? ""}`.toUpperCase();
+  if (/\(\s*BS\b/.test(haystack)) return "BS";
+  if (/\(\s*W\b/.test(haystack)) return "W";
+  if (/\(\s*L\b/.test(haystack)) return "L";
+  if (/\(\s*S\b/.test(haystack) || /\(\s*SV\b/.test(haystack)) return "SV";
+  if (/\(\s*H\b/.test(haystack) || /\(\s*HLD\b/.test(haystack)) return "HLD";
+  return null;
 }
 
 interface BoxScorePlayerEntry {
+  note?: string;
   person?: { id?: number; fullName?: string };
   stats?: { batting?: BoxStatBatting; pitching?: BoxStatPitching };
   seasonStats?: { batting?: BoxStatBatting; pitching?: BoxStatPitching };
@@ -234,6 +270,14 @@ function buildPitcherStats(
   const strikeouts = toNumber(pitching.strikeOuts);
   const walks = toNumber(pitching.baseOnBalls);
   const pitchCount = toNumber(pitching.pitchesThrown ?? pitching.numberOfPitches);
+  const hitsAllowed = toNumber(pitching.hits);
+  const runsAllowed = toNumber(pitching.runs);
+  const homeRunsAllowed = toNumber(pitching.homeRuns);
+  const ipDecimal = Number.parseFloat(String(inningsPitched));
+  const pitched = Number.isFinite(ipDecimal) && ipDecimal > 0;
+  // Quality start: 6+ IP, 3 or fewer ER. Decimal IP "6.0" works directly.
+  const qualityStart = pitched && ipDecimal >= 6 && earnedRuns <= 3;
+  const decision = parsePitcherNote(player.note, pitching.note);
 
   const blank = ".000";
   return {
@@ -252,11 +296,17 @@ function buildPitcherStats(
       stolenBases: 0,
       battingAverage: blank,
       ops: blank,
-      dailyStatsStatus: pitchCount > 0 || strikeouts > 0 ? "boxscore" : "boxscore-no-app",
+      dailyStatsStatus: pitched ? "boxscore" : "boxscore-no-app",
       statsType: "pitching",
       inningsPitched: String(inningsPitched),
       earnedRuns,
       pitchCount,
+      hitsAllowed,
+      runsAllowed,
+      homeRunsAllowed,
+      decision,
+      qualityStart,
+      pitched,
     },
     seasonStats: {
       gamesPlayed: toNumber(seasonPitching.gamesPlayed),
@@ -329,13 +379,40 @@ async function buildStatsMapForDate(
           const poolPlayer = personIdToPoolPlayer.get(personId);
           if (!poolPlayer) continue;
 
-          // Prefer pitcher line if pitching stats exist with non-zero IP; else hitter.
+          // Decide which statline to render. Priority order:
+          //   1. Pitcher who actually pitched today  -> pitcher line
+          //   2. Hitter (or two-way) who had a PA    -> hitter line
+          //   3. Pitcher who was on the roster but DNP -> pitcher line w/ pitched=false
+          //   4. Anyone else                          -> hitter line (may be blank)
           const pitching = entry.stats?.pitching;
-          const ip = pitching?.inningsPitched;
-          const hasPitched = pitching && ip != null && Number(ip) > 0;
-          const resolved = hasPitched
-            ? buildPitcherStats(date, opponentAbbr, entry)
-            : buildHitterStats(date, opponentAbbr, entry);
+          const batting = entry.stats?.batting;
+          const ip = Number.parseFloat(String(pitching?.inningsPitched ?? "0"));
+          const hasPitched = pitching && Number.isFinite(ip) && ip > 0;
+          const hadAtBat = batting && Number(batting.atBats ?? 0) > 0;
+          const pos = String(entry.position?.abbreviation ?? "").toUpperCase();
+          const isPitcherPosition = pos === "SP" || pos === "RP" || pos === "P" || pos === "CP" || pos === "CL";
+          let resolved: ResolvedMLBPlayerStats | null = null;
+          if (hasPitched) {
+            // Two-way (Ohtani-style): pitcher line on top, hitter line attached as
+            // secondaryStats so the iOS row can render both.
+            resolved = buildPitcherStats(date, opponentAbbr, entry);
+            if (resolved && hadAtBat) {
+              const hitter = buildHitterStats(date, opponentAbbr, entry);
+              if (hitter) {
+                resolved = {
+                  ...resolved,
+                  dailyStats: { ...resolved.dailyStats, secondaryStats: hitter.dailyStats },
+                } as ResolvedMLBPlayerStats;
+              }
+            }
+          } else if (isPitcherPosition && pitching) {
+            // Pitcher on the active roster who didn't take the mound.
+            // Build the pitcher line so the UI shows "Did not pitch" instead
+            // of an empty 0-for-0 batting card.
+            resolved = buildPitcherStats(date, opponentAbbr, entry);
+          } else {
+            resolved = buildHitterStats(date, opponentAbbr, entry);
+          }
           if (resolved) {
             results.set(poolPlayer.playerId, resolved);
           }
