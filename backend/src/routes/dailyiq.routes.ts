@@ -19,6 +19,12 @@ import { getPersistedBriefByDate,
 import { getTopPlayers as cosmosGetTopPlayers } from "../repositories/dailyiq.repository.js";
 import { getPlayerScoreByName } from "../services/playerScore/playerScore.service.js";
 import { computeFantasyPoints } from "../services/dailyiq/fantasyScoring.service.js";
+import {
+  computeDailyScore,
+  baselineFromSeason,
+} from "../services/dailyiq/dailyScore.service.js";
+import { computeMovement } from "../services/dailyiq/movement.service.js";
+import { getMarketDeltasForPlayers } from "../services/dailyiq/marketDelta.service.js";
 import { searchMlbPerson, levelFromSport } from "../services/playerScore/mlbStats.service.js";
 
 type PlayerIQEnrichment = {
@@ -89,6 +95,14 @@ interface PlayerDailyStats {
   inningsPitched?: string;
   earnedRuns?: number;
   pitchCount?: number;
+  hitsAllowed?: number;
+  runsAllowed?: number;
+  homeRunsAllowed?: number;
+  decision?: 'W' | 'L' | 'SV' | 'HLD' | 'BS' | null;
+  qualityStart?: boolean;
+  pitched?: boolean;
+  // two-way (Ohtani-style) hitter line attached to pitcher day
+  secondaryStats?: PlayerDailyStats;
 }
 
 interface PlayerSeasonStats {
@@ -116,6 +130,7 @@ interface PlayerSeasonStats {
   saves?: number;
   gamesStarted?: number;
   whip?: string;
+  inningsPitched?: string;
 }
 
 interface BasePlayerResponse {
@@ -124,6 +139,10 @@ interface BasePlayerResponse {
   rankingScore: number;
   /** DraftKings-style fantasy points for the day. Null when the player didn't play. */
   fantasyPoints: number | null;
+  /** DailyIQ score — product-defined daily impact score (weighted by HR, K, IP, decision, etc). */
+  dailyScore: number;
+  /** Movement badge derived from dailyScore vs rolling baseline + optional market comp delta. */
+  movement?: PlayerMovement | null;
   league: League;
   level: MiLBLevel;
   playerName: string;
@@ -134,6 +153,20 @@ interface BasePlayerResponse {
   dailyStats: PlayerDailyStats;
   seasonStats: PlayerSeasonStats;
   lastUpdated: string;
+}
+
+interface PlayerMovement {
+  direction: 'up' | 'down' | 'neutral';
+  label: string;
+  reason: string;
+  performanceDelta: number;       // (score - baseline) / max(baseline, 1)
+  marketDelta?: {
+    pct1d: number;
+    pct7d: number;
+    pct30d: number;
+    avg30dPrice?: number;
+    sampleCount?: number;
+  } | null;
 }
 
 interface PlayerResponse extends BasePlayerResponse {
@@ -290,8 +323,33 @@ const OPPONENTS: Record<League, string[]> = {
 };
 
 const BRIEF_BACKGROUND_REFRESH_MS = Number(process.env.DAILYIQ_BACKGROUND_REFRESH_MS ?? 300000);
-let _briefCache: BriefCache | null = null;
-let _briefRefreshPromise: Promise<void> | null = null;
+// Per-date in-memory cache. Previously this was a single slot which clobbered
+// itself whenever requests for different dates arrived (e.g. iOS picker on
+// yesterday vs -3d). LRU-bounded to 14 entries so two weeks of date browsing
+// stays warm without unbounded growth.
+const BRIEF_CACHE_MAX_ENTRIES = 14;
+const _briefCacheByDate = new Map<string, BriefCache>();
+const _briefRefreshByDate = new Map<string, Promise<void>>();
+
+function setBriefCache(date: string, value: BriefCache): void {
+  // Re-insert to move to end (Map preserves insertion order = LRU MRU at end).
+  _briefCacheByDate.delete(date);
+  _briefCacheByDate.set(date, value);
+  while (_briefCacheByDate.size > BRIEF_CACHE_MAX_ENTRIES) {
+    const oldestKey = _briefCacheByDate.keys().next().value;
+    if (oldestKey === undefined) break;
+    _briefCacheByDate.delete(oldestKey);
+  }
+}
+
+function getBriefCache(date: string): BriefCache | null {
+  const hit = _briefCacheByDate.get(date);
+  if (!hit) return null;
+  // Touch to refresh MRU position.
+  _briefCacheByDate.delete(date);
+  _briefCacheByDate.set(date, hit);
+  return hit;
+}
 
 let _mlbSeasonStatsCache: { data: Map<string, PlayerSeasonStats>; season: number; cachedAtMs: number } | null = null;
 const MLB_SEASON_STATS_TTL_MS = 3_600_000; // 1 hour
@@ -368,7 +426,7 @@ function getOpponent(profile: PlayerProfile, date: string): string {
   return opponents[stableHash(`${profile.playerId}:${date}:opp`) % opponents.length];
 }
 
-const PITCHER_POSITIONS = ["SP", "RP", "CL"];
+const PITCHER_POSITIONS = ["SP", "RP", "CL", "CP", "P", "TWP"];
 
 function buildDailyStats(profile: PlayerProfile, date: string): PlayerDailyStats {
   const seed = stableHash(`${profile.playerId}:${date}:daily`);
@@ -628,11 +686,18 @@ function buildBasePlayerResponse(profile: PlayerProfile, date: string, rank: num
   const fantasyPoints = statsOverride
     ? computeFantasyPoints(profile.position, stats.dailyStats as unknown as Parameters<typeof computeFantasyPoints>[1])
     : null;
+  // DailyIQ score: position-aware weighted impact, separate from DK fantasy.
+  const dailyScore = computeDailyScore(
+    profile.position,
+    stats.dailyStats as unknown as Parameters<typeof computeDailyScore>[1],
+  );
   return {
     playerId: profile.playerId,
     rank,
     rankingScore,
     fantasyPoints,
+    dailyScore,
+    movement: null, // populated later by decorateWithMovement
     league: profile.league,
     level: profile.level,
     playerName: profile.playerName,
@@ -648,6 +713,94 @@ function buildBasePlayerResponse(profile: PlayerProfile, date: string, rank: num
 
 function decorateWithWatchlistStatus(players: BasePlayerResponse[], watchlist: Set<string>): PlayerResponse[] {
   return players.map((player) => ({ ...player, isOnWatchlist: watchlist.has(player.playerId) }));
+}
+
+/**
+ * Decorate the supplied player list with movement badges, re-sort by
+ * dailyScore desc, and reassign rank. Market deltas are fetched in ONE
+ * batched call across MLB+MiLB so we don't fan out per-player.
+ *
+ * - dailyScore is already computed in buildBasePlayerResponse.
+ * - baseline comes from per-game season production (position-aware).
+ * - marketDelta is folded into the reason text when |pct7d| >= 5.
+ *
+ * Returns a new array — input is not mutated.
+ */
+type MarketDeltaMap = Awaited<ReturnType<typeof getMarketDeltasForPlayers>>;
+
+/** Pure: apply movement decoration using a pre-fetched market-delta map. */
+function applyMovementWithMap(
+  players: BasePlayerResponse[],
+  marketMap: MarketDeltaMap,
+): BasePlayerResponse[] {
+  return players.map((p) => {
+    const baseline = baselineFromSeason(
+      p.position,
+      p.seasonStats as unknown as Parameters<typeof baselineFromSeason>[1],
+    );
+    const marketDelta = marketMap.get(p.playerName) ?? null;
+    const movement = computeMovement({
+      score: p.dailyScore ?? 0,
+      baseline,
+      marketDelta: marketDelta as any,
+    });
+    return { ...p, movement };
+  });
+}
+
+/** Fetch market deltas for a deduped set of player names. ONE Cosmos batch. */
+async function fetchMarketDeltaMap(
+  allPlayers: BasePlayerResponse[],
+): Promise<MarketDeltaMap> {
+  const names = Array.from(new Set(allPlayers.map((p) => p.playerName).filter(Boolean)));
+  if (names.length === 0) return new Map();
+  try {
+    return await getMarketDeltasForPlayers(names);
+  } catch (err: any) {
+    // Market deltas are best-effort: if comp_logs is unavailable we still
+    // emit movement based on performance vs baseline alone.
+    console.warn("[dailyiq.routes] getMarketDeltasForPlayers failed:", err?.message ?? err);
+    return new Map();
+  }
+}
+
+async function decorateWithMovement(allPlayers: BasePlayerResponse[]): Promise<BasePlayerResponse[]> {
+  if (allPlayers.length === 0) return allPlayers;
+  const marketMap = await fetchMarketDeltaMap(allPlayers);
+  return applyMovementWithMap(allPlayers, marketMap);
+}
+
+/** Re-rank by dailyScore desc (with watchlist +10% boost), reassign rank 1..N. */
+function rerankByDailyScore(players: BasePlayerResponse[], watchlist: Set<string>): BasePlayerResponse[] {
+  const adjusted = players
+    .map((p) => ({
+      player: p,
+      effective: (p.dailyScore ?? 0) * (watchlist.has(p.playerId) ? 1.1 : 1),
+    }))
+    .sort((a, b) => b.effective - a.effective);
+  return adjusted.map(({ player }, idx) => ({ ...player, rank: idx + 1 }));
+}
+
+/** Pick top movers for the dashboard strips. Operates on movement-decorated rows. */
+function pickMovers(players: BasePlayerResponse[]): {
+  risers: BasePlayerResponse[];
+  fallers: BasePlayerResponse[];
+  breakouts: BasePlayerResponse[];
+} {
+  const withMv = players.filter((p) => p.movement);
+  const risers = withMv
+    .filter((p) => p.movement!.direction === "up" && p.movement!.label !== "Breakout Alert")
+    .sort((a, b) => (b.movement!.performanceDelta ?? 0) - (a.movement!.performanceDelta ?? 0))
+    .slice(0, 5);
+  const fallers = withMv
+    .filter((p) => p.movement!.direction === "down")
+    .sort((a, b) => (a.movement!.performanceDelta ?? 0) - (b.movement!.performanceDelta ?? 0))
+    .slice(0, 5);
+  const breakouts = withMv
+    .filter((p) => p.movement!.label === "Breakout Alert")
+    .sort((a, b) => (b.dailyScore ?? 0) - (a.dailyScore ?? 0))
+    .slice(0, 5);
+  return { risers, fallers, breakouts };
 }
 
 async function getPlayerPool(league: League, level: MiLBLevel | "All" = "All"): Promise<PlayerProfile[]> {
@@ -1007,18 +1160,21 @@ router.post("/admin/run-job", async (req: Request, res: Response) => {
   }
 });
 
-function currentBriefCache(): BriefCache | null {
-  return _briefCache;
+function currentBriefCache(date: string): BriefCache | null {
+  return getBriefCache(date);
 }
 
 function refreshBriefCache(date: string): Promise<void> {
-  if (_briefRefreshPromise) return _briefRefreshPromise;
-  _briefRefreshPromise = (async () => {
-    _briefCache = await buildAndPersistBriefPayload(date);
+  const existing = _briefRefreshByDate.get(date);
+  if (existing) return existing;
+  const promise = (async () => {
+    const built = await buildAndPersistBriefPayload(date);
+    setBriefCache(date, built);
   })().finally(() => {
-    _briefRefreshPromise = null;
+    _briefRefreshByDate.delete(date);
   });
-  return _briefRefreshPromise;
+  _briefRefreshByDate.set(date, promise);
+  return promise;
 }
 
 router.get("/health", (_req, res) => {
@@ -1079,6 +1235,48 @@ router.get("/dashboard/player-stats", async (req, res) => {
   res.json({ dashboardDate: date, lastUpdated, mlbTopPlayers, milbTopPlayers, watchlistPlayers });
 });
 
+/**
+ * Build the watchlist section for the brief response.
+ *
+ * Mirrors GET /watchlist but stays lightweight: no recentForm or tomorrow
+ * matchup lookups — those are slower per-player calls that the dedicated
+ * /watchlist endpoint owns. Returns plain BasePlayerResponse rows that the
+ * brief handler then decorates with movement using the shared market map.
+ */
+async function buildWatchlistSectionPlayers(
+  userId: string,
+  date: string,
+): Promise<BasePlayerResponse[]> {
+  const entries = await getWatchlistEntries(userId);
+  const resolved = entries
+    .map((entry) => {
+      const pooled = findPlayerById(entry.playerId);
+      const profile = pooled ?? profileFromWatchlistEntry(entry);
+      return profile ? { entry, profile } : null;
+    })
+    .filter((v): v is { entry: WatchlistEntry; profile: PlayerProfile } => Boolean(v));
+
+  const milbProfiles = resolved
+    .filter(({ profile }) => profile.league === "MiLB")
+    .map(({ profile }) => profile);
+  const milbOverrides = milbProfiles.length
+    ? await getMiLBStatsOverrides(date, milbProfiles).catch(() => new Map<string, ResolvedMiLBPlayerStats>())
+    : new Map<string, ResolvedMiLBPlayerStats>();
+
+  return resolved.map(({ entry, profile }) => {
+    const statsOverride =
+      profile.league === "MiLB" ? milbOverrides.get(profile.playerId) : undefined;
+    return buildBasePlayerResponse(
+      profile,
+      date,
+      0,
+      scorePlayerForDay(profile, date, statsOverride),
+      entry.createdAt,
+      statsOverride,
+    );
+  });
+}
+
 const handleBriefRequest = async (req: Request, res: Response) => {
   const date = normalizeDate(req.query.date);
   const wantFresh = req.query.fresh === "true";
@@ -1092,12 +1290,13 @@ const handleBriefRequest = async (req: Request, res: Response) => {
   };
 
   try {
+    const cachedForDate = getBriefCache(date);
     if (wantFresh) {
       meta.cacheStatus = "fresh";
-      _briefCache = await buildAndPersistBriefPayload(date);
-    } else if (_briefCache?.date === date) {
+      setBriefCache(date, await buildAndPersistBriefPayload(date));
+    } else if (cachedForDate) {
       const isToday = date === defaultBriefDate();
-      const isStale = Date.now() - _briefCache.cachedAtMs >= BRIEF_BACKGROUND_REFRESH_MS;
+      const isStale = Date.now() - cachedForDate.cachedAtMs >= BRIEF_BACKGROUND_REFRESH_MS;
       if (isToday && isStale) {
         meta.cacheStatus = "stale";
         refreshBriefCache(date).catch(() => undefined);
@@ -1126,17 +1325,62 @@ const handleBriefRequest = async (req: Request, res: Response) => {
       }
       if (persisted) {
         meta.cacheStatus = "persisted-hit";
-        _briefCache = hydrateBriefCache(persisted);
+        setBriefCache(date, hydrateBriefCache(persisted));
       } else {
         meta.cacheStatus = "cold";
-        _briefCache = await buildAndPersistBriefPayload(date);
+        setBriefCache(date, await buildAndPersistBriefPayload(date));
       }
     }
 
-    const payload = currentBriefCache() ?? await buildAndPersistBriefPayload(date);
-    const [mlbEnriched, milbEnriched] = await Promise.all([
-      enrichWithPlayerIQ(decorateWithWatchlistStatus(payload.mlb, watchlist)),
-      enrichWithPlayerIQ(decorateWithWatchlistStatus(payload.milb, watchlist)),
+    const payload = currentBriefCache(date) ?? await buildAndPersistBriefPayload(date);
+
+    // Build the watchlist section in parallel with the brief cache hydration.
+    // When the caller isn't signed in this resolves to an empty array.
+    const watchlistSectionRaw = userId
+      ? await buildWatchlistSectionPlayers(userId, date)
+      : [];
+
+    // BATCH STEP: collect every unique player name across mlb + milb + watchlist
+    // and fetch market deltas in ONE Cosmos query batch. The shared map is then
+    // re-used by applyMovementWithMap for each section — no per-player fan-out.
+    const allForBatch = [...payload.mlb, ...payload.milb, ...watchlistSectionRaw];
+    const marketMap = await fetchMarketDeltaMap(allForBatch);
+    (meta as Record<string, unknown>).marketDeltaBatchCount = 1;
+    (meta as Record<string, unknown>).marketDeltaBatchSize = new Set(
+      allForBatch.map((p) => p.playerName).filter(Boolean),
+    ).size;
+
+    const mlbDecorated = applyMovementWithMap(payload.mlb, marketMap);
+    const milbDecorated = applyMovementWithMap(payload.milb, marketMap);
+    const watchlistDecorated = applyMovementWithMap(watchlistSectionRaw, marketMap);
+
+    // MLB / MiLB: rerank by dailyScore desc (with +10% watchlist boost), stable
+    // secondary sort by existing rankingScore handled inside rerankByDailyScore.
+    const mlbRanked = rerankByDailyScore(mlbDecorated, watchlist);
+    const milbRanked = rerankByDailyScore(milbDecorated, watchlist);
+
+    // Watchlist: apply +10% dailyScore boost (multiplier 1.10), then sort by
+    // abs(performanceDelta) desc so the biggest movers surface first.
+    const watchlistRanked = watchlistDecorated
+      .map((p) => ({
+        ...p,
+        dailyScore: Number(((p.dailyScore ?? 0) * 1.1).toFixed(2)),
+      }))
+      .sort(
+        (a, b) =>
+          Math.abs(b.movement?.performanceDelta ?? 0) -
+          Math.abs(a.movement?.performanceDelta ?? 0),
+      )
+      .map((p, idx) => ({ ...p, rank: idx + 1 }));
+
+    const { risers, fallers, breakouts } = pickMovers([...mlbRanked, ...milbRanked]);
+    const [mlbEnriched, milbEnriched, watchlistEnriched, risersEnriched, fallersEnriched, breakoutsEnriched] = await Promise.all([
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(mlbRanked, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(milbRanked, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(watchlistRanked, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(risers, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(fallers, watchlist)),
+      enrichWithPlayerIQ(decorateWithWatchlistStatus(breakouts, watchlist)),
     ]);
     // Rebuild byLevel from the watchlist-decorated + IQ-enriched MiLB list so
     // per-level buckets carry the same flags (isOnWatchlist, playerIQ*) as the
@@ -1150,10 +1394,14 @@ const handleBriefRequest = async (req: Request, res: Response) => {
       mlb: mlbEnriched,
       milb: milbEnriched,
       byLevel,
+      watchlist: watchlistEnriched,
+      risers: risersEnriched,
+      fallers: fallersEnriched,
+      breakouts: breakoutsEnriched,
       _meta: meta,
     });
   } catch (error: any) {
-    const payload = currentBriefCache();
+    const payload = currentBriefCache(date);
     if (payload) {
       const decoratedMilb = decorateWithWatchlistStatus(payload.milb, watchlist);
       return res.json({
@@ -1163,6 +1411,9 @@ const handleBriefRequest = async (req: Request, res: Response) => {
         mlb: decorateWithWatchlistStatus(payload.mlb, watchlist),
         milb: decoratedMilb,
         byLevel: buildByLevelMap(decoratedMilb as unknown as BasePlayerResponse[]),
+        risers: [],
+        fallers: [],
+        breakouts: [],
         _meta: { ...meta, cacheStatus: "error-fallback" },
       });
     }
@@ -1246,7 +1497,13 @@ router.get("/watchlist", async (req, res) => {
         tomorrowMatchup,
       };
     });
-  res.json({ userId, date, count: items.length, watchlist: items });
+  // Decorate movement and sort by absolute performanceDelta desc so the most
+  // noteworthy moves bubble to the top of the Watchlist tab.
+  const decorated = await decorateWithMovement(items as unknown as BasePlayerResponse[]);
+  const sorted = decorated
+    .map((p, i) => ({ ...(items[i] as any), movement: p.movement }))
+    .sort((a, b) => Math.abs(b.movement?.performanceDelta ?? 0) - Math.abs(a.movement?.performanceDelta ?? 0));
+  res.json({ userId, date, count: sorted.length, watchlist: sorted });
 });
 
 router.post("/watchlist", async (req, res) => {
