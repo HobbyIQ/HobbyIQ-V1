@@ -589,8 +589,8 @@ export function stripGradingTokens(q: string): string {
 // Cross-parallel sibling comp fetcher.
 //
 // When CH has thin/stale comps for the user's target card, pull comps from
-// OTHER parallels of the same player+year+set so the neighbor-synthesis
-// engine can derive the target price via parallel multipliers (e.g. Blue
+// OTHER parallels of the same player+year+set so fallback pricing logic can
+// derive the target price via parallel multipliers (e.g. Blue
 // Wave /150 → infer from Aqua /125 + Orange /25 + Refractor base).
 // ---------------------------------------------------------------------------
 
@@ -672,7 +672,7 @@ export async function fetchSiblingParallelComps(opts: {
             variant: s.variant ?? "Base",
             number: s.number ?? "",
             // Synthesize a title that includes the sibling's variant so
-            // `parallelTierKey()` in neighborSynthesis can classify it.
+            // downstream parallel-tier parsing can classify it.
             title:
               sale.title ??
               `${playerName} ${year ?? ""} ${setName ?? ""} ${s.variant ?? ""} ${s.number ?? ""}`.trim(),
