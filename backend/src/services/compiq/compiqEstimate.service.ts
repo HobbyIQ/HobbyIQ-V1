@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
-import { findCompsByQuery, getCardSales, searchCards, type CardHedgeCard } from "./cardhedge.client.js";
+import { type CardHedgeCard } from "./cardhedge.client.js";
+import { findCompsRouted, searchCardsRouted, getCardSalesRouted } from "./cardsight.router.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
@@ -603,7 +604,7 @@ async function fetchBroaderTrend(
   // Find sibling cards: same player + year + set, any variant.
   let siblings: CardHedgeCard[] = [];
   try {
-    siblings = await searchCards(`${year} ${set} ${player}`.trim(), 20);
+    siblings = await searchCardsRouted(`${year} ${set} ${player}`.trim(), 20);
   } catch {
     siblings = [];
   }
@@ -625,7 +626,7 @@ async function fetchBroaderTrend(
   const siblingSales = await Promise.all(
     siblingIds.map(async (id) => {
       try {
-        return await getCardSales(id, grade, SAMPLES_PER_SIBLING);
+        return await getCardSalesRouted(id, grade, SAMPLES_PER_SIBLING, { cardIdSource: "cardhedge" });
       } catch {
         return [];
       }
@@ -706,11 +707,11 @@ async function fetchComps(
   // When the iOS client picked a specific Card Hedge card from the search
   // list, skip identity resolution entirely and pull sales directly.
   if (pinnedCardId) {
-    const sales = await getCardSales(pinnedCardId, grade, 25);
+    const sales = await getCardSalesRouted(pinnedCardId, grade, 25, { cardIdSource: "cardhedge" });
     // Pull set/player/variant for display by looking up via search (best effort).
     let identityCard: any = null;
     try {
-      const hits = await searchCards(query || pinnedCardId, 20);
+      const hits = await searchCardsRouted(query || pinnedCardId, 20);
       identityCard = hits.find((h) => h.card_id === pinnedCardId) ?? null;
     } catch {
       identityCard = null;
@@ -752,7 +753,7 @@ async function fetchComps(
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
-  const { card, sales, variantWarning, aiCategory } = await findCompsByQuery(query, { grade, limit: 25 });
+  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, { grade, limit: 25 });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
