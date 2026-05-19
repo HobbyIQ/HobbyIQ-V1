@@ -3,6 +3,7 @@ import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { findCompsByQuery, getCardSales, searchCards, type CardHedgeCard } from "./cardhedge.client.js";
+import { findCompsRouted } from "./cardsight.router.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
@@ -695,7 +696,15 @@ async function fetchBroaderTrend(
 async function fetchComps(
   query: string,
   grade: string = "Raw",
-  pinnedCardId?: string
+  pinnedCardId?: string,
+  routeContext?: {
+    playerName?: string;
+    cardYear?: string | number;
+    product?: string;
+    parallel?: string;
+    gradeCompany?: string;
+    gradeValue?: string;
+  },
 ): Promise<FetchedComps> {
   if (!process.env.CARD_HEDGE_API_KEY) {
     console.warn("[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []");
@@ -752,7 +761,16 @@ async function fetchComps(
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
-  const { card, sales, variantWarning, aiCategory } = await findCompsByQuery(query, { grade, limit: 25 });
+  // PR #4 scope: only the free-text identify/match path is routed through
+  // CARDSIGHT_MODE. The pinned-id and other direct searchCards/getCardSales
+  // call sites remain Card Hedge only for PR #5 migration scope.
+  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, {
+    grade,
+    limit: 25,
+    gradeCompany: routeContext?.gradeCompany,
+    gradeValue: routeContext?.gradeValue,
+    queryContext: routeContext,
+  });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
@@ -1049,7 +1067,14 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       : null;
   const inferredGrade = explicitGrade ? null : parseGradeFromQuery(cardTitle);
   const cardHedgeGrade = explicitGrade ?? inferredGrade ?? "Raw";
-  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId);
+  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId, {
+    playerName: body.playerName,
+    cardYear: body.cardYear,
+    product: body.product,
+    parallel: normalizedParallel,
+    gradeCompany: normalizedGradeCompany ?? undefined,
+    gradeValue: body.gradeValue,
+  });
 
   // ── Sport-scope guard ────────────────────────────────────────────────────
   // CompIQ currently supports baseball only (issue #7). If Card Hedge's AI
