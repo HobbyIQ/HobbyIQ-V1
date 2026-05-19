@@ -1,0 +1,46 @@
+# Backend unit test suite (vitest, ~529 tests, excludes Tier 1 live-API harness).
+# Runs on any PR touching backend/** except harness-only changes.
+# Complements regression.yml, which owns the compiq pricing harness.
+name: backend-tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "!backend/harness/**"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - ".github/workflows/test.yml"
+
+concurrency:
+  group: backend-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        env:
+          NODE_ENV: "test"
+        run: npm test
