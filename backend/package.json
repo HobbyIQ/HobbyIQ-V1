@@ -1,9 +1,9 @@
 {
   "name": "hobbyiq-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node dist/server.js",
     "build": "tsc",
     "zip": "node ../zip.js",
     "ocr:report": "node scripts/ocr-quality-report.js",
