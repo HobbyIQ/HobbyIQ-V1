@@ -1,7 +1,7 @@
 // DailyIQ market-delta lookup.
 //
 // Joins a player to the Cosmos `comp_logs` container that the CompIQ pricing
-// path writes to on every searchAndPrice() call. Comp logs are partitioned by
+// path writes to on every estimate call. Comp logs are partitioned by
 // `/player` so a single point-in-partition query covers all sold cards for
 // that player across our user base.
 //
