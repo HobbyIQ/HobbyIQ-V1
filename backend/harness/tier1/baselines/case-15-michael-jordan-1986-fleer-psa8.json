@@ -1,16 +1,16 @@
-{
+﻿{
     "caseId":  "case-15-michael-jordan-1986-fleer-psa8",
     "category":  "vintage",
     "query":  "1986 Fleer Michael Jordan PSA 8",
     "grade":  "PSA 8",
-    "capturedAt":  "2026-05-15T18:33:30.2020565Z",
+    "capturedAt":  "2026-05-20T00:48:18.4952846Z",
     "search":  {
                    "pricingEngine":  "monolith",
-                   "engineVersion":  "1989cb8",
-                   "computedAt":  "2026-05-15T18:24:05.308Z",
+                   "engineVersion":  "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+                   "computedAt":  "2026-05-20T00:48:20.133Z",
                    "success":  true,
                    "query":  "1986 Fleer Michael Jordan PSA 8",
-                   "summary":  "Unsupported sport (Basketball). CompIQ currently prices baseball cards only.",
+                   "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
                    "marketTier":  {
                                       "value":  null,
                                       "high":  null
@@ -28,28 +28,49 @@
                                     null
                                 ],
                    "fairMarketValueLive":  null,
+                   "marketValue":  null,
+                   "predictedPrice":  null,
+                   "predictedPriceRange":  null,
+                   "predictedPriceAttribution":  null,
                    "confidence":  0,
-                   "source":  "unsupported_sport",
-                   "unsupportedSportReason":  "CompIQ currently supports baseball cards only. This appears to be a basketball card.",
-                   "detectedSport":  "Basketball",
+                   "source":  "no-recent-comps",
                    "trendAnalysis":  {
                                          "market_direction":  "flat",
-                                         "change_from_older_to_recent":  null,
-                                         "liquidity":  "Normal"
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
                                      },
+                   "regime":  "insufficient_data",
+                   "regimeConfidence":  "low",
+                   "regimeDiagnostics":  {
+                                             "compsUsedForClassification":  0,
+                                             "windowDays":  90,
+                                             "slopePctPerMonth":  null,
+                                             "r2":  null,
+                                             "coefficientOfVariation":  null,
+                                             "recentMeanLast14d":  null,
+                                             "olderMean14to90d":  null,
+                                             "pctChangeRecentVsOlder":  null,
+                                             "classificationReason":  "skipped_classification: source=no-recent-comps (classifier output discarded: Only 0 usable comp(s) in last 90 days (need \u003e= 5).)"
+                                         },
+                   "predictedRange":  {
+                                          "low":  null,
+                                          "high":  null
+                                      },
+                   "predictedRangeDiagnostics":  {
+                                                     "windowAppliedDays":  null,
+                                                     "compsAfterFilter":  0,
+                                                     "mathApplied":  "null_non_live_source",
+                                                     "sanityCapsApplied":  [
+
+                                                                           ],
+                                                     "weightedPercentileBuckets":  null
+                                                 },
+                   "predictedRangeAdjustedConfidence":  null,
                    "supply":  null,
                    "recentComps":  [
 
                                    ],
-                   "cardIdentity":  {
-                                        "card_id":  "1586038977359x685970805780906000",
-                                        "title":  "Michael Jordan 1986 Fleer Basketball",
-                                        "player":  "Michael Jordan",
-                                        "set":  "1986 Fleer Basketball",
-                                        "year":  null,
-                                        "number":  "57",
-                                        "variant":  "Base"
-                                    },
+                   "cardIdentity":  null,
                    "gradeUsed":  "PSA 8",
                    "compsUsed":  0,
                    "compsAvailable":  0,
@@ -78,132 +99,10 @@
                    "searchQuery":  "1986 Michael Jordan PSA 8"
                },
     "searchError":  null,
-    "cardHedgeCardId":  "1586038977359x685970805780906000",
-    "priceById":  {
-                      "pricingEngine":  "monolith",
-                      "engineVersion":  "1989cb8",
-                      "computedAt":  "2026-05-15T18:33:31.137Z",
-                      "success":  true,
-                      "cardHedgeCardId":  "1586038977359x685970805780906000",
-                      "summary":  "Buy — good value and market signals are positive.",
-                      "marketTier":  {
-                                         "value":  15506.599999999999,
-                                         "high":  17833.05
-                                     },
-                      "buyZone":  [
-                                      11862.135,
-                                      13180.15
-                                  ],
-                      "holdZone":  [
-                                       13180.15,
-                                       15506.599999999999
-                                   ],
-                      "sellZone":  [
-                                       15506.599999999999,
-                                       17833.05
-                                   ],
-                      "fairMarketValueLive":  15506.599999999999,
-                      "confidence":  0.95,
-                      "source":  "live",
-                      "trendAnalysis":  {
-                                            "market_direction":  "up",
-                                            "change_from_older_to_recent":  7,
-                                            "liquidity":  "Normal",
-                                            "broaderTrend":  {
-                                                                 "impliedTrendPct":  0,
-                                                                 "direction":  "flat",
-                                                                 "recentMedian":  null,
-                                                                 "olderMedian":  null,
-                                                                 "recentCount":  0,
-                                                                 "olderCount":  0,
-                                                                 "similarCardsScanned":  0,
-                                                                 "totalSamples":  0,
-                                                                 "windowRecentDays":  14,
-                                                                 "windowOlderDays":  45,
-                                                                 "basedOn":  "insufficient"
-                                                             }
-                                        },
-                      "recentComps":  [
-                                          {
-                                              "price":  12913.04347826087,
-                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
-                                              "soldDate":  "2026-05-14T05:44:00.000Z"
-                                          },
-                                          {
-                                              "price":  13913.04347826087,
-                                              "title":  "1986-87 Fleer - Michael Jordan #57 PSA 8",
-                                              "soldDate":  "2026-05-14T05:14:00.000Z"
-                                          },
-                                          {
-                                              "price":  13217.391304347828,
-                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
-                                              "soldDate":  "2026-05-14T02:11:00.000Z"
-                                          },
-                                          {
-                                              "price":  11956.521739130436,
-                                              "title":  "1986 Fleer Basketball Michael Jordan ROOKIE #57 PSA 8 NM-MT",
-                                              "soldDate":  "2026-05-13T23:20:27.000Z"
-                                          },
-                                          {
-                                              "price":  11826.956521739132,
-                                              "title":  "1986 Fleer Premier Michael Jordan #57 57 Of 132 PSA 8",
-                                              "soldDate":  "2026-05-11T03:59:00.000Z"
-                                          },
-                                          {
-                                              "price":  8860,
-                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
-                                              "soldDate":  "2026-05-10T19:45:00.000Z"
-                                          },
-                                          {
-                                              "price":  11697.391304347828,
-                                              "title":  "1986 FLEER #57 MICHAEL JORDAN ROOKIE RC PSA 8",
-                                              "soldDate":  "2026-05-10T13:05:00.000Z"
-                                          },
-                                          {
-                                              "price":  11775.652173913044,
-                                              "title":  "1986-87 Fleer #57 Michael Jordan Rookie Card - PSA 8 - Raw 10",
-                                              "soldDate":  "2026-05-10T02:30:00.000Z"
-                                          },
-                                          {
-                                              "price":  12739.13043478261,
-                                              "title":  "1986-87 Fleer - Michael Jordan #57 (RC) - GOAT - PSA 8 NEAR MINT-MINT",
-                                              "soldDate":  "2026-05-09T15:50:00.000Z"
-                                          },
-                                          {
-                                              "price":  12521.739130434784,
-                                              "title":  "MICHAEL JORDAN PSA 8 1986-87 FLEER BASKETBALL #57 ROOKIE CARD RC BULLS NM-MT HOF",
-                                              "soldDate":  "2026-05-08T23:14:00.000Z"
-                                          }
-                                      ],
-                      "cardIdentity":  {
-                                           "card_id":  "1586038977359x685970805780906000",
-                                           "title":  null,
-                                           "player":  null,
-                                           "set":  null,
-                                           "year":  null,
-                                           "number":  null,
-                                           "variant":  null
-                                       },
-                      "gradeUsed":  "PSA 8",
-                      "compsUsed":  24,
-                      "compsAvailable":  24,
-                      "daysSinceNewestComp":  null,
-                      "broaderTrend":  {
-                                           "impliedTrendPct":  0,
-                                           "direction":  "flat",
-                                           "recentMedian":  null,
-                                           "olderMedian":  null,
-                                           "recentCount":  0,
-                                           "olderCount":  0,
-                                           "similarCardsScanned":  0,
-                                           "totalSamples":  0,
-                                           "windowRecentDays":  14,
-                                           "windowOlderDays":  45,
-                                           "basedOn":  "insufficient"
-                                       }
-                  },
+    "cardHedgeCardId":  null,
+    "priceById":  null,
     "priceByIdError":  null,
     "notes":  [
-
+                  "no cardHedgeCardId found in search response"
               ]
 }

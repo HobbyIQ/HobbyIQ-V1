@@ -1,130 +1,108 @@
-{
-  "caseId": "case-14",
-  "category": "popular-baseline",
-  "query": "2018 Bowman Chrome Wander Franco 1st Auto",
-  "grade": "Raw",
-  "capturedAt": "2026-05-18T18:02:07.855Z",
-  "search": {
-    "pricingEngine": "monolith",
-    "engineVersion": "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
-    "computedAt": "2026-05-18T18:01:33.679Z",
-    "success": true,
-    "query": "2018 Bowman Chrome Wander Franco 1st Auto",
-    "summary": "Hold — fair value, but momentum is improving.",
-    "marketTier": {
-      "value": 105,
-      "high": 121
-    },
-    "buyZone": [
-      80.10000000000001,
-      89
-    ],
-    "holdZone": [
-      89,
-      105
-    ],
-    "sellZone": [
-      105,
-      121
-    ],
-    "fairMarketValueLive": 105,
-    "marketValue": 105,
-    "predictedPrice": null,
-    "predictedPriceRange": null,
-    "predictedPriceAttribution": null,
-    "confidence": 0.65,
-    "source": "live",
-    "trendAnalysis": {
-      "market_direction": "flat",
-      "change_from_older_to_recent": 0,
-      "liquidity": "Normal"
-    },
-    "regime": "insufficient_data",
-    "regimeConfidence": "low",
-    "regimeDiagnostics": {
-      "compsUsedForClassification": 0,
-      "windowDays": 90,
-      "slopePctPerMonth": null,
-      "r2": null,
-      "coefficientOfVariation": null,
-      "recentMeanLast14d": null,
-      "olderMean14to90d": null,
-      "pctChangeRecentVsOlder": null,
-      "classificationReason": "Only 0 usable comp(s) in last 90 days (need >= 5)."
-    },
-    "predictedRange": {
-      "low": null,
-      "high": null
-    },
-    "predictedRangeDiagnostics": {
-      "windowAppliedDays": null,
-      "compsAfterFilter": 0,
-      "mathApplied": "null_insufficient_data",
-      "sanityCapsApplied": [],
-      "weightedPercentileBuckets": null
-    },
-    "predictedRangeAdjustedConfidence": "low",
-    "supply": null,
-    "recentComps": [
-      {
-        "price": 56.55,
-        "title": "2019 Bowman Chrome Draft BDC-93 WANDER FRANCO Image Variation Auto #30/99 RAYS - Raw 10",
-        "soldDate": "2025-07-08T04:37:00.000Z",
-        "grade": "Raw"
-      },
-      {
-        "price": 99.99,
-        "title": "2019 Bowman Chrome Draft Wander Franco AUTO Variation #/99 SSP Image Variation - Raw 10",
-        "soldDate": "2024-09-29T20:13:14.000Z",
-        "grade": "Raw"
-      },
-      {
-        "price": 120,
-        "title": "2019 Bowman Draft Chrome Image Variation Refractor Batting SP Wander Franco Auto - Raw 10",
-        "soldDate": "2024-02-16T17:30:45.000Z",
-        "grade": "Raw"
-      },
-      {
-        "price": 105.05,
-        "title": "2019 Bowman Draft Chrome Wander Franco Non Auto SP Variation - Raw 10",
-        "soldDate": "2021-10-25T00:36:40.000Z",
-        "grade": "Raw"
-      }
-    ],
-    "cardIdentity": {
-      "card_id": "1711924952194x481210679898961700",
-      "title": "Wander Franco 2019 Bowman Draft Chrome Image Variation Autograph Baseball",
-      "player": "Wander Franco",
-      "set": "2019 Bowman Draft Chrome Baseball",
-      "year": null,
-      "number": "BDC-93",
-      "variant": "Base"
-    },
-    "gradeUsed": "Raw",
-    "compsUsed": 4,
-    "compsAvailable": 4,
-    "daysSinceNewestComp": null,
-    "variantWarning": [],
-    "neighborSynthesis": null,
-    "crossParallelAnchor": null,
-    "buySignal": null,
-    "parsedQuery": {
-      "playerName": "Wander Franco",
-      "year": 2018,
-      "brand": "Bowman",
-      "set": "Bowman Chrome",
-      "parallel": null,
-      "isAuto": true,
-      "isPatch": false,
-      "isRookie": false,
-      "printRun": null,
-      "cardNumber": null,
-      "grade": null,
-      "gradingCompany": null,
-      "confidence": 1
-    },
-    "searchQuery": "2018 Wander Franco Bowman Chrome auto"
-  },
-  "cardHedgeCardId": null,
-  "priceById": null
+﻿{
+    "caseId":  "case-14-wander-franco-2018-bowman-chrome-1st-auto-raw",
+    "category":  "popularBaseline",
+    "query":  "2018 Bowman Chrome Wander Franco 1st Auto",
+    "grade":  "Raw",
+    "capturedAt":  "2026-05-20T00:48:17.6629747Z",
+    "search":  {
+                   "pricingEngine":  "monolith",
+                   "engineVersion":  "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+                   "computedAt":  "2026-05-20T00:46:01.276Z",
+                   "success":  true,
+                   "query":  "2018 Bowman Chrome Wander Franco 1st Auto",
+                   "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
+                   "marketTier":  {
+                                      "value":  null,
+                                      "high":  null
+                                  },
+                   "buyZone":  [
+                                   null,
+                                   null
+                               ],
+                   "holdZone":  [
+                                    null,
+                                    null
+                                ],
+                   "sellZone":  [
+                                    null,
+                                    null
+                                ],
+                   "fairMarketValueLive":  null,
+                   "marketValue":  null,
+                   "predictedPrice":  null,
+                   "predictedPriceRange":  null,
+                   "predictedPriceAttribution":  null,
+                   "confidence":  0,
+                   "source":  "no-recent-comps",
+                   "trendAnalysis":  {
+                                         "market_direction":  "flat",
+                                         "change_from_older_to_recent":  0,
+                                         "liquidity":  "Unknown"
+                                     },
+                   "regime":  "insufficient_data",
+                   "regimeConfidence":  "low",
+                   "regimeDiagnostics":  {
+                                             "compsUsedForClassification":  0,
+                                             "windowDays":  90,
+                                             "slopePctPerMonth":  null,
+                                             "r2":  null,
+                                             "coefficientOfVariation":  null,
+                                             "recentMeanLast14d":  null,
+                                             "olderMean14to90d":  null,
+                                             "pctChangeRecentVsOlder":  null,
+                                             "classificationReason":  "skipped_classification: source=no-recent-comps (classifier output discarded: Only 0 usable comp(s) in last 90 days (need \u003e= 5).)"
+                                         },
+                   "predictedRange":  {
+                                          "low":  null,
+                                          "high":  null
+                                      },
+                   "predictedRangeDiagnostics":  {
+                                                     "windowAppliedDays":  null,
+                                                     "compsAfterFilter":  0,
+                                                     "mathApplied":  "null_non_live_source",
+                                                     "sanityCapsApplied":  [
+
+                                                                           ],
+                                                     "weightedPercentileBuckets":  null
+                                                 },
+                   "predictedRangeAdjustedConfidence":  null,
+                   "supply":  null,
+                   "recentComps":  [
+
+                                   ],
+                   "cardIdentity":  null,
+                   "gradeUsed":  "Raw",
+                   "compsUsed":  0,
+                   "compsAvailable":  0,
+                   "daysSinceNewestComp":  null,
+                   "variantWarning":  [
+
+                                      ],
+                   "neighborSynthesis":  null,
+                   "crossParallelAnchor":  null,
+                   "buySignal":  null,
+                   "parsedQuery":  {
+                                       "playerName":  "Wander Franco",
+                                       "year":  2018,
+                                       "brand":  "Bowman",
+                                       "set":  "Bowman Chrome",
+                                       "parallel":  null,
+                                       "isAuto":  true,
+                                       "isPatch":  false,
+                                       "isRookie":  false,
+                                       "printRun":  null,
+                                       "cardNumber":  null,
+                                       "grade":  null,
+                                       "gradingCompany":  null,
+                                       "confidence":  1
+                                   },
+                   "searchQuery":  "2018 Wander Franco Bowman Chrome auto"
+               },
+    "searchError":  null,
+    "cardHedgeCardId":  null,
+    "priceById":  null,
+    "priceByIdError":  null,
+    "notes":  [
+                  "no cardHedgeCardId found in search response"
+              ]
 }
