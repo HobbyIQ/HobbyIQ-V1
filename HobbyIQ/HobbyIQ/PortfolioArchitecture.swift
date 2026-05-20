@@ -66,6 +66,10 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let summary: String?
     var isAuto: Bool = false
 
+    // PR B: photo-storage-sas schema additions
+    let photos: [String]?
+    let clientId: String?
+
     init(
         id: UUID = UUID(),
         playerName: String,
@@ -88,7 +92,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         confidence: Double? = nil,
         method: String? = nil,
         summary: String? = nil,
-        isAuto: Bool = false
+        isAuto: Bool = false,
+        photos: [String]? = nil,
+        clientId: String? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -112,6 +118,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.method = method
         self.summary = summary
         self.isAuto = isAuto
+        self.photos = photos
+        self.clientId = clientId
     }
 
     var profitLoss: Double {
