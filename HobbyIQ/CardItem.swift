@@ -57,11 +57,23 @@ final class CardItem {
     @Relationship(deleteRule: .cascade)
     var saleRecord: CardSaleRecord?
 
-    // MARK: PR B.5 — Sync identity fields
-    // Minimal additions for the PortfolioSyncService spike.
-    // PR C will add pendingSyncFields, SyncIntent queue, and tombstones.
+    // MARK: Sync identity fields
     var serverHoldingId: String?
     var clientId: String?
+
+    // MARK: PR C.1 — Sync metadata
+
+    /// Tracks which fields have been locally edited but not yet pushed
+    /// to the backend. The read path checks this set before overwriting
+    /// a field — if present, the local value is authoritative.
+    /// Cleared after a successful write path push.
+    var pendingSyncFields: [String] = []
+
+    /// Soft-delete tombstone. Non-nil means the user deleted locally;
+    /// the sync queue will push a DELETE to the backend on next sync.
+    /// The read path skips re-inserting rows whose serverHoldingId
+    /// matches a local row with a non-nil deletedAt.
+    var deletedAt: Date?
 
     // MARK: Init
     init(
