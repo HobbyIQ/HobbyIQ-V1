@@ -1,0 +1,282 @@
+﻿## Cleanup Phase 3 Report (2026-05-17)
+
+### 1. Cat A discards executed
+- Requested Cat A count: 8
+- Deleted: 7
+- Blocked: 1
+- deleted: .data/dailyiq-watchlists.json
+- deleted: .vscode/extensions.json
+- deleted: .vscode/launch.json
+- deleted: .vscode/settings.json
+- deleted: .vscode/tasks.json
+- deleted: tmp_extract/package.json
+- deleted: tmp_extract/package-lock.json
+- blocked: worktrees/phase3-engine-pr/ :: delete error Could not find a part of the path 'ServiceInstanceIdDetector.d.ts'.
+
+### 2. Cat B discards executed
+- Requested Cat B count: 19
+- Deleted after hash check: 19
+- Blocked: 0
+- Hash check performed for all Cat B files.
+- Random spot-check sample (3):
+  - backend/tests/predictedRangeTierAnchored.test.ts :: hash matched branches = pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+  - backend/src/services/compiq/predictedRangeMultiplierAnchored.ts :: hash matched branches = pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+  - backend/docs/phase-c-checklist.md :: hash matched branches = pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- deleted: backend/docs/investigations/drake-baldwin-revalidation-adr-0003.md :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/docs/investigations/neighbor-synthesis-cleanup-pass.md :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/docs/phase-c-checklist.md :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/agents/multiplierAnchoredPredictedPrice.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/curation/multiplierTableRegistry.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/chromeDraftMultipliers.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/parallelAttributesLookup.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/peerPoolBuilder.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/predictedRangeMultiplierAnchored.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/predictedRangeTierAnchored.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/src/services/compiq/tierMultipliers.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/compiq/chromeDraftMultipliers.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/compiq/predictedRangeMultiplierAnchored.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/drakeBaldwinIntegration.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/multiplierAnchoredPredictedPrice.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/multiplierTableRegistry.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/peerPoolBuilder.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: backend/tests/predictedRangeTierAnchored.test.ts :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+- deleted: docs/adr/0001-phase-3-predictive-range.md :: preserved in pr/phase3-engine at C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/worktrees/phase3-engine-pr
+
+### 3. Cat B blocked
+- none
+
+### 4. Cat C slicing proposals
+- Cat C paths in triage report: 175
+- Existing on disk: 175
+- Outliers missing on disk: 0
+
+#### Slice A: iOS / Swift preservation PR
+- Branch suggestion: pr/ios-frontend-preservation
+- File count: 40
+- Estimated PR size: medium
+- Cohesion notes: coherent iOS UI/service/model unit from same session.
+- Risk flags: verify root-level Swift placement vs frontend layout before merge.
+- Suggested PR title: Preserve iOS frontend work from session 2026-05-17
+- Suggested PR description: Preserve untracked Swift views/models/services identified as real owner work from cleanup triage.
+  - AddCardView.swift
+  - BacktestAdminView.swift
+  - CardDashboardView.swift
+  - CardDetailView.swift
+  - CardInventoryView.swift
+  - CardItem.swift
+  - CardSaleRecord.swift
+  - CardScannerService.swift
+  - CardScannerView.swift
+  - CardScanResultView.swift
+  - CompIQImageResolver.swift
+  - CompIQService.swift
+  - DailyIQService.swift
+  - DailyIQViewModel.swift
+  - Extensions.swift
+  - frontend/src/AlertStore.swift
+  - frontend/src/AppRouter.swift
+  - frontend/src/EbayListingDraftView.swift
+  - frontend/src/PortfolioService.swift
+  - frontend/src/PriceAlert.swift
+  - frontend/src/PriceAlertService.swift
+  - frontend/src/SetAlertView.swift
+  - frontend/src/SignInView.swift
+  - frontend/src/WatchlistService.swift
+  - GradingHelperView.swift
+  - GradingPipelineView.swift
+  - InventoryRefreshService.swift
+  - ListingComposerView.swift
+  - PortfolioDashboardHome.swift
+  - PortfolioHeatMapView.swift
+  - PortfolioInventoryView.swift
+  - PortfolioRootView.swift
+  - PortfolioSettingsView.swift
+  - PreviewSampleCards.swift
+  - RecentCompsListView.swift
+  - SalesTrackerView.swift
+  - SearchIQOrchestrator.swift
+  - SearchResultView.swift
+  - SellCardSheet.swift
+  - WatchlistView.swift
+
+#### Slice B: Backend modules preservation PR
+- Branch suggestion: pr/backend-modules-preservation
+- File count: 30
+- Estimated PR size: medium
+- Cohesion notes: backend src/test additions not already preserved by isolated PRs.
+- Risk flags: includes test fixtures and generated investigation payloads; may need split.
+- Suggested PR title: Preserve backend modules (src/tests) from session 2026-05-17
+- Suggested PR description: Preserve backend implementation/test files from Cat C after duplicate branch pruning.
+  - backend/src/agents/beckett/beckettChecklistFetcher.ts
+  - backend/src/agents/beckett/beckettChecklistParser.ts
+  - backend/src/agents/beckett/beckettUrlDiscovery.ts
+  - backend/src/agents/beckett/brandRegistry.ts
+  - backend/src/agents/beckett/cardDedup.ts
+  - backend/src/agents/beckett/parallelNameNormalizer.ts
+  - backend/src/agents/beckett/sweepOrchestrator.ts
+  - backend/src/curation/applyWorksheet.ts
+  - backend/src/curation/curationOrchestrator.ts
+  - backend/src/curation/eligibilityAnalyzer.ts
+  - backend/src/curation/worksheetGenerator.ts
+  - backend/src/scripts/migrate-2024-bowman-chrome-prospects.ts
+  - backend/src/scripts/verify-parallel-attributes-coverage.ts
+  - backend/src/services/dailyiq/dailyScore.service.ts
+  - backend/src/services/dailyiq/marketDelta.service.ts
+  - backend/src/services/dailyiq/movement.service.ts
+  - backend/src/services/sportsCardsPro/client.ts
+  - backend/tests/applyWorksheet.test.ts
+  - backend/tests/beckettChecklistParser.test.ts
+  - backend/tests/beckettUrlDiscovery.test.ts
+  - backend/tests/cardDedup.test.ts
+  - backend/tests/curationOrchestrator.test.ts
+  - backend/tests/eligibilityAnalyzer.test.ts
+  - backend/tests/fixtures/beckett/2022-Bowman-Baseball-Checklist-2.xlsx
+  - backend/tests/parallelAttributesSchema.test.ts
+  - backend/tests/parallelNameNormalizer.test.ts
+  - backend/tests/sourceCitation.test.ts
+  - backend/tests/sweepOrchestrator.test.ts
+  - backend/tests/tierMultipliers.test.ts
+  - backend/tests/worksheetGenerator.test.ts
+
+#### Slice C: Documentation preservation PR
+- Branch suggestion: pr/documentation-preservation
+- File count: 31
+- Estimated PR size: medium
+- Cohesion notes: docs/ADR/investigation artifacts from same operational window.
+- Risk flags: JSON evidence payloads may be bulky; confirm keep policy.
+- Suggested PR title: Preserve documentation and reports from session 2026-05-17
+- Suggested PR description: Preserve markdown investigations, deployment runbooks, and related docs not already merged.
+  - backend/docs/data-sources.md
+  - backend/docs/deployment/deploy-runbook.md
+  - backend/docs/deployment/existing-deployment-discovery.md
+  - backend/docs/deployment/phase-c-rollback-context.md
+  - backend/docs/investigations/2022-bowman-chrome-uncovered-parallels.md
+  - backend/docs/investigations/cardhedger-2019-topps-probe.md
+  - backend/docs/investigations/cardhedger-2019-topps-probe-samples.json
+  - backend/docs/investigations/cardhedger-client-surface.md
+  - backend/docs/investigations/ch-422-diagnostic-2026-05-17.md
+  - backend/docs/investigations/ch-422-reprobe-raw-2026-05-17.json
+  - backend/docs/investigations/comps-filter-drake-baldwin-2026-05-17.md
+  - backend/docs/investigations/drake-baldwin-live-probe-2026-05-17.md
+  - backend/docs/investigations/drake-baldwin-live-probe-raw-2026-05-17.json
+  - backend/docs/investigations/drake-baldwin-mechanism-1-rerun-2026-05-17.md
+  - backend/docs/investigations/drake-baldwin-mechanism-1-rerun-raw-2026-05-17.json
+  - backend/docs/investigations/drake-baldwin-mechanism-1-result.md
+  - backend/docs/investigations/drake-baldwin-peer-parallel-diagnostic-2026-05-17.md
+  - backend/docs/investigations/drake-baldwin-peer-parallel-inventory-2026-05-17.json
+  - backend/docs/investigations/drake-baldwin-revalidation-raw-adr-0003.json
+  - backend/docs/investigations/drake-baldwin-validation-2026-05-17.md
+  - backend/docs/investigations/drake-baldwin-validation-raw-2026-05-17.json
+  - backend/docs/investigations/mechanism-1-alternate-candidate-scan-2026-05-17.json
+  - backend/docs/investigations/mechanism-1-alternate-validation-2026-05-17.md
+  - backend/docs/investigations/multiplier-table-2022-bowman-conflicts.json
+  - backend/docs/investigations/multiplier-table-2022-bowman-sanity-check.json
+  - backend/docs/investigations/multiplier-table-current-shape.md
+  - backend/docs/investigations/multiplier-table-extension-2022-bowman-report.md
+  - backend/docs/investigations/vitest-baseline-failures.md
+  - backend/docs/investigations/wyatt-drake-cpa-coverage-gap-diagnostic.md
+  - compiq-functions/README.md
+  - docs/triage-issue-pr2.5.md
+
+#### Slice D: Misc / config preservation PR
+- Branch suggestion: pr/misc-preservation
+- File count: 74
+- Estimated PR size: large
+- Cohesion notes: residual Cat C files not fitting iOS/backend/docs buckets.
+- Risk flags: may include function scaffolding and environment-adjacent support files.
+- Suggested PR title: Preserve misc session artifacts from 2026-05-17
+- Suggested PR description: Preserve remaining Cat C files pending owner grouping decisions.
+  - compiq-functions/.funcignore
+  - compiq-functions/fn-backtest-runner/__init__.py
+  - compiq-functions/fn-backtest-runner/function.json
+  - compiq-functions/fn-cardhedge-comps/__init__.py
+  - compiq-functions/fn-cardhedge-comps/function.json
+  - compiq-functions/fn-cardhedge-comps/function.py
+  - compiq-functions/fn-ebay-signals/__init__.py
+  - compiq-functions/fn-ebay-signals/function.json
+  - compiq-functions/fn-ebay-signals/function.py
+  - compiq-functions/fn-news-signals/__init__.py
+  - compiq-functions/fn-news-signals/function.json
+  - compiq-functions/fn-news-signals/function.py
+  - compiq-functions/fn-nightly-comp-prefetch/__init__.py
+  - compiq-functions/fn-nightly-comp-prefetch/__pycache__/function.cpython-314.pyc
+  - compiq-functions/fn-nightly-comp-prefetch/function.json
+  - compiq-functions/fn-nightly-comp-prefetch/function.py
+  - compiq-functions/fn-odds-signals/__init__.py
+  - compiq-functions/fn-odds-signals/function.json
+  - compiq-functions/fn-odds-signals/function.py
+  - compiq-functions/fn-player-score-refresh/__init__.py
+  - compiq-functions/fn-player-score-refresh/function.json
+  - compiq-functions/fn-price-alert-checker/__init__.py
+  - compiq-functions/fn-price-alert-checker/function.json
+  - compiq-functions/fn-price-floor/__init__.py
+  - compiq-functions/fn-price-floor/function.json
+  - compiq-functions/fn-reddit-signals/__init__.py
+  - compiq-functions/fn-reddit-signals/function.json
+  - compiq-functions/fn-reddit-signals/function.py
+  - compiq-functions/fn-search-intent/__init__.py
+  - compiq-functions/fn-search-intent/function.json
+  - compiq-functions/fn-serve-signals/__init__.py
+  - compiq-functions/fn-serve-signals/function.json
+  - compiq-functions/fn-signal-aggregator/__init__.py
+  - compiq-functions/fn-signal-aggregator/function.json
+  - compiq-functions/fn-signal-aggregator/function.py
+  - compiq-functions/fn-stats-signals/__init__.py
+  - compiq-functions/fn-stats-signals/function.json
+  - compiq-functions/fn-stats-signals/function.py
+  - compiq-functions/fn-trends-signals/__init__.py
+  - compiq-functions/fn-trends-signals/function.json
+  - compiq-functions/fn-trends-signals/function.py
+  - compiq-functions/fn-youtube-signals/__init__.py
+  - compiq-functions/fn-youtube-signals/function.json
+  - compiq-functions/fn-youtube-signals/function.py
+  - compiq-functions/host.json
+  - compiq-functions/local.settings.json.example
+  - compiq-functions/requirements.txt
+  - compiq-functions/shared/__init__.py
+  - compiq-functions/shared/__pycache__/__init__.cpython-314.pyc
+  - compiq-functions/shared/__pycache__/cardhedge.cpython-314.pyc
+  - compiq-functions/shared/card_modifiers.py
+  - compiq-functions/shared/cardhedge.py
+  - compiq-functions/shared/career_arc.py
+  - compiq-functions/shared/cosmos_floor.py
+  - compiq-functions/shared/ebay_auth.py
+  - compiq-functions/shared/pack_calendar.py
+  - compiq-functions/shared/playoff_calendar.py
+  - compiq-functions/shared/psa_pop.py
+  - compiq-functions/shared/show_calendar.py
+  - mcp-server/backtest.ts
+  - mcp-server/body.json
+  - mcp-server/cardhedge.ts
+  - mcp-server/cardModifiers.ts
+  - mcp-server/catalystCalendar.ts
+  - mcp-server/compsAnalytics.ts
+  - mcp-server/compsLoader.ts
+  - mcp-server/deploy-log.txt
+  - mcp-server/package.json
+  - mcp-server/package-lock.json
+  - mcp-server/predictionLog.ts
+  - mcp-server/pricing.ts
+  - mcp-server/scripts/query-predictions.cjs
+  - mcp-server/server.ts
+  - mcp-server/tsconfig.json
+
+#### Outliers — owner judgment needed
+- none
+
+### 5. Cat D + Cat E deferral note
+- No action taken on Cat D files (remain untracked in root for owner-paced review).
+- No action taken on Cat E files (remain untracked in root for secrets/config owner decisions).
+
+### 6. .gitignore PR
+- Branch: pr/gitignore-log-artifacts
+- Worktree: C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-deploy-main-gitignore
+- Status: opened
+- PR URL: https://github.com/HobbyIQ/HobbyIQ-V1/pull/47
+- Notes: tracked-check output:
+
+### 7. Recommended next actions
+- Review Cat A/B discard outcomes and any blocked files.
+- Choose which Cat C slice(s) to execute first (A/B/C/D).
+- Review and merge .gitignore PR via normal flow (no auto-merge).
+- Run a fresh status/untracked check before Phase 3.1 execution prompt.

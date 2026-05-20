@@ -28,3 +28,26 @@ backend/harness/fixtures/cardhedge/
 
 # Azure App Service env var dump � contains live secrets; never commit (see PR #2.5)
 backend/azure-app-env-vars.txt
+
+# Root cleanup artifact-heavy folders (Phase 2.5)
+webapp-logs/
+logdownload_hotfix/
+logdownload_2f6c9d/
+logdownload_*/
+tmp/
+# Local Azure Blob connection string (secret, do not commit)
+.blobconn.txt
+
+# === V1 curation 2026-05-19: build artifacts, deps, large local data ===
+mcp-server/node_modules/
+mcp-server/dist/
+mcp-server/mcp-deploy.zip
+compiq-functions/.venv/
+compiq-functions/**/__pycache__/
+compiq-functions/fn-compiq-deploy.zip
+backend/data/
+ops-tail.txt
+untracked-list-2026-05-17.txt
+backend/harness-output.txt
+backend/unit-suite-output.txt
+tier1-local-output.txt

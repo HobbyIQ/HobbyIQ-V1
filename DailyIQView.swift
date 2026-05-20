@@ -15,6 +15,9 @@ class DailyIQViewModel: ObservableObject {
     @Published var error: String? = nil
     @Published var watchlistError: String? = nil
     @Published var watchPlayerName = ""
+    // Selected brief date in YYYY-MM-DD. nil = server default (yesterday LA).
+    // Drives the date picker in the header and the ?date= query param.
+    @Published var selectedDate: String? = nil
 
     private var loadTask: Task<Void, Never>? = nil
     private var retryTask: Task<Void, Never>? = nil
@@ -57,7 +60,7 @@ class DailyIQViewModel: ObservableObject {
     // Core brief fetch — shared by load() and refresh()
     private func fetchBrief(sessionId: String?, fresh: Bool, isBackgroundRetry: Bool = false) async {
         do {
-            let result = try await APIService.shared.fetchDailyBrief(fresh: fresh)
+            let result = try await APIService.shared.fetchDailyBrief(date: selectedDate, fresh: fresh)
             brief = result
             // Secondary data — doesn't affect brief visibility
             await fetchSecondary(sessionId: sessionId)
@@ -407,7 +410,7 @@ struct DailyIQView: View {
     }
 
     private var headerBar: some View {
-        HStack {
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("DailyIQ")
                     .font(.title2.weight(.bold))
@@ -419,10 +422,29 @@ struct DailyIQView: View {
                 }
             }
             Spacer()
+            // Date picker. Bound to vm.selectedDate via a Date proxy so the
+            // server actually receives ?date=YYYY-MM-DD and the brief refreshes.
+            DatePicker(
+                "",
+                selection: Binding<Date>(
+                    get: { Self.parseISODate(vm.selectedDate) ?? Self.yesterdayLA() },
+                    set: { newValue in
+                        let iso = Self.formatISODate(newValue)
+                        if iso != vm.selectedDate {
+                            vm.selectedDate = iso
+                            vm.refresh(sessionId: auth.activeSessionId)
+                        }
+                    }
+                ),
+                in: ...Date(),
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .tint(.blue)
             if vm.isLoading || vm.isRefreshing {
                 ProgressView()
                     .tint(.blue)
-                    .padding(.trailing, 4)
             }
             AccountButton {
                 if let onAccount { onAccount() } else { showAccount = true }
@@ -430,6 +452,31 @@ struct DailyIQView: View {
         }
         .padding(.horizontal)
         .padding(.vertical, 12)
+    }
+
+    private static func parseISODate(_ s: String?) -> Date? {
+        guard let s = s, !s.isEmpty else { return nil }
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Los_Angeles")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: s)
+    }
+
+    private static func formatISODate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Los_Angeles")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    private static func yesterdayLA() -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Los_Angeles") ?? .current
+        return cal.date(byAdding: .day, value: -1, to: Date()) ?? Date()
     }
 
     @ViewBuilder
@@ -546,10 +593,11 @@ struct DailyIQView: View {
         let onRemove: () -> Void
 
         private var teamLeagueLine: String {
+            let teamLabel = performer.team.isEmpty ? "Unknown" : performer.team
             if let level = performer.level, !level.isEmpty, performer.league == "MiLB" {
-                return (performer.team ?? "Unknown") + " • " + performer.league
+                return teamLabel + " • " + performer.league
             }
-            return (performer.team ?? "Unknown") + " • " + performer.league
+            return teamLabel + " • " + performer.league
         }
 
         private var levelBadgeText: String? {
@@ -574,6 +622,43 @@ struct DailyIQView: View {
             case "Rookie": return .pink
             default: return .gray
             }
+        }
+
+        // Pitcher vs hitter stat line builders.
+        // Pitcher: IP/H/R/ER/BB/K + decision badge in trailing text.
+        // Empty state: "Did not pitch" if position is pitcher but pitched=false.
+        fileprivate static func todayLine(_ performer: DailyPerformer) -> String {
+            let ds = performer.dailyStats
+            if performer.isPitcher {
+                if ds.pitched == false || (ds.inningsPitched ?? "0.0") == "0.0" {
+                    return "Did not pitch"
+                }
+                let ip = ds.inningsPitched ?? "0.0"
+                let h  = ds.hitsAllowed   ?? 0
+                let r  = ds.runsAllowed   ?? 0
+                let er = ds.earnedRuns    ?? 0
+                let bb = ds.walks
+                let k  = ds.strikeouts
+                let dec = (ds.decision != nil && !ds.decision!.isEmpty) ? " (\(ds.decision!))" : ""
+                let qs  = (ds.qualityStart == true) ? " QS" : ""
+                return "\(ip) IP | \(h) H | \(r) R | \(er) ER | \(bb) BB | \(k) K\(dec)\(qs)"
+            }
+            return "\(ds.hits)-\(ds.atBats) | BA: \(ds.battingAverage) | OPS: \(ds.ops)"
+        }
+
+        fileprivate static func seasonLine(_ performer: DailyPerformer) -> String {
+            let ss = performer.seasonStats
+            if performer.isPitcher {
+                let era = ss.era ?? "—"
+                let whip = ss.whip ?? "—"
+                let k = ss.strikeouts
+                let ip = ss.inningsPitched ?? "—"
+                let w = ss.wins ?? 0
+                let l = ss.losses ?? 0
+                let sv = ss.saves ?? 0
+                return "\(w)-\(l), \(sv) SV | ERA \(era) | WHIP \(whip) | \(k) K | \(ip) IP"
+            }
+            return "\(ss.homeRuns) HR | \(ss.rbis) RBI | BA: \(ss.battingAverage) | OPS: \(ss.ops)"
         }
 
         var body: some View {
@@ -604,26 +689,46 @@ struct DailyIQView: View {
                             .foregroundColor(isWatchlisted ? .red : .gray)
                     }
                 }
+
+                // Movement badge — distinct from stat badges. Renders only when
+                // the backend supplies a non-neutral movement signal.
+                if let mv = performer.movement, mv.label != "No Change" {
+                    MovementBadge(movement: mv)
+                }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack {
+                    HStack(alignment: .top) {
                         Text("Today:")
                             .font(.caption)
                             .foregroundColor(.gray)
                         Spacer()
-                        Text("\(performer.dailyStats.hits)-\(performer.dailyStats.atBats) | BA: \(performer.dailyStats.battingAverage) | OPS: \(performer.dailyStats.ops)")
+                        Text(Self.todayLine(performer))
                             .font(.caption)
                             .foregroundColor(.white)
+                            .multilineTextAlignment(.trailing)
                     }
-                    
-                    HStack {
+                    // Two-way player: render the second statline beneath the first.
+                    if let secondary = performer.dailyStats.secondaryStats {
+                        HStack {
+                            Text("\u{00A0}\u{00A0}also:")
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text("\(secondary.hits)-\(secondary.atBats) | \(secondary.homeRuns) HR | \(secondary.rbis) RBI")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+
+                    HStack(alignment: .top) {
                         Text("Season:")
                             .font(.caption)
                             .foregroundColor(.gray)
                         Spacer()
-                        Text("\(performer.seasonStats.homeRuns) HR | \(performer.seasonStats.rbis) RBI | BA: \(performer.seasonStats.battingAverage) | OPS: \(performer.seasonStats.ops)")
+                        Text(Self.seasonLine(performer))
                             .font(.caption2)
                             .foregroundColor(.white)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
             }
@@ -631,6 +736,53 @@ struct DailyIQView: View {
             .padding(12)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    /// Visually distinct from stat chips (1 HR, Multi-Hit). Pill capsule with
+    /// direction-tinted background, glyph, and a one-line reason underneath.
+    private struct MovementBadge: View {
+        let movement: Movement
+
+        private var tint: Color {
+            switch movement.direction {
+            case "up": return .green
+            case "down": return .red
+            default:    return .gray
+            }
+        }
+
+        private var glyph: String {
+            if movement.label == "Breakout Alert" { return "bolt.fill" }
+            switch movement.direction {
+            case "up":   return "arrow.up.right"
+            case "down": return "arrow.down.right"
+            default:     return "minus"
+            }
+        }
+
+        var body: some View {
+            HStack(alignment: .center, spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: glyph)
+                        .font(.system(size: 10, weight: .bold))
+                    Text(movement.label.uppercased())
+                        .font(.system(size: 10, weight: .heavy))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(tint.opacity(0.18))
+                .foregroundColor(tint)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(tint.opacity(0.5), lineWidth: 1))
+
+                Text(movement.reason)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 0)
+            }
         }
     }
 

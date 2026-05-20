@@ -1,0 +1,248 @@
+
+> hobbyiq-backend@1.0.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90mC:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/backend[39m
+
+ [31m❯[39m tests/pricing/compiq-estimate.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [31m❯[39m tests/pricing/cache-logger.test.ts [2m([22m[2m0 test[22m[2m)[22m
+[90mstderr[2m | tests/engineMeta.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+ [31m❯[39m tests/pricing/api-compatibility.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m tests/engineMeta.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [31m❯[39m tests/pricing/api-response-shape.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m tests/pricing/explanation-engine.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m harness/regression.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m tests/pricing/verdict-engine.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m tests/pricing/engines.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/pricing/fallbacks.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/pricing/pipeline.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m tests/pricing/observability.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m tests/pricing/learning.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/pricing/comp-weighting.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+[90mstderr[2m | tests/compiqEstimate.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+[90mstderr[2m | tests/portfolio.routes.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+[90mstderr[2m | tests/compiqPricingAccuracy.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+[90mstderr[2m | tests/health.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+[90mstderr[2m | tests/dailyiq.routes.test.ts
+[22m[39m[engineMeta] GIT_SHA environment variable not set; engineVersion will be stamped as "unknown" on all responses. Set GIT_SHA in App Service application settings before deploy.
+
+ [32m✓[39m tests/compiqPricingAccuracy.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+[90mstdout[2m | tests/health.test.ts[2m > [22m[2m/api/health[2m > [22m[2mreturns 200 and status ok
+[22m[39m[GET] /api/health
+
+ [32m✓[39m tests/health.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 27[2mms[22m[39m
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[POST] /api/auth/signin
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[auth] TEST MODE: using in-memory user store
+
+[90mstdout[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[POST] /api/compiq/estimate
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[compiq.computeEstimate] thin-data short-circuit: comps=0 daysSinceNewest=null query="Blake Burke 2024 Bowman Chrome orange wave PSA 10 Auto"
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns only MLB players for the MLB top endpoint
+[22m[39m[GET] /api/dailyiq/players/top/mlb
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[ebayFallback] APIFY_TOKEN not set — skipping eBay fallback
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[compiq.computeEstimate] neighbor-synthesis (stale-path) failed: insufficient_neighbor_pool comps=0
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns only MiLB players for the MiLB top endpoint
+[22m[39m[GET] /api/dailyiq/players/top/milb
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns required fields
+[22m[39m[cardhedge.client] CARD_HEDGE_API_KEY missing
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns non-empty watchlist top players for a large limit
+[22m[39m[GET] /api/dailyiq/watchlist/top?limit=50
+[dailyiq.watchlist] COSMOS_ENDPOINT/COSMOS_CONNECTION_STRING not set; using file-backed fallback
+
+[90mstdout[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns valid fallback for sparse payload
+[22m[39m[POST] /api/compiq/estimate
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns valid fallback for sparse payload
+[22m[39m[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns valid fallback for sparse payload
+[22m[39m[compiq.computeEstimate] thin-data short-circuit: comps=0 daysSinceNewest=null query=""
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns valid fallback for sparse payload
+[22m[39m[ebayFallback] APIFY_TOKEN not set — skipping eBay fallback
+
+[90mstderr[2m | tests/compiqEstimate.test.ts[2m > [22m[2m/api/compiq/estimate[2m > [22m[2mreturns valid fallback for sparse payload
+[22m[39m[compiq.computeEstimate] neighbor-synthesis (stale-path) failed: insufficient_neighbor_pool comps=0
+
+ [31m❯[39m tests/compiqEstimate.test.ts [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 77[2mms[22m[39m
+[31m     [31m×[31m returns required fields[39m[32m 67[2mms[22m[39m
+[31m     [31m×[31m returns valid fallback for sparse payload[39m[32m 9[2mms[22m[39m
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[POST] /api/auth/signin
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[POST] /api/auth/signin
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[auth] TEST MODE: using in-memory user store
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[POST] /api/portfolio/holdings
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[portfolio] TEST MODE: Using in-memory store (not for production)
+
+[90mstderr[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[POST] /api/auth/signin
+
+[90mstderr[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[compiq.computeEstimate] thin-data short-circuit: comps=0 daysSinceNewest=null query="Paul Skenes"
+
+[90mstderr[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[ebayFallback] APIFY_TOKEN not set — skipping eBay fallback
+
+[90mstderr[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[compiq.computeEstimate] neighbor-synthesis (stale-path) failed: insufficient_neighbor_pool comps=0
+
+[90mstderr[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[cardhedge.client] CARD_HEDGE_API_KEY missing
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[POST] /api/portfolio/holdings/test-holding-1/sell
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[GET] /api/portfolio/holdings
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[GET] /api/portfolio/ledger
+
+[90mstdout[2m | tests/portfolio.routes.test.ts[2m > [22m[2mPortfolio routes[2m > [22m[2mrecords account-scoped sell ledger and updates remaining holding quantity
+[22m[39m[GET] /api/portfolio/ledger
+
+ [32m✓[39m tests/portfolio.routes.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 150[2mms[22m[39m
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[POST] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[GET] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mscopes watchlists by authenticated user
+[22m[39m[GET] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mprevents duplicate watchlist entries for the same user
+[22m[39m[POST] /api/auth/signin
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mprevents duplicate watchlist entries for the same user
+[22m[39m[POST] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mprevents duplicate watchlist entries for the same user
+[22m[39m[POST] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mprevents duplicate watchlist entries for the same user
+[22m[39m[GET] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns dashboard sections and watchlist status consistently
+[22m[39m[POST] /api/auth/signin
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns dashboard sections and watchlist status consistently
+[22m[39m[POST] /api/dailyiq/watchlist
+
+[90mstdout[2m | tests/dailyiq.routes.test.ts[2m > [22m[2mDailyIQ routes[2m > [22m[2mreturns dashboard sections and watchlist status consistently
+[22m[39m[GET] /api/dailyiq/dashboard/player-stats
+
+ [32m✓[39m tests/dailyiq.routes.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 271[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/pricing/api-compatibility.test.ts[2m [ tests/pricing/api-compatibility.test.ts ][22m
+[31m[1mReferenceError[22m: before is not defined[39m
+[36m [2m❯[22m tests/pricing/api-compatibility.test.ts:[2m6:1[22m[39m
+    [90m  4|[39m [35mimport[39m { expect } [35mfrom[39m [32m'chai'[39m[33m;[39m
+    [90m  5|[39m [35mlet[39m app[33m:[39m any[33m;[39m
+    [90m  6|[39m [34mbefore[39m([35masync[39m () [33m=>[39m {
+    [90m   |[39m [31m^[39m
+    [90m  7|[39m   app = (await import('../../src/server.js')).default || (await import…
+    [90m  8|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/pricing/api-response-shape.test.ts[2m [ tests/pricing/api-response-shape.test.ts ][22m
+[31m[1mReferenceError[22m: before is not defined[39m
+[36m [2m❯[22m tests/pricing/api-response-shape.test.ts:[2m4:1[22m[39m
+    [90m  2|[39m [35mimport[39m { expect } [35mfrom[39m [32m'chai'[39m[33m;[39m
+    [90m  3|[39m [35mlet[39m app[33m:[39m any[33m;[39m
+    [90m  4|[39m [34mbefore[39m([35masync[39m () [33m=>[39m {
+    [90m   |[39m [31m^[39m
+    [90m  5|[39m   app = (await import('../../src/server.js')).default || (await import…
+    [90m  6|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/pricing/cache-logger.test.ts[2m [ tests/pricing/cache-logger.test.ts ][22m
+[31m[1mError[22m: No test suite found in file C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/backend/tests/pricing/cache-logger.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/pricing/compiq-estimate.test.ts[2m [ tests/pricing/compiq-estimate.test.ts ][22m
+[31m[1mError[22m: No test suite found in file C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/backend/tests/pricing/compiq-estimate.test.ts[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/compiqEstimate.test.ts[2m > [22m/api/compiq/estimate[2m > [22mreturns required fields
+[31m[1mAssertionError[22m: expected undefined to be defined[39m
+[36m [2m❯[22m tests/compiqEstimate.test.ts:[2m24:40[22m[39m
+    [90m 22|[39m     } [35melse[39m {
+    [90m 23|[39m       [90m// When FMV is null the sufficiency gate must explain why.[39m
+    [90m 24|[39m       [34mexpect[39m(res[33m.[39mbody[33m.[39mdataSufficiency)[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m   |[39m                                        [31m^[39m
+    [90m 25|[39m       [34mexpect[39m(res[33m.[39mbody[33m.[39mdataSufficiency[33m.[39msufficient)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m 26|[39m       [34mexpect[39m([35mtypeof[39m res[33m.[39mbody[33m.[39mdataSufficiency[33m.[39mmessage)[33m.[39m[34mtoBe[39m([32m"string"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/compiqEstimate.test.ts[2m > [22m/api/compiq/estimate[2m > [22mreturns valid fallback for sparse payload
+[31m[1mAssertionError[22m: expected undefined to be false // Object.is equality[39m
+
+[32m- Expected:[39m
+false
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/compiqEstimate.test.ts:[2m43:52[22m[39m
+    [90m 41|[39m     )[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 42|[39m     [35mif[39m (res[33m.[39mbody[33m.[39mfairMarketValue [33m===[39m [35mnull[39m) {
+    [90m 43|[39m       [34mexpect[39m(res[33m.[39mbody[33m.[39mdataSufficiency[33m?.[39msufficient)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m   |[39m                                                    [31m^[39m
+    [90m 44|[39m     }
+    [90m 45|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m14 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m73 passed[39m[22m[90m (75)[39m
+[2m   Start at [22m 12:44:11
+[2m   Duration [22m 2.58s[2m (transform 4.95s, setup 0ms, import 11.41s, tests 674ms, environment 5ms)[22m
+

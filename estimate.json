@@ -1,0 +1,167 @@
+﻿{
+    "cardTitle":  "Caleb Bonemer 2024 Bowman Chrome Draft blue wave refractor Auto",
+    "verdict":  "Pass — too expensive for the current risk.",
+    "action":  "Pass",
+    "dealScore":  44,
+    "quickSaleValue":  31,
+    "fairMarketValue":  36,
+    "premiumValue":  41,
+    "explanation":  [
+                        "Recent sales are trending lower — prices are softening.",
+                        "There are not many listed right now.",
+                        "This card may be overpriced.",
+                        "Buyers still look active.",
+                        "Buyers are in control"
+                    ],
+    "marketDNA":  {
+                      "demand":  "High",
+                      "speed":  "Normal",
+                      "risk":  "Medium",
+                      "trend":  "Down",
+                      "marketCondition":  "Buyer\u0027s Market"
+                  },
+    "marketRegime":  {
+                         "regime":  "momentum",
+                         "volatilityPct":  13.492897355754883,
+                         "slopePctPerComp":  13.57692307692308,
+                         "confidence":  0.68,
+                         "note":  "Recent comps are accelerating upward."
+                     },
+    "normalization":  {
+                          "parallelInput":  "Blue Wave Refractor",
+                          "parallelCanonical":  "blue wave refractor",
+                          "gradeCompanyInput":  null,
+                          "gradeCompanyCanonical":  null
+                      },
+    "confidence":  {
+                       "pricingConfidence":  65,
+                       "liquidityConfidence":  65,
+                       "timingConfidence":  65
+                   },
+    "exitStrategy":  {
+                         "recommendedMethod":  "auction",
+                         "expectedDaysToSell":  7,
+                         "timingRecommendation":  "List at auction within the next few days."
+                     },
+    "freshness":  {
+                      "status":  "Live",
+                      "lastUpdated":  "2026-05-14T03:06:13.995Z"
+                  },
+    "pricingAnalytics":  {
+                             "projectedNextSale":  34,
+                             "trendSlope":  -6.43,
+                             "rSquared":  0.78,
+                             "projectionConfidence":  60,
+                             "anchorModel":  {
+                                                 "anchorPrice":  50,
+                                                 "anchorDate":  "2025-10-19T01:44:00.000Z",
+                                                 "longTermMultiplier":  0.4,
+                                                 "shortTermMultiplier":  0.4,
+                                                 "netTrendMultiplier":  0.7,
+                                                 "impliedTrendPct":  -60
+                                             },
+                             "compPoolDebug":  {
+                                                   "totalNormalized":  3,
+                                                   "exactMatchForTrend":  3,
+                                                   "usingFallbackPool":  false
+                                               }
+                         },
+    "broaderTrend":  {
+                         "impliedTrendPct":  -60,
+                         "direction":  "down",
+                         "recentMedian":  7,
+                         "olderMedian":  624.99,
+                         "recentCount":  38,
+                         "olderCount":  5,
+                         "similarCardsScanned":  8,
+                         "totalSamples":  85,
+                         "windowRecentDays":  14,
+                         "windowOlderDays":  45,
+                         "basedOn":  "broader"
+                     },
+    "buyWindowScore":  4,
+    "buyWindowLabel":  "Weak Buy Window",
+    "buyWindowReasons":  [
+                             "Price falling — potential buy dip",
+                             "Liquid market — reliable signal"
+                         ],
+    "confidenceInterval":  {
+                               "low":  29,
+                               "high":  43,
+                               "width":  "moderate",
+                               "explanation":  "Based on 43 sales — moderate confidence"
+                           },
+    "sellingGuidance":  {
+                            "sellRange":  {
+                                              "low":  31,
+                                              "high":  41
+                                          },
+                            "quickSale":  31,
+                            "fair":  36,
+                            "ebayListingPrice":  41.32,
+                            "bestOfferFloor":  31,
+                            "auctionStartPrice":  21.6,
+                            "breakEven":  42.53,
+                            "recommendedPlatform":  "auction",
+                            "notes":  [
+                                          "Start auction at $21.6 to drive bidders; expect a clear in the $31–$41 band.",
+                                          "Heads up: at 13% fees + $1 shipping you\u0027d need $42.53 gross to net the $36 fair price."
+                                      ],
+                            "assumptions":  {
+                                                "feePct":  0.13,
+                                                "shippingCost":  1
+                                            }
+                        },
+    "compQuality":  {
+                        "totalComps":  3,
+                        "usedComps":  3,
+                        "excluded":  0,
+                        "reasons":  {
+
+                                    }
+                    },
+    "graderPremium":  {
+                          "applied":  1,
+                          "company":  null,
+                          "grade":  null,
+                          "normalizedAnchor":  36
+                      },
+    "dataSufficiency":  {
+                            "sufficient":  true,
+                            "level":  "thin",
+                            "message":  "Thin data — based on 3 sales (38 in last 14d). Treat as approximate."
+                        },
+    "estimate":  36,
+    "compsUsed":  3,
+    "cardIdentity":  {
+                         "card_id":  "1736803833283x668800900475769300",
+                         "title":  null,
+                         "player":  "Caleb Bonemer",
+                         "set":  "2024 Bowman Draft Chrome Baseball",
+                         "year":  null,
+                         "number":  "CPA-CBO",
+                         "variant":  "Blue Wave Refractor"
+                     },
+    "recentComps":  [
+                        {
+                            "price":  39,
+                            "title":  "2024 Bowman Draft Chrome  CALEB BONEMER  Blue Wave Refractor Auto /150  #CPA-CBO - Raw 10",
+                            "soldDate":  "2025-10-19T01:44:00.000Z"
+                        },
+                        {
+                            "price":  49.99,
+                            "title":  "2024 Bowman Chrome Draft Caleb Bonemer Blue Wave Refractor Auto 116/150 #CPA-CBO - Raw 10",
+                            "soldDate":  "2024-12-24T13:00:35.000Z"
+                        },
+                        {
+                            "price":  49.59,
+                            "title":  "2024 Bowman Draft 1st Chrome Blue Wave Refractor Auto Caleb Bonemer /150 CPA-CBO - Raw 10",
+                            "soldDate":  "2024-12-20T19:30:51.000Z"
+                        }
+                    ],
+    "gradeUsed":  "Raw",
+    "source":  "live",
+    "variantWarning":  [
+
+                       ]
+}

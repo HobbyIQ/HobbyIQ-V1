@@ -1,0 +1,661 @@
+﻿## Untracked Files Deep Triage (2026-05-17)
+
+### Scope notes
+- Original raw count: 4355
+- Filtered count after artifact-root exclusion: 389
+- Filter pattern used: ^(webapp-logs/|logdownload_hotfix/|logdownload_2f6c9d/|logdownload_[a-f0-9]+/|tmp/)
+- .gitignore status: patterns were missing and added/staged for owner review (not committed). Added: webapp-logs/, logdownload_hotfix/, logdownload_2f6c9d/, logdownload_*/, tmp/
+
+### Summary counts
+- Total untracked: 389
+- Category A (build artifact / orphaned): 8
+- Category B (duplicate of isolated PR): 19
+- Category C (real owner work — PRESERVE): 175
+- Category D (scratch / verify before discard): 173
+- Category E (config/secrets — owner review): 14
+
+### Category A — Safe to discard
+- .data/dailyiq-watchlists.json — Build artifact / workspace-local state / IDE or temp output
+- .vscode/extensions.json — Build artifact / workspace-local state / IDE or temp output
+- .vscode/launch.json — Build artifact / workspace-local state / IDE or temp output
+- .vscode/settings.json — Build artifact / workspace-local state / IDE or temp output
+- .vscode/tasks.json — Build artifact / workspace-local state / IDE or temp output
+- tmp_extract/package.json — Build artifact / workspace-local state / IDE or temp output
+- tmp_extract/package-lock.json — Build artifact / workspace-local state / IDE or temp output
+- worktrees/phase3-engine-pr/ — Build artifact / workspace-local state / IDE or temp output
+
+### Category B — Duplicates (safe to discard, preserved elsewhere)
+- backend/docs/investigations/drake-baldwin-revalidation-adr-0003.md — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/docs/investigations/neighbor-synthesis-cleanup-pass.md — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/docs/phase-c-checklist.md — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/agents/multiplierAnchoredPredictedPrice.ts — matches pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/src/curation/multiplierTableRegistry.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/chromeDraftMultipliers.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/parallelAttributesLookup.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/peerPoolBuilder.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/predictedRangeMultiplierAnchored.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/predictedRangeTierAnchored.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/src/services/compiq/tierMultipliers.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/tests/compiq/chromeDraftMultipliers.test.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/tests/compiq/predictedRangeMultiplierAnchored.test.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/tests/drakeBaldwinIntegration.test.ts — matches pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/multiplierAnchoredPredictedPrice.test.ts — matches pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/multiplierTableRegistry.test.ts — matches pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/peerPoolBuilder.test.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- backend/tests/predictedRangeTierAnchored.test.ts — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+- docs/adr/0001-phase-3-predictive-range.md — matches pr/phase3-engine, pr/mechanism-1-normalization-fix, pr/phase-3-contract-cleanup
+
+### Category C — Real owner work to PRESERVE
+- AddCardView.swift — SwiftUI View struct AddCardView. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/data-sources.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/deployment/deploy-runbook.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/deployment/existing-deployment-discovery.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/deployment/phase-c-rollback-context.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/2022-bowman-chrome-uncovered-parallels.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/cardhedger-2019-topps-probe.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/cardhedger-2019-topps-probe-samples.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/cardhedger-client-surface.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/ch-422-diagnostic-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/ch-422-reprobe-raw-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/comps-filter-drake-baldwin-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-live-probe-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-live-probe-raw-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-mechanism-1-rerun-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-mechanism-1-rerun-raw-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-mechanism-1-result.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-peer-parallel-diagnostic-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-peer-parallel-inventory-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-revalidation-raw-adr-0003.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-validation-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/drake-baldwin-validation-raw-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/mechanism-1-alternate-candidate-scan-2026-05-17.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/mechanism-1-alternate-validation-2026-05-17.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/multiplier-table-2022-bowman-conflicts.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/multiplier-table-2022-bowman-sanity-check.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/multiplier-table-current-shape.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/multiplier-table-extension-2022-bowman-report.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/vitest-baseline-failures.md — Swift class named. Recommended preservation path: isolate into focused PR branch.
+- backend/docs/investigations/wyatt-drake-cpa-coverage-gap-diagnostic.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/beckettChecklistFetcher.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/beckettChecklistParser.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/beckettUrlDiscovery.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/brandRegistry.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/cardDedup.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/parallelNameNormalizer.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/agents/beckett/sweepOrchestrator.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- backend/src/curation/applyWorksheet.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/curation/curationOrchestrator.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/curation/eligibilityAnalyzer.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/curation/worksheetGenerator.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/scripts/migrate-2024-bowman-chrome-prospects.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/src/scripts/verify-parallel-attributes-coverage.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/services/dailyiq/dailyScore.service.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- backend/src/services/dailyiq/marketDelta.service.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- backend/src/services/dailyiq/movement.service.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- backend/src/services/sportsCardsPro/client.ts — Swift class SportsCardsProAuthError. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/applyWorksheet.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/beckettChecklistParser.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/beckettUrlDiscovery.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/cardDedup.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/curationOrchestrator.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/eligibilityAnalyzer.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/fixtures/beckett/2022-Bowman-Baseball-Checklist-2.xlsx — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/parallelAttributesSchema.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/parallelNameNormalizer.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/sourceCitation.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/sweepOrchestrator.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/tierMultipliers.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- backend/tests/worksheetGenerator.test.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- BacktestAdminView.swift — SwiftUI View struct BacktestAdminView. Recommended preservation path: isolate into focused PR branch.
+- CardDashboardView.swift — SwiftUI View struct CardDashboardView. Recommended preservation path: isolate into focused PR branch.
+- CardDetailView.swift — SwiftUI View struct CardDetailView. Recommended preservation path: isolate into focused PR branch.
+- CardInventoryView.swift — SwiftUI View struct CardInventoryView. Recommended preservation path: isolate into focused PR branch.
+- CardItem.swift — Swift class CardItem. Recommended preservation path: isolate into focused PR branch.
+- CardSaleRecord.swift — Swift class CardSaleRecord. Recommended preservation path: isolate into focused PR branch.
+- CardScannerService.swift — Swift class CardScannerService. Recommended preservation path: isolate into focused PR branch.
+- CardScannerView.swift — SwiftUI View struct CardScannerView. Recommended preservation path: isolate into focused PR branch.
+- CardScanResultView.swift — SwiftUI View struct CardScanResultView. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/.funcignore — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-backtest-runner/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-backtest-runner/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-cardhedge-comps/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-cardhedge-comps/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-cardhedge-comps/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-ebay-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-ebay-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-ebay-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-news-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-news-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-news-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-nightly-comp-prefetch/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-nightly-comp-prefetch/__pycache__/function.cpython-314.pyc — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-nightly-comp-prefetch/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-nightly-comp-prefetch/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-odds-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-odds-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-odds-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-player-score-refresh/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-player-score-refresh/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-price-alert-checker/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-price-alert-checker/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-price-floor/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-price-floor/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-reddit-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-reddit-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-reddit-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-search-intent/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-search-intent/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-serve-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-serve-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-signal-aggregator/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-signal-aggregator/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-signal-aggregator/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-stats-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-stats-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-stats-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-trends-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-trends-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-trends-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-youtube-signals/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-youtube-signals/function.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/fn-youtube-signals/function.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/host.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/local.settings.json.example — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/README.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/requirements.txt — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/__init__.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/__pycache__/__init__.cpython-314.pyc — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/__pycache__/cardhedge.cpython-314.pyc — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/card_modifiers.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/cardhedge.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/career_arc.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/cosmos_floor.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/ebay_auth.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/pack_calendar.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/playoff_calendar.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/psa_pop.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- compiq-functions/shared/show_calendar.py — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- CompIQImageResolver.swift — SwiftUI module. Recommended preservation path: isolate into focused PR branch.
+- CompIQService.swift — Swift enum/module CompIQServiceError. Recommended preservation path: isolate into focused PR branch.
+- DailyIQService.swift — Swift enum/module CodingKeys. Recommended preservation path: isolate into focused PR branch.
+- DailyIQViewModel.swift — Swift class DailyIQViewModel. Recommended preservation path: isolate into focused PR branch.
+- docs/triage-issue-pr2.5.md — Markdown documentation draft. Recommended preservation path: isolate into focused PR branch.
+- Extensions.swift — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- frontend/src/AlertStore.swift — Swift class AlertStore. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/AppRouter.swift — Swift class AppRouter. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/EbayListingDraftView.swift — SwiftUI View struct EbayListingDraftView. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/PortfolioService.swift — Swift class PortfolioService. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/PriceAlert.swift — Swift enum/module PriceAlertDirection. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/PriceAlertService.swift — Swift class PriceAlertService. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/SetAlertView.swift — SwiftUI View struct SetAlertView. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/SignInView.swift — SwiftUI View struct SignInView. Recommended preservation path: isolate into focused PR branch.
+- frontend/src/WatchlistService.swift — Swift enum/module CodingKeys. Recommended preservation path: isolate into focused PR branch.
+- GradingHelperView.swift — SwiftUI View struct GradingHelperView. Recommended preservation path: isolate into focused PR branch.
+- GradingPipelineView.swift — SwiftUI View struct GradingPipelineView. Recommended preservation path: isolate into focused PR branch.
+- InventoryRefreshService.swift — Swift class InventoryRefreshService. Recommended preservation path: isolate into focused PR branch.
+- ListingComposerView.swift — SwiftUI View struct ListingComposerView. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/backtest.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- mcp-server/body.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/cardhedge.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- mcp-server/cardModifiers.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/catalystCalendar.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/compsAnalytics.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/compsLoader.ts — Code module. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/deploy-log.txt — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/package.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/package-lock.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/predictionLog.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- mcp-server/pricing.ts — Source/support file (manual review). Recommended preservation path: isolate into focused PR branch.
+- mcp-server/scripts/query-predictions.cjs — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/server.ts — Automated test/spec file. Recommended preservation path: isolate into focused PR branch.
+- mcp-server/tsconfig.json — Non-source/support artifact. Recommended preservation path: isolate into focused PR branch.
+- PortfolioDashboardHome.swift — SwiftUI View struct PortfolioDashboardHome. Recommended preservation path: isolate into focused PR branch.
+- PortfolioHeatMapView.swift — Swift class PortfolioHeatMapViewModel. Recommended preservation path: isolate into focused PR branch.
+- PortfolioInventoryView.swift — SwiftUI View struct PortfolioInventoryView. Recommended preservation path: isolate into focused PR branch.
+- PortfolioRootView.swift — SwiftUI View struct PortfolioRootView. Recommended preservation path: isolate into focused PR branch.
+- PortfolioSettingsView.swift — SwiftUI View struct PortfolioSettingsView. Recommended preservation path: isolate into focused PR branch.
+- PreviewSampleCards.swift — Swift enum/module PreviewSampleCards. Recommended preservation path: isolate into focused PR branch.
+- RecentCompsListView.swift — SwiftUI View struct RecentCompsListView. Recommended preservation path: isolate into focused PR branch.
+- SalesTrackerView.swift — SwiftUI View struct SalesTrackerView. Recommended preservation path: isolate into focused PR branch.
+- SearchIQOrchestrator.swift — Swift class SearchIQOrchestrator. Recommended preservation path: isolate into focused PR branch.
+- SearchResultView.swift — SwiftUI View struct SearchResultView. Recommended preservation path: isolate into focused PR branch.
+- SellCardSheet.swift — SwiftUI View struct SellCardSheet. Recommended preservation path: isolate into focused PR branch.
+- WatchlistView.swift — SwiftUI View struct WatchlistView. Recommended preservation path: isolate into focused PR branch.
+
+### Category D — Scratch / verify
+- .github/copilot-instructions.md — Untracked non-core file requiring owner verification before discard
+- _b3.py — Untracked non-core file requiring owner verification before discard
+- apps/web/src/components/PortfolioView.css — Untracked non-core file requiring owner verification before discard
+- apps/web/src/features/portfolio/screens/PortfolioScreen.css — Untracked non-core file requiring owner verification before discard
+- apps/web/src/pages/SearchPage.css — Untracked non-core file requiring owner verification before discard
+- backend/.tmp-cardhedger-probe.cjs — Likely exploration/scratch artifact by name pattern
+- backend/_policy_tmp.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-Platinum.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-s-Best.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-Sterling.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Bowman-Transcendent.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Topps-Dynasty.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Topps-Gold-Label.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2020/Topps-Triple-Threads.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Inception.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Platinum.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-s-Best.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Sterling.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Bowman-Transcendent.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Donruss.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Donruss-Optic.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Definitive-Collection.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Finest.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Fire.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Five-Star.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Gold-Label.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Heritage.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Inception.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Museum-Collection.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Opening-Day.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Stadium-Club.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Tier-One.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Tribute.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2021/Topps-Triple-Threads.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Platinum.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Sterling.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Bowman-Transcendent.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Donruss.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Archives.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Definitive-Collection.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Gypsy-Queen.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Heritage.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Museum-Collection.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Opening-Day.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Pro-Debut.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2022/Topps-Tribute.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-Platinum.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-s-Best.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Bowman-Sterling.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Donruss.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Big-League.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Chrome-Update.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Finest.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Heritage.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Holiday.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Museum-Collection.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Pro-Debut.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Stadium-Club.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Tier-One.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2023/Topps-Tribute.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman-s-Best.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Bowman-Sterling.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Donruss.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Leaf-Metal.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Five-Star.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Heritage.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Holiday.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Stadium-Club.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Tier-One.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2024/Topps-Tribute.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Bowman-Draft.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Topps-Heritage.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Topps-Holiday.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Topps-Pro-Debut.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Topps-Tribute.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2025/Topps-Update.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2026/Bowman.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2026/Bowman-Mega.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/2026/Donruss.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/REPORT.md — Likely exploration/scratch artifact by name pattern
+- backend/data/beckett-sweep/REPORT-A3.md — Likely exploration/scratch artifact by name pattern
+- backend/data/beckett-sweep/SUMMARY.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/SUMMARY-A3.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/unmatchedParallels.json — Untracked non-core file requiring owner verification before discard
+- backend/data/beckett-sweep/unmatchedParallels-A3.json — Untracked non-core file requiring owner verification before discard
+- backend/data/phase-c-2022-bowman-chrome/eligibility/2022-Bowman-Chrome.json — Untracked non-core file requiring owner verification before discard
+- backend/data/phase-c-2022-bowman-chrome/SUMMARY.json — Untracked non-core file requiring owner verification before discard
+- backend/flush-ch-cache-v2.mjs — Untracked non-core file requiring owner verification before discard
+- backend/harness-output.txt — Likely exploration/scratch artifact by name pattern
+- backend/routes/alerts.js — Untracked non-core file requiring owner verification before discard
+- backend/routes/ebay.js — Untracked non-core file requiring owner verification before discard
+- backend/routes/ocr.js — Untracked non-core file requiring owner verification before discard
+- backend/routes/portfolio.js — Untracked non-core file requiring owner verification before discard
+- backend/routes/uploads.js — Untracked non-core file requiring owner verification before discard
+- backend/routes/watchlist.js — Untracked non-core file requiring owner verification before discard
+- backend/scan-lifecycle-policy.json — Untracked non-core file requiring owner verification before discard
+- backend/scripts/append_queue.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/create_issues.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/ensure_labels.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/flush-ch-cache-phase1.cjs — Untracked non-core file requiring owner verification before discard
+- backend/scripts/flush-ch-match.cjs — Untracked non-core file requiring owner verification before discard
+- backend/scripts/inspect_vintage.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/momentum_inspect.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/momentum_pool.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/momentum_probe.ps1 — Likely exploration/scratch artifact by name pattern
+- backend/scripts/momentum_table.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/ocr-quality-report.js — Likely exploration/scratch artifact by name pattern
+- backend/scripts/ocr-release-readiness.js — Untracked non-core file requiring owner verification before discard
+- backend/scripts/parallels-2b-i-phase3-devries-curate.ts — Untracked non-core file requiring owner verification before discard
+- backend/scripts/parallels-2b-i-phase3-devries-test.ts — Untracked non-core file requiring owner verification before discard
+- backend/scripts/parallels-2b-i-phase3-rebuild-catalog.ts — Untracked non-core file requiring owner verification before discard
+- backend/scripts/parallels-2b-i-skenes-stage3-tiers.ts — Untracked non-core file requiring owner verification before discard
+- backend/scripts/parallels-2b-i-verify-probe.ts — Likely exploration/scratch artifact by name pattern
+- backend/scripts/probe_vintage.ps1 — Likely exploration/scratch artifact by name pattern
+- backend/scripts/run-beckett-sweep.ts — Untracked non-core file requiring owner verification before discard
+- backend/scripts/update_issues.ps1 — Untracked non-core file requiring owner verification before discard
+- backend/scripts/validate-beckett-2022-bowman.ts — Untracked non-core file requiring owner verification before discard
+- backend/services/alertService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/appleAuthService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/cacheService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/ebayService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/ocrService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/portfolioService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/pushService.js — Untracked non-core file requiring owner verification before discard
+- backend/services/watchlistService.js — Untracked non-core file requiring owner verification before discard
+- backend/unit-suite-output.txt — Likely exploration/scratch artifact by name pattern
+- bodine-response.json — Likely exploration/scratch artifact by name pattern
+- body.json — Likely exploration/scratch artifact by name pattern
+- bowman-draft-dryrun.txt — Likely exploration/scratch artifact by name pattern
+- case-19b-full-grade-present.json — Untracked non-core file requiring owner verification before discard
+- cc-bowman.html — Untracked non-core file requiring owner verification before discard
+- cc-bowman-chrome.html — Untracked non-core file requiring owner verification before discard
+- cc-bowman-draft.html — Untracked non-core file requiring owner verification before discard
+- docs/pr2.5-manifest.txt — Untracked non-core file requiring owner verification before discard
+- estimate.json — Untracked non-core file requiring owner verification before discard
+- harness-output.txt — Likely exploration/scratch artifact by name pattern
+- harness-output-issue6.txt — Likely exploration/scratch artifact by name pattern
+- ohtani.json — Untracked non-core file requiring owner verification before discard
+- ops-report.json — Likely exploration/scratch artifact by name pattern
+- ops-tail.txt — Likely exploration/scratch artifact by name pattern
+- raw.json — Likely exploration/scratch artifact by name pattern
+- response.json — Likely exploration/scratch artifact by name pattern
+- root-worktree-inventory-2026-05-17.md — Untracked non-core file requiring owner verification before discard
+- scan-smells.ps1 — Untracked non-core file requiring owner verification before discard
+- scripts/smoke-watchlist.ps1 — Untracked non-core file requiring owner verification before discard
+- scripts/verify-pr12.ps1 — Untracked non-core file requiring owner verification before discard
+- tier1-local-output.txt — Likely exploration/scratch artifact by name pattern
+- tmp_inventory_report.ps1 — Likely exploration/scratch artifact by name pattern
+- unit-suite-output.txt — Likely exploration/scratch artifact by name pattern
+- untracked-list-2026-05-17.txt — Untracked non-core file requiring owner verification before discard
+
+### Category E — Config/secrets (owner review)
+- .blobconn.txt — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/data/cardboard-connection-sweep/2022/Topps.json — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/data/cardboard-connection-sweep/REPORT.md — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/data/cardboard-connection-sweep/SUMMARY.json — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/data/cardboard-connection-sweep/unmatchedParallels.json — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/inspect-mantle-keys.mjs — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/src/agents/cardboardConnection/cardboardConnectionFetcher.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/src/agents/cardboardConnection/cardboardConnectionParser.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/src/agents/cardboardConnection/cardboardConnectionUrlDiscovery.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/tests/cardboardConnectionFetcher.test.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/tests/cardboardConnectionParser.test.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/tests/cardboardConnectionUrlDiscovery.test.ts — config/secret-bearing filename pattern (contents intentionally redacted)
+- backend/tests/fixtures/cardboard-connection/2022-Topps-Series-1-Baseball-checklist-Excel-spreadsheet.trimmed.xlsx — config/secret-bearing filename pattern (contents intentionally redacted)
+- frontend/src/EbayConnectView.swift — config/secret-bearing filename pattern (contents intentionally redacted)
+
+### iOS / Swift content deep-look
+- Swift-related untracked files: 41
+- These files form a coherent iOS feature surface: dashboard/detail/inventory views, scanning, listing/sales, portfolio, and supporting services/models.
+- Most root-level .swift files are classified Category C unless exact-branch duplicate hashes were found.
+
+- AddCardView.swift — [C] SwiftUI View struct AddCardView; not matched in isolated branches
+- BacktestAdminView.swift — [C] SwiftUI View struct BacktestAdminView; not matched in isolated branches
+- CardDashboardView.swift — [C] SwiftUI View struct CardDashboardView; not matched in isolated branches
+- CardDetailView.swift — [C] SwiftUI View struct CardDetailView; not matched in isolated branches
+- CardInventoryView.swift — [C] SwiftUI View struct CardInventoryView; not matched in isolated branches
+- CardItem.swift — [C] Swift class CardItem; not matched in isolated branches
+- CardSaleRecord.swift — [C] Swift class CardSaleRecord; not matched in isolated branches
+- CardScannerService.swift — [C] Swift class CardScannerService; not matched in isolated branches
+- CardScannerView.swift — [C] SwiftUI View struct CardScannerView; not matched in isolated branches
+- CardScanResultView.swift — [C] SwiftUI View struct CardScanResultView; not matched in isolated branches
+- CompIQImageResolver.swift — [C] SwiftUI module; not matched in isolated branches
+- CompIQService.swift — [C] Swift enum/module CompIQServiceError; not matched in isolated branches
+- DailyIQService.swift — [C] Swift enum/module CodingKeys; not matched in isolated branches
+- DailyIQViewModel.swift — [C] Swift class DailyIQViewModel; not matched in isolated branches
+- Extensions.swift — [C] Source/support file (manual review); not matched in isolated branches
+- frontend/src/AlertStore.swift — [C] Swift class AlertStore; not matched in isolated branches
+- frontend/src/AppRouter.swift — [C] Swift class AppRouter; not matched in isolated branches
+- frontend/src/EbayConnectView.swift — [E] Swift class EbayAccountStore; not matched in isolated branches
+- frontend/src/EbayListingDraftView.swift — [C] SwiftUI View struct EbayListingDraftView; not matched in isolated branches
+- frontend/src/PortfolioService.swift — [C] Swift class PortfolioService; not matched in isolated branches
+- frontend/src/PriceAlert.swift — [C] Swift enum/module PriceAlertDirection; not matched in isolated branches
+- frontend/src/PriceAlertService.swift — [C] Swift class PriceAlertService; not matched in isolated branches
+- frontend/src/SetAlertView.swift — [C] SwiftUI View struct SetAlertView; not matched in isolated branches
+- frontend/src/SignInView.swift — [C] SwiftUI View struct SignInView; not matched in isolated branches
+- frontend/src/WatchlistService.swift — [C] Swift enum/module CodingKeys; not matched in isolated branches
+- GradingHelperView.swift — [C] SwiftUI View struct GradingHelperView; not matched in isolated branches
+- GradingPipelineView.swift — [C] SwiftUI View struct GradingPipelineView; not matched in isolated branches
+- InventoryRefreshService.swift — [C] Swift class InventoryRefreshService; not matched in isolated branches
+- ListingComposerView.swift — [C] SwiftUI View struct ListingComposerView; not matched in isolated branches
+- PortfolioDashboardHome.swift — [C] SwiftUI View struct PortfolioDashboardHome; not matched in isolated branches
+- PortfolioHeatMapView.swift — [C] Swift class PortfolioHeatMapViewModel; not matched in isolated branches
+- PortfolioInventoryView.swift — [C] SwiftUI View struct PortfolioInventoryView; not matched in isolated branches
+- PortfolioRootView.swift — [C] SwiftUI View struct PortfolioRootView; not matched in isolated branches
+- PortfolioSettingsView.swift — [C] SwiftUI View struct PortfolioSettingsView; not matched in isolated branches
+- PreviewSampleCards.swift — [C] Swift enum/module PreviewSampleCards; not matched in isolated branches
+- RecentCompsListView.swift — [C] SwiftUI View struct RecentCompsListView; not matched in isolated branches
+- SalesTrackerView.swift — [C] SwiftUI View struct SalesTrackerView; not matched in isolated branches
+- SearchIQOrchestrator.swift — [C] Swift class SearchIQOrchestrator; not matched in isolated branches
+- SearchResultView.swift — [C] SwiftUI View struct SearchResultView; not matched in isolated branches
+- SellCardSheet.swift — [C] SwiftUI View struct SellCardSheet; not matched in isolated branches
+- WatchlistView.swift — [C] SwiftUI View struct WatchlistView; not matched in isolated branches
+
+### Backend src/test duplicate spot-check (hash-verified)
+- backend/src/services/compiq/chromeDraftMultipliers.ts — WORK=9143feb4337786e81cddc67b46699845583edaf5, phase3=9143feb4337786e81cddc67b46699845583edaf5, mechanism1=9143feb4337786e81cddc67b46699845583edaf5, equal=True
+- backend/src/services/compiq/parallelAttributesLookup.ts — WORK=3e7433a2ea0280180952a32e62720399ec4b2554, phase3=3e7433a2ea0280180952a32e62720399ec4b2554, mechanism1=3e7433a2ea0280180952a32e62720399ec4b2554, equal=True
+- backend/tests/peerPoolBuilder.test.ts — WORK=585dbadf5a8b9136c1f95045e2d20b633cab60e1, phase3=585dbadf5a8b9136c1f95045e2d20b633cab60e1, mechanism1=585dbadf5a8b9136c1f95045e2d20b633cab60e1, equal=True
+
+### Recent files (last 24h)
+- Count in last 24h: 203
+- untracked-list-2026-05-17.txt — 5/17/2026 4:05:50 PM
+- root-worktree-inventory-2026-05-17.md — 5/17/2026 4:02:29 PM
+- tmp_inventory_report.ps1 — 5/17/2026 3:59:11 PM
+- backend/docs/investigations/wyatt-drake-cpa-coverage-gap-diagnostic.md — 5/17/2026 3:30:15 PM
+- backend/docs/deployment/phase-c-rollback-context.md — 5/17/2026 12:32:59 PM
+- worktrees/phase3-engine-pr/ — 5/17/2026 11:44:44 AM
+- backend/docs/deployment/deploy-runbook.md — 5/17/2026 11:28:35 AM
+- backend/docs/deployment/existing-deployment-discovery.md — 5/17/2026 11:28:35 AM
+- backend/docs/investigations/drake-baldwin-mechanism-1-rerun-2026-05-17.md — 5/17/2026 9:50:29 AM
+- backend/docs/investigations/ch-422-diagnostic-2026-05-17.md — 5/17/2026 9:50:29 AM
+- backend/docs/investigations/drake-baldwin-mechanism-1-rerun-raw-2026-05-17.json — 5/17/2026 9:40:26 AM
+- backend/docs/investigations/ch-422-reprobe-raw-2026-05-17.json — 5/17/2026 9:37:12 AM
+- backend/docs/investigations/drake-baldwin-peer-parallel-diagnostic-2026-05-17.md — 5/17/2026 9:30:34 AM
+- backend/src/agents/multiplierAnchoredPredictedPrice.ts — 5/17/2026 9:30:34 AM
+- backend/docs/investigations/drake-baldwin-mechanism-1-result.md — 5/17/2026 9:30:34 AM
+- backend/docs/investigations/drake-baldwin-live-probe-2026-05-17.md — 5/17/2026 9:30:34 AM
+- backend/docs/investigations/mechanism-1-alternate-validation-2026-05-17.md — 5/17/2026 9:30:34 AM
+- backend/tests/multiplierAnchoredPredictedPrice.test.ts — 5/17/2026 9:30:34 AM
+- backend/tests/drakeBaldwinIntegration.test.ts — 5/17/2026 9:30:34 AM
+- backend/docs/investigations/mechanism-1-alternate-candidate-scan-2026-05-17.json — 5/17/2026 9:26:56 AM
+- backend/docs/investigations/drake-baldwin-peer-parallel-inventory-2026-05-17.json — 5/17/2026 9:22:39 AM
+- backend/docs/investigations/drake-baldwin-live-probe-raw-2026-05-17.json — 5/17/2026 9:14:26 AM
+- backend/docs/investigations/neighbor-synthesis-cleanup-pass.md — 5/17/2026 9:08:56 AM
+- backend/docs/investigations/drake-baldwin-validation-2026-05-17.md — 5/17/2026 9:00:50 AM
+- backend/docs/investigations/comps-filter-drake-baldwin-2026-05-17.md — 5/17/2026 9:00:50 AM
+- backend/docs/investigations/drake-baldwin-revalidation-adr-0003.md — 5/17/2026 9:00:50 AM
+- backend/docs/investigations/drake-baldwin-revalidation-raw-adr-0003.json — 5/17/2026 8:59:19 AM
+- backend/docs/investigations/drake-baldwin-validation-raw-2026-05-17.json — 5/17/2026 8:34:46 AM
+- backend/docs/investigations/multiplier-table-extension-2022-bowman-report.md — 5/17/2026 8:34:09 AM
+- backend/docs/investigations/2022-bowman-chrome-uncovered-parallels.md — 5/17/2026 8:34:09 AM
+
+### Stash cross-reference
+- stash@{0} file list:
+  - MainAppView.swift
+  - apps/web/src/features/alerts/api/alerts.api.js
+  - apps/web/src/features/alerts/api/alerts.api.ts
+  - azure.yaml
+  - backend/package-lock.json
+  - backend/package.json
+  - backend/routes/compiq.js
+  - backend/routes/dailyiq.js
+  - backend/routes/playeriq.js
+  - backend/server.js
+  - deploy-verify/apps/api/src/providers/cache/AzureRedisCacheProvider.js
+  - deploy-verify/apps/api/src/providers/cache/AzureRedisCacheProvider.ts
+  - deploy-verify/apps/api/src/providers/cache/CacheProvider.js
+  - deploy-verify/apps/api/src/providers/cache/CacheProvider.ts
+  - deploy-verify/apps/api/src/providers/cache/InMemoryCacheProvider.js
+  - deploy-verify/apps/api/src/providers/cache/InMemoryCacheProvider.ts
+  - deploy-verify/apps/api/src/providers/cache/MockCacheProvider.js
+  - deploy-verify/apps/api/src/providers/cache/MockCacheProvider.ts
+  - deploy-verify/apps/api/src/providers/cache/RedisCacheProvider.js
+  - deploy-verify/apps/api/src/providers/cache/RedisCacheProvider.ts
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-position.repository.js
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-position.repository.ts
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-summary.repository.js
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-summary.repository.ts
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-targets.repository.js
+  - deploy-verify/apps/api/src/repositories/portfolio/portfolio-targets.repository.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/actionPlan.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/actionPlan.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/catalystTracker.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/catalystTracker.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/compQuality.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/compQuality.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/entryExitPlan.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/entryExitPlan.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/guardrails.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/guardrails.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/liquidityAnalysis.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/liquidityAnalysis.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/listingQuality.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/listingQuality.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/marketMaturity.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/marketMaturity.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/marketTemperature.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/marketTemperature.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/playerRecommendation.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/playerRecommendation.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/portfolioFit.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/portfolioFit.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/riskAssessment.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/riskAssessment.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/thesisEngine.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/thesisEngine.ts
+  - deploy-verify/apps/api/src/services/marketIntel/decision/timeHorizon.js
+  - deploy-verify/apps/api/src/services/marketIntel/decision/timeHorizon.ts
+  - deploy-verify/apps/api/src/tests/e2e/scenario-runner.service.test.js
+  - deploy-verify/apps/api/src/tests/e2e/scenario-runner.service.test.ts
+  - dist/api/controllers/brainController.js
+  - dist/api/controllers/brainOrchestratorController.js
+  - dist/api/controllers/cardDecisionController.js
+  - dist/api/controllers/deepHealthController.js
+  - dist/api/controllers/fullAnalysisController.js
+  - dist/api/controllers/outcomeController.js
+  - dist/api/middleware/analyticsMiddleware.js
+  - dist/api/middleware/errorHandlerMiddleware.js
+  - dist/api/middleware/loggerMiddleware.js
+  - dist/api/middleware/rateLimitMiddleware.js
+  - dist/api/middleware/validationMiddleware.js
+  - dist/api/routes/brainOrchestratorRoutes.js
+  - dist/api/routes/brainRoutes.js
+  - dist/api/routes/cardDecisionRoutes.js
+  - dist/api/routes/deepHealthRoutes.js
+  - dist/api/routes/fullAnalysisRoutes.js
+  - dist/api/routes/outcomeRoutes.js
+  - dist/brain/formatters/cardDecisionViewModel.js
+  - dist/brain/formatters/cardOutcomeViewModel.js
+  - dist/brain/handlers/cardDecisionHandler.js
+  - dist/brain/handlers/cardOutcomeHandler.js
+  - dist/brain/handlers/fullAnalysisHandler.js
+  - dist/brain/handlers/marketHandlers.js
+  - dist/brain/orchestration/brainOrchestrator.js
+  - dist/brain/schemas/cardDecisionSchema.js
+  - dist/brain/schemas/cardOutcomeSchema.js
+  - dist/brain/types/fullAnalysisResponse.js
+  - dist/config/envValidation.js
+  - dist/config/featureFlags.js
+  - dist/models/CardMarketSnapshot.js
+  - dist/models/DecisionLog.js
+  - dist/models/NewsSignal.js
+  - dist/models/SupplySnapshot.js
+  - dist/providers/bestBuysProvider.js
+  - dist/providers/marketMoversProvider.js
+  - dist/providers/marketProviders.js
+  - dist/providers/playerSummaryProvider.js
+  - dist/server.js
+  - dist/services/cache/cacheService.js
+  - dist/services/compiq/absorptionEngine.js
+  - dist/services/compiq/accelerationEngine.js
+  - dist/services/compiq/clusterEngine.js
+  - dist/services/compiq/compQualityScorer.js
+  - dist/services/compiq/compSelectionEngine.js
+  - dist/services/compiq/confidenceEngine.js
+  - dist/services/compiq/fmvBandsEngine.js
+  - dist/services/compiq/freshnessEngine.js
+  - dist/services/compiq/getComps.js
+  - dist/services/compiq/index.js
+  - dist/services/compiq/listingFloorEngine.js
+  - dist/services/compiq/normalizeCompData.js
+  - dist/services/compiq/outlierEngine.js
+  - dist/services/compiq/outlierFilter.js
+  - dist/services/compiq/parallelCatalog.js
+  - dist/services/compiq/parallelInterpolationEngine.js
+  - dist/services/compiq/parallelResolver.js
+  - dist/services/compiq/parallelTierMap.js
+  - dist/services/compiq/productRules.js
+  - dist/services/compiq/recencyWeightEngine.js
+  - dist/services/compiq/trendAnalysisEngine.js
+  - dist/services/compiq/trendEngine.js
+  - dist/services/compiq/velocityEngine.js
+  - dist/services/compiq/volatilityEngine.js
+  - dist/services/compiq/weightedFMVEngine.js
+  - dist/services/compiq/weightedPricingEngine.js
+  - dist/services/decision/decisionEngine.js
+  - dist/services/learning/decisionLogger.js
+  - dist/services/learning/outcomeLogger.js
+  - dist/services/learning/predictionLogger.js
+  - dist/services/marketImpact/awardsImpactEngine.js
+  - dist/services/marketImpact/hobbyBuzzEngine.js
+  - dist/services/marketImpact/marketImpactAggregator.js
+  - dist/services/marketImpact/performanceImpactEngine.js
+  - dist/services/marketImpact/rankingImpactEngine.js
+  - dist/services/marketImpact/types.js
+  - dist/services/news/eventImpactEngine.js
+  - dist/services/playeriq/playerSignalEngine.js
+  - dist/services/prediction/eventModel.js
+  - dist/services/prediction/outcomeEngine.js
+  - dist/services/prediction/priceProjectionEngine.js
+  - dist/services/prediction/probabilityEngine.js
+  - dist/services/prediction/scenarioBuilder.js
+  - dist/services/supply/liquidityEngine.js
+  - dist/services/supply/supplyCollector.js
+  - dist/services/supply/supplyTrendEngine.js
+  - dist/utils/capitalize.js
+  - hello-azure/server.js
+  - infra/main.bicep
+  - package-lock.json
+  - package.json
+  - tsconfig.json
+- Overlap with untracked iOS files: none (stash entries are mostly tracked-file edits and deploy artifacts).
+
+### Recommended preservation paths
+- iOS frontend additions: open a dedicated iOS-preservation PR from a clean worktree (views/models/services only).
+- Backend additions (src/tests/docs): split into two PRs: (1) engine/docs artifacts already preserved elsewhere (discard root duplicates), (2) truly new backend work from Category C.
+- Documentation additions: isolate backend/docs + docs/adr into a docs-only PR.
+- Config/example updates: move secret-bearing paths to secure local storage and add sanitized examples only.
+
+### Open questions for owner
+- Should root-level Swift files be treated as the canonical iOS source of truth, or migrated under frontend/src before preservation PRs?
+- Should .vscode project settings be shared (keep) or strictly local (discard)?
+- Should backend/data and backend/scripts exploratory assets be archived outside repo before cleanup?

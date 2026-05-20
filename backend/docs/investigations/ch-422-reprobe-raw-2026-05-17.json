@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-05-17T13:37:12.097Z",
+  "firstProbeTimestamp": "2026-05-17T13:31:01.736Z",
+  "candidates": [
+    {
+      "player": "Wyatt Langford",
+      "card_id": "1715551786815x465857243859532540",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Druw Jones",
+      "card_id": "1683255642231x627406834221212400",
+      "status": "200",
+      "compsReturned": 19
+    },
+    {
+      "player": "Termarr Johnson",
+      "card_id": "1701218545285x305164881072651700",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Elijah Green",
+      "card_id": "1701218559695x588000874852467500",
+      "status": "404",
+      "compsReturned": null
+    },
+    {
+      "player": "Jacob Berry",
+      "card_id": "1683239796328x277630547162625470",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Cam Collier",
+      "card_id": "1683253745283x323885041717266940",
+      "status": "200",
+      "compsReturned": 11
+    },
+    {
+      "player": "Brooks Lee",
+      "card_id": "1701218538137x569261887651091800",
+      "status": "200",
+      "compsReturned": 18
+    },
+    {
+      "player": "Justin Crawford",
+      "card_id": "1683239793403x865440034793031800",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Daniel Susac",
+      "card_id": "1715551802901x709079521126422300",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Kumar Rocker",
+      "card_id": "1701218540100x241498975790747970",
+      "status": "200",
+      "compsReturned": 22
+    },
+    {
+      "player": "Owen Murphy",
+      "card_id": "1701218550110x330919961061664450",
+      "status": "200",
+      "compsReturned": 6
+    },
+    {
+      "player": "Andrew Painter",
+      "card_id": "1683949796760x379043926798382700",
+      "status": "200",
+      "compsReturned": 2
+    }
+  ],
+  "drake": {
+    "query": "Drake Baldwin 2022 Bowman Chrome auto",
+    "searchStatus": "200",
+    "card_id": "1701218519780x715706808382578600",
+    "set": "2022 Bowman Draft Baseball",
+    "variant": "Base",
+    "status": "200",
+    "compsReturned": 22
+  },
+  "controls": [
+    {
+      "query": "Aaron Judge 2024 Topps Series 1 base",
+      "status": "200",
+      "compsReturned": 22,
+      "card_id": "1743888598644x794261026590418800",
+      "set": "2024 Topps Brooklyn Collection Baseball",
+      "variant": "Base"
+    },
+    {
+      "query": "2023 Topps Chrome refractor Ronald Acuna Jr",
+      "status": "200",
+      "compsReturned": 22,
+      "card_id": "1717641598672x322290281239315800",
+      "set": "2023 Topps Chrome Black Baseball",
+      "variant": "Refractor"
+    },
+    {
+      "query": "Jordan Lawlar 2022 Bowman Chrome auto",
+      "status": "200",
+      "compsReturned": 4,
+      "card_id": "1695080576274x680470835075413000",
+      "set": "2023 Bowman Chrome Baseball",
+      "variant": "Base"
+    }
+  ]
+}

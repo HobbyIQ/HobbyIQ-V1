@@ -1,0 +1,576 @@
+[
+  {
+    "parallel": "Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Speckle Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1.4500000000000002,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1.75,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 2.5,
+    "legacyBaseline": 5.7
+  },
+  {
+    "parallel": "Blue Shimmer Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 3,
+    "legacyBaseline": 4.8
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 3.5,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 4.75,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 8,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Gold Shimmer Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 9,
+    "legacyBaseline": 9.3
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 16,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Red Lava Refractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 45,
+    "legacyBaseline": 57
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman",
+    "subset": "Chrome Prospects",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Atomic Refractor",
+    "product": "Bowman",
+    "subset": "Inserts",
+    "newBaseline": 2.5,
+    "legacyBaseline": 4.2
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman",
+    "subset": "Inserts",
+    "newBaseline": 7,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman",
+    "subset": "Inserts",
+    "newBaseline": 14,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Red Refractor",
+    "product": "Bowman",
+    "subset": "Inserts",
+    "newBaseline": 45,
+    "legacyBaseline": 55
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman",
+    "subset": "Inserts",
+    "newBaseline": 200,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Atomic Refractor",
+    "product": "Bowman",
+    "subset": "Invicta Inserts",
+    "newBaseline": 2.5,
+    "legacyBaseline": 4.2
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman",
+    "subset": "Invicta Inserts",
+    "newBaseline": 7,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman",
+    "subset": "Invicta Inserts",
+    "newBaseline": 14,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Red Refractor",
+    "product": "Bowman",
+    "subset": "Invicta Inserts",
+    "newBaseline": 45,
+    "legacyBaseline": 55
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman",
+    "subset": "Invicta Inserts",
+    "newBaseline": 200,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 1,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 1.75,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 2.5,
+    "legacyBaseline": 5.7
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 3.5,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 4.75,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 8,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 16,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Atomic Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Base",
+    "newBaseline": 2.5,
+    "legacyBaseline": 4.2
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1.75,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 2.5,
+    "legacyBaseline": 5.7
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 3.5,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 4.75,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 8,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 16,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospects",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 1.55,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Speckle Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 1.9500000000000002,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 2.25,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue RayWave Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 3.85,
+    "legacyBaseline": 4.6
+  },
+  {
+    "parallel": "HTA Choice Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 3.7,
+    "legacyBaseline": 2.3
+  },
+  {
+    "parallel": "Atomic Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 4.25,
+    "legacyBaseline": 4.2
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 4.4,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 5.5,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 9.75,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Gold Mini Diamond Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 11,
+    "legacyBaseline": 10.3
+  },
+  {
+    "parallel": "Gold Shimmer Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 11,
+    "legacyBaseline": 9.3
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 18.5,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Orange Shimmer Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 21,
+    "legacyBaseline": 16.2
+  },
+  {
+    "parallel": "Orange Wave Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 19.5,
+    "legacyBaseline": 16.3
+  },
+  {
+    "parallel": "Red Shimmer Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 60,
+    "legacyBaseline": 54
+  },
+  {
+    "parallel": "Red Wave Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 58,
+    "legacyBaseline": 52
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Rookie Autographs",
+    "newBaseline": 1.55,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Rookie Autographs",
+    "newBaseline": 9.75,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Rookie Autographs",
+    "newBaseline": 18.5,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Chrome Rookie Autographs",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Atomic Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Inserts",
+    "newBaseline": 2.5,
+    "legacyBaseline": 4.2
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Inserts",
+    "newBaseline": 14,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Inserts",
+    "newBaseline": 200,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Chrome",
+    "subset": "Bowman Ascensions / AFL Relics",
+    "newBaseline": 14,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Chrome",
+    "subset": "Bowman Ascensions / AFL Relics",
+    "newBaseline": 200,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Speckle Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1.4500000000000002,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 1.75,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 2.5,
+    "legacyBaseline": 5.7
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 3.5,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 4.75,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 8,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 16,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospects",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  },
+  {
+    "parallel": "Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 1.55,
+    "legacyBaseline": 2.2
+  },
+  {
+    "parallel": "Purple Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 2.25,
+    "legacyBaseline": 2.7
+  },
+  {
+    "parallel": "Blue Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 3.7,
+    "legacyBaseline": 5.7
+  },
+  {
+    "parallel": "Green Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 4.4,
+    "legacyBaseline": 4.3
+  },
+  {
+    "parallel": "Yellow Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 5.5,
+    "legacyBaseline": 6.7
+  },
+  {
+    "parallel": "Gold Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 9.75,
+    "legacyBaseline": 14.5
+  },
+  {
+    "parallel": "Orange Refractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 18.5,
+    "legacyBaseline": 21.9
+  },
+  {
+    "parallel": "Superfractor",
+    "product": "Bowman Draft",
+    "subset": "Chrome Prospect Autographs",
+    "newBaseline": 300,
+    "legacyBaseline": 125
+  }
+]

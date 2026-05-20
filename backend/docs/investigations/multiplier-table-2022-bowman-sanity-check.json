@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-05-17T12:19:47.374Z",
+  "probes": [
+    {
+      "label": "Refractor (Bowman Chrome base)",
+      "brand": "Bowman Chrome",
+      "parallel": "Refractor",
+      "context": {
+        "year": 2022,
+        "subset": "Chrome Base"
+      },
+      "matched": true,
+      "canonical": "Refractor",
+      "subset": "Chrome Base",
+      "baselineMultiplier": 1,
+      "rangeLow": 1,
+      "rangeHigh": 1,
+      "directCompOnly": false
+    },
+    {
+      "label": "Blue Refractor (Bowman Chrome base)",
+      "brand": "Bowman Chrome",
+      "parallel": "Blue Refractor",
+      "context": {
+        "year": 2022,
+        "subset": "Chrome Base"
+      },
+      "matched": true,
+      "canonical": "Blue Refractor",
+      "subset": "Chrome Base",
+      "baselineMultiplier": 2.5,
+      "rangeLow": 2,
+      "rangeHigh": 3,
+      "directCompOnly": false
+    },
+    {
+      "label": "Sky Blue (Bowman paper subset)",
+      "brand": "Bowman",
+      "parallel": "Sky Blue",
+      "context": {
+        "year": 2022,
+        "subset": "Paper Base + Paper Prospects"
+      },
+      "matched": true,
+      "canonical": "Sky Blue Border",
+      "subset": "Paper Base + Paper Prospects",
+      "baselineMultiplier": 1.5,
+      "rangeLow": 1.3,
+      "rangeHigh": 1.7,
+      "directCompOnly": false
+    },
+    {
+      "label": "Sky Blue Refractor (Bowman paper subset)",
+      "brand": "Bowman",
+      "parallel": "Sky Blue Refractor",
+      "context": {
+        "year": 2022,
+        "subset": "Paper Base + Paper Prospects"
+      },
+      "matched": false,
+      "canonical": null,
+      "subset": null,
+      "baselineMultiplier": null,
+      "rangeLow": null,
+      "rangeHigh": null,
+      "directCompOnly": null
+    },
+    {
+      "label": "Green Mini-Diamond Refractors (Bowman Chrome broad)",
+      "brand": "Bowman Chrome",
+      "parallel": "Green Mini-Diamond Refractors",
+      "context": {
+        "year": 2022
+      },
+      "matched": true,
+      "canonical": "B&W Mini Diamond Refractor",
+      "subset": "Chrome Base",
+      "baselineMultiplier": 1.75,
+      "rangeLow": 1.5,
+      "rangeHigh": 2,
+      "directCompOnly": false
+    },
+    {
+      "label": "X-Fractor (Bowman Chrome broad)",
+      "brand": "Bowman Chrome",
+      "parallel": "X-Fractor",
+      "context": {
+        "year": 2022
+      },
+      "matched": false,
+      "canonical": null,
+      "subset": null,
+      "baselineMultiplier": null,
+      "rangeLow": null,
+      "rangeHigh": null,
+      "directCompOnly": null
+    },
+    {
+      "label": "Aqua Refractor (Bowman Draft CPA)",
+      "brand": "Bowman Draft",
+      "parallel": "Aqua Refractor",
+      "context": {
+        "year": 2022,
+        "subset": "Chrome Prospect Autographs"
+      },
+      "matched": true,
+      "canonical": "Aqua Refractor",
+      "subset": "Chrome Prospect Autographs",
+      "baselineMultiplier": 3,
+      "rangeLow": 2.5,
+      "rangeHigh": 3.5,
+      "directCompOnly": false
+    },
+    {
+      "label": "Aqua Refractor (Bowman Chrome base)",
+      "brand": "Bowman Chrome",
+      "parallel": "Aqua Refractor",
+      "context": {
+        "year": 2022,
+        "subset": "Chrome Base"
+      },
+      "matched": false,
+      "canonical": null,
+      "subset": null,
+      "baselineMultiplier": null,
+      "rangeLow": null,
+      "rangeHigh": null,
+      "directCompOnly": null
+    }
+  ]
+}

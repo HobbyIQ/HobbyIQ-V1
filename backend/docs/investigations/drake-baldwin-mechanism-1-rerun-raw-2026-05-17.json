@@ -1,0 +1,272 @@
+{
+  "generatedAt": "2026-05-17T13:40:26.651Z",
+  "request": {
+    "playerName": "Drake Baldwin",
+    "cardYear": 2022,
+    "product": "Bowman Chrome",
+    "parallel": "Blue Refractor",
+    "isAuto": true
+  },
+  "response": {
+    "cardTitle": "Drake Baldwin 2022 Bowman Chrome blue refractor Auto",
+    "verdict": "No comps found for this exact variant (missing: blue; refractor; all 3 fetched comps rejected by variant filter (parallel_mismatch×3)). Card Hedge doesn't have sold data for this card yet.",
+    "action": "Hold",
+    "dealScore": 0,
+    "quickSaleValue": null,
+    "fairMarketValue": null,
+    "marketValue": null,
+    "predictedPrice": null,
+    "predictedPriceRange": null,
+    "predictedPriceAttribution": {
+      "mechanism": "multiplier-anchored",
+      "failureReason": "insufficient-curated-peer-parallels"
+    },
+    "premiumValue": null,
+    "explanation": [
+      "Requested autograph variant not found in Card Hedge's sold database.",
+      "Closest match on file: Base (missing: blue; refractor; all 3 fetched comps rejected by variant filter (parallel_mismatch×3)).",
+      "Will retry automatically once comps are recorded."
+    ],
+    "marketDNA": {
+      "demand": "Unknown",
+      "speed": "Unknown",
+      "risk": "High",
+      "trend": "Flat",
+      "marketCondition": "Variant Not Found"
+    },
+    "marketRegime": {
+      "regime": "illiquid",
+      "volatilityPct": 0,
+      "slopePctPerComp": 0,
+      "confidence": 0.2,
+      "note": "Variant mismatch — no usable comps for the requested card."
+    },
+    "normalization": {
+      "parallelInput": "Blue Refractor",
+      "parallelCanonical": "blue refractor",
+      "gradeCompanyInput": null,
+      "gradeCompanyCanonical": null
+    },
+    "confidence": {
+      "pricingConfidence": 0,
+      "liquidityConfidence": 0,
+      "timingConfidence": 0
+    },
+    "exitStrategy": {
+      "recommendedMethod": "wait",
+      "expectedDaysToSell": null,
+      "timingRecommendation": "Wait for the variant's first comps to land in Card Hedge."
+    },
+    "freshness": {
+      "status": "Needs refresh",
+      "lastUpdated": null
+    },
+    "pricingAnalytics": null,
+    "estimate": null,
+    "compsUsed": 0,
+    "compsAvailable": 27,
+    "cardIdentity": {
+      "card_id": "1701218519780x715706808382578600",
+      "title": "Drake Baldwin 2022 Bowman Draft Chrome Draft Pick Autograph Baseball",
+      "player": "Drake Baldwin",
+      "set": "2022 Bowman Draft Baseball",
+      "year": null,
+      "number": "CDA-DBN",
+      "variant": "Base"
+    },
+    "recentComps": [
+      {
+        "price": 169.99,
+        "title": "2022 Bowman Draft Drake Baldwin 1st Chrome Auto #CDA-DBN ROY Braves - Raw",
+        "soldDate": "2026-05-12T01:33:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 159.99,
+        "title": "2022 Bowman Draft Chrome 1st AUTO Drake Baldwin #CDA-DBN Braves RC MINT - Raw",
+        "soldDate": "2026-05-10T11:09:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 125,
+        "title": "2022 Bowman Chrome Draft 1st Bowman Drake Baldwin Auto #CDA-DBN - Raw",
+        "soldDate": "2026-05-03T01:00:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 91.02,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-08-12T00:51:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 120,
+        "title": "Drake Baldwin 2022 Bowman Chrome 1st Draft RC Auto CDA-DBN Braves Rare Nice! - Raw 10",
+        "soldDate": "2025-08-05T23:03:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 120,
+        "title": "2022 Bowman Draft #CDA-DBN Drake Baldwin Chrome Auto Draft Pick Autograph - Raw 10",
+        "soldDate": "2025-07-22T06:12:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 95,
+        "title": "2022 Bowman - Drake Baldwin Chrome Draft Pick Auto #CDA-DBN - Raw 10",
+        "soldDate": "2025-07-18T06:27:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 64,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-07-16T03:55:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 89.99,
+        "title": "2022 Bowman Chrome Draft Drake Baldwin Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-07-10T03:18:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 88.43,
+        "title": "2022 Bowman Draft Drake Baldwin 1st Chrome Auto #CDA-DBN Braves Rookie RC AU - Raw 10",
+        "soldDate": "2025-07-09T03:38:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 89,
+        "title": "2022 Bowman Draft Chrome Drake Baldwin 1st Auto #CDA-DBN ATL Braves Rookie RC - Raw 10",
+        "soldDate": "2025-06-30T03:03:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 103.38,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Pick Auto 1st Prospect #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-06-29T01:20:00.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 110,
+        "title": "2022 Bowman Chrome Draft - Drake Baldwin - Chrome 1st Auto CDA-DBN 🔥 - Raw 10",
+        "soldDate": "2025-06-05T13:37:23.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 127.51,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Pick Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-05-26T20:08:40.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 104.03,
+        "title": "2022 Bowman Draft Chrome Draft Pick Auto Drake Baldwin #CDA-DBN Auto - Raw 10",
+        "soldDate": "2025-05-19T19:06:31.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 89,
+        "title": "2022 Bowman Draft Chrome Draft Pick Auto Drake Baldwin #CDA-DBN Auto 🔥📈 - Raw 10",
+        "soldDate": "2025-05-17T12:16:55.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 104.03,
+        "title": "2022 Bowman Draft Chrome Draft Pick Auto Drake Baldwin #CDA-DBN Auto - Raw 10",
+        "soldDate": "2025-05-15T19:38:39.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 75,
+        "title": "Drake Baldwin AUTO 2022 Bowman Chrome Draft Prospect Autograph #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-05-14T15:14:43.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 64.26,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-05-14T11:42:39.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 79.95,
+        "title": "2022 Bowman Draft ~ Drake Baldwin #CDA-DBN ~ 1st Bowman ~ Chrome Auto ~ Braves - Raw 10",
+        "soldDate": "2025-05-13T20:38:36.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 56,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-05-12T19:38:42.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 44,
+        "title": "2022 Bowman Draft Drake Baldwin Chrome Auto 1st #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-05-11T20:39:27.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 50,
+        "title": "2022 Bowman Draft Drake Baldwin #CDA-DBN Chrome 1st  AUTO Atlanta Braves - Raw 10",
+        "soldDate": "2025-05-08T13:57:04.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 77,
+        "title": "2022 Bowman Draft Chrome Draft Pick Auto Drake Baldwin #CDA-DBN - Raw 10",
+        "soldDate": "2025-03-31T19:54:55.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 68,
+        "title": "2022 Bowman Draft ~ Drake Baldwin #CDA-DBN ~ 1st Bowman ~ Chrome Auto ~ Braves - Raw 10",
+        "soldDate": "2025-03-29T00:34:47.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 70,
+        "title": "2022 Bowman Draft Chrome 1st AUTO Drake Baldwin #CDA-DBN Braves - Raw 10",
+        "soldDate": "2025-03-28T21:06:29.000Z",
+        "grade": "Raw"
+      },
+      {
+        "price": 69,
+        "title": "Drake Baldwin 2022 Bowman Chrome Draft Auto CDA-DBN Atlanta Braves #7 - Raw 10",
+        "soldDate": "2025-03-23T19:06:36.000Z",
+        "grade": "Raw"
+      }
+    ],
+    "gradeUsed": "Raw",
+    "source": "variant-mismatch",
+    "daysSinceNewestComp": null,
+    "variantWarning": [
+      "blue",
+      "refractor"
+    ],
+    "compQuality": {
+      "totalComps": 0,
+      "usedComps": 0,
+      "excluded": 0,
+      "reasons": {}
+    },
+    "crossParallelAnchor": null,
+    "effectiveFmv": null,
+    "dataSufficiency": {
+      "sufficient": false,
+      "level": "none",
+      "message": "Variant not found (missing: blue; refractor; all 3 fetched comps rejected by variant filter (parallel_mismatch×3))."
+    },
+    "neighborSynthesisDebug": null
+  },
+  "nullPathAnalysis": {
+    "failureReason": "insufficient-curated-peer-parallels",
+    "compsCount": 27,
+    "groupedByParallelAsReturned": {
+      "Base/unspecified": 27
+    },
+    "curatedPeersWithComps": 0,
+    "curatedPeerUniverseCount": 21
+  }
+}

@@ -1,0 +1,279 @@
+﻿## Root Worktree Inventory (2026-05-17)
+
+### Summary
+- Modified tracked: 17 files
+- Deleted tracked: 1 files
+- Untracked: 167 files
+- Stashes: 1
+- Current branch: fix/issue-25-ch-autograph-identity
+
+### Raw porcelain status
+-  M APIService.swift
+-  M DailyIQView.swift
+-  M backend/.data/dailyiq-watchlists.json
+-  M backend/docs/parallels-reference-schema.md
+-  M backend/harness/tier1/baselines/case-17-luka-doncic-2018-panini-prizm-silver-psa10.json
+-  M backend/package-lock.json
+-  M backend/package.json
+-  M backend/src/routes/compiq.routes.ts
+-  M backend/src/routes/dailyiq.routes.ts
+-  M backend/src/services/compiq/cardhedge.client.ts
+-  M backend/src/services/compiq/compiqEstimate.service.ts
+-  M backend/src/services/compiq/ebayFallback.ts
+-  M backend/src/services/compiq/neighborMultipliers.ts
+-  D backend/src/services/compiq/neighborSynthesis.ts
+-  M backend/src/services/compiq/predictedRange.ts
+-  M backend/src/services/dailyiq/mlbBoxScoreService.ts
+-  M backend/src/services/parallelsReference/ingestion.ts
+-  M backend/tests/parallelsReference/curationHarness.test.ts
+- ?? -
+- ?? .blobconn.txt
+- ?? .data/
+- ?? .github/copilot-instructions.md
+- ?? .vscode/
+- ?? AddCardView.swift
+- ?? BacktestAdminView.swift
+- ?? CardDashboardView.swift
+- ?? CardDetailView.swift
+- ?? CardInventoryView.swift
+- ?? CardItem.swift
+- ?? CardSaleRecord.swift
+- ?? CardScanResultView.swift
+- ?? CardScannerService.swift
+- ?? CardScannerView.swift
+- ?? CompIQImageResolver.swift
+- ?? CompIQService.swift
+- ?? DailyIQService.swift
+- ?? DailyIQViewModel.swift
+- ?? Extensions.swift
+- ?? GradingHelperView.swift
+- ?? GradingPipelineView.swift
+- ?? InventoryRefreshService.swift
+- ?? ListingComposerView.swift
+- ?? PortfolioDashboardHome.swift
+- ?? PortfolioHeatMapView.swift
+- ?? PortfolioInventoryView.swift
+- ?? PortfolioRootView.swift
+- ?? PortfolioSettingsView.swift
+- ?? PreviewSampleCards.swift
+- ?? RecentCompsListView.swift
+- ?? SalesTrackerView.swift
+- ?? SearchIQOrchestrator.swift
+- ?? SearchResultView.swift
+- ?? SellCardSheet.swift
+- ?? WatchlistView.swift
+- ?? _b3.py
+- ?? apps/web/src/components/PortfolioView.css
+- ?? apps/web/src/features/portfolio/screens/PortfolioScreen.css
+- ?? apps/web/src/pages/SearchPage.css
+- ?? backend/.tmp-cardhedger-probe.cjs
+- ?? backend/_policy_tmp.json
+- ?? backend/data/
+- ?? backend/docs/data-sources.md
+- ?? backend/docs/deployment/
+- ?? backend/docs/investigations/
+- ?? backend/docs/phase-c-checklist.md
+- ?? backend/flush-ch-cache-v2.mjs
+- ?? backend/harness-output.txt
+- ?? backend/inspect-mantle-keys.mjs
+- ?? backend/routes/alerts.js
+- ?? backend/routes/ebay.js
+- ?? backend/routes/ocr.js
+- ?? backend/routes/portfolio.js
+- ?? backend/routes/uploads.js
+- ?? backend/routes/watchlist.js
+- ?? backend/scan-lifecycle-policy.json
+- ?? backend/scripts/append_queue.ps1
+- ?? backend/scripts/create_issues.ps1
+- ?? backend/scripts/ensure_labels.ps1
+- ?? backend/scripts/flush-ch-cache-phase1.cjs
+- ?? backend/scripts/flush-ch-match.cjs
+- ?? backend/scripts/inspect_vintage.ps1
+- ?? backend/scripts/momentum_inspect.ps1
+- ?? backend/scripts/momentum_pool.ps1
+- ?? backend/scripts/momentum_probe.ps1
+- ?? backend/scripts/momentum_table.ps1
+- ?? backend/scripts/ocr-quality-report.js
+- ?? backend/scripts/ocr-release-readiness.js
+- ?? backend/scripts/parallels-2b-i-phase3-devries-curate.ts
+- ?? backend/scripts/parallels-2b-i-phase3-devries-test.ts
+- ?? backend/scripts/parallels-2b-i-phase3-rebuild-catalog.ts
+- ?? backend/scripts/parallels-2b-i-skenes-stage3-tiers.ts
+- ?? backend/scripts/parallels-2b-i-verify-probe.ts
+- ?? backend/scripts/probe_vintage.ps1
+- ?? backend/scripts/run-beckett-sweep.ts
+- ?? backend/scripts/update_issues.ps1
+- ?? backend/scripts/validate-beckett-2022-bowman.ts
+- ?? backend/services/alertService.js
+- ?? backend/services/appleAuthService.js
+- ?? backend/services/cacheService.js
+- ?? backend/services/ebayService.js
+- ?? backend/services/ocrService.js
+- ?? backend/services/portfolioService.js
+- ?? backend/services/pushService.js
+- ?? backend/services/watchlistService.js
+- ?? backend/src/agents/
+- ?? backend/src/curation/
+- ?? backend/src/scripts/
+- ?? backend/src/services/compiq/chromeDraftMultipliers.ts
+- ?? backend/src/services/compiq/parallelAttributesLookup.ts
+- ?? backend/src/services/compiq/peerPoolBuilder.ts
+- ?? backend/src/services/compiq/predictedRangeMultiplierAnchored.ts
+- ?? backend/src/services/compiq/predictedRangeTierAnchored.ts
+- ?? backend/src/services/compiq/tierMultipliers.ts
+- ?? backend/src/services/dailyiq/dailyScore.service.ts
+- ?? backend/src/services/dailyiq/marketDelta.service.ts
+- ?? backend/src/services/dailyiq/movement.service.ts
+- ?? backend/src/services/sportsCardsPro/
+- ?? backend/tests/applyWorksheet.test.ts
+- ?? backend/tests/beckettChecklistParser.test.ts
+- ?? backend/tests/beckettUrlDiscovery.test.ts
+- ?? backend/tests/cardDedup.test.ts
+- ?? backend/tests/cardboardConnectionFetcher.test.ts
+- ?? backend/tests/cardboardConnectionParser.test.ts
+- ?? backend/tests/cardboardConnectionUrlDiscovery.test.ts
+- ?? backend/tests/compiq/
+- ?? backend/tests/curationOrchestrator.test.ts
+- ?? backend/tests/drakeBaldwinIntegration.test.ts
+- ?? backend/tests/eligibilityAnalyzer.test.ts
+- ?? backend/tests/fixtures/
+- ?? backend/tests/multiplierAnchoredPredictedPrice.test.ts
+- ?? backend/tests/multiplierTableRegistry.test.ts
+- ?? backend/tests/parallelAttributesSchema.test.ts
+- ?? backend/tests/parallelNameNormalizer.test.ts
+- ?? backend/tests/peerPoolBuilder.test.ts
+- ?? backend/tests/predictedRangeTierAnchored.test.ts
+- ?? backend/tests/sourceCitation.test.ts
+- ?? backend/tests/sweepOrchestrator.test.ts
+- ?? backend/tests/tierMultipliers.test.ts
+- ?? backend/tests/worksheetGenerator.test.ts
+- ?? backend/tmp/
+- ?? backend/unit-suite-output.txt
+- ?? bodine-response.json
+- ?? body.json
+- ?? bowman-draft-dryrun.txt
+- ?? case-19b-full-grade-present.json
+- ?? cc-bowman-chrome.html
+- ?? cc-bowman-draft.html
+- ?? cc-bowman.html
+- ?? compiq-functions/
+- ?? docs/adr/
+- ?? docs/pr2.5-manifest.txt
+- ?? docs/triage-issue-pr2.5.md
+- ?? estimate.json
+- ?? frontend/src/AlertStore.swift
+- ?? frontend/src/AppRouter.swift
+- ?? frontend/src/EbayConnectView.swift
+- ?? frontend/src/EbayListingDraftView.swift
+- ?? frontend/src/PortfolioService.swift
+- ?? frontend/src/PriceAlert.swift
+- ?? frontend/src/PriceAlertService.swift
+- ?? frontend/src/SetAlertView.swift
+- ?? frontend/src/SignInView.swift
+- ?? frontend/src/WatchlistService.swift
+- ?? harness-output-issue6.txt
+- ?? harness-output.txt
+- ?? logdownload_2f6c9d/
+- ?? logdownload_hotfix/
+- ?? mcp-server/
+- ?? ohtani.json
+- ?? ops-report.json
+- ?? ops-tail.txt
+- ?? raw.json
+- ?? response.json
+- ?? root-worktree-inventory-2026-05-17.md
+- ?? scan-smells.ps1
+- ?? scripts/smoke-watchlist.ps1
+- ?? scripts/verify-pr12.ps1
+- ?? tier1-local-output.txt
+- ?? tmp/
+- ?? tmp_extract/
+- ?? tmp_inventory_report.ps1
+- ?? tmp_inventory_report3.ps1
+- ?? unit-suite-output.txt
+- ?? webapp-logs/
+- ?? worktrees/
+
+### Categorized by recommendation
+
+#### Safe to discard (MATCH_MAIN or DUPLICATE_OF_ISOLATED_PR)
+- backend/harness/tier1/baselines/case-17-luka-doncic-2018-panini-prizm-silver-psa10.json — No diff vs origin/main. [1 file changed, 2 insertions(+), 18 deletions(-)]
+- backend/src/routes/compiq.routes.ts — Matches isolated PR content (pr/phase3-engine and pr/mechanism-1-normalization-fix). [1 file changed, 4 insertions(+), 8 deletions(-)]
+- backend/src/services/compiq/cardhedge.client.ts — No diff vs origin/main. [1 file changed, 278 insertions(+), 21 deletions(-)]
+- backend/src/services/compiq/compiqEstimate.service.ts — Matches isolated PR content (pr/phase3-engine and pr/mechanism-1-normalization-fix). [1 file changed, 1 insertion(+), 2 deletions(-)]
+- backend/src/services/compiq/ebayFallback.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- backend/src/services/compiq/neighborMultipliers.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- backend/src/services/compiq/neighborSynthesis.ts — File absent on origin/main; local deletion aligns with main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- backend/src/services/compiq/predictedRange.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- backend/src/services/parallelsReference/ingestion.ts — No diff vs origin/main. [1 file changed, 84 insertions(+), 7 deletions(-)]
+
+#### Owner work to preserve (DIVERGENT_OWNER_WORK)
+- APIService.swift — 1 file changed, 157 insertions(+), 3 deletions(-). Recommended preservation path: isolate into dedicated PR/worktree.
+- DailyIQView.swift — 1 file changed, 162 insertions(+), 10 deletions(-). Recommended preservation path: isolate into dedicated PR/worktree.
+- backend/docs/parallels-reference-schema.md — 1 file changed, 2 insertions(+), 18 deletions(-). Recommended preservation path: isolate into dedicated PR/worktree.
+- backend/src/routes/dailyiq.routes.ts — 1 file changed, 278 insertions(+), 21 deletions(-). Recommended preservation path: isolate into dedicated PR/worktree.
+- backend/src/services/dailyiq/mlbBoxScoreService.ts — 1 file changed, 84 insertions(+), 7 deletions(-). Recommended preservation path: isolate into dedicated PR/worktree.
+- backend/tests/parallelsReference/curationHarness.test.ts — 1 file changed, 56 insertions(+). Recommended preservation path: isolate into dedicated PR/worktree.
+
+#### Stale / probably discardable (DIVERGENT_STALE)
+- backend/package-lock.json — 1 file changed, 104 insertions(+).
+- backend/package.json — 1 file changed, 1 insertion(+).
+
+#### Needs owner review (uncertain)
+- backend/.data/dailyiq-watchlists.json — Exact content match with local branch restore/preprod-deployed-state. [1 file changed, 23 insertions(+), 4 deletions(-)]
+
+#### Untracked files
+- Build artifacts to ignore: .blobconn.txt; .data/; backend/harness-output.txt; backend/tmp/; backend/unit-suite-output.txt; harness-output-issue6.txt; harness-output.txt; logdownload_2f6c9d/; logdownload_hotfix/; tmp/; tmp_extract/; unit-suite-output.txt; webapp-logs/
+- Possible scratch / discardable: -; .vscode/; _b3.py; apps/web/src/components/PortfolioView.css; apps/web/src/features/portfolio/screens/PortfolioScreen.css; apps/web/src/pages/SearchPage.css; backend/.tmp-cardhedger-probe.cjs; backend/_policy_tmp.json; backend/flush-ch-cache-v2.mjs; backend/inspect-mantle-keys.mjs; backend/routes/alerts.js; backend/routes/ebay.js; backend/routes/ocr.js; backend/routes/portfolio.js; backend/routes/uploads.js; backend/routes/watchlist.js; backend/scan-lifecycle-policy.json; backend/services/alertService.js; backend/services/appleAuthService.js; backend/services/cacheService.js; backend/services/ebayService.js; backend/services/ocrService.js; backend/services/portfolioService.js; backend/services/pushService.js; backend/services/watchlistService.js; bodine-response.json; body.json; bowman-draft-dryrun.txt; case-19b-full-grade-present.json; cc-bowman-chrome.html; cc-bowman-draft.html; cc-bowman.html; estimate.json; ohtani.json; ops-report.json; ops-tail.txt; raw.json; response.json; scan-smells.ps1; scripts/smoke-watchlist.ps1; scripts/verify-pr12.ps1; tier1-local-output.txt; tmp_inventory_report.ps1; tmp_inventory_report3.ps1
+- Possible owner work to preserve: .github/copilot-instructions.md; AddCardView.swift; BacktestAdminView.swift; CardDashboardView.swift; CardDetailView.swift; CardInventoryView.swift; CardItem.swift; CardSaleRecord.swift; CardScanResultView.swift; CardScannerService.swift; CardScannerView.swift; CompIQImageResolver.swift; CompIQService.swift; DailyIQService.swift; DailyIQViewModel.swift; Extensions.swift; GradingHelperView.swift; GradingPipelineView.swift; InventoryRefreshService.swift; ListingComposerView.swift; PortfolioDashboardHome.swift; PortfolioHeatMapView.swift; PortfolioInventoryView.swift; PortfolioRootView.swift; PortfolioSettingsView.swift; PreviewSampleCards.swift; RecentCompsListView.swift; SalesTrackerView.swift; SearchIQOrchestrator.swift; SearchResultView.swift; SellCardSheet.swift; WatchlistView.swift; backend/data/; backend/docs/data-sources.md; backend/docs/deployment/; backend/docs/investigations/; backend/docs/phase-c-checklist.md; backend/scripts/append_queue.ps1; backend/scripts/create_issues.ps1; backend/scripts/ensure_labels.ps1; backend/scripts/flush-ch-cache-phase1.cjs; backend/scripts/flush-ch-match.cjs; backend/scripts/inspect_vintage.ps1; backend/scripts/momentum_inspect.ps1; backend/scripts/momentum_pool.ps1; backend/scripts/momentum_probe.ps1; backend/scripts/momentum_table.ps1; backend/scripts/ocr-quality-report.js; backend/scripts/ocr-release-readiness.js; backend/scripts/parallels-2b-i-phase3-devries-curate.ts; backend/scripts/parallels-2b-i-phase3-devries-test.ts; backend/scripts/parallels-2b-i-phase3-rebuild-catalog.ts; backend/scripts/parallels-2b-i-skenes-stage3-tiers.ts; backend/scripts/parallels-2b-i-verify-probe.ts; backend/scripts/probe_vintage.ps1; backend/scripts/run-beckett-sweep.ts; backend/scripts/update_issues.ps1; backend/scripts/validate-beckett-2022-bowman.ts; backend/src/agents/; backend/src/curation/; backend/src/scripts/; backend/src/services/compiq/chromeDraftMultipliers.ts; backend/src/services/compiq/parallelAttributesLookup.ts; backend/src/services/compiq/peerPoolBuilder.ts; backend/src/services/compiq/predictedRangeMultiplierAnchored.ts; backend/src/services/compiq/predictedRangeTierAnchored.ts; backend/src/services/compiq/tierMultipliers.ts; backend/src/services/dailyiq/dailyScore.service.ts; backend/src/services/dailyiq/marketDelta.service.ts; backend/src/services/dailyiq/movement.service.ts; backend/src/services/sportsCardsPro/; backend/tests/applyWorksheet.test.ts; backend/tests/beckettChecklistParser.test.ts; backend/tests/beckettUrlDiscovery.test.ts; backend/tests/cardDedup.test.ts; backend/tests/cardboardConnectionFetcher.test.ts; backend/tests/cardboardConnectionParser.test.ts; backend/tests/cardboardConnectionUrlDiscovery.test.ts; backend/tests/compiq/; backend/tests/curationOrchestrator.test.ts; backend/tests/drakeBaldwinIntegration.test.ts; backend/tests/eligibilityAnalyzer.test.ts; backend/tests/fixtures/; backend/tests/multiplierAnchoredPredictedPrice.test.ts; backend/tests/multiplierTableRegistry.test.ts; backend/tests/parallelAttributesSchema.test.ts; backend/tests/parallelNameNormalizer.test.ts; backend/tests/peerPoolBuilder.test.ts; backend/tests/predictedRangeTierAnchored.test.ts; backend/tests/sourceCitation.test.ts; backend/tests/sweepOrchestrator.test.ts; backend/tests/tierMultipliers.test.ts; backend/tests/worksheetGenerator.test.ts; compiq-functions/; docs/adr/; docs/pr2.5-manifest.txt; docs/triage-issue-pr2.5.md; frontend/src/AlertStore.swift; frontend/src/AppRouter.swift; frontend/src/EbayConnectView.swift; frontend/src/EbayListingDraftView.swift; frontend/src/PortfolioService.swift; frontend/src/PriceAlert.swift; frontend/src/PriceAlertService.swift; frontend/src/SetAlertView.swift; frontend/src/SignInView.swift; frontend/src/WatchlistService.swift; mcp-server/; root-worktree-inventory-2026-05-17.md
+- Orphaned worktree state: worktrees/
+
+### Spot-check: duplicates of isolated PR branches
+- backend/src/routes/compiq.routes.ts => pr/phase3-engine, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/cardhedge.client.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/compiqEstimate.service.ts => pr/phase3-engine, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/ebayFallback.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/neighborMultipliers.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/predictedRange.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/parallelsReference/ingestion.ts => pr/phase3-engine, pr/sourcecitation-schema, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/docs/phase-c-checklist.md => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/chromeDraftMultipliers.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/parallelAttributesLookup.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/peerPoolBuilder.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/predictedRangeMultiplierAnchored.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/predictedRangeTierAnchored.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/src/services/compiq/tierMultipliers.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/tests/drakeBaldwinIntegration.test.ts => pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/multiplierAnchoredPredictedPrice.test.ts => pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/multiplierTableRegistry.test.ts => pr/phase3-engine, pr/phase-3-contract-cleanup
+- backend/tests/peerPoolBuilder.test.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+- backend/tests/predictedRangeTierAnchored.test.ts => pr/phase3-engine, pr/phase-3-contract-cleanup, pr/mechanism-1-normalization-fix
+
+### Stashes
+- stash@{0}: WIP on main: c355340 feat: wire search/price to live Apify eBay comps + update iOS models — recommendation: inspect before any root cleanup action.
+
+### Recommended next actions
+- Files to discard (count): 11
+- Files needing preservation as new PRs (count): 6
+- Files needing owner judgment (count): 109
+- Estimated cleanup time after owner reviews: 60-120 minutes.
+
+### Tracked file detail (full triage)
+- [DIVERGENT_OWNER_WORK] APIService.swift — Large local Swift API changes not present on origin/main or known isolated PR branches. [1 file changed, 157 insertions(+), 3 deletions(-)]
+- [DIVERGENT_OWNER_WORK] DailyIQView.swift — Large local Swift UI updates not present on origin/main or known isolated PR branches. [1 file changed, 162 insertions(+), 10 deletions(-)]
+- [MATCH_OTHER_BRANCH] backend/.data/dailyiq-watchlists.json — Exact content match with local branch restore/preprod-deployed-state. [1 file changed, 23 insertions(+), 4 deletions(-)]
+- [DIVERGENT_OWNER_WORK] backend/docs/parallels-reference-schema.md — Substantive doc delta from main (74 additions/17 removals) beyond merged isolated PR scope. [1 file changed, 2 insertions(+), 18 deletions(-)]
+- [MATCH_MAIN] backend/harness/tier1/baselines/case-17-luka-doncic-2018-panini-prizm-silver-psa10.json — No diff vs origin/main. [1 file changed, 2 insertions(+), 18 deletions(-)]
+- [DIVERGENT_STALE] backend/package-lock.json — Dependency lockfile drift likely from local install churn; not in isolated PR branches. [1 file changed, 104 insertions(+)]
+- [DIVERGENT_STALE] backend/package.json — Single-line dependency/script drift likely from local run setup. [1 file changed, 1 insertion(+)]
+- [DUPLICATE_OF_ISOLATED_PR] backend/src/routes/compiq.routes.ts — Matches isolated PR content (pr/phase3-engine and pr/mechanism-1-normalization-fix). [1 file changed, 4 insertions(+), 8 deletions(-)]
+- [DIVERGENT_OWNER_WORK] backend/src/routes/dailyiq.routes.ts — Large route-level changes (278 additions/21 removals) not on main. [1 file changed, 278 insertions(+), 21 deletions(-)]
+- [MATCH_MAIN] backend/src/services/compiq/cardhedge.client.ts — No diff vs origin/main. [1 file changed, 278 insertions(+), 21 deletions(-)]
+- [DUPLICATE_OF_ISOLATED_PR] backend/src/services/compiq/compiqEstimate.service.ts — Matches isolated PR content (pr/phase3-engine and pr/mechanism-1-normalization-fix). [1 file changed, 1 insertion(+), 2 deletions(-)]
+- [MATCH_MAIN] backend/src/services/compiq/ebayFallback.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- [MATCH_MAIN] backend/src/services/compiq/neighborMultipliers.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- [MATCH_MAIN] backend/src/services/compiq/neighborSynthesis.ts — File absent on origin/main; local deletion aligns with main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- [MATCH_MAIN] backend/src/services/compiq/predictedRange.ts — No diff vs origin/main. [1 file changed, 1 insertion(+), 2 deletions(-)]
+- [DIVERGENT_OWNER_WORK] backend/src/services/dailyiq/mlbBoxScoreService.ts — Substantive service changes (84 additions/7 removals) not on main. [1 file changed, 84 insertions(+), 7 deletions(-)]
+- [MATCH_MAIN] backend/src/services/parallelsReference/ingestion.ts — No diff vs origin/main. [1 file changed, 84 insertions(+), 7 deletions(-)]
+- [DIVERGENT_OWNER_WORK] backend/tests/parallelsReference/curationHarness.test.ts — Test expansion (56 additions) not on main. [1 file changed, 56 insertions(+)]

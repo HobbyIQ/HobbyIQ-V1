@@ -1,0 +1,1408 @@
+{
+  "generatedAt": "2026-05-17T13:26:56.125Z",
+  "candidatesTried": 12,
+  "curatedPeerUniverseCount": 21,
+  "scored": [
+    {
+      "player": "Wyatt Langford",
+      "query": "Wyatt Langford 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Wyatt Langford 2024 Bowman Chrome Prospect Autograph Baseball",
+        "player": "Wyatt Langford",
+        "set": "2024 Bowman Chrome Prospects Baseball",
+        "number": "CPA-WLA",
+        "variant": "Base",
+        "card_id": "1715551786815x465857243859532540",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1731983030748x976917739242028000/resized_20241119_022347.jpeg",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 1,
+        "30 Day Sales": 5,
+        "rookie": false,
+        "gain": 0,
+        "prices": [
+          {
+            "grade": "PSA 10",
+            "price": "179.99"
+          },
+          {
+            "grade": "PSA 9",
+            "price": "48.55"
+          },
+          {
+            "grade": "Raw",
+            "price": "47.0"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Druw Jones",
+      "query": "Druw Jones 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Druw Jones 2023 Bowman Chrome Prospects Auto Baseball Yellow",
+        "player": "Druw Jones",
+        "set": "2023 Bowman Chrome Prospects Baseball",
+        "number": "CPA-DJ",
+        "variant": "Yellow",
+        "card_id": "1683255642231x627406834221212400",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1777861507108x548142388986678800/resize",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 1,
+        "30 Day Sales": 3,
+        "rookie": false,
+        "gain": 0,
+        "prices": [
+          {
+            "grade": "PSA 9",
+            "price": "103.5"
+          },
+          {
+            "grade": "Raw",
+            "price": "130.0"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Termarr Johnson",
+      "query": "Termarr Johnson 2022 Bowman Chrome auto",
+      "card": {
+        "card_id": "1701218545285x305164881072651700",
+        "player": "Termarr Johnson",
+        "set": "2022 Bowman Draft Baseball",
+        "number": "CDA-TJ",
+        "variant": "Base",
+        "title": "Termarr Johnson 2022 Bowman Draft Chrome Draft Pick Autograph Baseball"
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Elijah Green",
+      "query": "Elijah Green 2022 Bowman Chrome auto",
+      "card": {
+        "card_id": "1701218559695x588000874852467500",
+        "player": "Elijah Green",
+        "set": "2022 Bowman Draft Baseball",
+        "number": "CDA-EG",
+        "variant": "Base",
+        "title": "Elijah Green 2022 Bowman Draft Chrome Draft Pick Autograph Baseball"
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Jacob Berry",
+      "query": "Jacob Berry 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Jacob Berry 2023 Bowman Chrome Prospects Auto Baseball",
+        "player": "Jacob Berry",
+        "set": "2023 Bowman Chrome Prospects Baseball",
+        "number": "CPA-JB",
+        "variant": "Base",
+        "card_id": "1683239796328x277630547162625470",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1721934146144x246292312767056640/crop_image",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 2,
+        "30 Day Sales": 2,
+        "rookie": false,
+        "gain": 0,
+        "prices": [
+          {
+            "grade": "SGC 9.5",
+            "price": "5.0"
+          },
+          {
+            "grade": "Raw",
+            "price": "5.0"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Cam Collier",
+      "query": "Cam Collier 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Cam Collier 2023 Bowman Chrome Prospects Auto Baseball Green Grass",
+        "player": "Cam Collier",
+        "set": "2023 Bowman Chrome Prospects Baseball",
+        "number": "CPA-CC",
+        "variant": "Green Grass",
+        "card_id": "1683253745283x323885041717266940",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1723521711210x894301874583591800/resized_20240813_040150.jpeg",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 2,
+        "30 Day Sales": 2,
+        "rookie": false,
+        "gain": 30.14,
+        "prices": [
+          {
+            "grade": "PSA 9",
+            "price": "95.0"
+          },
+          {
+            "grade": "Raw",
+            "price": "82.5"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Brooks Lee",
+      "query": "Brooks Lee 2022 Bowman Chrome auto",
+      "card": {
+        "card_id": "1701218538137x569261887651091800",
+        "player": "Brooks Lee",
+        "set": "2022 Bowman Draft Baseball",
+        "number": "CDA-BL",
+        "variant": "Base",
+        "title": "Brooks Lee 2022 Bowman Draft Chrome Draft Pick Autograph Baseball"
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Justin Crawford",
+      "query": "Justin Crawford 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Justin Crawford 2023 Bowman Chrome Prospects Auto Baseball",
+        "player": "Justin Crawford",
+        "set": "2023 Bowman Chrome Prospects Baseball",
+        "number": "CPA-JC",
+        "variant": "Base",
+        "card_id": "1683239793403x865440034793031800",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1775315893024x618245184013125400/resize",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 1,
+        "30 Day Sales": 3,
+        "rookie": false,
+        "gain": 0,
+        "prices": [
+          {
+            "grade": "SGC 9.5",
+            "price": "64.99"
+          },
+          {
+            "grade": "Raw",
+            "price": "19.99"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Daniel Susac",
+      "query": "Daniel Susac 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Daniel Susac 2024 Bowman Chrome Prospect Autograph Baseball",
+        "player": "Daniel Susac",
+        "set": "2024 Bowman Chrome Prospects Baseball",
+        "number": "CPA-DS",
+        "variant": "Base",
+        "card_id": "1715551802901x709079521126422300",
+        "image": "https://942284f33c575895b4be9de571ca6e40.cdn.bubble.io/d112/f1774165686658x595823238868218300/resize",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Prospects Baseball",
+        "7 Day Sales": 8,
+        "30 Day Sales": 40,
+        "rookie": false,
+        "gain": -44.16,
+        "prices": [
+          {
+            "grade": "PSA 10",
+            "price": "88.0"
+          },
+          {
+            "grade": "PSA 9",
+            "price": "46.0"
+          },
+          {
+            "grade": "Raw",
+            "price": "27.5"
+          }
+        ]
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Kumar Rocker",
+      "query": "Kumar Rocker 2022 Bowman Chrome auto",
+      "card": {
+        "card_id": "1701218540100x241498975790747970",
+        "player": "Kumar Rocker",
+        "set": "2022 Bowman Draft Baseball",
+        "number": "CDA-KR",
+        "variant": "Base",
+        "title": "Kumar Rocker 2022 Bowman Draft Chrome Draft Pick Autograph Baseball"
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Owen Murphy",
+      "query": "Owen Murphy 2022 Bowman Chrome auto",
+      "card": {
+        "card_id": "1701218550110x330919961061664450",
+        "player": "Owen Murphy",
+        "set": "2022 Bowman Draft Baseball",
+        "number": "CDA-OM",
+        "variant": "Base",
+        "title": "Owen Murphy 2022 Bowman Draft Chrome Draft Pick Autograph Baseball"
+      },
+      "variantWarning": [],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    },
+    {
+      "player": "Andrew Painter",
+      "query": "Andrew Painter 2022 Bowman Chrome auto",
+      "card": {
+        "description": "Andrew Painter 2023 Bowman Chrome Sights on September Auto Baseball",
+        "player": "Andrew Painter",
+        "set": "2023 Bowman Chrome Baseball",
+        "number": "SOS-16",
+        "variant": "Base",
+        "card_id": "1683949796760x379043926798382700",
+        "image": "",
+        "category": "Baseball",
+        "category_group": "Sports Cards",
+        "set_type": "Bowman Chrome Baseball",
+        "7 Day Sales": 0,
+        "30 Day Sales": 0,
+        "rookie": false,
+        "gain": 0,
+        "prices": [
+          {
+            "grade": "BGS 8.5",
+            "price": "96.0"
+          },
+          {
+            "grade": "BGS 8",
+            "price": "0.0"
+          },
+          {
+            "grade": "Raw",
+            "price": "39.99"
+          }
+        ]
+      },
+      "variantWarning": [
+        "autograph"
+      ],
+      "total90dCpaComps": 0,
+      "distinctCuratedPeersWithComp": 0,
+      "bcAnchorCount": 0,
+      "bdAnchorCount": 0,
+      "nonAnchorSubjectCandidates": [],
+      "curatedRows": [
+        {
+          "parallel": "Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Speckle Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Purple Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Blue RayWave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "HTA Choice Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Green Atomic Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Yellow Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Mini Diamond Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Gold Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Orange Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Shimmer Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Red Wave Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Black Mojo Refractor",
+          "count": 0
+        },
+        {
+          "parallel": "Superfractor",
+          "count": 0
+        },
+        {
+          "parallel": "B&W Mini Diamond Refractor",
+          "count": 0
+        }
+      ],
+      "meetsCriteria": false
+    }
+  ],
+  "winner": null
+}

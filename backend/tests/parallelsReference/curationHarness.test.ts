@@ -392,3 +392,59 @@ describe("renderProposalMarkdown", () => {
     expect(md).toMatch(/test warning/);
   });
 });
+
+// ─── Phase 3 (issue #25) — printRun=null is a valid persisted state ─────────
+//
+// Per backend/docs/parallels-reference-schema.md §2.3 (Phase 3 reframe):
+// printRun is an OPTIONAL enhancement field. tierWithinSet remains required;
+// printRun=null is NOT a curation incompleteness signal. These tests pin that
+// behavior at the curation-harness boundary so a future regression cannot
+// silently re-introduce a printRun requirement.
+
+describe("Phase 3 — printRun=null is a valid commit", () => {
+  it("validateProposal returns 0 errors when printRun is null and tierWithinSet is set", () => {
+    const errs = validateProposal(
+      makeProposal([makeEntry({ printRun: null, tierWithinSet: 4 })]),
+      { reviewedBy: "owner", reviewedAt: NOW },
+    );
+    expect(errs).toEqual([]);
+  });
+
+  it("commitProposal successfully writes a record with printRun=null", async () => {
+    const { container, store } = makeFakeContainer();
+    const proposal = makeProposal([
+      makeEntry({
+        parallelName: "Blue Refractor",
+        color: "Blue",
+        printRun: null, // print run unknown / not publicly available
+        tierWithinSet: 4,
+      }),
+    ]);
+    const result = await commitProposal(container, proposal, {
+      reviewedBy: "owner",
+      reviewedAt: NOW,
+    });
+    expect(result.attempted).toBe(1);
+    expect(result.succeeded).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(store.size).toBe(1);
+    const expectedId = parallelAttributesId(TARGET_SET, "Blue Refractor", false);
+    const stored = store.get(`${TARGET_SET}|${expectedId}`);
+    expect(stored).toBeDefined();
+    expect(stored!.printRun).toBeNull();
+    expect(stored!.tierWithinSet).toBe(4);
+  });
+
+  it("tierWithinSet remains required — printRun=null does NOT loosen the tier check", () => {
+    // Phase 3 contract: printRun optional, tierWithinSet stays mandatory.
+    // Regression guard: a curator dropping BOTH should still be rejected
+    // exactly on the tierWithinSet error.
+    const errs = validateProposal(
+      makeProposal([makeEntry({ printRun: null, tierWithinSet: null })]),
+      { reviewedBy: "owner", reviewedAt: NOW },
+    );
+    expect(errs.some((e) => /tierWithinSet is null/.test(e))).toBe(true);
+    // And no errors should reference printRun for the null-printRun case.
+    expect(errs.every((e) => !/printRun/.test(e))).toBe(true);
+  });
+});

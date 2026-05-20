@@ -345,6 +345,7 @@ struct DailyBriefMarketDNA: Codable {
 }
 
 struct DailyStats: Codable {
+    // Hitter fields (default 0 / blank for pitcher days)
     let hits: Int
     let atBats: Int
     let runs: Int
@@ -354,9 +355,34 @@ struct DailyStats: Codable {
     let walks: Int
     let battingAverage: String
     let ops: String
+    // Pitcher fields (nil for hitter days)
+    let statsType: String?
+    let inningsPitched: String?
+    let earnedRuns: Int?
+    let pitchCount: Int?
+    let hitsAllowed: Int?
+    let runsAllowed: Int?
+    let homeRunsAllowed: Int?
+    let decision: String?       // "W" | "L" | "SV" | "HLD" | "BS"
+    let qualityStart: Bool?
+    let pitched: Bool?
+    let dailyStatsStatus: String?
+    // Two-way (Ohtani-style): secondary hitter line attached when player both
+    // pitched and batted in the same game.
+    let secondaryStats: SecondaryDailyStats?
+
+    var isPitcherDay: Bool {
+        if let s = statsType, s.lowercased() == "pitching" { return true }
+        if let ip = inningsPitched, let v = Double(ip), v > 0 { return true }
+        return false
+    }
 
     enum CodingKeys: String, CodingKey {
         case hits, atBats, runs, rbis, rbi, homeRuns, strikeouts, walks, battingAverage, ops
+        case statsType, inningsPitched, earnedRuns, pitchCount
+        case hitsAllowed, runsAllowed, homeRunsAllowed, decision, qualityStart, pitched
+        case dailyStatsStatus
+        case secondaryStats
     }
 
     init(from decoder: Decoder) throws {
@@ -368,6 +394,51 @@ struct DailyStats: Codable {
         homeRuns      = try c.decodeIfPresent(Int.self,    forKey: .homeRuns)      ?? 0
         strikeouts    = try c.decodeIfPresent(Int.self,    forKey: .strikeouts)    ?? 0
         walks         = try c.decodeIfPresent(Int.self,    forKey: .walks)         ?? 0
+        battingAverage = try c.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
+        ops           = try c.decodeIfPresent(String.self, forKey: .ops)           ?? ".000"
+        statsType        = try c.decodeIfPresent(String.self, forKey: .statsType)
+        inningsPitched   = try c.decodeIfPresent(String.self, forKey: .inningsPitched)
+        earnedRuns       = try c.decodeIfPresent(Int.self,    forKey: .earnedRuns)
+        pitchCount       = try c.decodeIfPresent(Int.self,    forKey: .pitchCount)
+        hitsAllowed      = try c.decodeIfPresent(Int.self,    forKey: .hitsAllowed)
+        runsAllowed      = try c.decodeIfPresent(Int.self,    forKey: .runsAllowed)
+        homeRunsAllowed  = try c.decodeIfPresent(Int.self,    forKey: .homeRunsAllowed)
+        decision         = try c.decodeIfPresent(String.self, forKey: .decision)
+        qualityStart     = try c.decodeIfPresent(Bool.self,   forKey: .qualityStart)
+        pitched          = try c.decodeIfPresent(Bool.self,   forKey: .pitched)
+        dailyStatsStatus = try c.decodeIfPresent(String.self, forKey: .dailyStatsStatus)
+        secondaryStats   = try c.decodeIfPresent(SecondaryDailyStats.self, forKey: .secondaryStats)
+    }
+}
+
+// Lighter shape: same hitter fields as DailyStats, no nested secondary or
+// pitcher fields. Used for the hitter line of two-way players.
+struct SecondaryDailyStats: Codable {
+    let hits: Int
+    let atBats: Int
+    let runs: Int
+    let rbis: Int
+    let homeRuns: Int
+    let strikeouts: Int
+    let walks: Int
+    let stolenBases: Int
+    let battingAverage: String
+    let ops: String
+
+    enum CodingKeys: String, CodingKey {
+        case hits, atBats, runs, rbis, rbi, homeRuns, strikeouts, walks, stolenBases, battingAverage, ops
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        hits          = try c.decodeIfPresent(Int.self,    forKey: .hits)          ?? 0
+        atBats        = try c.decodeIfPresent(Int.self,    forKey: .atBats)        ?? 0
+        runs          = try c.decodeIfPresent(Int.self,    forKey: .runs)          ?? 0
+        rbis          = try c.decodeIfPresent(Int.self,    forKey: .rbis)          ?? c.decodeIfPresent(Int.self, forKey: .rbi) ?? 0
+        homeRuns      = try c.decodeIfPresent(Int.self,    forKey: .homeRuns)      ?? 0
+        strikeouts    = try c.decodeIfPresent(Int.self,    forKey: .strikeouts)    ?? 0
+        walks         = try c.decodeIfPresent(Int.self,    forKey: .walks)         ?? 0
+        stolenBases   = try c.decodeIfPresent(Int.self,    forKey: .stolenBases)   ?? 0
         battingAverage = try c.decodeIfPresent(String.self, forKey: .battingAverage) ?? ".000"
         ops           = try c.decodeIfPresent(String.self, forKey: .ops)           ?? ".000"
     }
@@ -383,12 +454,22 @@ struct SeasonStats: Codable {
     let walks: Int
     let strikeouts: Int
     let walkToStrikeout: String?
+    // Pitcher season fields
+    let statsType: String?
+    let era: String?
+    let whip: String?
+    let wins: Int?
+    let losses: Int?
+    let saves: Int?
+    let gamesStarted: Int?
+    let inningsPitched: String?
 
     enum CodingKeys: String, CodingKey {
         case battingAverage, homeRuns, rbis, rbi
         case obp, onBasePercentage
         case slg, sluggingPercentage
         case ops, walks, strikeouts, walkToStrikeout
+        case statsType, era, whip, wins, losses, saves, gamesStarted, inningsPitched
     }
 
     init(from decoder: Decoder) throws {
@@ -402,6 +483,14 @@ struct SeasonStats: Codable {
         walks          = try c.decodeIfPresent(Int.self,    forKey: .walks)          ?? 0
         strikeouts     = try c.decodeIfPresent(Int.self,    forKey: .strikeouts)     ?? 0
         walkToStrikeout = try c.decodeIfPresent(String.self, forKey: .walkToStrikeout)
+        statsType      = try c.decodeIfPresent(String.self, forKey: .statsType)
+        era            = try c.decodeIfPresent(String.self, forKey: .era)
+        whip           = try c.decodeIfPresent(String.self, forKey: .whip)
+        wins           = try c.decodeIfPresent(Int.self,    forKey: .wins)
+        losses         = try c.decodeIfPresent(Int.self,    forKey: .losses)
+        saves          = try c.decodeIfPresent(Int.self,    forKey: .saves)
+        gamesStarted   = try c.decodeIfPresent(Int.self,    forKey: .gamesStarted)
+        inningsPitched = try c.decodeIfPresent(String.self, forKey: .inningsPitched)
     }
 }
 
@@ -412,15 +501,67 @@ struct DailyPerformer: Codable, Identifiable {
     let team: String
     let league: String
     let level: String?
+    let position: String?
     let dailyStats: DailyStats
     let seasonStats: SeasonStats
+    /// DailyIQ position-aware impact score; backend may omit on legacy responses.
+    let dailyScore: Double?
+    /// Movement badge — direction + label + reason + performance delta.
+    let movement: Movement?
+
+    enum CodingKeys: String, CodingKey {
+        case playerId, playerName, team, league, level, position, dailyStats, seasonStats, dailyScore, movement
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        playerId    = try c.decode(String.self, forKey: .playerId)
+        playerName  = try c.decode(String.self, forKey: .playerName)
+        team        = try c.decodeIfPresent(String.self, forKey: .team) ?? ""
+        league      = try c.decodeIfPresent(String.self, forKey: .league) ?? "MLB"
+        level       = try c.decodeIfPresent(String.self, forKey: .level)
+        position    = try c.decodeIfPresent(String.self, forKey: .position)
+        dailyStats  = try c.decode(DailyStats.self, forKey: .dailyStats)
+        seasonStats = try c.decode(SeasonStats.self, forKey: .seasonStats)
+        dailyScore  = try c.decodeIfPresent(Double.self, forKey: .dailyScore)
+        movement    = try c.decodeIfPresent(Movement.self, forKey: .movement)
+    }
+
+    var isPitcher: Bool {
+        if let p = position?.uppercased(), ["SP","RP","P","CP","CL","TWP"].contains(p) { return true }
+        return dailyStats.isPitcherDay
+    }
+}
+
+/// Movement badge emitted by the DailyIQ backend.
+/// direction: "up" | "down" | "neutral"
+/// label: "Breakout Alert" | "Stock Up" | "Rising" | "Cooling" | "Stock Down" | "No Change"
+struct Movement: Codable, Equatable {
+    let direction: String
+    let label: String
+    let reason: String
+    let performanceDelta: Double
+    let marketDelta: MarketDelta?
+}
+
+struct MarketDelta: Codable, Equatable {
+    let pct1d: Double
+    let pct7d: Double
+    let pct30d: Double
+    let avg30dPrice: Double?
+    let sampleCount: Int?
 }
 
 struct DailyBriefResponse: Codable {
     let date: String
     let generatedAt: String
+    let lastUpdated: String?
     let mlb: [DailyPerformer]
     let milb: [DailyPerformer]
+    let risers: [DailyPerformer]?
+    let fallers: [DailyPerformer]?
+    let breakouts: [DailyPerformer]?
+    let watchlist: [DailyPerformer]?
 }
 
 struct DailyWatchPlayer: Codable, Identifiable {
@@ -454,9 +595,12 @@ struct DailyWatchlistItem: Codable, Identifiable {
     let team: String?
     let league: String?
     let level: String?
+    let position: String?
     let addedAt: String?
     let dailyStats: DailyStats?
     let seasonStats: SeasonStats?
+    let dailyScore: Double?
+    let movement: Movement?
 
     var id: String { playerId }
 }
@@ -819,9 +963,19 @@ class APIService {
         return try await postRequest(url: url, body: request)
     }
 
-    func fetchDailyBrief(fresh: Bool = false) async throws -> DailyBriefResponse {
-        let urlString = baseURL + "/api/dailyiq/brief" + (fresh ? "?fresh=true" : "")
-        let url = URL(string: urlString)!
+    func fetchDailyBrief(date: String? = nil, fresh: Bool = false) async throws -> DailyBriefResponse {
+        // Build with URLComponents so the date param actually reaches the
+        // server. Previously the URL was hard-coded with only ?fresh=true,
+        // which made every call default server-side to "yesterday LA" — the
+        // brief looked identical regardless of what the UI showed.
+        var components = URLComponents(string: baseURL + "/api/dailyiq/brief")!
+        var items: [URLQueryItem] = []
+        if let date = date, !date.isEmpty { items.append(URLQueryItem(name: "date", value: date)) }
+        if fresh { items.append(URLQueryItem(name: "fresh", value: "true")) }
+        if !items.isEmpty { components.queryItems = items }
+        guard let url = components.url else {
+            throw APIServiceError.invalidResponse(-1)
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

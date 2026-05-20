@@ -1,0 +1,39 @@
+#### Slice B: Backend modules preservation PR
+- Branch suggestion: pr/backend-modules-preservation
+- File count: 30
+- Estimated PR size: medium
+- Cohesion notes: backend src/test additions not already preserved by isolated PRs.
+- Risk flags: includes test fixtures and generated investigation payloads; may need split.
+- Suggested PR title: Preserve backend modules (src/tests) from session 2026-05-17
+- Suggested PR description: Preserve backend implementation/test files from Cat C after duplicate branch pruning.
+  - backend/src/agents/beckett/beckettChecklistFetcher.ts
+  - backend/src/agents/beckett/beckettChecklistParser.ts
+  - backend/src/agents/beckett/beckettUrlDiscovery.ts
+  - backend/src/agents/beckett/brandRegistry.ts
+  - backend/src/agents/beckett/cardDedup.ts
+  - backend/src/agents/beckett/parallelNameNormalizer.ts
+  - backend/src/agents/beckett/sweepOrchestrator.ts
+  - backend/src/curation/applyWorksheet.ts
+  - backend/src/curation/curationOrchestrator.ts
+  - backend/src/curation/eligibilityAnalyzer.ts
+  - backend/src/curation/worksheetGenerator.ts
+  - backend/src/scripts/migrate-2024-bowman-chrome-prospects.ts
+  - backend/src/scripts/verify-parallel-attributes-coverage.ts
+  - backend/src/services/dailyiq/dailyScore.service.ts
+  - backend/src/services/dailyiq/marketDelta.service.ts
+  - backend/src/services/dailyiq/movement.service.ts
+  - backend/src/services/sportsCardsPro/client.ts
+  - backend/tests/applyWorksheet.test.ts
+  - backend/tests/beckettChecklistParser.test.ts
+  - backend/tests/beckettUrlDiscovery.test.ts
+  - backend/tests/cardDedup.test.ts
+  - backend/tests/curationOrchestrator.test.ts
+  - backend/tests/eligibilityAnalyzer.test.ts
+  - backend/tests/fixtures/beckett/2022-Bowman-Baseball-Checklist-2.xlsx
+  - backend/tests/parallelAttributesSchema.test.ts
+  - backend/tests/parallelNameNormalizer.test.ts
+  - backend/tests/sourceCitation.test.ts
+  - backend/tests/sweepOrchestrator.test.ts
+  - backend/tests/tierMultipliers.test.ts
+  - backend/tests/worksheetGenerator.test.ts
+
