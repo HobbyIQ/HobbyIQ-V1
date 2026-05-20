@@ -82,6 +82,8 @@ final class PortfolioSyncService {
         let byServer = try modelContext.fetch(descriptor)
 
         if let existing = byServer.first {
+            // Skip soft-deleted rows — the delete intent will handle cleanup
+            guard !existing.isDeleted else { return }
             Self.updateCardItem(existing, from: holding)
             return
         }
@@ -96,13 +98,25 @@ final class PortfolioSyncService {
             let byClient = try modelContext.fetch(clientDescriptor)
 
             if let existing = byClient.first {
+                guard !existing.isDeleted else { return }
                 existing.serverHoldingId = serverId
                 Self.updateCardItem(existing, from: holding)
                 return
             }
         }
 
-        // No match — insert new
+        // No match — check if we have a tombstone for this server ID
+        // (card was deleted locally but server still returns it).
+        // In that case, do NOT re-insert — the delete intent will clean up.
+        let tombstonePredicate = #Predicate<CardItem> { item in
+            item.serverHoldingId == serverId && item.deletedAt != nil
+        }
+        var tombstoneDescriptor = FetchDescriptor<CardItem>(predicate: tombstonePredicate)
+        tombstoneDescriptor.fetchLimit = 1
+        let tombstones = try modelContext.fetch(tombstoneDescriptor)
+        guard tombstones.isEmpty else { return }
+
+        // No match, no tombstone — insert new
         let newCard = Self.mapHoldingToNewCardItem(holding)
         modelContext.insert(newCard)
     }
