@@ -26,8 +26,8 @@ struct AppPrimaryButtonStyle: ButtonStyle {
 }
 
 struct AppSecondaryButtonStyle: ButtonStyle {
-    var backgroundColor: Color = AppColors.surfaceElevated
-    var textColor: Color = AppColors.textPrimary
+    var backgroundColor: Color = AppColors.accent
+    var textColor: Color = AppColors.background
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -37,11 +37,8 @@ struct AppSecondaryButtonStyle: ButtonStyle {
             .padding(.vertical, 16)
             .padding(.horizontal, AppSpacing.large)
             .background(backgroundColor)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppCardRadius.small, style: .continuous)
-                    .stroke(AppColors.border, lineWidth: 1)
-            )
             .clipShape(RoundedRectangle(cornerRadius: AppCardRadius.small, style: .continuous))
+            .shadow(color: backgroundColor.opacity(0.24), radius: 12, x: 0, y: 6)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .opacity(configuration.isPressed ? 0.96 : 1)
             .animation(.easeInOut(duration: 0.16), value: configuration.isPressed)

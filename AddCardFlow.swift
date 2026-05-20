@@ -220,8 +220,8 @@ struct SearchAddForm: View {
         form.isGraded ? "\(form.gradingCompany) \(form.gradeValue)" : "Raw"
     }
 
-    private var canSearch: Bool {
-        !normalizedPlayerName.isEmpty && !normalizedProduct.isEmpty
+    private var queryReady: Bool {
+        form.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).count > 2
     }
 
     private var canAdd: Bool {
@@ -251,7 +251,7 @@ struct SearchAddForm: View {
                         TextField("e.g. 2024 Bowman Chrome Dylan Crews Auto", text: $form.searchQuery)
                             .autocorrectionDisabled()
                             .submitLabel(.search)
-                            .onSubmit { parseAndResolve() }
+                            .onSubmit { searchAndVerify() }
                         if !form.searchQuery.isEmpty {
                             Button {
                                 form.searchQuery = ""
@@ -293,11 +293,23 @@ struct SearchAddForm: View {
                                 }
                             }
                             Spacer()
-                            Button(showCardDetails ? "Done" : "Edit") {
-                                showCardDetails.toggle()
+                            HStack(spacing: 10) {
+                                Button(showCardDetails ? "Done" : "Edit") {
+                                    showCardDetails.toggle()
+                                }
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.accentColor)
+
+                                Button {
+                                    searchAndVerify()
+                                } label: {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.accentColor)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Refresh pricing")
                             }
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.accentColor)
                         }
                         .padding(10)
                         .background(Color(.secondarySystemGroupedBackground))
@@ -338,19 +350,26 @@ struct SearchAddForm: View {
                         }
                     }
 
-                    // Parse button — only before resolved
-                    if !form.isResolved {
-                        let queryReady = form.searchQuery.trimmingCharacters(in: .whitespaces).count > 2
-                        Button(action: parseAndResolve) {
-                            Text("Fill Card Details")
-                                .font(.subheadline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(queryReady ? Color.accentColor.opacity(0.12) : Color(.systemGray5))
-                                .foregroundColor(queryReady ? Color.accentColor : .secondary)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                    // Search & verify button — only before the first verified result
+                    if form.searchResult == nil {
+                        Button(action: searchAndVerify) {
+                            HStack(spacing: 6) {
+                                if form.isSearching {
+                                    ProgressView().tint(.white)
+                                    Text("Searching eBay sales…")
+                                } else {
+                                    Image(systemName: "magnifyingglass")
+                                    Text("Search & Verify Card")
+                                }
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(queryReady ? Color.accentColor : Color(.systemGray5))
+                            .foregroundColor(queryReady ? .white : .secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
-                        .disabled(!queryReady)
+                        .disabled(!queryReady || form.isSearching)
                     }
                 }
                 .padding(.horizontal)
@@ -420,35 +439,15 @@ struct SearchAddForm: View {
 
                 // ── Get Market Price ───────────────────────────────────────
                 VStack(spacing: 10) {
-                    Button(action: runSearch) {
-                        HStack(spacing: 6) {
-                            if form.isSearching {
-                                ProgressView().tint(.white)
-                                Text("Fetching Price…")
-                            } else {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                Text(form.searchResult == nil ? "Get Market Price" : "Refresh Price")
-                            }
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(canSearch ? Color.accentColor : Color(.systemGray4))
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    if form.searchResult != nil {
+                        verifiedBanner
+                            .padding(.horizontal)
                     }
-                    .disabled(!canSearch || form.isSearching)
-                    .padding(.horizontal)
 
                     if let err = form.searchError {
                         Text(err)
                             .font(.caption)
                             .foregroundColor(.red)
-                            .padding(.horizontal)
-                    } else if !canSearch {
-                        Text("Enter player name and set to price the card.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                             .padding(.horizontal)
                     }
 
@@ -600,15 +599,28 @@ struct SearchAddForm: View {
         form.parallel = ""
         form.isAuto = false
         form.searchResult = nil
+        form.searchError = nil
         showCardDetails = false
     }
 
-    private func runSearch() {
-        guard canSearch else { return }
+    private func searchAndVerify() {
+        guard form.isSearching == false else { return }
 
-        form.isSearching = true
-        form.searchError = nil
-        form.searchResult = nil
+        if form.searchResult == nil {
+            let q = form.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard q.count > 2 else {
+                form.searchError = "Could not verify card — check your description and try again."
+                return
+            }
+            let parsed = parseCardQuery(q)
+            form.playerName = parsed.playerName
+            form.cardYear = parsed.cardYear.map(String.init) ?? form.cardYear
+            form.product = parsed.product ?? form.product
+            form.parallel = parsed.parallel ?? form.parallel
+            form.isAuto = parsed.isAuto
+            form.isResolved = true
+            showCardDetails = false
+        }
 
         let gradeIntVal: Int? = form.isGraded ? Int(form.gradeValue) : nil
         let request = CardEstimateRequest(
@@ -621,16 +633,22 @@ struct SearchAddForm: View {
             gradeValue: gradeIntVal
         )
 
+        form.isSearching = true
+        form.searchError = nil
+        form.searchResult = nil
+
         Task { @MainActor in
             defer { form.isSearching = false }
             do {
                 let result = try await APIService.shared.estimateCardDirect(request: request)
                 form.searchResult = result
+                form.isResolved = true
+                showCardDetails = false
                 if form.purchasePrice.isEmpty, let qsv = result.quickSaleValue {
                     form.purchasePrice = String(format: "%.2f", qsv)
                 }
             } catch {
-                form.searchError = "Pricing unavailable: \(error.localizedDescription)"
+                form.searchError = "Could not verify card — check your description and try again."
             }
         }
     }
@@ -726,6 +744,57 @@ struct SearchAddForm: View {
         if s.contains("sell") { return .red }
         if s.contains("buy") || s.contains("hold") { return .green }
         return .orange
+    }
+
+    private var verifiedBanner: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.green)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Verified")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.green)
+
+                Text(verifiedBannerDetail)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                searchAndVerify()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.accentColor)
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Refresh pricing")
+        }
+        .padding(12)
+        .background(Color.green.opacity(0.10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.green.opacity(0.30), lineWidth: 1.4)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var verifiedBannerDetail: String {
+        if let parallel = form.searchResult?.pricingAnalytics?.parallelDetected?.trimmingCharacters(in: .whitespacesAndNewlines),
+           parallel.isEmpty == false {
+            return parallel
+        }
+
+        if let comps = form.searchResult?.pricingAnalytics?.compsUsed {
+            return "\(comps) comps used"
+        }
+
+        return "Live pricing complete"
     }
 }
 

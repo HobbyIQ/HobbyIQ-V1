@@ -7,15 +7,15 @@ import SwiftUI
 
 enum Theme {
     enum Colors {
-        static let background = Color(red: 0.043, green: 0.059, blue: 0.078)
-        static let cardBackground = Color(red: 0.071, green: 0.094, blue: 0.129)
-        static let cardBackgroundElevated = Color(red: 0.085, green: 0.110, blue: 0.149)
-        static let accent = Color(red: 0.000, green: 0.784, blue: 0.325)
-        static let accentMuted = Color(red: 0.000, green: 0.784, blue: 0.325).opacity(0.16)
-        static let textPrimary = Color.white
-        static let textSecondary = Color.white.opacity(0.68)
-        static let border = Color.white.opacity(0.08)
-        static let shadow = Color.black.opacity(0.28)
+        static let background = HobbyIQTheme.Colors.appBackground
+        static let cardBackground = HobbyIQTheme.Colors.cardNavy
+        static let cardBackgroundElevated = HobbyIQTheme.Colors.steelGray
+        static let accent = HobbyIQTheme.Colors.electricBlue
+        static let accentMuted = HobbyIQTheme.Colors.electricBlue.opacity(0.16)
+        static let textPrimary = HobbyIQTheme.Colors.pureWhite
+        static let textSecondary = HobbyIQTheme.Colors.mutedText
+        static let border = HobbyIQTheme.Colors.steelGray.opacity(0.5)
+        static let shadow = Color.black.opacity(0.25)
     }
 
     enum Spacing {
@@ -36,14 +36,14 @@ enum Theme {
 struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(Theme.Spacing.large)
-            .background(Theme.Colors.cardBackground)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
             .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous)
-                    .stroke(Theme.Colors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1.2)
             }
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.large, style: .continuous))
-            .shadow(color: Theme.Colors.shadow, radius: 14, x: 0, y: 8)
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -56,15 +56,15 @@ struct SecondaryTextStyle: ViewModifier {
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
-            .foregroundStyle(Theme.Colors.textPrimary)
+            .font(HobbyIQTheme.Typography.bodyEmphasis)
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Spacing.medium)
-            .padding(.horizontal, Theme.Spacing.large)
-            .background(Theme.Colors.accent.opacity(configuration.isPressed ? 0.78 : 1.0))
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
+            .padding(.vertical, 14)
+            .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(configuration.isPressed ? 0.78 : 1.0))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .shadow(color: Theme.Colors.accent.opacity(0.22), radius: 10, x: 0, y: 6)
+            .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.3), radius: 12, x: 0, y: 6)
     }
 }
 
@@ -79,8 +79,8 @@ extension View {
 
     func themedScreen() -> some View {
         self
-            .background(Theme.Colors.background)
-            .toolbarBackground(Theme.Colors.background, for: .navigationBar)
+            .background(HobbyIQBackground())
+            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
     }

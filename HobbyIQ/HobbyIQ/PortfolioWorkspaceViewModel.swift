@@ -16,6 +16,8 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
     @Published private(set) var totalProfitLoss: Double = 0
     @Published private(set) var importedCards: [InventoryCard] = []
     @Published private(set) var estimates: [CardEstimate] = []
+    @Published private(set) var sellIQPortfolioCards: [SellIQPortfolioCard] = []
+    @Published private(set) var sellIQPortfolioErrorMessage: String?
     @Published private(set) var isLoading = false
     @Published private(set) var isRefreshingValues = false
     @Published private(set) var selectedFileName = "No file selected"
@@ -90,6 +92,7 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
         uploadSuccessMessage = nil
         refreshValuesErrorMessage = nil
         importErrorMessage = nil
+        sellIQPortfolioErrorMessage = nil
         errorMessage = nil
     }
 
@@ -112,7 +115,15 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
 
         let request = BulkEstimateRequest(
             cards: inventory.map {
-                BulkEstimateCard(playerName: $0.playerName, cardName: $0.cardName, cost: $0.cost)
+                BulkEstimateCard(
+                    playerName: $0.playerName,
+                    cardName: $0.cardName,
+                    cost: $0.cost,
+                    year: $0.year.isEmpty ? nil : $0.year,
+                    parallel: $0.parallel.isEmpty ? nil : $0.parallel,
+                    grade: $0.grade.isEmpty ? nil : $0.grade,
+                    isAuto: $0.isAuto ? true : nil
+                )
             }
         )
 
@@ -122,6 +133,8 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
             let updatedInventory = inventory.enumerated().map { index, card in
                 guard index < response.results.count else { return card }
                 let result = response.results[index]
+                // Skip overwriting card value when the estimate returned no price
+                guard result.fairValue > 0 else { return card }
                 return card.updatingCompEstimate(
                     currentValue: result.fairValue,
                     lowValue: result.lowValue,
@@ -144,6 +157,55 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
         } catch {
             refreshValuesErrorMessage = friendlyRefreshErrorMessage(for: error)
         }
+    }
+
+    func refreshSellIQPortfolio() async {
+        let cards = await LocalPortfolioProvider.shared.getInventory()
+        sellIQPortfolioCards = cards.map { card in
+            SellIQPortfolioCard(
+                cardId: card.id.uuidString,
+                userId: AuthService.shared.userId ?? "",
+                playerName: card.playerName,
+                cardName: card.cardName,
+                cost: card.cost,
+                currentValue: card.currentValue,
+                profitLoss: card.profitLoss,
+                roi: card.cost > 0 ? (card.profitLoss / card.cost) * 100 : 0,
+                signal: card.profitLoss >= 0 ? "hold" : "sell",
+                confidence: card.confidence ?? 0.75,
+                listPrice: card.currentValue,
+                minAcceptableOffer: card.currentValue * 0.92,
+                quickSalePrice: card.currentValue * 0.88,
+                format: card.grade.isEmpty ? "Raw" : card.grade,
+                reasoning: [
+                    card.method ?? "Local estimate",
+                    card.summary ?? "SellIQ suggestion generated from portfolio data."
+                ],
+                lastSellIQAt: card.purchaseDate ?? ISO8601DateFormatter().string(from: .now)
+            )
+        }
+        sellIQPortfolioErrorMessage = nil
+    }
+
+    func markSellIQCardSold(
+        card: SellIQPortfolioCard,
+        salePrice: Double,
+        fees: Double,
+        date: Date
+    ) async -> Bool {
+        guard let inventoryCard = await LocalPortfolioProvider.shared.getInventory().first(where: { $0.id.uuidString == card.cardId }) else {
+            sellIQPortfolioErrorMessage = "Could not find that card."
+            return false
+        }
+
+        await PortfolioService(provider: LocalPortfolioProvider.shared).markCardAsSold(
+            card: inventoryCard,
+            salePrice: salePrice,
+            fees: fees,
+            date: date
+        )
+        await refreshSellIQPortfolio()
+        return true
     }
 
     func importInventoryFile(data: Data, fileName: String) async {
@@ -189,10 +251,18 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let cards = importedCards.map {
-                CardInput(playerName: $0.playerName, cardName: $0.cardName, cost: $0.cost)
+            let compCards = importedCards.map {
+                CompIQCardInput(playerName: $0.playerName, cardName: $0.cardName, cost: $0.cost, parallel: nil, grade: nil, serialNumber: nil)
             }
-            estimates = try await apiService.bulkEstimate(cards: cards)
+            let results = try await apiService.bulkEstimate(cards: compCards)
+            estimates = zip(importedCards, results).map { card, result in
+                CardEstimate(
+                    playerName: card.playerName,
+                    cardName: card.cardName,
+                    estimatedValue: result.fairValue,
+                    confidence: String(format: "%.0f%%", result.confidence)
+                )
+            }
             errorMessage = nil
             uploadSuccessMessage = "Pricing finished."
         } catch {
@@ -286,7 +356,7 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
     private func friendlyRefreshErrorMessage(for error: Error) -> String {
         if let apiError = error as? APIError {
             switch apiError {
-            case .httpError, .decodingError, .networkError, .invalidResponse, .invalidURL, .encodingError, .insecureBaseURL:
+            case .httpError, .decodingError, .networkError, .invalidResponse, .invalidURL, .encodingError:
                 return "Could not refresh values. Try again."
             }
         }

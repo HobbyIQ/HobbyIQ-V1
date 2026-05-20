@@ -1,0 +1,44 @@
+{
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/ProfitIQViewModel.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQViewModel.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQViewModel.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQViewModel.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQViewModel.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQViewModel.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/ProfitListView.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitListView.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitListView.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitListView.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitListView.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitListView.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/PushNotificationManager.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PushNotificationManager.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PushNotificationManager.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PushNotificationManager.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PushNotificationManager.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PushNotificationManager.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/QuickAddCardView.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/QuickAddCardView.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/QuickAddCardView.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/QuickAddCardView.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/QuickAddCardView.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/QuickAddCardView.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/SharedComponents.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SharedComponents.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SharedComponents.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SharedComponents.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SharedComponents.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SharedComponents.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/SubscriptionManager.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SubscriptionManager.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SubscriptionManager.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SubscriptionManager.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SubscriptionManager.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/SubscriptionManager.swiftdeps"
+  }
+}

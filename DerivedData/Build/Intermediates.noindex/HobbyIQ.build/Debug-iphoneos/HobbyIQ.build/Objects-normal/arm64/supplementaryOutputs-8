@@ -1,0 +1,44 @@
+{
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/PortfolioAddFlowView.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioAddFlowView.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioAddFlowView.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioAddFlowView.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioAddFlowView.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioAddFlowView.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/PortfolioIQModels.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQModels.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQModels.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQModels.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQModels.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQModels.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/PortfolioIQView.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQView.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQView.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQView.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQView.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQView.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/PortfolioIQViewModel.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQViewModel.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQViewModel.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQViewModel.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQViewModel.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/PortfolioIQViewModel.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/ProfitIQCardDetailView.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQCardDetailView.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQCardDetailView.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQCardDetailView.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQCardDetailView.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQCardDetailView.swiftdeps"
+  },
+  "/Users/drew/Desktop/HobbyIQ/HobbyIQ/HobbyIQ/ProfitIQModels.swift" : {
+    "const-values" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQModels.swiftconstvalues",
+    "dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQModels.d",
+    "diagnostics" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQModels.dia",
+    "object" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQModels.o",
+    "swift-dependencies" : "/Users/drew/Desktop/HobbyIQ/HobbyIQ/DerivedData/Build/Intermediates.noindex/HobbyIQ.build/Debug-iphoneos/HobbyIQ.build/Objects-normal/arm64/ProfitIQModels.swiftdeps"
+  }
+}

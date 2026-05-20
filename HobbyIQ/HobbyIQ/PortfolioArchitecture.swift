@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import Foundation
 
 struct CardInput: Identifiable, Hashable {
@@ -41,7 +42,7 @@ struct CardEstimate: Identifiable, Hashable {
     }
 }
 
-struct InventoryCard: Identifiable, Hashable {
+struct InventoryCard: Identifiable, Hashable, Codable {
     let id: UUID
     let playerName: String
     let cardName: String
@@ -52,6 +53,18 @@ struct InventoryCard: Identifiable, Hashable {
     let setName: String
     let parallel: String
     let grade: String
+    let purchaseDate: String?
+    let purchasePlatform: String?
+    let quantity: Double?
+    let notes: String?
+    let imageFrontUrl: String?
+    let imageBackUrl: String?
+    let lowValue: Double?
+    let highValue: Double?
+    let confidence: Double?
+    let method: String?
+    let summary: String?
+    var isAuto: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -63,7 +76,19 @@ struct InventoryCard: Identifiable, Hashable {
         year: String = "",
         setName: String = "",
         parallel: String = "",
-        grade: String = ""
+        grade: String = "",
+        purchaseDate: String? = nil,
+        purchasePlatform: String? = nil,
+        quantity: Double? = nil,
+        notes: String? = nil,
+        imageFrontUrl: String? = nil,
+        imageBackUrl: String? = nil,
+        lowValue: Double? = nil,
+        highValue: Double? = nil,
+        confidence: Double? = nil,
+        method: String? = nil,
+        summary: String? = nil,
+        isAuto: Bool = false
     ) {
         self.id = id
         self.playerName = playerName
@@ -75,6 +100,18 @@ struct InventoryCard: Identifiable, Hashable {
         self.setName = setName
         self.parallel = parallel
         self.grade = grade
+        self.purchaseDate = purchaseDate
+        self.purchasePlatform = purchasePlatform
+        self.quantity = quantity
+        self.notes = notes
+        self.imageFrontUrl = imageFrontUrl
+        self.imageBackUrl = imageBackUrl
+        self.lowValue = lowValue
+        self.highValue = highValue
+        self.confidence = confidence
+        self.method = method
+        self.summary = summary
+        self.isAuto = isAuto
     }
 
     var profitLoss: Double {
@@ -82,7 +119,7 @@ struct InventoryCard: Identifiable, Hashable {
     }
 }
 
-struct Sale: Identifiable, Hashable {
+struct Sale: Identifiable, Hashable, Codable {
     let id: UUID
     let cardId: UUID
     let playerName: String
@@ -166,15 +203,26 @@ final class LocalCompIQProvider: CompIQProvider {
 final class LocalPortfolioProvider: ObservableObject, PortfolioProvider {
     static let shared = LocalPortfolioProvider()
 
+    private static let inventoryKey = "hiq.local.inventory"
+    private static let salesKey = "hiq.local.sales"
+
     @Published private var inventory: [InventoryCard]
     @Published private var sales: [Sale]
 
     init(
-        inventory: [InventoryCard] = PortfolioSeedData.inventory,
-        sales: [Sale] = PortfolioSeedData.sales
+        inventory: [InventoryCard]? = nil,
+        sales: [Sale]? = nil
     ) {
-        self.inventory = inventory
-        self.sales = sales
+        if let inventory {
+            self.inventory = inventory
+        } else {
+            self.inventory = Self.loadFromDisk(key: Self.inventoryKey) ?? []
+        }
+        if let sales {
+            self.sales = sales
+        } else {
+            self.sales = Self.loadFromDisk(key: Self.salesKey) ?? []
+        }
     }
 
     func getInventory() async -> [InventoryCard] {
@@ -183,6 +231,7 @@ final class LocalPortfolioProvider: ObservableObject, PortfolioProvider {
 
     func saveInventory(_ cards: [InventoryCard]) async {
         inventory = cards
+        Self.saveToDisk(cards, key: Self.inventoryKey)
     }
 
     func getSales() async -> [Sale] {
@@ -191,6 +240,19 @@ final class LocalPortfolioProvider: ObservableObject, PortfolioProvider {
 
     func saveSale(_ sale: Sale) async {
         sales.append(sale)
+        Self.saveToDisk(sales, key: Self.salesKey)
+    }
+
+    // MARK: - Disk Persistence
+
+    private static func saveToDisk<T: Encodable>(_ value: T, key: String) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    private static func loadFromDisk<T: Decodable>(key: String) -> T? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(T.self, from: data)
     }
 }
 
@@ -315,7 +377,7 @@ final class PortfolioService {
 
         let totalSold = filteredSales.reduce(0) { $0 + $1.salePrice }
         let totalProfit = filteredSales.reduce(0) { $0 + $1.profit }
-        let margin = totalSold > 0 ? totalProfit / totalSold : 0
+        let margin = totalSold > 0 ? (totalProfit / totalSold) * 100 : 0
 
         return PortfolioPerformanceSnapshot(
             totalSold: totalSold,
@@ -355,77 +417,6 @@ final class PortfolioService {
 enum PortfolioPeriod {
     case month
     case year
-}
-
-enum PortfolioSeedData {
-    static let inventory: [InventoryCard] = [
-        InventoryCard(
-            playerName: "Roman Anthony",
-            cardName: "Chrome Auto",
-            cost: 225,
-            currentValue: 468,
-            status: "active",
-            year: "2024",
-            setName: "Bowman Chrome",
-            parallel: "Base Auto",
-            grade: "Raw"
-        ),
-        InventoryCard(
-            playerName: "Leo De Vries",
-            cardName: "Blue Refractor",
-            cost: 140,
-            currentValue: 118,
-            status: "active",
-            year: "2024",
-            setName: "Bowman Sapphire",
-            parallel: "Blue Refractor",
-            grade: "PSA 10"
-        ),
-        InventoryCard(
-            playerName: "Paul Skenes",
-            cardName: "Draft Refractor",
-            cost: 310,
-            currentValue: 515,
-            status: "active",
-            year: "2023",
-            setName: "Bowman Draft Chrome",
-            parallel: "Refractor",
-            grade: "PSA 9"
-        )
-    ]
-
-    static let sales: [Sale] = [
-        Sale(
-            cardId: UUID(),
-            playerName: "Junior Caminero",
-            cardName: "Gold Chrome",
-            cost: 180,
-            salePrice: 325,
-            fees: 22,
-            profit: 123,
-            date: Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now
-        ),
-        Sale(
-            cardId: UUID(),
-            playerName: "Walker Jenkins",
-            cardName: "Chrome Auto",
-            cost: 145,
-            salePrice: 240,
-            fees: 16,
-            profit: 79,
-            date: Calendar.current.date(byAdding: .day, value: -20, to: .now) ?? .now
-        ),
-        Sale(
-            cardId: UUID(),
-            playerName: "Jackson Holliday",
-            cardName: "Draft Sapphire",
-            cost: 260,
-            salePrice: 235,
-            fees: 18,
-            profit: -43,
-            date: Calendar.current.date(byAdding: .month, value: -2, to: .now) ?? .now
-        )
-    ]
 }
 
 private extension String {

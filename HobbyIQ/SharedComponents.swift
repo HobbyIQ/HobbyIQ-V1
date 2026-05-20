@@ -46,19 +46,34 @@ struct SectionCardView<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
-            Text(title)
-                .sectionHeaderStyle()
+        VStack(spacing: Theme.Spacing.small) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+
+                Text(title.uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(1.2)
+                    .fixedSize()
+
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+            }
 
             if let subtitle, subtitle.isEmpty == false {
                 Text(subtitle)
                     .font(.subheadline)
                     .secondaryTextStyle()
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
 
             content
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .cardStyle()
     }
 }
@@ -314,9 +329,9 @@ struct PortfolioInsightCardView: View {
         .padding(14)
         .background(Theme.Colors.surface)
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Theme.Colors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }

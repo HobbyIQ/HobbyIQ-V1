@@ -5,536 +5,774 @@
 
 import SwiftUI
 
+@MainActor
 struct DailyIQView: View {
-    private let milbHitters = DailyIQMockPlayer.milbHitters
-    private let milbPitchers = DailyIQMockPlayer.milbPitchers
-    private let mlbHitters = DailyIQMockPlayer.mlbHitters
-    private let mlbPitchers = DailyIQMockPlayer.mlbPitchers
-    private let milbWatch = DailyIQMockNote.milbWatch
-    private let mlbWatch = DailyIQMockNote.mlbWatch
-    private let milbMovers = DailyIQMockNote.milbMovers
-    private let mlbMovers = DailyIQMockNote.mlbMovers
-    private let milbTracker = DailyIQAppearance.milb
-    private let mlbTracker = DailyIQAppearance.mlb
+    private let userId: String
+    @ObservedObject private var service: DailyIQService
+    @State private var selectedSegment: DailySegment = .watchlist
+    @State private var selectedDate: Date
+    @State private var watchlistQuery = ""
+    @State private var trackedWatchlist: [DailyWatchlistEntry] = []
+    @State private var watchedPlayerNames: Set<String> = []
+    @State private var isSyncingWatchlist = false
+    @State private var playerIQName: String?
+
+    @MainActor
+    init(userId: String = "", service: DailyIQService? = nil) {
+        self.userId = userId
+        self._service = ObservedObject(wrappedValue: service ?? .shared)
+        self._selectedDate = State(initialValue: Date())
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: AppSpacing.large) {
-                header
-                buySignalsSection
-                milbSection
-                mlbSection
+            VStack(spacing: 16) {
+                heroCard
+
+                if isSyncingWatchlist {
+                    backendStatusBanner(
+                        title: "Updating watchlist…",
+                        message: "Pushing the change to the backend and refreshing DailyIQ."
+                    )
+                }
+                if let message = service.errorMessage {
+                    backendStatusBanner(
+                        title: "DailyIQ sync issue",
+                        message: message,
+                        systemImage: "wifi.exclamationmark"
+                    )
+                }
+
+                segmentControl
+
+                switch selectedSegment {
+                case .milb:
+                    backendPlayersCard(
+                        title: "MiLB Daily Prospect Brief",
+                        subtitle: "Top MiLB performers for the day",
+                        players: milbPlayers
+                    )
+                case .mlb:
+                    backendPlayersCard(
+                        title: "MLB Daily Brief",
+                        subtitle: "Top MLB performers for the day",
+                        players: mlbPlayers
+                    )
+                case .watchlist:
+                    watchlistCard
+                }
             }
-            .padding(AppSpacing.screenPadding)
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.top, 8)
             .padding(.bottom, 32)
         }
-        .background(AppColors.background.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-        .accountToolbar()
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
-            Text("DailyIQ")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(AppColors.textPrimary)
-
-            Text("Top MLB and MiLB performers from yesterday")
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
-
-            Text(Date.now.formatted(date: .abbreviated, time: .omitted))
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(AppColors.accent)
+        .background(HobbyIQBackground())
+        .toolbar(.hidden, for: .navigationBar)
+        .task {
+            await refreshDailyIQ(for: nil)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var buySignalsSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Text("Top Buy Signals")
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
-
-            VStack(spacing: AppSpacing.medium) {
-                BuySignalCard(signal: .milb)
-                BuySignalCard(signal: .mlb)
+        .onChange(of: selectedDate) { _, newValue in
+            Task { await refreshDailyIQ(for: newValue) }
+        }
+        .refreshable {
+            await refreshDailyIQ(for: selectedDate)
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { playerIQName != nil },
+            set: { if !$0 { playerIQName = nil } }
+        )) {
+            if let name = playerIQName {
+                PlayerIQView(initialQuery: name)
+                    .preferredColorScheme(.dark)
             }
         }
     }
 
-    private var milbSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.large) {
-            SectionTitleCard(
-                title: "MiLB Daily Prospect Brief",
-                subtitle: "Top minor league performances from yesterday"
-            )
-
-            DailyPlayerSection(title: "Verified Top Prospect Performances", subtitle: "Hitters", players: milbHitters)
-            DailyPlayerSection(title: "", subtitle: "Pitchers", players: milbPitchers)
-            DailyNoteSection(title: "Prospect Watch", notes: milbWatch)
-            DailyNoteSection(title: "PerformanceIQ - Hobby Movers", notes: milbMovers)
-            AppearanceTrackerSection(title: "MiLB Multi-Appearance Tracker", appearances: milbTracker)
-        }
-    }
-
-    private var mlbSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.large) {
-            SectionTitleCard(
-                title: "MLB Daily Brief",
-                subtitle: "Top MLB performances from yesterday"
-            )
-
-            DailyPlayerSection(title: "Verified Top MLB Performances", subtitle: "Hitters", players: mlbHitters)
-            DailyPlayerSection(title: "", subtitle: "Pitchers", players: mlbPitchers)
-            DailyNoteSection(title: "MLB Watch", notes: mlbWatch)
-            DailyNoteSection(title: "PerformanceIQ - MLB Hobby Movers", notes: mlbMovers)
-            AppearanceTrackerSection(title: "MLB Multi-Appearance Tracker", appearances: mlbTracker)
-        }
-    }
-}
-
-private struct BuySignalCard: View {
-    enum SignalType {
-        case milb
-        case mlb
-
-        var title: String {
-            switch self {
-            case .milb: return "Top MiLB Buy Signal"
-            case .mlb: return "Top MLB Buy Signal"
-            }
-        }
-
-        var playerName: String {
-            switch self {
-            case .milb: return "Leo De Vries"
-            case .mlb: return "Gunnar Henderson"
-            }
-        }
-
-        var team: String {
-            switch self {
-            case .milb: return "San Diego • A+"
-            case .mlb: return "Baltimore • MLB"
-            }
-        }
-
-        var appearances: String {
-            switch self {
-            case .milb: return "4 appearances in the past 2 weeks"
-            case .mlb: return "3 appearances in the past 2 weeks"
-            }
-        }
-
-        var label: String {
-            switch self {
-            case .milb: return "Top Buy Watch"
-            case .mlb: return "Watch"
-            }
-        }
-
-        var reason: String {
-            switch self {
-            case .milb: return "Momentum is building after multiple strong showings."
-            case .mlb: return "Cards may get more attention if the power stays hot."
-            }
-        }
-
-        var takeaway: String {
-            switch self {
-            case .milb: return "Still risky - watch pricing."
-            case .mlb: return "Short-term buzz looks real, but do not chase too high."
-            }
-        }
-    }
-
-    let signal: SignalType
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Text(signal.title)
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
-
+    private var heroCard: some View {
+        VStack(spacing: 14) {
+            // Title row with date picker
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
-                    Text(signal.playerName)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(AppColors.textPrimary)
-                    Text(signal.team)
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DailyIQ")
+                        .font(HobbyIQTheme.Typography.title)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                    Text("Daily player performance & hobby \(Labels.signals)")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
 
-                Spacer(minLength: 12)
+                Spacer()
 
-                Text(signal.label)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(AppColors.background)
+                DatePicker("", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .tint(HobbyIQTheme.Colors.electricBlue)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppColors.accent)
-                    .clipShape(Capsule())
+                    .padding(.vertical, 8)
+                    .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4)
+                    )
+                    .clipShape(Capsule(style: .continuous))
             }
 
-            Text(signal.appearances)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColors.accent)
+            // Date display
+            HStack(spacing: 12) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
 
-            Text(signal.reason)
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
+                Text(service.brief?.date ?? selectedDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-            Text(signal.takeaway)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+
+                // Stats summary
+                HStack(spacing: 16) {
+                    VStack(spacing: 2) {
+                        Text("\(milbPlayers.count)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        Text("MiLB")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+
+                    VStack(spacing: 2) {
+                        Text("\(mlbPlayers.count)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        Text("MLB")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+
+                    VStack(spacing: 2) {
+                        Text("\(trackedWatchlist.count)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                        Text("Watch")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color.white.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         }
-        .appGlassCardStyle(radius: AppCardRadius.large)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .padding(.vertical, 4)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
+    }
+
+    private var segmentControl: some View {
+        HStack(spacing: 6) {
+            ForEach(DailySegment.allCases) { segment in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedSegment = segment
+                    }
+                } label: {
+                    Text(segment.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(selectedSegment == segment ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background {
+                            if selectedSegment == segment {
+                                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.pill, style: .continuous)
+                                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.2))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(Capsule(style: .continuous))
+    }
+
+    private var watchlistCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            dailySectionHeader("WATCHLIST")
+
+            // Search + Add bar
+            HStack(spacing: 10) {
+                HobbyIQSearchField(text: $watchlistQuery, placeholder: "Search player and add to watchlist...")
+                    .onSubmit {
+                        Task { await addWatchlistEntry(from: watchlistQuery) }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                Button {
+                    Task { await addWatchlistEntry(from: watchlistQuery) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Add")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(HobbyIQTheme.Colors.electricBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(12)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+
+            // Watchlist entries
+            if trackedWatchlist.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "eye")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("Add players to track their daily and season lines here.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(trackedWatchlist) { entry in
+                        Button {
+                            playerIQName = entry.playerName
+                        } label: {
+                            DailyWatchlistRow(entry: entry) { Task { await removeWatchlistEntry(entry) } }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func dailySectionHeader(_ title: String) -> some View {
+        HStack(spacing: 10) {
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                .frame(height: 1)
+
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(1.2)
+                .fixedSize()
+
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                .frame(height: 1)
+        }
+    }
+
+    private func backendPlayersCard(
+        title: String,
+        subtitle: String,
+        players: [DailyPlayerStat]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            dailySectionHeader(title.uppercased())
+
+            if service.isLoading && players.isEmpty {
+                VStack(spacing: 10) {
+                    ProgressView()
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Loading…")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else if players.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "person.3")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("No data available yet.")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                LazyVStack(spacing: 10) {
+                    ForEach(players.prefix(50)) { stat in
+                        Button {
+                            playerIQName = stat.playerName
+                        } label: {
+                            DailyPlayerStatRow(
+                                stat: stat,
+                                isTracked: watchedPlayerNames.contains(stat.playerName),
+                                onToggleWatch: { _ = Task { await toggleWatch(for: stat) } }
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var milbPlayers: [DailyPlayerStat] {
+        Array(service.brief?.topMiLB.prefix(50) ?? [])
+    }
+
+    private var mlbPlayers: [DailyPlayerStat] {
+        Array(service.brief?.topMLB.prefix(50) ?? [])
+    }
+
+    private var currentPlayers: [DailyPlayerStat] {
+        milbPlayers + mlbPlayers
+    }
+
+    private func backendStatusBanner(title: String, message: String, systemImage: String = "arrow.triangle.2.circlepath") -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.warning)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.warning.opacity(0.3), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+    }
+
+    private func addWatchlistEntry(from stat: DailyPlayerStat) async {
+        isSyncingWatchlist = true
+        defer { isSyncingWatchlist = false }
+
+        guard let backendWatchlist = await service.addWatchlistEntry(
+            userId: userId,
+            playerId: stat.playerId,
+            playerName: stat.playerName,
+            team: stat.team,
+            level: stat.level,
+            position: stat.position,
+            referenceDate: selectedDate
+        ) else {
+            return
+        }
+
+        syncWatchlistState(from: backendWatchlist)
+        watchlistQuery = ""
+        await refreshDailyIQ(for: selectedDate)
+    }
+
+    private func addWatchlistEntry(from rawValue: String) async {
+        let query = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.isEmpty == false else { return }
+
+        let resolvedStat = currentPlayers.first(where: {
+            $0.playerName.caseInsensitiveCompare(query) == .orderedSame ||
+            $0.playerName.localizedCaseInsensitiveContains(query) ||
+            query.localizedCaseInsensitiveContains($0.playerName)
+        })
+
+        if let resolvedStat {
+            await addWatchlistEntry(from: resolvedStat)
+            return
+        }
+
+        // Fallback for manual search — use playerName as playerId
+        isSyncingWatchlist = true
+        defer { isSyncingWatchlist = false }
+
+        guard let backendWatchlist = await service.addWatchlistEntry(
+            userId: userId,
+            playerId: query,
+            playerName: query,
+            referenceDate: selectedDate
+        ) else {
+            return
+        }
+
+        syncWatchlistState(from: backendWatchlist)
+        watchlistQuery = ""
+        await refreshDailyIQ(for: selectedDate)
+    }
+
+    private func removeWatchlistEntry(_ entry: DailyWatchlistEntry) async {
+        isSyncingWatchlist = true
+        defer { isSyncingWatchlist = false }
+
+        let metadata = watchlistMutationMetadata(for: entry)
+        guard let backendWatchlist = await service.removeWatchlistEntry(
+            userId: userId,
+            playerId: entry.playerId,
+            playerName: entry.playerName,
+            team: metadata.team,
+            level: metadata.level,
+            position: metadata.position,
+            referenceDate: selectedDate
+        ) else {
+            return
+        }
+
+        syncWatchlistState(from: backendWatchlist)
+        await refreshDailyIQ(for: selectedDate)
+    }
+
+    private func toggleWatch(for stat: DailyPlayerStat) async {
+        if watchedPlayerNames.contains(stat.playerName) {
+            let entry = trackedWatchlist.first { $0.playerName.caseInsensitiveCompare(stat.playerName) == .orderedSame }
+                ?? DailyWatchlistEntry(
+                    playerId: stat.playerId,
+                    playerName: stat.playerName,
+                    teamLeague: "\(stat.team) • \(stat.level)",
+                    dailyStats: stat.todayLine,
+                    seasonStats: stat.seasonLine,
+                    trend: stat.trendBadgeText
+                )
+            await removeWatchlistEntry(entry)
+        } else {
+            await addWatchlistEntry(from: stat)
+        }
+    }
+
+    private func syncWatchlistState(from backendWatchlist: [WatchPlayerResult]) {
+        let entries = backendWatchlist.map(DailyWatchlistEntry.init(result:))
+        trackedWatchlist = entries
+        watchedPlayerNames = Set(entries.map(\.playerName))
+    }
+
+    private func watchlistMutationMetadata(for entry: DailyWatchlistEntry) -> (team: String?, level: String?, position: String?) {
+        if let stat = currentPlayers.first(where: { $0.playerName.caseInsensitiveCompare(entry.playerName) == .orderedSame }) {
+            return (stat.team, stat.level, stat.position)
+        }
+
+        let team = entry.teamName.isEmpty ? nil : entry.teamName
+        let level = entry.level.isEmpty ? nil : entry.level
+        let position = entry.position.isEmpty ? nil : entry.position
+        if team != nil || level != nil || position != nil {
+            return (team, level, position)
+        }
+
+        let parts = entry.teamLeague.split(separator: "•").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let fallbackTeam = parts.first
+        let fallbackLevel = parts.count > 1 ? String(parts[1]) : nil
+        return (fallbackTeam, fallbackLevel, nil)
+    }
+
+    private func refreshDailyIQ(for date: Date?) async {
+        async let refreshTask: Void = service.refreshAll(userId: userId, referenceDate: date)
+        async let watchlistTask = service.refreshWatchlist(userId: userId, referenceDate: date)
+
+        _ = await refreshTask
+        if let backendWatchlist = await watchlistTask {
+            syncWatchlistState(from: backendWatchlist)
+        }
+
+        // Sync the date picker to match the date the backend actually returned
+        if let briefDate = service.brief?.date,
+           let parsed = DailyIQService.parseAPIDate(briefDate) {
+            if Calendar.current.isDate(parsed, inSameDayAs: selectedDate) == false {
+                selectedDate = parsed
+            }
+        }
     }
 }
 
-private struct SectionTitleCard: View {
+private struct DailyPlayerRoleSection: View {
     let title: String
-    let subtitle: String
+    let players: [DailyPlayerStat]
+    let isTracked: (DailyPlayerStat) -> Bool
+    let onToggleWatch: (DailyPlayerStat) -> Void
+    let onSelectPlayer: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
             Text(title)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppColors.textPrimary)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(1.2)
 
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
+            LazyVStack(spacing: HobbyIQTheme.Spacing.medium) {
+                ForEach(players.prefix(50)) { stat in
+                    Button {
+                        onSelectPlayer(stat.playerName)
+                    } label: {
+                        DailyPlayerStatRow(
+                            stat: stat,
+                            isTracked: isTracked(stat),
+                            onToggleWatch: { onToggleWatch(stat) }
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+private struct FlowChipsView<Item: Hashable>: View {
+    let title: String
+    let items: [Item]
+    let action: (Item) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(1.2)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(items, id: \.self) { item in
+                        Button {
+                            action(item)
+                        } label: {
+                            Text(String(describing: item))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.16))
+                                .overlay(
+                                    Capsule(style: .continuous)
+                                        .stroke(HobbyIQTheme.Colors.steelGray, lineWidth: 1.2)
+                                )
+                                .clipShape(Capsule(style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum DailySegment: String, CaseIterable, Identifiable {
+    case milb = "MiLB"
+    case mlb = "MLB"
+    case watchlist = "Watchlist"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+}
+
+private struct DailyPlayerStatRow: View {
+    let stat: DailyPlayerStat
+    let isTracked: Bool
+    let onToggleWatch: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Row 1: Full name + watch button
+            HStack(alignment: .center, spacing: 8) {
+                Text(stat.playerName)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                Spacer(minLength: 4)
+
+                Button(action: onToggleWatch) {
+                    Text(isTracked ? "Watchlist ✓" : "Watchlist +")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(isTracked ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.electricBlue)
+                }
+                .buttonStyle(.plain)
+                .disabled(isTracked)
+            }
+
+            // Row 2: Team details
+            Text(stat.identityLine)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            // Row 3: Daily stats + highlight badges
+            HStack(spacing: 6) {
+                Text(stat.headlineStatLine)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                ForEach(stat.highlightBadges, id: \.label) { badge in
+                    Text(badge.label)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(badge.color.foreground)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(badge.color.background)
+                        .clipShape(Capsule(style: .continuous))
+                }
+            }
+
+            // Row 4: Season stats
+            HStack(spacing: 0) {
+                if !stat.opponent.isEmpty {
+                    Text("vs \(stat.opponent)")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                    Text("  ·  ")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                }
+
+                Text(stat.seasonContextLine)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
+
 }
 
-private struct DailyPlayerSection: View {
-    let title: String
-    let subtitle: String
-    let players: [DailyIQMockPlayer]
+private struct DailyWatchlistRow: View {
+    let entry: DailyWatchlistEntry
+    let onRemove: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            if title.isEmpty == false {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textPrimary)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            // Row 1: Full name + remove button
+            HStack(alignment: .center, spacing: 8) {
+                Text(entry.playerName)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-            Text(subtitle)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColors.accent)
+                Spacer(minLength: 4)
 
-            ForEach(players) { player in
-                DailyPlayerCard(player: player)
-            }
-        }
-    }
-}
-
-private struct DailyPlayerCard: View {
-    let player: DailyIQMockPlayer
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
+                Button(action: onRemove) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .frame(width: 24, height: 24)
+                        .background(HobbyIQTheme.Colors.danger.opacity(0.25))
+                        .clipShape(Circle())
                 }
-            } label: {
-                VStack(alignment: .leading, spacing: AppSpacing.small) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(player.name)
-                                .font(.headline)
-                                .foregroundStyle(AppColors.textPrimary)
-                            Text(player.topLine)
-                                .font(.subheadline)
-                                .foregroundStyle(AppColors.textSecondary)
-                        }
+                .buttonStyle(.plain)
+            }
 
-                        Spacer()
+            // Row 2: Team details
+            Text(entry.teamLeague)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
-                        Text(isExpanded ? "See Less" : "See More")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(AppColors.accent)
-                    }
-
-                    Text(player.statLine)
+            // Row 3: Daily stats + flag chips
+            if !entry.headlineStatLine.isEmpty {
+                HStack(spacing: 6) {
+                    Text(entry.headlineStatLine)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                    Text(player.performanceNote)
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
-
-                    Text(player.hobbyTakeaway)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppColors.textPrimary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-
-            if isExpanded {
-                VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
-                    if let firstBowmanYear = player.firstBowmanYear {
-                        DailyDetailRow(title: "First Bowman", value: firstBowmanYear)
+                    ForEach(entry.flagChips, id: \.self) { chip in
+                        Text(chip)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
+                            .clipShape(Capsule(style: .continuous))
                     }
-
-                    if let rankingNote = player.rankingNote {
-                        DailyDetailRow(title: "Ranking note", value: rankingNote)
-                    }
-
-                    if let rookieNote = player.rookieNote {
-                        DailyDetailRow(title: "Key card note", value: rookieNote)
-                    }
-
-                    DailyDetailRow(title: "Why it matters", value: player.whyItMatters)
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+            } else if !entry.dailyStats.isEmpty {
+                Text(entry.dailyStats)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+
+            // Row 4: Season stats
+            HStack(spacing: 0) {
+                if !entry.opponent.isEmpty {
+                    Text("vs \(entry.opponent)")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                    Text("  ·  ")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                }
+
+                if !entry.seasonContextLine.isEmpty {
+                    Text(entry.seasonContextLine)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                } else {
+                    Text(entry.seasonStats)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+
+            // No-game message if the player didn't play
+            if !entry.played, let msg = entry.noGameMessage, !msg.isEmpty {
+                Text(msg)
+                    .font(.caption2.italic())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
             }
         }
-        .appGlassCardStyle(radius: AppCardRadius.large)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }
 
-private struct DailyDetailRow: View {
-    let title: String
-    let value: String
 
-    var body: some View {
-        HStack(alignment: .top, spacing: AppSpacing.small) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColors.textSecondary)
-            Spacer(minLength: 12)
-            Text(value)
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textPrimary)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-}
 
-private struct DailyNoteSection: View {
-    let title: String
-    let notes: [DailyIQMockNote]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
 
-            ForEach(notes) { note in
-                VStack(alignment: .leading, spacing: AppSpacing.small) {
-                    Text(note.title)
-                        .font(.headline)
-                        .foregroundStyle(AppColors.textPrimary)
 
-                    Text(note.note)
-                        .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
 
-                    Text(note.takeaway)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppColors.accent)
-                }
-                .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.large)
-            }
-        }
-    }
-}
 
-private struct AppearanceTrackerSection: View {
-    let title: String
-    let appearances: [DailyIQAppearance]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
 
-            ForEach(appearances) { appearance in
-                HStack {
-                    Text(appearance.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppColors.textPrimary)
-                    Spacer()
-                    Text("\(appearance.count)x")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(AppColors.accent)
-                }
-                .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.medium)
-            }
-        }
-    }
-}
 
-private struct DailyIQMockPlayer: Identifiable {
-    let id = UUID()
-    let name: String
-    let topLine: String
-    let statLine: String
-    let performanceNote: String
-    let hobbyTakeaway: String
-    let whyItMatters: String
-    let firstBowmanYear: String?
-    let rankingNote: String?
-    let rookieNote: String?
 
-    static let milbHitters: [DailyIQMockPlayer] = [
-        DailyIQMockPlayer(
-            name: "Leo De Vries",
-            topLine: "San Diego • A+ • SS",
-            statLine: "3-for-5, HR, 2 RBI, SB",
-            performanceNote: "Strong game with impact at the plate and on the bases.",
-            hobbyTakeaway: "Buy interest rising",
-            whyItMatters: "Multiple strong showings are building hobby momentum.",
-            firstBowmanYear: "2024",
-            rankingNote: "Top 20 overall prospect",
-            rookieNote: nil
-        ),
-        DailyIQMockPlayer(
-            name: "Walker Jenkins",
-            topLine: "Minnesota • A • OF",
-            statLine: "2-for-4, 2B, 3 RBI",
-            performanceNote: "Barreled the ball all night.",
-            hobbyTakeaway: "Strong game",
-            whyItMatters: "Another loud night keeps him on the watch list.",
-            firstBowmanYear: "2024",
-            rankingNote: "Top 10 system rank",
-            rookieNote: nil
-        )
-    ]
 
-    static let milbPitchers: [DailyIQMockPlayer] = [
-        DailyIQMockPlayer(
-            name: "Chase Burns",
-            topLine: "Cincinnati • AA • SP",
-            statLine: "5 IP, 9 K, 1 ER",
-            performanceNote: "Missed bats all outing.",
-            hobbyTakeaway: "Watch list",
-            whyItMatters: "Fast-rising stuff keeps his best cards in focus.",
-            firstBowmanYear: "2025",
-            rankingNote: "Fast-rising arm",
-            rookieNote: nil
-        )
-    ]
 
-    static let mlbHitters: [DailyIQMockPlayer] = [
-        DailyIQMockPlayer(
-            name: "Gunnar Henderson",
-            topLine: "Baltimore • MLB • INF",
-            statLine: "3-for-5, HR, 2 RBI",
-            performanceNote: "Big game with loud contact.",
-            hobbyTakeaway: "Cards may get more attention",
-            whyItMatters: "When the bat heats up, his premium cards move fast.",
-            firstBowmanYear: nil,
-            rankingNote: nil,
-            rookieNote: "Key rookie chrome cards still lead the market"
-        ),
-        DailyIQMockPlayer(
-            name: "Bobby Witt Jr.",
-            topLine: "Kansas City • MLB • SS",
-            statLine: "2-for-4, 2B, 3 R",
-            performanceNote: "Fast start and all-around impact.",
-            hobbyTakeaway: "Momentum is building",
-            whyItMatters: "Power and speed nights keep him in hobby talk.",
-            firstBowmanYear: nil,
-            rankingNote: nil,
-            rookieNote: "Flagship rookies still get the most eyes"
-        )
-    ]
-
-    static let mlbPitchers: [DailyIQMockPlayer] = [
-        DailyIQMockPlayer(
-            name: "Paul Skenes",
-            topLine: "Pittsburgh • MLB • SP",
-            statLine: "6 IP, 10 K, 0 ER",
-            performanceNote: "Power stuff looked real again.",
-            hobbyTakeaway: "Still risky - watch pricing",
-            whyItMatters: "Pitching hype and results together can move the market fast.",
-            firstBowmanYear: nil,
-            rankingNote: nil,
-            rookieNote: "Top rookie and debut cards still lead demand"
-        )
-    ]
-}
-
-private struct DailyIQMockNote: Identifiable {
-    let id = UUID()
-    let title: String
-    let note: String
-    let takeaway: String
-
-    static let milbWatch: [DailyIQMockNote] = [
-        DailyIQMockNote(
-            title: "Sebastian Walcott",
-            note: "Big upside profile. A few strong games can move hobby talk fast.",
-            takeaway: "Watch list"
-        ),
-        DailyIQMockNote(
-            title: "Jesús Made",
-            note: "Quiet box score, but the tools still make him worth tracking.",
-            takeaway: "More data needed"
-        )
-    ]
-
-    static let mlbWatch: [DailyIQMockNote] = [
-        DailyIQMockNote(
-            title: "Jackson Merrill",
-            note: "A hot week could bring more eyes back to his top rookie cards.",
-            takeaway: "Watch list"
-        )
-    ]
-
-    static let milbMovers: [DailyIQMockNote] = [
-        DailyIQMockNote(
-            title: "Leo De Vries",
-            note: "A loud game can bring more eyes to his first key cards.",
-            takeaway: "Buy interest rising"
-        )
-    ]
-
-    static let mlbMovers: [DailyIQMockNote] = [
-        DailyIQMockNote(
-            title: "Gunnar Henderson",
-            note: "Strong production can lift short-term hobby buzz.",
-            takeaway: "Cards may get more attention"
-        ),
-        DailyIQMockNote(
-            title: "Paul Skenes",
-            note: "Premium arms can move fast after another dominant outing.",
-            takeaway: "Still risky - watch pricing"
-        )
-    ]
-}
-
-private struct DailyIQAppearance: Identifiable {
-    let id = UUID()
-    let name: String
-    let count: Int
-
-    static let milb: [DailyIQAppearance] = [
-        DailyIQAppearance(name: "Leo De Vries", count: 4),
-        DailyIQAppearance(name: "Walker Jenkins", count: 3),
-        DailyIQAppearance(name: "Chase Burns", count: 2)
-    ]
-
-    static let mlb: [DailyIQAppearance] = [
-        DailyIQAppearance(name: "Gunnar Henderson", count: 3),
-        DailyIQAppearance(name: "Paul Skenes", count: 3),
-        DailyIQAppearance(name: "Bobby Witt Jr.", count: 2)
-    ]
-}
 
 #Preview {
     NavigationStack {

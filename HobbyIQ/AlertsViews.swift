@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import SwiftUI
 
 @MainActor
@@ -14,8 +15,8 @@ final class AlertsInboxViewModel: ObservableObject {
 
     private let service: OperationalDataService
 
-    init(service: OperationalDataService = .shared) {
-        self.service = service
+    init(service: OperationalDataService? = nil) {
+        self.service = service ?? OperationalDataService.shared
     }
 
     var filteredAlerts: [AlertItem] {
@@ -51,14 +52,22 @@ final class AlertsInboxViewModel: ObservableObject {
 
 @MainActor
 final class AlertSettingsViewModel: ObservableObject {
-    @Published var preferences = PreviewFixtures.alertPreferences
+    @Published var preferences = AlertPreferences(
+        inAppEnabled: true,
+        emailEnabled: false,
+        pushEnabled: true,
+        watchlistAlertsEnabled: true,
+        portfolioAlertsEnabled: true,
+        moverAlertsEnabled: true,
+        minimumSeverity: .caution
+    )
     @Published private(set) var isSaving = false
     @Published var statusMessage: String?
 
     private let service: OperationalDataService
 
-    init(service: OperationalDataService = .shared) {
-        self.service = service
+    init(service: OperationalDataService? = nil) {
+        self.service = service ?? OperationalDataService.shared
     }
 
     func save() async {
@@ -138,7 +147,7 @@ struct AlertsInboxView: View {
                     }
                 }
             }
-            .background(Theme.Colors.background)
+            .background { HobbyIQBackground() }
             .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -237,7 +246,7 @@ struct AlertDetailView: View {
                         Spacer()
 
                         if let confidence = alert.confidence {
-                            MetricPillView(title: "Confidence", value: "\(confidence)%", accent: Theme.Colors.accent)
+                            MetricPillView(title: Labels.confidence, value: "\(confidence)%", accent: Theme.Colors.accent)
                         }
                     }
 
@@ -271,7 +280,7 @@ struct AlertDetailView: View {
             .padding(Theme.Spacing.medium)
             .padding(.bottom, Theme.Spacing.large)
         }
-        .background(Theme.Colors.background)
+        .background { HobbyIQBackground() }
         .navigationTitle("Alert")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
@@ -340,7 +349,7 @@ struct AlertSettingsView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        .background { HobbyIQBackground() }
         .navigationTitle("Alert Settings")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()

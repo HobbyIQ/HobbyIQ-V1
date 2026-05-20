@@ -15,8 +15,8 @@ final class ProfitIQViewModel: ObservableObject {
 
     private let workspaceViewModel: PortfolioWorkspaceViewModel
 
-    init(workspaceViewModel: PortfolioWorkspaceViewModel = PortfolioWorkspaceViewModel()) {
-        self.workspaceViewModel = workspaceViewModel
+    init(workspaceViewModel: PortfolioWorkspaceViewModel? = nil) {
+        self.workspaceViewModel = workspaceViewModel ?? PortfolioWorkspaceViewModel()
     }
 
     func load() async {

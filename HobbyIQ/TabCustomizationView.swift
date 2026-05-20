@@ -14,27 +14,27 @@ struct TabCustomizationView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xSmall) {
                     Text("Home and Settings stay pinned in the tab bar.")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                     Text("Reorder the middle tabs below or hide them for a tighter workflow.")
                         .font(.subheadline)
-                        .secondaryTextStyle()
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
-                .listRowBackground(Theme.Colors.card)
+                .listRowBackground(HobbyIQTheme.Colors.cardNavy)
             }
 
             Section("Visible Tabs") {
                 ForEach(configuration.visibleTabs) { tab in
                     HStack {
                         Label(tab.title, systemImage: tab.systemImage)
-                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         Spacer()
                         Button("Hide") {
                             configuration.hide(tab)
                         }
-                        .foregroundStyle(Theme.Colors.negative)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                     }
-                    .listRowBackground(Theme.Colors.card)
+                    .listRowBackground(HobbyIQTheme.Colors.cardNavy)
                 }
                 .onMove(perform: configuration.move)
             }
@@ -44,14 +44,14 @@ struct TabCustomizationView: View {
                     ForEach(configuration.hiddenTabs) { tab in
                         HStack {
                             Label(tab.title, systemImage: tab.systemImage)
-                                .foregroundStyle(Theme.Colors.textPrimary)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                             Spacer()
                             Button("Show") {
                                 configuration.show(tab)
                             }
-                            .foregroundStyle(Theme.Colors.accent)
+                            .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
                         }
-                        .listRowBackground(Theme.Colors.card)
+                        .listRowBackground(HobbyIQTheme.Colors.cardNavy)
                     }
                 }
             }
@@ -60,12 +60,12 @@ struct TabCustomizationView: View {
                 Button("Reset Default Layout") {
                     configuration.resetToDefault()
                 }
-                .foregroundStyle(Theme.Colors.accent)
-                .listRowBackground(Theme.Colors.card)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .listRowBackground(HobbyIQTheme.Colors.cardNavy)
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.Colors.background)
+        .background { HobbyIQBackground() }
         .listStyle(.insetGrouped)
         .navigationTitle("Customize Tabs")
         .navigationBarTitleDisplayMode(.inline)

@@ -11,16 +11,7 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    HobbyIQTheme.bg,
-                    HobbyIQTheme.card,
-                    HobbyIQTheme.greenSoft.opacity(0.7)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            HobbyIQBackground()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
@@ -85,13 +76,6 @@ struct PaywallView: View {
                         .buttonStyle(SecondaryButton())
                         .disabled(sessionViewModel.isLoading)
 
-                        Button("Unlock Access for Testing") {
-                            sessionViewModel.unlockAccessForTesting()
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.green)
-                        .buttonStyle(.plain)
-
                         Button("Log Out") {
                             Task { await sessionViewModel.signOut() }
                         }
@@ -106,7 +90,7 @@ struct PaywallView: View {
                         }
                     }
 
-                    Text("TODO: Wire real StoreKit 2 product loading, purchase handling, restore flow, and entitlement verification here before submission.")
+                    Text("Subscriptions are managed by Apple. Restore Purchases to recover access.")
                         .font(.footnote)
                         .foregroundStyle(HobbyIQTheme.textMuted)
                         .multilineTextAlignment(.center)
@@ -164,7 +148,7 @@ struct PaywallView: View {
         .background(isSelected ? HobbyIQTheme.cardElevated : HobbyIQTheme.card)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isSelected ? (tier == .allStar ? Color.yellow.opacity(0.5) : HobbyIQTheme.green.opacity(0.5)) : HobbyIQTheme.stroke, lineWidth: 1)
+                .stroke(isSelected ? (tier == .allStar ? Color.yellow.opacity(0.5) : HobbyIQTheme.green.opacity(0.5)) : HobbyIQTheme.stroke, lineWidth: 1.6)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }

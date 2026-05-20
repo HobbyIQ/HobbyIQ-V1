@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getUserBySession, signIn, signOut } from "../services/authService.js";
+import { getUserBySession, signIn, signOut, signUp } from "../services/authService.js";
 
 const router = Router();
 
@@ -10,6 +10,18 @@ router.post("/signin", async (req: Request, res: Response) => {
 
   if (!result.success) {
     return res.status(401).json(result);
+  }
+
+  return res.json(result);
+});
+
+router.post("/signup", async (req: Request, res: Response) => {
+  const identifier = String(req.body?.username ?? req.body?.email ?? "");
+  const password = String(req.body?.password ?? "");
+  const result = await signUp(identifier, password);
+
+  if (!result.success) {
+    return res.status(400).json(result);
   }
 
   return res.json(result);

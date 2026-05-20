@@ -30,6 +30,11 @@ function getMockMLBStats() {
             performanceNote: "Dominant outing Ã¢â‚¬â€ command was elite",
             trend: "hot",
             hr: 0, hits: 0, rbi: 0, strikeouts: 11, era: 1.28,
+            pitchingInningsPitched: "7.0",
+            pitchingEarnedRuns: 1,
+            pitchingHitsAllowed: 4,
+            pitchingWalksAllowed: 2,
+            pitchingStrikeouts: 11,
             isProspect: false, buySignal: true,
         },
         {
@@ -74,6 +79,11 @@ function getMockMLBStats() {
             performanceNote: "Shutout frames through 6 Ã¢â‚¬â€ vintage stuff",
             trend: "up",
             hr: 0, hits: 0, rbi: 0, strikeouts: 8, era: 2.10,
+            pitchingInningsPitched: "6.0",
+            pitchingEarnedRuns: 0,
+            pitchingHitsAllowed: 3,
+            pitchingWalksAllowed: 1,
+            pitchingStrikeouts: 8,
             isProspect: false, buySignal: false,
         },
     ];
@@ -122,6 +132,11 @@ function getMockMiLBStats() {
             performanceNote: "Fastball-slider combo looking sharper this week",
             trend: "up",
             hr: 0, hits: 0, rbi: 0, strikeouts: 9, era: 3.12,
+            pitchingInningsPitched: "6.0",
+            pitchingEarnedRuns: 1,
+            pitchingHitsAllowed: 4,
+            pitchingWalksAllowed: 2,
+            pitchingStrikeouts: 9,
             isProspect: true, buySignal: true,
         },
         {
@@ -335,6 +350,18 @@ function selectBestPerformers(stats, limit = 5) {
         statLine: s.statLine,
         trend: s.trend,
         performanceNote: s.performanceNote,
+        hr: s.hr,
+        hits: s.hits,
+        rbi: s.rbi,
+        strikeouts: s.strikeouts,
+        era: s.era ?? null,
+        pitchingInningsPitched: s.pitchingInningsPitched ?? null,
+        pitchingEarnedRuns: s.pitchingEarnedRuns ?? null,
+        pitchingHitsAllowed: s.pitchingHitsAllowed ?? null,
+        pitchingWalksAllowed: s.pitchingWalksAllowed ?? null,
+        pitchingStrikeouts: s.pitchingStrikeouts ?? null,
+        buySignal: s.buySignal,
+        isProspect: s.isProspect,
         score: performanceScore(s),
     }));
 }
@@ -505,6 +532,16 @@ async function getWatchPlayerFeed(userId) {
                 team: dailyMatch.team,
                 position: dailyMatch.position,
                 level: dailyMatch.level,
+                hr: dailyMatch.hr,
+                hits: dailyMatch.hits,
+                rbi: dailyMatch.rbi,
+                strikeouts: dailyMatch.strikeouts,
+                era: dailyMatch.era ?? null,
+                pitchingInningsPitched: dailyMatch.pitchingInningsPitched ?? null,
+                pitchingEarnedRuns: dailyMatch.pitchingEarnedRuns ?? null,
+                pitchingHitsAllowed: dailyMatch.pitchingHitsAllowed ?? null,
+                pitchingWalksAllowed: dailyMatch.pitchingWalksAllowed ?? null,
+                pitchingStrikeouts: dailyMatch.pitchingStrikeouts ?? null,
             };
         }
         // 2. Not in yesterday's feed Ã¢â‚¬â€ hit the MLB Stats API
@@ -518,6 +555,16 @@ async function getWatchPlayerFeed(userId) {
                 team: live.team,
                 position: live.position,
                 level: "MLB",
+                hr: live.hr,
+                hits: live.hits,
+                rbi: live.rbi,
+                strikeouts: live.strikeouts,
+                era: live.era ?? null,
+                pitchingInningsPitched: live.pitchingInningsPitched ?? null,
+                pitchingEarnedRuns: live.pitchingEarnedRuns ?? null,
+                pitchingHitsAllowed: live.pitchingHitsAllowed ?? null,
+                pitchingWalksAllowed: live.pitchingWalksAllowed ?? null,
+                pitchingStrikeouts: live.pitchingStrikeouts ?? null,
             };
         }
         // 3. No game found

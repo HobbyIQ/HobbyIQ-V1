@@ -3,66 +3,9 @@
 //  HobbyIQ
 //
 
+import Combine
 import Foundation
 import StoreKit
-
-enum AppAccessTier: String, CaseIterable, Identifiable {
-    case none
-    case free
-    case pro
-    case allStar
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .none:
-            return "Locked"
-        case .free:
-            return "Free"
-        case .pro:
-            return "Pro"
-        case .allStar:
-            return "All-Star"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .none:
-            return "lock.fill"
-        case .free:
-            return "sparkles"
-        case .pro:
-            return "chart.line.uptrend.xyaxis.circle.fill"
-        case .allStar:
-            return "star.circle.fill"
-        }
-    }
-
-    var accentColorName: String {
-        switch self {
-        case .none:
-            return "secondary"
-        case .free:
-            return "accent"
-        case .pro:
-            return "accent"
-        case .allStar:
-            return "caution"
-        }
-    }
-}
-
-struct SubscriptionPlan: Identifiable {
-    let tier: AppAccessTier
-    let price: String
-    let period: String
-    let headline: String
-    let detail: String
-
-    var id: AppAccessTier { tier }
-}
 
 @MainActor
 final class SubscriptionStore: ObservableObject {
@@ -78,7 +21,7 @@ final class SubscriptionStore: ObservableObject {
             tier: .free,
             price: "$0",
             period: "",
-            headline: "Try the product with mock intelligence",
+            headline: "Try the product with live features",
             detail: "Explore the app experience before subscribing."
         ),
         SubscriptionPlan(
@@ -166,13 +109,13 @@ final class SubscriptionStore: ObservableObject {
                 }
                 return
             } catch {
-                purchaseMessage = "Purchase failed. Using preview unlock for internal testing."
+                setTier(.free)
+                purchaseMessage = "Purchase failed. Free access remains available."
             }
         }
 
-        try? await Task.sleep(for: .seconds(0.9))
-        setTier(tier)
-        purchaseMessage = "\(tier.title) preview unlocked for internal testing."
+        setTier(.free)
+        purchaseMessage = "\(tier.title) is not available right now. Free access remains enabled."
     }
 
     func restorePurchases() async {

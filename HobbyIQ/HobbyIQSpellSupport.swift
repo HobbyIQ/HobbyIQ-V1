@@ -17,7 +17,6 @@ enum HobbyIQSpellSupport {
     static let directReplacements: [String: String] = [
         "mibl": "MiLB",
         "playeriq": "PlayerIQ",
-        "playeriq": "PlayerIQ",
         "compiq": "CompIQ",
         "bowmn": "Bowman",
         "chorme": "Chrome",

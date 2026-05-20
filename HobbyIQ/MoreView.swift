@@ -16,7 +16,7 @@ struct MoreView: View {
             .padding(16)
             .padding(.bottom, 32)
         }
-        .background(HobbyIQTheme.bg.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationTitle("More")
         .navigationBarTitleDisplayMode(.inline)
         .accountToolbar()
@@ -154,7 +154,7 @@ private struct MoreDetailView: View {
             }
             .padding(16)
         }
-        .background(HobbyIQTheme.bg.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
     }

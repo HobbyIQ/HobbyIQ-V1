@@ -68,6 +68,13 @@ function formatPitchingLine(s) {
         parts.push(`${s["hits"]} H`);
     return parts.join(", ") || "No stats";
 }
+function calculatePitchingEra(pitching) {
+    const innings = normalizeInningsPitched(pitching?.inningsPitched);
+    if (innings <= 0)
+        return null;
+    const earnedRuns = toNumber(pitching?.earnedRuns);
+    return Number(((earnedRuns * 9) / innings).toFixed(2));
+}
 function toNumber(value) {
     const n = Number(value ?? 0);
     return Number.isFinite(n) ? n : 0;
@@ -112,6 +119,11 @@ function buildPerformer(player, teamAbbrev, level, batting, pitching) {
     const score = Math.max(battingScore, pitchingScore);
     if (!hasMeaningfulLine(score, batting, pitching))
         return null;
+    const pitchingInningsPitched = isPitcher ? pitching?.inningsPitched ?? null : null;
+    const pitchingEarnedRuns = isPitcher ? toNumber(pitching?.earnedRuns) : null;
+    const pitchingHitsAllowed = isPitcher ? toNumber(pitching?.hits) : null;
+    const pitchingWalksAllowed = isPitcher ? toNumber(pitching?.baseOnBalls) : null;
+    const pitchingStrikeouts = isPitcher ? toNumber(pitching?.strikeOuts) : null;
     return {
         playerName: player?.person?.fullName ?? "Unknown",
         team: teamAbbrev,
@@ -124,7 +136,12 @@ function buildPerformer(player, teamAbbrev, level, batting, pitching) {
         hits: toNumber(batting?.hits),
         rbi: toNumber(batting?.rbi),
         strikeouts: toNumber((isPitcher ? pitching?.strikeOuts : batting?.strikeOuts)),
-        era: isPitcher ? null : null,
+        era: isPitcher ? calculatePitchingEra(pitching) : null,
+        pitchingInningsPitched,
+        pitchingEarnedRuns,
+        pitchingHitsAllowed,
+        pitchingWalksAllowed,
+        pitchingStrikeouts,
         isProspect: level === "MiLB",
         buySignal: score >= 10,
         score,
@@ -210,6 +227,12 @@ async function getLastGameStat(playerName) {
             position: last.position?.abbreviation ?? (group === "pitching" ? "P" : "POS"),
             team: last.team?.abbreviation ?? "",
             played: true,
+            pitchingInningsPitched: group === "pitching" ? last.stat?.inningsPitched ?? null : null,
+            pitchingEarnedRuns: group === "pitching" ? toNumber(last.stat?.earnedRuns) : null,
+            pitchingHitsAllowed: group === "pitching" ? toNumber(last.stat?.hits) : null,
+            pitchingWalksAllowed: group === "pitching" ? toNumber(last.stat?.baseOnBalls) : null,
+            pitchingStrikeouts: group === "pitching" ? toNumber(last.stat?.strikeOuts) : null,
+            era: group === "pitching" ? calculatePitchingEra(last.stat) : null,
         };
         statCache.set(cacheKey, { result, cachedDate: today });
         return result;

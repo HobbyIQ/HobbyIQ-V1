@@ -4,6 +4,7 @@
 //
 
 import AVFoundation
+import Combine
 import Speech
 import SwiftUI
 
@@ -16,8 +17,7 @@ struct HobbyIQView: View {
 
     var body: some View {
         ZStack {
-            AppColors.background.ignoresSafeArea()
-            backgroundGlow
+            HobbyIQBackground()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: AppSpacing.xxLarge) {
@@ -29,7 +29,7 @@ struct HobbyIQView: View {
                     searchResultsSection
                 }
                 .padding(.horizontal, AppSpacing.screenPadding)
-                .padding(.bottom, 32)
+                .padding(.bottom, HobbyIQTheme.Spacing.xxLarge)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -62,7 +62,7 @@ struct HobbyIQView: View {
                 .offset(x: 120, y: -280)
 
             Circle()
-                .fill(Color.white.opacity(0.05))
+                .fill(HobbyIQTheme.Colors.subtleSurface)
                 .frame(width: 180, height: 180)
                 .blur(radius: 90)
                 .offset(x: -140, y: -120)
@@ -76,7 +76,7 @@ struct HobbyIQView: View {
 
             VStack(spacing: AppSpacing.small) {
                 Text("Welcome to HobbyIQ")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(HobbyIQTheme.Typography.hero)
                     .foregroundStyle(AppColors.textPrimary)
                     .multilineTextAlignment(.center)
 
@@ -137,7 +137,7 @@ struct HobbyIQView: View {
             .background(AppColors.surfaceElevated)
             .overlay(
                 RoundedRectangle(cornerRadius: AppCardRadius.large, style: .continuous)
-                    .stroke(AppColors.border, lineWidth: 1)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
             .clipShape(RoundedRectangle(cornerRadius: AppCardRadius.large, style: .continuous))
             .frame(maxWidth: 660)
@@ -188,7 +188,7 @@ struct HobbyIQView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(AppColors.textMuted)
                 .textCase(.uppercase)
-                .tracking(0.8)
+                .tracking(1.2)
 
             VStack(alignment: .leading, spacing: AppSpacing.medium) {
                 Text("MLB Daily Brief")
@@ -288,12 +288,12 @@ struct HobbyIQView: View {
 
 private struct LogoBadge: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
+        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
             .fill(AppColors.accentSoft)
             .frame(width: 76, height: 76)
             .overlay {
                 Text("HIQ")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .font(HobbyIQTheme.Typography.sectionTitle)
                     .foregroundStyle(AppColors.accent)
             }
     }
@@ -365,7 +365,7 @@ private struct HomeCompResultCard: View {
                 .foregroundStyle(AppColors.accent)
 
             Text(result.summaryLine)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(HobbyIQTheme.Typography.title)
                 .foregroundStyle(AppColors.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -420,7 +420,7 @@ private struct HomePlayerResultCard: View {
                 .foregroundStyle(AppColors.accent)
 
             Text(result.playerName)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(HobbyIQTheme.Typography.title)
                 .foregroundStyle(AppColors.textPrimary)
 
             LabeledGroup(title: "Player Profile", items: result.playerProfile)
@@ -521,7 +521,7 @@ private struct MLBDailyBriefView: View {
             VStack(spacing: AppSpacing.large) {
                 VStack(alignment: .leading, spacing: AppSpacing.small) {
                     Text("MLB Daily Brief")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(HobbyIQTheme.Typography.statNumber)
                         .foregroundStyle(AppColors.textPrimary)
 
                     Text("Top MLB performances from yesterday")
@@ -535,9 +535,9 @@ private struct MLBDailyBriefView: View {
                 BriefSection(title: "Hobby Movers", items: movers)
             }
             .padding(AppSpacing.screenPadding)
-            .padding(.bottom, 32)
+            .padding(.bottom, HobbyIQTheme.Spacing.xxLarge)
         }
-        .background(AppColors.background.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -699,9 +699,14 @@ private final class HobbyIQSpeechRecognizer: NSObject, ObservableObject {
             }
         }
 
-        let microphoneGranted = await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+        let microphoneGranted: Bool
+        if #available(iOS 17.0, *) {
+            microphoneGranted = await AVAudioApplication.requestRecordPermission()
+        } else {
+            microphoneGranted = await withCheckedContinuation { continuation in
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
             }
         }
 

@@ -73,7 +73,7 @@ struct GlobalSearchBar: View {
         .background(HobbyIQTheme.card)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(HobbyIQTheme.stroke, lineWidth: 1)
+                .stroke(HobbyIQTheme.stroke, lineWidth: 1.6)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
@@ -466,10 +466,10 @@ struct ZoneCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(color)
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(HobbyIQTheme.stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }
 
@@ -495,7 +495,7 @@ struct HoldingCard: View {
                 HStack(spacing: 10) {
                     SmallInfoPill(title: "Paid", value: item.cost)
                     SmallInfoPill(title: "Now", value: item.value)
-                    SmallInfoPill(title: "P/L", value: item.pnl)
+                    SmallInfoPill(title: Labels.profitLoss, value: item.pnl)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -561,7 +561,7 @@ struct CircleButton: View {
                 .frame(width: 42, height: 42)
                 .background(HobbyIQTheme.card)
                 .overlay(
-                    Circle().stroke(HobbyIQTheme.stroke, lineWidth: 1)
+                    Circle().stroke(HobbyIQTheme.stroke, lineWidth: 1.6)
                 )
         }
         .buttonStyle(.plain)
@@ -598,10 +598,10 @@ struct GlassCard<Content: View>: View {
             .frame(maxWidth: width ?? .infinity, alignment: .leading)
             .background(HobbyIQTheme.card)
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(HobbyIQTheme.stroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }
 

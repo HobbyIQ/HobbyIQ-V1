@@ -20,14 +20,14 @@ struct ActionIQView: View {
                 if let plan {
                     summaryCard(plan)
                     actionSection(title: "Sell Now", subtitle: "Move these first.", cards: plan.sellNow, accent: AppColors.danger)
-                    actionSection(title: "Watch", subtitle: "Keep an eye on these.", cards: plan.watch, accent: .orange)
+                    actionSection(title: "Watch", subtitle: "Keep an eye on these.", cards: plan.watch, accent: HobbyIQTheme.Colors.warning)
                     actionSection(title: "Hold", subtitle: "Wait for a better spot.", cards: plan.hold, accent: AppColors.accent)
                 }
             }
             .padding(AppSpacing.screenPadding)
-            .padding(.bottom, 24)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
-        .background(AppColors.background.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationTitle("ActionIQ")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
@@ -37,7 +37,7 @@ struct ActionIQView: View {
                     AccountView(sessionViewModel: sessionViewModel)
                 } label: {
                     Image(systemName: "person.crop.circle")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(HobbyIQTheme.Typography.cardTitle)
                         .foregroundStyle(AppColors.textPrimary)
                         .frame(width: 34, height: 34)
                         .background(AppColors.surfaceElevated)
@@ -80,7 +80,7 @@ struct ActionIQView: View {
             .padding(.vertical, 14)
             .foregroundStyle(AppColors.background)
             .background(AppColors.accent)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         }
         .disabled(isLoading)
     }
@@ -96,13 +96,13 @@ struct ActionIQView: View {
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
             }
-            .padding(16)
+            .padding(HobbyIQTheme.Spacing.medium)
             .background(AppColors.danger.opacity(0.14))
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(AppColors.danger.opacity(0.28), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                    .stroke(AppColors.danger.opacity(0.28), lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         }
 
         if isLoading {
@@ -125,13 +125,13 @@ struct ActionIQView: View {
 
             HStack(spacing: 12) {
                 actionStat(title: "Sell Now", value: plan.sellNow.count, color: AppColors.danger)
-                actionStat(title: "Watch", value: plan.watch.count, color: .orange)
+                actionStat(title: "Watch", value: plan.watch.count, color: HobbyIQTheme.Colors.warning)
                 actionStat(title: "Hold", value: plan.hold.count, color: AppColors.accent)
             }
         }
-        .padding(16)
+        .padding(HobbyIQTheme.Spacing.medium)
         .background(AppColors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private func actionStat(title: String, value: Int, color: Color) -> some View {
@@ -146,7 +146,7 @@ struct ActionIQView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
     }
 
     private func actionSection(title: String, subtitle: String, cards: [ActionIQCard], accent: Color) -> some View {
@@ -164,7 +164,7 @@ struct ActionIQView: View {
                 HobbyIQEmptyStateView(
                     title: "Nothing here right now.",
                     message: "This section will fill as the plan updates.",
-                    systemName: "tray"
+                    systemImage: "tray"
                 )
             } else {
                 VStack(spacing: 12) {
@@ -174,9 +174,9 @@ struct ActionIQView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(HobbyIQTheme.Spacing.medium)
         .background(AppColors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private func loadPlan() async {
@@ -185,10 +185,12 @@ struct ActionIQView: View {
         defer { isLoading = false }
 
         do {
-            plan = try await APIService.shared.fetchActionPlan(userId: "demo")
+            plan = try await APIService.shared.fetchActionPlan(userId: AuthService.shared.userId ?? "")
         } catch {
             errorMessage = "Could not load your action plan."
+            #if DEBUG
             print("ActionIQ error:", error)
+            #endif
         }
     }
 
@@ -259,15 +261,15 @@ private struct ActionIQCardRow: View {
                 }
                 .padding(12)
                 .background(AppColors.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
             }
         }
-        .padding(14)
+        .padding(HobbyIQTheme.Spacing.medium)
         .background(AppColors.surface)
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(AppColors.border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }

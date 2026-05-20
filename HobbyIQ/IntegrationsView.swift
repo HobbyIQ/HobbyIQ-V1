@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import SwiftUI
 
 @MainActor
@@ -14,8 +15,8 @@ final class IntegrationsViewModel: ObservableObject {
 
     private let service: OperationalDataService
 
-    init(service: OperationalDataService = .shared) {
-        self.service = service
+    init(service: OperationalDataService? = nil) {
+        self.service = service ?? OperationalDataService.shared
     }
 
     func load() async {
@@ -75,7 +76,7 @@ struct IntegrationsView: View {
                     }
                 }
             }
-            .background(Theme.Colors.background)
+            .background { HobbyIQBackground() }
             .navigationTitle("Integrations")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()

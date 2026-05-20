@@ -6,10 +6,10 @@
 import SwiftUI
 
 struct AuthView: View {
+    @StateObject private var sessionViewModel = AppSessionViewModel()
+
     var body: some View {
-        LoginView { session in
-            AuthService.shared.session = session
-        }
+        LoginView(sessionViewModel: sessionViewModel)
     }
 }
 

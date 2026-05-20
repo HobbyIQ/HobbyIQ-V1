@@ -32,7 +32,7 @@ struct ProfitListView: View {
                     HobbyIQEmptyStateView(
                         title: "No ProfitIQ cards yet",
                         message: "Add inventory to see what to sell, watch, or hold.",
-                        systemName: "chart.line.uptrend.xyaxis"
+                        systemImage: "chart.line.uptrend.xyaxis"
                     )
                 } else {
                     if let errorMessage = viewModel.errorMessage {
@@ -91,7 +91,7 @@ struct ProfitListView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
         }
-        .background(AppColors.background.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationTitle("Portfolio")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()

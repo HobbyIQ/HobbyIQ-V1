@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import SwiftUI
 
 @MainActor
@@ -13,8 +14,8 @@ final class WatchlistViewModel: ObservableObject {
 
     private let service: OperationalDataService
 
-    init(service: OperationalDataService = .shared) {
-        self.service = service
+    init(service: OperationalDataService? = nil) {
+        self.service = service ?? OperationalDataService.shared
     }
 
     func load() async {
@@ -68,7 +69,7 @@ struct WatchlistView: View {
                     List {
                         ForEach(viewModel.items) { item in
                             NavigationLink {
-                                WatchlistDetailView(item: item)
+                                PlayerIQView(initialQuery: item.name)
                             } label: {
                                 WatchlistRow(item: item)
                             }
@@ -79,11 +80,11 @@ struct WatchlistView: View {
                         }
                     }
                     .scrollContentBackground(.hidden)
-                    .background(Theme.Colors.background)
+                    .background { HobbyIQBackground() }
                     .listStyle(.insetGrouped)
                 }
             }
-            .background(Theme.Colors.background)
+            .background { HobbyIQBackground() }
             .navigationTitle("Watchlist")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -158,7 +159,7 @@ private struct WatchlistDetailView: View {
             .padding(Theme.Spacing.medium)
             .padding(.bottom, Theme.Spacing.large)
         }
-        .background(Theme.Colors.background)
+        .background { HobbyIQBackground() }
         .navigationTitle(item.type.rawValue)
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()

@@ -28,7 +28,14 @@ final class CompIQViewModel: ObservableObject {
     @Published var serialNumber = ""
     @Published var salePrice = ""
 
+    /// Cache: key is "player|card|cost|parallel|grade" → result
+    private var estimateCache: [String: CompIQEstimateResult] = [:]
+
     private init() {}
+
+    private func cacheKey() -> String {
+        "\(trimmed(playerName))|\(trimmed(cardName))|\(cost)|\(trimmedOrNil(parallel) ?? "")|\(normalizedGrade(grade) ?? "")"
+    }
 
     var costDouble: Double? {
         Double(cost.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -58,6 +65,13 @@ final class CompIQViewModel: ObservableObject {
             return
         }
 
+        // Return cached result if available for identical inputs
+        let key = cacheKey()
+        if let cached = estimateCache[key] {
+            result = cached
+            return
+        }
+
         isLoading = true
         errorMessage = nil
         insight = nil
@@ -76,7 +90,9 @@ final class CompIQViewModel: ObservableObject {
                 serialNumber: serialInt,
                 recentComps: nil
             )
-            result = try await APIService.shared.singleEstimate(request: request)
+            let fetchedResult = try await APIService.shared.singleEstimate(request: request)
+            estimateCache[key] = fetchedResult
+            result = fetchedResult
         } catch {
             result = nil
             errorMessage = friendlyError(error)
@@ -118,7 +134,7 @@ final class CompIQViewModel: ObservableObject {
                     playerName: trimmed(playerName),
                     cardName: trimmedOrNil(cardName),
                     fairValue: result.fairValue,
-                    investmentScore: result.confidence,
+                    investmentScore: Int(result.confidence),
                     compCount: result.details?.compCount,
                     trendDirection: result.details?.grade,
                     trendStrength: result.method,
@@ -211,12 +227,12 @@ final class CompIQViewModel: ObservableObject {
     }
 
     func submitSale(platform: String) async {
-        guard let result else {
+        guard result != nil else {
             errorMessage = "Run CompIQ first."
             return
         }
 
-        guard let salePrice = salePriceDouble else {
+        guard let recordedSalePrice = salePriceDouble else {
             errorMessage = "Enter a sale price."
             return
         }
@@ -230,7 +246,7 @@ final class CompIQViewModel: ObservableObject {
                     cardName: trimmed(cardName),
                     parallel: trimmedOrNil(parallel),
                     serialNumber: serialInt,
-                    salePrice: salePrice,
+                    salePrice: recordedSalePrice,
                     saleDate: Self.saleDateFormatter.string(from: Date()),
                     grade: normalizedGrade(grade),
                     platform: platform.isEmpty ? nil : platform

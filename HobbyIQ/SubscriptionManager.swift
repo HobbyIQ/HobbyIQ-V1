@@ -47,8 +47,42 @@ struct SubscriptionPlan: Identifiable {
     let title: String
     let detail: String
     let fallbackPrice: String
+    let price: String
+    let period: String
+    let headline: String
 
     var id: AppAccessTier { tier }
+
+    init(
+        tier: AppAccessTier,
+        title: String,
+        detail: String,
+        fallbackPrice: String
+    ) {
+        self.tier = tier
+        self.title = title
+        self.detail = detail
+        self.fallbackPrice = fallbackPrice
+        self.price = fallbackPrice
+        self.period = ""
+        self.headline = title
+    }
+
+    init(
+        tier: AppAccessTier,
+        price: String,
+        period: String,
+        headline: String,
+        detail: String
+    ) {
+        self.tier = tier
+        self.title = headline
+        self.detail = detail
+        self.fallbackPrice = "\(price)\(period)"
+        self.price = price
+        self.period = period
+        self.headline = headline
+    }
 }
 
 @MainActor
@@ -70,7 +104,7 @@ final class SubscriptionManager: ObservableObject {
         SubscriptionPlan(
             tier: .free,
             title: "Free",
-            detail: "Preview the product with stable mock intelligence and a complete UI experience.",
+            detail: "Explore the product with a complete UI experience.",
             fallbackPrice: "$0"
         ),
         SubscriptionPlan(
@@ -146,8 +180,8 @@ final class SubscriptionManager: ObservableObject {
 
         guard let productID = productIDsByTier[tier],
               let product = products.first(where: { $0.id == productID }) else {
-            setTier(tier)
-            statusMessage = "\(tier.title) preview unlocked for internal testing."
+            setTier(.free)
+            statusMessage = "\(tier.title) is not available right now. Free access remains enabled."
             return
         }
 
@@ -168,7 +202,7 @@ final class SubscriptionManager: ObservableObject {
                 statusMessage = "Purchase state is unavailable right now."
             }
         } catch {
-            statusMessage = "Purchase failed. You can still continue with Free access for testing."
+            statusMessage = "Purchase failed. You can still continue with Free access."
         }
     }
 

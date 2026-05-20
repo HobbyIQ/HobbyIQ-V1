@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import SwiftUI
 
 @MainActor
@@ -13,8 +14,8 @@ final class PerformanceViewModel: ObservableObject {
 
     private let service: OperationalDataService
 
-    init(service: OperationalDataService = .shared) {
-        self.service = service
+    init(service: OperationalDataService? = nil) {
+        self.service = service ?? OperationalDataService.shared
     }
 
     func load() async {
@@ -48,7 +49,7 @@ struct PerformanceView: View {
                         VStack(spacing: Theme.Spacing.medium) {
                             SectionCardView(title: "Performance Summary") {
                                 HStack(spacing: Theme.Spacing.small) {
-                                    MetricPillView(title: "Portfolio", value: PercentFormatters.percent(snapshot.totalReturnPercent), accent: Theme.Colors.accent)
+                                    MetricPillView(title: Labels.portfolio, value: PercentFormatters.percent(snapshot.totalReturnPercent), accent: Theme.Colors.accent)
                                     MetricPillView(title: "Benchmark", value: snapshot.benchmarkReturnPercent.map(PercentFormatters.percent) ?? "N/A", accent: Theme.Colors.caution)
                                     MetricPillView(title: "Accuracy", value: snapshot.recommendationAccuracyPercent.map(PercentFormatters.percent) ?? "N/A", accent: Theme.Colors.textPrimary)
                                 }
@@ -56,7 +57,7 @@ struct PerformanceView: View {
                                 RefreshMetaView(refreshMeta: snapshot.refreshMeta)
                             }
 
-                            SectionCardView(title: "Portfolio Curve", subtitle: "A clean seven-point view of recent portfolio trajectory.") {
+                            SectionCardView(title: "\(Labels.portfolio) Curve", subtitle: "A clean seven-point view of recent portfolio trajectory.") {
                                 PositionPerformanceChartView(points: snapshot.series)
                             }
                         }
@@ -68,7 +69,7 @@ struct PerformanceView: View {
                         .padding(Theme.Spacing.medium)
                 }
             }
-            .background(Theme.Colors.background)
+            .background { HobbyIQBackground() }
             .navigationTitle("Performance")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()

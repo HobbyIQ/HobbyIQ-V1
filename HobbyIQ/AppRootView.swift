@@ -6,13 +6,14 @@
 import SwiftUI
 
 struct AppRootView: View {
+    @EnvironmentObject private var appState: AppState
     @StateObject private var sessionViewModel = AppSessionViewModel()
 
     var body: some View {
         Group {
             switch sessionViewModel.launchState {
             case .launching:
-                LaunchView()
+                LaunchView(sessionViewModel: sessionViewModel)
             case .signedOut:
                 LoginView(sessionViewModel: sessionViewModel)
             case .paywall:
@@ -24,17 +25,19 @@ struct AppRootView: View {
                     Task { await sessionViewModel.checkSessionOnLaunch() }
                 }
                 .padding(20)
-                .background(HobbyIQTheme.bg.ignoresSafeArea())
+                .background(HobbyIQBackground())
             }
         }
-        .preferredColorScheme(.dark)
-        .background(HobbyIQTheme.bg)
         .task {
             await sessionViewModel.checkSessionOnLaunch()
+        }
+        .onOpenURL { url in
+            _ = appState.handleIncomingURL(url)
         }
     }
 }
 
 #Preview {
     AppRootView()
+        .environmentObject(AppState())
 }

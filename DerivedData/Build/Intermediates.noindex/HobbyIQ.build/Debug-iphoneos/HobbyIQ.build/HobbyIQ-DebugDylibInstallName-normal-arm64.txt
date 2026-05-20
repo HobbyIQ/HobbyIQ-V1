@@ -1,0 +1,1 @@
+@rpath/HobbyIQ.debug.dylib

@@ -52,7 +52,7 @@ struct CompIQCardSelectionView: View {
                     .background(cardColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Theme.Colors.divider, lineWidth: 1)
+                            .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
                     )
                     .shadow(color: Theme.Colors.shadow, radius: Theme.Shadow.radius, x: 0, y: Theme.Shadow.y)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -113,7 +113,7 @@ struct CompIQCardSelectionView: View {
         .background(cardColor)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Theme.Colors.divider, lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .shadow(color: Theme.Colors.shadow, radius: Theme.Shadow.radius, x: 0, y: Theme.Shadow.y)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -140,11 +140,7 @@ struct CompIQCardSelectionView: View {
         .background(cardColor)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(LinearGradient(
-                    colors: [HobbyIQTheme.blue.opacity(0.9), HobbyIQTheme.green.opacity(0.9)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Theme.Colors.shadow, radius: Theme.Shadow.radius, x: 0, y: Theme.Shadow.y)
@@ -192,11 +188,7 @@ struct CompIQCardSelectionView: View {
         .background(cardColor)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(LinearGradient(
-                    colors: [HobbyIQTheme.blue.opacity(0.9), HobbyIQTheme.green.opacity(0.9)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ), lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Theme.Colors.shadow, radius: Theme.Shadow.radius, x: 0, y: Theme.Shadow.y)

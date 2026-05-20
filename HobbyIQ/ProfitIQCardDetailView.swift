@@ -11,6 +11,7 @@ struct ProfitIQCardDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showingMarkSoldSheet = false
+    @State private var showingAlertSheet = false
 
     var body: some View {
         ScrollView {
@@ -24,10 +25,27 @@ struct ProfitIQCardDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
         }
-        .background(AppColors.background.ignoresSafeArea())
+        .background { HobbyIQBackground() }
         .navigationTitle("ProfitIQ")
         .navigationBarTitleDisplayMode(.inline)
         .themedNavigationSurface()
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingAlertSheet = true
+                } label: {
+                    Image(systemName: "bell")
+                        .foregroundStyle(Theme.Colors.accent)
+                }
+            }
+        }
+        .sheet(isPresented: $showingAlertSheet) {
+            SetPriceAlertSheet(
+                playerName: card.playerName,
+                cardName: card.cardName,
+                suggestedPrice: card.currentValue
+            )
+        }
         .sheet(isPresented: $showingMarkSoldSheet) {
             ProfitIQMarkSoldSheet(viewModel: viewModel, card: card) {
                 dismiss()
@@ -59,10 +77,10 @@ struct ProfitIQCardDetailView: View {
             .padding(14)
             .background(AppColors.surfaceElevated)
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(AppColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
     }
 
@@ -171,7 +189,7 @@ private struct ProfitIQMarkSoldSheet: View {
                 }
                 .padding(16)
             }
-            .background(AppColors.background.ignoresSafeArea())
+            .background { HobbyIQBackground() }
             .navigationTitle("Mark Sold")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()
@@ -197,7 +215,7 @@ private struct ProfitIQMarkSoldSheet: View {
                 .background(AppColors.surfaceElevated)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(AppColors.border, lineWidth: 1)
+                        .stroke(AppColors.border, lineWidth: 1.6)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .foregroundStyle(AppColors.textPrimary)
@@ -219,7 +237,7 @@ private struct ProfitIQMarkSoldSheet: View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(profit >= 0 ? AppColors.accent : .red)
 
-            Text("Margin")
+            Text(Labels.margin)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppColors.textPrimary)
 
@@ -230,5 +248,94 @@ private struct ProfitIQMarkSoldSheet: View {
         .padding(12)
         .background(AppColors.surfaceElevated)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct SetPriceAlertSheet: View {
+    let playerName: String
+    let cardName: String
+    let suggestedPrice: Double
+
+    @State private var targetPrice: String = ""
+    @State private var isSaving = false
+    @State private var confirmationMessage: String?
+    @State private var errorMessage: String?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Card") {
+                    Text(playerName)
+                        .font(.headline)
+                    Text(cardName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Target Price") {
+                    TextField("$0.00", text: $targetPrice)
+                        .keyboardType(.decimalPad)
+                }
+
+                if let confirmationMessage {
+                    Section {
+                        Label(confirmationMessage, systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Theme.Colors.accent)
+                    }
+                }
+
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background { HobbyIQBackground() }
+            .navigationTitle("Set Price Alert")
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task { await saveAlert() }
+                    }
+                    .disabled(isSaving || parsedPrice == nil)
+                }
+            }
+            .onAppear {
+                targetPrice = String(format: "%.2f", suggestedPrice)
+            }
+        }
+    }
+
+    private var parsedPrice: Double? {
+        Double(targetPrice.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private func saveAlert() async {
+        guard let price = parsedPrice else { return }
+        isSaving = true
+        errorMessage = nil
+
+        do {
+            let request = CreateAlertRequest(
+                type: "price",
+                playerName: playerName,
+                cardName: cardName,
+                threshold: price
+            )
+            _ = try await APIService.shared.createAlert(request)
+            confirmationMessage = "Alert set — we'll notify you when price hits $\(String(format: "%.2f", price))"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isSaving = false
     }
 }

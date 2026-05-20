@@ -9,6 +9,8 @@ import UIKit
 #endif
 
 enum HobbyIQTheme {
+    static let heroSubtitle = "Fast answers for the Hobby."
+
     enum Colors {
         static let deepNavy = Color(hex: 0x0B1424)
         static let appBackground = Color(hex: 0x06101D)
@@ -20,8 +22,11 @@ enum HobbyIQTheme {
         static let hobbyGreen = Color(hex: 0x7CFF72)
         static let brightGreen = Color(hex: 0xB6FF4D)
         static let successGreen = Color(hex: 0x41E66F)
-        static let mutedText = Color(hex: 0xA8B3C7)
+        static let mutedText = Color(hex: 0xC4CDD9)
         static let pureWhite = Color(hex: 0xFFFFFF)
+        static let warning = Color.orange
+        static let danger = Color.red
+        static let subtleSurface = Color.white.opacity(0.05)
 
         static let border = steelGray.opacity(0.88)
         static let softBorder = electricBlue.opacity(0.28)
@@ -52,7 +57,7 @@ enum HobbyIQTheme {
         )
 
         static let primaryButton = LinearGradient(
-            colors: [Colors.electricBlue, Colors.brightBlue],
+            colors: [Colors.electricBlue, Colors.electricBlue],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -92,8 +97,8 @@ enum HobbyIQTheme {
         static let cardTitle = Font.system(size: 18, weight: .semibold, design: .rounded)
         static let body = Font.system(size: 16, weight: .regular, design: .default)
         static let bodyEmphasis = Font.system(size: 16, weight: .semibold, design: .default)
-        static let caption = Font.system(size: 12, weight: .regular, design: .default)
-        static let captionEmphasis = Font.system(size: 12, weight: .semibold, design: .default)
+        static let caption = Font.system(size: 13, weight: .regular, design: .default)
+        static let captionEmphasis = Font.system(size: 13, weight: .semibold, design: .default)
         static let statNumber = Font.system(size: 30, weight: .bold, design: .rounded)
         static let statSubtle = Font.system(size: 15, weight: .semibold, design: .rounded)
     }
@@ -106,27 +111,27 @@ enum HobbyIQTheme {
         tabBarAppearance.backgroundColor = UIColor(hex: 0x06101D)
         tabBarAppearance.shadowColor = UIColor(hex: 0x2A3344)
 
-        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(hex: 0xA8B3C7)
+        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(hex: 0xC4CDD9)
         tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(hex: 0xA8B3C7)
+            .foregroundColor: UIColor(hex: 0xC4CDD9)
         ]
         tabBarAppearance.stackedLayoutAppearance.selected.iconColor = UIColor(hex: 0x1E90FF)
         tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: UIColor(hex: 0x1E90FF)
         ]
 
-        tabBarAppearance.inlineLayoutAppearance.normal.iconColor = UIColor(hex: 0xA8B3C7)
+        tabBarAppearance.inlineLayoutAppearance.normal.iconColor = UIColor(hex: 0xC4CDD9)
         tabBarAppearance.inlineLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(hex: 0xA8B3C7)
+            .foregroundColor: UIColor(hex: 0xC4CDD9)
         ]
         tabBarAppearance.inlineLayoutAppearance.selected.iconColor = UIColor(hex: 0x1E90FF)
         tabBarAppearance.inlineLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: UIColor(hex: 0x1E90FF)
         ]
 
-        tabBarAppearance.compactInlineLayoutAppearance.normal.iconColor = UIColor(hex: 0xA8B3C7)
+        tabBarAppearance.compactInlineLayoutAppearance.normal.iconColor = UIColor(hex: 0xC4CDD9)
         tabBarAppearance.compactInlineLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(hex: 0xA8B3C7)
+            .foregroundColor: UIColor(hex: 0xC4CDD9)
         ]
         tabBarAppearance.compactInlineLayoutAppearance.selected.iconColor = UIColor(hex: 0x1E90FF)
         tabBarAppearance.compactInlineLayoutAppearance.selected.titleTextAttributes = [
@@ -137,7 +142,7 @@ enum HobbyIQTheme {
         tabBar.standardAppearance = tabBarAppearance
         tabBar.scrollEdgeAppearance = tabBarAppearance
         tabBar.tintColor = UIColor(hex: 0x1E90FF)
-        tabBar.unselectedItemTintColor = UIColor(hex: 0xA8B3C7)
+        tabBar.unselectedItemTintColor = UIColor(hex: 0xC4CDD9)
 
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithOpaqueBackground()
@@ -151,6 +156,11 @@ enum HobbyIQTheme {
         navigationBar.scrollEdgeAppearance = navAppearance
         navigationBar.compactAppearance = navAppearance
         navigationBar.tintColor = UIColor(hex: 0x1E90FF)
+
+        // Global backgrounds for common containers
+        UITableView.appearance().backgroundColor = UIColor(hex: 0x06101D)
+        UITableViewCell.appearance().backgroundColor = UIColor(hex: 0x06101D)
+        UICollectionView.appearance().backgroundColor = UIColor(hex: 0x06101D)
 #endif
     }
 }
@@ -203,7 +213,7 @@ struct HobbyIQLogoHeader: View {
             logoContent
 
             if showTagline {
-                Text("Fast Answers for the Hobby")
+                Text(HobbyIQTheme.heroSubtitle)
                     .font(HobbyIQTheme.Typography.captionEmphasis)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
@@ -265,10 +275,10 @@ struct HIQPrimaryButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            .background(HobbyIQTheme.Gradients.primaryButton)
+            .background(HobbyIQTheme.Colors.electricBlue)
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.brightBlue.opacity(0.45), lineWidth: 1)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.45), lineWidth: 1.6)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
             .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.34), radius: 14, x: 0, y: 8)
@@ -294,11 +304,11 @@ struct HIQSecondaryButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
-            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.92))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.92))
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.hobbyGreen, lineWidth: 1.1)
+                    .stroke(HobbyIQTheme.Colors.electricBlue, lineWidth: 1.6)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         }
@@ -310,42 +320,59 @@ struct HIQSearchBar: View {
     @Binding var text: String
     var placeholder: String = "Search players, cards, sets…"
     var showsFilterIcon: Bool = false
+    var showsMicIcon: Bool = false
+    var isListening: Bool = false
     var onFilterTap: (() -> Void)? = nil
     var onSubmit: (() -> Void)? = nil
+    var onMicTap: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.subheadline.weight(.semibold))
+                .font(.body.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
+                .font(.body)
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .submitLabel(.search)
                 .onSubmit {
                     onSubmit?()
                 }
 
+            if showsMicIcon {
+                Button {
+                    onMicTap?()
+                } label: {
+                    Image(systemName: isListening ? "mic.fill" : "mic")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(isListening ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.electricBlue)
+                        .symbolEffect(.pulse, isActive: isListening)
+                }
+                .buttonStyle(.plain)
+            }
+
             if showsFilterIcon {
                 Button {
                     onFilterTap?()
                 } label: {
                     Image(systemName: "slider.horizontal.3")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.body.weight(.bold))
                         .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                .stroke(HobbyIQTheme.Colors.steelGray, lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(isListening ? AnyShapeStyle(HobbyIQTheme.Colors.danger.opacity(0.6)) : AnyShapeStyle(HobbyIQTheme.Gradients.dashboardStroke), lineWidth: 3.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -393,7 +420,7 @@ struct HIQStatCard: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(HobbyIQTheme.Colors.steelGray, lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.12), radius: 14, x: 0, y: 8)
@@ -444,7 +471,7 @@ struct HIQDashboardCard: View {
                         .background(HobbyIQTheme.Colors.steelGray.opacity(0.75))
                         .overlay(
                             Capsule(style: .continuous)
-                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.6)
                         )
                         .clipShape(Capsule(style: .continuous))
                     }
@@ -483,7 +510,7 @@ struct HIQDashboardCard: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.2)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
@@ -495,7 +522,7 @@ struct HIQDashboardCard: View {
                 .fill(HobbyIQTheme.Colors.slateGray)
                 .overlay(
                     RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.28), lineWidth: 1)
+                        .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.28), lineWidth: 1.6)
                 )
 
             if let cardImageName, UIImage(named: cardImageName) != nil {
@@ -574,7 +601,7 @@ private struct WrapBadgesView: View {
                     .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.6)
                     )
                     .clipShape(Capsule(style: .continuous))
             }
@@ -629,6 +656,221 @@ private struct FlowLayout: Layout {
     }
 }
 
+struct HIQAvatarButton: View {
+    enum Source {
+        case asset(name: String)
+        case system(symbol: String)
+    }
+
+    var source: Source = .asset(name: "hobby_icon")
+    var size: CGFloat = 40
+    var showsShadow: Bool = true
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+
+                avatarContent
+                    .clipShape(Circle())
+            }
+            .frame(width: size, height: size)
+            .overlay(
+                Circle()
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.6)
+            )
+            .shadow(color: showsShadow ? HobbyIQTheme.Colors.shadow : .clear, radius: showsShadow ? 6 : 0, x: 0, y: showsShadow ? 3 : 0)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Account")
+    }
+
+    @ViewBuilder
+    private var avatarContent: some View {
+        switch source {
+        case .asset(let name):
+            #if canImport(UIKit)
+            if let _ = UIImage(named: name) {
+                Image(name)
+                    .resizable()
+                    .scaledToFill()
+            } else if let _ = UIImage(named: "hobbyiq_logo") {
+                Image("hobbyiq_logo")
+                    .resizable()
+                    .scaledToFill()
+                    .padding(6)
+            } else {
+                defaultSymbol
+            }
+            #else
+            Image(name)
+                .resizable()
+                .scaledToFill()
+            #endif
+        case .system(let symbol):
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.48, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+    }
+
+    private var defaultSymbol: some View {
+        Image(systemName: "person.circle.fill")
+            .font(.system(size: size * 0.52, weight: .semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+    }
+}
+
+struct HIQPhotoSourcePopup: View {
+    @Binding var isPresented: Bool
+    var onTakePhoto: () -> Void
+    var onPhotoLibrary: () -> Void
+
+    var body: some View {
+        ZStack {
+            // Dimmed background
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture { isPresented = false }
+
+            // Centered card
+            VStack(spacing: 16) {
+                Text("Add Photo")
+                    .font(HobbyIQTheme.Typography.cardTitle)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                VStack(spacing: 10) {
+                    HIQPrimaryButton(title: "Take a Photo", systemImage: "camera") {
+                        isPresented = false
+                        onTakePhoto()
+                    }
+                    HIQSecondaryButton(title: "Photo Library", systemImage: "photo.on.rectangle") {
+                        isPresented = false
+                        onPhotoLibrary()
+                    }
+                }
+
+                Button {
+                    isPresented = false
+                } label: {
+                    Text("Cancel")
+                        .font(HobbyIQTheme.Typography.bodyEmphasis)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(HobbyIQTheme.Spacing.cardPadding)
+            .frame(maxWidth: 360)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+            .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.22), radius: 20, x: 0, y: 10)
+        }
+        .accessibilityAddTraits(.isModal)
+    }
+}
+
+extension View {
+    func hiqPhotoSourcePopup(isPresented: Binding<Bool>, onTakePhoto: @escaping () -> Void, onPhotoLibrary: @escaping () -> Void) -> some View {
+        ZStack {
+            self
+            if isPresented.wrappedValue {
+                HIQPhotoSourcePopup(isPresented: isPresented, onTakePhoto: onTakePhoto, onPhotoLibrary: onPhotoLibrary)
+                    .transition(.opacity.combined(with: .scale))
+                    .zIndex(1)
+            }
+        }
+    }
+}
+
+// Added Components and Extensions as per instructions
+
+struct HIQScreen<Content: View>: View {
+    var alignment: Alignment = .topLeading
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ZStack(alignment: alignment) {
+            HobbyIQBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
+                    content()
+                }
+                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+                .padding(.vertical, HobbyIQTheme.Spacing.large)
+            }
+        }
+        .ignoresSafeArea(edges: .top)
+    }
+}
+
+struct HIQAppContainer<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                HobbyIQBackground()
+                content()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .hiqAppStyle()
+    }
+}
+
+extension View {
+    /// Apply HobbyIQ look-and-feel across the app. Use at your app root.
+    /// Example: RootView().hiqAppStyle()
+    func hiqAppStyle() -> some View {
+        self
+            // Global tint for controls and navigation items
+            .tint(HobbyIQTheme.Colors.electricBlue)
+            // Default foreground for text when not explicitly styled
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            // Unify background on all screens
+            .background(HobbyIQTheme.Colors.appBackground)
+            // Preferred color scheme for dark styling
+            .preferredColorScheme(.dark)
+    }
+}
+
+extension View {
+    func hiqCardStyle(cornerRadius: CGFloat = HobbyIQTheme.Radius.xLarge, stroke: some ShapeStyle = HobbyIQTheme.Gradients.dashboardStroke, lineWidth: CGFloat = 1.6, shadow: Color = HobbyIQTheme.Colors.electricBlue.opacity(0.18)) -> some View {
+        self
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(stroke, lineWidth: lineWidth)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .shadow(color: shadow, radius: 18, x: 0, y: 10)
+    }
+}
+
+struct HIQSectionHeader: View {
+    let title: String
+    var body: some View {
+        Text(title)
+            .font(HobbyIQTheme.Typography.sectionTitle)
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .padding(.top, HobbyIQTheme.Spacing.large)
+    }
+}
+
+#Preview("Avatar Button") {
+    ZStack {
+        HobbyIQBackground()
+        HIQAvatarButton(source: .asset(name: "hobby_icon"), size: 48, showsShadow: true) {}
+    }
+}
+
 #Preview("Brand Header") {
     ZStack {
         HobbyIQBackground()
@@ -674,3 +916,28 @@ private struct FlowLayout: Layout {
         .padding()
     }
 }
+#Preview("Photo Source Popup") {
+    @Previewable @State var show = true
+    return ZStack {
+        HobbyIQBackground()
+        Color.clear
+            .hiqPhotoSourcePopup(isPresented: .constant(true), onTakePhoto: {}, onPhotoLibrary: {})
+    }
+}
+
+#Preview("HIQScreen + Card Style") {
+    HIQScreen {
+        HIQSectionHeader(title: "Overview")
+        VStack(alignment: .leading, spacing: 8) {
+            Text("This is standardized content")
+                .font(HobbyIQTheme.Typography.body)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("Cards now share borders, radius, and shadow")
+                .font(HobbyIQTheme.Typography.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .padding(HobbyIQTheme.Spacing.cardPadding)
+        .hiqCardStyle()
+    }
+}
+

@@ -7,17 +7,11 @@ import SwiftUI
 
 struct CompIQView: View {
     @StateObject private var viewModel: CompIQViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var initialQuery: String?
-    @State private var parseText = ""
-    @State private var listingPlatform = "eBay"
-    @State private var salePlatform = "eBay"
+    @State private var searchText = ""
     @State private var didApplyInitialQuery = false
-
-    private let backgroundColor = Color(hex: 0x10131A)
-    private let cardColor = Color(hex: 0x1A1D24)
-    private let accentColor = Color(hex: 0x3B82F6)
-    private let textPrimary = Color(hex: 0xE8EAF0)
-    private let textSecondary = Color(hex: 0x9CA3AF)
+    @State private var navigateToVariants = false
 
     @MainActor
     init(initialQuery: String? = nil, viewModel: CompIQViewModel? = nil) {
@@ -27,18 +21,38 @@ struct CompIQView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 16) {
-                header
-                inputSection
-                actionsSection
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                heroCard
+                searchCard
+                readyCard
                 resultSection
             }
-            .padding(16)
-            .padding(.bottom, 24)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
-        .background(backgroundColor.ignoresSafeArea())
-        .navigationTitle("CompIQ")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(HobbyIQBackground())
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Back")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationDestination(isPresented: $navigateToVariants) {
+            CompIQVariantPickerView(initialQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
         .onAppear { applyInitialQueryIfNeeded() }
         .onChange(of: initialQuery) { _, _ in
             didApplyInitialQuery = false
@@ -46,182 +60,75 @@ struct CompIQView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("CompIQ")
-                .font(.largeTitle.bold())
-                .foregroundStyle(textPrimary)
+                .font(HobbyIQTheme.Typography.title)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-            Text("Live comp estimates, insights, listings, and sale records.")
-                .font(.subheadline)
-                .foregroundStyle(textSecondary)
+            Text(HobbyIQTheme.heroSubtitle)
+                .font(HobbyIQTheme.Typography.body)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(cardColor)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
     }
 
-    private var inputSection: some View {
+    private var searchCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionHeader(title: "Card Input Form", subtitle: "Enter one card and run a live estimate.")
-
-            VStack(spacing: 12) {
-                field(title: "Player Name", placeholder: "Caleb Bonemer", text: $viewModel.playerName)
-                field(title: "Card Name / Set", placeholder: "2025 Bowman Chrome Auto", text: $viewModel.cardName)
-                field(title: "Your Cost", placeholder: "125", text: $viewModel.cost, keyboardType: .decimalPad)
-
-                HStack(spacing: 12) {
-                    field(title: "Parallel", placeholder: "Blue Wave", text: $viewModel.parallel)
-                    field(title: "Serial #", placeholder: " /99", text: $viewModel.serialNumber, keyboardType: .numberPad)
+            HobbyIQSearchField(text: $searchText, placeholder: "Dylan Crews - 2025 Bowman Chrome...")
+                .onSubmit {
+                    submitSearch()
                 }
 
-                Picker("Grade", selection: $viewModel.grade) {
-                    Text("Raw").tag("")
-                    Text("PSA 9").tag("PSA 9")
-                    Text("PSA 10").tag("PSA 10")
-                    Text("BGS 9.5").tag("BGS 9.5")
-                    Text("SGC 10").tag("SGC 10")
-                }
-                .pickerStyle(.menu)
-                .tint(accentColor)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardColor.opacity(0.9))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            Text("Search the card, verify the exact variant, and let the backend do the pricing work.")
+                .font(HobbyIQTheme.Typography.body)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Parse Text")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(textSecondary)
-
-                    TextEditor(text: $parseText)
-                        .frame(minHeight: 92)
-                        .scrollContentBackground(.hidden)
-                        .padding(10)
-                        .foregroundStyle(textPrimary)
-                        .background(cardColor.opacity(0.9))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
+            HIQPrimaryButton(title: "Find Cards", systemImage: "magnifyingglass") {
+                submitSearch()
             }
-
-            HStack(spacing: 12) {
-                Button {
-                    Task { await viewModel.runEstimate() }
-                } label: {
-                    HStack(spacing: 8) {
-                        if viewModel.isLoading {
-                            ProgressView().tint(backgroundColor)
-                        }
-                        Text(viewModel.isLoading ? "Running..." : "Run CompIQ")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CompIQPrimaryButtonStyle(accent: accentColor, background: textPrimary))
-                .disabled(viewModel.isLoading)
-
-                Button {
-                    Task { await viewModel.parseFromText(parseText) }
-                } label: {
-                    Text("Parse Card")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-                .disabled(parseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
+            .opacity(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
         }
-        .padding(16)
-        .background(cardColor)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
     }
 
-    private var actionsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionHeader(title: "Actions", subtitle: "Generate insight, listing copy, and sale records.")
+    private func submitSearch() {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        navigateToVariants = true
+    }
 
-            HStack(spacing: 12) {
-                Button {
-                    Task { await viewModel.loadInsight() }
-                } label: {
-                    Text(viewModel.isLoadingInsight ? "Loading..." : "Insight")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-                .disabled(viewModel.isLoadingInsight)
-
-                Menu {
-                    Button("eBay") { listingPlatform = "eBay" }
-                    Button("COMC") { listingPlatform = "COMC" }
-                    Button("Goldin") { listingPlatform = "Goldin" }
-                    Button("Other") { listingPlatform = "Other" }
-                } label: {
-                    Text(listingPlatform)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-
-                Button {
-                    Task { await viewModel.loadListing(platform: listingPlatform) }
-                } label: {
-                    Text(viewModel.isLoadingListing ? "Listing..." : "Listing")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-                .disabled(viewModel.isLoadingListing)
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Sale Record")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(textSecondary)
-
-                field(title: "Sale Price", placeholder: "150", text: $viewModel.salePrice, keyboardType: .decimalPad)
-
-                HStack(spacing: 12) {
-                    Menu {
-                        Button("eBay") { salePlatform = "eBay" }
-                        Button("COMC") { salePlatform = "COMC" }
-                        Button("Instagram") { salePlatform = "Instagram" }
-                        Button("Other") { salePlatform = "Other" }
-                    } label: {
-                        Text(salePlatform)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-
-                    Button {
-                        Task { await viewModel.submitSale(platform: salePlatform) }
-                    } label: {
-                        Text("Record Sale")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(CompIQSecondaryButtonStyle(background: cardColor, accent: accentColor, textColor: textPrimary))
-                }
-            }
+    private var readyCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Ready when you are")
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("Enter a card and tap Run CompIQ for a live estimate.")
+                .font(HobbyIQTheme.Typography.body)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
-        .padding(16)
-        .background(cardColor)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
     }
 
     @ViewBuilder
@@ -236,21 +143,40 @@ struct CompIQView: View {
 
         if let result = viewModel.result {
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader(title: "Live Estimate", subtitle: "The current value returned by Azure.")
+                sectionHeader(title: Labels.liveEstimate, subtitle: "The current value returned by Azure.")
                 estimateCard(result)
+                sellingGuidanceSection(result)
+                verdictRow(result)
+                variantWarningRow(result)
                 zonesCard(result)
+                buyWindowRow(result)
                 summaryCard(result)
                 explanationCard(result)
+                broaderTrendRow(result)
+                exitStrategyRow(result)
+                freshnessRow(result)
+
+                HStack(spacing: 12) {
+                    HIQSecondaryButton(title: viewModel.isLoadingInsight ? "Loading..." : "Insight", systemImage: "wand.and.stars") {
+                        Task { await viewModel.loadInsight() }
+                    }
+                    .opacity(viewModel.isLoadingInsight ? 0.75 : 1)
+                    .disabled(viewModel.isLoadingInsight)
+
+                    HIQSecondaryButton(title: viewModel.isLoadingListing ? "Listing..." : "Listing", systemImage: "square.and.pencil") {
+                        Task { await viewModel.loadListing(platform: "eBay") }
+                    }
+                    .opacity(viewModel.isLoadingListing ? 0.75 : 1)
+                    .disabled(viewModel.isLoadingListing)
+                }
             }
-            .padding(16)
-            .background(cardColor)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        } else if viewModel.isLoading == false {
-            emptyStateCard
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
 
         if let insight = viewModel.insight {
@@ -262,21 +188,21 @@ struct CompIQView: View {
                 sectionHeader(title: "Listing Copy", subtitle: "Generated listing text for your platform.")
                 Text(title)
                     .font(.headline.weight(.semibold))
-                    .foregroundStyle(textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 if let listingDescription = viewModel.listingDescription {
                     Text(listingDescription)
                         .font(.subheadline)
-                        .foregroundStyle(textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(16)
-            .background(cardColor)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
 
         if let parsed = viewModel.parsedCard {
@@ -284,250 +210,38 @@ struct CompIQView: View {
                 sectionHeader(title: "Parsed Card", subtitle: "Fields inferred from your text.")
                 Text(parsed.playerName ?? "Unknown player")
                     .font(.headline.bold())
-                    .foregroundStyle(textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Text([parsed.cardName, parsed.parallel, parsed.grade].compactMap { $0 }.joined(separator: " • "))
                     .font(.subheadline)
-                    .foregroundStyle(textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
-            .padding(16)
-            .background(cardColor)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
     }
 
-    private var loadingCard: some View {
-        HStack(spacing: 12) {
-            ProgressView()
-                .tint(accentColor)
-            Text("CompIQ is working...")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(textPrimary)
-            Spacer()
+    private func runSearch() async {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+
+        await viewModel.parseFromText(trimmed)
+
+        if viewModel.playerName.isEmpty {
+            viewModel.playerName = trimmed
         }
-        .padding(16)
-        .background(cardColor)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private var emptyStateCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Ready when you are")
-                .font(.headline.bold())
-                .foregroundStyle(textPrimary)
-            Text("Enter a card and tap Run CompIQ for a live estimate.")
-                .font(.subheadline)
-                .foregroundStyle(textSecondary)
+        if viewModel.cardName.isEmpty {
+            viewModel.cardName = trimmed
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardColor)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private func estimateCard(_ result: CompIQEstimateResult) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Fair Value")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(textSecondary)
-                    Text(result.fairValue.formatted(.currency(code: "USD")))
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .foregroundStyle(accentColor)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    Text("Confidence")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(textSecondary)
-                    Text(result.confidence.formatted(.percent.precision(.fractionLength(0))))
-                        .font(.headline.bold())
-                        .foregroundStyle(textPrimary)
-                }
-            }
-
-            HStack(spacing: 12) {
-                statPill(title: "Low", value: result.lowValue.formatted(.currency(code: "USD")), tint: .green)
-                statPill(title: "High", value: result.highValue.formatted(.currency(code: "USD")), tint: .red)
-            }
-
-            Text(result.summary)
-                .font(.subheadline)
-                .foregroundStyle(textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+        if viewModel.cost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            viewModel.cost = "1"
         }
-        .padding(16)
-        .background(backgroundCard)
-    }
 
-    private func zonesCard(_ result: CompIQEstimateResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "HobbyIQ Zones", subtitle: "Quick buy / hold / sell guide rails.")
-            HStack(spacing: 12) {
-                statPill(title: "Buy Zone", value: result.lowValue.formatted(.currency(code: "USD")), tint: .green)
-                statPill(title: "Fair", value: result.fairValue.formatted(.currency(code: "USD")), tint: accentColor)
-                statPill(title: "Sell Zone", value: result.highValue.formatted(.currency(code: "USD")), tint: .red)
-            }
-        }
-        .padding(16)
-        .background(backgroundCard)
-    }
-
-    private func summaryCard(_ result: CompIQEstimateResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "What We Know", subtitle: "The short version.")
-            Text(result.method.isEmpty ? "Unknown method" : result.method)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(textSecondary)
-            Text(result.explanation.isEmpty ? "No summary provided." : result.explanation)
-                .font(.subheadline)
-                .foregroundStyle(textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
-        }
-        .padding(16)
-        .background(backgroundCard)
-    }
-
-    private func explanationCard(_ result: CompIQEstimateResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "How We Comped It", subtitle: "Plain-English notes from Azure.")
-
-            if result.explanationLines.isEmpty {
-                Text("No explanation was returned for this estimate.")
-                    .font(.subheadline)
-                    .foregroundStyle(textSecondary)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(result.explanationLines, id: \.self) { line in
-                        HStack(alignment: .top, spacing: 8) {
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 6, height: 6)
-                                .padding(.top, 7)
-                            Text(line)
-                                .font(.subheadline)
-                                .foregroundStyle(textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(backgroundCard)
-    }
-
-    private func errorBanner(message: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color.red)
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(red: 0.3, green: 0.1, blue: 0.1))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.red.opacity(0.3), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private func infoCard(title: String, body: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader(title: title, subtitle: "Generated from the live CompIQ routes.")
-            Text(body)
-                .font(.subheadline)
-                .foregroundStyle(textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
-        }
-        .padding(16)
-        .background(cardColor)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private func sectionHeader(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.headline.bold())
-                .foregroundStyle(textPrimary)
-            Text(subtitle)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(textSecondary)
-        }
-    }
-
-    private func statPill(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(textSecondary)
-            Text(value)
-                .font(.subheadline.bold())
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.white.opacity(0.03))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private var backgroundCard: some View {
-        cardColor
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
-    private func field(title: String, placeholder: String, text: Binding<String>, keyboardType: UIKeyboardType = .default) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(textSecondary)
-            TextField(placeholder, text: text)
-                .keyboardType(keyboardType)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
-                .padding(12)
-                .background(Color.white.opacity(0.03))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .foregroundStyle(textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        await viewModel.runEstimate()
     }
 
     private func applyInitialQueryIfNeeded() {
@@ -538,50 +252,477 @@ struct CompIQView: View {
             return
         }
 
-        if viewModel.playerName.isEmpty {
-            viewModel.playerName = query
+        searchText = query
+        navigateToVariants = true
+    }
+
+    private func sectionHeader(title: String, subtitle: String) -> some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+
+                Text(title.uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(1.2)
+                    .fixedSize()
+
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+            }
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
         }
     }
-}
 
-private struct CompIQPrimaryButtonStyle: ButtonStyle {
-    let accent: Color
-    let background: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline.bold())
-            .foregroundStyle(background)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 16)
-            .background(accent.opacity(configuration.isPressed ? 0.8 : 1))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    private var loadingCard: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(HobbyIQTheme.Colors.electricBlue)
+            Text("CompIQ is working...")
+                .font(HobbyIQTheme.Typography.bodyEmphasis)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer()
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
     }
-}
 
-private struct CompIQSecondaryButtonStyle: ButtonStyle {
-    let background: Color
-    let accent: Color
-    let textColor: Color
+    private func errorBanner(message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(HobbyIQTheme.Colors.danger)
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.danger.opacity(0.25))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.danger.opacity(0.3), lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(textColor)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 14)
-            .background(background.opacity(configuration.isPressed ? 0.85 : 1))
+    private func infoCard(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(title: title, subtitle: "Generated from the live CompIQ routes.")
+            Text(body)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private func statPill(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.03))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func estimateCard(_ result: CompIQEstimateResult) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(Labels.fairValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(result.formattedFairValue)
+                        .font(HobbyIQTheme.Typography.hero)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(Labels.confidence)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(result.confidence.formatted(.percent.precision(.fractionLength(0))))
+                        .font(.headline.bold())
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+            }
+
+            HStack(spacing: 12) {
+                statPill(title: "Low", value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: "High", value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.danger)
+            }
+
+            Text(result.summary)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private func zonesCard(_ result: CompIQEstimateResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "HobbyIQ Zones", subtitle: "Quick buy / hold / sell guide rails.")
+            HStack(spacing: 12) {
+                statPill(title: Labels.buyZone, value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: "Fair", value: result.formattedFairValue, tint: HobbyIQTheme.Colors.electricBlue)
+                statPill(title: Labels.sellZone, value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.danger)
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private func summaryCard(_ result: CompIQEstimateResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "What We Know", subtitle: "The short version.")
+            Text(result.method.isEmpty ? "Unknown method" : result.method)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(result.explanation.isEmpty ? "No summary provided." : result.explanation)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private func explanationCard(_ result: CompIQEstimateResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: Labels.howWeCompedIt, subtitle: "Plain-English notes from Azure.")
+
+            if result.explanationLines.isEmpty {
+                Text("No explanation was returned for this estimate.")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(result.explanationLines, id: \.self) { line in
+                        HStack(alignment: .top, spacing: 8) {
+                            Circle()
+                                .fill(HobbyIQTheme.Colors.electricBlue)
+                                .frame(width: 6, height: 6)
+                                .padding(.top, 7)
+                            Text(line)
+                                .font(.subheadline)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func verdictRow(_ result: CompIQEstimateResult) -> some View {
+        if let verdict = result.verdict, verdict.isEmpty == false {
+            HStack(spacing: 8) {
+                Text(verdict)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                if let action = result.action, action.isEmpty == false, action != verdict {
+                    Text(action)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(verdictActionColor(action))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(verdictActionColor(action).opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                Spacer()
+                if let deal = result.dealScore {
+                    Text("Deal \(String(format: "%.0f", deal))")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func variantWarningRow(_ result: CompIQEstimateResult) -> some View {
+        if let warning = result.variantWarning, warning.isEmpty == false {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    .font(.caption)
+                Text(warning)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func buyWindowRow(_ result: CompIQEstimateResult) -> some View {
+        if let label = result.buyWindowLabel {
+            HStack {
+                Text("Buy Window")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                Text(label)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                if let score = result.buyWindowScore {
+                    Text(String(format: "%.0f", score))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(score >= 70 ? HobbyIQTheme.Colors.successGreen : score >= 40 ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.danger)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func broaderTrendRow(_ result: CompIQEstimateResult) -> some View {
+        if let label = result.broaderTrendLabel, label.isEmpty == false {
+            HStack {
+                Text("Broader Trend")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                Text(label)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func exitStrategyRow(_ result: CompIQEstimateResult) -> some View {
+        if let method = result.exitRecommendation {
+            HStack {
+                Text("Exit Strategy")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(method)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let days = result.exitDaysToSell {
+                        Text("~\(days)d to sell")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func freshnessRow(_ result: CompIQEstimateResult) -> some View {
+        if let status = result.freshnessStatus, status.isEmpty == false {
+            HStack {
+                Text("Freshness")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                Text(status.capitalized)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(freshnessStatusColor(status))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(freshnessStatusColor(status).opacity(0.15))
+                    .clipShape(Capsule())
+            }
+        }
+    }
+
+    private func verdictActionColor(_ action: String) -> Color {
+        let lower = action.lowercased()
+        if lower.contains("buy") { return HobbyIQTheme.Colors.successGreen }
+        if lower.contains("sell") { return HobbyIQTheme.Colors.danger }
+        return HobbyIQTheme.Colors.warning
+    }
+
+    private func freshnessStatusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "fresh": return HobbyIQTheme.Colors.successGreen
+        case "stale": return HobbyIQTheme.Colors.warning
+        default: return HobbyIQTheme.Colors.mutedText
+        }
+    }
+
+    // MARK: - Selling Guidance
+
+    @ViewBuilder
+    private func sellingGuidanceSection(_ result: CompIQEstimateResult) -> some View {
+        if let guidance = result.sellingGuidance {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader(title: "Selling Guidance", subtitle: "Actionable sell-side pricing.")
+
+                platformPill(guidance.recommendedPlatform)
+
+                if guidance.fair != nil {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        if let range = guidance.sellRange {
+                            guidanceRow(label: "Sell Range", value: "\(formatCurrency(range.low)) – \(formatCurrency(range.high))")
+                        }
+                        if let v = guidance.quickSale {
+                            guidanceRow(label: "Quick Sale", value: formatCurrency(v), subtitle: "Closes within 48h")
+                        }
+                        if let v = guidance.fair {
+                            guidanceRow(label: "Fair Price", value: formatCurrency(v), subtitle: "Balanced FMV")
+                        }
+                        if let v = guidance.ebayListingPrice {
+                            guidanceRow(label: "eBay BIN Price", value: formatCurrency(v), subtitle: "List at this sticker")
+                        }
+                        if let v = guidance.bestOfferFloor {
+                            guidanceRow(label: "Best Offer Floor", value: formatCurrency(v), subtitle: "Auto-decline below")
+                        }
+                        if let v = guidance.auctionStartPrice {
+                            guidanceRow(label: "Auction Start", value: formatCurrency(v), subtitle: "No-reserve opener")
+                        }
+                        if let v = guidance.breakEven {
+                            guidanceRow(label: "Break-even", value: formatCurrency(v), subtitle: "Gross needed to net fair")
+                        }
+                    }
+                } else if let firstNote = guidance.notes.first {
+                    Text(firstNote)
+                        .font(.footnote)
+                        .foregroundStyle(.gray)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if guidance.fair != nil {
+                    ForEach(guidance.notes, id: \.self) { note in
+                        Text(note)
+                            .font(.footnote)
+                            .foregroundStyle(.gray)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(accent.opacity(0.35), lineWidth: 1)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        }
     }
-}
 
-#Preview {
-    NavigationStack {
-        CompIQView()
+    private func platformPill(_ platform: String) -> some View {
+        Text(platform.replacingOccurrences(of: "_", with: " ").capitalized)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(platformColor(platform).opacity(0.25))
+            .overlay(
+                Capsule().stroke(platformColor(platform).opacity(0.5), lineWidth: 1.2)
+            )
+            .clipShape(Capsule())
     }
-    .preferredColorScheme(.dark)
+
+    private func platformColor(_ platform: String) -> Color {
+        switch platform.lowercased() {
+        case "auction": return .blue
+        case "buy_it_now": return HobbyIQTheme.Colors.successGreen
+        case "best_offer": return .orange
+        default: return .gray
+        }
+    }
+
+    private func guidanceRow(label: String, value: String, subtitle: String? = nil) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                }
+            }
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        formatter.roundingMode = .halfUp
+        return formatter.string(from: NSNumber(value: value)) ?? "$\(String(format: "%.2f", value))"
+    }
+
+    #Preview {
+        NavigationStack {
+            CompIQView()
+        }
+        .preferredColorScheme(.dark)
+    }
 }

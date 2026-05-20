@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
 
 type SubscriptionPlan = "free" | "pro" | "all-star";
 
@@ -26,6 +28,8 @@ export interface AuthResult {
 }
 
 const users: Record<string, AuthUserRecord> = {};
+const dataDir = path.resolve(process.cwd(), ".data");
+const authUsersPath = path.join(dataDir, "auth-users.json");
 
 const SEEDED_USERS = [
   {
@@ -107,6 +111,27 @@ function seedUsers() {
   }
 }
 
+async function ensureDataDir() {
+  await mkdir(dataDir, { recursive: true });
+}
+
+async function loadPersistedUsers() {
+  try {
+    const raw = await readFile(authUsersPath, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, AuthUserRecord>;
+    for (const [userId, user] of Object.entries(parsed)) {
+      users[userId] = user;
+    }
+  } catch {
+    // No persisted auth store yet. Seed users below.
+  }
+}
+
+async function persistUsers() {
+  await ensureDataDir();
+  await writeFile(authUsersPath, JSON.stringify(users, null, 2), "utf8");
+}
+
 function findUser(identifier: string): AuthUserRecord | undefined {
   const normalized = identifier.trim().toLowerCase();
   return Object.values(users).find((user) => {
@@ -116,9 +141,26 @@ function findUser(identifier: string): AuthUserRecord | undefined {
   });
 }
 
+function createUserRecord(email: string, password: string): AuthUserRecord {
+  const normalizedEmail = email.trim();
+  return {
+    userId: `user-${generateId()}`,
+    email: normalizedEmail,
+    passwordHash: hashPassword(password),
+    plan: "free",
+    createdAt: new Date().toISOString(),
+  };
+}
+
 seedUsers();
+const authStoreReady = (async () => {
+  await loadPersistedUsers();
+  await persistUsers();
+})();
 
 export async function signIn(identifier: string, password: string): Promise<AuthResult> {
+  await authStoreReady;
+
   if (!identifier || !password) {
     return { success: false, error: "Email and password required" };
   }
@@ -132,11 +174,35 @@ export async function signIn(identifier: string, password: string): Promise<Auth
   return { success: true, user: toAuthUser(user), sessionId };
 }
 
+export async function signUp(identifier: string, password: string): Promise<AuthResult> {
+  await authStoreReady;
+
+  if (!identifier || !password) {
+    return { success: false, error: "Username and password required" };
+  }
+
+  const normalized = identifier.trim().toLowerCase();
+  const existingUser = Object.values(users).find((user) => user.email.trim().toLowerCase() === normalized);
+  if (existingUser) {
+    return { success: false, error: "An account already exists for that email" };
+  }
+
+  const user = createUserRecord(identifier, password);
+  users[user.userId] = user;
+  await persistUsers();
+
+  const sessionId = createSessionToken(user.userId);
+  return { success: true, user: toAuthUser(user), sessionId };
+}
+
 export async function signOut(_sessionId: string): Promise<AuthResult> {
+  await authStoreReady;
   return { success: true };
 }
 
 export async function getUserBySession(sessionId: string): Promise<AuthUser | null> {
+  await authStoreReady;
+
   const session = readSessionToken(sessionId);
   if (!session) return null;
 

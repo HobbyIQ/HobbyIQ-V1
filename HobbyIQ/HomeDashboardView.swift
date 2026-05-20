@@ -10,10 +10,7 @@ struct HomeDashboardView: View {
     @StateObject private var sessionViewModel = AppSessionViewModel()
 
     var body: some View {
-        DashboardView(
-            userId: AuthService.shared.userId ?? "",
-            selectedTab: $selectedTab
-        )
+        DashboardView(selectedTab: $selectedTab, sessionViewModel: sessionViewModel)
         .environmentObject(sessionViewModel)
     }
 }

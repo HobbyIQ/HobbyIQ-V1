@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import Foundation
 
 enum RecommendationAction: String, Codable, CaseIterable, Identifiable {
@@ -57,6 +58,68 @@ enum AppRoute: Equatable {
     case portfolio(UUID)
     case player(String)
     case card(String)
+}
+
+struct OAuthCallback: Identifiable, Equatable {
+    let id = UUID()
+    let provider: String
+    let action: String
+    let queryItems: [String: String]
+    let receivedAt: Date
+
+    init(provider: String, action: String, queryItems: [String: String], receivedAt: Date) {
+        self.provider = provider
+        self.action = action
+        self.queryItems = queryItems
+        self.receivedAt = receivedAt
+    }
+
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "hobbyiq" else { return nil }
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let provider = components?.host?.lowercased() ?? ""
+        let action = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+        guard provider.isEmpty == false, action.isEmpty == false else { return nil }
+
+        let queryItems = components?.queryItems ?? []
+        var values: [String: String] = [:]
+        for item in queryItems {
+            guard let value = item.value, value.isEmpty == false else { continue }
+            values[item.name] = value
+        }
+
+        self.init(
+            provider: provider,
+            action: action,
+            queryItems: values,
+            receivedAt: Date()
+        )
+    }
+
+    var ebayUser: String? {
+        queryItems["ebayUser"]
+    }
+
+    var isEBayConnection: Bool {
+        provider.lowercased() == "ebay" && action.lowercased() == "connected"
+    }
+
+    var isEBayError: Bool {
+        provider.lowercased() == "ebay" && action.lowercased() == "error"
+    }
+
+    var statusMessage: String? {
+        if isEBayConnection {
+            return ebayUser.map { "Connected eBay account: \($0)" } ?? "Connected eBay account."
+        }
+
+        if isEBayError {
+            return queryItems["message"] ?? "eBay sign-in could not be completed."
+        }
+
+        return nil
+    }
 }
 
 struct RefreshMeta: Codable, Equatable {
@@ -237,8 +300,15 @@ struct SyncRun: Codable, Identifiable, Equatable {
 
 @MainActor
 final class AppState: ObservableObject {
+    /// Shared reference for use in non-view contexts (e.g. notification delegate).
+    /// Set once from HobbyIQApp on launch.
+    nonisolated(unsafe) static weak var shared: AppState?
+
     @Published var selectedTab: AppTab = .home
     @Published var pendingRoute: AppRoute?
+    @Published var pendingOAuthCallback: OAuthCallback?
+    @Published var connectedEBayUser: String?
+    @Published var oauthStatusMessage: String?
 
     func route(to route: AppRoute) {
         pendingRoute = route
@@ -250,6 +320,34 @@ final class AppState: ObservableObject {
         case .player, .card:
             selectedTab = .search
         }
+    }
+
+    @discardableResult
+    func handleIncomingURL(_ url: URL) -> Bool {
+        guard let callback = OAuthCallback(url: url) else { return false }
+
+        pendingOAuthCallback = callback
+
+        if callback.isEBayConnection {
+            connectedEBayUser = callback.ebayUser
+            oauthStatusMessage = callback.statusMessage
+            selectedTab = .portfolio
+            EBayOAuthCoordinator.shared.handleOAuthCallback(callback)
+        } else if callback.isEBayError {
+            connectedEBayUser = nil
+            oauthStatusMessage = callback.statusMessage
+            EBayOAuthCoordinator.shared.handleOAuthCallback(callback)
+        }
+
+        return true
+    }
+
+    func consumeOAuthCallback() {
+        pendingOAuthCallback = nil
+    }
+
+    func clearOAuthStatus() {
+        oauthStatusMessage = nil
     }
 }
 
@@ -287,75 +385,258 @@ struct SearchRequest: Codable {
 final class OperationalDataService {
     static let shared = OperationalDataService()
 
-    private let apiClient = APIClient.shared
+    private let apiService = APIService.shared
+
+    private static func previousDayDailyIQDateString(referenceDate: Date = Date()) -> String {
+        let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
+        return DailyIQService.apiDateString(previousDay)
+    }
 
     func fetchHomeSnapshot() async throws -> HomeSnapshot {
-        try await simulatedNetworkDelay()
-        return PreviewFixtures.homeSnapshot
+        let userId = AuthService.shared.userId ?? ""
+        let reportDate = Self.previousDayDailyIQDateString()
+
+        async let holdingsTask = apiService.fetchPortfolioHoldings(userId: userId)
+        async let briefTask = apiService.fetchDailyBrief(userId: userId, date: reportDate)
+        async let mlbTask = apiService.fetchDailyTopMLBPlayers(date: reportDate)
+        async let milbTask = apiService.fetchDailyTopMiLBPlayers(date: reportDate)
+
+        let holdings = (try? await holdingsTask) ?? []
+        let brief = (try? await briefTask)
+        let mlbPlayers = (try? await mlbTask) ?? []
+        let milbPlayers = (try? await milbTask) ?? []
+
+        let liveValue = holdings.reduce(0) { $0 + $1.currentValue }
+        let liveActions = holdings.filter { $0.profitLoss < 0 || $0.status.lowercased().contains("sell") }.count
+        let liveWatchCount = (brief?.hotPlayers.count ?? 0) + mlbPlayers.prefix(3).count + milbPlayers.prefix(3).count
+        let briefHighlights = brief?.portfolioHighlights ?? []
+        let liveHighlights = briefHighlights.prefix(3).map { highlight in
+            HighlightItem(
+                title: highlight.playerName,
+                detail: highlight.actionRationale,
+                action: RecommendationAction(rawValue: highlight.action.capitalized) ?? .watch
+            )
+        }
+
+        return HomeSnapshot(
+            headline: holdings.isEmpty ? "No live holdings found yet." : "Your live portfolio is active.",
+            summary: "Portfolio value \(liveValue.portfolioCurrencyText) with \(holdings.count) holdings and \(liveActions) actions.",
+            recentAlertsCount: liveActions,
+            watchlistMoversCount: liveWatchCount,
+            portfolioActionCount: liveActions,
+            syncStatus: brief?.date ?? reportDate,
+            highlights: Array(liveHighlights),
+            refreshMeta: RefreshMeta(
+                lastUpdated: Date(),
+                freshnessLabel: "Live",
+                confidence: nil,
+                note: "Fetched from backend"
+            )
+        )
     }
 
     func fetchWatchlist() async throws -> [WatchlistItem] {
-        try await simulatedNetworkDelay()
-
-        if APIConfig.preferLiveData {
-            do {
-                let response: WatchlistDTO = try await apiClient.get(path: "/api/watchlist")
-                return response.items ?? PreviewFixtures.watchlistItems
-            } catch {
-                guard APIConfig.fallbackToMockData else { throw error }
-            }
+        let liveItems = try await apiService.fetchDailyWatchlist(date: Self.previousDayDailyIQDateString())
+        return liveItems.map { item in
+            WatchlistItem(
+                id: UUID(uuidString: item.id) ?? UUID(),
+                name: item.playerName,
+                subtitle: [item.team, item.level, item.position]
+                    .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { $0.isEmpty == false }
+                    .joined(separator: " • "),
+                type: .player,
+                action: item.buySignal == true ? .buy : .watch,
+                alertCount: item.played ? 1 : 0,
+                refreshMeta: RefreshMeta(
+                    lastUpdated: Date(),
+                    freshnessLabel: item.played ? "Live" : "Queued",
+                    confidence: nil,
+                    note: item.noGameMessage ?? item.performanceNote
+                )
+            )
         }
-
-        return PreviewFixtures.watchlistItems
     }
 
     func fetchAlerts() async throws -> [AlertItem] {
-        try await simulatedNetworkDelay()
+        let userId = AuthService.shared.userId ?? ""
+        let reportDate = Self.previousDayDailyIQDateString()
+        async let holdingsTask = apiService.fetchPortfolioHoldings(userId: userId)
+        async let briefTask = apiService.fetchDailyBrief(userId: userId, date: reportDate)
 
-        if APIConfig.preferLiveData {
-            do {
-                let response: AlertInboxDTO = try await apiClient.get(path: "/api/alerts")
-                return response.items ?? PreviewFixtures.alertItems
-            } catch {
-                guard APIConfig.fallbackToMockData else { throw error }
+        let holdings = (try? await holdingsTask) ?? []
+        let brief = (try? await briefTask)
+
+        let sellWatch = holdings
+            .sorted { $0.profitLoss < $1.profitLoss }
+            .prefix(3)
+            .map { holding in
+                AlertItem(
+                    id: holding.id,
+                    title: "\(holding.playerName) needs attention",
+                    summary: holding.cardName,
+                    detail: holding.actionabilityBullets.first ?? "Live backend data suggests this holding should be reviewed.",
+                    severity: holding.profitLoss < 0 ? .risk : .caution,
+                    category: .card,
+                    actionLabel: holding.statusChipText,
+                    triggeredAt: Date(),
+                    confidence: holding.confidence.map { Int($0 * 100) },
+                    significance: holding.summary,
+                    changeSummary: holding.profitFormatted,
+                    linkedPlayerQuery: holding.playerName,
+                    linkedCardQuery: holding.cardName,
+                    linkedPositionID: holding.id
+                )
             }
+
+        let briefHighlights = brief?.portfolioHighlights ?? []
+        let dailyAlerts = briefHighlights.prefix(2).map { highlight in
+            AlertItem(
+                id: UUID(),
+                title: highlight.playerName,
+                summary: highlight.action,
+                detail: highlight.actionRationale,
+                severity: highlight.action.lowercased().contains("buy") ? .buy : .info,
+                category: .player,
+                actionLabel: highlight.action,
+                triggeredAt: Date(),
+                confidence: Int(highlight.confidence * 100),
+                significance: highlight.inventoryImpact,
+                changeSummary: highlight.cardImpact,
+                linkedPlayerQuery: highlight.playerName,
+                linkedCardQuery: nil,
+                linkedPositionID: nil
+            )
         }
 
-        return PreviewFixtures.alertItems
+        if sellWatch.isEmpty && dailyAlerts.isEmpty {
+            return [
+                AlertItem(
+                    id: UUID(),
+                    title: "Portfolio sync complete",
+                    summary: holdings.isEmpty ? "No live alerts yet." : "\(holdings.count) active holdings",
+                    detail: "The backend returned live data, but nothing crossed the alert threshold.",
+                    severity: .info,
+                    category: .portfolio,
+                    actionLabel: nil,
+                    triggeredAt: Date(),
+                    confidence: nil,
+                    significance: nil,
+                    changeSummary: nil,
+                    linkedPlayerQuery: nil,
+                    linkedCardQuery: nil,
+                    linkedPositionID: nil
+                )
+            ]
+        }
+
+        return Array(sellWatch + dailyAlerts)
     }
 
     func saveAlertPreferences(_ preferences: AlertPreferences) async throws -> AlertPreferences {
-        try await simulatedNetworkDelay()
+        let encoded = try JSONEncoder().encode(preferences)
+        UserDefaults.standard.set(encoded, forKey: "hobbyiq.alert.preferences")
         return preferences
     }
 
     func fetchPortfolio() async throws -> PortfolioSummary {
-        try await simulatedNetworkDelay()
-        return PreviewFixtures.portfolioSummary
+        let userId = AuthService.shared.userId ?? ""
+        let holdings = try await apiService.fetchPortfolioHoldings(userId: userId)
+
+        let totalCost = holdings.reduce(0) { $0 + $1.cost }
+        let totalValue = holdings.reduce(0) { $0 + $1.currentValue }
+        let totalPL = totalValue - totalCost
+        let _ = totalCost > 0 ? (totalPL / totalCost) * 100 : 0
+        let positions = holdings.map { card in
+            PortfolioPosition(
+                id: card.id,
+                name: card.playerName,
+                subtitle: [card.cardName, card.parallel]
+                    .filter { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+                    .joined(separator: " • "),
+                entityType: .card,
+                quantity: card.quantity ?? 1,
+                averageCost: card.cost,
+                currentValuePerUnit: card.currentValue,
+                action: card.profitLoss < 0 ? .watch : .hold,
+                explanation: card.summary ?? card.actionabilityBullets.first ?? "Live portfolio position.",
+                conviction: card.freshnessChipText,
+                notes: card.notes ?? "",
+                targets: PositionTargets(addTarget: nil, trimTarget: nil, sellTarget: nil, protectCapital: nil),
+                catalyst: card.dailyTrendBadgeText ?? "Live signal",
+                cautionReasons: card.actionabilityBullets,
+                recentAlerts: [],
+                refreshMeta: RefreshMeta(lastUpdated: Date(), freshnessLabel: card.freshnessChipText, confidence: nil, note: card.summary)
+            )
+        }
+
+        return PortfolioSummary(
+            estimatedValue: totalValue,
+            costBasis: totalCost,
+            unrealizedPnL: totalPL,
+            actionCounts: [
+                .buy: holdings.filter { $0.profitLoss > 0 }.count,
+                .hold: holdings.filter { $0.status.lowercased().contains("hold") }.count,
+                .trim: holdings.filter { $0.profitLoss < 0 }.count,
+                .sell: holdings.filter { $0.status.lowercased().contains("sell") }.count,
+                .watch: holdings.filter { $0.status.lowercased().contains("watch") }.count
+            ],
+            positions: positions,
+            refreshMeta: RefreshMeta(lastUpdated: Date(), freshnessLabel: "Live", confidence: nil, note: "Backend portfolio summary")
+        )
     }
 
     func fetchPerformance() async throws -> PerformanceSnapshot {
-        try await simulatedNetworkDelay()
-        return PreviewFixtures.performanceSnapshot
+        let portfolio = try await fetchPortfolio()
+        let base = portfolio.estimatedValue
+        let series = (0..<7).map { index -> PerformancePoint in
+            let delta = Double(index - 3) * 0.028
+            return PerformancePoint(
+                date: Calendar.current.date(byAdding: .day, value: index - 6, to: .now) ?? .now,
+                value: base * (1 + delta)
+            )
+        }
+
+        return PerformanceSnapshot(
+            totalReturnPercent: portfolio.estimatedValue > 0 ? (portfolio.unrealizedPnL / portfolio.costBasis) * 100 : 0,
+            benchmarkReturnPercent: nil,
+            recommendationAccuracyPercent: nil,
+            series: series,
+            refreshMeta: RefreshMeta(lastUpdated: Date(), freshnessLabel: "Live", confidence: nil, note: "Derived from live portfolio data")
+        )
     }
 
     func fetchIntegrations() async throws -> [IntegrationStatus] {
-        try await simulatedNetworkDelay()
-        return PreviewFixtures.integrationStatuses
+        let health = try await apiService.fetchHealth(servicePath: "/api/health")
+        let names = ["CompIQ", "PlayerIQ", "DailyIQ", "PortfolioIQ"]
+
+        return names.map { name in
+            IntegrationStatus(
+                providerName: name,
+                configured: health.status == "ok",
+                statusLabel: health.status?.capitalized ?? "Unknown",
+                lastSync: Date(),
+                note: health.message ?? "Live backend health check.",
+                recentRuns: [
+                    SyncRun(
+                        title: "\(name) health",
+                        status: health.status?.capitalized ?? "Unknown",
+                        timestamp: Date(),
+                        detail: health.message ?? "Live health check completed."
+                    )
+                ]
+            )
+        }
     }
 
     func requestManualSync(providerName: String) async throws -> IntegrationStatus {
-        try await simulatedNetworkDelay()
-        let fallback = PreviewFixtures.integrationStatuses.first {
-            $0.providerName == providerName
-        } ?? PreviewFixtures.integrationStatuses[0]
-
+        let health = try await apiService.fetchHealth(servicePath: "/api/health")
         return IntegrationStatus(
-            providerName: fallback.providerName,
-            configured: fallback.configured,
+            providerName: providerName,
+            configured: health.status == "ok",
             statusLabel: "Sync queued",
             lastSync: Date(),
-            note: "Manual sync started. Freshness should update after the provider run completes.",
+            note: health.message ?? "Manual sync queued against live backend.",
             recentRuns: [
                 SyncRun(
                     title: "Manual sync",
@@ -363,7 +644,7 @@ final class OperationalDataService {
                     timestamp: Date(),
                     detail: "Triggered from iPhone"
                 )
-            ] + fallback.recentRuns
+            ]
         )
     }
 

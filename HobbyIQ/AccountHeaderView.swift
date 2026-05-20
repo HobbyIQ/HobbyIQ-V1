@@ -36,7 +36,7 @@ struct AccountHeaderView: View {
         .background(AppColors.surfaceElevated)
         .overlay(
             Capsule(style: .continuous)
-                .stroke(AppColors.border, lineWidth: 1)
+                .stroke(AppColors.border, lineWidth: 1.6)
         )
         .clipShape(Capsule(style: .continuous))
     }

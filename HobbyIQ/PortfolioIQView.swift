@@ -4,14 +4,15 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PortfolioIQView: View {
-    @StateObject private var vm: PortfolioIQViewModel
-    @State private var isAddingCard = false
+    @ObservedObject var vm: PortfolioIQViewModel
+    let onSwitchToInventory: (PortfolioInventoryFilter) -> Void
 
-    init(viewModel: PortfolioIQViewModel = PortfolioIQViewModel()) {
-        _vm = StateObject(wrappedValue: viewModel)
-    }
+    @State private var selectedCard: InventoryCard?
+    @State private var showingLedger = false
+    @State private var selectedPeriod: PerformancePeriod = .month
 
     var body: some View {
         NavigationView {
@@ -24,24 +25,19 @@ struct PortfolioIQView: View {
                     errorState(message: errorMessage)
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
+                        VStack(spacing: 16) {
                             header
 
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
                             }
 
-                            portfolioSnapshotSection
                             performanceSection
-
-                            if vm.bestCardsToSellNow.isEmpty == false {
-                                sellNowSection
-                            }
-
-                            collectionSection
+                            priorityActionsSection
+                            topMoversSection
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
+                        .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+                        .padding(.top, 8)
                         .padding(.bottom, 24)
                     }
                     .refreshable {
@@ -49,22 +45,21 @@ struct PortfolioIQView: View {
                     }
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await vm.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .disabled(vm.isLoading)
-                }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 88)
             }
-            .sheet(isPresented: $isAddingCard) {
-                AddPortfolioCardView(viewModel: AddPortfolioCardViewModel()) {
-                    Task { await vm.refresh() }
-                }
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showingLedger) {
+                PortfolioLedgerSheet(entries: vm.ledgerEntries)
+            }
+            .sheet(item: $selectedCard) { card in
+                PortfolioHoldingDetailSheet(
+                    viewModel: vm,
+                    card: card,
+                    onUpdated: {
+                        Task { await vm.refresh() }
+                    }
+                )
             }
             .onAppear {
                 if vm.summary == nil {
@@ -76,7 +71,7 @@ struct PortfolioIQView: View {
     }
 
     private var background: some View {
-        Color(hex: 0x10131A).ignoresSafeArea()
+        HobbyIQBackground()
     }
 
     private var loadingState: some View {
@@ -106,192 +101,360 @@ struct PortfolioIQView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Hero Card
+
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+        let summary = vm.heroSummary
+        let pnlColor: Color = summary.unrealizedPnL >= 0 ? .green : .red
+
+        return VStack(spacing: 10) {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PortfolioIQ")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(Color(hex: 0xE8EAF0))
+                        .font(HobbyIQTheme.Typography.title)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                    Text("Manage cards, values, and sales signals.")
-                        .font(.subheadline)
-                        .foregroundStyle(Color(hex: 0x9CA3AF))
-                }
-
-                Spacer(minLength: 0)
-
-                Button {
-                    isAddingCard = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "plus")
-                        Text("Add")
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color(hex: 0xE8EAF0))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color(hex: 0x1A1D24))
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add Card")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 112, alignment: .leading)
-        .padding(16)
-        .background(Color(hex: 0x171B24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 4)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .hiqGlowSection(cornerRadius: 20)
-    }
-
-    private var portfolioSnapshotSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("PORTFOLIO SNAPSHOT")
-
-            let summary = vm.inventorySummary ?? PortfolioInventorySummary(
-                totalCost: 0,
-                totalCurrentValue: 0,
-                totalProfitLoss: 0,
-                roi: 0,
-                activeCount: 0
-            )
-
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                PortfolioMetricTile(
-                    title: "Total Value",
-                    value: summary.totalValueFormatted,
-                    subtitle: "\(summary.activeCount) cards tracked",
-                    subtitleColor: .green
-                )
-
-                PortfolioMetricTile(
-                    title: "Total P/L",
-                    value: summary.profitFormatted,
-                    subtitle: "since cost basis",
-                    subtitleColor: summary.totalProfitLoss >= 0 ? .green : .red
-                )
-
-                PortfolioMetricTile(
-                    title: "ROI",
-                    value: summary.roiFormatted,
-                    subtitle: "return on investment",
-                    subtitleColor: summary.roi >= 0 ? .green : .red
-                )
-
-                PortfolioMetricTile(
-                    title: "Cost Basis",
-                    value: summary.totalCostFormatted,
-                    subtitle: "amount invested",
-                    subtitleColor: .gray
-                )
-            }
-        }
-    }
-
-    private var performanceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("PERFORMANCE")
-
-            HStack(spacing: 12) {
-                PortfolioPerformanceCard(title: "THIS MONTH", stats: vm.monthStats)
-                PortfolioPerformanceCard(title: "THIS YEAR", stats: vm.yearStats)
-            }
-            .padding(.horizontal)
-        }
-    }
-
-    private var sellNowSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("🔥 SELL NOW")
-
-            VStack(spacing: 0) {
-                ForEach(Array(vm.bestCardsToSellNow.prefix(5).enumerated()), id: \.element.id) { index, card in
-                    PortfolioBestSellRow(card: card)
-
-                    if index < min(vm.bestCardsToSellNow.count, 5) - 1 {
-                        Divider()
-                            .overlay(Color.white.opacity(0.08))
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(HobbyIQTheme.Colors.hobbyGreen)
+                            .frame(width: 7, height: 7)
+                        Text(vm.heroSummary.lastRefreshText)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                     }
                 }
-            }
-            .background(Color(hex: 0x1A1D24))
-            .cornerRadius(16)
-            .padding(.horizontal)
-        }
-    }
-
-    private var collectionSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("📦 MY COLLECTION")
-
-            HStack {
-                Text("\(vm.inventoryDetails.count) cards")
-                    .font(.caption)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
 
                 Spacer()
 
-                Text("Last updated \(vm.accountSnapshot?.generatedAtFormatted ?? "—")")
-                    .font(.caption2)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                Button {
+                    showingLedger = true
+                } label: {
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(width: 34, height: 34)
+                        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4)
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal)
 
-            if vm.inventoryDetails.isEmpty {
+            // Hero value
+            VStack(spacing: 6) {
+                Text(summary.totalValue.portfolioCurrencyText)
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .minimumScaleFactor(0.7)
+
+                HStack(spacing: 4) {
+                    Image(systemName: summary.unrealizedPnL >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        .font(.caption2.weight(.bold))
+                    Text(summary.unrealizedPnL.portfolioSignedCurrencyText)
+                        .font(.subheadline.weight(.semibold))
+                    Text("•")
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text(summary.roi.portfolioSignedPercentText + " " + Labels.roi)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(pnlColor)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Quiet supporting line
+            Text("Cost basis \(portfolioCurrencyString(summary.costBasis)) · \(summary.totalCards) cards")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .padding(.vertical, 4)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
+    }
+
+    // MARK: - Performance Section
+
+    private var performanceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(Labels.performance)
+
+            // Segmented control
+            HStack(spacing: 0) {
+                ForEach(PerformancePeriod.allCases) { period in
+                    Button {
+                        selectedPeriod = period
+                    } label: {
+                        Text(period.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
+                            .clipShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .clipShape(Capsule(style: .continuous))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+            )
+
+            // Performance card
+            performanceCard(for: selectedPeriod)
+        }
+    }
+
+    private func performanceCard(for period: PerformancePeriod) -> some View {
+        let stats: PortfolioPeriodStats? = {
+            switch period {
+            case .month: return vm.monthStats
+            case .year: return vm.yearStats
+            default: return nil
+            }
+        }()
+
+        let resolvedStats = stats ?? PortfolioPeriodStats(
+            totalSold: 0,
+            totalProfit: 0,
+            totalExpenses: nil,
+            netProfit: nil,
+            margin: 0
+        )
+        let netProfit = resolvedStats.netProfit ?? resolvedStats.totalProfit
+        let netColor: Color = {
+            if netProfit == 0 { return HobbyIQTheme.Colors.mutedText }
+            return netProfit > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        }()
+
+        return VStack(spacing: 8) {
+            Text(resolvedStats.netProfitFormatted)
+                .font(.title2.bold())
+                .foregroundStyle(netColor)
+                .minimumScaleFactor(0.7)
+
+            Text(resolvedStats.marginFormatted)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(netColor.opacity(0.8))
+
+            Text("Sold \(resolvedStats.totalSoldFormatted) · Fees \(resolvedStats.totalExpensesFormatted)")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: - Priority Actions
+
+    private var priorityActionsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(Labels.priorityActions)
+
+            if vm.priorityActions.isEmpty {
                 portfolioEmptyState
+                    .padding(.vertical, 4)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(vm.inventoryDetails.enumerated()), id: \.element.id) { index, card in
-                        PortfolioCardRow(card: card)
+                    ForEach(Array(vm.priorityActions.prefix(3).enumerated()), id: \.element.id) { index, action in
+                        Button {
+                            let filter: PortfolioInventoryFilter
+                            switch action.kind {
+                            case .sellWatch:
+                                filter = .sellWatch
+                            case .highRisk:
+                                filter = .losers
+                            case .stalePricing:
+                                filter = .stale
+                            }
+                            onSwitchToInventory(filter)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: actionIconName(for: action.kind))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(actionColor(for: action.kind))
+                                    .frame(width: 32, height: 32)
+                                    .background(actionColor(for: action.kind).opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                        if index < vm.inventoryDetails.count - 1 {
+                                Text(action.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                                Spacer()
+
+                                Text("\(action.cardCount)")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color(hex: 0x232937))
+                                    .clipShape(Capsule(style: .continuous))
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < min(vm.priorityActions.count, 3) - 1 {
                             Divider()
-                                .overlay(Color.white.opacity(0.08))
+                                .overlay(Color.white.opacity(0.06))
+                                .padding(.leading, 56)
                         }
                     }
                 }
-                .background(Color(hex: 0x1A1D24))
-                .cornerRadius(16)
-                .padding(.horizontal)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             }
         }
     }
+
+    // MARK: - Top Movers
+
+    private var topMoversSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(Labels.topMovers)
+
+            if vm.topMovers.isEmpty {
+                portfolioEmptyState
+                    .padding(.vertical, 4)
+            } else {
+                let gainers = Array(vm.topMovers.filter { $0.profitLoss >= 0 }.prefix(3))
+                let losers = Array(vm.topMovers.filter { $0.profitLoss < 0 }.prefix(3))
+
+                VStack(spacing: 0) {
+                    if !gainers.isEmpty {
+                        moverSubheader(title: Labels.gainers, icon: "arrow.up.right", color: .green)
+
+                        ForEach(Array(gainers.enumerated()), id: \.element.id) { index, mover in
+                            Button {
+                                selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
+                            } label: {
+                                moverRow(mover: mover)
+                            }
+                            .buttonStyle(.plain)
+
+                            if index < gainers.count - 1 || !losers.isEmpty {
+                                Divider()
+                                    .overlay(Color.white.opacity(0.06))
+                                    .padding(.leading, 12)
+                            }
+                        }
+                    }
+
+                    if !losers.isEmpty {
+                        moverSubheader(title: Labels.losers, icon: "arrow.down.right", color: .red)
+
+                        ForEach(Array(losers.enumerated()), id: \.element.id) { index, mover in
+                            Button {
+                                selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
+                            } label: {
+                                moverRow(mover: mover)
+                            }
+                            .buttonStyle(.plain)
+
+                            if index < losers.count - 1 {
+                                Divider()
+                                    .overlay(Color.white.opacity(0.06))
+                                    .padding(.leading, 12)
+                            }
+                        }
+                    }
+                }
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            }
+        }
+    }
+
+    private func moverSubheader(title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(color)
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(1.0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+    }
+
+    private func moverRow(mover: PortfolioMover) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(mover.playerName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(mover.cardName)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 12)
+
+            Text(mover.profitLoss.portfolioSignedCurrencyText)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(mover.profitLoss >= 0 ? .green : .red)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Helpers
 
     private var portfolioEmptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x9CA3AF))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
-            Text("No cards yet.")
+            Text("No data yet.")
                 .font(.headline.bold())
                 .foregroundStyle(.white)
 
-            Text("Add your first card using the + button.")
+            Text("Add cards to your inventory to see actions and movers.")
                 .font(.caption)
-                .foregroundStyle(Color(hex: 0x9CA3AF))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(20)
-        .background(Color(hex: 0x1A1D24))
-        .cornerRadius(16)
-        .padding(.horizontal)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private func warningBanner(message: String) -> some View {
@@ -318,203 +481,141 @@ struct PortfolioIQView: View {
         .background(Color(hex: 0x1A1D24))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.orange.opacity(0.24), lineWidth: 1)
+                .stroke(Color.orange.opacity(0.24), lineWidth: 1.6)
         )
         .cornerRadius(14)
         .padding(.horizontal)
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Color(hex: 0x9CA3AF))
-            .tracking(1.5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal)
+        HStack(spacing: 10) {
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                .frame(height: 1)
+
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(1.2)
+                .fixedSize()
+
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                .frame(height: 1)
+        }
+    }
+
+    private func actionIconName(for kind: PortfolioPriorityActionKind) -> String {
+        switch kind {
+        case .sellWatch: return "exclamationmark.circle.fill"
+        case .highRisk: return "flame.fill"
+        case .stalePricing: return "clock.arrow.circlepath"
+        }
+    }
+
+    private func actionColor(for kind: PortfolioPriorityActionKind) -> Color {
+        switch kind {
+        case .sellWatch: return .orange
+        case .highRisk: return .red
+        case .stalePricing: return Color(hex: 0x3B82F6)
+        }
     }
 }
 
-private struct PortfolioMetricTile: View {
-    let title: String
-    let value: String
-    let subtitle: String
-    let subtitleColor: Color
+// MARK: - Performance Period
+
+private enum PerformancePeriod: String, CaseIterable, Identifiable {
+    case today = "Today"
+    case week = "Week"
+    case month = "Month"
+    case year = "Year"
+    case all = "All"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+}
+
+// MARK: - Supporting Views
+
+private struct PortfolioLedgerSheet: View {
+    let entries: [PortfolioLedgerEntry]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color(hex: 0x9CA3AF))
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if entries.isEmpty {
+                        PortfolioLedgerEmptyState()
+                    } else {
+                        ForEach(entries) { entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(entry.playerName)
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(.white)
+                                        Text(entry.cardName)
+                                            .font(.caption)
+                                            .foregroundStyle(Color(hex: 0x9CA3AF))
+                                    }
 
-            Text(value)
+                                    Spacer(minLength: 0)
+
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text(entry.salePrice.portfolioCurrencyText)
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(.white)
+                                        Text(entry.profit.portfolioSignedCurrencyText)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(entry.profit >= 0 ? .green : .red)
+                                    }
+                                }
+
+                                Text(entry.dateText)
+                                    .font(.caption2)
+                                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+                            .portfolioCardSurface(cornerRadius: 18)
+                        }
+                    }
+                }
+                .padding(16)
+            }
+            .background { HobbyIQBackground() }
+            .navigationTitle("Ledger")
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
+        }
+    }
+}
+
+private struct PortfolioLedgerEmptyState: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "book.closed")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            Text("No sales yet.")
                 .font(.headline.bold())
                 .foregroundStyle(.white)
-
-            Text(subtitle)
+            Text("When you mark cards sold, the ledger will appear here.")
                 .font(.caption)
-                .foregroundStyle(subtitleColor)
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+                .multilineTextAlignment(.center)
         }
-        .padding(12)
+        .frame(maxWidth: .infinity)
+        .padding(20)
         .background(Color(hex: 0x1A1D24))
-        .cornerRadius(14)
-    }
-}
-
-private struct PortfolioPerformanceCard: View {
-    let title: String
-    let stats: PortfolioPeriodStats?
-
-    var body: some View {
-        let resolvedStats = stats ?? PortfolioPeriodStats(
-            totalSold: 0,
-            totalProfit: 0,
-            totalExpenses: nil,
-            netProfit: nil,
-            margin: 0
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
         )
-        let netProfit = resolvedStats.netProfit ?? resolvedStats.totalProfit
-        let netColor: Color = netProfit >= 0 ? .green : .red
-
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color(hex: 0x9CA3AF))
-                .tracking(1.2)
-
-            Text(resolvedStats.netProfitFormatted)
-                .font(.headline.bold())
-                .foregroundStyle(netColor)
-
-            Text(resolvedStats.marginFormatted)
-                .font(.caption)
-                .foregroundStyle(Color(hex: 0x9CA3AF))
-
-            Divider()
-                .overlay(Color.white.opacity(0.08))
-
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Sold")
-                        .font(.caption2)
-                        .foregroundStyle(Color(hex: 0x9CA3AF))
-                    Text(resolvedStats.totalSoldFormatted)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Fees")
-                        .font(.caption2)
-                        .foregroundStyle(Color(hex: 0x9CA3AF))
-                    Text(resolvedStats.totalExpensesFormatted)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color(hex: 0x1A1D24))
-        .cornerRadius(14)
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 }
 
-private struct PortfolioBestSellRow: View {
-    let card: PortfolioBestSellCard
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(card.playerName)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-
-                Text(card.cardName)
-                    .font(.caption)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
-
-                Text(card.recommendation)
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(portfolioSignalBadgeText(card.signal))
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(card.signalColor)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(card.signalColor.opacity(0.15))
-                    .cornerRadius(5)
-
-                Text(card.roiFormatted)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(card.roi >= 0 ? .green : .red)
-
-                Text(card.profitFormatted)
-                    .font(.caption2)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
-            }
-        }
-        .padding(12)
-    }
-}
-
-private struct PortfolioCardRow: View {
-    let card: PortfolioCardDetail
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(card.signalColor)
-                .frame(width: 8, height: 8)
-                .padding(.top, 6)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(card.playerName)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-
-                Text(card.cardName)
-                    .font(.caption)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(card.currentValueFormatted)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-
-                Text(card.profitFormatted)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(card.profitLoss >= 0 ? .green : .red)
-
-                Text(card.roiFormatted)
-                    .font(.caption2)
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
-            }
-        }
-        .padding(12)
-    }
-}
-
-private func portfolioSignalBadgeText(_ rawValue: String?) -> String {
-    let trimmed = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    guard trimmed.isEmpty == false else {
-        return "N/A"
-    }
-
-    return trimmed
-        .replacingOccurrences(of: "_", with: " ")
-        .replacingOccurrences(of: "-", with: " ")
-        .uppercased()
-}
+// MARK: - Preview Data
 
 private extension PortfolioSummaryResponse {
     static var previewSample: PortfolioSummaryResponse {
@@ -612,5 +713,9 @@ private extension PortfolioSummaryResponse {
 }
 
 #Preview {
-    PortfolioIQView(viewModel: PortfolioIQViewModel(initialSummary: .previewSample))
+    PortfolioIQView(
+        vm: PortfolioIQViewModel(initialSummary: .previewSample),
+        onSwitchToInventory: { _ in }
+    )
+    .environmentObject(AppState())
 }
