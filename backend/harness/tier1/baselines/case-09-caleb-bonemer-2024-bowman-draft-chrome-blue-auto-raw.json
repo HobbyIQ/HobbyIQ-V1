@@ -1,120 +1,505 @@
-{
+﻿{
     "caseId":  "case-09-caleb-bonemer-2024-bowman-draft-chrome-blue-auto-raw",
     "category":  "realLookups",
     "query":  "2024 Bowman Draft Chrome Blue Auto Caleb Bonemer",
     "grade":  "Raw",
-    "capturedAt":  "2026-05-15T18:33:29.2555095Z",
+    "capturedAt":  "2026-05-20T00:39:22.4249591Z",
     "search":  {
                    "pricingEngine":  "monolith",
-                   "engineVersion":  "1989cb8",
-                   "computedAt":  "2026-05-15T18:24:06.008Z",
+                   "engineVersion":  "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+                   "computedAt":  "2026-05-20T00:39:22.728Z",
                    "success":  true,
                    "query":  "2024 Bowman Draft Chrome Blue Auto Caleb Bonemer",
-                   "summary":  "Indicative price ($46.97) synthesized from 2 last comp was 432 days ago. Confidence 26/100.",
+                   "summary":  "No comps found for this exact variant (missing: all 5 fetched comps rejected by variant filter (parallel_mismatch×5)). Card Hedge doesn\u0027t have sold data for this card yet.",
                    "marketTier":  {
-                                      "value":  46.96969696969697,
-                                      "high":  54.01515151515151
+                                      "value":  null,
+                                      "high":  null
                                   },
                    "buyZone":  [
-                                   37.2,
-                                   41.333333333333336
+                                   null,
+                                   null
                                ],
                    "holdZone":  [
-                                    41.333333333333336,
-                                    46.96969696969697
+                                    null,
+                                    null
                                 ],
                    "sellZone":  [
-                                    46.96969696969697,
-                                    54.01515151515151
+                                    null,
+                                    null
                                 ],
-                   "fairMarketValueLive":  46.96969696969697,
-                   "confidence":  0.26,
-                   "source":  "neighbor-synthesis",
+                   "fairMarketValueLive":  null,
+                   "marketValue":  null,
+                   "predictedPrice":  null,
+                   "predictedPriceRange":  null,
+                   "predictedPriceAttribution":  null,
+                   "confidence":  0,
+                   "source":  "variant-mismatch",
                    "trendAnalysis":  {
                                          "market_direction":  "flat",
                                          "change_from_older_to_recent":  0,
                                          "liquidity":  "Unknown"
                                      },
+                   "regime":  "insufficient_data",
+                   "regimeConfidence":  "low",
+                   "regimeDiagnostics":  {
+                                             "compsUsedForClassification":  47,
+                                             "windowDays":  90,
+                                             "slopePctPerMonth":  null,
+                                             "r2":  null,
+                                             "coefficientOfVariation":  null,
+                                             "recentMeanLast14d":  111.78,
+                                             "olderMean14to90d":  70.94,
+                                             "pctChangeRecentVsOlder":  57.57,
+                                             "classificationReason":  "skipped_classification: source=variant-mismatch (classifier output discarded: Last 14d mean is 57.6% above 14-90d mean across 5 recent sales.)"
+                                         },
+                   "predictedRange":  {
+                                          "low":  null,
+                                          "high":  null
+                                      },
+                   "predictedRangeDiagnostics":  {
+                                                     "windowAppliedDays":  null,
+                                                     "compsAfterFilter":  0,
+                                                     "mathApplied":  "null_non_live_source",
+                                                     "sanityCapsApplied":  [
+
+                                                                           ],
+                                                     "weightedPercentileBuckets":  null
+                                                 },
+                   "predictedRangeAdjustedConfidence":  null,
                    "supply":  null,
                    "recentComps":  [
                                        {
-                                           "price":  55,
-                                           "title":  "1st Bowman chrome auto TRUE BLUE /150 Caleb Bonemer 2024 Bowman Draft CPA-CBO - Raw 10",
-                                           "soldDate":  "2025-03-09T16:06:40.000Z"
+                                           "price":  104.5,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-05-17T00:33:09Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  107.51,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-05-15T00:33:31Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  106.5,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome Auto 1st Prospect (B)",
+                                           "soldDate":  "2026-05-13T02:20:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  115.39,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome Auto 1st Prospect (A)",
+                                           "soldDate":  "2026-05-12T02:45:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  124.99,
+                                           "title":  "2024 Bowman Draft CALEB BONEMER 1st Chrome Auto White Sox #CPA-CBO",
+                                           "soldDate":  "2026-05-09T16:05:57.289623Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  88.11,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-28T01:12:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  91,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-28T01:09:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  86,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-27T02:20:13Z",
+                                           "grade":  "Raw"
                                        },
                                        {
                                            "price":  100,
-                                           "title":  "2024 Bowman Draft #CPA-CBO Caleb Bonemer Chrome Auto Blue Refractor /150 - Raw 10",
-                                           "soldDate":  "2025-01-31T17:38:48.000Z"
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-22T00:42:37Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  72.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-17T00:20:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  97,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-16T01:46:51Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  60,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-08T01:18:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  76,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-08T00:39:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-08T00:30:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  71,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-07T00:45:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  52,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Prospect Auto #CPA-CBO",
+                                           "soldDate":  "2026-04-04T01:00:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63.63,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-02T01:32:19Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.25,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-04-01T01:00:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  65,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-31T00:45:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  56,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-31T00:39:13Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  61,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-31T00:33:27Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-30T23:58:50Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-27T23:10:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  67,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-25T23:10:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  76,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-23T01:38:25Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  60,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-19T00:13:26Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  70.69,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-18T02:04:44Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  79,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-13T16:02:47.479736Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome Auto 1st Prospect B",
+                                           "soldDate":  "2026-03-12T02:48:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  71,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome Auto 1st Prospect A",
+                                           "soldDate":  "2026-03-12T02:39:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  71,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-11T00:11:10Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  70,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-10T00:55:25Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  66.2,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-08T02:12:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  66,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Prospect Auto #CPA-CBO Chicago White Sox",
+                                           "soldDate":  "2026-03-05T02:30:00Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  100,
+                                           "title":  "2024 Bowman Draft - Autographs Caleb Bonemer #CPA-CBO 1st Bowman Chw Sox",
+                                           "soldDate":  "2026-03-02T17:02:30.222003Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  70,
+                                           "title":  "2024 Bowman Draft - Caleb Bonemer Chrome 1st AUTO #CPA-CBO",
+                                           "soldDate":  "2026-03-02T02:11:33Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63.77,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-03-02T01:20:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-26T02:53:54Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-26T02:43:28Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-26T02:32:07Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  66,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-26T01:44:16Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  69,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome 1st Prospect RC Auto",
+                                           "soldDate":  "2026-02-23T17:33:11Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  85.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer 1st Auto #CPA-CBO",
+                                           "soldDate":  "2026-02-22T17:02:23.696204Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  74.33,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-20T01:24:23Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  81,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-20T01:24:14Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  63.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-20T01:24:03Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  73,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-20T01:23:58Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  67,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-17T02:27:07Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  76,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-13T03:12:48Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  67.03,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome 1st Prospect RC Auto",
+                                           "soldDate":  "2026-02-13T01:23:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  60.59,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome 1st Prospect RC Auto",
+                                           "soldDate":  "2026-02-10T01:47:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  89.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-09T17:02:20.405534Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Chrome 1st Prospect RC Auto",
+                                           "soldDate":  "2026-02-06T18:01:07Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-05T01:45:03Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  62.09,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-02-02T02:27:56Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-28T02:01:12Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st Prospect #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-28T02:00:50Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  64.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-26T17:02:42.055076Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  99.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-20T17:02:39.004374Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-18T17:02:31.263584Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  43,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO See Pictures-Surface ",
+                                           "soldDate":  "2026-01-15T01:25:55Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  67,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-05T04:10:01Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  60.5,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-04T05:24:56Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  45,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2026-01-01T17:02:36.707388Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  51,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2025-12-31T17:37:49Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  59.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2025-12-30T17:02:09.307543Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  55,
+                                           "title":  "Caleb Bonemer 2024 Bowman Draft #CPA-CBO Base Auto 1st Rookie RC",
+                                           "soldDate":  "2025-12-05T21:00:48.282855Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  99.99,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2025-12-01T13:13:33.966719Z",
+                                           "grade":  "Raw"
+                                       },
+                                       {
+                                           "price":  45,
+                                           "title":  "2024 Bowman Draft Caleb Bonemer Chrome Auto 1st #CPA-CBO White Sox",
+                                           "soldDate":  "2025-11-27T15:36:17.415620Z",
+                                           "grade":  "Raw"
                                        }
                                    ],
                    "cardIdentity":  {
-                                        "card_id":  "1736791720219x582648490284626000",
-                                        "title":  "Caleb Bonemer 2024 Bowman Draft Chrome Prospect Autographs Baseball Blue Refractor",
-                                        "player":  "Caleb Bonemer",
-                                        "set":  "2024 Bowman Draft Chrome Baseball",
+                                        "card_id":  "496a7e19-b26d-4f48-9fae-e66d6961c27a",
+                                        "title":  "Caleb Bonemer",
+                                        "player":  null,
+                                        "set":  null,
                                         "year":  null,
                                         "number":  "CPA-CBO",
-                                        "variant":  "Blue Refractor"
+                                        "variant":  null
                                     },
                    "gradeUsed":  "Raw",
-                   "compsUsed":  2,
-                   "compsAvailable":  2,
-                   "daysSinceNewestComp":  432,
+                   "compsUsed":  0,
+                   "compsAvailable":  69,
+                   "daysSinceNewestComp":  null,
                    "variantWarning":  [
 
                                       ],
-                   "neighborSynthesis":  {
-                                             "stepsRelaxedMax":  2,
-                                             "detail":  [
-                                                            {
-                                                                "neighborTitle":  "1st Bowman chrome auto TRUE BLUE /150 Caleb Bonemer 2024 Bowman Draft CPA-CBO - Raw 10",
-                                                                "neighborPrice":  55,
-                                                                "neighborParallel":  "Blue",
-                                                                "neighborGrade":  "Raw",
-                                                                "neighborIsAuto":  true,
-                                                                "neighborPrintRun":  150,
-                                                                "neighborYear":  2024,
-                                                                "relativeMultiplier":  0.6060606060606061,
-                                                                "syntheticPrice":  33.333333333333336,
-                                                                "stepsRelaxed":  1,
-                                                                "soldDate":  "2025-03-09T16:06:40.000Z"
-                                                            },
-                                                            {
-                                                                "neighborTitle":  "2024 Bowman Draft #CPA-CBO Caleb Bonemer Chrome Auto Blue Refractor /150 - Raw 10",
-                                                                "neighborPrice":  100,
-                                                                "neighborParallel":  "Blue Refractor",
-                                                                "neighborGrade":  "Raw",
-                                                                "neighborIsAuto":  true,
-                                                                "neighborPrintRun":  150,
-                                                                "neighborYear":  2024,
-                                                                "relativeMultiplier":  0.6060606060606061,
-                                                                "syntheticPrice":  60.60606060606061,
-                                                                "stepsRelaxed":  2,
-                                                                "soldDate":  "2025-01-31T17:38:48.000Z"
-                                                            }
-                                                        ],
-                                             "anchor":  {
-                                                            "price":  46.96969696969697,
-                                                            "neighborsUsed":  2,
-                                                            "parallelTier":  "blue",
-                                                            "sources":  [
-                                                                            {
-                                                                                "title":  "1st Bowman chrome auto TRUE BLUE /150 Caleb Bonemer 2024 Bowman Draft CPA-CBO - Raw 10",
-                                                                                "rawPrice":  55,
-                                                                                "syntheticPrice":  33.333333333333336,
-                                                                                "soldDate":  "2025-03-09T16:06:40.000Z"
-                                                                            },
-                                                                            {
-                                                                                "title":  "2024 Bowman Draft #CPA-CBO Caleb Bonemer Chrome Auto Blue Refractor /150 - Raw 10",
-                                                                                "rawPrice":  100,
-                                                                                "syntheticPrice":  60.60606060606061,
-                                                                                "soldDate":  "2025-01-31T17:38:48.000Z"
-                                                                            }
-                                                                        ]
-                                                        },
-                                             "trend":  null
-                                         },
+                   "neighborSynthesis":  null,
                    "crossParallelAnchor":  null,
                    "buySignal":  null,
                    "parsedQuery":  {
@@ -135,64 +520,86 @@
                    "searchQuery":  "2024 Caleb Bonemer Bowman Draft auto Blue"
                },
     "searchError":  null,
-    "cardHedgeCardId":  "1736791720219x582648490284626000",
+    "cardHedgeCardId":  "496a7e19-b26d-4f48-9fae-e66d6961c27a",
     "priceById":  {
                       "pricingEngine":  "monolith",
-                      "engineVersion":  "1989cb8",
-                      "computedAt":  "2026-05-15T18:33:30.086Z",
+                      "engineVersion":  "c75aa2586a126c8a05cb9d069d829ab38aa2f0f6",
+                      "computedAt":  "2026-05-20T00:39:22.849Z",
                       "success":  true,
-                      "cardHedgeCardId":  "1736791720219x582648490284626000",
-                      "summary":  "Indicative price ($46.97) synthesized from 2 last comp was 432 days ago. Confidence 26/100.",
+                      "cardHedgeCardId":  "496a7e19-b26d-4f48-9fae-e66d6961c27a",
+                      "summary":  "Insufficient recent comps — no comps on file. Refine the query or wait for fresh sales.",
                       "marketTier":  {
-                                         "value":  46.96969696969697,
-                                         "high":  54.01515151515151
+                                         "value":  null,
+                                         "high":  null
                                      },
                       "buyZone":  [
-                                      37.2,
-                                      41.333333333333336
+                                      null,
+                                      null
                                   ],
                       "holdZone":  [
-                                       41.333333333333336,
-                                       46.96969696969697
+                                       null,
+                                       null
                                    ],
                       "sellZone":  [
-                                       46.96969696969697,
-                                       54.01515151515151
+                                       null,
+                                       null
                                    ],
-                      "fairMarketValueLive":  46.96969696969697,
-                      "confidence":  0.26,
-                      "source":  "neighbor-synthesis",
+                      "fairMarketValueLive":  null,
+                      "marketValue":  null,
+                      "predictedPrice":  null,
+                      "predictedPriceRange":  null,
+                      "predictedPriceAttribution":  null,
+                      "confidence":  0,
+                      "source":  "no-recent-comps",
                       "trendAnalysis":  {
                                             "market_direction":  "flat",
                                             "change_from_older_to_recent":  0,
                                             "liquidity":  "Unknown",
                                             "broaderTrend":  null
                                         },
+                      "regime":  "insufficient_data",
+                      "regimeConfidence":  "low",
+                      "regimeDiagnostics":  {
+                                                "compsUsedForClassification":  0,
+                                                "windowDays":  90,
+                                                "slopePctPerMonth":  null,
+                                                "r2":  null,
+                                                "coefficientOfVariation":  null,
+                                                "recentMeanLast14d":  null,
+                                                "olderMean14to90d":  null,
+                                                "pctChangeRecentVsOlder":  null,
+                                                "classificationReason":  "skipped_classification: source=no-recent-comps (classifier output discarded: Only 0 usable comp(s) in last 90 days (need \u003e= 5).)"
+                                            },
+                      "predictedRange":  {
+                                             "low":  null,
+                                             "high":  null
+                                         },
+                      "predictedRangeDiagnostics":  {
+                                                        "windowAppliedDays":  null,
+                                                        "compsAfterFilter":  0,
+                                                        "mathApplied":  "null_non_live_source",
+                                                        "sanityCapsApplied":  [
+
+                                                                              ],
+                                                        "weightedPercentileBuckets":  null
+                                                    },
+                      "predictedRangeAdjustedConfidence":  null,
                       "recentComps":  [
-                                          {
-                                              "price":  55,
-                                              "title":  "1st Bowman chrome auto TRUE BLUE /150 Caleb Bonemer 2024 Bowman Draft CPA-CBO - Raw 10",
-                                              "soldDate":  "2025-03-09T16:06:40.000Z"
-                                          },
-                                          {
-                                              "price":  100,
-                                              "title":  "2024 Bowman Draft #CPA-CBO Caleb Bonemer Chrome Auto Blue Refractor /150 - Raw 10",
-                                              "soldDate":  "2025-01-31T17:38:48.000Z"
-                                          }
+
                                       ],
                       "cardIdentity":  {
-                                           "card_id":  "1736791720219x582648490284626000",
-                                           "title":  null,
-                                           "player":  "Caleb Bonemer",
-                                           "set":  "2024 Bowman Draft Chrome Baseball",
-                                           "year":  null,
-                                           "number":  "CPA-CBO",
-                                           "variant":  "Blue Refractor"
+                                           "card_id":  "496a7e19-b26d-4f48-9fae-e66d6961c27a",
+                                           "title":  "Caleb Bonemer",
+                                           "player":  null,
+                                           "set":  "Chrome Prospect Autographs",
+                                           "year":  "2024",
+                                           "number":  null,
+                                           "variant":  null
                                        },
                       "gradeUsed":  "Raw",
-                      "compsUsed":  2,
-                      "compsAvailable":  2,
-                      "daysSinceNewestComp":  432,
+                      "compsUsed":  0,
+                      "compsAvailable":  0,
+                      "daysSinceNewestComp":  null,
                       "broaderTrend":  null
                   },
     "priceByIdError":  null,
