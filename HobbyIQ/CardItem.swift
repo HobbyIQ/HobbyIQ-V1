@@ -145,4 +145,29 @@ final class CardItem {
         return (gainLoss / purchasePrice) * 100
     }
     var isSold: Bool { cardStatus == .sold }
+    var isDeleted: Bool { deletedAt != nil }
+
+    // MARK: Pending-write helpers
+
+    /// Marks the given field names as locally edited.
+    /// The read path will not overwrite these fields until
+    /// the write path pushes them and clears the set.
+    func markFieldsPending(_ fields: String...) {
+        var current = Set(pendingSyncFields)
+        for field in fields { current.insert(field) }
+        pendingSyncFields = Array(current)
+        updatedAt = Date()
+    }
+
+    /// Clears all pending field markers (called after successful push).
+    func clearPendingSyncFields() {
+        pendingSyncFields = []
+    }
+
+    /// Soft-deletes this card locally. The sync queue will push
+    /// a DELETE to the backend on next processing cycle.
+    func markDeleted() {
+        deletedAt = Date()
+        updatedAt = Date()
+    }
 }
