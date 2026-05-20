@@ -32,12 +32,15 @@ jobs:
           fi
 
           ET_HOUR=$(TZ=America/New_York date +%H)
-          if [ "$ET_HOUR" = "05" ]; then
+          # Widen the gate from equality to a 4-hour window to absorb GitHub
+          # Actions schedule drift (cron jobs regularly fire 1-3+ hours late).
+          # 10# strips leading zeros so bash treats "05" as decimal, not octal.
+          if [ "$((10#$ET_HOUR))" -ge 5 ] && [ "$((10#$ET_HOUR))" -le 9 ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Current ET hour is 05; continuing workflow."
+            echo "Current ET hour is $ET_HOUR (within 05-09 window); continuing workflow."
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Current ET hour is $ET_HOUR; skipping this UTC trigger."
+            echo "Current ET hour is $ET_HOUR (outside 05-09 window); skipping this UTC trigger."
           fi
 
       - name: Setup Node.js 24
@@ -138,8 +141,11 @@ jobs:
       - name: Warm DailyIQ brief
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
+          # ?fresh=true forces buildAndPersistBriefPayload to run and write to
+          # Cosmos; without it the route returns the in-memory _briefCache and
+          # skips persistence entirely (root cause of issue #80).
           RESPONSE=$(curl -s \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief")
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief?fresh=true")
           MLB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('mlb',[])))" 2>/dev/null || echo "?")
           MILB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('milb',[])))" 2>/dev/null || echo "?")
           echo "Daily brief warmed — MLB: $MLB_COUNT performers, MiLB: $MILB_COUNT performers"
