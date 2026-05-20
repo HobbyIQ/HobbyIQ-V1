@@ -54,5 +54,9 @@ export interface PortfolioHolding {
   // Optional and lazily populated — older holdings created before this PR may not have it.
   playerId?: string;
   playerIdConfidence?: "high" | "medium" | "low" | "ambiguous";
-  playerIdResolvedAt?: string;
-}
+  playerIdResolvedAt?: string;  // Photo URLs (permanent blob URLs in the card-images container) and an
+  // iOS-generated stable identifier used for upsert-by-clientId. Both added
+  // by PR B (multi-tab migration). Optional on existing docs; required-shape
+  // on new InventoryIQ holdings created from iOS.
+  photos?: string[];
+  clientId?: string;}
