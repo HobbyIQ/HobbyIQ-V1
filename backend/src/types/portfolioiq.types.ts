@@ -50,4 +50,9 @@ export interface PortfolioHolding {
   lastUpdated?: string | number;
   statusCategory?: string;
   notes?: string;
+  // MLB Stats personId resolved from playerName at addHolding time (PR #68, 2026-05).
+  // Optional and lazily populated — older holdings created before this PR may not have it.
+  playerId?: string;
+  playerIdConfidence?: "high" | "medium" | "low" | "ambiguous";
+  playerIdResolvedAt?: string;
 }

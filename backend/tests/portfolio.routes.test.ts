@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterEach, beforeEach, vi } from "vitest";
 import app from "../src/app";
+import { _clearPlayerResolverCache } from "../src/services/mlb/playerResolver.service.js";
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
@@ -76,5 +77,101 @@ describe("Portfolio routes", () => {
       .set("x-session-id", sessionB);
     expect(ledgerB.status).toBe(200);
     expect(ledgerB.body.entries.some((e: any) => e.holdingId === "test-holding-1")).toBe(false);
+  });
+});
+
+describe("Portfolio routes — playerId resolution (PR #68)", () => {
+  beforeEach(() => {
+    _clearPlayerResolverCache();
+  });
+
+  it("populates playerId on addHolding when MLB resolves the name", async () => {
+    // Successful MLB people/search response for the resolver; everything
+    // else (computeEstimate, etc.) still rejects via the outer beforeEach.
+    const fetchMock = vi.fn(async (url: any) => {
+      const u = String(url);
+      if (u.includes("statsapi.mlb.com/api/v1/people/search")) {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return {
+              people: [
+                { id: 545361, fullName: "Mike Trout", mlbDebutDate: "2011-07-08" },
+              ],
+            };
+          },
+        } as unknown as Response;
+      }
+      throw new Error("network disabled in tests");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const session = await signIn("HobbyIQ", "Baseball25");
+    const add = await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "test-holding-playerid-1",
+        playerName: "Mike Trout",
+        cardTitle: "2011 Topps Update RC",
+        cardYear: 2011,
+        quantity: 1,
+        purchasePrice: 50,
+        totalCostBasis: 50,
+        currentValue: 100,
+      });
+    expect(add.status).toBe(201);
+
+    const holdings = await request(app)
+      .get("/api/portfolio/holdings")
+      .set("x-session-id", session);
+    expect(holdings.status).toBe(200);
+    const saved = holdings.body.holdings.find((h: any) => h.id === "test-holding-playerid-1");
+    expect(saved).toBeTruthy();
+    expect(saved.playerId).toBe("545361");
+    expect(saved.playerIdConfidence).toBe("high");
+    expect(typeof saved.playerIdResolvedAt).toBe("string");
+  });
+
+  it("leaves playerId undefined and still succeeds when resolver returns no match", async () => {
+    const fetchMock = vi.fn(async (url: any) => {
+      const u = String(url);
+      if (u.includes("statsapi.mlb.com/api/v1/people/search")) {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return { people: [] };
+          },
+        } as unknown as Response;
+      }
+      throw new Error("network disabled in tests");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const session = await signIn("HobbyIQ", "Baseball25");
+    const add = await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "test-holding-playerid-2",
+        playerName: "Zzz Definitely Not Real",
+        cardTitle: "Fake 2099 Phantom",
+        cardYear: 2099,
+        quantity: 1,
+        purchasePrice: 1,
+        totalCostBasis: 1,
+        currentValue: 1,
+      });
+    expect(add.status).toBe(201);
+
+    const holdings = await request(app)
+      .get("/api/portfolio/holdings")
+      .set("x-session-id", session);
+    const saved = holdings.body.holdings.find((h: any) => h.id === "test-holding-playerid-2");
+    expect(saved).toBeTruthy();
+    expect(saved.playerId).toBeUndefined();
+    expect(saved.playerIdConfidence).toBeUndefined();
   });
 });

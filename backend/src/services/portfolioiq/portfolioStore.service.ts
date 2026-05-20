@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
+import { resolvePlayer } from "../mlb/playerResolver.service.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -763,6 +764,28 @@ export async function addHolding(req: Request, res: Response) {
     await autoPriceHolding(doc, doc.holdings[holding.id], undefined, "add");
   } catch {
     // Keep the saved holding even if live pricing fails.
+  }
+
+  // PR #68: resolve playerId from playerName on new holdings only. Failure
+  // here must never block holding creation — we just leave playerId unset.
+  try {
+    const name = String(doc.holdings[holding.id]?.playerName ?? "").trim();
+    if (name && !doc.holdings[holding.id]?.playerId) {
+      const cardYear = toNumber(doc.holdings[holding.id]?.cardYear, 0) || undefined;
+      const resolved = await resolvePlayer(name, { year: cardYear });
+      if (resolved) {
+        doc.holdings[holding.id] = {
+          ...doc.holdings[holding.id],
+          playerId: resolved.playerId,
+          playerIdConfidence: resolved.confidence,
+          playerIdResolvedAt: new Date().toISOString(),
+        };
+      } else {
+        console.warn(`[playerResolver] no MLB match for holding playerName="${name}" cardYear=${cardYear ?? "?"}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[playerResolver] resolution failed for holding ${holding.id}:`, err);
   }
 
   await writeUserDoc(auth.userId, doc);
