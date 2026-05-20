@@ -106,6 +106,19 @@ jobs:
           resource-group-name: rg-hobbyiq-dev
           package: deploy.zip
 
+      # azure/webapps-deploy@v3 does not update App Settings, so GIT_SHA and
+      # DEPLOYED_AT stay stale after workflow-triggered deploys and /api/health
+      # reports the wrong build metadata. Refresh them here so observability
+      # reflects what was actually deployed. See issue #83.
+      - name: Update build metadata App Settings
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          az webapp config appsettings set \
+            --resource-group rg-hobbyiq-dev \
+            --name HobbyIQ3 \
+            --settings GIT_SHA=${{ github.sha }} DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --output none
+
       # Wait for the app to finish restarting before warming cache
       - name: Wait for app restart
         if: steps.et-gate.outputs.should_run == 'true'
