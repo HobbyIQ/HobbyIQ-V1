@@ -459,6 +459,13 @@ struct APIService {
         )
     }
 
+    func deletePortfolioHolding(holdingId: String) async throws -> PortfolioIQActionResponse {
+        try await delete(
+            path: "/api/portfolio/holdings/\(holdingId)",
+            responseType: PortfolioIQActionResponse.self
+        )
+    }
+
     // MARK: - Alerts
 
     func fetchAlerts() async throws -> AlertsAPIResponse {

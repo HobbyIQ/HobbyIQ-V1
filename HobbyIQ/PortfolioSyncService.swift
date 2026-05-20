@@ -1,21 +1,11 @@
 // PortfolioSyncService.swift
-// HobbyIQ — PR B.5 concurrency spike.
+// HobbyIQ — portfolio sync service for offline-first card management.
 //
-// Minimal sync skeleton proving the actor isolation model compiles
-// cleanly under strict Swift 6 concurrency BEFORE PR C builds the
-// full sync layer on top.
-//
-// What this file ships:
+// Architecture:
 //   writePath(card:)  — CardItem → InventoryCard → APIService.addPortfolioHolding
 //                       → write back serverHoldingId on local row
 //   readPath()        — APIService.fetchPortfolioHoldings → upsert into ModelContext
 //                       keyed by serverHoldingId first, falling back to clientId
-//
-// What this file does NOT ship (PR C scope):
-//   - pendingSyncFields guard (prevents pull from clobbering local edits)
-//   - SyncIntent @Model + queue
-//   - Tombstones for soft-delete
-//   - Working mapper implementations (fatalError stubs below)
 
 import Foundation
 import SwiftData
@@ -40,10 +30,7 @@ final class PortfolioSyncService {
 
     /// Pushes a local CardItem to the backend as a new holding.
     /// On success, writes the server-assigned holding ID back to
-    /// `card.serverHoldingId` and saves the context.
-    ///
-    /// - Note: This method does NOT guard against pending local edits.
-    ///   PR C adds `pendingSyncFields` to prevent clobbering in-flight changes.
+    /// `card.serverHoldingId`, clears `pendingSyncFields`, and saves.
     func writePath(card: CardItem) async throws {
         // Ensure clientId exists before sending to server
         if card.clientId == nil {
@@ -60,6 +47,7 @@ final class PortfolioSyncService {
             card.serverHoldingId = returnedHolding.id.uuidString
         }
 
+        card.pendingSyncFields = []
         card.updatedAt = Date()
         try modelContext.save()
     }
@@ -68,10 +56,8 @@ final class PortfolioSyncService {
 
     /// Fetches all holdings from the backend and upserts them into SwiftData.
     /// Upsert key priority: serverHoldingId first, then clientId.
-    ///
-    /// - Note: For the spike, this uses simple last-write-wins.
-    ///   PR C adds `pendingSyncFields` guard to prevent the pull from
-    ///   overwriting user-authoritative fields that have unsaved local edits.
+    /// Respects `pendingSyncFields` — fields with pending local edits
+    /// are NOT overwritten by the server value.
     func readPath() async throws {
         let holdings = try await apiService.fetchPortfolioHoldings()
 
@@ -122,16 +108,9 @@ final class PortfolioSyncService {
     }
 
     // MARK: - Mappers
-    //
-    // These are stubbed with fatalError for the spike. PR C implements
-    // real mapping once the field-by-field decisions are finalized.
 
-    /// Maps a local CardItem to the InventoryCard wire type for POST.
+    /// Maps a local CardItem to the InventoryCard wire type for POST/PATCH.
     static func mapCardItemToHolding(_ card: CardItem) -> InventoryCard {
-        // Wire mapping: CardItem (SwiftData) → InventoryCard (Codable wire type)
-        //
-        // The InventoryCard init has defaults for most fields, so we map
-        // what CardItem actually tracks.
         InventoryCard(
             playerName: card.playerName,
             cardName: card.cardTitle.isEmpty ? card.playerName : card.cardTitle,
@@ -141,9 +120,10 @@ final class PortfolioSyncService {
             year: card.year.map(String.init) ?? "",
             setName: card.setName,
             parallel: card.parallel,
-            grade: card.grade,
+            grade: card.isRaw ? "" : card.grade,
             notes: card.notes.isEmpty ? nil : card.notes,
             isAuto: card.isAuto,
+            photos: card.photoURLs.isEmpty ? nil : card.photoURLs,
             clientId: card.clientId
         )
     }
@@ -152,6 +132,7 @@ final class PortfolioSyncService {
     static func mapHoldingToNewCardItem(_ holding: InventoryCard) -> CardItem {
         let card = CardItem(
             playerName: holding.playerName,
+            isRaw: holding.grade.isEmpty,
             cardTitle: holding.cardName,
             year: Int(holding.year),
             setName: holding.setName,
@@ -165,32 +146,37 @@ final class PortfolioSyncService {
             clientId: holding.clientId
         )
         card.serverHoldingId = holding.id.uuidString
+        card.photoURLs = holding.photos ?? []
         return card
     }
 
-    /// Updates server-authoritative fields on an existing CardItem from a holding.
+    /// Updates an existing CardItem from a server holding.
     ///
-    /// For the spike, this does simple last-write-wins on all fields.
-    /// PR C adds a `pendingSyncFields` guard: user-authoritative fields
-    /// (purchasePrice, photos, notes) are NOT overwritten when the local
-    /// row has unsaved edits.
+    /// Server-authoritative fields (currentValue, serverHoldingId) are always
+    /// overwritten. User-authoritative fields are guarded by `pendingSyncFields`:
+    /// if a field name is in the set, the local value takes precedence.
     static func updateCardItem(_ card: CardItem, from holding: InventoryCard) {
-        // Server-authoritative fields — always overwrite
+        // Server-authoritative — always overwrite
         card.currentValue = holding.currentValue
         card.serverHoldingId = holding.id.uuidString
 
-        // TODO: PR C — guard user-authoritative fields behind pendingSyncFields.
-        // For the spike, last-write-wins on everything:
-        card.playerName = holding.playerName
-        card.cardTitle = holding.cardName
-        card.purchasePrice = holding.cost
-        card.status = holding.status
-        card.year = Int(holding.year)
-        card.setName = holding.setName
-        card.parallel = holding.parallel
-        card.grade = holding.grade
-        card.isAuto = holding.isAuto
-        card.notes = holding.notes ?? ""
+        let pending = Set(card.pendingSyncFields)
+
+        // User-authoritative — skip if locally edited
+        if !pending.contains("playerName")   { card.playerName = holding.playerName }
+        if !pending.contains("cardTitle")    { card.cardTitle = holding.cardName }
+        if !pending.contains("purchasePrice"){ card.purchasePrice = holding.cost }
+        if !pending.contains("status")       { card.status = holding.status }
+        if !pending.contains("year")         { card.year = Int(holding.year) }
+        if !pending.contains("setName")      { card.setName = holding.setName }
+        if !pending.contains("parallel")     { card.parallel = holding.parallel }
+        if !pending.contains("grade") {
+            card.grade = holding.grade
+            card.isRaw = holding.grade.isEmpty
+        }
+        if !pending.contains("isAuto")       { card.isAuto = holding.isAuto }
+        if !pending.contains("notes")        { card.notes = holding.notes ?? "" }
+        if !pending.contains("photoURLs")    { card.photoURLs = holding.photos ?? [] }
 
         card.updatedAt = Date()
     }
