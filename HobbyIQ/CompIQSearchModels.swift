@@ -1,0 +1,335 @@
+//
+//  CompIQSearchModels.swift
+//  HobbyIQ
+//
+
+import Foundation
+
+// MARK: - Card Search (POST /api/compiq/cardsearch)
+
+struct CompIQVariantSearchRequest: Codable {
+    let query: String
+}
+
+struct CompIQVariantHit: Codable, Identifiable, Hashable {
+    let cardHedgeCardId: String
+    let player: String?
+    let set: String?
+    let year: Int?
+    let number: String?
+    let variant: String?
+    let title: String?
+    let displayLabel: String?
+    let imageUrl: String?
+
+    var id: String { cardHedgeCardId }
+
+    var resolvedLabel: String {
+        if let displayLabel, displayLabel.isEmpty == false { return displayLabel }
+        if let title, title.isEmpty == false { return title }
+        let parts = [set, player, number, variant].compactMap { $0 }
+        return parts.isEmpty ? cardHedgeCardId : parts.joined(separator: " ")
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // cardsearch returns "card_id"; keep internal property name the same
+        cardHedgeCardId = try container.decode(String.self, forKey: .cardHedgeCardId)
+        player = try? container.decodeIfPresent(String.self, forKey: .player)
+        set = try? container.decodeIfPresent(String.self, forKey: .set)
+        year = try? container.decodeIfPresent(Int.self, forKey: .year)
+        // cardsearch returns "card_number"
+        number = try? container.decodeIfPresent(String.self, forKey: .number)
+        variant = try? container.decodeIfPresent(String.self, forKey: .variant)
+        title = try? container.decodeIfPresent(String.self, forKey: .title)
+        displayLabel = try? container.decodeIfPresent(String.self, forKey: .displayLabel)
+        // cardsearch returns "image_url"
+        imageUrl = try? container.decodeIfPresent(String.self, forKey: .imageUrl)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case cardHedgeCardId = "card_id"
+        case player, set, year
+        case number = "card_number"
+        case variant, title, displayLabel
+        case imageUrl = "image_url"
+    }
+}
+
+struct CompIQVariantListResponse: Codable {
+    let success: Bool?
+    let query: String?
+    let count: Int?
+    let results: [CompIQVariantHit]?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // cardsearch returns "ok" instead of "success"
+        success = try? container.decodeIfPresent(Bool.self, forKey: .success)
+        query = try? container.decodeIfPresent(String.self, forKey: .query)
+        count = try? container.decodeIfPresent(Int.self, forKey: .count)
+        // cardsearch returns "hits" instead of "results"
+        results = try? container.decodeIfPresent([CompIQVariantHit].self, forKey: .results)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case success = "ok"
+        case query, count
+        case results = "hits"
+    }
+}
+
+// MARK: - Price By ID (POST /api/compiq/price-by-id)
+
+struct CompIQPriceByIdRequest: Codable {
+    let cardHedgeCardId: String
+    let query: String?
+    let gradeCompany: String?
+    let gradeValue: Int?
+}
+
+struct PriceZone: Codable, Hashable {
+    let low: Double?
+    let high: Double?
+
+    init(low: Double?, high: Double?) {
+        self.low = low
+        self.high = high
+    }
+
+    init(from array: [Double?]?) {
+        self.low = array?.first.flatMap { $0 }
+        self.high = (array?.count ?? 0) > 1 ? array?[1] : nil
+    }
+}
+
+struct CompIQPriceMarketTier: Codable, Hashable {
+    let value: Double?
+    let high: Double?
+}
+
+struct CompIQPriceTrendAnalysis: Codable, Hashable {
+    let marketDirection: String?
+    let changeFromOlderToRecent: String?
+    let liquidity: String?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        marketDirection = try? container.decodeIfPresent(String.self, forKey: .marketDirection)
+        // Backend may send as number or string
+        if let str = try? container.decodeIfPresent(String.self, forKey: .changeFromOlderToRecent) {
+            changeFromOlderToRecent = str
+        } else if let num = try? container.decodeIfPresent(Double.self, forKey: .changeFromOlderToRecent) {
+            changeFromOlderToRecent = String(format: "%.1f%%", num)
+        } else {
+            changeFromOlderToRecent = nil
+        }
+        liquidity = try? container.decodeIfPresent(String.self, forKey: .liquidity)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case marketDirection = "market_direction"
+        case changeFromOlderToRecent = "change_from_older_to_recent"
+        case liquidity
+    }
+}
+
+struct CompIQPriceCardIdentity: Codable, Hashable {
+    let cardId: String?
+    let player: String?
+    let set: String?
+    let number: String?
+    let variant: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case cardId = "card_id"
+        case player, set, number, variant
+    }
+}
+
+struct CompIQPriceRecentComp: Codable, Hashable, Identifiable {
+    let price: Double?
+    let title: String?
+    let soldDate: String?
+
+    var id: String { "\(title ?? "")-\(price ?? 0)-\(soldDate ?? "")" }
+
+    var parsedDate: Date? {
+        guard let soldDate, soldDate.isEmpty == false else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: soldDate) { return date }
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: soldDate)
+    }
+
+    var relativeDate: String {
+        guard let date = parsedDate else { return soldDate ?? "Unknown" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+struct CompIQPriceBuyWindow: Codable, Hashable {
+    let score: Double?
+    let label: String?
+    let reasons: [String]?
+}
+
+struct CompIQPriceFreshness: Codable, Hashable {
+    let status: String?
+    let lastUpdated: String?
+    let daysSinceNewestComp: Int?
+}
+
+struct CompIQPriceBroaderTrend: Codable, Hashable {
+    let direction: String?
+    let label: String?
+    let note: String?
+}
+
+struct CompIQPriceExitStrategy: Codable, Hashable {
+    let recommendedMethod: String?
+    let expectedDaysToSell: Int?
+    let timingRecommendation: String?
+}
+
+struct CompIQPriceByIdResponse: Codable {
+    let success: Bool?
+    let cardHedgeCardId: String?
+    let summary: String?
+    let marketTier: CompIQPriceMarketTier?
+    /// Phase 3: renamed from `fmv`. The canonical market value from the engine.
+    let marketValue: Double?
+    /// Phase 3: predicted price from multiplier-anchored mechanism (nullable).
+    let predictedPrice: Double?
+    /// Phase 3: predicted price range (nullable AND may be absent from JSON — both decode as nil).
+    let predictedPriceRange: CompIQPriceRange?
+    /// Phase 3: attribution metadata for predictedPrice (shape varies by engine path).
+    let predictedPriceAttribution: CompIQPredictedPriceAttribution?
+    let buyZone: PriceZone?
+    let holdZone: PriceZone?
+    let sellZone: PriceZone?
+    let confidence: Double?
+    let source: String?
+    let trendAnalysis: CompIQPriceTrendAnalysis?
+    let recentComps: [CompIQPriceRecentComp]?
+    let cardIdentity: CompIQPriceCardIdentity?
+    let gradeUsed: String?
+    let compsUsed: Int?
+    let daysSinceNewestComp: Int?
+    let verdict: String?
+    let action: String?
+    let quickSaleValue: Double?
+    let premiumValue: Double?
+    let explanation: [String]?
+    let graderPremium: Double?
+    let buyWindow: CompIQPriceBuyWindow?
+    let freshness: CompIQPriceFreshness?
+    let broaderTrend: CompIQPriceBroaderTrend?
+    let exitStrategy: CompIQPriceExitStrategy?
+    let dealScore: Double?
+    let variantWarning: String?
+    let compQuality: String?
+    let dataSufficiency: String?
+
+    var hasInsufficientComps: Bool {
+        source == "no-recent-comps" || marketTier?.value == nil
+    }
+
+    var verdictText: String {
+        if let verdict, verdict.isEmpty == false { return verdict }
+        guard let summary, summary.isEmpty == false else { return "No verdict" }
+        let first = summary.components(separatedBy: CharacterSet(charactersIn: "—-–")).first ?? summary
+        return first.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var trendPercent: Double? {
+        guard let raw = trendAnalysis?.changeFromOlderToRecent else { return nil }
+        let pattern = #"[-+]?\d+(?:\.\d+)?"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
+              let range = Range(match.range, in: raw),
+              let value = Double(raw[range]) else { return nil }
+        return value
+    }
+
+    /// Formatted FMV that returns "—" when nil instead of "$0.00"
+    var formattedFMV: String {
+        guard let value = marketTier?.value else { return "—" }
+        return value.formatted(.currency(code: "USD"))
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        success = try? container.decodeIfPresent(Bool.self, forKey: .success)
+        cardHedgeCardId = try? container.decodeIfPresent(String.self, forKey: .cardHedgeCardId)
+        summary = try? container.decodeIfPresent(String.self, forKey: .summary)
+        marketTier = try? container.decodeIfPresent(CompIQPriceMarketTier.self, forKey: .marketTier)
+        marketValue = try? container.decodeIfPresent(Double.self, forKey: .marketValue)
+        predictedPrice = try? container.decodeIfPresent(Double.self, forKey: .predictedPrice)
+        predictedPriceRange = try? container.decodeIfPresent(CompIQPriceRange.self, forKey: .predictedPriceRange)
+        predictedPriceAttribution = try? container.decodeIfPresent(CompIQPredictedPriceAttribution.self, forKey: .predictedPriceAttribution)
+
+        // Zones come as [Double?] arrays — decode to PriceZone
+        if let arr = try? container.decodeIfPresent([Double?].self, forKey: .buyZone) {
+            buyZone = PriceZone(from: arr)
+        } else {
+            buyZone = nil
+        }
+        if let arr = try? container.decodeIfPresent([Double?].self, forKey: .holdZone) {
+            holdZone = PriceZone(from: arr)
+        } else {
+            holdZone = nil
+        }
+        if let arr = try? container.decodeIfPresent([Double?].self, forKey: .sellZone) {
+            sellZone = PriceZone(from: arr)
+        } else {
+            sellZone = nil
+        }
+
+        confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
+        source = try? container.decodeIfPresent(String.self, forKey: .source)
+        trendAnalysis = try? container.decodeIfPresent(CompIQPriceTrendAnalysis.self, forKey: .trendAnalysis)
+        recentComps = try? container.decodeIfPresent([CompIQPriceRecentComp].self, forKey: .recentComps)
+        cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
+        gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
+        compsUsed = try? container.decodeIfPresent(Int.self, forKey: .compsUsed)
+        daysSinceNewestComp = try? container.decodeIfPresent(Int.self, forKey: .daysSinceNewestComp)
+        verdict = try? container.decodeIfPresent(String.self, forKey: .verdict)
+        action = try? container.decodeIfPresent(String.self, forKey: .action)
+        quickSaleValue = try? container.decodeIfPresent(Double.self, forKey: .quickSaleValue)
+        premiumValue = try? container.decodeIfPresent(Double.self, forKey: .premiumValue)
+        // explanation can be [String] or a single String
+        if let arr = try? container.decodeIfPresent([String].self, forKey: .explanation) {
+            explanation = arr
+        } else if let single = try? container.decodeIfPresent(String.self, forKey: .explanation) {
+            explanation = [single]
+        } else {
+            explanation = nil
+        }
+        graderPremium = try? container.decodeIfPresent(Double.self, forKey: .graderPremium)
+        buyWindow = try? container.decodeIfPresent(CompIQPriceBuyWindow.self, forKey: .buyWindow)
+        freshness = try? container.decodeIfPresent(CompIQPriceFreshness.self, forKey: .freshness)
+        broaderTrend = try? container.decodeIfPresent(CompIQPriceBroaderTrend.self, forKey: .broaderTrend)
+        exitStrategy = try? container.decodeIfPresent(CompIQPriceExitStrategy.self, forKey: .exitStrategy)
+        dealScore = try? container.decodeIfPresent(Double.self, forKey: .dealScore)
+        variantWarning = try? container.decodeIfPresent(String.self, forKey: .variantWarning)
+        compQuality = try? container.decodeIfPresent(String.self, forKey: .compQuality)
+        dataSufficiency = try? container.decodeIfPresent(String.self, forKey: .dataSufficiency)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case success, cardHedgeCardId, summary, marketTier
+        case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
+        case buyZone, holdZone, sellZone
+        case confidence, source, trendAnalysis, recentComps
+        case cardIdentity, gradeUsed, compsUsed, daysSinceNewestComp
+        case verdict, action, quickSaleValue, premiumValue, explanation
+        case graderPremium, buyWindow, freshness, broaderTrend
+        case exitStrategy, dealScore, variantWarning
+        case compQuality, dataSufficiency
+    }
+}
