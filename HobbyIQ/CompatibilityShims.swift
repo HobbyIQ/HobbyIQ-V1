@@ -1529,6 +1529,7 @@ extension InventoryCard {
         case purchaseDate, purchasePlatform, quantity, notes
         case imageFrontUrl, imageBackUrl
         case lowValue, highValue, confidence, method, summary, isAuto
+        case photos, clientId
     }
 
     // snake_case alternatives the backend may return
@@ -1551,6 +1552,8 @@ extension InventoryCard {
         case highValue = "high_value"
         case confidence, method, summary
         case isAuto = "is_auto"
+        case photos
+        case clientId = "client_id"
     }
 
     init(from decoder: Decoder) throws {
@@ -1601,6 +1604,10 @@ extension InventoryCard {
             ?? (try? s.decode(String.self, forKey: .summary))
         self.isAuto = (try? c.decode(Bool.self, forKey: .isAuto))
             ?? (try? s.decode(Bool.self, forKey: .isAuto)) ?? false
+        self.photos = (try? c.decode([String].self, forKey: .photos))
+            ?? (try? s.decode([String].self, forKey: .photos))
+        self.clientId = (try? c.decode(String.self, forKey: .clientId))
+            ?? (try? s.decode(String.self, forKey: .clientId))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1627,6 +1634,8 @@ extension InventoryCard {
         try container.encodeIfPresent(method, forKey: .method)
         try container.encodeIfPresent(summary, forKey: .summary)
         try container.encode(isAuto, forKey: .isAuto)
+        try container.encodeIfPresent(photos, forKey: .photos)
+        try container.encodeIfPresent(clientId, forKey: .clientId)
     }
 }
 
