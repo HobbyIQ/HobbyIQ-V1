@@ -1,1 +1,0 @@
-export { handleCompIQLiveEstimate } from "./service";
