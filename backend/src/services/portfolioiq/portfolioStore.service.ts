@@ -4,6 +4,7 @@ import { getUserBySession } from "../authService.js";
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
+import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -848,9 +849,43 @@ export async function deleteHolding(req: Request, res: Response) {
   const doc = await readUserDoc(auth.userId);
   if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
+  // Best-effort: drop any blob photos owned by this holding before discarding
+  // the record. A failure here must not block the holding deletion (the photo
+  // would otherwise become unreferenceable from the user's surface).
+  const photos = Array.isArray(doc.holdings[id].photos) ? (doc.holdings[id].photos as string[]) : [];
+  for (const url of photos) {
+    if (!url) continue;
+    try {
+      await deleteBlobByUrl(url);
+    } catch (err) {
+      console.warn("[portfolio] photo delete failed for", url, err);
+    }
+  }
+
   delete doc.holdings[id];
   await writeUserDoc(auth.userId, doc);
   res.json({ message: "Holding removed", id });
+}
+
+/**
+ * Look up a holding by the iOS-generated stable clientId for a given user.
+ * Used by upsert flows that retry adds and need to detect existing rows
+ * without trusting server-side ids. Returns null when nothing matches.
+ */
+export async function findHoldingByClientId(
+  userId: string,
+  clientId: string,
+): Promise<PortfolioHolding | null> {
+  const trimmedClientId = String(clientId ?? "").trim();
+  if (!userId || !trimmedClientId) return null;
+
+  const doc = await readUserDoc(userId);
+  for (const holding of Object.values(doc.holdings)) {
+    if (typeof holding?.clientId === "string" && holding.clientId === trimmedClientId) {
+      return holding;
+    }
+  }
+  return null;
 }
 
 export async function sellHolding(req: Request, res: Response) {
