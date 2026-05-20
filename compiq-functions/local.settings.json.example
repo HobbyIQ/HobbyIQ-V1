@@ -1,0 +1,17 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AZURE_BLOB_CONNECTION_STRING": "",
+    "EBAY_APP_ID": "",
+    "EBAY_CERT_ID": "",
+    "REDDIT_CLIENT_ID": "",
+    "REDDIT_CLIENT_SECRET": "",
+    "ODDS_API_KEY": "",
+    "NEWS_API_KEY": "",
+    "OPENAI_API_KEY": "",
+    "AZURE_SIGNAL_FUNCTION_URL": "",
+    "COMPIQ_TRACKED_PLAYERS": "Mike Trout,Shohei Ohtani,Aaron Judge,Ronald Acuna Jr,Juan Soto"
+  }
+}
