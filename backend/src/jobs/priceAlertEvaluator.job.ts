@@ -1,8 +1,9 @@
 // priceAlertEvaluator.job.ts — Scheduled scan over every active price alert.
 //
 // For each active, not-yet-triggered alert in the `compiq_alerts` Cosmos
-// container, builds a search query from the alert's card snapshot, re-prices
-// via the CompIQ pricing service, and on threshold-cross:
+// container, builds a structured CompIQ estimate request from the alert's
+// card snapshot, re-prices via the CompIQ estimate service, and on
+// threshold-cross:
 //   - flips `triggeredAt` + `isActive=false` in Cosmos
 //   - fires an APNs push via notification.service.sendPriceAlertNotification
 //
@@ -19,7 +20,8 @@ import {
   recordAlertEvaluation,
   PriceAlert,
 } from "../repositories/priceAlerts.repository.js";
-import { searchAndPrice } from "../services/compiq/compiqSearch.service.js";
+import { computeEstimate } from "../services/compiq/compiqEstimate.service.js";
+import type { CompIQEstimateRequest } from "../types/compiq.types.js";
 import { sendPriceAlertNotification } from "../services/notification.service.js";
 
 interface EvaluatorSummary {
@@ -46,17 +48,43 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Build a CompIQ search query string from the alert's stored card snapshot. */
-function buildQuery(alert: PriceAlert): string {
+/**
+ * Parse a freeform grade string like "PSA 10" / "BGS 9.5" / "SGC 10" into
+ * structured `{ gradeCompany, gradeValue }`. Returns an empty object for
+ * empty, raw, or unrecognized inputs — caller treats those as ungraded.
+ */
+function parseGrade(grade: string | null | undefined): {
+  gradeCompany?: string;
+  gradeValue?: number;
+} {
+  if (!grade) return {};
+  const trimmed = grade.trim();
+  if (!trimmed) return {};
+  if (/^raw$/i.test(trimmed)) return {};
+  const m = trimmed.match(/^([A-Za-z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+  if (!m) return {};
+  const value = Number(m[2]);
+  if (!Number.isFinite(value)) return {};
+  return { gradeCompany: m[1].toUpperCase(), gradeValue: value };
+}
+
+/**
+ * Build a structured CompIQ estimate request from the alert's stored card
+ * snapshot. Returns null when the snapshot lacks the minimum signal required
+ * to price (a player name) so the evaluator can skip without firing pricing.
+ */
+function buildEstimateRequest(alert: PriceAlert): CompIQEstimateRequest | null {
+  const playerName = alert.playerName?.trim();
+  if (!playerName) return null;
   const snap = alert.cardSnapshot;
-  const parts: string[] = [];
-  parts.push(alert.playerName.trim());
-  if (snap?.year) parts.push(String(snap.year));
-  if (snap?.setName) parts.push(snap.setName.trim());
-  if (snap?.cardNumber) parts.push(`#${snap.cardNumber.trim()}`);
-  if (snap?.variant) parts.push(snap.variant.trim());
-  if (snap?.grade) parts.push(snap.grade.trim());
-  return parts.filter(Boolean).join(" ").trim();
+  const req: CompIQEstimateRequest = { playerName };
+  if (snap?.year) req.cardYear = snap.year;
+  if (snap?.setName?.trim()) req.product = snap.setName.trim();
+  if (snap?.variant?.trim()) req.parallel = snap.variant.trim();
+  const grade = parseGrade(snap?.grade);
+  if (grade.gradeCompany) req.gradeCompany = grade.gradeCompany;
+  if (typeof grade.gradeValue === "number") req.gradeValue = grade.gradeValue;
+  return req;
 }
 
 function thresholdCrossed(alert: PriceAlert, currentPrice: number): boolean {
@@ -113,9 +141,9 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
 
     for (const alert of alerts) {
       evaluated += 1;
-      const query = buildQuery(alert);
-      if (!query) {
-        // Nothing to search for — skip and record null price so it surfaces.
+      const req = buildEstimateRequest(alert);
+      if (!req) {
+        // Nothing to price on — skip and record null price so it surfaces.
         await recordAlertEvaluation(alert.userId, alert.alertId, {
           currentPrice: null,
           triggered: false,
@@ -125,8 +153,8 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
 
       let currentPrice: number | null = null;
       try {
-        const result = await searchAndPrice(query);
-        const fair = result?.marketTier?.fair;
+        const result = await computeEstimate(req);
+        const fair = (result as { fairMarketValue?: unknown })?.fairMarketValue;
         currentPrice = typeof fair === "number" && fair > 0 ? fair : null;
       } catch (err: any) {
         pricingErrors += 1;
