@@ -18,8 +18,10 @@ import {
   computePredictedRange,
   type PredictedRangeResult,
 } from "../services/compiq/predictedRange.js";
-import { writeCorpusEntry } from "../services/corpus/writeCorpusEntry.js";
-import { corpusEntryFromPricingResult } from "../services/corpus/corpusMapping.js";
+import {
+  writeTelemetryEntries,
+  extractTelemetryCohortFromResult,
+} from "../services/corpus/writeTelemetryEntries.js";
 
 // Issue #25 Phase 1 â€” read-only regime fields. Prefers the estimate's
 // embedded `regimeClassification` (computed inside computeEstimate against
@@ -476,17 +478,18 @@ router.post("/search", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
-    // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
-    // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
-    void writeCorpusEntry(
-      corpusEntryFromPricingResult({
-        query: query.trim(),
-        querySource: "free_text",
-        endpoint: "/api/compiq/search",
-        durationMs: Date.now() - handlerStart,
-        result,
-      }),
-    );
+    // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
+    // training table) and comp_logs (operational/cohort table) from a
+    // single capture. Each writer self-gates on its own env vars
+    // (COMPIQ_CORPUS_* and COMPIQ_COMP_LOGS_*).
+    writeTelemetryEntries({
+      query: query.trim(),
+      querySource: "free_text",
+      endpoint: "/api/compiq/search",
+      durationMs: Date.now() - handlerStart,
+      result,
+      ...extractTelemetryCohortFromResult(result, query.trim()),
+    });
   } catch (err) {
     next(err);
   }
@@ -640,17 +643,15 @@ router.post("/price", async (req, res, next) => {
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
-    // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
-    // and COMPIQ_CORPUS_SAMPLE_RATE. See services/corpus/.
-    void writeCorpusEntry(
-      corpusEntryFromPricingResult({
-        query: query.trim(),
-        querySource: "free_text",
-        endpoint: "/api/compiq/price",
-        durationMs: Date.now() - handlerStart,
-        result,
-      }),
-    );
+    // Telemetry â€” see /search for rationale.
+    writeTelemetryEntries({
+      query: query.trim(),
+      querySource: "free_text",
+      endpoint: "/api/compiq/price",
+      durationMs: Date.now() - handlerStart,
+      result,
+      ...extractTelemetryCohortFromResult(result, query.trim()),
+    });
   } catch (err) {
     next(err);
   }
@@ -894,15 +895,19 @@ router.post("/price-by-id", async (req, res, next) => {
       const queryForCorpus = trimmedQuery.length > 0 ? trimmedQuery : cardHedgeCardId;
       const querySource: "free_text" | "card_id" =
         trimmedQuery.length > 0 ? "free_text" : "card_id";
-      void writeCorpusEntry(
-        corpusEntryFromPricingResult({
-          query: queryForCorpus,
-          querySource,
-          endpoint: "/api/compiq/price-by-id",
-          durationMs: Date.now() - handlerStart,
-          result,
-        }),
-      );
+      // /price-by-id is always pinned to a Card Hedge card_id, so
+      // override cardIdSource regardless of whether cardIdentity made
+      // it into the response.
+      writeTelemetryEntries({
+        query: queryForCorpus,
+        querySource,
+        endpoint: "/api/compiq/price-by-id",
+        durationMs: Date.now() - handlerStart,
+        result,
+        ...extractTelemetryCohortFromResult(result, queryForCorpus, "cardhedge"),
+        // Force cardId to the pinned id even if cardIdentity is absent.
+        cardId: cardHedgeCardId,
+      });
     }
   } catch (err) {
     next(err);
@@ -950,15 +955,14 @@ router.post("/bulk", async (req, res, next) => {
             compsUsed: 0,
             compsAvailable: 0,
           };
-          void writeCorpusEntry(
-            corpusEntryFromPricingResult({
-              query,
-              querySource: "free_text",
-              endpoint: "/api/compiq/bulk",
-              durationMs: Date.now() - handlerStart,
-              result: unsupportedData,
-            }),
-          );
+          writeTelemetryEntries({
+            query,
+            querySource: "free_text",
+            endpoint: "/api/compiq/bulk",
+            durationMs: Date.now() - handlerStart,
+            result: unsupportedData,
+            ...extractTelemetryCohortFromResult(unsupportedData, query),
+          });
           return {
             query,
             status: "ok" as const,
@@ -995,18 +999,18 @@ router.post("/bulk", async (req, res, next) => {
           compsUsed: (est as any).compsUsed ?? 0,
           compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         };
-        // Per-item corpus write â€” fire-and-forget. writeCorpusEntry rolls
-        // its sample-rate gate independently per call, so a 20-item bulk
-        // request produces up to 20 independent sampling rolls.
-        void writeCorpusEntry(
-          corpusEntryFromPricingResult({
-            query,
-            querySource: "free_text",
-            endpoint: "/api/compiq/bulk",
-            durationMs: Date.now() - handlerStart,
-            result: data,
-          }),
-        );
+        // Per-item telemetry â€” fire-and-forget. Each writer rolls its
+        // sample-rate gate independently per call, so a 20-item bulk
+        // request produces up to 20 independent sampling rolls per
+        // stream.
+        writeTelemetryEntries({
+          query,
+          querySource: "free_text",
+          endpoint: "/api/compiq/bulk",
+          durationMs: Date.now() - handlerStart,
+          result: data,
+          ...extractTelemetryCohortFromResult(data, query),
+        });
         return {
           query,
           status: "ok" as const,

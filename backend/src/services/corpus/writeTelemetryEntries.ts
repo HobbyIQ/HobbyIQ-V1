@@ -33,6 +33,81 @@ import {
   compLogEntryFromPricingResult,
   type CompLogEntryFromPricingResultArgs,
 } from "../compLogs/compLogMapping.js";
+import type { CompLogCardIdSource } from "../../models/compLogEntry.js";
+
+/**
+ * Extract the comp_log cohort fields (player, cardId, cardIdSource,
+ * parallel, grade, isAuto) from a pricing route's response object.
+ * Centralizes the read paths so call sites only have to import one
+ * helper and one extractor.
+ *
+ * Read paths:
+ *   - /search and /price: result.parsedQuery.{playerName,parallel,
+ *     isAuto,grade,gradingCompany} present.
+ *   - /price-by-id and /bulk: parsedQuery is NOT in the response.
+ *     player is read from result.cardIdentity.player; cohort fields
+ *     are best-effort (null/false).
+ *
+ * The fallbackQuery is used when neither parsedQuery nor cardIdentity
+ * yield a player — e.g. a bulk query string the engine couldn't parse.
+ *
+ * @param result the route's JSON response object (post-cacheWrap)
+ * @param fallbackQuery the user-facing query string for player fallback
+ * @param cardIdSourceHint forces the cardIdSource discriminator. Use
+ *   "cardhedge" for /price-by-id (request is pinned to a Card Hedge
+ *   card_id). Default behaviour: "cardhedge" when a cardId is present,
+ *   null otherwise.
+ */
+export function extractTelemetryCohortFromResult(
+  result: unknown,
+  fallbackQuery: string,
+  cardIdSourceHint?: CompLogCardIdSource,
+): Pick<
+  CompLogEntryFromPricingResultArgs,
+  "player" | "cardId" | "cardIdSource" | "parallel" | "grade" | "isAuto"
+> {
+  const r = (result ?? {}) as Record<string, unknown>;
+  const parsed = (r.parsedQuery ?? {}) as Record<string, unknown>;
+  const identity = (r.cardIdentity ?? {}) as Record<string, unknown>;
+
+  const playerFromParsed =
+    typeof parsed.playerName === "string" ? parsed.playerName : null;
+  const playerFromIdentity =
+    typeof identity.player === "string" ? identity.player : null;
+  const player =
+    (playerFromParsed && playerFromParsed.trim()) ||
+    (playerFromIdentity && playerFromIdentity.trim()) ||
+    fallbackQuery ||
+    null;
+
+  const cardId =
+    typeof identity.cardId === "string" && identity.cardId.length > 0
+      ? identity.cardId
+      : null;
+
+  const gradeFromParsed =
+    typeof parsed.grade === "string" && parsed.grade.length > 0
+      ? parsed.grade
+      : null;
+  const gradingCompany =
+    typeof parsed.gradingCompany === "string" ? parsed.gradingCompany : null;
+  const grade =
+    gradeFromParsed && gradingCompany
+      ? `${gradingCompany} ${gradeFromParsed}`
+      : (gradeFromParsed ?? null);
+
+  const parallel =
+    typeof parsed.parallel === "string" && parsed.parallel.length > 0
+      ? parsed.parallel
+      : null;
+
+  const isAuto = parsed.isAuto === true;
+
+  const cardIdSource: CompLogCardIdSource | null =
+    cardIdSourceHint ?? (cardId ? "cardhedge" : null);
+
+  return { player, cardId, cardIdSource, parallel, grade, isAuto };
+}
 
 /**
  * Union of the corpus + comp_log adapter inputs. Callers carry one
