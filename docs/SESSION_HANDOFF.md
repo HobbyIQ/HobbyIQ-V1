@@ -6,13 +6,13 @@
 
 - HobbyIQ3 (Azure App Service, rg-hobbyiq-dev, Central US)
 - URL: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
-- Deployed SHA: 4c0a1b69f51c019e58d2e80998febade8ac2ae63 (PR D.5 merge — D.1 + D.5 live)
+- Deployed SHA: d0094f312b41d0611f9e3c89f0dc37bb175b0c25 (PR D.6 merge â€” D.1 + D.5 + D.6 live)
 - CARDSIGHT_MODE: exclusive
 
 ## Origin/main HEAD
 
-- Current: 4c0a1b6 (PR #99 merge — D.5 webhook)
-- iOS at 8476e0d (PR #97) is on the same main branch — backend now ahead via PRs #98 + #99.
+- Current: d0094f3 (PR #100 merge â€” D.6 M1 ledger + Option A listing-link)
+- iOS at 8476e0d (PR #97) is on the same main branch â€” backend now ahead via PRs #98 + #99 + #100.
 
 ## PR D batch (2026-05-20 → 2026-05-21)
 
@@ -41,12 +41,27 @@
 - POST MARKETPLACE_ACCOUNT_DELETION (no match) → 200 {received:true} ✓
 - POST ITEM_SOLD → 200 {received:true} ✓
 
-### Carved out — PR D.6 (next session)
-Per data-model halts (decisions A + M1 + Split):
+### D.5 framing correction (added 2026-05-21 in D.6 handoff)
+The original "Carved out â€” PR D.6 (next session)" framing under-describes what actually happened. Honest framing:
+
+PR D.5 kickoff presented three askQuestions; transcript JSONL doesn't serialize askQuestions answers so actual selections cannot be verified from disk; post-compaction agent executed against recorded summary; user opted to recover deferred scope in PR D.6 rather than accept partial ship as final.
+
+The items below were the recovery scope picked up by PR D.6:
 - Add ebayOfferId + ebayListingId fields to PortfolioHolding; persist on createListing/reviseListing success
 - Extract markHoldingSoldFromEbay(holdingId, orderData) helper from sellHolding (non-HTTP form)
-- Wire real ITEM_SOLD handler in ebayWebhook.routes.ts (currently a 200 stub)
+- Wire real ITEM_SOLD handler in ebayWebhook.routes.ts (was a 200 stub)
 - DO NOT register webhook URL with eBay until D.6 ships if eBay test data could trigger ITEM_SOLD prematurely; for account-deletion-only registration the current stub is sufficient.
+
+### PR D.6 â€” M1 real ITEM_SOLD ledger integration + Option A listing-link (#100, squash sha d0094f3)
+- PortfolioHolding gained optional `ebayOfferId`, `ebayListingId`, `ebayListingPublishedAt` fields (persisted on createListing / reviseListing success; cleared on endListing / unpublish best-effort)
+- New `findHoldingByEbayOfferIdAcrossUsers` cross-partition Cosmos scan in `portfolioStore.service.ts` (logs invariant on multi-match; ebay_offer_index optimization deferred)
+- New `markHoldingSoldFromEbay(holdingId, EbaySaleData)` â€” idempotent on `holdingId + ebayOrderId`, never throws, decrements quantity, writes ITEM_SOLD ledger row, deletes when quantity hits zero. Manual `sellHolding` unchanged.
+- New eBay-source `EbaySaleData` / `MarkSoldFromEbayResult` interfaces; ledger row carries `source="ebay"`, granular fee fields (sellerPayout, paymentsFees, finalValueFees, shippingCost, taxCollected), `ebayOrderId`, `ebayLineItemId`, `needsReconciliation=true`, `suppliesCost=null`, `gradingCost=null` (user-entered, recorded later via PR E UX)
+- Capture-before-process webhook event store in `ebayWebhookEvents.service.ts` (Cosmos container `webhook_events`, partition `/notificationId`, lazy-created). Statuses: captured â†’ processed | error. Field names: `handlerResult` (success) / `handlerError` (failure). Test-mode in-memory Map.
+- `ebayWebhook.routes.ts` POST handler rewritten: dedup by notificationId â†’ capture â†’ topic dispatch (MARKETPLACE_ACCOUNT_DELETION / ITEM_SOLD / no-handler) â†’ per-branch `markEventProcessed`/`markEventError` â†’ outer try/catch â†’ always 200. Race-string error contract verified live: `no holding found with ebayOfferId={offerId} â€” possible race with end-listing or unknown offerId`.
+- Tests: 634/634 green pre-merge.
+- Deploy: Kudu deployment cb70da89-e1a9-4d35-b434-9225ae0c566b status=4 Success; /api/health reports d0094f3 / main / cosmos+redis+appInsights all OK.
+- Production smoke (Step 8): 5/5 PASS. GET challenge handshake â€” sha256=b80ba2783f11e855b735c1b76c3ff7791bc099f0d6858afa8cfed318a4bdc791. MARKETPLACE_ACCOUNT_DELETION â†’ Cosmos status=processed, handlerResult={action:"no-match"}. ITEM_SOLD bogus offerId â†’ status=error with the exact race string. Dedup POST (same notificationId twice) â†’ both 200, EXACTLY 1 Cosmos row. Cosmos verification done via node @azure/cosmos client against COSMOS_CONNECTION_STRING from App Settings.
 
 ## What shipped this session (2026-05-20 → 2026-05-21)
 
@@ -302,6 +317,33 @@ publish (PR D.4), come back to Windows for D.1 env config.
 The 5-step manual InventoryIQ sync smoke test from PR C is **still not
 executed**. It remains a precondition for declaring PR C fully green and
 should run before PR D iOS work begins on Mac.
+
+## PR D.6 carry-forwards (must read before PR E / next eBay session)
+
+1. **Reporting layer must read granular fee fields + netPayout when `source==="ebay"`.** Legacy aggregates (`fees`, `tax`, `shipping`) are 0 on eBay ledger entries by design. P&L / tax exports that sum the legacy columns will under-report eBay sales.
+2. **`needsReconciliation=true` entries must be hidden from final P&L or visibly flagged.** PR E adds a reconciliation UX where the user enters `gradingCost` / `suppliesCost` and clears the flag.
+3. **`gradingCost` / `suppliesCost` are user-entered and immutable once recorded.** ITEM_SOLD writes them as `null` â€” PR E UX captures them per-sale; do not auto-derive.
+4. **Tax export MUST NOT include unreconciled entries OR must flag them prominently.** Year-end exports will be wrong otherwise.
+5. **`linkEbayListing` / `unlinkEbayListingByOfferId` are best-effort.** A future >90-day reconciliation pass should re-sync offer/listing IDs against eBay's seller account in case publish/end events were missed.
+6. **`findHoldingByEbayOfferIdAcrossUsers` is a cross-partition scan.** Acceptable at current scale; if portfolio container grows past ~10k holdings, add an `ebay_offer_index` container partitioned on `/ebayOfferId` and write-through on listing publish/revise/end.
+7. **Webhook event status-transition writes are best-effort.** A stale `captured` row (handler crashed mid-flight before markEventProcessed/Error) is replay-safe: `markHoldingSoldFromEbay` is idempotent on `holdingId + ebayOrderId`, so an offline reconciler can re-dispatch any captured row whose holding state doesn't yet reflect it.
+8. **`scripts/deploy-with-build-info.ps1` aborts at step [2/5] when `az webapp deploy` emits stderr WARNING** (e.g. "Initiating deployment...") because `$ErrorActionPreference = "Stop"` at line 12 treats stderr as fatal. Workaround used this session: manually continue with Kudu poll + explicit restart + /api/health verify. Fix: wrap the `az webapp deploy` invocation in `2>$null` OR locally relax `$ErrorActionPreference` around just that call. **Real operational gotcha â€” the next agent that hits this might silently retry the whole script and re-trigger the restart-race the script was written to prevent.**
+9. **Cosmos data-plane queries from Windows: `az cosmosdb sql container query` is NOT a real az subcommand.** The working pattern in this codebase is the node `@azure/cosmos` client using `COSMOS_CONNECTION_STRING` from App Settings (read with `az webapp config appsettings list --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" -o tsv`). See `smoke-d6-cosmos-v2.cjs` (in `C:/temp/hobbyiq-cardsight-clean/`) for the working pattern. Document this so the next session/agent doesn't waste time on the non-existent az path.
+10. **ITEM_SOLD happy-path verification is uncovered by automated smoke.** Step 8 of D.6 verified the unhappy path (bogus offerId â†’ `markEventError` with the descriptive race string). The happy path requires either (a) a real eBay sandbox sale event after webhook registration, OR (b) a manually seeded `PortfolioHolding` with a real `ebayOfferId` + a synthetic `ITEM_SOLD` POST. **Mac-session task** with acceptance criteria:
+    - Seed a PortfolioHolding with a known `ebayOfferId` (or capture from a real sandbox listing publish).
+    - POST a synthetic ITEM_SOLD to `/api/ebay/webhook` referencing that `ebayOfferId`.
+    - Verify `webhook_events` row has `status="processed"` and `handlerResult.action="marked-sold"`.
+    - Verify the holding's `statusCategory` is updated (or the holding is deleted if full quantity sold).
+    - Verify a new `PortfolioLedgerEntry` exists with `source="ebay"`, correct `ebayOrderId`, NULL granular fees only if intentionally omitted (otherwise populated from the synthetic payload), `needsReconciliation=true`.
+
+### PR E scope hint
+- Build the reconciliation UX that consumes carry-forwards #1â€“#4: surface unreconciled eBay sales, let the user enter `gradingCost` / `suppliesCost`, clear `needsReconciliation`, and update reporting.
+
+### eBay portal registration block
+- Do NOT register the production webhook URL with eBay until carry-forward #10 is closed end-to-end on at least one happy-path event. Until then, account-deletion-only registration is the only safe configuration (current stub handles it; happy-path code is live but unverified against a real eBay payload shape beyond our synthetic test envelope).
+
+### End-to-end verification pending
+- Carry-forward #10 above is the gating verification. Once it's green, declare D.6 fully verified and proceed to register ITEM_SOLD with eBay in PR E.
 
 ## Style and operating preferences
 
