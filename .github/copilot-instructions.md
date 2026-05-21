@@ -340,3 +340,17 @@ Append-only log of operating-model lessons captured across sessions. Each entry 
 ### 2026-05-21 — Compaction summaries can fabricate hybrid claims
 
 Compaction summaries can recombine adjacent true facts into hybrid claims that are plausible but unsupported by the source transcript. When a summary asserts a specific action, decision, or event, verify against the source before acting on it. Mitigation: grep the pre-compaction transcript before propagating any summary claim that drives a plan decision or security-relevant action. Pattern observed 2026-05-21: summary attached rotation-flag from a true storage-key leak onto the most-frequently-mentioned secret name (Cosmos), producing a hybrid claim that did not exist in the transcript.
+
+### 2026-05-21 (extended) — Summary fabrication is not limited to compaction
+
+Resume briefs, hand-off prompts, and mid-session inferences constructed from prior session artifacts can carry the same hybrid-claim failure mode as post-compaction summaries. Three instances observed 2026-05-21:
+
+1. Post-compaction summary recombined Cosmos and storage-key facts into a false COSMOS_CONNECTION_STRING-leaked claim. Caught when the agent verified by grepping the pre-compaction transcript — actual leak was a storage account key, not Cosmos.
+
+2. A session message conflated "PR #101 opened on origin" with "PR #101 merged to main." Caught when the agent verified git state during a downstream deploy that aborted because the EAP fix wasn't actually on main.
+
+3. A resume-brief constructed mid-session asserted W1 rotated the wrong storage account. Caught when the agent verified against committed SECRET_ROTATIONS.md — W1 had rotated both accounts correctly with the active account explicitly identified.
+
+Common shape: a discrepancy is observed, a plausible explanation is constructed, and the explanation propagates as fact without verification against the source artifact. Mitigation: any claim about a prior decision, rotation, merge, commit, or shipped artifact must be verified against repo/git state before being acted on, especially for security-relevant items. The cost of verification is small; the cost of propagation is large.
+
+This applies to claims from any source: compaction summaries, resume briefs, conversation scrollback, the canonical brief itself, or mid-session inferences. Default to verifying.
