@@ -164,7 +164,7 @@ router.post("/listings/preview", async (req: Request, res: Response) => {
     return;
   }
 
-  const preview = buildListingPreview(input as HoldingListingInput);
+  const preview = await buildListingPreview(ctx.userId, input as HoldingListingInput);
   res.json({ success: true, preview });
 });
 

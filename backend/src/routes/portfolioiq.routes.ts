@@ -54,7 +54,7 @@ router.post("/holdings/:id/ebay/draft", async (req, res) => {
     return;
   }
 
-  const preview = buildListingPreview(input as HoldingListingInput);
+  const preview = await buildListingPreview(userId, input as HoldingListingInput);
   res.json({ success: true, preview });
 });
 router.post("/holdings/:id/ebay/listing", async (req, res) => {
