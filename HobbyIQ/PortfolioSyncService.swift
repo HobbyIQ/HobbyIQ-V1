@@ -194,6 +194,187 @@ final class PortfolioSyncService {
 
         card.updatedAt = Date()
     }
+
+    // MARK: - Intent enqueuing
+
+    /// Enqueues a create intent for a newly added card.
+    func enqueueCreate(card: CardItem) throws {
+        if card.clientId == nil {
+            card.clientId = UUID().uuidString
+        }
+        let intent = SyncIntent(
+            action: .create,
+            cardClientId: card.clientId!
+        )
+        modelContext.insert(intent)
+        try modelContext.save()
+    }
+
+    /// Enqueues an update intent for a locally edited card.
+    func enqueueUpdate(card: CardItem) throws {
+        guard let serverId = card.serverHoldingId else {
+            // Card hasn't been pushed yet — the existing create intent covers it
+            return
+        }
+        // Coalesce: if a pending update intent already exists, skip
+        let clientId = card.clientId ?? ""
+        let pendingPredicate = #Predicate<SyncIntent> { intent in
+            intent.cardClientId == clientId
+            && intent.action == "update"
+            && intent.status == "pending"
+        }
+        var descriptor = FetchDescriptor<SyncIntent>(predicate: pendingPredicate)
+        descriptor.fetchLimit = 1
+        let existing = try modelContext.fetch(descriptor)
+        guard existing.isEmpty else { return }
+
+        let intent = SyncIntent(
+            action: .update,
+            cardClientId: clientId,
+            serverHoldingId: serverId
+        )
+        modelContext.insert(intent)
+        try modelContext.save()
+    }
+
+    /// Enqueues a delete intent and soft-deletes the card.
+    func enqueueDelete(card: CardItem) throws {
+        card.markDeleted()
+
+        if let serverId = card.serverHoldingId {
+            let intent = SyncIntent(
+                action: .delete,
+                cardClientId: card.clientId ?? "",
+                serverHoldingId: serverId
+            )
+            modelContext.insert(intent)
+        }
+        // If no serverHoldingId, the card was never pushed — just remove
+        // any pending create intent for it
+        else if let clientId = card.clientId {
+            let createPredicate = #Predicate<SyncIntent> { intent in
+                intent.cardClientId == clientId && intent.action == "create"
+            }
+            let creates = try modelContext.fetch(FetchDescriptor<SyncIntent>(predicate: createPredicate))
+            for create in creates {
+                modelContext.delete(create)
+            }
+            modelContext.delete(card)
+        }
+
+        try modelContext.save()
+    }
+
+    // MARK: - Queue processor
+
+    private static let maxRetries = 5
+
+    /// Processes all pending SyncIntents in FIFO order.
+    /// Returns the number of intents successfully processed.
+    @discardableResult
+    func processQueue() async throws -> Int {
+        let pendingStatus = SyncIntentStatus.pending.rawValue
+        let pendingPredicate = #Predicate<SyncIntent> { intent in
+            intent.status == pendingStatus
+        }
+        var descriptor = FetchDescriptor<SyncIntent>(
+            predicate: pendingPredicate,
+            sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+        )
+        descriptor.fetchLimit = 50
+
+        let intents = try modelContext.fetch(descriptor)
+        var processed = 0
+
+        for intent in intents {
+            do {
+                intent.intentStatus = .inFlight
+                intent.lastAttemptedAt = Date()
+
+                try await processIntent(intent)
+
+                // Success — remove the intent
+                modelContext.delete(intent)
+                processed += 1
+            } catch {
+                intent.retryCount += 1
+                intent.lastError = error.localizedDescription
+
+                if intent.retryCount >= Self.maxRetries {
+                    intent.intentStatus = .failed
+                } else {
+                    intent.intentStatus = .pending
+                }
+            }
+        }
+
+        try modelContext.save()
+        return processed
+    }
+
+    private func processIntent(_ intent: SyncIntent) async throws {
+        switch intent.intentAction {
+        case .create:
+            try await processCreateIntent(intent)
+        case .update:
+            try await processUpdateIntent(intent)
+        case .delete:
+            try await processDeleteIntent(intent)
+        }
+    }
+
+    private func processCreateIntent(_ intent: SyncIntent) async throws {
+        let clientId = intent.cardClientId
+        let predicate = #Predicate<CardItem> { item in
+            item.clientId == clientId
+        }
+        var descriptor = FetchDescriptor<CardItem>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let card = try modelContext.fetch(descriptor).first else { return }
+
+        let holdingPayload = Self.mapCardItemToHolding(card)
+        let result = try await apiService.addPortfolioHolding(holdingPayload)
+
+        if let serverId = result.id {
+            card.serverHoldingId = serverId
+        } else if let returnedHolding = result.holding {
+            card.serverHoldingId = returnedHolding.id.uuidString
+        }
+
+        card.clearPendingSyncFields()
+        card.updatedAt = Date()
+    }
+
+    private func processUpdateIntent(_ intent: SyncIntent) async throws {
+        let clientId = intent.cardClientId
+        let predicate = #Predicate<CardItem> { item in
+            item.clientId == clientId
+        }
+        var descriptor = FetchDescriptor<CardItem>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let card = try modelContext.fetch(descriptor).first else { return }
+
+        let holdingPayload = Self.mapCardItemToHolding(card)
+        _ = try await apiService.updatePortfolioHolding(holdingPayload)
+
+        card.clearPendingSyncFields()
+        card.updatedAt = Date()
+    }
+
+    private func processDeleteIntent(_ intent: SyncIntent) async throws {
+        guard let serverId = intent.serverHoldingId else { return }
+
+        _ = try await apiService.deletePortfolioHolding(holdingId: serverId)
+
+        // Clean up tombstone row
+        let predicate = #Predicate<CardItem> { item in
+            item.serverHoldingId == serverId
+        }
+        let tombstones = try modelContext.fetch(FetchDescriptor<CardItem>(predicate: predicate))
+        for tombstone in tombstones {
+            modelContext.delete(tombstone)
+        }
+    }
 }
 
 // MARK: - Errors
