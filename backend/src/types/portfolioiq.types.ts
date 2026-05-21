@@ -59,4 +59,11 @@ export interface PortfolioHolding {
   // by PR B (multi-tab migration). Optional on existing docs; required-shape
   // on new InventoryIQ holdings created from iOS.
   photos?: string[];
-  clientId?: string;}
+  clientId?: string;
+  // eBay listing back-references. Set by ebayListing publish flow (PR D.6).
+  // null = not currently listed; absent = field never populated. End-listing
+  // flow clears all three back to null.
+  ebayOfferId?: string | null;
+  ebayListingId?: string | null;
+  ebayListingPublishedAt?: string | null;
+}

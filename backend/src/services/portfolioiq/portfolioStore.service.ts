@@ -213,6 +213,35 @@ interface PortfolioLedgerEntry {
   realizedProfitLossPct: number;
   soldAt: string;
   notes?: string;
+
+  // ----- eBay sale provenance (PR D.6, populated only for ITEM_SOLD path) -----
+  // Manual entries OMIT all of these. Readers MUST treat absent `source` as
+  // "manual" and absent `needsReconciliation` as false.
+  source?: "manual" | "ebay";
+  ebayOrderId?: string;
+  ebayOfferId?: string | null;
+  ebayListingId?: string | null;
+  ebayBuyerUsername?: string | null;
+  ebaySaleConfirmedAt?: string;
+
+  // Granular eBay fee fields. NULL = unknown / not yet reported by eBay.
+  // NEVER coerced to 0 — that would silently inflate netProceeds.
+  // The legacy top-level `fees` aggregate is set to 0 for eBay entries; the
+  // reporting layer must read these granular fields when source==="ebay".
+  finalValueFee?: number | null;
+  paymentProcessingFee?: number | null;
+  promotedListingFee?: number | null;
+  adFee?: number | null;
+  otherFees?: number | null;
+  netPayout?: number | null;
+  actualShippingCost?: number | null;
+  suppliesCost?: number | null;
+  gradingCost?: number | null;
+
+  // True when the recorded netProceeds is incomplete: at least one granular
+  // fee is null AND eBay did not provide an authoritative netPayout. The
+  // reconciliation pass should re-fetch the order and update this entry.
+  needsReconciliation?: boolean;
 }
 
 function normalizeId(value: unknown): string {
@@ -888,6 +917,168 @@ export async function findHoldingByClientId(
   return null;
 }
 
+/**
+ * Persist eBay listing back-references on a holding after a successful
+ * publish flow. Idempotent: re-calling overwrites existing values, which
+ * is what the publish flow wants (e.g. relisting after an end). Returns
+ * the updated holding, or null if the holding does not exist.
+ */
+export async function linkEbayListing(
+  userId: string,
+  holdingId: string,
+  link: { offerId: string; listingId: string; publishedAt?: string },
+): Promise<PortfolioHolding | null> {
+  if (!userId || !holdingId || !link?.offerId || !link?.listingId) return null;
+  const doc = await readUserDoc(userId);
+  const holding = doc.holdings[holdingId];
+  if (!holding) return null;
+  const updated: PortfolioHolding = {
+    ...holding,
+    ebayOfferId: link.offerId,
+    ebayListingId: link.listingId,
+    ebayListingPublishedAt: link.publishedAt ?? new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+  };
+  doc.holdings[holdingId] = updated;
+  await writeUserDoc(userId, doc);
+  return updated;
+}
+
+/**
+ * Clear eBay listing back-references on a holding after a successful
+ * end-listing flow. Looks the holding up by offerId so the caller does
+ * not need to know the holdingId. Returns the cleared holding, or null
+ * if no holding for this user references that offerId.
+ */
+export async function unlinkEbayListingByOfferId(
+  userId: string,
+  offerId: string,
+): Promise<PortfolioHolding | null> {
+  if (!userId || !offerId) return null;
+  const doc = await readUserDoc(userId);
+  let target: { id: string; holding: PortfolioHolding } | null = null;
+  for (const [id, h] of Object.entries(doc.holdings)) {
+    if (h?.ebayOfferId === offerId) {
+      target = { id, holding: h };
+      break;
+    }
+  }
+  if (!target) return null;
+  const cleared: PortfolioHolding = {
+    ...target.holding,
+    ebayOfferId: null,
+    ebayListingId: null,
+    ebayListingPublishedAt: null,
+    lastUpdated: new Date().toISOString(),
+  };
+  doc.holdings[target.id] = cleared;
+  await writeUserDoc(userId, doc);
+  return cleared;
+}
+
+/**
+ * Look up a holding by the eBay offerId persisted on it. Used by the
+ * webhook ITEM_SOLD handler (PR D.6) to map an eBay sale notification
+ * back to a HobbyIQ holding without requiring the caller to know
+ * the holdingId.
+ */
+export async function findHoldingByEbayOfferId(
+  userId: string,
+  offerId: string,
+): Promise<PortfolioHolding | null> {
+  if (!userId || !offerId) return null;
+  const doc = await readUserDoc(userId);
+  for (const holding of Object.values(doc.holdings)) {
+    if (holding?.ebayOfferId === offerId) return holding;
+  }
+  return null;
+}
+
+/**
+ * Cross-user lookup of a holding by eBay offerId. Used by the webhook
+ * ITEM_SOLD dispatcher when only the offerId is known (the webhook does
+ * not include the HobbyIQ userId).
+ *
+ * INVARIANT: an eBay offerId is unique per seller, and a HobbyIQ user is
+ * a single eBay seller, so at most ONE holding across the entire portfolio
+ * store should ever reference a given offerId. If the cross-partition
+ * scan returns more than one match, that is a data-corruption bug — we
+ * log loudly to App Insights and pick the first match deterministically
+ * (sorted by userId then holdingId) so behaviour is reproducible. We do
+ * NOT throw, because failing the webhook would cause eBay to retry
+ * forever and we'd lose the sale notification entirely.
+ *
+ * Implementation note: `holdings` is stored as a JSON object map keyed
+ * by holdingId, not as an array, so we can't use Cosmos `JOIN h IN`
+ * over an array. Instead we cross-partition project `userId` + `holdings`
+ * and filter in JS. Acceptable at current scale; future optimization
+ * is a dedicated `ebay_offer_index` container.
+ *
+ * Returns null when no match is found or when the backing store is
+ * unavailable.
+ */
+export async function findHoldingByEbayOfferIdAcrossUsers(
+  offerId: string,
+): Promise<{ userId: string; holdingId: string; holding: PortfolioHolding } | null> {
+  if (!offerId) return null;
+
+  type Match = { userId: string; holdingId: string; holding: PortfolioHolding };
+  const matches: Match[] = [];
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const [userId, doc] of testMemStore.entries()) {
+      for (const [holdingId, holding] of Object.entries(doc.holdings)) {
+        if (holding?.ebayOfferId === offerId) {
+          matches.push({ userId, holdingId, holding });
+        }
+      }
+    }
+  } else if (container) {
+    try {
+      const { resources } = await container.items
+        .query<{ userId: string; holdings: Record<string, PortfolioHolding> }>({
+          query: "SELECT c.userId, c.holdings FROM c",
+        })
+        .fetchAll();
+      for (const row of resources ?? []) {
+        if (!row?.holdings) continue;
+        for (const [holdingId, holding] of Object.entries(row.holdings)) {
+          if (holding?.ebayOfferId === offerId) {
+            matches.push({ userId: row.userId, holdingId, holding });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error(
+        "[portfolio] findHoldingByEbayOfferIdAcrossUsers query failed:",
+        err?.message ?? String(err),
+      );
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  if (matches.length === 0) return null;
+
+  if (matches.length > 1) {
+    // Deterministic ordering so retries pick the same row.
+    matches.sort((a, b) =>
+      a.userId === b.userId
+        ? a.holdingId.localeCompare(b.holdingId)
+        : a.userId.localeCompare(b.userId),
+    );
+    console.error(
+      `[portfolio] CRITICAL: ebayOfferId=${offerId} matched ${matches.length} holdings across users — INVARIANT VIOLATED (eBay offerIds are unique per seller). Matches: ${matches
+        .map((m) => `userId=${m.userId} holdingId=${m.holdingId}`)
+        .join(", ")}. Picking first deterministically: userId=${matches[0].userId} holdingId=${matches[0].holdingId}`,
+    );
+  }
+
+  return matches[0];
+}
+
 export async function sellHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
@@ -972,6 +1163,213 @@ export async function sellHolding(req: Request, res: Response) {
     holdingRemoved: remainingQty <= 0,
     remainingQuantity: Math.max(0, remainingQty),
   });
+}
+
+/**
+ * Non-HTTP helper that records an eBay-originated sale on a holding.
+ * Used by the ITEM_SOLD webhook handler (PR D.6).
+ *
+ * KEY GUARANTEES:
+ * - Idempotent on (holdingId, ebayOrderId): replaying the same orderId
+ *   returns the existing ledger entry without mutating state. This is
+ *   required because `markEventProcessed` in the webhook events store is
+ *   best-effort, so a future reconciliation pass may replay events whose
+ *   handler-result write failed mid-flight.
+ * - Never throws. Returns a discriminated result the caller can ack on.
+ * - NULL-not-zero for unknown eBay fees: a missing fee field is recorded
+ *   as null on the ledger entry, NOT silently treated as 0. When at least
+ *   one granular fee is null and no authoritative `netPayout` is given,
+ *   the entry is flagged `needsReconciliation: true`.
+ * - Manual sale defaults are NOT changed by this helper.
+ */
+export interface EbaySaleData {
+  ebayOrderId: string;
+  ebayOfferId?: string | null;
+  ebayListingId?: string | null;
+  ebayBuyerUsername?: string | null;
+  saleConfirmedAt: string;
+  quantitySold: number;
+  unitSalePrice: number;
+  finalValueFee?: number | null;
+  paymentProcessingFee?: number | null;
+  promotedListingFee?: number | null;
+  adFee?: number | null;
+  otherFees?: number | null;
+  netPayout?: number | null;
+  actualShippingCost?: number | null;
+  suppliesCost?: number | null;
+  gradingCost?: number | null;
+}
+
+export type MarkSoldFromEbayResult =
+  | {
+      status: "marked-sold" | "marked-sold-deduped";
+      entry: PortfolioLedgerEntry;
+      holdingRemoved: boolean;
+      remainingQuantity: number;
+    }
+  | { status: "holding-not-found" }
+  | { status: "invalid-input"; reason: string };
+
+export async function markHoldingSoldFromEbay(
+  userId: string,
+  holdingId: string,
+  data: EbaySaleData,
+): Promise<MarkSoldFromEbayResult> {
+  const trimmedOrderId = String(data?.ebayOrderId ?? "").trim();
+  if (!userId || !holdingId || !trimmedOrderId) {
+    return { status: "invalid-input", reason: "missing userId, holdingId, or ebayOrderId" };
+  }
+
+  const doc = await readUserDoc(userId);
+
+  // 1. Idempotency check — required per Step 3 decision #3 carry-forward.
+  //    Replay must return the existing entry, not mutate, not throw.
+  const existing = doc.ledger.find(
+    (e) =>
+      e.holdingId === holdingId &&
+      e.source === "ebay" &&
+      e.ebayOrderId === trimmedOrderId,
+  );
+  if (existing) {
+    const currentHolding = doc.holdings[holdingId];
+    return {
+      status: "marked-sold-deduped",
+      entry: existing,
+      holdingRemoved: !currentHolding,
+      remainingQuantity: currentHolding ? toNumber(currentHolding.quantity, 0) : 0,
+    };
+  }
+
+  // 2. Holding existence.
+  const holding = doc.holdings[holdingId];
+  if (!holding) {
+    return { status: "holding-not-found" };
+  }
+
+  // 3. Validate quantity / price.
+  const quantityOwned = Math.max(1, toNumber(holding.quantity, 1));
+  const quantitySold = Math.floor(toNumber(data.quantitySold, 0));
+  if (quantitySold <= 0 || quantitySold > quantityOwned) {
+    return { status: "invalid-input", reason: "invalid quantitySold" };
+  }
+  const unitSalePrice = toNumber(data.unitSalePrice, 0);
+  if (unitSalePrice <= 0) {
+    return { status: "invalid-input", reason: "invalid unitSalePrice" };
+  }
+
+  // 4. Compute math. Granular fees use NULL-not-zero semantics.
+  const currentCostBasis = toNumber(
+    holding.totalCostBasis,
+    toNumber(holding.purchasePrice, 0) * quantityOwned,
+  );
+  const avgUnitCost = quantityOwned > 0 ? currentCostBasis / quantityOwned : 0;
+  const costBasisSold = avgUnitCost * quantitySold;
+  const grossProceeds = unitSalePrice * quantitySold;
+
+  const granularFees = {
+    finalValueFee: data.finalValueFee ?? null,
+    paymentProcessingFee: data.paymentProcessingFee ?? null,
+    promotedListingFee: data.promotedListingFee ?? null,
+    adFee: data.adFee ?? null,
+    otherFees: data.otherFees ?? null,
+    actualShippingCost: data.actualShippingCost ?? null,
+  };
+  const netPayout = data.netPayout ?? null;
+  const allGranularKnown = Object.values(granularFees).every((v) => v !== null);
+
+  let netProceeds: number;
+  if (netPayout !== null) {
+    // eBay-authoritative net.
+    netProceeds = netPayout;
+  } else {
+    // Compute from known fees only. Unknown (null) fees contribute 0 here,
+    // but `needsReconciliation` will be true so downstream readers know
+    // the number is incomplete.
+    const knownFeeSum = Object.values(granularFees).reduce<number>(
+      (acc, v) => acc + (v ?? 0),
+      0,
+    );
+    netProceeds = grossProceeds - knownFeeSum;
+  }
+
+  const needsReconciliation = netPayout === null && !allGranularKnown;
+
+  const realizedProfitLoss = netProceeds - costBasisSold;
+  const realizedProfitLossPct =
+    costBasisSold > 0 ? (realizedProfitLoss / costBasisSold) * 100 : 0;
+
+  // 5. Build ledger entry. Legacy aggregate fees/tax/shipping are 0 for
+  //    eBay entries; the granular fields are the source of truth.
+  const ledgerEntry: PortfolioLedgerEntry = {
+    id: randomUUID(),
+    userId,
+    holdingId,
+    playerName: String(holding.playerName ?? ""),
+    cardTitle: String(holding.cardTitle ?? ""),
+    quantitySold,
+    unitSalePrice,
+    grossProceeds,
+    fees: 0,
+    tax: 0,
+    shipping: 0,
+    netProceeds,
+    costBasisSold,
+    realizedProfitLoss,
+    realizedProfitLossPct,
+    soldAt: data.saleConfirmedAt,
+    source: "ebay",
+    ebayOrderId: trimmedOrderId,
+    ebayOfferId: data.ebayOfferId ?? null,
+    ebayListingId: data.ebayListingId ?? null,
+    ebayBuyerUsername: data.ebayBuyerUsername ?? null,
+    ebaySaleConfirmedAt: data.saleConfirmedAt,
+    finalValueFee: granularFees.finalValueFee,
+    paymentProcessingFee: granularFees.paymentProcessingFee,
+    promotedListingFee: granularFees.promotedListingFee,
+    adFee: granularFees.adFee,
+    otherFees: granularFees.otherFees,
+    netPayout,
+    actualShippingCost: granularFees.actualShippingCost,
+    suppliesCost: data.suppliesCost ?? null,
+    gradingCost: data.gradingCost ?? null,
+    needsReconciliation,
+  };
+
+  // 6. Mutate holding state (mirrors sellHolding).
+  const remainingQty = quantityOwned - quantitySold;
+  if (remainingQty <= 0) {
+    delete doc.holdings[holdingId];
+  } else {
+    const updatedCostBasis = avgUnitCost * remainingQty;
+    const currentValuePerUnit =
+      quantityOwned > 0 ? toNumber(holding.currentValue, 0) / quantityOwned : 0;
+    const nextCurrentValue = currentValuePerUnit * remainingQty;
+    doc.holdings[holdingId] = {
+      ...holding,
+      quantity: remainingQty,
+      purchasePrice: avgUnitCost,
+      totalCostBasis: updatedCostBasis,
+      currentValue: nextCurrentValue,
+      totalProfitLoss: nextCurrentValue - updatedCostBasis,
+      totalProfitLossPct:
+        updatedCostBasis > 0
+          ? ((nextCurrentValue - updatedCostBasis) / updatedCostBasis) * 100
+          : 0,
+      lastUpdated: new Date().toISOString(),
+      freshnessStatus: "Updated Today",
+    };
+  }
+
+  doc.ledger.push(ledgerEntry);
+  await writeUserDoc(userId, doc);
+
+  return {
+    status: "marked-sold",
+    entry: ledgerEntry,
+    holdingRemoved: remainingQty <= 0,
+    remainingQuantity: Math.max(0, remainingQty),
+  };
 }
 
 export async function refreshHolding(req: Request, res: Response) {
