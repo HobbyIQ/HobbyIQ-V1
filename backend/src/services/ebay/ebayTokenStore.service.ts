@@ -142,3 +142,50 @@ export async function deleteTokenRecord(userId: string): Promise<void> {
     if (err?.code !== 404) throw err;
   }
 }
+
+/**
+ * Reverse-lookup: given an eBay-side identifier (`username` or encrypted
+ * `userId` from a marketplace-account-deletion notification), find the
+ * matching HobbyIQ userId so we can delete that user's token record.
+ *
+ * Matches against the `ebayUserId` field on stored token records — which
+ * was populated from eBay's commerce-identity endpoint at OAuth-callback
+ * time and stores whichever identifier eBay returned (`username` first,
+ * then encrypted `userId`).
+ *
+ * Returns null if no match is found. Webhooks must still respond 200 in
+ * that case (eBay treats anything else as a delivery failure and retries).
+ *
+ * Implementation: scans the in-memory FILE_STORE first (covers all users
+ * the App Service has seen since boot). On a miss, queries Cosmos via a
+ * cross-partition equality filter. The token container is small (one doc
+ * per connected user) so the cross-partition scan is cheap.
+ */
+export async function findUserIdByEbayUserId(
+  ebayUserIdOrUsername: string,
+): Promise<string | null> {
+  if (!ebayUserIdOrUsername) return null;
+
+  for (const [userId, record] of Object.entries(FILE_STORE)) {
+    if (record.ebayUserId === ebayUserIdOrUsername) return userId;
+  }
+
+  const container = await getContainer();
+  if (!container) return null;
+
+  try {
+    const { resources } = await container.items
+      .query<{ userId: string }>({
+        query: "SELECT TOP 1 c.userId FROM c WHERE c.record.ebayUserId = @id",
+        parameters: [{ name: "@id", value: ebayUserIdOrUsername }],
+      })
+      .fetchAll();
+    return resources[0]?.userId ?? null;
+  } catch (err: any) {
+    console.error(
+      "[ebayTokenStore] findUserIdByEbayUserId query failed:",
+      err?.message ?? String(err),
+    );
+    return null;
+  }
+}
