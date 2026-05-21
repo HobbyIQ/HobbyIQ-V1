@@ -8,6 +8,7 @@
 //                       keyed by serverHoldingId first, falling back to clientId
 
 import Foundation
+import Observation
 import SwiftData
 
 // MARK: - PortfolioSyncService
@@ -17,13 +18,64 @@ import SwiftData
 /// APIService is a value-type struct (implicitly Sendable), so its async methods
 /// can be awaited from the main actor without isolation issues.
 @MainActor
+@Observable
 final class PortfolioSyncService {
     private let modelContext: ModelContext
     private let apiService: APIService
 
+    /// Whether the sync service is actively processing.
+    private(set) var isSyncing = false
+
+    /// Last error from a sync operation (cleared on next successful sync).
+    private(set) var lastSyncError: String?
+
+    /// Timestamp of last successful full sync (read + queue drain).
+    private(set) var lastSyncDate: Date?
+
     init(modelContext: ModelContext, apiService: APIService) {
         self.modelContext = modelContext
         self.apiService = apiService
+    }
+
+    // MARK: - Auth-aware sync
+
+    /// Whether the user is authenticated and sync can proceed.
+    var isAuthenticated: Bool {
+        AuthService.shared.isLoggedIn
+    }
+
+    /// Runs a full sync cycle: read path → process queue.
+    /// No-ops if not authenticated. Safe to call repeatedly.
+    func sync() async {
+        guard isAuthenticated else {
+            lastSyncError = PortfolioSyncError.notAuthenticated.localizedDescription
+            return
+        }
+
+        isSyncing = true
+        lastSyncError = nil
+
+        do {
+            try await readPath()
+            try await processQueue()
+            lastSyncDate = Date()
+        } catch {
+            lastSyncError = error.localizedDescription
+        }
+
+        isSyncing = false
+    }
+
+    /// Called when the user signs in — triggers an initial sync.
+    func onSignIn() async {
+        await sync()
+    }
+
+    /// Called when the user signs out — resets sync state.
+    func onSignOut() {
+        isSyncing = false
+        lastSyncError = nil
+        lastSyncDate = nil
     }
 
     // MARK: - Write path
