@@ -108,7 +108,7 @@ Card Hedge already cancelled (2026-05-19) and router-disconnected (Phase 0 findi
 
 **4a success criteria:**
 - Cache hit rate >80% within 1 week of deploy
-- p95 prediction latency drops by >50% vs Phase 0 baseline
+- p95 prediction latency drops by >50% vs Day-10 baseline (2026-05-31 post-PR-A1 + PR-A1.1, includes existing in-process cacheWrap). **Baseline note (2026-05-21 PM):** Phase 0 latency baseline is not recoverable — requests-table auto-instrumentation was unwired pre-PR-A1; only ~1 hour of usable post-PR-A1 data exists at the time of this edit. Realistic baseline is Day-10.
 - Zero prediction calls direct to Cardsight when cache warm
 
 ### Phase 4b — Signal integration (Week 7: Jul 3-9)
@@ -281,7 +281,7 @@ End-of-July deliverables (Phases 0-4c + initial Phase 5 + Phase 6), observabilit
 - ✅ Documentation matches deployed reality
 - ✅ Card Hedge code/config cleaned up (Phase 3); subscription already canceled 2026-05-19
 - ✅ Cardsight serves 100% of comp data (router migration via Phase 1 Track B / PR-A2)
-- ✅ Cache layer reduces prediction latency >50% AND provides Cardsight-outage resilience
+- ✅ Cache layer reduces prediction latency >50% vs Day-10 baseline AND provides Cardsight-outage resilience
 - ✅ All 7 signal sources wired into live pricing
 - ✅ comp_logs → training pipeline runs end-to-end
 - ✅ At least one trained pricing model evaluated, go/no-go decision made
