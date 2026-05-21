@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import SwiftData
 import SwiftUI
 
 struct MainAppView: View {
@@ -33,6 +34,7 @@ private struct AppTabShellView: View {
     @ObservedObject var dailyIQService: DailyIQService
     @ObservedObject var sessionViewModel: AppSessionViewModel
     @EnvironmentObject private var appState: AppState
+    @Environment(\.modelContext) private var modelContext
 
     @State private var selectedTab: MainTab = .dashboard
     /// Tracks which tabs have been visited so we can defer creation of
@@ -40,6 +42,7 @@ private struct AppTabShellView: View {
     @State private var visitedTabs: Set<MainTab> = [.dashboard]
     @StateObject private var portfolioVM = PortfolioIQViewModel()
     @State private var isKeyboardVisible = false
+    @State private var syncService: PortfolioSyncService?
 
     var body: some View {
         ZStack {
@@ -61,6 +64,14 @@ private struct AppTabShellView: View {
             selectedTab = .dashboard
             applyPendingOAuthCallbackIfNeeded()
             await sessionViewModel.checkSessionOnLaunch()
+
+            // Initialize sync service and trigger initial sync
+            let service = PortfolioSyncService(
+                modelContext: modelContext,
+                apiService: .shared
+            )
+            syncService = service
+            await service.onSignIn()
         }
         .onChange(of: selectedTab) { _, newTab in
             visitedTabs.insert(newTab)
