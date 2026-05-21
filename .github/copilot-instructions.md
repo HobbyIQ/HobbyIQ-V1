@@ -333,6 +333,14 @@ Always auto-flag these conditions in pricing output:
 4. Explain key decisions in 2-3 sentences after the code
 5. Flag blockers — anything that requires the user's input, keys, or schema changes
 
+---
+
+## OPERATIONAL GOTCHAS
+
+Sharp edges that have wasted time before. Append new entries as they're discovered; keep each entry self-contained with the resource/component name spelled out.
+
+- **App Insights component name**: hobbyiq3 telemetry lives in component `hobbyiq-insights`, NOT in obvious-named alternatives (`HobbyIQ3`, `HobbyIQ`, `appi-hobbyiq-dev`, `appi-hobbyiq-prod`) which exist but are empty. Verify connection string before assuming a component name.
+
 ## LESSONS FROM PRIOR SESSIONS
 
 Append-only log of operating-model lessons captured across sessions. Each entry is dated and self-contained; do not collapse, summarize, or restructure prior entries when adding new ones.
