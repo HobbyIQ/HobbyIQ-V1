@@ -1,18 +1,52 @@
 # HobbyIQ Session Handoff — 2026-05-21
 
-(updated end of multi-session day spanning 2026-05-20 → 2026-05-21)
+(updated end of multi-session day spanning 2026-05-20 → 2026-05-21; PR D batch appended)
 
 ## Production state
 
 - HobbyIQ3 (Azure App Service, rg-hobbyiq-dev, Central US)
 - URL: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
-- Deployed SHA: cf7d48b1a1cc0c8969b851c11d09460a0c58c9ba
+- Deployed SHA: 4c0a1b69f51c019e58d2e80998febade8ac2ae63 (PR D.5 merge — D.1 + D.5 live)
 - CARDSIGHT_MODE: exclusive
 
 ## Origin/main HEAD
 
-- Current: 8476e0d (PR #97 merge — PR C complete)
-- Backend deployed is intentionally one step behind iOS — backend at cf7d48b ships PR #89/#90/#91 which are PR C preconditions. PR C itself is iOS-only.
+- Current: 4c0a1b6 (PR #99 merge — D.5 webhook)
+- iOS at 8476e0d (PR #97) is on the same main branch — backend now ahead via PRs #98 + #99.
+
+## PR D batch (2026-05-20 → 2026-05-21)
+
+### PR D.1 — eBay seller-policy refactor (#98, squash sha c2594419)
+- Removed EBAY_PAYMENT_POLICY_ID / RETURN_POLICY_ID / FULFILLMENT_POLICY_ID env vars entirely
+- New resolveSellerPolicies(userId, input) with four-state contract (none_configured / single / default-flagged / no_default_among_multiple)
+- New MissingSellerPolicyError + missingPolicy surfaced via EbayListingResult / preview warnings
+- buildListingPreview now async; getSellerPolicies exposes isDefault per entry
+- 7 new tests in tests/ebayListing.policies.test.ts
+
+### PR D.5 — eBay marketplace-account-deletion webhook (#99, squash sha 04b8d29 → main 4c0a1b6)
+- New GET/POST /api/ebay/webhook (mounted before /api/ebay)
+- GET: SHA-256 challenge handshake (challenge_code + EBAY_WEBHOOK_VERIFICATION_TOKEN + endpoint URL)
+- POST MARKETPLACE_ACCOUNT_DELETION: reverse-lookup userId via new findUserIdByEbayUserId helper (in-memory + Cosmos cross-partition), then deleteTokenRecord. Tries username → encrypted userId → eiasToken.
+- POST other topics (incl. ITEM_SOLD): logged + 200 stub
+- Always 200 on POST (eBay retries non-2xx aggressively)
+- 11 new tests in tests/ebayWebhook.test.ts; full suite 600/600
+
+### App settings added (HobbyIQ3)
+- EBAY_WEBHOOK_VERIFICATION_TOKEN — 64-char base64-url-safe random (never logged)
+- EBAY_WEBHOOK_ENDPOINT — https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/ebay/webhook
+
+### Production smoke test (post-deploy)
+- GET ?challenge_code=... → 200 + challengeResponse hex ✓
+- GET (missing challenge_code) → 400 ✓
+- POST MARKETPLACE_ACCOUNT_DELETION (no match) → 200 {received:true} ✓
+- POST ITEM_SOLD → 200 {received:true} ✓
+
+### Carved out — PR D.6 (next session)
+Per data-model halts (decisions A + M1 + Split):
+- Add ebayOfferId + ebayListingId fields to PortfolioHolding; persist on createListing/reviseListing success
+- Extract markHoldingSoldFromEbay(holdingId, orderData) helper from sellHolding (non-HTTP form)
+- Wire real ITEM_SOLD handler in ebayWebhook.routes.ts (currently a 200 stub)
+- DO NOT register webhook URL with eBay until D.6 ships if eBay test data could trigger ITEM_SOLD prematurely; for account-deletion-only registration the current stub is sufficient.
 
 ## What shipped this session (2026-05-20 → 2026-05-21)
 
