@@ -197,3 +197,65 @@ describe("compLogEntryFromPricingResult — cohort fields", () => {
     expect(e.isAuto).toBe(true);
   });
 });
+
+describe("compLogEntryFromPricingResult — playerName + cardYear (PR-A1.1)", () => {
+  const baseArgs = {
+    player: "mike trout",
+    cardId: null,
+    query: "x",
+    cardIdSource: null,
+    endpoint: "/x",
+    durationMs: 0,
+    parallel: null,
+    grade: null,
+    isAuto: false,
+    result: {},
+  } as const;
+
+  it("persists playerName verbatim (original casing) when provided", () => {
+    const e = compLogEntryFromPricingResult(
+      { ...baseArgs, playerName: "Mike Trout" }, NOW);
+    expect(e.playerName).toBe("Mike Trout");
+    // player partition key stays lowercased; the two fields are independent.
+    expect(e.player).toBe("mike trout");
+  });
+
+  it("trims playerName and returns null when empty/whitespace/missing", () => {
+    const a = compLogEntryFromPricingResult(
+      { ...baseArgs, playerName: "  Mike Trout  " }, NOW);
+    expect(a.playerName).toBe("Mike Trout");
+    const b = compLogEntryFromPricingResult({ ...baseArgs, playerName: "" }, NOW);
+    expect(b.playerName).toBeNull();
+    const c = compLogEntryFromPricingResult({ ...baseArgs, playerName: "   " }, NOW);
+    expect(c.playerName).toBeNull();
+    const d = compLogEntryFromPricingResult({ ...baseArgs }, NOW);
+    expect(d.playerName).toBeNull();
+    const e = compLogEntryFromPricingResult({ ...baseArgs, playerName: null }, NOW);
+    expect(e.playerName).toBeNull();
+  });
+
+  it("accepts cardYear as number and persists as 4-digit integer", () => {
+    const e = compLogEntryFromPricingResult({ ...baseArgs, cardYear: 2011 }, NOW);
+    expect(e.cardYear).toBe(2011);
+  });
+
+  it("coerces cardYear from numeric string", () => {
+    const e = compLogEntryFromPricingResult({ ...baseArgs, cardYear: "2024" }, NOW);
+    expect(e.cardYear).toBe(2024);
+  });
+
+  it("returns null cardYear when out of range or unparseable", () => {
+    expect(compLogEntryFromPricingResult({ ...baseArgs, cardYear: 1800 }, NOW).cardYear).toBeNull();
+    expect(compLogEntryFromPricingResult({ ...baseArgs, cardYear: 2200 }, NOW).cardYear).toBeNull();
+    expect(compLogEntryFromPricingResult({ ...baseArgs, cardYear: "garbage" }, NOW).cardYear).toBeNull();
+    expect(compLogEntryFromPricingResult({ ...baseArgs, cardYear: NaN }, NOW).cardYear).toBeNull();
+    expect(compLogEntryFromPricingResult({ ...baseArgs, cardYear: null }, NOW).cardYear).toBeNull();
+    expect(compLogEntryFromPricingResult({ ...baseArgs }, NOW).cardYear).toBeNull();
+  });
+
+  it("is backward compatible — callers without the new fields produce null on both", () => {
+    const e = compLogEntryFromPricingResult({ ...baseArgs }, NOW);
+    expect(e.playerName).toBeNull();
+    expect(e.cardYear).toBeNull();
+  });
+});

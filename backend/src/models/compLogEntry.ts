@@ -133,6 +133,21 @@ export interface CompLogEntry {
   /** Whether the request targeted an autographed card. */
   isAuto: boolean;
 
+  /**
+   * Human-readable player name (original casing, e.g. "Mike Trout") as
+   * parsed from the query or resolved from cardIdentity. Distinct from
+   * the partition-key `player` field, which is lowercased / slugged.
+   * Null when no player can be resolved.
+   */
+  playerName: string | null;
+
+  /**
+   * Card release year parsed from the query or resolved from
+   * cardIdentity. Stored as a 4-digit number, or null when no year is
+   * available (e.g. cardId-pinned requests without identity).
+   */
+  cardYear: number | null;
+
   /** Comp counts within rolling sale-date windows. */
   w7Count: number | null;
   w14Count: number | null;
