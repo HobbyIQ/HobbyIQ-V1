@@ -5,6 +5,7 @@
 //  Created by Drew Vabulas on 4/12/26.
 //
 
+import SwiftData
 import SwiftUI
 import UserNotifications
 
@@ -55,5 +56,6 @@ struct HobbyIQApp: App {
                 AppState.shared = appState
             }
         }
+        .modelContainer(for: [CardItem.self, CardSaleRecord.self, SyncIntent.self])
     }
 }
