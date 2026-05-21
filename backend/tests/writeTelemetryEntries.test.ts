@@ -104,4 +104,67 @@ describe("writeTelemetryEntries", () => {
     writeTelemetryEntries(captureArgs());
     expect(calls).toEqual(["corpus", "comp_log"]);
   });
+
+  it("plumbs playerName and cardYear through to the comp_log entry (PR-A1.1)", () => {
+    writeTelemetryEntries({
+      ...captureArgs(),
+      playerName: "Mike Trout",
+      cardYear: 2011,
+    });
+    const compLogEntry = compLogMock.mock.calls[0][0];
+    expect(compLogEntry.playerName).toBe("Mike Trout");
+    expect(compLogEntry.cardYear).toBe(2011);
+  });
+
+  it("defaults playerName and cardYear to null when callers omit them", () => {
+    writeTelemetryEntries(captureArgs());
+    const compLogEntry = compLogMock.mock.calls[0][0];
+    expect(compLogEntry.playerName).toBeNull();
+    expect(compLogEntry.cardYear).toBeNull();
+  });
+});
+
+import { extractTelemetryCohortFromResult } from "../src/services/corpus/writeTelemetryEntries";
+
+describe("extractTelemetryCohortFromResult — playerName + cardYear (PR-A1.1)", () => {
+  it("reads playerName from parsedQuery verbatim and cardYear from parsedQuery.year", () => {
+    const cohort = extractTelemetryCohortFromResult(
+      {
+        parsedQuery: { playerName: "Mike Trout", year: 2011 },
+        cardIdentity: { player: "mike trout", cardId: "ch_abc" },
+      },
+      "fallback query",
+    );
+    expect(cohort.playerName).toBe("Mike Trout");
+    expect(cohort.cardYear).toBe(2011);
+  });
+
+  it("falls back to cardIdentity.player and cardIdentity.year when parsedQuery is absent (e.g. /price-by-id)", () => {
+    const cohort = extractTelemetryCohortFromResult(
+      { cardIdentity: { player: "Mike Trout", cardId: "ch_abc", year: 2018 } },
+      "fallback query",
+      "cardhedge",
+    );
+    expect(cohort.playerName).toBe("Mike Trout");
+    expect(cohort.cardYear).toBe(2018);
+  });
+
+  it("returns null playerName and null cardYear when neither source has them", () => {
+    const cohort = extractTelemetryCohortFromResult({}, "raw query");
+    expect(cohort.playerName).toBeNull();
+    expect(cohort.cardYear).toBeNull();
+  });
+
+  it("coerces numeric-string year and drops out-of-range years", () => {
+    const a = extractTelemetryCohortFromResult(
+      { parsedQuery: { playerName: "X", year: "2022" } },
+      "q",
+    );
+    expect(a.cardYear).toBe(2022);
+    const b = extractTelemetryCohortFromResult(
+      { parsedQuery: { playerName: "X", year: 1800 } },
+      "q",
+    );
+    expect(b.cardYear).toBeNull();
+  });
 });

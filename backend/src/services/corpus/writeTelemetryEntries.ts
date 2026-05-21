@@ -64,7 +64,7 @@ export function extractTelemetryCohortFromResult(
   cardIdSourceHint?: CompLogCardIdSource,
 ): Pick<
   CompLogEntryFromPricingResultArgs,
-  "player" | "cardId" | "cardIdSource" | "parallel" | "grade" | "isAuto"
+  "player" | "cardId" | "cardIdSource" | "parallel" | "grade" | "isAuto" | "playerName" | "cardYear"
 > {
   const r = (result ?? {}) as Record<string, unknown>;
   const parsed = (r.parsedQuery ?? {}) as Record<string, unknown>;
@@ -79,6 +79,37 @@ export function extractTelemetryCohortFromResult(
     (playerFromIdentity && playerFromIdentity.trim()) ||
     fallbackQuery ||
     null;
+
+  // Human-readable playerName: prefer parsed.playerName (verbatim from
+  // parser) over cardIdentity.player. Distinct from `player` because
+  // `player` is downstream slug/lowercase and also accepts the raw
+  // fallback query when neither parsed nor identity has a name.
+  const playerNameRaw =
+    (playerFromParsed && playerFromParsed.trim()) ||
+    (playerFromIdentity && playerFromIdentity.trim()) ||
+    null;
+  const playerName = playerNameRaw && playerNameRaw.length > 0 ? playerNameRaw : null;
+
+  // cardYear: prefer parsed.year, fall back to cardIdentity.year.
+  // /price-by-id has no parsedQuery in its response shape, so identity
+  // is the only available source there.
+  const yearFromParsed = parsed.year;
+  const yearFromIdentity = identity.year;
+  let cardYear: number | null = null;
+  for (const cand of [yearFromParsed, yearFromIdentity]) {
+    if (typeof cand === "number" && Number.isFinite(cand)) {
+      cardYear = Math.trunc(cand);
+      break;
+    }
+    if (typeof cand === "string" && cand.trim() !== "") {
+      const n = Number(cand);
+      if (Number.isFinite(n)) {
+        cardYear = Math.trunc(n);
+        break;
+      }
+    }
+  }
+  if (cardYear !== null && (cardYear < 1900 || cardYear > 2100)) cardYear = null;
 
   const cardId =
     typeof identity.cardId === "string" && identity.cardId.length > 0
@@ -106,7 +137,7 @@ export function extractTelemetryCohortFromResult(
   const cardIdSource: CompLogCardIdSource | null =
     cardIdSourceHint ?? (cardId ? "cardhedge" : null);
 
-  return { player, cardId, cardIdSource, parallel, grade, isAuto };
+  return { player, cardId, cardIdSource, parallel, grade, isAuto, playerName, cardYear };
 }
 
 /**
@@ -117,7 +148,7 @@ export interface TelemetryCaptureArgs
   extends CorpusEntryFromPricingResultArgs,
     Pick<
       CompLogEntryFromPricingResultArgs,
-      "player" | "cardId" | "cardIdSource" | "parallel" | "grade" | "isAuto"
+      "player" | "cardId" | "cardIdSource" | "parallel" | "grade" | "isAuto" | "playerName" | "cardYear"
     > {}
 
 /**
@@ -148,6 +179,8 @@ export function writeTelemetryEntries(args: TelemetryCaptureArgs): void {
     parallel: args.parallel,
     grade: args.grade,
     isAuto: args.isAuto,
+    playerName: args.playerName,
+    cardYear: args.cardYear,
   });
 
   writeCorpusEntry(corpusEntry);

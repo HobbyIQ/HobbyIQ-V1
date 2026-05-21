@@ -76,6 +76,16 @@ export interface CompLogEntryFromPricingResultArgs {
   parallel: string | null | undefined;
   grade: string | null | undefined;
   isAuto: boolean;
+  /**
+   * Human-readable player name (original casing). Optional / backward
+   * compatible — callers that don't supply it get a null on the entry.
+   */
+  playerName?: string | null | undefined;
+  /**
+   * Card release year. Optional / backward compatible. Accepts a number
+   * or numeric string; coerced to a finite 4-digit number or null.
+   */
+  cardYear?: number | string | null | undefined;
   /** Route's JSON response object (post-cache). */
   result: PricingRouteResultShape | null | undefined;
 }
@@ -187,6 +197,22 @@ export function compLogEntryFromPricingResult(
   const sourceRaw = typeof result.source === "string" ? result.source : null;
   const playerRaw = typeof args.player === "string" ? args.player.trim() : "";
 
+  // playerName: verbatim human-readable, trimmed; null when missing/empty.
+  const playerNameRaw =
+    typeof args.playerName === "string" ? args.playerName.trim() : "";
+  const playerName = playerNameRaw === "" ? null : playerNameRaw;
+
+  // cardYear: coerce number-or-string to a finite 4-digit number; null
+  // when missing/unparseable/out-of-range.
+  let cardYear: number | null = null;
+  if (typeof args.cardYear === "number" && Number.isFinite(args.cardYear)) {
+    cardYear = Math.trunc(args.cardYear);
+  } else if (typeof args.cardYear === "string" && args.cardYear.trim() !== "") {
+    const n = Number(args.cardYear);
+    if (Number.isFinite(n)) cardYear = Math.trunc(n);
+  }
+  if (cardYear !== null && (cardYear < 1900 || cardYear > 2100)) cardYear = null;
+
   return {
     compLogSchemaVersion: 1,
     player: playerRaw === "" ? "unknown" : playerRaw.toLowerCase(),
@@ -215,6 +241,8 @@ export function compLogEntryFromPricingResult(
     parallel: args.parallel ?? null,
     grade: args.grade ?? null,
     isAuto: args.isAuto,
+    playerName,
+    cardYear,
     w7Count: w7.count,
     w14Count: w14.count,
     w30Count: w30.count,
