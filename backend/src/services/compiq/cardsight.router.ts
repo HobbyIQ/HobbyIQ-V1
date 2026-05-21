@@ -134,53 +134,85 @@ async function findCompsViaCardsight(
   query: string,
   opts: FindCompsRoutedOptions,
 ): Promise<RoutedResult> {
-  const mapped = await resolveCardId(toCardsightQuery(query, opts));
-  if (!mapped.cardId) {
-    return emptyCardsightResult(["cardsight_no_catalog_match", ...mapped.warnings]);
-  }
-
-  const pricing = await getPricing(mapped.cardId, {
-    parallelId: mapped.parallelId ?? undefined,
+  const start = Date.now();
+  log.info("cardsight.findComps.start", {
+    query,
+    playerName: opts.queryContext?.playerName ?? null,
+    cardYear: opts.queryContext?.cardYear ?? null,
+    parallel: opts.queryContext?.parallel ?? null,
+    gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany ?? null,
+    gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue ?? null,
+    ts: start,
   });
+  let outcome: "ok" | "empty" | "no_match" | "no_pricing" | "error" | "timeout" = "ok";
+  let cardId: string | null = null;
+  let result_count = 0;
+  try {
+    const mapped = await resolveCardId(toCardsightQuery(query, opts));
+    if (!mapped.cardId) {
+      outcome = "no_match";
+      return emptyCardsightResult(["cardsight_no_catalog_match", ...mapped.warnings]);
+    }
+    cardId = mapped.cardId;
 
-  const translated = translateResponse(pricing, {
-    gradeCompany: opts.gradeCompany,
-    gradeValue: opts.gradeValue,
-  });
+    const pricing = await getPricing(mapped.cardId, {
+      parallelId: mapped.parallelId ?? undefined,
+    });
 
-  const baseCard: CardHedgeCard = {
-    card_id: mapped.cardId,
-    title: pricing.card?.name ?? undefined,
-    player: pricing.card?.player ?? undefined,
-    set: pricing.card?.setName ?? undefined,
-    year: pricing.card?.year ?? undefined,
-    number: pricing.card?.number ?? undefined,
-    variant: mapped.parallelId ?? undefined,
-  };
+    const translated = translateResponse(pricing, {
+      gradeCompany: opts.gradeCompany,
+      gradeValue: opts.gradeValue,
+    });
 
-  if (translated.length === 0) {
+    const baseCard: CardHedgeCard = {
+      card_id: mapped.cardId,
+      title: pricing.card?.name ?? undefined,
+      player: pricing.card?.player ?? undefined,
+      set: pricing.card?.setName ?? undefined,
+      year: pricing.card?.year ?? undefined,
+      number: pricing.card?.number ?? undefined,
+      variant: mapped.parallelId ?? undefined,
+    };
+
+    if (translated.length === 0) {
+      outcome = "no_pricing";
+      return {
+        card: baseCard,
+        sales: [],
+        variantWarning: ["cardsight_no_pricing_data", ...mapped.warnings],
+        aiCategory: null,
+      };
+    }
+
+    result_count = translated.length;
+    if (result_count === 0) outcome = "empty";
+
     return {
       card: baseCard,
-      sales: [],
-      variantWarning: ["cardsight_no_pricing_data", ...mapped.warnings],
+      sales: translated.map((s) => ({
+        title: s.title,
+        price: s.price,
+        date: s.soldDate,
+        grade: opts.grade ?? "Raw",
+        source: "cardsight",
+        sale_type: null,
+        url: null,
+      })),
+      variantWarning: mapped.warnings,
       aiCategory: null,
     };
+  } catch (err) {
+    outcome = err instanceof CardsightTimeoutError ? "timeout" : "error";
+    throw err;
+  } finally {
+    log.info("cardsight.findComps.end", {
+      query,
+      cardId,
+      result_count,
+      latency_ms: Date.now() - start,
+      outcome,
+    });
   }
-
-  return {
-    card: baseCard,
-    sales: translated.map((s) => ({
-      title: s.title,
-      price: s.price,
-      date: s.soldDate,
-      grade: opts.grade ?? "Raw",
-      source: "cardsight",
-      sale_type: null,
-      url: null,
-    })),
-    variantWarning: mapped.warnings,
-    aiCategory: null,
-  };
 }
 
 export async function findCompsRouted(
