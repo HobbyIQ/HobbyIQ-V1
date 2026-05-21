@@ -7,6 +7,7 @@ import Foundation
 import XCTest
 @testable import HobbyIQ
 
+@MainActor
 final class CompIQDecodeTests: XCTestCase {
 
     // MARK: - Phase 3 fields present and populated

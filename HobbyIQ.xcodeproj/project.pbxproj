@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		3AAEB8132FBE95BF0081C666 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A61D40E2F8C72C7001EA933 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A61D4152F8C72C7001EA933;
+			remoteInfo = HobbyIQ;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		3A61D4162F8C72C7001EA933 /* HobbyIQ.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HobbyIQ.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AAEB80F2FBE95BF0081C666 /* HobbyIQTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HobbyIQTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = HobbyIQ;
 			sourceTree = "<group>";
 		};
+		3AAEB8102FBE95BF0081C666 /* HobbyIQTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HobbyIQTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3A61D4132F8C72C7001EA933 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AAEB80C2FBE95BF0081C666 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				3A61D4182F8C72C7001EA933 /* HobbyIQ */,
+				3AAEB8102FBE95BF0081C666 /* HobbyIQTests */,
 				3A61D4172F8C72C7001EA933 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				3A61D4162F8C72C7001EA933 /* HobbyIQ.app */,
+				3AAEB80F2FBE95BF0081C666 /* HobbyIQTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 3A61D4162F8C72C7001EA933 /* HobbyIQ.app */;
 			productType = "com.apple.product-type.application";
 		};
+		3AAEB80E2FBE95BF0081C666 /* HobbyIQTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AAEB8152FBE95BF0081C666 /* Build configuration list for PBXNativeTarget "HobbyIQTests" */;
+			buildPhases = (
+				3AAEB80B2FBE95BF0081C666 /* Sources */,
+				3AAEB80C2FBE95BF0081C666 /* Frameworks */,
+				3AAEB80D2FBE95BF0081C666 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3AAEB8142FBE95BF0081C666 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3AAEB8102FBE95BF0081C666 /* HobbyIQTests */,
+			);
+			name = HobbyIQTests;
+			packageProductDependencies = (
+			);
+			productName = HobbyIQTests;
+			productReference = 3AAEB80F2FBE95BF0081C666 /* HobbyIQTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					3A61D4152F8C72C7001EA933 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					3AAEB80E2FBE95BF0081C666 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 3A61D4152F8C72C7001EA933;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				3A61D4152F8C72C7001EA933 /* HobbyIQ */,
+				3AAEB80E2FBE95BF0081C666 /* HobbyIQTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		3A61D4142F8C72C7001EA933 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AAEB80D2FBE95BF0081C666 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3AAEB80B2FBE95BF0081C666 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3AAEB8142FBE95BF0081C666 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A61D4152F8C72C7001EA933 /* HobbyIQ */;
+			targetProxy = 3AAEB8132FBE95BF0081C666 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3A61D41F2F8C72C8001EA933 /* Debug */ = {
@@ -324,6 +399,48 @@
 			};
 			name = Release;
 		};
+		3AAEB8162FBE95BF0081C666 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Justtheboysandcard.HobbyIQTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HobbyIQ.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HobbyIQ";
+			};
+			name = Debug;
+		};
+		3AAEB8172FBE95BF0081C666 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Justtheboysandcard.HobbyIQTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HobbyIQ.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HobbyIQ";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -341,6 +458,15 @@
 			buildConfigurations = (
 				3A61D4222F8C72C8001EA933 /* Debug */,
 				3A61D4232F8C72C8001EA933 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3AAEB8152FBE95BF0081C666 /* Build configuration list for PBXNativeTarget "HobbyIQTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3AAEB8162FBE95BF0081C666 /* Debug */,
+				3AAEB8172FBE95BF0081C666 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
