@@ -2,6 +2,8 @@
 
 (updated end of multi-session day spanning 2026-05-20 → 2026-05-21; PR D batch appended)
 
+**Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
+
 ## Production state
 
 - HobbyIQ3 (Azure App Service, rg-hobbyiq-dev, Central US)
