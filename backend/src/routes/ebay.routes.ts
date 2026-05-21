@@ -38,6 +38,10 @@ import {
   getSellerPolicies,
   HoldingListingInput,
 } from "../services/ebay/ebayListing.service.js";
+import {
+  linkEbayListing,
+  unlinkEbayListingByOfferId,
+} from "../services/portfolioiq/portfolioStore.service.js";
 
 const router = Router();
 
@@ -193,6 +197,21 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
     res.status(502).json(result);
     return;
   }
+  // PR D.6: persist eBay listing back-references on the holding so the
+  // ITEM_SOLD webhook can map a sale notification back to this holding.
+  // Best-effort: failure to link should not fail the publish response,
+  // since the listing is already live on eBay.
+  if (result.offerId && result.listingId) {
+    try {
+      await linkEbayListing(ctx.userId, String(input.holdingId), {
+        offerId: result.offerId,
+        listingId: result.listingId,
+        publishedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("[ebay.publish] linkEbayListing failed:", err);
+    }
+  }
   res.json(result);
 });
 
@@ -232,6 +251,14 @@ router.post("/listings/:offerId/end", async (req: Request, res: Response) => {
   if (!result.success) {
     res.status(502).json(result);
     return;
+  }
+  // PR D.6: clear eBay listing back-references on the linked holding.
+  // Best-effort: failure to unlink should not fail the end-listing
+  // response, since the listing is already removed from eBay.
+  try {
+    await unlinkEbayListingByOfferId(ctx.userId, offerId);
+  } catch (err) {
+    console.error("[ebay.end] unlinkEbayListingByOfferId failed:", err);
   }
   res.json({ success: true });
 });
