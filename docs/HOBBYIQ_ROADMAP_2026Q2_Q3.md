@@ -1,7 +1,7 @@
 # HobbyIQ Roadmap — 2026 Q2 → Q3
 
-**Drafted:** 2026-05-21
-**Target horizons:** End of July 2026 (CompIQ formalization + ERP) → Mid-September 2026 (ML moat realized)
+**Drafted:** 2026-05-21 (reframed 2026-05-21 PM post Phase 0)
+**Target horizons:** End of July 2026 (CompIQ formalization + ERP) → Mid-September 2026 (ML moat realized — stretch, contingent on Phase 4c data sufficiency)
 **Status:** Active plan
 **Owner:** Drew
 
@@ -13,96 +13,90 @@ The ML moat is the strategic endpoint: every other card pricing tool can buy acc
 
 This document is canonical. Updates committed here as diffs, not absorbed into session handoffs.
 
+**Update 2026-05-21:** Card Hedge subscription cancelled 2026-05-19. Production state characterization (Phase 0) determined CH is effectively disconnected at the router layer (`CARDSIGHT_MODE=exclusive` + Site B short-circuit returns `[]` without calling CH). Remaining CH work is cleanup, not deliberate decommissioning. Separately, the production observability layer was found to be largely unwired (comp_logs writer never shipped, compiq_corpus sampling at zero, warn-line traces at ~9% capture). PR-A1 (and PR-A1.1) restored observability before any migration code change. Cardsight is the sole comp data source going forward; coverage gap at cutover cannot be sized from existing telemetry and is accepted as post-deploy discovery.
+
 ## The problems being solved
 
-**1. Silent prediction regression.** `getCardSalesRouted()` in exclusive mode returns `[]` for cardhedge-namespace IDs at two production call sites (sibling pools L629, pinned-ID path L710 in compiqEstimate.service.ts). Live since CARDSIGHT_MODE flipped to exclusive. Severity unknown until Phase 0 measurement.
+**1. Silent prediction regression (reframed).** The router's `primary_mode_cardhedge_namespace_only` short-circuit in `CARDSIGHT_MODE=exclusive` returns `[]` for cardhedge-namespace IDs. Header comment at `cardsight.router.ts` L17-L20 explicitly states Cardsight pricing is never called for cardhedge IDs in this iteration. Severity cannot be quantified from existing telemetry (warn captured at ~9% in App Insights). Phase 1 Track B builds the migration that closes this gap.
 
-**2. Card Hedge dependency.** CH is paid external API documented as primary data source. Cardsight is strategic replacement. Migration partial today: `/api/compiq/price` free-text uses Cardsight; `/api/compiq/search-list` and `/api/compiq/price-by-id` bypass router and call CH live; nightly ingestion still writes CH data with no production consumer.
+**2. Card Hedge dependency (resolved at router; cleanup pending).** Card Hedge subscription cancelled 2026-05-19. CH is functionally disconnected at the router (`CARDSIGHT_MODE=exclusive` + Site B short-circuit returns `[]` without calling CH at prediction time). Remaining work is code/config cleanup: delete the client, remove env vars, disable the ingestion function, scrub docs.
 
-**3. Documented architecture doesn't match deployed reality.** `copilot-instructions.md` describes MCP-mediated pipeline reading cached comps from blob, rule "never call live at prediction time." Actual code calls Cardsight and Card Hedge live at every prediction. 14 Azure Functions writing nightly to blob have no production backend consumer. Signal pipeline is dead-output relative to live pricing.
+**3. Documented architecture doesn't match deployed reality.** `copilot-instructions.md` describes MCP-mediated pipeline reading cached comps from blob, rule "never call live at prediction time." Actual code calls Cardsight live at every prediction. 14 Azure Functions writing nightly to blob have no production backend consumer. Signal pipeline is dead-output relative to live pricing. **Additionally (Phase 0 finding 2026-05-21):** `comp_logs` writer never shipped to production before PR-A1. The 5 pre-PR-A1 rows in `comp_logs` were from a one-off local seed script run 2026-05-03; no live traffic was ever recorded.
 
-**4. CompIQ not formalized for ML.** comp_logs accumulating. Backtest harness exists. Alpha-weight ramp infrastructure exists. Training pipeline, model itself, and production serving infrastructure unbuilt. Strategic moat depends on closing this gap.
+**4. CompIQ not formalized for ML.** comp_logs accumulating (as of PR-A1 / 2026-05-21T17:44:32Z writer flip). Backtest harness exists. Alpha-weight ramp infrastructure exists. Training pipeline, model itself, and production serving infrastructure unbuilt. Strategic moat depends on closing this gap.
 
 **5. ERP-grade portfolio incomplete.** PR D.6 shipped eBay ITEM_SOLD ledger integration with NULL fee fields awaiting Finances API enrichment. Reconciliation UX, tax export, P&L by category, pricing-driven recommendations — all pending.
 
 **6. Pricing × Portfolio intersection unbuilt.** Pricing predictions don't surface into portfolio views. Sales data doesn't feed back into pricing model. Each side reinforces the other only after this integration ships.
 
+**7. Production observability layer largely unwired.** `comp_logs` writer not shipped pre-PR-A1; `COMPIQ_CORPUS_SAMPLE_RATE` was 0 (PR-A1 sets `COMPIQ_COMP_LOGS_SAMPLE_RATE=1.0` via separate variable); router warn line captured at ~9% in App Insights; Cosmos `hobbyiq-comps-centralus` regional endpoint at ~21% failure rate; `cardsight.findComps.start` / `.end` `log.info` events not reaching App Service Linux Node container stdout. Phase 4c training pipeline depends on observability being functional. Phase 4a cache layer planning depends on accurate telemetry.
+
 ## Phasing
 
-### Phase 0 — Measure (Week 1: May 22-28)
+### Phase 0 — Measure — **COMPLETE 2026-05-21 (executed ahead of schedule)**
 
-**Read-only. Foundation for every later decision.**
+Original scope was read-only measurement Week 1 (May 22-28). Compressed into a single working session on 2026-05-21 once CH cancellation forced the timeline. Phase 0 surfaced the observability gap which required immediate (not Week 2) remediation; that remediation became Phase 1 Track A.
 
-- App Insights query: count of `primary_mode_cardhedge_namespace_only` warn logs over 30 days (regression severity)
-- App Insights query: count of cardhedger.com calls over 30 days (cost + traffic baseline)
-- App Insights query: p50/p95 latency on `/api/compiq/price` and `/api/compiq/search-list`
-- App Insights query: success rate on prediction endpoints
-- Blob inventory: confirm fn-* signal functions writing expected data
-- MCP repo discovery: search GitHub, local disk, history for any MCP-mediated pricing code outside deployed backend
-- Cardsight coverage spot-check: top 100 most-predicted cards from comp_logs, verify Cardsight has acceptable-quality data for each
-- Card Hedge subscription: check renewal date, plan cancellation timing
-- Deploy-script ErrorActionPreference fix (ships during Phase 0)
+**Actual deliverables:**
+- **PR #101** (commit `14bab24`): deploy-script `ErrorActionPreference` fix — **OPENED, NOT MERGED** (follow-up; script still aborts at [2/5] on stderr `WARNING`).
+- **PR #102**: canonical `copilot-instructions.md` ported + LESSONS section + `SECRET_ROTATIONS.md` + Phase 0 audit artifacts (MERGED).
+- **PR #104** (squashed into `ea0a724`): observability restore — `comp_logs` writer + telemetry helper + structured cardsight logs + 95 tests (MERGED).
+- **PR #105** (squashed into `e333ae1`): `playerName`/`cardYear` schema additions plumbed end-to-end (MERGED).
+- **Issue #103**: `/estimate` telemetry deferral.
+- **Issue #106**: B2 cohort definition (Day-10 review).
+- Storage account `stcompiqfnotgm` key1 rotated 2026-05-21.
+- `COMPIQ_COMP_LOGS_SAMPLE_RATE=1.0` set 2026-05-21T17:44:32Z (writer flip; soak start clock).
 
-**Phase 0 success criteria:**
-- Silent regression severity quantified (warn-log rate per day)
-- Card Hedge call volume + cost quantified
-- Cardsight coverage gap on top 100 cards identified
-- MCP repo found OR confirmed to need building
-- Deploy-script bug resolved
+**Findings captured:** see `docs/SESSION_HANDOFF.md` Phase 0 / WORKSTREAM 4 section (Findings 1-11) and `docs/phase0/SOAK_LOG.md`.
 
-**Phase 0 exit gate:** if Cardsight coverage gap on top 100 cards is >10%, plan re-evaluates before Phase 1. Do not proceed to CH removal with known coverage gap.
+### Phase 1 — Observability restore + Cardsight migration (May 22-Jun 4)
 
-### Phase 1 — Stop the bleeding (Week 2: May 29-Jun 4)
+Two tracks. Track A unblocks every later phase by making production state observable. Track B is the original "stop the bleeding" + "replace router bypasses" work, consolidated since CH router-level disconnect made the original Phase 1/Phase 2 split unnecessary.
 
-**Fix silent regression. Do not start larger migration yet.**
+**Track A — Observability restore. COMPLETE via PR-A1 (`ea0a724`) + PR-A1.1 (`e333ae1`).**
+10-day soak running, started 2026-05-21T17:44:32Z, Day-10 review 2026-05-31T17:44:32Z.
+Known gaps carried forward:
+- `cardsight.findComps.start` / `.end` stdout emission gap (environmental, not code — does not reach App Service Linux container stdout).
+- Cache-hit telemetry pollution (architectural smell — writer is inside `cacheWrap`; cache hits produce extra `comp_logs` rows with ~2-3ms latency). Deferred to Phase 4a measurement-design. Filter rule for soak: `latency_ms >= 50 GROUP BY endpoint`.
+- Schema gaps #1 / #2 / #4 / #5 from SOAK_LOG (cardIdSource null, cardId null, parallel literal-only, 2× row fan-out) — decisions deferred to Day-10 review and PR-A2.
 
-- Build CH-namespace → Cardsight ID mapper. Input: cardhedge cardId. Output: cardsight cardId via catalog lookup.
-- Wire mapper into `getCardSalesRouted()` cardhedge-namespace path: instead of returning `[]` in exclusive mode, resolve through mapper and call Cardsight with translated ID
-- Update L629 (sibling pools) and L710 (pinned-ID path) in compiqEstimate.service.ts to use new flow
-- Verification: warn-log rate for `primary_mode_cardhedge_namespace_only` drops to zero in production
-- Verification: prediction success rate does not regress vs Phase 0 baseline
+**Track B — Cardsight migration (PR-A2). Post-soak, after Day-10 review.**
+- Caller-side ID change at `/price-by-id` to pass Cardsight IDs (not cardhedge IDs) into the router.
+- Fix the L710 try/catch hazard in `compiqEstimate.service.ts` (pinned-ID path).
+- Mapper-driven Cardsight resolution for any residual cardhedge-namespace IDs in the corpus.
+- Remove direct CH client calls from `compiq.routes.ts` (`/search-list` L240, `/price-by-id` L675/L678).
 
 **Phase 1 success criteria:**
-- Zero `primary_mode_cardhedge_namespace_only` warn logs in 24h post-deploy
-- Prediction success rate equal or better than Phase 0 baseline
-- Sibling pool and pinned-ID predictions returning non-empty comp data
+- Track A: writer flowing, soak completes without backslide, Day-10 schema-gap decisions made.
+- Track B: zero `primary_mode_cardhedge_namespace_only` warns post-deploy; no direct `cardhedge.client` imports from route files; endpoint success rates unchanged.
 
-### Phase 2 — Replace router bypasses (Week 3: Jun 5-11)
+### Phase 2 — REMOVED
 
-**Make router authoritative for all CH calls.**
+Folded into Phase 1 Track B. The original Phase 2 ("replace router bypasses") and Phase 1 ("stop the bleeding via mapper") collapsed once CH was confirmed disconnected at the router — the work is one coherent PR-A2 surface, not two phases.
 
-- compiq.routes.ts L240 `/search-list`: replace direct `searchCards()` import with `searchCardsRouted()`
-- compiq.routes.ts L675, L678 `/price-by-id`: replace direct `searchCards()` calls with `searchCardsRouted()`
-- Each replacement is its own small PR with verification gate
-- Update tests to expect routed path
+### Phase 3 — CH cleanup (half-day, single PR; timing after Phase 1 Track B)
 
-**Phase 2 success criteria:**
-- No direct imports of cardhedge.client functions from route files
-- All searches route through cardsight.router
-- Endpoint success rates unchanged from Phase 1 baseline
+Card Hedge already cancelled (2026-05-19) and router-disconnected (Phase 0 finding). Phase 3 is now pure code/config cleanup, not decommissioning.
 
-### Phase 3 — Decommission Card Hedge (Week 4: Jun 12-18)
+**Scope:**
+- Delete `services/compiq/cardhedge.client.ts`.
+- Remove `CARD_HEDGE_API_KEY` and other CH-* env vars from App Service settings.
+- Disable `fn-cardhedge-comps` via `function.json` (runtime app-setting disable blocked on this Linux Consumption SKU per Phase 0 finding).
+- Update `copilot-instructions.md` to remove CH references.
+- Remove vestigial `CARD_HEDGE_API_KEY` guard at `compiqEstimate.service.ts` L700-704.
+- Decide `cardHedgeCardId` schema column rename vs naming debt (data migration cost vs permanent column name).
 
-**Card Hedge removed from production.**
-
-- Disable `fn-cardhedge-comps` schedule (Azure Portal)
-- Verify no consumers of fn-cardhedge-comps blob output for 7 days
-- Delete `services/compiq/cardhedge.client.ts`
-- Delete dead exports: `findCompsByQuery`, `getCardSales`, `fetchSiblingParallelComps` references
-- Remove `CARD_HEDGE_API_KEY` and legacy CH env vars from App Settings
-- Cancel Card Hedge subscription (business action)
-- Update copilot-instructions.md to remove Card Hedge references
-- Naming-debt decision: rename `cardHedgeCardId` to `cardId` in corpus schema (data migration) OR accept as permanent column name
+**Estimated:** half-day of work, single PR.
 
 **Phase 3 success criteria:**
-- Zero references to Card Hedge in active code paths
-- Card Hedge API key revoked
-- Card Hedge subscription canceled
-- Documented architecture matches deployed reality
+- Zero references to Card Hedge in active code paths.
+- Documented architecture matches deployed reality.
 
 ### Phase 4a — MCP-mediated cache layer (Weeks 5-6: Jun 19-Jul 2)
 
 **Complete the half-built infrastructure. Live prediction calls become cache reads.**
+
+**Framing update 2026-05-21:** Cardsight is now the sole comp data source. The cache layer is resilience-critical, not just a latency optimization — a Cardsight outage with no cache is a full prediction outage. **Phase 4a urgency increased.**
 
 - Decision in Week 5: MCP-as-separate-service vs in-process cache layer. Lean: in-process unless Phase 0 found existing MCP repo
 - Implement cache reader: blob read by player-slug key, TTL respect, miss → live Cardsight call → write to cache
@@ -110,6 +104,7 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 - Fallback semantics: if Cardsight down AND cache stale, return stale data with `freshness: "stale"` flag, never serve nothing
 - Cache invalidation: signal pipeline triggers re-fetch on >5% predicted-price-move; otherwise nightly refresh
 - Observability: cache hit rate dashboard in App Insights
+- **Cache-hit telemetry pollution (carried over from Phase 1 Track A):** decide between adding a `cache_hit: boolean` field to `comp_logs` schema (preferred — preserves cache-effectiveness observability) vs moving the writer outside `cacheWrap` (loses cache-hit visibility). This decision belongs to Phase 4a measurement-design, not Phase 1.
 
 **4a success criteria:**
 - Cache hit rate >80% within 1 week of deploy
@@ -121,7 +116,7 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 **Signals being collected start influencing predictions. "Predictive pricing" actually becomes predictive.**
 
 - Build signal reader for each: Reddit, Google Trends, News, YouTube, MLB Stats, Odds, eBay-signals
-- Implement weighted blender. Per documented weights with redistribution (CH 0.20 weight reassigned to Cardsight comps or distributed across signals): Reddit 0.15, Trends 0.15, Odds 0.15, Stats 0.10, News 0.05, eBay 0.20, Cardsight comps 0.20
+- Implement weighted blender. CH weight already gone post Phase 3 cleanup; redistribute its former 0.20 across remaining signals (lean: Cardsight comps absorb, since CH was the sold-data peer): Reddit 0.15, Trends 0.15, Odds 0.15, Stats 0.10, News 0.05, eBay 0.20, Cardsight comps 0.20
 - Per-signal fallback to 1.0 multiplier on read failure (partial > none)
 - Combined multiplier capped 0.70-1.50 per existing rule
 - Backtest: last 30 days historical predictions with signals on vs off; measure prediction-vs-actual delta
@@ -135,6 +130,8 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 ### Phase 4c — ML training pipeline (Weeks 8-9: Jul 10-23)
 
 **Clean Cardsight-only training data flowing. First trained model exists.**
+
+**Reality check 2026-05-21:** at `COMPIQ_COMP_LOGS_SAMPLE_RATE=1.0` and current traffic (~1660 `/price-by-id` calls/month), `comp_logs` accumulates ~1660 rows/month. ML training requires substantially more data than this produces in a single month. Phase 4c may need to defer model training until either (a) traffic grows, (b) historical backfill is sourced, or (c) timeline accepts the data accumulation rate. **Decision gate at end of Phase 4c:** based on accumulated row count, decide whether Phase 4d ships with current data or extends Phase 4c.
 
 - Build comp_logs → training-dataset pipeline: each row = (input features, predicted price, actual sale price if known)
 - Backfill actual outcomes: join comp_logs predictions with PortfolioLedgerEntry sales data
@@ -152,6 +149,8 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 
 **Trained model serves real predictions. Production ML reality, not scaffolding.**
 
+**Timeline caveat 2026-05-21:** Phase 4d start is contingent on the Phase 4c data-sufficiency decision gate. If accumulated row count at end of Phase 4c is insufficient, Phase 4d slips until data sufficiency is met.
+
 - Model serving infrastructure: Azure ML endpoint or container deployment. Auth, scaling, monitoring, cost controls.
 - A/B testing harness at prediction layer: traffic-splitting, side-by-side logging of model vs GPT-4o predictions, statistical significance testing on prediction-vs-outcome deltas
 - Outcome tracking pipeline expansion: actual eBay sold prices for predicted cards (not just HobbyIQ-user-sold cards). Addresses selection bias risk.
@@ -168,6 +167,8 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 ### Phase 4e — ML moat realized (Weeks 14-16: Aug 21-Sep 17)
 
 **Model serves majority of traffic. Feedback loop closed. Competitive position defensible.**
+
+**Stretch target 2026-05-21:** mid-September moat realization is now a **stretch target contingent on Phase 4c data sufficiency.** If Phase 4c slips due to data accumulation rate, Phase 4e slips proportionally.
 
 - Trained model serves 75%+ of production traffic
 - GPT-4o reasoning layer remains as fallback only
@@ -253,9 +254,17 @@ If solo: context-switch by day-of-week (backend Mon-Wed, iOS Thu-Fri). If outsid
 
 6. **iOS workstream stalls.** If solo, iOS schedule slips when backend grinding intensifies. Mitigation: confirm outside help by Week 4, or accept Phase 5/6 iOS surfaces slip into Q3.
 
-7. **Card Hedge subscription auto-renews mid-Phase 2 or 3.** Operational. Mitigation: check renewal date in Phase 0, plan accordingly.
+7. **Production ML incident.** Trained model serves bad predictions, users see them. Mitigation: Phase 4d rollback and monitoring infrastructure. Tabletop the failure modes before shipping.
 
-8. **Production ML incident.** Trained model serves bad predictions, users see them. Mitigation: Phase 4d rollback and monitoring infrastructure. Tabletop the failure modes before shipping.
+8. **Observability layer partially restored, emission gap remains.** Production observability layer was largely unwired through Phase 0; partial restoration via PR-A1 + PR-A1.1 with a known emission gap on `cardsight.findComps.start` / `.end`. Future sessions must verify telemetry is flowing before assuming any production state from logs/metrics.
+
+9. **Phase 4c training data accumulation rate is bounded by current traffic volume.** At `COMPIQ_COMP_LOGS_SAMPLE_RATE=1.0` and ~1660 calls/month, ML moat realization timeline depends on traffic growth, backfill, or timeline extension. Mitigation: explicit decision gate at end of Phase 4c.
+
+10. **Cosmos `hobbyiq-comps-centralus` endpoint at ~21% failure rate** (Phase 0 finding 2026-05-21). Root cause uninvestigated; affects all containers including `comp_logs` and `webhook_events`. Mitigation: investigate before Phase 4a cache layer ships.
+
+11. **Compaction summary fabrication pattern observed 2026-05-21.** Captured in `copilot-instructions.md` LESSONS FROM PRIOR SESSIONS section. Mitigation: grep transcript before propagating summary claims that drive plan decisions.
+
+12. **Deploy pipeline has at least three known failure modes that verification gates do not catch.** (1) PR #101 EAP fix unmerged so script aborts at [2/5] on stderr `WARNING`; (2) stale `deploy.zip` can ship if not rebuilt before each deploy (`GIT_SHA` env var set independently of zip contents, `/api/health` SHA verification insufficient); (3) function-level disable via runtime app-setting blocked on Linux Consumption SKU. Mitigation: deploy pipeline reliability audit pending; for now, use second-axis verification (schema field presence) when deploying code changes.
 
 **Medium-impact risks:**
 
@@ -266,16 +275,18 @@ If solo: context-switch by day-of-week (backend Mon-Wed, iOS Thu-Fri). If outsid
 
 ## Acceptance criteria for "done by mid-September"
 
-End-of-July deliverables (Phases 0-4c + initial Phase 5 + Phase 6):
-- ✅ Card Hedge removed from all production paths, subscription canceled
-- ✅ Cardsight serves 100% of comp data
-- ✅ Cache layer reduces prediction latency >50%
+End-of-July deliverables (Phases 0-4c + initial Phase 5 + Phase 6), observability-first ordering:
+- ✅ Production observability layer wired and verified (Phase 1 Track A — DONE 2026-05-21 modulo known emission gap)
+- ✅ comp_logs writer flowing at sample rate 1.0; soak completed; Day-10 schema-gap decisions made
+- ✅ Documentation matches deployed reality
+- ✅ Card Hedge code/config cleaned up (Phase 3); subscription already canceled 2026-05-19
+- ✅ Cardsight serves 100% of comp data (router migration via Phase 1 Track B / PR-A2)
+- ✅ Cache layer reduces prediction latency >50% AND provides Cardsight-outage resilience
 - ✅ All 7 signal sources wired into live pricing
 - ✅ comp_logs → training pipeline runs end-to-end
 - ✅ At least one trained pricing model evaluated, go/no-go decision made
 - ✅ Per-card movement signals shipped to iOS dashboard
 - ✅ PR E reconciliation UX shipped
-- ✅ Documentation matches deployed reality
 
 Mid-September deliverables (Phases 4d-4e + complete Phase 5):
 - ✅ Trained model serves ≥75% of production traffic
