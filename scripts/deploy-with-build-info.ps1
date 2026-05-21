@@ -53,18 +53,30 @@ Start-Sleep -Seconds 30
 # Deploy WITHOUT restart (we'll restart explicitly after Kudu reports done)
 Write-Host ""
 Write-Host "[2/5] Enqueueing deploy (--restart false, --async true)..."
-az webapp deploy `
-    --resource-group $rg `
-    --name $app `
-    --src-path deploy.zip `
-    --type zip `
-    --restart false `
-    --async true `
-    --output none
+# Carry-forward #8 fix: az webapp deploy writes "WARNING: Initiating deployment..."
+# to stderr on success, which under $ErrorActionPreference=Stop (set at top of script)
+# terminates the script before the Kudu poll can establish ground truth. Scope EAP
+# to Continue around just this call; Kudu poll downstream is the authoritative
+# success signal. try/finally guarantees EAP is restored even on unexpected throw.
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    az webapp deploy `
+        --resource-group $rg `
+        --name $app `
+        --src-path deploy.zip `
+        --type zip `
+        --restart false `
+        --async true `
+        --output none
+    $deployExit = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $prevEAP
+}
 # az may return non-zero on async polling timeout while deploy is queued
 # successfully; treat any exit code as advisory and proceed to poll Kudu.
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "    (az exited $LASTEXITCODE — proceeding to Kudu poll; this often happens with async deploys)"
+if ($deployExit -ne 0) {
+    Write-Host "    (az exited $deployExit — proceeding to Kudu poll; this often happens with async deploys)"
 }
 
 # Get AAD bearer token for Kudu API (basic auth is disabled on this site)
