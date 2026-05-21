@@ -332,3 +332,11 @@ Always auto-flag these conditions in pricing output:
 3. Write complete, production-ready code — no placeholders or stubs
 4. Explain key decisions in 2-3 sentences after the code
 5. Flag blockers — anything that requires the user's input, keys, or schema changes
+
+## LESSONS FROM PRIOR SESSIONS
+
+Append-only log of operating-model lessons captured across sessions. Each entry is dated and self-contained; do not collapse, summarize, or restructure prior entries when adding new ones.
+
+### 2026-05-21 — Compaction summaries can fabricate hybrid claims
+
+Compaction summaries can recombine adjacent true facts into hybrid claims that are plausible but unsupported by the source transcript. When a summary asserts a specific action, decision, or event, verify against the source before acting on it. Mitigation: grep the pre-compaction transcript before propagating any summary claim that drives a plan decision or security-relevant action. Pattern observed 2026-05-21: summary attached rotation-flag from a true storage-key leak onto the most-frequently-mentioned secret name (Cosmos), producing a hybrid claim that did not exist in the transcript.
