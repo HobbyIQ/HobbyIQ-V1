@@ -542,7 +542,7 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 | PR-A1 — `comp_logs` writer | PR #104 (squashed) | `ea0a724` | Merged + deployed; soak running |
 | PR-A1.1 — `playerName` + `cardYear` schema | PR #105 (squashed) | `e333ae1` | Merged + deployed mid-soak `2026-05-21T18:49Z` (stale-zip recovery — see Finding 11 of earlier 2026-05-21 PM entry) |
 | Canonical docs + LESSONS + SECRET_ROTATIONS + Phase 0 audit artifacts | PR | #102 | Merged |
-| Deploy-script EAP-scope fix | PR | #101 | **Opened, NOT merged** — follow-up pending |
+| Deploy-script EAP-scope fix | PR #101 (squashed) | `ebf3efe` | Merged `2026-05-21T21:58:57Z`; closes PR D.6 carry-forward #8 |
 | Roadmap reframe (W5) | Commit | (in PR #102 batch) | Live in `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` |
 | W6.2 Q3 latency baseline | Commit | `b3db482` | `docs/phase0/q3_latency_baseline.md` |
 | W6.3 blob inventory of 14 fn-* | Commit | `672ffd8` | `docs/phase0/blob_inventory_2026-05-21.md` |
@@ -562,11 +562,7 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 
 ## Deferred / open items entering day-2+
 
-- PR #101 merge (deploy-script EAP-scope fix).
 - W6.1 Q1 warn-log baseline measurement (needs 48 h of post-PR-A1 traffic).
 - Finding 6 investigation: confirm whether `fn-nightly-comp-prefetch` actually writes anything.
 - Finding 5 investigation: trace the `fn-cardhedge-comps` 27-comp-uniform pattern's consumer chain.
-- Finding 4: add App Insights `hobbyiq-insights` component-naming note to `copilot-instructions.md` Part 9.
-- Finding 2: roadmap edit to move Phase 4a p95-reduction baseline from "Phase 0 baseline (doesn't exist)" to "Day-10 post-PR-A1."
-- Workstream 3 (this prompt): extend LESSONS section in `copilot-instructions.md` with Finding 11.
 - Phase 4a / Phase 5 design open question: how to address the DailyIQ niche-prospect-auto coverage gap. Three candidate approaches captured in Finding 12; decision deferred to Phase 4a kickoff or earlier strategic session.
