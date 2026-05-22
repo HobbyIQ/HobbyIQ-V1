@@ -1,79 +1,90 @@
-// Backend-backed comp loader for the MCP server.
+// Blob-backed comp loader for the MCP server.
 //
-// Phase 1 CH removal (refs c285c33 + WS2 ship at 9124e54): replaces the
-// prior blob-read pattern (compiq-signals/{player-slug}/cardhedge.json,
-// written nightly by fn-cardhedge-comps) with a call to backend's
-// /api/compiq/price endpoint. Backend's /price now routes its comps
-// through findCompsRouted → resolveCardId → Cardsight getPricing under
-// CARDSIGHT_MODE=exclusive.
-//
-// MCP server is on the admin path only (called by fn-backtest-runner).
-// Latency budget tolerates Cardsight's first-call p50 ~9–10s; subsequent
-// calls hit backend's 15-min Redis cache + cardsight.client's 6h cache.
-//
-// Function signature preserved (callers in server.ts:223 and
-// backtest.ts:239 unchanged). playerSlug export removed — cardhedge.ts
-// has its own local copy and no other module imported the one from here.
+// The MCP server NEVER calls Card Hedge live at prediction time. It reads
+// `compiq-signals/{player-slug}/cardhedge.json` (written nightly by
+// `fn-cardhedge-comps`) and projects the cached `raw_sales` into the
+// `CardComp[]` shape that pricing.ts expects.
 
+import {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+} from "@azure/storage-blob";
 import type { CardComp } from "./pricing.js";
 
-const BACKEND_URL =
-  process.env.HOBBYIQ_BACKEND_URL ??
-  "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
-const FETCH_TIMEOUT_MS = 30_000; // Cardsight first-call p50 ~9-10s; headroom.
+const CONTAINER = "compiq-signals";
+const CONN = process.env.AZURE_BLOB_CONNECTION_STRING ?? "";
 
-interface BackendPriceResponse {
-  success?: boolean;
-  recentComps?: Array<{
-    price?: number;
-    title?: string;
-    soldDate?: string | null;
-    grade?: string;
-  }>;
+let client: BlobServiceClient | null = null;
+
+function getClient(): BlobServiceClient | null {
+  if (client) return client;
+  if (!CONN) return null;
+  try {
+    client = BlobServiceClient.fromConnectionString(CONN);
+    return client;
+  } catch {
+    return null;
+  }
+}
+
+export function playerSlug(name: string): string {
+  return name.toLowerCase().trim().replace(/\s+/g, "-");
+}
+
+interface CachedSale {
+  price: number;
+  date: string;
+  grade?: string;
+  source?: string;
+  title?: string;
+  url?: string;
+}
+
+interface CachedCardHedgePayload {
+  player?: string;
+  raw_sales?: CachedSale[];
+  card_hedge_id?: string;
+  updated_at?: string;
+}
+
+async function readBlobJson<T>(path: string): Promise<T | null> {
+  const c = getClient();
+  if (!c) return null;
+  try {
+    const container = c.getContainerClient(CONTAINER);
+    const blob = container.getBlockBlobClient(path);
+    const exists = await blob.exists();
+    if (!exists) return null;
+    const dl = await blob.downloadToBuffer();
+    return JSON.parse(dl.toString("utf8")) as T;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchPlayerComps(
   playerName: string,
-  preferredGrade?: string,
+  preferredGrade?: string
 ): Promise<CardComp[]> {
-  if (!playerName?.trim()) return [];
+  const slug = playerSlug(playerName);
+  const payload = await readBlobJson<CachedCardHedgePayload>(
+    `${slug}/cardhedge.json`
+  );
+  if (!payload?.raw_sales?.length) return [];
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/compiq/price`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: playerName }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+  const sales = payload.raw_sales
+    .filter((s) => Number.isFinite(Number(s.price)) && Number(s.price) > 0)
+    .map<CardComp>((s) => ({
+      price: Number(s.price),
+      date: s.date,
+      grade: s.grade ?? preferredGrade ?? "Raw",
+      source: s.source ?? "card_hedge",
+      title: s.title,
+    }));
 
-    if (!res.ok) {
-      console.warn(
-        `[compsLoader] backend /price returned ${res.status} for "${playerName}"`,
-      );
-      return [];
-    }
-
-    const body = (await res.json()) as BackendPriceResponse;
-    if (!body.recentComps?.length) return [];
-
-    return body.recentComps
-      .filter((c) => Number.isFinite(Number(c.price)) && Number(c.price) > 0)
-      .map<CardComp>((c) => ({
-        price: Number(c.price),
-        date: c.soldDate ?? "",
-        grade: c.grade ?? preferredGrade ?? "Raw",
-        source: "cardsight",
-        title: c.title,
-      }));
-  } catch (err) {
-    clearTimeout(timeoutId);
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(
-      `[compsLoader] backend /price failed for "${playerName}": ${msg}`,
-    );
-    return [];
-  }
+  // Sort newest first; pricing.ts already filters by 21/30 day windows.
+  sales.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  return sales;
 }
