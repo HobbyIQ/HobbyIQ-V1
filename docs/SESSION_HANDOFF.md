@@ -551,6 +551,9 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 | Issue: B2 cardIdSource cohort definition | Issue | #106 | Open, decision deferred to Day-10 |
 | Finding 10 resolution — `compiq-functions/fn-*` source restoration to `main` | PR #107 (squashed) | `46390e7` | Merged 2026-05-22T00:43Z; +2,615 lines / 45 files; no production change (canonicalization only) |
 | Phase 3a CH access tripwire monitor (GitHub Action, Option D) | PR #108 + #109 (squashed) | `dbe5536` + `b1b773c8` | Shipped + dry-run verified on main; daily 02:30 UTC schedule active; federated MI `ch-monitor-oidc` + `Storage Blob Data Reader` on `stcompiqfnotgm2`; details in `docs/phase0/phase3a_monitor_config.md` |
+| OPERATIONAL GOTCHAS extension (Phase 3a ship) | Commit | `9949dde` | Two gotchas added to `copilot-instructions.md`: `workflow_dispatch` default-branch constraint; `az storage blob download --file -` metadata-not-content defect |
+| Workstream 2 — COSMOS_KEY shared-auth diagnostic | Commit | `000b777` | `docs/phase0/finding_cosmos_key_shared_auth.md` — CONFIRMED PARTIAL: defect affects all Python paths in `fn-compiq`; Node backend has AAD fallback and is NOT affected; Cosmos 21% rate not explained by this defect |
+| Workstream 3 — Finding 5 deeper consumer analysis | Commit | `031cd24` | `docs/phase0/finding5_deeper_consumer_analysis.md` — three consumer paths characterized (compsLoader active+uncached, primePlayerComps dormant, cardhedge.client near-dormant); prediction degrades within ~15 min of CH death; monitor lag up to ~24h |
 
 **Phase 0 measurement state:** complete except W6.1 (deferred to day-2+ for 48 h of post-PR-A1 warn-log accumulation). Active soak continues independently. Day-10 review window `2026-05-31T17:44:32Z`.
 
@@ -564,6 +567,8 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 ## Deferred / open items entering day-2+
 
 - W6.1 Q1 warn-log baseline measurement (needs 48 h of post-PR-A1 traffic).
-- Finding 6 investigation: confirm whether `fn-nightly-comp-prefetch` actually writes anything.
-- Finding 5 investigation: trace the `fn-cardhedge-comps` 27-comp-uniform pattern's consumer chain.
+- Finding 6 investigation: confirm whether `fn-nightly-comp-prefetch` actually writes anything. W2 (commit `000b777`) confirmed Failure A (`COSMOS_KEY` stale) persists in the post-PR-107 newer version on main; Failure B (empty `compiq.inventory`) is independent and also persists. Carry-forward is now the decision question, not the investigation.
 - Phase 4a / Phase 5 design open question: how to address the DailyIQ niche-prospect-auto coverage gap. Three candidate approaches captured in Finding 12; decision deferred to Phase 4a kickoff or earlier strategic session.
+- Cosmos 21% failure-rate diagnostic — original Phase 0 Finding 4 (`hobbyiq-comps-centralus` regional endpoint at 21% failure rate). W2 ruled out the `COSMOS_KEY`-stale-key defect as a plausible explanation (Node backend has AAD fallback). Likely regional-routing / geo-replication issue; needs its own focused diagnostic.
+- `compiq-mcp` App Insights observability gap — W3 surfaced that the MCP Web App has no `APPLICATIONINSIGHTS_CONNECTION_STRING` env var; telemetry from MCP call sites is invisible. Extends the W6 capture #7 observability bifurcation to a third subsystem. Decision needed: wire telemetry as own workstream OR accept the gap into Phase 4a planning.
+- Phase 3a monitor detection-vs-degradation lag — W3 finding: prediction quality degrades within ~15 minutes of CH access dying (bounded by backend Redis 15-min TTL); monitor fires daily, so detection lag is up to ~24h. Known and acceptable for a tripwire; future enhancement (hourly fire, real-time blob observability, downstream prediction-quality monitor) is its own decision.
