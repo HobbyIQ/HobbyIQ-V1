@@ -242,13 +242,47 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 
 **Verification:** Run the 5 Phase 1 acceptance test queries against staging or a feature-flagged hobbyiq3 deploy. Watch `comp_logs` `outcome=ok / source=cardsight` rate over 24h; expect a measurable jump.
 
-### Phase 2 — Defect #3 (parser + dictionary)
+### Phase 2 — Defect #3 + queryContext plumbing + Step A routing (expanded scope, 2026-05-23)
 
-**Scope:** Small-to-medium PR. SET_PATTERNS ordering fix + dictionary expansion. Most effort is in validating each new dictionary entry against Cardsight's actual release-name strings (one `searchCatalog` call per entry, manual confirmation).
+**Scope reclassified 2026-05-23** after Step A's attempted standalone ship failed acceptance (3/5 iOS-shape, 4/5 simple-shape vs 5/5 required). Step A's routing change (PR #110's meaningful-query fall-through in `/price-by-id`) does not stand alone — it requires queryContext plumbing and dictionary coverage to reach the 5/5 ship gate. Folding Step A into Phase 2 makes the dependency explicit.
 
-**What works after:** Structured queries like `"2024 Bowman Draft Chrome Caleb Bonemer Auto"` resolve to the correct Bowman Draft Chrome release in Cardsight catalog. The `releaseName` filter inside `resolveCardId` actually narrows results instead of falling through. Combined with Phase 1's selection logic, this should bring the iOS-shape query family (with year + set + player + #) into the working set.
+**Phase 2 now contains three changes that must ship together:**
 
-**What still doesn't:** Specific-parallel queries (Blue Refractor vs Blue Wave Refractor) — Phase 3 territory.
+1. **Defect #3 — parser SET_PATTERNS + dictionary** (original Phase 2 scope)
+   - Add `bowman draft chrome` ahead of `bowman draft` in [cardQueryParser.ts:46-69](../../backend/src/services/compiq/cardQueryParser.ts#L46) SET_PATTERNS
+   - Expand [cardsight.mapper.ts:38-46](../../backend/src/services/compiq/cardsight.mapper.ts#L38) `COMPIQ_TO_CARDSIGHT_RELEASES` for `topps update`, `donruss optic`, etc.
+   - Validate each new dictionary entry against live Cardsight `searchCatalog` releaseName values
+
+2. **queryContext plumbing** (was implicit in Phase 1's stated future-state, now made explicit)
+   - In [compiqEstimate.service.ts](../../backend/src/services/compiq/compiqEstimate.service.ts) `fetchComps` — pass `queryContext: {playerName, cardYear, product, parallel, gradeCompany, gradeValue}` to `findCompsRouted`
+   - The structured fields exist in `body` (from parsed-query or direct structured input) but are currently dropped at the `fetchComps → findCompsRouted` boundary
+   - Without this, my Phase 1 `resolveCardId` selection logic gets `playerName=cardTitle joined string` instead of structured input, falls through to free-text catalog search
+
+3. **Step A — meaningful-query fall-through in `/price-by-id`** (folded in)
+   - Re-apply PR #110's routing change (see preserved branch `feature/step-a-part1-meaningful-query-fallthrough` at commit `f5cd3e7`, kept on origin for Phase 2 to consume)
+   - With #1 and #2 above landed, this change activates `/price-by-id` for Cardsight with reliable cardId selection
+
+**Acceptance gate:** 5/5 verified-number demo cards return `source: cardsight` (or `live`) via ALL of `/price`, `/price-by-id`, `/estimate`. No regression on Phase 1's existing /price + /estimate green paths.
+
+**Demo card list locked 2026-05-23** (numbers verified via /search-list against CH catalog):
+
+| Card | CH number | Cardsight number | Status |
+|---|---|---|---|
+| Mike Trout 2011 Topps Update | US175 | US175 | both agree, canonical demo card |
+| Shohei Ohtani 2018 Topps Update | US285 | US153 (top hit; US285 also exists at sibling cardId) | catalog-duplicate; Phase 1 #5 fix handles |
+| Aaron Judge 2017 Topps Update | US99 | (variable, depends on catalog hit) | I had US87 wrong; lock US99 |
+| Bobby Witt Jr 2022 Topps Chrome Update | USC35 | (variable) | I had USC150 wrong; lock USC35 |
+| Caleb Bonemer 2024 Bowman Draft Chrome | CPA-CBO (auto, CH top-ranked) / BD-31 (paper base, CS top-ranked) | both exist as separate cardIds | both valid demo cards for different cases — auto for prospect-auto demos, base for paper RC demos |
+
+**Cross-catalog disagreement finding (2026-05-23):** CH and Cardsight have DIFFERENT card numbers and/or DIFFERENT top-ranked variants for 4 of 5 demo cards. The disagreement is not always wrong — sometimes Cardsight has multiple cardIds (defect #5 catalog duplicates), sometimes CH catalog labels a card with a different number than Cardsight does, sometimes CH ranks the auto variant above the paper base. Any cross-catalog work must handle disagreements explicitly: assume the CH cardId-to-Cardsight cardId mapping is NOT a 1:1 correspondence at the number level. The mapping is via `searchCatalog → resolveCardId` based on player+year+release+parallel, not via card number.
+
+**Scope:** Medium PR. ~80-150 LOC across the three changes plus targeted tests.
+
+**Out of scope (still):** Phase 3 (defect #2 parallelMatches set-equality), defect #4 AUTO regex, defect #6 parser sport-suffix, defect #7 CH-identity guard, MCP rewire (Step B), fn-cardhedge-comps decommission (Step C).
+
+**What works after:** Structured iOS-shape queries route correctly through both `/price` and `/price-by-id`. Demo card set returns Cardsight comps consistently. Harness regression scoreboard becomes meaningful.
+
+**What still doesn't:** Specific-parallel queries (Blue Refractor vs Blue Wave Refractor) — Phase 3 territory. Parser sport-suffix tokens corrupt playerName for /price (defect #6, own PR). CH-identity guard's haystack relies on card.title under Cardsight (defect #7, only manifests on /price with corrupt playerName).
 
 ### Phase 3 — Defect #2 (parallelMatches set-equality) and any remaining tightening
 
