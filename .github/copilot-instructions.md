@@ -341,6 +341,10 @@ Sharp edges that have wasted time before. Append new entries as they're discover
 
 - **App Insights component name**: hobbyiq3 telemetry lives in component `hobbyiq-insights`, NOT in obvious-named alternatives (`HobbyIQ3`, `HobbyIQ`, `appi-hobbyiq-dev`, `appi-hobbyiq-prod`) which exist but are empty. Verify connection string before assuming a component name.
 
+- **GitHub Actions `workflow_dispatch` requires the workflow file to be on the default branch (`main`).** A feature-branch PR cannot be tested via `workflow_dispatch` even with `--ref <branch>` — the API returns HTTP 404 because the workflow definition isn't on `main` yet. GitHub's security model rejects dispatching workflows that don't exist on the protected default branch. Workarounds: (a) merge first then dispatch on `main` (lose pre-merge safety), (b) add a temporary `on: push: branches: [<feature-branch>]` trigger and revert before merge (YAML churn), (c) skip pre-merge testing and observe the first scheduled fire. OIDC federated credentials with `subject: ref:refs/heads/<feature-branch>` do NOT bypass this — the binding constraint is "workflow file on default branch", not "OIDC trust on branch."
+
+- **`az storage blob download --file -` dumps METADATA JSON to stdout, NOT file content.** The actual blob content is written silently to the "-" destination but stdout captures only the metadata wrapper (`{"container":..., "content":"", "properties":{...}}`). Any script that does `content=$(az storage blob download ... --file -)` and then parses `$content` as JSON will fail to find the expected fields. Correct pattern: download to a real tempfile and `cat` it: `tmpfile=$(mktemp); az storage blob download ... --file "$tmpfile" >/dev/null 2>&1; content=$(cat "$tmpfile"); rm -f "$tmpfile"`. Encountered twice in the 2026-05-21 session: initial Workstream A debug pass and the Phase 3a ch-monitor first dry-run (resolved by PR #109).
+
 ## LESSONS FROM PRIOR SESSIONS
 
 Append-only log of operating-model lessons captured across sessions. Each entry is dated and self-contained; do not collapse, summarize, or restructure prior entries when adding new ones.
