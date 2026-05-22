@@ -572,3 +572,66 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 - Cosmos 21% failure-rate diagnostic — original Phase 0 Finding 4 (`hobbyiq-comps-centralus` regional endpoint at 21% failure rate). W2 ruled out the `COSMOS_KEY`-stale-key defect as a plausible explanation (Node backend has AAD fallback). Likely regional-routing / geo-replication issue; needs its own focused diagnostic.
 - `compiq-mcp` App Insights observability gap — W3 surfaced that the MCP Web App has no `APPLICATIONINSIGHTS_CONNECTION_STRING` env var; telemetry from MCP call sites is invisible. Extends the W6 capture #7 observability bifurcation to a third subsystem. Decision needed: wire telemetry as own workstream OR accept the gap into Phase 4a planning.
 - Phase 3a monitor detection-vs-degradation lag — W3 finding: prediction quality degrades within ~15 minutes of CH access dying (bounded by backend Redis 15-min TTL); monitor fires daily, so detection lag is up to ~24h. Known and acceptable for a tripwire; future enhancement (hourly fire, real-time blob observability, downstream prediction-quality monitor) is its own decision.
+
+---
+
+# 2026-05-22 — CH removal attempted, rolled back, re-scoped for next session
+
+**Net production change this session: zero.** The two PRs that landed earlier today (#110 backend, #111 MCP, both showing as merged on `main` in `git log`) were rolled back at the runtime layer. Both apps are now serving pre-CH-removal code; the merged commits remain on `main` but their corresponding deploys have been replaced.
+
+## What was attempted
+
+Three workstreams attempted in sequence, all reverted at the runtime layer:
+
+1. **WS2 + WS3 ship (already committed pre-session):** backend `fetchComps` meaningful-query fall-through (`9124e54`, PR #110) + MCP `compsLoader` rewire to call backend `/api/compiq/price` (`fc5575d`, PR #111). The two PRs assumed Cardsight under `CARDSIGHT_MODE=exclusive` could absorb the same player-level and free-text calling patterns that Card Hedge handled. Both deploys completed earlier today (backend `9124e54` at 04:16Z, MCP `4cebfb6f` at ~12:00Z) but production behavior was query-shape-fragile: the MCP path returned 0 comps for iOS-shape queries like `"2011 Topps Update Mike Trout US175"`.
+
+2. **WS3 Fix I+ (uncommitted, in-flight):** MCP `compsLoader` refactored to `fetchCompsForCard({playerName, year, set, cardNumber, grade, variant})` using backend's `/search-list` + `/price-by-id` as a two-step. Deployed to `compiq-mcp` mid-session (deploy `4cebfb6f`). Smoke surfaced that backend `/price-by-id` still returns `source: "no-recent-comps"` for the demo card even with a valid `cardHedgeCardId` and meaningful free-text query — the failure was downstream of MCP, in backend's `findCompsViaCardsight` → `resolveCardId` path.
+
+3. **WS3 B1 (uncommitted, in-flight):** backend `/api/compiq/price-by-id` handler extended to call `parseCardQuery(query)` and populate the structured fields (`cardYear`, `product`, `parallel`, `isAuto`) on the `CompIQEstimateRequest` body, and `fetchComps` / `computeEstimate` plumbing extended to thread these as `opts.queryContext` into `findCompsRouted`. Backend test suite 715/715 green including a new `compiqEstimateQueryContext.test.ts` (2 tests) verifying the threading. Deployed to `hobbyiq3` (deploy `57a49bad`). Direct smoke surfaced that B1 **regressed** the previously-working WS2 query shape (`"Mike Trout 2011 Topps Update Baseball"`): 3 calls post-B1 all returned `outcome=no_recent_comps`, including queries that had returned `ok/cardsight` against the un-B1 build hours earlier (verified via Cosmos `comp_logs` cutoff at `2026-05-22T04:16:00Z`).
+
+## Findings (planning inputs for the next session)
+
+1. **Cardsight is card-level; CH was player-level.** This is the load-bearing architectural difference. CH's `cardhedge.json` blobs contained ~20-30 sales per player aggregated across that player's recent cards; MCP's design assumed broad player-level pools then filtered locally via `filterCompsForCard`. Cardsight's API is keyed on a single `cardId` and returns pricing for *that* card only. There is no player-aggregation endpoint upstream. The migration is therefore an architectural shift, not a data-source swap.
+
+2. **`COMPIQ_TO_CARDSIGHT_RELEASES` dictionary coverage gap.** `backend/src/services/compiq/cardsight.mapper.ts:38-46` defines the release-name dictionary used by `resolveCardId`. It covers `topps chrome`, `topps chrome update`, `bowman chrome`, etc., but **does not cover `topps update`** (the base, non-Chrome variant). When a structured query arrives with `product: "Topps Update"`, `lookupReleaseName` returns null, and the catalog search collapses to `playerName` alone with a year filter — too narrow on filter, too broad on candidate cards. All three demo cards (Mike Trout 2011, Ohtani 2018, Judge 2017 — all base Topps Update) hit this gap. Probable additional gaps for `Donruss Optic` variants and others.
+
+3. **`/price-by-id` pre-B1 behavior: raw-query free-text pass-through.** Without structured `queryContext`, `findCompsRouted` falls back to using the full query string as `playerName` in `toCardsightQuery`. Cardsight's catalog text-match works for queries shaped like `"Mike Trout 2011 Topps Update Baseball"` (3 successful WS2 smoke entries in `comp_logs`) but fails for iOS-shape queries with card numbers like `"2011 Topps Update Mike Trout US175"` ("US175" contaminates the text match). The pre-B1 behavior is fragile-but-works for some shapes; B1's structured-route change regressed the working shapes by routing through the incomplete dictionary lookup.
+
+4. **B1 plumbing is correct mechanically; the failure surface moved.** The unit tests verifying that `findCompsRouted` receives `opts.queryContext` populated all passed. The regression was downstream in `resolveCardId`. A reviewer reading B1 in isolation would not have caught the regression — the bug surfaces only when `resolveCardId` has to do the dictionary lookup with a non-covered product.
+
+5. **MCP `/predict` is on the iOS critical path.** The prior session-summary characterization that "MCP is admin-only, iOS doesn't call MCP" was wrong. iOS Swift has direct references to `compiq-mcp.azurewebsites.net/api/compiq/predict` from `CompIQService.swift:129`, `SearchIQOrchestrator.swift:484`, `BacktestAdminView.swift:84`, `CompIQImageResolver.swift:22`, `PortfolioHeatMapView.swift:25`, `PriceAlert.swift:34`. Backend does NOT call MCP, but iOS does. Any MCP regression affects user-facing prediction calls directly. This re-frames the urgency of MCP rewires: they ARE on the live path.
+
+6. **`fn-backtest-runner` is deployed + enabled.** `az functionapp function list --name fn-compiq` shows it scheduled `0 30 3 * * *` (03:30 UTC daily). Calls MCP `/api/compiq/admin/backtest/run` with `{minAgeDays, limit}` — no card identity. MCP's `runBacktest` groups predictions by player and calls `fetchPlayerComps(player)`. Any MCP rewire that breaks `fetchPlayerComps` also breaks the backtest. Pre-session production reality is that backtest scoring depends on the same player-level data shape MCP `/predict` did.
+
+7. **WS2's `ok/cardsight` smoke was query-shape-specific, not a general-purpose fix.** Verified during the rollback: 3 ok/cardsight rows existed in `comp_logs` between WS2 deploy and B1 attempt; all 3 came from `/price-by-id` with queries that happened to be Cardsight-friendly (`"Mike Trout 2011 Topps Update Baseball"`, `"2024 Bowman Draft Chrome Refractor Auto Nick Kurtz"`). iOS-shape queries with card numbers were never tested as part of WS2 verification. The smoke didn't generalize.
+
+8. **Chunked-deploy-boundary discipline worked.** The rollback was possible because WS4 (fn-cardhedge-comps decommission) had not yet been committed or applied to production. If WS4 had proceeded on schedule, today would have ended with: backtest broken, MCP returning 0 comps, fn-cardhedge-comps disabled, and the CH blobs going stale within 24h. Holding WS4 until WS3 was verified prevented a much worse outcome.
+
+## Production state at rollback
+
+Both apps verified back on pre-removal code via direct VFS reads against wwwroot and live smoke tests:
+
+| App | Deployed code path | Verification |
+|---|---|---|
+| `hobbyiq3` | `dist/services/compiq/compiqEstimate.service.js` calls `findCompsRouted(query, { grade, limit: 25 })` (no `queryContext`) | `/api/health` reports `build.shaShort=fc5575d`; direct `/price-by-id` smoke for `"Mike Trout 2011 Topps Update Baseball"` returns `source: "live"`, `compsUsed: 1`, real sale data |
+| `compiq-mcp` | `dist/compsLoader.js` reads `compiq-signals/{slug}/cardhedge.json` via `BlobServiceClient.fromConnectionString` (the pre-WS3 state at `5fad0a2`) | `/health` 200 OK; `/api/compiq/predict` for Mike Trout returns 26 comps + `nextSaleEstimate=$310`; Aaron Judge 27 comps; Shohei Ohtani 27 comps |
+
+**Important state divergence:** `git HEAD` on `main` is `fc5575d` which has the WS3 MCP rewire committed. `compiq-mcp` wwwroot has the **pre-WS3** code from `5fad0a2`. They disagree. The next MCP deploy from main would silently re-introduce the WS3 backend-call path. This needs explicit handling in the next session — either revert PR #111 properly on main, or have the next CH-removal attempt land a different commit that supersedes `fc5575d`.
+
+App settings touched this session that were not reverted:
+
+- `hobbyiq3`: `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (was `false`) and `NPM_CONFIG_PRODUCTION=false` (new). These enable Oryx-side rebuild during deploy and allow devDependency install for the rebuild. Runtime behavior is unaffected (NODE_ENV stays `production`). Leaving these in place is harmless; the next deploy benefits from the slim-zip pattern.
+- `compiq-mcp`: `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (was unset). Same rationale as above. Leave in place.
+
+## Carry-forwards for the next session
+
+- **CH removal is still the goal.** Approach must be revised based on these findings. The next session opens with a design discussion before any code.
+- **Bottom-up candidate approach:** extend `COMPIQ_TO_CARDSIGHT_RELEASES` dictionary FIRST to cover all sets the demo cards span (`topps update`, `donruss optic`, possibly others). Add a fallback in `resolveCardId` that includes the raw `product` text in the search query when no dictionary mapping exists (so unmapped products at least try to find a catalog match). THEN attempt `/price-by-id` `queryContext` plumbing again. THEN MCP rewire. Verify each layer in isolation before stacking.
+- **Top-down candidate approach:** leave `/price-by-id` raw-query free-text behavior alone and focus the CH-removal migration on `/api/compiq/price` (the free-text endpoint, where the structured parser already runs in the route handler via `requestFromParsed`). Tighter scope, fewer moving parts. `/price-by-id` stays as-is until iOS's call patterns can be measured against the dictionary coverage.
+- **`git HEAD` vs deployed-state reconciliation:** decide whether to revert PRs #110 and #111 on `main` (clean reconciliation, requires a PR) or accept the temporary divergence with a deploy-pinning note (faster, requires deploy discipline next session).
+- **WS4 is paused indefinitely.** Do not decommission `fn-cardhedge-comps` until a verified CH-removal path is in production AND has demonstrated multi-day stability. The blob remains the production data source.
+- **`compiq-mcp` App Insights gap (deferred from 2026-05-21):** would have shortened the diagnosis loop today. Wiring telemetry on MCP is a meaningful prerequisite for the next attempt.
+
+## Explicit acknowledgment
+
+**No production behavior change shipped today.** Two PRs merged into `main` (#110 and #111) but the deploys backing them were rolled back. The session produced findings (the 8 above) and a re-scope. Treat today as planning input for the next CH-removal attempt, not a partial-ship.
