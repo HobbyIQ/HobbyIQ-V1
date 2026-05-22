@@ -437,3 +437,184 @@ Open design questions (called out in §3 and §8) that the implementing session 
 1. Cardsight's actual `releaseName` field values for `topps update` and `bowman chrome` — confirm via live probe before committing dictionary entries.
 2. Bowman Chrome dictionary correction — verify against the 4 historical ok-rows in comp_logs that current behavior they depend on doesn't break.
 3. Cache key normalization between warming (structured input) and /price computeEstimate's parseCardQuery fallback — ensure both produce identical normalized keys.
+
+---
+
+## Pre-implementation diagnostic findings (2026-05-23 PM, read-only)
+
+Resolves the three open design questions from §10. One new defect surfaced during Q3 (cardNumber regex gap) — captured below as **defect #8** and folded into the Phase 2 scope as a small addition to defect #6's existing PR.
+
+### Q1 resolved — Cardsight releaseName values verified
+
+**Method:** For each demo card, probed `searchCatalog(<player> <releaseStr>, year)` (the exact query shape `resolveCardId` constructs when the dictionary has a mapping) and captured the `releaseName` field values from the response.
+
+| Card | searchCatalog query | Cardsight `releaseName` | candidates with that releaseName |
+|---|---|---|---|
+| Mike Trout 2011 TU | `"Mike Trout"` year=2011 | **`"Topps Update"`** | 1 (cardId fda530ab Base Set) |
+| Shohei Ohtani 2018 TU | `"Shohei Ohtani"` year=2018 | **`"Topps Update"`** | 2 (catalog-duplicate per defect #5) |
+| Aaron Judge 2017 TU | `"Aaron Judge Topps Update"` year=2017 | **`"Topps Update"`** | 14 (catalog has 14 Judge cards under this release; 411dbd50 is the Base Set) |
+| Bobby Witt Jr 2022 TCU | `"Bobby Witt Jr Topps Chrome Update"` year=2022 | **`"Topps Chrome Update"`** | 5 (8722ee0e + 6134bc63 are Base Set) |
+| Caleb Bonemer 2024 BDC | `"Caleb Bonemer"` year=2024 | **`"Bowman Draft"`** | 3 (BD-31 Base + CPA-CBO Auto + Class of 2024 Auto) |
+
+**Important nuance:** Searching with just `<player>` + year filter doesn't always surface Topps Update / Topps Chrome Update cards (Judge with bare-player query returned only Bowman/Donruss releases; Witt similarly). The catalog text-search benefits from the release name being IN the query string. This is exactly what `resolveCardId` does when the dictionary has a mapping — `queryParts.push(releaseName)`. So adding `"topps update"` → `"Topps Update"` to the dictionary makes the catalog query effective, NOT just the post-fetch filter.
+
+**Locked dictionary additions for Phase 2:**
+
+```typescript
+// Add to COMPIQ_TO_CARDSIGHT_RELEASES:
+"topps update": "Topps Update",          // covers Trout 2011, Ohtani 2018, Judge 2017, Acuna 2018
+```
+
+**Bowman Chrome correction** (catalog probe `"Mike Trout Bowman Chrome"` year=2011 returns `["Bowman Draft Picks & Prospects", "Bowman Chrome"]` distinct releaseNames — confirms Cardsight has a flagship `"Bowman Chrome"` release distinct from `"Bowman Draft Chrome"`):
+
+```typescript
+// Change:
+"bowman chrome": "Bowman Draft Chrome",  // current — INCORRECT (flagship maps to draft)
+// To:
+"bowman chrome": "Bowman Chrome",        // corrected — flagship maps to flagship
+```
+
+**No other dictionary changes required for the 5/5 demo gate.** `"topps chrome update"` → `"Topps Chrome Update"` is already in the dictionary (covers Witt). `"bowman draft chrome"` → `"Bowman Draft Chrome"` is already in the dictionary (covers Bonemer's Chrome Prospect Auto subset).
+
+**Open question for Phase 2's smoke verification:** Cardsight has TWO Topps Update Base Set candidates for Ohtani 2018 (defect #5 catalog-duplicate); Phase 1's pricing-probe top-3 should pick the data-bearing one. Witt has FIVE Topps Chrome Update candidates; same coverage. Verify in smoke that the pricing probe picks correctly.
+
+### Q2 resolved — Bowman Chrome regression risk: LOW
+
+**Historical ok/cardsight rows containing "Bowman Chrome" (30d):** 8 rows, 2 distinct queries:
+
+| Distinct query | Count | Parser output (current code) | Live /price result (Phase 1 deployed) |
+|---|---:|---|---|
+| `"2020 Bobby Witt Jr Bowman Chrome Refractor BDC-1"` | 5 | set=`"Bowman Chrome"`, brand=`"Bowman"`, parallel=`"Refractor"` | `source=live, 3 comps, cardId 98a86c16-8650-41` |
+| `"2024 bowman chrome mike trout"` | 3 | set=`"Bowman Chrome"`, brand=`"Bowman"`, parallel=null | `source=live, 5 comps, cardId de9211f2-2316-4e` |
+
+**Risk analysis under the corrected `"bowman chrome" → "Bowman Chrome"` mapping:**
+
+Both queries currently succeed because the current (incorrect) `"Bowman Draft Chrome"` mapping accidentally finds data-bearing candidates via Phase 1's pricing-probe (when releaseName filter narrows to Bowman Draft Chrome candidates, the probe picks one with data — possibly the wrong card semantically, but the response shape has non-zero comps).
+
+After the correction:
+- `resolveCardId` searches Cardsight for `"<player> Bowman Chrome"` with year filter
+- Cardsight catalog HAS a `"Bowman Chrome"` release (confirmed via probe — distinct from `"Bowman Draft Chrome"`)
+- Filter narrows to the correct release; pricing probe picks the data-bearing flagship Bowman Chrome cardId
+- Result: same `source=live` outcome OR cleaner (right card semantically); regression unlikely
+
+**Both queries should still pass post-correction.** Risk is low. **Mitigation:** Phase 2's smoke includes both historical queries as regression checks; if either regresses, the correction can be staged behind a temporary fallback (dictionary lookup falls back to "Bowman Draft Chrome" if the corrected "Bowman Chrome" finds zero candidates).
+
+### Q3 resolved — Cache key alignment FAILS without a parser fix; new defect #8 surfaced
+
+**Warming-side key for Mike Trout 2011 Topps Update:**
+```
+"mike trout|2011|topps update|||||"
+```
+
+**Request-side key computed from parseCardQuery on iOS displayLabel** `"2011 Topps Update Baseball Mike Trout US175 Base"`:
+```
+"baseball mike trout us|2011|topps update|||||"
+```
+
+**Mismatch.** `playerName` differs because parseCardQuery's playerName extraction doesn't strip:
+
+1. **`"Baseball"`** — defect #6 (already characterized). Sport-suffix not in NOISE list.
+2. **`"US175"` → `"US"` → `"Us"` residue** — **NEW DEFECT #8.** The cardNumber regex at [cardQueryParser.ts:152-153](../../backend/src/services/compiq/cardQueryParser.ts#L152-L153) is:
+   ```typescript
+   text.match(/#([A-Z]{1,3}-?\d+)\b/i) ||   // requires # prefix OR optional hyphen
+   text.match(/\b([A-Z]{1,3}-\d+)\b/);      // requires explicit hyphen
+   ```
+   Neither matches `"US175"` (no `#` prefix, no hyphen). cardNumber stays null. Then the digit-strip at [line 222](../../backend/src/services/compiq/cardQueryParser.ts#L222) `.replace(/[^a-zA-Z\s'-]/g, " ")` removes the digits, leaving `"US"` to survive into playerName.
+
+**Verified across all 5 demo cards** — none of their iOS displayLabel formats produce a clean cache key match against warming:
+
+| Card | Warming key | Request key (parseCardQuery on displayLabel) | Match |
+|---|---|---|---|
+| Mike Trout | `mike trout\|2011\|topps update\|...` | `baseball mike trout us\|2011\|topps update\|...` | ✗ |
+| Shohei Ohtani | `shohei ohtani\|2018\|topps update\|...` | `baseball shohei ohtani us\|2018\|topps update\|...` | ✗ |
+| Aaron Judge | `aaron judge\|2017\|topps update\|...` | `baseball aaron judge us\|2017\|topps update\|...` | ✗ |
+| Bobby Witt Jr | `bobby witt jr\|2022\|topps chrome update\|...` | `baseball bobby witt jr usc\|2022\|topps chrome update\|...` | ✗ |
+| Caleb Bonemer | `caleb bonemer\|2024\|bowman draft chrome\|...` | `baseball caleb bonemer cpa-cbo\|2024\|bowman draft\|...` | ✗ |
+
+Bonemer has a third contamination pattern (`"CPA-CBO"` — letter-only hyphenated card number). The cardNumber regex's `\d+` requirement means letter-only second part doesn't match either.
+
+### Defect #8 — `parseCardQuery` cardNumber regex misses unhyphenated and letter-only patterns
+
+**Location:** [backend/src/services/compiq/cardQueryParser.ts:152-153](../../backend/src/services/compiq/cardQueryParser.ts#L152-L153)
+
+**Current behavior:**
+```typescript
+const cardNumMatch = text.match(/#([A-Z]{1,3}-?\d+)\b/i) ||
+                     text.match(/\b([A-Z]{1,3}-\d+)\b/);
+```
+
+Misses:
+- `"US175"` (no `#` prefix, no hyphen) — Topps Update / Topps Chrome Update common format
+- `"USC150"`, `"USC35"` (same pattern) — Topps Chrome Update common
+- `"CPA-CBO"`, `"C24-CBO"` (letter-letter, no digits in second part) — Bowman Draft autograph subset format
+
+**Required behavior:** Expand regex to capture all three patterns:
+```typescript
+const cardNumMatch =
+  text.match(/#([A-Z0-9]{1,5}-?[A-Z0-9]+)\b/i) ||    // hashed
+  text.match(/\b([A-Z]{1,4}-[A-Z0-9]+)\b/) ||         // hyphenated (letter or letter-mixed)
+  text.match(/\b([A-Z]{1,4}\d+)\b/);                  // NEW: unhyphenated US175/USC35
+```
+
+**Estimated scope:** 3-5 lines (regex expansion + careful ordering to avoid mis-matching grade tokens like `"PSA 10"`). Plus 4-6 unit-test assertions covering the new patterns.
+
+**Coupled with:** Defect #6 (sport-suffix stopword). Both contribute to playerName contamination on iOS displayLabel queries. Bundle in the same parser PR. Together they take playerName from `"Baseball Mike Trout Us"` to `"Mike Trout"`.
+
+**Test cases required:**
+```typescript
+parseCardQuery("2011 Topps Update Mike Trout US175 Base") → cardNumber: "US175", playerName: "Mike Trout"
+parseCardQuery("2022 Topps Chrome Update Bobby Witt Jr. USC35 Base") → cardNumber: "USC35", playerName: "Bobby Witt Jr"
+parseCardQuery("2024 Bowman Draft Caleb Bonemer #CPA-CBO Auto") → cardNumber: "CPA-CBO", playerName: "Caleb Bonemer"
+parseCardQuery("Bowman Draft Caleb Bonemer C24-CBO /250") → cardNumber: "C24-CBO", playerName: "Caleb Bonemer"
+```
+
+### Q3 corrected outcome — cache key alignment AFTER defects #6 + #8 are fixed
+
+With both fixes applied, parseCardQuery on `"2011 Topps Update Baseball Mike Trout US175 Base"` should produce:
+- year: 2011
+- set: "Topps Update", brand: "Topps"
+- cardNumber: "US175" (captured)
+- parallel: null
+- playerName: "Mike Trout" (no Baseball, no US residue)
+
+Resulting cache key: `"mike trout|2011|topps update|||us175||"` — STILL doesn't match warming's `"mike trout|2011|topps update|||||"` because warming has `cardNumber=undefined` while parsed has `cardNumber="US175"`.
+
+**Two options for cache-key alignment:**
+
+**Option A — exclude cardNumber from cache key.** Modify `buildCacheKey` to drop the cardNumber field. Cache key becomes player+year+product+parallel+gradeCompany+gradeValue. Warming targets are player-level so they'd match request-side queries regardless of card number. Cost: cache becomes per-player-per-year-per-product, which is correct for the catalog resolution. Cards differing only by number share a cache entry, which is wrong only if they resolve to different cardIds — but `resolveCardId` uses cardNumber for detail-probe disambiguation, not catalog narrowing, so the resolved cardId might differ. **Cache could return wrong cardId for queries with different card numbers.** Not safe.
+
+**Option B — include cardNumber in warming targets.** Warming inputs gain a cardNumber field for each target. Keys match. Warming covers cardNumber-specific entries. New maintenance burden: warming list expands; verified card numbers from Q1 (US175, US285, US99, USC35, CPA-CBO) need adding. ~10 LOC change to CACHE_WARM_TARGETS.
+
+**Recommendation: Option B.** Cache stays correct; warming inputs expand to include known card numbers. The 10 warming targets get cardNumber fields populated with verified values from Q1's diagnostic.
+
+**Estimated scope for Option B:** ~10 LOC in `cardsight.mapper.ts` CACHE_WARM_TARGETS constant. No logic change — just data.
+
+### Phase 2 scope adjustment
+
+Original Phase 2: parser SET_PATTERNS (#3a) + dictionary (#3b) + queryContext plumbing + Step A routing + defect #6 stopword.
+
+**Updated Phase 2 scope adds:**
+- Defect #8 — parseCardQuery cardNumber regex expansion (3-5 LOC + tests)
+- CACHE_WARM_TARGETS expansion — add `cardNumber` field to each of the 10 warming targets (~10 LOC, data only)
+
+Total LOC range updates: was ~100-150 LOC, now **~115-170 LOC**. Still small-to-medium PR. No structural change to the design; the new defect #8 is a refinement of the parser layer.
+
+### Updated ship gate verification step
+
+Post-deploy smoke now also captures cache hit rate as an explicit check:
+
+1. Run 5/5 cold smoke against /price + /price-by-id + /estimate
+2. Run 5/5 warm smoke (immediately repeated)
+3. Capture `resolveCardId_cache_stats` log from docker stream
+4. **Expected: hit rate ≥ 60% on the warm pass** (warming primed + cold pass populated + warm pass hits)
+
+If hit rate stays at 0% on the warm pass, key normalization needs a second look before declaring Phase 2 shipped.
+
+### Updated open questions for implementing session
+
+1. ~~Cardsight's actual `releaseName` field values~~ — RESOLVED. Dictionary additions locked: `"topps update"` → `"Topps Update"` (the only required addition); `"bowman chrome"` correction to `"Bowman Chrome"`.
+2. ~~Bowman Chrome dictionary correction regression risk~~ — RESOLVED. LOW risk. Both historical queries should still pass; smoke includes them as regression checks.
+3. ~~Cache key normalization~~ — RESOLVED via expanded scope: defect #8 cardNumber regex + Option B warming-target cardNumber fields.
+
+**New open question** for the implementing session:
+- The Phase 1 commit (`5c9d561`) is currently on `main` and deployed. After Phase 2 ships, an LRU cache *invalidation* may be needed if any of the warming target card numbers turn out to be wrong (per Q1, Witt Jr's number from CH was USC35 but Cardsight's Witt 2022 TCU Base candidates are 8722ee0e and 6134bc63 — Cardsight may have its own catalog numbering different from CH's USC35). Verify each warming target's cardNumber against Cardsight's `getCardDetail` `.number` field before locking in CACHE_WARM_TARGETS.
