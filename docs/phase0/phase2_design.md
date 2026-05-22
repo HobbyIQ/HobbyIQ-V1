@@ -719,3 +719,109 @@ When Phase 2 PR is opened, the implementer should:
 10. Smoke ship gate: 5/5 demo cards via /price + /price-by-id + /estimate; cache hit rate ≥60% on warm pass; 4 historical Bowman Chrome ok-rows still pass
 
 No further design questions outstanding. Phase 2 implementation can proceed in a focused session.
+
+---
+
+## Implementation findings (2026-05-25)
+
+Phase 2 was implemented per the design above on branch `feature/phase2-parser-dict-querycontext-stepa` (head commit `1a5919b`) and opened as **PR #114**. Vitest passed 766/766 and tsc was clean, but pre-merge local endpoint smoke surfaced three implementation-time issues that block the 5/5 ship gate. PR #114 was **closed (not merged)** to defer for re-design. Branch is preserved on origin so the implementation work is available for consumption.
+
+### Smoke result (local backend, CARDSIGHT_MODE=exclusive, 30s post-warming cooldown)
+
+| Card | /price | /price-by-id | /estimate |
+|---|---|---|---|
+| Mike Trout 2011 TU US175 | PASS (15 comps, fmv=$333) | PASS (15 comps, fmv=$356) | PASS (15 comps, fmv=$333) |
+| Shohei Ohtani 2018 TU US285 | FAIL (cardId=null) | FAIL (e5d2c888, no comps) | FAIL (cardId=null) |
+| Aaron Judge 2017 TU US99 | FAIL (411dbd50, no comps) | FAIL (411dbd50, no comps) | FAIL (cardId=null) |
+| Bobby Witt Jr 2022 TCU USC35 | PASS (115 comps, fmv=$24) | PASS (115 comps, fmv=$19) | PASS (115 comps, fmv=$24) |
+| Caleb Bonemer 2024 BDC CPA-CBO | PASS (4 comps, fmv=$103) | PASS (4 comps, fmv=$104) | PASS (4 comps, fmv=$103) |
+
+| Historical regression | Result |
+|---|---|
+| 2020 Witt Bowman Chrome BDC-1 Refractor | FAIL (cardId 57b55c2c, no comps) — REGRESSION |
+| 2024 Bowman Chrome Mike Trout | PASS (5 comps) |
+| 2018 Ohtani Topps Chrome RC | PASS (48 comps) |
+| 2019 Vladdy Jr Topps Chrome RC | PASS (50 comps) |
+
+**Tally:** 3/5 /price, 3/5 /price-by-id, 3/5 /estimate, 3/4 regressions. Below ship gate.
+
+### Defect #10 — warming API load explosion
+
+**Root cause.** Adding `cardNumber` to `CACHE_WARM_TARGETS` (the Option B cache-key-alignment change from addendum 8a51dd5) triggers the cardNumber detail-probe path inside `resolveCardId` for all 10 warming targets simultaneously at server startup. Per target: ~5 `getCardDetail` probes (capped by `MAX_DETAIL_PROBES`) + ~3 `getPricing` probes (fall-through when no cardNumber detail matches — defect #9 territory, the 8/10 cross-catalog disagreement). Across 10 parallel warming calls fired via `Promise.all` that's ~80-90 concurrent Cardsight API calls in the first few seconds of startup.
+
+**Failure mode.** Cardsight returns HTTP 429 (Too Many Requests) after roughly the first 30 concurrent calls. The client's existing retry (3 attempts, 1s/2s/4s backoff) is insufficient under sustained 429s — all retries exhaust, `api_threw` fires, the pricing-probe step in `resolveCardId` sees zero records across the candidate set, falls back to `candidates[0]` with `matchConfidence: "likely"`, and **caches that fallback resolution**. The cache entry persists for 7 days (LRU TTL). Subsequent requests hit the poisoned cache → `cardId` resolves but `getPricing` (still rate-limited or now empty) returns no comps → user sees `no-recent-comps`.
+
+**Cooldown insufficiency.** A 30s post-warming cooldown did not clear the 429 condition — pricing probes during the smoke run continued to surface `status:429, attempt:3, backoffMs:4000` retries.
+
+**Pre-Phase-2 contrast.** Pre-Phase-2 warming made roughly 40 calls (10 × searchCatalog + ~30 × pricing-probe with K=3) and stayed under the rate limit. Phase 2 more than doubled startup API load by adding the cardNumber detail-probe path for every warming target.
+
+**Production impact (anticipated).** Every container restart (deploys, scale events, idle-timeout cycles) on hobbyiq3 would re-trigger the warming storm, producing 30-60 seconds of degraded /price + /estimate responses while Cardsight's rate limit window recovers. iOS users hitting the API in this window get `no-recent-comps`.
+
+**Mitigation options for Phase 2 re-design:**
+- **(a) Serialize warming.** Replace `Promise.all` with sequential `await` loop. Startup goes from ~21s → ~3-4 minutes for 10 targets, but no rate-limit cascade. Reasonable since warming is fire-and-forget.
+- **(b) Reduce MAX_DETAIL_PROBES during warming.** Cap detail probes to 1-2 when called from the warming path (e.g. plumb a `fromWarming?: boolean` flag through `resolveCardId`). Cuts ~50% of detail-probe load.
+- **(c) Warm without cardNumber.** Revert addendum 8a51dd5's CACHE_WARM_TARGETS expansion; accept that cardNumber-keyed requests miss the cache. (Defect #11 already implies the keys never aligned anyway.)
+- **(d) Hybrid.** Warm with structured-only keys (compatible with /price's parseCardQuery + requestFromParsed output). Defer cardNumber-keyed warming to lazy first-request. Cleanest if combined with defect #11 fix.
+
+Estimated scope: ~5-10 LOC for any of the above.
+
+### Defect #11 — `QueryContext` type missing `cardNumber` field
+
+**Root cause.** [backend/src/services/compiq/cardsight.router.ts:51-58](../../backend/src/services/compiq/cardsight.router.ts#L51-L58) defines:
+
+```typescript
+type QueryContext = {
+  playerName?: string;
+  cardYear?: string | number;
+  product?: string;
+  parallel?: string;
+  gradeCompany?: string;
+  gradeValue?: string;
+};
+```
+
+No `cardNumber` field. The mapper at [cardsight.router.ts:94-104](../../backend/src/services/compiq/cardsight.router.ts#L94-L104) (`toCardsightQuery`) constructs the `resolveCardId` input from `queryContext` and **does not pass cardNumber** — the field is silently dropped on every request-side path.
+
+**Effect on cache-key alignment.** `buildCacheKey` in `cardsight.mapper.ts:324-334` includes `cardNumber` in its 8-field tuple. Warming targets populate cardNumber (US175, USC35, CPA-CBO, etc.) → warming-side cache keys look like `mike trout|2011|topps update|||us175||`. Request-side, even though `parseCardQuery` extracts `cardNumber="US175"` from iOS displayLabels (post-defect-#8 fix), the value never reaches `resolveCardId` because the `queryContext → toCardsightQuery → resolveCardId` chain drops it. Request-side keys look like `mike trout|2011|topps update|||||` (no cardNumber). **Keys never match.**
+
+**Consequence.** The Q3 cache-alignment design goal from addendum 8a51dd5 ("Option B — include cardNumber in warming targets") is fundamentally not achieved. Cache hit rate stays at 0% on request-side even after warming completes successfully. The "warm cache reduces cold-path latency" benefit Phase 1 was meant to provide is silently neutralized.
+
+**Fix scope.**
+1. Add `cardNumber?: string` to `QueryContext` in `cardsight.router.ts`.
+2. Thread `cardNumber: ctx.cardNumber` through `toCardsightQuery` to the returned `resolveCardId` input.
+3. In `compiqEstimate.service.ts`, populate `queryContext.cardNumber` from `parsed?.cardNumber ?? body.cardNumber` (the latter doesn't exist on `CompIQEstimateRequest` today; either add it or rely on parse-only).
+4. Optionally also add `cardNumber` to `CompIQEstimateRequest` for /estimate's structured body and update `requestFromParsed` to set it.
+
+Estimated scope: ~5-10 LOC across 2-3 files.
+
+### Regression #12 — Bowman Chrome correction without fallback
+
+**Root cause.** The dictionary correction `"bowman chrome" → "Bowman Chrome"` (was `"Bowman Draft Chrome"`) now maps queries targeting Bowman Draft Chrome cards (e.g. `"2020 Bobby Witt Jr Bowman Chrome Refractor BDC-1"`) to the flagship Bowman Chrome release. Cardsight then picks a flagship Bowman Chrome cardId (57b55c2c-09b5) that has pricing data (112 records observed) but it's the wrong card semantically — the `translateResponse` step returns empty for the user's query.
+
+**Anticipation.** Design Q2 explicitly predicted this and proposed the mitigation: "the correction can be staged behind a temporary fallback (dictionary lookup falls back to 'Bowman Draft Chrome' if the corrected 'Bowman Chrome' finds zero candidates)." The mitigation was **not implemented** on PR #114.
+
+**Pre-Phase-2 behavior.** The original mismap (`"bowman chrome" → "Bowman Draft Chrome"`) accidentally routed BDC-1 queries to a data-bearing Bowman Draft Chrome cardId via Phase 1's pricing-probe fallback. The query "worked" via a coincidental misrouting that happened to land on a card with semantic overlap.
+
+**Fix options:**
+- **(a) Implement the Q2 fallback.** In `lookupReleaseName` or `_resolveCardId`, if `"bowman chrome"` mapping finds zero candidates with that exact releaseName, retry with `"Bowman Draft Chrome"`. Falls back to Phase 1 behavior for the edge case.
+- **(b) Reorder dictionary or use multi-value mapping.** Allow a single product string to map to multiple release names, tried in order.
+- **(c) Use parser-level disambiguation.** If query has cardNumber matching `BDC-N` pattern, prefer "Bowman Draft Chrome" regardless of the user's typed release name. Heuristic, may have edge cases.
+
+Estimated scope: ~10-15 LOC.
+
+### Phase 2 disposition
+
+**PR #114 closed (not merged, not deleted).** Branch `feature/phase2-parser-dict-querycontext-stepa` preserved on origin at commit `1a5919b` for re-design consumption — parser changes, dictionary changes, queryContext plumbing, Step A routing, and CACHE_WARM_TARGETS cardNumber additions all remain available.
+
+**Production unchanged.** main HEAD stays at `b68ac7c` (Phase 1 + PR #113 defensive Cosmos guard). hobbyiq3 deployed SHA unchanged.
+
+**Phase 2 re-design must address all three defects before re-implementation:**
+- Defect #10 mitigation choice (recommended: combine (d) hybrid warming with (b) MAX_DETAIL_PROBES reduction)
+- Defect #11 cardNumber threading (~5-10 LOC across `cardsight.router.ts` + `compiqEstimate.service.ts`)
+- Regression #12 fallback (recommended: option (a) — implement the Q2-predicted dictionary fallback)
+
+**Revised total scope estimate:** original 115-170 LOC + 30-50 LOC for the three additional fixes = **~160-220 LOC**.
+
+**What worked (carry forward unchanged):** Parser changes (defects #3a/#6/#8) all behaved correctly in unit tests and produced clean output on the 5 demo card iOS displayLabels. Dictionary `topps update → Topps Update` addition resolved correctly. Step A meaningful-query fall-through behaved as designed. queryContext plumbing threads correctly when `cardNumber` is not a factor (4 of 5 demo cards passed on at least one endpoint when cache wasn't poisoned).
+
+**What needs to change:** The cache-alignment design (addendum 8a51dd5 Option B) needs revisiting now that defect #11 reveals the alignment was incomplete by design.

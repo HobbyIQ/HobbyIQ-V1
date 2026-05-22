@@ -244,6 +244,30 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 
 ### Phase 2 — Defect #3 + queryContext plumbing + Step A routing (expanded scope, 2026-05-23)
 
+**Status (2026-05-25): ATTEMPTED; DEFERRED FOR RE-DESIGN.**
+
+Phase 2 was implemented per the design above on branch `feature/phase2-parser-dict-querycontext-stepa` and opened as **PR #114** (closed, not merged). Vitest 766/766 passed + tsc clean, but pre-merge local endpoint smoke surfaced three implementation-time issues that block the 5/5 ship gate. PR #114 closed to defer; branch preserved on origin for re-design consumption.
+
+**Smoke result:** 3/5 demo cards on /price, 3/5 on /price-by-id, 3/5 on /estimate, 3/4 historical regressions.
+
+**Three blocking issues (full characterization in [phase2_design.md "Implementation findings (2026-05-25)"](phase2_design.md#implementation-findings-2026-05-25)):**
+
+- **Defect #10 — warming API load explosion.** Adding cardNumber to CACHE_WARM_TARGETS triggers cardNumber detail-probe × 10 parallel warming targets = ~80-90 Cardsight calls at startup. Rate limit hits at ~30 → 429 storm poisons cache with `candidates[0]` fallback resolutions cached for 7 days. 30s post-warming cooldown insufficient. Fix options: (a) serialize warming, (b) reduce MAX_DETAIL_PROBES from warming path, (c) warm without cardNumber, (d) hybrid (recommended). ~5-10 LOC.
+- **Defect #11 — QueryContext type missing cardNumber.** `cardsight.router.ts` QueryContext type lacks cardNumber; `toCardsightQuery` drops it. Request-side cache keys never include cardNumber; warming-side keys do; **cache hit rate stays at 0%** — addendum 8a51dd5's Option B alignment goal is not achieved. Fix: add cardNumber to QueryContext + thread through. ~5-10 LOC.
+- **Regression #12 — Bowman Chrome correction without fallback.** The `bowman chrome → Bowman Chrome` correction maps queries targeting Bowman Draft Chrome cards to flagship Bowman Chrome (no comps). Design Q2 predicted this and specified the fallback mitigation; **mitigation not implemented on PR #114**. Fix: implement the predicted dictionary fallback. ~10-15 LOC.
+
+**Phase 2 re-design must address all three before re-implementation.** Revised total scope estimate: original 115-170 LOC + 30-50 LOC for the three additional fixes = **~160-220 LOC**, single PR (or split if useful).
+
+**What worked (preserved on branch, carry-forward into re-design):** Parser changes (#3a/#6/#8) — clean unit tests + correct displayLabel parses. Dictionary `topps update → Topps Update` — resolves correctly. Step A meaningful-query fall-through — behaves as designed. queryContext plumbing — threads structured fields correctly when cardNumber is not a factor. 4 of 5 demo cards passed on at least one endpoint when cache wasn't poisoned (Trout, Witt, Bonemer on all 3; Judge on /price-by-id on warm-cache run-1).
+
+**What needs to change:** The cache-alignment design needs revisiting now that defect #11 reveals the alignment was incomplete by design. The warming load needs to be bounded so it doesn't trip Cardsight's rate limit.
+
+**Production unchanged:** main HEAD stays at `b68ac7c` (Phase 1 + PR #113 defensive Cosmos guard). Zero deploy from the Phase 2 attempt.
+
+---
+
+**Original Phase 2 scope description follows (still applicable; re-design extends rather than replaces):**
+
 **Scope reclassified 2026-05-23** after Step A's attempted standalone ship failed acceptance (3/5 iOS-shape, 4/5 simple-shape vs 5/5 required). Step A's routing change (PR #110's meaningful-query fall-through in `/price-by-id`) does not stand alone — it requires queryContext plumbing and dictionary coverage to reach the 5/5 ship gate. Folding Step A into Phase 2 makes the dependency explicit.
 
 **Phase 2 now contains three changes that must ship together:**

@@ -1027,3 +1027,75 @@ This is a **different defect than originally characterized**. The 22.6% rate is 
 4. With the actual error body in hand, design a targeted guard for the specific field
 
 **Out of scope for next session:** any other workstream until this Cosmos defect characterization completes OR is explicitly deferred again. Don't add complexity to PR #113's guard until the real cause is known.
+
+---
+
+# 2026-05-25 — Phase 2 attempted; closed PR #114, deferred for re-design
+
+## What was attempted
+
+Phase 2 implementation per the locked design at `docs/phase0/phase2_design.md` (composite of commits 172ef42 + 53eab5e + 8a51dd5; handoff reference `588e98f`). Single PR with three logical commits on branch `feature/phase2-parser-dict-querycontext-stepa`:
+
+1. Parser changes — defects #3a (Bowman Draft Chrome SET_PATTERN), #6 (sport-suffix NOISE), #8 (cardNumber regex expansion)
+2. Dictionary changes — `topps update → Topps Update` (new), `bowman chrome → Bowman Chrome` (corrected); CACHE_WARM_TARGETS expanded with cardNumber field per addendum 8a51dd5's Option B
+3. queryContext plumbing + Step A meaningful-query fall-through routing (re-applied from f5cd3e7) folded together in fetchComps
+
+Diff: 8 files, +538/-44 LOC across `cardQueryParser.ts`, `cardsight.mapper.ts`, `cardsight.router.ts`, `compiqEstimate.service.ts`, plus 4 test files (one new for parser, one new for queryContext threading, two updated for dictionary + pinned-card paths).
+
+## What passed
+
+- Vitest: **766/766 pass** + 100 skipped (no regressions)
+- `tsc --noEmit`: clean
+- 22 new parser tests, 4 new dictionary tests, 4 new queryContext threading tests
+- compiqEstimatePinnedCard.test.ts updated for both legacy + meaningful-query branches
+
+## What failed (the reason for the deferral)
+
+**Pre-merge local endpoint smoke surfaced three implementation-time issues.** Smoke ran the 5 demo cards × 3 endpoints + 4 historical regressions against a locally-running backend with CARDSIGHT_MODE=exclusive. Result: 3/5 demo cards via /price, 3/5 via /price-by-id, 3/5 via /estimate, 3/4 regressions. **Below the 5/5 ship gate.**
+
+- **Defect #10 — warming API load explosion.** CACHE_WARM_TARGETS with cardNumber triggers cardNumber detail-probe × 10 parallel targets = ~80-90 Cardsight calls in the first seconds of startup. Cardsight rate-limits with 429s; cache gets poisoned with `candidates[0]` fallback resolutions cached for 7 days. 30s post-warming cooldown insufficient.
+- **Defect #11 — QueryContext type missing cardNumber.** `cardsight.router.ts:51-58` QueryContext lacks cardNumber; `toCardsightQuery` drops it. Request-side cache keys never include cardNumber; warming-side keys do; cache hit rate stays at 0% despite addendum 8a51dd5's "Option B alignment" goal.
+- **Regression #12 — Bowman Chrome correction without fallback.** `bowman chrome → Bowman Chrome` maps queries targeting Bowman Draft Chrome cards to flagship; design Q2 predicted this and specified the fallback mitigation; not implemented on PR #114.
+
+Full characterization in `docs/phase0/phase2_design.md` "Implementation findings (2026-05-25)" section.
+
+## Disposition
+
+- **PR #114 closed (not merged, not deleted).** Branch `feature/phase2-parser-dict-querycontext-stepa` preserved on origin at `1a5919b` for re-design consumption.
+- **Net production change: zero.** No deploy from the Phase 2 attempt.
+- **main HEAD unchanged: `b68ac7c`** (Phase 1 + PR #113 defensive Cosmos guard).
+- **hobbyiq3 deployed SHA unchanged** (most recent deploy 2026-05-22T20:25Z, well before this session).
+- `docs/phase0/phase2_design.md` extended with "Implementation findings (2026-05-25)" section.
+- `docs/phase0/ch_removal_v2_plan.md` Phase 2 section marked "ATTEMPTED; DEFERRED FOR RE-DESIGN" with the three blocking issues referenced.
+
+## Next session work
+
+- **Phase 2 re-design workstream.** Estimated 30-45 min re-design discussion + diagnostic (no code) to choose mitigations for #10/#11/#12. Then re-implementation in one focused session.
+- Re-design must explicitly choose:
+  - Defect #10 mitigation: serialize warming / reduce MAX_DETAIL_PROBES / drop cardNumber from warming / hybrid (recommended)
+  - Defect #11 fix: add cardNumber to QueryContext + thread through `toCardsightQuery` + `computeEstimate` queryContext build (~5-10 LOC)
+  - Regression #12 fix: implement Q2-predicted dictionary fallback in `resolveCardId` or `lookupReleaseName` (~10-15 LOC)
+- Revised total scope estimate: original 115-170 LOC + 30-50 LOC for the three additional fixes = **~160-220 LOC**, single PR (or split if useful).
+- Consumption: the re-implementation can cherry-pick from preserved branch `feature/phase2-parser-dict-querycontext-stepa` (parser, dictionary, queryContext plumbing, Step A routing all carry forward; only CACHE_WARM_TARGETS cardNumber addition and the queryContext/lookupReleaseName paths need revisiting).
+
+## Carry-forwards otherwise unchanged
+
+- Cosmos 22-27% failure rate real cause TBD (carry-forward from 2026-05-24 PM PR #113 outcome C). Next-session entry-point note above remains valid.
+- Defects #4 (AUTO regex), #2 (parallelMatches set-equality), #7 (CH-identity guard), #9 (cardNumber detail-probe cross-catalog disagreement) — all still deferred.
+- MCP /predict architectural mismatch — still queued post-Phase-2.
+- fn-cardhedge-comps decommission — still gated on Phase 2 + Step B + Step C completion.
+- 2024-2025 Topps Chrome Update Base catalog-duplicate diagnostic — still a carry-forward.
+- Day-10 PR #113 soak review: 2026-05-31T17:44:32Z.
+
+## Next session entry point (updated)
+
+**Phase 2 re-design (NEW priority) OR Cosmos 22-27% diagnostic (carry-forward from 2026-05-24 PM).**
+
+Choose one to start. If Phase 2 re-design picks up first, the entry point is:
+
+1. Re-read `docs/phase0/phase2_design.md` "Implementation findings (2026-05-25)" section (defects #10/#11/#12 characterization)
+2. Pick mitigation strategy for each
+3. Document the chosen approach as a Phase 2 v2 design addendum
+4. Then re-implement, consuming the preserved `feature/phase2-parser-dict-querycontext-stepa` branch where useful
+
+If Cosmos diagnostic picks up first, follow the prior session's entry-point notes (grep player_trends writers + instrument catch block). PR #113's defensive guard remains live; do not modify it until the real cause is characterized.
