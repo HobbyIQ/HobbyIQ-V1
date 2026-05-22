@@ -635,3 +635,90 @@ App settings touched this session that were not reverted:
 ## Explicit acknowledgment
 
 **No production behavior change shipped today.** Two PRs merged into `main` (#110 and #111) but the deploys backing them were rolled back. The session produced findings (the 8 above) and a re-scope. Treat today as planning input for the next CH-removal attempt, not a partial-ship.
+
+---
+
+# 2026-05-22 PM — CH removal redesign characterization complete
+
+Continuation session immediately following the AM rollback. Three diagnostic workstreams + one planning workstream landed as durable documentation. No code changed; no deploys; main and deployed reality are now aligned via revert PRs.
+
+## What shipped this session
+
+| Commit | What |
+|---|---|
+| `566fd8e` | Revert PR #111 (MCP `compsLoader` rewire) — Workstream 1 |
+| `83ea415` | Revert PR #110 (backend meaningful-query fall-through) — Workstream 1 |
+| `9af3db2` | `docs/phase0/cardsight_coverage_characterization.md` — 5-defect characterization (Thread 1 direct Cardsight calls, Thread 2 variant-mismatch audit, Thread 2b verification on Chrome Prospect Autographs cardId) |
+| `d31b2ff` | Addendum to characterization doc — Topps Update Base vendor-gap disambiguation. Outcome (B) confirmed: catalog inconsistency, not vendor gap. Hit rate 10/10 across 5+5 cohort probe. |
+| `8d6d769` | `docs/phase0/ch_removal_v2_plan.md` — sequenced phased plan for the next CH removal attempt |
+
+**Net production change: zero.** Three durable doc artifacts capturing the path forward.
+
+## Production / git reconciliation
+
+`origin/main` HEAD is now `8d6d769` (post-revert + planning docs). `hobbyiq3` and `compiq-mcp` are both serving pre-CH-removal code (the rollback state from AM). After today's reverts, **a deploy from `main` no longer silently re-introduces broken CH-removal code.** The runtime/git divergence flagged in the AM entry is resolved.
+
+App settings remain as documented in the AM entry: `SCM_DO_BUILD_DURING_DEPLOYMENT=true` on both apps; `NPM_CONFIG_PRODUCTION=false` on `hobbyiq3`. Slim-zip + Oryx-rebuild pattern is the working deploy pattern.
+
+## Five characterized consumption-layer defects
+
+Each defect with file:line; full detail in `docs/phase0/cardsight_coverage_characterization.md`:
+
+| # | Defect | Location | Severity |
+|---|---|---|---|
+| 1 | `resolveCardId` blind `candidates[0]` pick — no release/set verification | [cardsight.mapper.ts:144-156](phase0/cardsight_coverage_characterization.md) | Load-bearing |
+| 2 | `parallelMatches` token-subset over-permissive — "Blue Refractor" matches "Blue Wave Refractor" | [cardsight.mapper.ts:67-71](phase0/cardsight_coverage_characterization.md) | Last-mile |
+| 3 | `parseCardQuery` SET_PATTERNS gap (no `bowman draft chrome`) + `COMPIQ_TO_CARDSIGHT_RELEASES` dictionary coverage (no `topps update` etc) | [cardQueryParser.ts:46-69](phase0/cardsight_coverage_characterization.md), [cardsight.mapper.ts:38-46](phase0/cardsight_coverage_characterization.md) | Feeds #1 |
+| 4 | `isCompVariantMatch` AUTO regex misses `"Autographs"` (s-suffix) and `"(AU,"` (comma-suffix) | [cardQueryParser.ts:302-306](phase0/cardsight_coverage_characterization.md) | Independent |
+| 5 | Cardsight catalog returns 2-11 cardIds per logical player×year×set; subset empty; `candidates[0]` can land on empty duplicate | [cardsight.mapper.ts:144-156](phase0/cardsight_coverage_characterization.md) (same code as #1) | Load-bearing, coupled with #1 |
+
+The variant filter itself ([cardQueryParser.ts:291-354](phase0/cardsight_coverage_characterization.md)) is confirmed correct as designed — it is the symptom-surfacing layer, not the load-bearing problem.
+
+## Phased plan (full detail in `docs/phase0/ch_removal_v2_plan.md`)
+
+| Phase | Defects | Scope | Acceptance |
+|---|---|---|---|
+| 0 (optional) | #4 AUTO regex | Small PR (~5-10 LOC) | Unit test: `isCompVariantMatch` accepts "Autographs" and "(AU," formats |
+| 1 (load-bearing) | #1 + #5 resolveCardId selection | Medium PR (~30-80 LOC) | 5/5 demo cards (Trout 2011 TU, Ohtani 2018 TU, Judge 2017 TU, Acuna 2018 TU, +Skenes 2024 TCU) return `source: cardsight` via `/api/compiq/price-by-id`; no regression on 6 historical ok/cardsight rows |
+| 2 | #3 parser + dictionary | Small-medium PR | Bowman Draft Chrome queries parse correctly; structured queries route to right release |
+| 3 | #2 parallelMatches set-equality | Small PR (~5-10 LOC) | "Blue Refractor" vs "Blue Wave Refractor" disambiguate correctly |
+
+**Post-Phase 3 (separate workstream):** Steps A (re-ship #110), B (re-ship #111 with MCP architectural mismatch resolved), C (`fn-cardhedge-comps` decommission), D (cleanup).
+
+## Updated carry-forwards entering next session
+
+- **Phase 1 PR (defects #1 + #5)** — next session start point. Files: [backend/src/services/compiq/cardsight.mapper.ts](../backend/src/services/compiq/cardsight.mapper.ts) lines 89-156.
+- **2024-2025 Topps Chrome Update Base coverage diagnostic** — Path A addendum carry-forward. Path A confirmed the duplicate pattern for Topps Update Base; Topps Chrome Update Base unverified. Likely same pattern but needs a 5-card probe.
+- **MCP `/predict` player-level vs card-level architectural mismatch** — unresolved, separate from the five consumption defects. Three sub-options open: (1) per-card refactor in `backtest.ts`, (2) new `/api/compiq/comps-by-player` aggregation endpoint, (3) decouple `fn-backtest-runner` from MCP. Decision deferred to its own workstream after Phase 1-3 land.
+- **Cache strategy decision for `resolveCardId` disambiguation** — needed before Phase 1 starts. Choices: in-process LRU or existing Redis `cacheWrap` with structured key. Plan recommends Redis.
+- **Pre-existing carry-forwards still pending from prior sessions:**
+  - W6.1 Q1 warn-log baseline measurement (48h of post-PR-A1 traffic)
+  - Finding 6 re-investigation (`fn-nightly-comp-prefetch` writes; W2 confirmed Failure A persists; carry-forward is now the decision question)
+  - COSMOS_KEY shared-defect (Python paths affected; Node has AAD fallback)
+  - Cosmos 21% regional-routing failure-rate diagnostic
+  - `compiq-mcp` App Insights wiring — observability gap that lengthened today's diagnosis loop
+  - Phase 3a monitor detection-vs-degradation lag
+  - DailyIQ niche-prospect-auto coverage gap (Finding 12)
+  - Day-10 soak review window: 2026-05-31T17:44:32Z
+  - iOS workstream items (unrelated to this thread)
+
+## Lessons captured this session
+
+(Suggest appending to the existing LESSONS section at line 115 of this file, or to `copilot-instructions.md` LESSONS FROM PRIOR SESSIONS.)
+
+- **When a vendor appears to have limited coverage, run direct vendor calls with multiple search shapes before accepting that framing.** Coverage hypotheses are often consumption-layer defects in disguise. The Path A diagnostic disambiguated this in <30 minutes by fanning out across all catalog candidates instead of accepting `candidates[0]`. The original Workstream 2 conclusion that Cardsight had Topps Update Base coverage gaps for 3 cards was wrong — Cardsight had the data on sibling cardIds.
+- **User instinct + agent technical capability can disambiguate failure modes that either alone misses.** When metrics suggest one diagnosis but specific behavior contradicts, weight the contradiction. The 1.6% historical Cardsight `ok` rate suggested vendor limitation; the Bonemer "69 comps filtered to 0" pattern contradicted; following the contradiction surfaced the five-defect characterization rather than accepting the metric at face value.
+
+## Next session entry point
+
+1. Read `docs/phase0/cardsight_coverage_characterization.md` (5 defects + addendum)
+2. Read `docs/phase0/ch_removal_v2_plan.md` (phased plan)
+3. Start with **Phase 1**: defects #1 + #5 in `backend/src/services/compiq/cardsight.mapper.ts:89-156`
+4. Decide cache strategy (Redis vs in-process LRU) before writing code
+5. Ship gate:
+   - 5/5 demo cards return `source: cardsight` via `/api/compiq/price-by-id` with full-text queries
+   - No regression on the 6 historical ok/cardsight rows in `comp_logs`
+   - Negative test: junk player query returns `no-recent-comps` without crash or `variant-mismatch`
+   - 24h post-deploy: `outcome=ok / source=cardsight` rate measurably above 1.6%
+
+Out of scope for Phase 1: dictionary expansion (Phase 2), parallel disambiguation (Phase 3), AUTO regex (Phase 0 or 3), MCP rewire (post-Phase 3), `fn-cardhedge-comps` decommission (post-Phase 3).
