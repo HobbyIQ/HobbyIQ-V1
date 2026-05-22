@@ -477,6 +477,8 @@ Per W6.3 blob inventory: 5 players, all written 2026-05-21 02:00–02:00:23Z, `c
 
 Function deployed, timer `0 30 2 * * *`, `isDisabled=False`. Per `copilot-instructions.md`, it writes per-card cache to `compiq-signals/{player}/{card_id}/comps.json`. **No per-card subfolders exist in the container** — only flat per-player `{signal}.json` files. Phase 4a cache-layer design assumes prefetch output is available; current state suggests this assumption is false. Block on confirming actual write behavior before Phase 4a cache work.
 
+**Finding 6 annotation (post PR #107 merge 2026-05-21):** `main` now carries a newer version of `fn-nightly-comp-prefetch/function.py` than what was deployed at time of the Workstream B diagnostic. The branch version adds 4 helper functions and a scoring-based `_resolve_card_hedge_id` rewrite. The Failure A (`COSMOS_KEY` auth) and Failure B (empty inventory) characterizations in `docs/phase0/finding6_nightly_prefetch_writepath.md` were derived from the OLDER deployed version. Future investigation of Finding 6 must account for whether the issues persist in the newer version on `main` or were addressed by the scoring rewrite.
+
 ### 7. `fn-compiq` App Insights observability also unwired
 
 99 trace rows + 2 request rows in 30 days across the entire 14-function app. Only `fn-ebay-signals` and `fn-reddit-signals` emit visible telemetry. Blob mtime is the only reliable invocation signal for the other 7 timer functions. The bifurcation pattern from `hobbyiq3` repeats — observability is structurally underdeveloped across the system, not just on the API.
@@ -492,9 +494,11 @@ Brief listed 15 functions and described count as 14. Actual deployed count is **
 - `fn-price-alert-checker`: in brief, NOT deployed.
 - `fn-nightly-comp-prefetch`: deployed and active, NOT in brief, but referenced in `copilot-instructions.md`.
 
-### 10. `compiq-functions/fn-*` source-on-branch anomaly
+### 10. `compiq-functions/fn-*` source-on-branch anomaly — RESOLVED
 
 Production has 14 deployed functions but `main` carries only scaffolding + shared helpers (PR #76 `2d2ea21`, PR #77 `91e517d`). Per-function source dirs (`fn-cardhedge-comps`, `fn-ebay-signals`, etc.) live only on `origin/wip/snapshot-2026-05-20` (HEAD `5fad0a2`) and `origin/restore/preprod-deployed-state` (HEAD `1cb6f45`), each carrying 16 `fn-*` dirs (the deployed 14 plus the 2 not-deployed pair from Finding 9 above). Anyone editing function code from a `main` checkout starts from scaffolding, not from the deployed state. **Configuration / source-of-truth gap.** Surfaces a follow-up: which branch is canonical for Phase 3 cleanup PRs against the function app? Documented in detail in `docs/phase0/mcp_repo_discovery.md` "Adjacent finding" section (commit `24aab9e`).
+
+**Resolution (2026-05-21 PM):** PR #107 (squash merge `46390e7`) restored the 14 deployed `fn-*` directories plus 2 not-deployed extras (with status READMEs) from `origin/wip/snapshot-2026-05-20` onto `main`. Byte-level verification before the PR confirmed 48/50 deployed files byte-identical to branch (CRLF-normalized); the 1 file with content drift (`fn-nightly-comp-prefetch/function.py`) has branch-newer scoring improvements — see Finding 6 annotation above. Kudu auth resolved via Functions runtime `/admin/vfs/...` endpoint with `host/default/listKeys` master key (not the SCM AAD path, which is blocked at tenant-resource-principal registration). `.gitignore` patched to exclude `compiq-functions/**/__pycache__/`. Workstream C scope doc at `docs/phase0/finding10_compiq_functions_canonical_branch.md` (commit `8980cdb`) characterized the gap; this PR closes it.
 
 ### 11. Summary-fabrication failure mode is not limited to compaction summaries
 
@@ -545,6 +549,7 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 | W6.4 MCP repo discovery | Commit | `24aab9e` | `docs/phase0/mcp_repo_discovery.md` |
 | Issue: `/estimate` telemetry deferral | Issue | #103 | Open |
 | Issue: B2 cardIdSource cohort definition | Issue | #106 | Open, decision deferred to Day-10 |
+| Finding 10 resolution — `compiq-functions/fn-*` source restoration to `main` | PR #107 (squashed) | `46390e7` | Merged 2026-05-22T00:43Z; +2,615 lines / 45 files; no production change (canonicalization only) |
 
 **Phase 0 measurement state:** complete except W6.1 (deferred to day-2+ for 48 h of post-PR-A1 warn-log accumulation). Active soak continues independently. Day-10 review window `2026-05-31T17:44:32Z`.
 
@@ -561,7 +566,6 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 - W6.1 Q1 warn-log baseline measurement (needs 48 h of post-PR-A1 traffic).
 - Finding 6 investigation: confirm whether `fn-nightly-comp-prefetch` actually writes anything.
 - Finding 5 investigation: trace the `fn-cardhedge-comps` 27-comp-uniform pattern's consumer chain.
-- Finding 10 reconciliation: choose canonical branch for `compiq-functions/fn-*` source-of-truth, then PR back onto `main`.
 - Finding 4: add App Insights `hobbyiq-insights` component-naming note to `copilot-instructions.md` Part 9.
 - Finding 2: roadmap edit to move Phase 4a p95-reduction baseline from "Phase 0 baseline (doesn't exist)" to "Day-10 post-PR-A1."
 - Workstream 3 (this prompt): extend LESSONS section in `copilot-instructions.md` with Finding 11.
