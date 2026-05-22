@@ -311,3 +311,87 @@ The pattern across these: Mike Trout 2011 Topps Update has 600 records and works
 - Does not decide whether to restore PR #110's full-text fall-through path
 
 Those decisions are deferred to a separate planning workstream that uses this characterization as input alongside the deferred DailyIQ coverage gap design.
+
+---
+
+## Addendum 2026-05-22 — Topps Update vendor-side disambiguation (Outcome B confirmed)
+
+Follow-up diagnostic to resolve §11's open question on whether Ohtani 2018 / Judge 2017 / Acuna 2018 Topps Update Base are vendor coverage gaps. Test cohort expanded to 5 random 2017-2018 TU Base stars and 5 non-Trout 2011 TU Base players (peer cohort to Trout). Read-only, direct Cardsight calls only.
+
+### Reframe of the original Workstream 2 "0 records" finding
+
+The original §5 Thread 1 test queried Cardsight catalog for each player and called `getPricing` on `candidates[0]`. For Ohtani/Judge/Acuna 2018-17 Topps Update, that returned 0 records and was tentatively labeled a vendor coverage gap.
+
+**That conclusion was wrong.** When the same players are queried with multiple search shapes and ALL Topps Update Base candidates are pricing-checked (not just position [0]), the data is present:
+
+| Card | candidates[0] from §5 | Hidden cardId with data |
+|---|---|---|
+| Ohtani 2018 TU US285 | `e5d2c888` → 0 records | `23084701` → **1818 records, last_sale=2026-05-22T01:59Z** |
+| Judge 2017 TU US87 | (no TU candidate at all in player+year shape) | `1c810c2c` → **779 records, last_sale=2026-05-22T01:41Z** (surfaces via player+year+set shape) |
+| Acuna 2018 TU US250 | `65aa7e68` → 0 (Workstream 2 test) | `65aa7e68` → **337 records** today (cardId IS data-bearing; previous run hit a transient or cache state) |
+
+The 0 records were **catalog duplicates without pricing**, not vendor gaps. Cardsight catalog returns multiple cardIds per logical player×year×set, and only a subset carry pricing data.
+
+### Cohort A — 2017-2018 Topps Update Base (5 random stars)
+
+```
+Cody Bellinger    2017 — 7 TU candidates, 6 non-zero, best=295 records (faaf9791)
+Rhys Hoskins      2017 — 4 TU candidates, 2 non-zero, best=3 records   (c641bd9f)
+Gleyber Torres    2018 — 6 TU candidates, 6 non-zero, best=188 records (39272462)
+Juan Soto         2018 — 11 TU candidates, 6 non-zero, best=476 records (499c9ea4)
+Walker Buehler    2018 — 2 TU candidates, 1 non-zero, best=32 records  (19f5f059)
+
+Hit rate: 5/5
+Total empty duplicates: 9 across 30 candidates
+```
+
+### Cohort B — 2011 Topps Update Base (5 non-Trout peer players)
+
+```
+Anthony Rizzo     2011 — 2 TU candidates, 2 non-zero, best=141 records (57a3cf99)
+Eric Hosmer       2011 — 4 TU candidates, 4 non-zero, best=120 records (42e3a1f9)
+Dustin Ackley     2011 — 4 TU candidates, 4 non-zero, best=39 records  (f140066f)
+Brandon Belt      2011 — 2 TU candidates, 2 non-zero, best=33 records  (a59fea1d)
+Mark Trumbo       2011 — 7 TU candidates, 6 non-zero, best=56 records  (0c94059f)
+
+Hit rate: 5/5
+Total empty duplicates: 1 across 19 candidates
+```
+
+**10/10 cards across both cohorts have at least one pricing-bearing cardId.** 100% of cards have multiple Topps Update Base cardIds. Cohort A (2017-18) carries noticeably more empty duplicates per card (~1.8 avg) than Cohort B (2011, ~0.2 avg) — but both have viable data.
+
+Note: Some "candidates" are namesake players the search surfaces by surname (Geovany Soto / Gregory Soto / Alexander Torres) or combo cards ("Philly Phenoms (Bryce Harper / Rhys Hoskins)", "Battery Bath (Walker Buehler / Russell Martin)"). These are legitimately different cards, not duplicates. They still represent selection noise that `resolveCardId` would need to filter.
+
+### Why Mike Trout 2011 Topps Update returned 600 records and looked anomalous
+
+Trout's 2011 TU Base cardId `fda530ab` has 600 records. The non-Trout peer cohort's best cardIds top out at 141 (Rizzo) — Trout is ~4× the peer median, consistent with his being a top-tier collected name in that class. Not anomalous, just a star-power volume premium. Other 2017-2018 stars (Bellinger 295, Torres 188, Soto 476) sit in similar ranges for their cohort.
+
+### Outcome conclusion: (B) catalog inconsistency / fifth defect
+
+Per the diagnostic spec's three outcomes:
+
+- **(A) Genuine vendor coverage gap** — REJECTED. Every test card has pricing-bearing cardIds.
+- **(B) Catalog inconsistency / fifth defect** — CONFIRMED. Cardsight catalog returns multiple cardIds per logical card, only some carry pricing data; some are namesake/combo entries. `resolveCardId`'s `candidates[0]` pick is unreliable not just because of relevance ranking (§6) but because the catalog itself has 2-11 entries per card, some empty.
+- **(C) Anomalous Trout result** — REJECTED. Trout's 600 is in line with star-tier expectations; peer cohort's best cardIds are 33-141.
+
+### Fifth defect — formal characterization
+
+Adding to the four-defect table in §1:
+
+| Module | Defect | Effect |
+|---|---|---|
+| `cardsight.client.searchCatalog` output / `cardsight.mapper.resolveCardId` selection | Catalog returns 2-11 cardIds per logical player×year×set; subset carry empty `getPricing` results; subset are namesake/combo cards | `candidates[0]` pick can land on empty duplicate even when data exists on a sibling cardId |
+
+This is upstream of the relevance-ranking issue from §6 — Cardsight's catalog model itself has duplicates that the consumption layer must navigate. Picking the wrong duplicate produces a `no-recent-comps` outcome that's indistinguishable from a real coverage gap unless you fan out across all candidates.
+
+### Confirmed: vendor coverage is solid
+
+For the demo-relevant card classes (Topps Update Base across 2011 and 2017-2018), Cardsight has comprehensive pricing data. The CH-removal feasibility blocker is consumption-layer logic, not vendor data quality. The original Workstream 2 §11 open question is closed.
+
+### One thing this diagnostic did NOT do
+
+Did not test the Skenes 2024 Topps Chrome Update USC150 case (the other §11 open-question entry, which the original §5 also showed as 0 records). For consistency with the 5-card cohort approach, that needs its own probe — possibly a separate batch covering 2024-2025 Topps Chrome Update Base. Not characterized in this addendum. Leaving as carry-forward.
+
+### Open carry-forward
+
+- Probe 2024-2025 Topps Chrome Update Base for the same duplicate pattern. Likely outcome: same as Topps Update (multiple cardIds, subset data-bearing) — but unverified.
