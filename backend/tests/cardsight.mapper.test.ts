@@ -242,6 +242,82 @@ describe("resolveCardId — LRU cache behavior", () => {
   });
 });
 
+describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RELEASES)", () => {
+  it("'topps update' maps to 'Topps Update' (new entry — covers Trout/Ohtani/Judge demo cards)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("trout-tu", "Topps Update"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "topps update",
+    });
+
+    expect(r.cardId).toBe("trout-tu");
+    // searchCatalog should have been called with query containing the
+    // dictionary-resolved release name (not the raw product string).
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Topps Update",
+      expect.objectContaining({ year: 2011 }),
+    );
+  });
+
+  it("'bowman chrome' maps to 'Bowman Chrome' (corrected from prior 'Bowman Draft Chrome' mismap)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("trout-bc", "Bowman Chrome"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2024,
+      product: "bowman chrome",
+    });
+
+    expect(r.cardId).toBe("trout-bc");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("'bowman draft chrome' still maps to 'Bowman Draft Chrome' (existing entry — no regression)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("bonemer-bdc", "Bowman Draft Chrome"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "bowman draft chrome",
+    });
+
+    expect(r.cardId).toBe("bonemer-bdc");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Caleb Bonemer Bowman Draft Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("'topps chrome update' still maps to 'Topps Chrome Update' (existing entry — no regression)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("witt-tcu", "Topps Chrome Update"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2022,
+      product: "topps chrome update",
+    });
+
+    expect(r.cardId).toBe("witt-tcu");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Topps Chrome Update",
+      expect.objectContaining({ year: 2022 }),
+    );
+  });
+});
+
 describe("resolveCardId — parallel resolution preserved", () => {
   it("resolves parallelId when input.parallel present and detail.parallels has match", async () => {
     (cs.searchCatalog as any).mockResolvedValue([catalog("only-id", "Topps Update")]);
