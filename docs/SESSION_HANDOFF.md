@@ -550,6 +550,7 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 | Issue: `/estimate` telemetry deferral | Issue | #103 | Open |
 | Issue: B2 cardIdSource cohort definition | Issue | #106 | Open, decision deferred to Day-10 |
 | Finding 10 resolution — `compiq-functions/fn-*` source restoration to `main` | PR #107 (squashed) | `46390e7` | Merged 2026-05-22T00:43Z; +2,615 lines / 45 files; no production change (canonicalization only) |
+| Phase 3a CH access tripwire monitor (GitHub Action, Option D) | PR #108 + #109 (squashed) | `dbe5536` + `b1b773c8` | Shipped + dry-run verified on main; daily 02:30 UTC schedule active; federated MI `ch-monitor-oidc` + `Storage Blob Data Reader` on `stcompiqfnotgm2`; details in `docs/phase0/phase3a_monitor_config.md` |
 
 **Phase 0 measurement state:** complete except W6.1 (deferred to day-2+ for 48 h of post-PR-A1 warn-log accumulation). Active soak continues independently. Day-10 review window `2026-05-31T17:44:32Z`.
 
