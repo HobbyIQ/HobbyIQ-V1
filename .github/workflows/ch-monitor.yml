@@ -59,13 +59,22 @@ jobs:
             blob_name="${player}/cardhedge.json"
 
             # Read blob content via AAD (no connection string).
-            content=$(az storage blob download \
+            # NOTE: az storage blob download --file - dumps METADATA JSON to
+            # stdout, NOT the file content. Download to a tempfile and cat it
+            # to capture the actual blob bytes.
+            tmpfile=$(mktemp)
+            if az storage blob download \
               --account-name "$STORAGE_ACCOUNT" \
               --container-name "$CONTAINER" \
               --name "$blob_name" \
-              --file - \
+              --file "$tmpfile" \
               --auth-mode login \
-              --no-progress 2>/dev/null || echo "")
+              --no-progress >/dev/null 2>&1; then
+              content=$(cat "$tmpfile")
+            else
+              content=""
+            fi
+            rm -f "$tmpfile"
 
             last_modified=$(az storage blob show \
               --account-name "$STORAGE_ACCOUNT" \
