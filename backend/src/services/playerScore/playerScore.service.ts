@@ -289,12 +289,72 @@ export function buildPlayerScore(
 }
 
 /**
+ * Validate a Cosmos document id / partition-key value.
+ *
+ * Defends against Cosmos HTTP 400 rejections per
+ * `docs/phase0/cosmos_21_failure_rate_investigation.md` (commit 44e3884) —
+ * 22.6% of player_trends upserts were failing with 400 Bad Request.
+ * The most concrete cause is `playerNameSlug` returning the empty string
+ * for edge-case inputs (e.g. `"..."`, `"?"`, non-ASCII-only names),
+ * which produces an empty `id` field that Cosmos rejects.
+ *
+ * Rules:
+ *  - non-empty string
+ *  - ≤ 255 characters
+ *  - no `/`, `\`, `?`, `#` (Cosmos id-character restrictions)
+ */
+function isValidCosmosId(id: string | null | undefined): id is string {
+  if (typeof id !== "string" || id.length === 0) return false;
+  if (id.length > 255) return false;
+  if (/[/\\?#]/.test(id)) return false;
+  return true;
+}
+
+// Skip-rate telemetry. Sampled to avoid log noise on every estimate call.
+const _upsertStats = { attempts: 0, skipped_invalid_id: 0, lastLogAt: 0 };
+function logUpsertStatsThrottled(): void {
+  const now = Date.now();
+  if (now - _upsertStats.lastLogAt < 5 * 60 * 1000) return;
+  if (_upsertStats.attempts === 0) return;
+  const skipRate = Math.round((_upsertStats.skipped_invalid_id / _upsertStats.attempts) * 1000) / 10;
+  console.log(JSON.stringify({
+    event: "playerScore_upsert_stats",
+    source: "playerScore.service",
+    attempts: _upsertStats.attempts,
+    skipped_invalid_id: _upsertStats.skipped_invalid_id,
+    skipRatePct: skipRate,
+  }));
+  _upsertStats.lastLogAt = now;
+}
+
+/**
  * Upsert a PlayerScore document. Also fires a fire-and-forget write to
  * `player_trend_history` so the PlayerIQView score chart has data over time.
  *
- * Never throws.
+ * Never throws. Skips with structured warning when `score.id` or
+ * `score.playerId` fails Cosmos id validation (see `isValidCosmosId`).
  */
 export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
+  _upsertStats.attempts += 1;
+
+  // Pre-flight validation. Cosmos rejects empty / oversized / special-char
+  // ids with HTTP 400, which previously dominated 97% of failures in
+  // hobbyiq-comps-centralus (~22.6% of all writes). Skip + log instead of
+  // letting Cosmos reject; counter visible via `playerScore_upsert_stats`.
+  if (!isValidCosmosId(score.id) || !isValidCosmosId(score.playerId)) {
+    _upsertStats.skipped_invalid_id += 1;
+    console.warn(JSON.stringify({
+      event: "playerScore_upsert_skipped_invalid_id",
+      source: "playerScore.service",
+      playerName: score.playerName ?? null,
+      id: score.id ?? null,
+      playerId: score.playerId ?? null,
+      mlbPlayerId: score.mlbPlayerId ?? null,
+    }));
+    logUpsertStatsThrottled();
+    return;
+  }
+
   try {
     await initContainers();
     if (!trendsContainer) return;
@@ -303,6 +363,7 @@ export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
     console.warn("[playerScore] upsert failed:", (err as Error).message);
     return;
   }
+  logUpsertStatsThrottled();
 
   // Fire-and-forget history write
   void (async () => {
@@ -320,6 +381,17 @@ export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
     }
   })();
 }
+
+// Test-only internal accessors.
+export const __playerScoreInternals = {
+  isValidCosmosId,
+  resetStats: (): void => {
+    _upsertStats.attempts = 0;
+    _upsertStats.skipped_invalid_id = 0;
+    _upsertStats.lastLogAt = 0;
+  },
+  getStats: () => ({ ..._upsertStats }),
+};
 
 /** Read by playerId (preferred — single-partition lookup). */
 export async function getPlayerScore(playerId: string): Promise<PlayerScore | null> {
