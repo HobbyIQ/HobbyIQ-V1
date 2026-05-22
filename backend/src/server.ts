@@ -3,6 +3,7 @@ import app from "./app.js";
 import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
+import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 
 // Initialize App Insights — must be called before the server handles requests.
 // The Azure App Service agent (ApplicationInsightsAgent_EXTENSION_VERSION=~3)
@@ -42,4 +43,12 @@ app.listen(port, "0.0.0.0", () => {
   } catch (err: any) {
     console.error("[server] startPriceAlertEvaluatorJob failed:", err?.message ?? err);
   }
+  // Phase 1 CH-removal-v2 fix (commit 8d6d769): prime the resolveCardId LRU
+  // cache for popular cards so the first iOS request after a container
+  // restart doesn't pay the multi-candidate disambiguation cold-path.
+  // Fire-and-forget — failure is non-fatal (queries still resolve, just slow
+  // on first hit per card).
+  warmResolveCardIdCache().catch((err) => {
+    console.warn("[server] warmResolveCardIdCache failed:", err?.message ?? err);
+  });
 });

@@ -157,13 +157,16 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 
 ### After defects #1 + #5 (resolveCardId selection)
 
+**Endpoint note (correction 2026-05-22, Phase 1 implementation):** acceptance uses `POST /api/compiq/price` (free-text endpoint), NOT `/api/compiq/price-by-id`. The latter is short-circuited under `CARDSIGHT_MODE=exclusive` until PR #110's meaningful-query fall-through is re-shipped (Step A of §6). `/price` exercises the same `fetchComps → findCompsRouted → resolveCardId` code path and is where Phase 1's fix is observable today. `/price-by-id` becomes observable after Step A.
+
 | Test | Payload | Expected after fix |
 |---|---|---|
-| Mike Trout 2011 TU Base demo | `POST /api/compiq/price-by-id { cardHedgeCardId, query: "Mike Trout 2011 Topps Update Baseball" }` | `source: "cardsight"` (or "live"), `compsUsed >= 5`, comps from cardId `fda530ab-...` with title format `"2011 Topps Update Series Mike Trout #US175 ..."` |
-| Ohtani 2018 TU Base | `POST /api/compiq/price-by-id { query: "Shohei Ohtani 2018 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `23084701-...` (the 1818-record candidate, not the empty duplicate `e5d2c888-...`) |
-| Judge 2017 TU Base | `POST /api/compiq/price-by-id { query: "Aaron Judge 2017 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `1c810c2c-...` |
-| Acuna 2018 TU Base | `POST /api/compiq/price-by-id { query: "Ronald Acuna 2018 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `65aa7e68-...` or `6162c768-...` |
-| Negative — junk player | `POST /api/compiq/price-by-id { query: "Fake Player 2099 Topps Update" }` | `source: "no-recent-comps"`, no crash, no `variant-mismatch` |
+| Mike Trout 2011 TU Base demo | `POST /api/compiq/price { query: "Mike Trout 2011 Topps Update Baseball" }` | `source: "live"` (or "cardsight"), `recentComps.length >= 5`, comps from cardId `fda530ab-...` with title format `"2011 Topps Update Series Mike Trout #US175 ..."` |
+| Ohtani 2018 TU Base | `POST /api/compiq/price { query: "Shohei Ohtani 2018 Topps Update Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `23084701-...` (the 1818-record candidate, not the empty duplicate `e5d2c888-...`) |
+| Judge 2017 TU Base | `POST /api/compiq/price { query: "Aaron Judge 2017 Topps Update Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `1c810c2c-...` |
+| Bobby Witt Jr 2022 Topps Chrome | `POST /api/compiq/price { query: "Bobby Witt Jr 2022 Topps Chrome Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from a Topps Chrome (not Topps Update) cardId |
+| Niche prospect (DailyIQ-class) | `POST /api/compiq/price { query: "Caleb Bonemer 2024 Bowman Draft Chrome" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `626bebd0-...` or sibling |
+| Negative — junk player | `POST /api/compiq/price { query: "Fake Player 2099 Topps Update" }` | `source: "no-recent-comps"`, no crash, no `variant-mismatch` |
 
 ### After defect #3 (parser + dictionary)
 
@@ -182,6 +185,8 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 | Bonemer Blue Refractor /150 live | `POST /api/compiq/price-by-id { query: "2024 Bowman Draft Chrome Caleb Bonemer Blue Refractor Auto" }` | resolveCardId resolves to parent cardId `496a7e19-...` with parallel_id matching Blue Refractor (parallel `0c0d36a1-...`), not Blue Wave Refractor (`cbc2ecd8-...`). Pricing returns Blue Refractor /150 comps (which may be thin per addendum §11 carry-forward). |
 
 ## 5. Phased fix sequencing
+
+**Visibility note:** Phase 1's mapper fix is foundational. `/api/compiq/price` exercises it immediately because that endpoint already flows through `findCompsRouted → resolveCardId`. `/api/compiq/price-by-id` activates the same fix only after Step A (PR #110 re-ship), because the route's cardhedge-namespace cardIdSource currently dead-ends under exclusive mode before reaching resolveCardId.
 
 ### Phase 0 — Defect #4 (optional, can ship anytime)
 
