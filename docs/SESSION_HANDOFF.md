@@ -792,3 +792,77 @@ Step A ship gate: 5/5 demo cards return `source: cardsight` (not just `source: l
 4. Ship gate: 5/5 demo cards return `source: cardsight` via `/api/compiq/price-by-id`; no regression on `/price`; full backend suite green
 
 **Out of scope for Step A:** Phase 2/3, defects #4/#6, MCP rewire, `fn-cardhedge-comps` decommission.
+
+---
+
+# 2026-05-23 PM — Step A deployed prematurely, rolled back; Phase 2 scope expanded to include Step A's routing change
+
+Continuation session immediately after the AM Phase 1 ship. Attempted Step A as a standalone single-PR change (per the v2 plan correction earlier this morning). Smoke acceptance failed; rolled back to Phase 1's deployed state and folded Step A's routing change into Phase 2's scope.
+
+## What happened
+
+| Event | Details |
+|---|---|
+| Step A routing change deployed | Branch `feature/step-a-part1-meaningful-query-fallthrough` commit `f5cd3e7` (revert-the-revert of `83ea415`). Deployed to hobbyiq3 via slim-zip pattern without PR open. |
+| Step A smoke gate | **3/5** with verified iOS-shape displayLabel queries; **4/5** with simpler shapes. Below 5/5 required. |
+| Rollback target | hobbyiq3 redeployed from `main` HEAD `a121baf` (Phase 1 squash-merge + handoff entry; runtime-identical to `a3a84b2` and `5c9d561`). `/api/health` verified at `a121baf` post-restart. |
+| Post-rollback smoke | Phase 1 paths green — 5/5 `/api/compiq/price`, `/estimate` Mike Trout returns `source=live $408`. `/price-by-id` cache-busted call returns `source=no-recent-comps` (legacy short-circuit, as expected for the pre-Step-A state). |
+| Step A branch | `feature/step-a-part1-meaningful-query-fallthrough` preserved at `origin/f5cd3e7`. NOT mergeable standalone — Phase 2 will consume the routing change as part of its PR. |
+| v2 plan update | Commit `02e5ccf` on main: Phase 2 scope expanded to include Step A's routing change + queryContext plumbing alongside defect #3. Verified demo card numbers locked. Cross-catalog disagreement finding added. |
+
+## Durable findings captured today
+
+1. **/estimate is iOS's primary pricing path and is Phase-1-covered.** Verified via grep (`HobbyIQViewModel.swift` calls `priceCardEstimate` → `/api/compiq/estimate`) and 5/5 smoke against the same demo card set Phase 1 used. No /estimate-specific defect, no /estimate-specific path; same `computeEstimate → fetchComps → findCompsRouted → resolveCardId` chain.
+2. **/price-by-id is harness-dominated with low iOS traffic.** 278 calls in 30d, 19 distinct queries; top 10 are harness tier1 baseline cards (Bonemer, Hammond, Kurtz, Wood) at 42×42×43 calls each. Real iOS calls are ~3 in 30d (resolvedLabel-cardId fallback). iOS code path exists and is reachable but rarely exercised.
+3. **iOS Swift code DOES call /price-by-id.** Found at `HobbyIQ/APIService.swift:106-113` `priceByCardId` → `HobbyIQ/CompIQPricedCardView.swift:962-968` `fetchPrice` from `CompIQVariantPickerView`. The earlier "iOS doesn't call /price-by-id" framing was a grep-against-wrong-location artifact (the OneDrive working-tree mirror lacks the `HobbyIQ/` directory).
+4. **CH and Cardsight catalog disagree on demo card numbers/variants for 4 of 5 demo cards.** Mike Trout US175 is the only universal agreement. Ohtani: catalog-duplicate effects. Judge: my US87 was wrong, CH+reality say US99. Witt Jr: my USC150 was wrong, CH says USC35. Bonemer: CH ranks the auto variant (CPA-CBO) above the paper base (BD-31); Cardsight has them as distinct cardIds. Mapping between CH and Cardsight is NOT a number-level 1:1.
+5. **Step A's routing change works mechanically but doesn't activate cleanly under iOS-shape queries.** iOS-shape `displayLabel` strings (`"2017 Topps Update Baseball Aaron Judge US99 Base"`) contaminate Cardsight catalog text search — the card-number + "Baseball" + "Base" suffix push the right card out of the top-3 pricing probe. Phase 2's queryContext plumbing + dictionary expansion is the foundation needed before Step A's routing can hit 5/5.
+
+## Process correction
+
+**Step A was deployed before PR was opened.** Default workflow should be: PR open → eyeball pass → approve → merge → deploy. Today's sequence was: build → deploy → smoke → fail → rollback. The rollback was clean but the deploy-first pattern means production state diverged from main (and from PR review) for ~30 minutes. Future workstreams: PR before deploy. Smoke against a staging slot or a feature-flag-gated path if pre-production verification is needed.
+
+## Verified demo card list (locked 2026-05-23 PM)
+
+| Card | CH catalog # | Cardsight catalog # | Demo purpose |
+|---|---|---|---|
+| Mike Trout 2011 Topps Update | US175 | US175 | canonical demo (both catalogs agree) |
+| Shohei Ohtani 2018 Topps Update | US285 | US153 (top hit; US285 also exists at sibling cardId) | catalog-duplicate exercise; Phase 1 #5 fix handles |
+| Aaron Judge 2017 Topps Update | US99 | varies | locked US99; was wrong about US87 |
+| Bobby Witt Jr 2022 Topps Chrome Update | USC35 | varies | locked USC35; was wrong about USC150 |
+| Caleb Bonemer 2024 Bowman Draft Chrome | CPA-CBO (auto) / BD-31 (paper) | both as separate cardIds | dual demo: prospect-auto + paper RC |
+
+## Updated carry-forwards entering next session
+
+- **Phase 2 (expanded scope) is the next workstream.** Three changes in one PR:
+  1. Defect #3 — `parseCardQuery` SET_PATTERNS ordering + `COMPIQ_TO_CARDSIGHT_RELEASES` dictionary expansion
+  2. queryContext plumbing — `fetchComps → findCompsRouted` passes structured fields through
+  3. Step A routing — re-apply PR #110's meaningful-query fall-through in `/price-by-id` handler (consume from preserved branch `f5cd3e7`)
+- **Acceptance gate:** 5/5 verified-number demo cards via `/price`, `/price-by-id`, AND `/estimate`. No regression on Phase 1's existing /price + /estimate green paths.
+- **Phase 2 may surface defects #8+ during implementation.** Discipline holds: HALT and characterize if a new defect appears.
+- **Defects #4 (AUTO regex), #6 (parser sport-suffix), #7 (CH-identity guard)** all remain deferred to own PRs; not Phase 2 dependencies.
+- **Phase 3 (defect #2 — parallelMatches set-equality)** still queued post-Phase-2.
+- **MCP rewire (Step B)** and **fn-cardhedge-comps decommission (Step C)** unchanged.
+- **2024-2025 Topps Chrome Update Base catalog-duplicate diagnostic** still pending from Path A addendum.
+- **`compiq-mcp` App Insights wiring** still pending — would have shortened today's diagnosis loops.
+- **Pre-existing carry-forwards still pending:** W6.1 warn-log baseline, Finding 6, COSMOS_KEY shared-defect, Cosmos 21% regional routing, Phase 3a monitor lag, DailyIQ niche-prospect-auto coverage gap, Day-10 soak review (2026-05-31), iOS workstream items.
+
+## Production state at end of session
+
+- `origin/main` HEAD: `02e5ccf` (v2 plan update reflecting today's findings)
+- hobbyiq3 deployed: `a121baf` (Phase 1 + AM handoff; runtime-identical to `a3a84b2`/`5c9d561`)
+- compiq-mcp deployed: `5fad0a2` (pre-WS3 blob-reading code; unchanged since 2026-05-22 rollback)
+- App settings unchanged from end of 2026-05-22
+
+## Next session entry point
+
+**Phase 2 (expanded scope) PR.** Consume the preserved Step A routing branch as a starting point:
+1. `git checkout main && git pull && git checkout -b feature/phase2-defect3-and-step-a`
+2. Cherry-pick or merge `feature/step-a-part1-meaningful-query-fallthrough` to bring in the Step A routing change
+3. Add defect #3 work: `cardQueryParser.ts` SET_PATTERNS ordering fix + `cardsight.mapper.ts` `COMPIQ_TO_CARDSIGHT_RELEASES` expansion
+4. Add queryContext plumbing in `compiqEstimate.service.ts` `fetchComps → findCompsRouted` call
+5. Test surface: parser unit tests for new patterns, dictionary unit tests for new entries, queryContext propagation test, end-to-end 5/5 smoke
+6. Ship gate: 5/5 verified-number demo cards via `/price` + `/price-by-id` + `/estimate`
+7. **PR open BEFORE deploy.** Eyeball review before merge.
+
+Out of scope for Phase 2: defects #4/#6/#7, Phase 3, MCP rewire, fn-cardhedge-comps decommission.
