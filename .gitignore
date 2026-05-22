@@ -34,3 +34,6 @@ logdownload_hotfix/
 logdownload_2f6c9d/
 logdownload_*/
 tmp/
+
+# Azure Functions Python bytecode (Finding 10 / source-restoration PR)
+compiq-functions/**/__pycache__/
