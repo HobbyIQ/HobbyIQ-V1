@@ -142,8 +142,42 @@ const hasAuto =
 | #3 | `cardQueryParser.ts`, `cardsight.mapper.ts` (dict) | — | #1's catalog query quality (but #1 fix can ship in parallel) |
 | #4 | `cardQueryParser.ts` (AUTO regex) | — | Auto-set comp matches with non-standard title formats |
 | #5 | `cardsight.mapper.ts` (selection block) | — | Catalog-duplicate cards (which is most demo cards) |
+| #6 | `cardQueryParser.ts` (playerName extraction) | — | Any query that includes a sport-suffix token (e.g. "Baseball", "Football") — parser leaves it attached to playerName |
+| #7 | `compiqEstimate.service.ts:1124-1150` (CH-identity guard) | #6 amplifies it but not strictly required | Activation of `/price-by-id` (Step A) — guard's haystack relies on Cardsight populating `card.player`, which Cardsight does NOT do (only `card.name`) |
 
 **Critical observation:** #1 and #5 share a code location. Implementations cannot fully separate. Plan them as a single joint fix.
+
+### Defect #6 — `parseCardQuery` sport-suffix stopword gap
+
+**Location:** [cardQueryParser.ts](../../backend/src/services/compiq/cardQueryParser.ts) — playerName extraction logic (after year/brand/set/parallel stripping).
+
+**Current behavior:** Surfaced during Phase 1 acceptance verification (2026-05-22). Input `"Mike Trout 2011 Topps Update Baseball"` is parsed:
+- year=2011 → stripped
+- brand="Topps" + set="Topps Update" → stripped
+- "Baseball" suffix → NOT stripped (no sport stopword)
+- Leftover tokens → playerName="Mike Trout Baseball" (corrupted)
+
+Cardsight's catalog stores set names with sport suffixes (e.g., "2011 Topps Update Baseball"), so iOS-shape queries that copy the catalog's set label include "Baseball" — which the parser then attaches to playerName.
+
+**Required behavior:** Strip sport-suffix tokens (`Baseball`, `Football`, `Basketball`, `Hockey`, `Soccer`) from playerName extraction. Likely a single tokens-to-ignore list addition.
+
+**Estimated scope:** ~5-10 LOC. Small PR.
+
+**Coupled with:** Amplifies defect #7. Without #6's fix, #7 trips for any query with a sport suffix.
+
+### Defect #7 — CH-identity guard's haystack doesn't include Cardsight's actual player field
+
+**Location:** [compiqEstimate.service.ts:1124-1150](../../backend/src/services/compiq/compiqEstimate.service.ts#L1124-L1150)
+
+**Current behavior:** The guard tokenizes `body.playerName` (≥4-char tokens) and checks all tokens appear in `(fetched.card.player ?? "") + " " + (fetched.card.title ?? "")`. Under Card Hedge, `fetched.card.player` was always populated. Under Cardsight, the API response carries `card.name` (the player's name) but NOT a separate `card.player` field — `cardsight.router.ts:findCompsViaCardsight` assigns `baseCard.player = pricing.card?.player ?? undefined`, which is undefined because Cardsight's `card` object has no `player` key. The haystack reduces to just `card.title` (which is also `pricing.card.name`, just under a different field name).
+
+**Required behavior:** Under Cardsight responses, the haystack must include `card.name` (the player's name as Cardsight knows it). The cleanest fix is in the router: when building `baseCard` from a Cardsight `pricing.card`, set `player` from `pricing.card.name` if `pricing.card.player` is absent. Then the existing guard logic works unchanged.
+
+**Estimated scope:** ~5-10 LOC. Small PR. One-line change in `cardsight.router.ts:findCompsViaCardsight` (around the `baseCard` construction) plus a unit test.
+
+**Coupled with:** Blocks Step A (re-ship PR #110 meaningful-query fall-through). Without #7's fix, the guard discards every successful Cardsight resolution from `/price-by-id`, defeating the purpose of re-shipping. Defect #6 amplifies but doesn't gate it — even cleanly-parsed playerNames trip the guard when `card.player` is null AND the haystack's title doesn't happen to contain the surname.
+
+**Verification (during Phase 1 acceptance):** Mike Trout query "Mike Trout 2011 Topps Update Baseball" resolved correctly to cardId `fda530ab` with 133 comps from Cardsight. The guard then trivially discarded all 133 because `parsed.playerName="Mike Trout Baseball"` (defect #6) and `fetched.card.player=null` (defect #7). With "Baseball" removed from the query, defect #6 didn't fire and the guard passed because `card.title="Mike Trout"` matched both `mike` and `trout` tokens — but this is fragile coincidence, not robustness. If `card.title` were null or differently shaped, the guard would still trip even for clean queries.
 
 ## 4. Acceptance test queries
 
@@ -157,13 +191,16 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 
 ### After defects #1 + #5 (resolveCardId selection)
 
+**Endpoint note (correction 2026-05-22, Phase 1 implementation):** acceptance uses `POST /api/compiq/price` (free-text endpoint), NOT `/api/compiq/price-by-id`. The latter is short-circuited under `CARDSIGHT_MODE=exclusive` until PR #110's meaningful-query fall-through is re-shipped (Step A of §6). `/price` exercises the same `fetchComps → findCompsRouted → resolveCardId` code path and is where Phase 1's fix is observable today. `/price-by-id` becomes observable after Step A.
+
 | Test | Payload | Expected after fix |
 |---|---|---|
-| Mike Trout 2011 TU Base demo | `POST /api/compiq/price-by-id { cardHedgeCardId, query: "Mike Trout 2011 Topps Update Baseball" }` | `source: "cardsight"` (or "live"), `compsUsed >= 5`, comps from cardId `fda530ab-...` with title format `"2011 Topps Update Series Mike Trout #US175 ..."` |
-| Ohtani 2018 TU Base | `POST /api/compiq/price-by-id { query: "Shohei Ohtani 2018 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `23084701-...` (the 1818-record candidate, not the empty duplicate `e5d2c888-...`) |
-| Judge 2017 TU Base | `POST /api/compiq/price-by-id { query: "Aaron Judge 2017 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `1c810c2c-...` |
-| Acuna 2018 TU Base | `POST /api/compiq/price-by-id { query: "Ronald Acuna 2018 Topps Update Baseball" }` | `source: "cardsight"`, `compsUsed >= 5`, comps from cardId `65aa7e68-...` or `6162c768-...` |
-| Negative — junk player | `POST /api/compiq/price-by-id { query: "Fake Player 2099 Topps Update" }` | `source: "no-recent-comps"`, no crash, no `variant-mismatch` |
+| Mike Trout 2011 TU Base demo | `POST /api/compiq/price { query: "Mike Trout 2011 Topps Update Baseball" }` | `source: "live"` (or "cardsight"), `recentComps.length >= 5`, comps from cardId `fda530ab-...` with title format `"2011 Topps Update Series Mike Trout #US175 ..."` |
+| Ohtani 2018 TU Base | `POST /api/compiq/price { query: "Shohei Ohtani 2018 Topps Update Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `23084701-...` (the 1818-record candidate, not the empty duplicate `e5d2c888-...`) |
+| Judge 2017 TU Base | `POST /api/compiq/price { query: "Aaron Judge 2017 Topps Update Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `1c810c2c-...` |
+| Bobby Witt Jr 2022 Topps Chrome | `POST /api/compiq/price { query: "Bobby Witt Jr 2022 Topps Chrome Baseball" }` | `source: "live"`, `recentComps.length >= 5`, comps from a Topps Chrome (not Topps Update) cardId |
+| Niche prospect (DailyIQ-class) | `POST /api/compiq/price { query: "Caleb Bonemer 2024 Bowman Draft Chrome" }` | `source: "live"`, `recentComps.length >= 5`, comps from cardId `626bebd0-...` or sibling |
+| Negative — junk player | `POST /api/compiq/price { query: "Fake Player 2099 Topps Update" }` | `source: "no-recent-comps"`, no crash, no `variant-mismatch` |
 
 ### After defect #3 (parser + dictionary)
 
@@ -182,6 +219,8 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 | Bonemer Blue Refractor /150 live | `POST /api/compiq/price-by-id { query: "2024 Bowman Draft Chrome Caleb Bonemer Blue Refractor Auto" }` | resolveCardId resolves to parent cardId `496a7e19-...` with parallel_id matching Blue Refractor (parallel `0c0d36a1-...`), not Blue Wave Refractor (`cbc2ecd8-...`). Pricing returns Blue Refractor /150 comps (which may be thin per addendum §11 carry-forward). |
 
 ## 5. Phased fix sequencing
+
+**Visibility note:** Phase 1's mapper fix is foundational. `/api/compiq/price` exercises it immediately because that endpoint already flows through `findCompsRouted → resolveCardId`. `/api/compiq/price-by-id` activates the same fix only after Step A (PR #110 re-ship), because the route's cardhedge-namespace cardIdSource currently dead-ends under exclusive mode before reaching resolveCardId.
 
 ### Phase 0 — Defect #4 (optional, can ship anytime)
 
@@ -226,6 +265,8 @@ Once Phases 1-3 land, the original migration plan applies — but simpler than t
 ### Step A — Re-ship the `/price-by-id` meaningful-query fall-through (was PR #110)
 
 The reverted PR #110 was correct in concept; it was unblocked at the routing layer but blocked at the selection layer. With Phases 1-3 landed, the same code change can re-ship as a small PR. The change is now low-risk because the underlying `findCompsRouted → resolveCardId → getPricing` path is reliable.
+
+**Sub-prerequisite — defect #7 fix MUST land before or alongside Step A.** Phase 1 acceptance verification surfaced that the CH-identity guard at [compiqEstimate.service.ts:1124-1150](../../backend/src/services/compiq/compiqEstimate.service.ts#L1124-L1150) discards every successful Cardsight resolution because the guard's haystack relies on `fetched.card.player` and Cardsight's response shape leaves that field unset. Without the #7 fix, re-shipping PR #110 would route `/price-by-id` through `resolveCardId` correctly only to have computeEstimate's guard then wipe the comps. Step A is therefore better characterized as a two-part change: (i) re-ship PR #110's meaningful-query fall-through, (ii) fix defect #7's CH-identity guard for Cardsight response shape. Both are small PRs; both must land together to make `/price-by-id` observable.
 
 **Acceptance:** the original PR #110 smoke tests now pass on the iOS-shape query family, not just the WS2-known-good full-text shape.
 
