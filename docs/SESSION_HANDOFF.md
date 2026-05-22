@@ -722,3 +722,73 @@ The variant filter itself ([cardQueryParser.ts:291-354](phase0/cardsight_coverag
    - 24h post-deploy: `outcome=ok / source=cardsight` rate measurably above 1.6%
 
 Out of scope for Phase 1: dictionary expansion (Phase 2), parallel disambiguation (Phase 3), AUTO regex (Phase 0 or 3), MCP rewire (post-Phase 3), `fn-cardhedge-comps` decommission (post-Phase 3).
+
+---
+
+# 2026-05-23 — Phase 1 CH removal shipped (PR #112)
+
+Phase 1 of the v2 CH-removal plan (`docs/phase0/ch_removal_v2_plan.md`) shipped on `main`. First code change since yesterday's rollback batch. Two defects (#6 and #7) surfaced during acceptance verification and were documented in the v2 plan; both are deferred to focused PRs in later sessions.
+
+## What shipped
+
+| Commit | What |
+|---|---|
+| `5c9d561` (PR #112, squash) | Phase 1 mapper rewrite + LRU cache + startup warming + 13 new mapper tests + plan doc updates (defects #6/#7 characterization, Step A reclassification) |
+
+PR title: `feat(cardsight): Phase 1 — resolveCardId disambiguation + cache + warming`. Branch `feature/phase1-ch-removal-resolvecardid` squash-merged and deleted from `origin`.
+
+**Deployed SHA:** `a3a84b2` on `hobbyiq3` (deployed 2026-05-22T17:13:53Z, restarted 2026-05-22T17:18Z). Post-merge `/api/health` still reports `a3a84b2`. The squash-merge to `main` produced `5c9d561`; no auto-deploy fired (only the `CompIQ Pricing Regression Harness` workflow ran, non-destructive). `main` HEAD = `5c9d561`; deployed = `a3a84b2`; runtime is functionally identical (squash-merge SHA differs from pre-merge branch SHA, but the file content is the same).
+
+## Ship gate verification
+
+| Test | Result |
+|---|---|
+| 5 demo queries (Trout/Ohtani/Judge/Witt/Bonemer 2011-2024 Topps Update / Topps Chrome / Bowman Draft Chrome) | **5/5 PASS** — all `source=live`, real comps, real FMV ($408 Trout, $185 Ohtani, $91 Judge, $8 Witt, $103 Bonemer) |
+| 4 regression queries (historical `/price` ok rows from `comp_logs` 30d window) | **4/4 PASS** — no regression on prior working queries |
+| Negative junk-player | PASS — `source=no-recent-comps`, HTTP 200, no crash, no variant-mismatch |
+| Backend test suite | **725/725 passing** (+10 new mapper tests vs pre-Phase-1 baseline) |
+| Cache warming at startup | **10/10 primed**, 0 failed, 8056ms elapsed |
+| Cold-call latency | 42-3283ms (well under iOS 60s budget) |
+| Warm-call latency | 42-124ms (LRU + cardsight.client cacheWrap) |
+
+## Defects #6 + #7 surfaced during acceptance
+
+Both characterized in [docs/phase0/ch_removal_v2_plan.md](phase0/ch_removal_v2_plan.md) §2; neither in code yet.
+
+- **Defect #6 — `parseCardQuery` sport-suffix stopword gap** ([cardQueryParser.ts](../backend/src/services/compiq/cardQueryParser.ts) playerName extraction). "Mike Trout 2011 Topps Update Baseball" parses to `playerName="Mike Trout Baseball"`. No sport stopword strips "Baseball"/"Football"/etc. Small fix; own PR.
+
+- **Defect #7 — CH-identity guard's Cardsight blindness** ([compiqEstimate.service.ts:1124-1150](../backend/src/services/compiq/compiqEstimate.service.ts#L1124-L1150)). Guard checks `parsed.playerName` tokens against `card.player + " " + card.title`. Cardsight responses populate `card.name` but NOT `card.player`. Haystack reduces to title only, so guard discards every successful Cardsight resolution when tokens don't appear in title (which is fragile coincidence even when defect #6 doesn't fire).
+
+## Step A reclassified — two-part work
+
+The original v2 plan §6 had Step A as a single change ("re-ship the PR #110 meaningful-query fall-through"). Phase 1 acceptance verification surfaced that defect #7 BLOCKS Step A — re-shipping PR #110's routing alone would have `/price-by-id` route correctly through `resolveCardId` only to have the CH-identity guard then wipe the comps.
+
+**Step A is now formally a two-part PR (must land together):**
+
+1. Re-ship PR #110's meaningful-query fall-through (the original Step A scope)
+2. Fix defect #7's CH-identity guard for Cardsight response shape — one-line change in `cardsight.router.ts:findCompsViaCardsight` to populate `baseCard.player` from `pricing.card.name` when `pricing.card.player` is absent, plus a unit test
+
+Step A ship gate: 5/5 demo cards return `source: cardsight` (not just `source: live`) via `/api/compiq/price-by-id`, no regression on `/price`.
+
+## Updated carry-forwards entering next session
+
+- **Step A (next phase, two-part PR):** re-ship PR #110 routing + fix defect #7 CH-identity guard. Both small, both must land in the same PR. Ship gate: 5/5 demo cards via `/price-by-id`.
+- **Defect #6 deferred** (parser sport-suffix stopword). Own focused PR. Independent of Step A — useful but not gating.
+- **Defect #4 deferred** (`isCompVariantMatch` AUTO regex). Already deferrable per v2 plan §5; still applies.
+- **Phase 2 unchanged** (defect #3 — `parseCardQuery` SET_PATTERNS + `COMPIQ_TO_CARDSIGHT_RELEASES` dictionary expansion). Improves catalog query input quality; can ship in parallel with Step A.
+- **Phase 3 unchanged** (defect #2 — `parallelMatches` set-equality). Last-mile parallel disambiguation; after Phase 1 + 2 land.
+- **MCP `/predict` architectural mismatch unchanged** — Step B of v2 plan §6. Three sub-options still open (per-card refactor / new aggregation endpoint / decouple from MCP).
+- **LRU cache will activate after Step A queryContext plumbing.** Current Phase 1 deploys saw 0% LRU hit rate because warming uses structured input keys while `/price` calls land with joined-string keys. Step A's queryContext plumbing (the part that re-ships PR #110's routing) will align the keys, at which point cache hit rate should climb sharply for the warming-primed cards.
+- **2024-2025 Topps Chrome Update Base catalog-duplicate diagnostic** — still pending from Path A addendum (`docs/phase0/cardsight_coverage_characterization.md`).
+- **Pre-existing carry-forwards still pending:** W6.1 warn-log baseline, Finding 6 re-investigation, COSMOS_KEY shared-defect, Cosmos 21% regional-routing diagnostic, `compiq-mcp` App Insights wiring, Phase 3a monitor lag, DailyIQ niche-prospect-auto coverage gap, Day-10 soak review window (2026-05-31T17:44:32Z), iOS workstream items.
+
+## Next session entry point
+
+**Step A — two-part PR: re-ship PR #110 routing + fix defect #7 CH-identity guard.**
+
+1. Re-read [docs/phase0/ch_removal_v2_plan.md](phase0/ch_removal_v2_plan.md) §6 Step A (now reclassified as two-part)
+2. Re-read the original PR #110 (reverted as `83ea415`) to identify the routing change to re-introduce: meaningful-query fall-through in `fetchComps` + queryContext plumbing from `compiqEstimate.service.ts` into `findCompsRouted`
+3. Add the defect #7 fix in `cardsight.router.ts:findCompsViaCardsight` (~5-10 LOC + unit test)
+4. Ship gate: 5/5 demo cards return `source: cardsight` via `/api/compiq/price-by-id`; no regression on `/price`; full backend suite green
+
+**Out of scope for Step A:** Phase 2/3, defects #4/#6, MCP rewire, `fn-cardhedge-comps` decommission.
