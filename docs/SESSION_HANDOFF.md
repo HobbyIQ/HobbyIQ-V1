@@ -866,3 +866,79 @@ Continuation session immediately after the AM Phase 1 ship. Attempted Step A as 
 7. **PR open BEFORE deploy.** Eyeball review before merge.
 
 Out of scope for Phase 2: defects #4/#6/#7, Phase 3, MCP rewire, fn-cardhedge-comps decommission.
+
+---
+
+# 2026-05-24 — Phase 2 design complete; ready for implementation
+
+Design-only session. Four docs commits build the foundation for Phase 2 implementation. No code, no deploys, no production change. Next session can start cold from the design doc and the implementer checklist.
+
+## What shipped this session
+
+| Commit | What |
+|---|---|
+| `172ef42` | `docs/phase0/phase2_design.md` — Phase 2 design (parser + dictionary + queryContext plumbing + Step A routing) in one coherent PR |
+| `53eab5e` | Pre-implementation diagnostic addendum — cache key normalization, dictionary verification, Bowman Chrome regression risk |
+| `8a51dd5` | Warming-target cardNumber audit addendum — locked CH-format numbers across all 10 CACHE_WARM_TARGETS |
+| `(this commit)` | SESSION_HANDOFF 2026-05-24 entry |
+
+**Net production change: zero.** hobbyiq3 still at `a121baf` (Phase 1 + handoff). compiq-mcp unchanged at pre-WS3 `5fad0a2`.
+
+## Defects characterized this session
+
+- **Defect #8** — `parseCardQuery` cardNumber regex misses iOS displayLabel patterns. Specifically: `US175` / `USC35` / `USC150` (unhyphenated letter-digit) and `CPA-CBO` / `C24-CBO` (letter-letter hyphenated). Universal: returns `null` for all 10 demo card displayLabels. **Bundled into Phase 2** as a 3-5 line regex expansion alongside defect #6.
+- **Defect #9** — `resolveCardId` cardNumber detail-probe assumes 1:1 catalog mapping between CH and Cardsight. When iOS queries carry CH-format numbers (`US285`) but Cardsight catalog returns different numbers (`US153`) for the same logical card, the exact-match filter rejects the data-bearing candidate. **Deferred** — Phase 1's existing fall-through logic at [cardsight.mapper.ts:207-210](../backend/src/services/compiq/cardsight.mapper.ts#L207-L210) handles gracefully (falls through to pricing probe on the original candidate set); emits `cardnumber_filter_no_match` warning log but doesn't break resolution. Polish PR after Phase 2 ships.
+
+## Phase 2 implementation scope (locked)
+
+- **~115-170 LOC** across 3-4 files
+- **Single PR** consuming branch `feature/step-a-part1-meaningful-query-fallthrough` (`f5cd3e7`) for Step A's routing change
+- **Five changes**: parser SET_PATTERNS (defect #3a), dictionary expansion + Bowman Chrome correction (defect #3b), defect #6 sport-suffix NOISE, defect #8 cardNumber regex, queryContext plumbing, Step A routing
+- **Acceptance gate**: 5/5 verified demo cards via `/price` + `/price-by-id` + `/estimate`; cache hit rate ≥60% on warm pass; 4/4 historical Bowman Chrome ok-rows still pass
+
+## Catalog disagreement finding (durable)
+
+CH `/search-list` and Cardsight catalog disagree on card numbers for 8/10 warming targets. Per-card numbers reconciled in `phase2_design.md` audit addendum (`8a51dd5`). Cache key alignment uses CH-format numbers (the iOS displayLabel source-of-truth). Defect #9's filter behavior is the only downstream symptom; Phase 1's fall-through absorbs it.
+
+## Next session entry point
+
+1. Read `docs/phase0/phase2_design.md` end-to-end including both addenda (`53eab5e` Q1/Q2/Q3 diagnostic + `8a51dd5` warming-target audit).
+2. Implementation checklist is in design doc §10 ("Implementing session checklist").
+3. Recommended order:
+   - Parser changes (`cardQueryParser.ts`) — cleanest entry point: defects #6 + #8 stopword + cardNumber regex + defect #3a SET_PATTERNS entry
+   - Dictionary (`cardsight.mapper.ts` `COMPIQ_TO_CARDSIGHT_RELEASES`) — defect #3b: add `"topps update"`, correct `"bowman chrome"`
+   - CACHE_WARM_TARGETS expansion — add locked `cardNumber` field per audit addendum table
+   - queryContext plumbing (`compiqEstimate.service.ts` `fetchComps`) — thread structured fields to `findCompsRouted`
+   - Step A routing folded in (`compiqEstimate.service.ts` `fetchComps` meaningful-query check)
+   - Integration tests + 5-card smoke
+4. **PR open → eyeball pass → approve → merge → deploy.** NOT deploy → smoke. Process correction from 2026-05-23 PM stands.
+
+## Updated carry-forwards entering next session
+
+**Phase 2 implementation** is the next workstream. After Phase 2 ships:
+
+- **Defect #4** (`isCompVariantMatch` AUTO regex) — later phase, small PR
+- **Defect #2** (`parallelMatches` set-equality) — Phase 3, small PR
+- **Defect #7** (CH-identity guard Cardsight-blindness) — still characterized but unaddressed; not gating
+- **Defect #9** (cardNumber catalog mismatch) — defer until Phase 2 ships and the `cardnumber_filter_no_match` warning rate is observable in production logs
+- **MCP `/predict` architectural mismatch** — separate workstream; three sub-options open
+- **`fn-cardhedge-comps` decommission** — after all Cardsight paths verified working in production
+
+**Pre-existing carry-forwards still pending (unchanged):**
+- W6.1 Q1 warn-log baseline measurement (48h post-PR-A1 traffic)
+- Finding 6 re-investigation (`fn-nightly-comp-prefetch` write-path)
+- COSMOS_KEY shared-defect fix (Python paths)
+- Cosmos 21% regional-routing failure-rate diagnostic
+- `compiq-mcp` App Insights wiring
+- Phase 3a monitor detection-vs-degradation lag
+- DailyIQ niche-prospect-auto coverage gap design
+- Day-10 soak review window: **2026-05-31T17:44:32Z**
+- iOS workstream items
+
+## Production state at end of session
+
+- `origin/main` HEAD: `8a51dd5` (Phase 2 design + addenda; will be the SHA prior to this handoff commit)
+- hobbyiq3 deployed: `a121baf` (Phase 1 + AM handoff)
+- compiq-mcp deployed: `5fad0a2` (pre-WS3 blob-reading code)
+- App settings unchanged
+- Feature branch `feature/step-a-part1-meaningful-query-fallthrough` preserved at `origin/f5cd3e7` for Phase 2 to consume
