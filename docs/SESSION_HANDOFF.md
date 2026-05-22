@@ -446,7 +446,7 @@ Leaning toward the first. Deferred to Phase 4a per W5 reframe.
 
 End-of-W6 record. Closes out the Phase 0 measurement workstream: W6.2 (Q3 latency baseline), W6.3 (blob inventory), W6.4 (MCP repo discovery) all complete and pushed. W6.1 (Q1 warn-log baseline) intentionally deferred to day-2+ for post-PR-A1 traffic accumulation. Active 10-day soak continues; day-10 review scheduled `2026-05-31T17:44:32Z`.
 
-## W6 captures (11 findings)
+## W6 captures (12 findings)
 
 Each captured in structured form per the compaction-fabrication discipline — explicit values, no prose collapse.
 
@@ -506,6 +506,25 @@ Three instances observed in this single day:
 
 Common shape: a discrepancy is observed, a plausible explanation is constructed, and the explanation propagates as fact without being verified against the source artifact. Mitigation: any claim about a prior decision, rotation, merge, commit, or shipped artifact must be verified against repo/git state before being acted on. This lesson is queued for `copilot-instructions.md` LESSONS FROM PRIOR SESSIONS section as an extension to the existing 2026-05-21 entry (Workstream 3).
 
+### 12. DailyIQ watchlist refresh dominates organic comp_logs traffic — coverage gap exposed, not a system bug
+
+DailyIQ watchlist refresh dominates organic `comp_logs` traffic. Diagnostic across the last 444 `comp_logs` rows surfaced that the most recent 200-row window is essentially 100% automated watchlist refresh, firing in batches of **28 rows at irregular 5–32 minute intervals**. The refreshed queries cluster in a specific cohort: niche-prospect autos in non-base parallels (Blue, Gold Wave, Green Refractor) of current-year Bowman Draft Chrome products (Hammond, Bonemer, Willits, others), **100% ungraded, 100% null cardId, 100% `isAuto=true`**.
+
+System behavior on this cohort: **79% `no_recent_comps`** (Cardsight returns no comps — genuine thin-market gap), **20% `variant_mismatch` with non-empty comps** (Cardsight returns comps but for the wrong variant; variant-resolution correctly refuses to set `predictedPrice`). **0% successful predictions.**
+
+This is **NOT a system bug.** The pricing engine is safely refusing to fabricate prices for cards with insufficient comp coverage. Successful predictions DO exist in `comp_logs` broader history — **10 `ok` rows across the full 444-row sample, last success at `2026-05-21T19:01:34Z`** for Ohtani RC ($162), Guerrero Jr RC ($320), Witt Bowman Chrome Refractor BDC-1 ($2), and Trout Bowman Chrome ($2). All four query shapes are common, well-covered cards.
+
+**Product implication.** DailyIQ watchlists are populated by users with cards they care about. Niche prospect autos are exactly the cards collectors most care about (rookies, low-pop parallels). **The cards collectors most want priced are systematically the cards the system structurally can't price.** From a UX perspective, watchlist refresh produces null predictions on the cards that matter most to the user.
+
+This is a coverage gap exposed by the DailyIQ use case, not a system failure. The variant-resolution safety behavior is correct. The product question is whether Phase 4a (cache layer) and Phase 5 (Pricing × Portfolio integration) design must specifically address this cohort — for example by:
+- surfacing "comp data available but variant uncertain" to users rather than `null`, or
+- widening Cardsight coverage for prospect autos, or
+- adding a confidence-degraded prediction mode for `variant_mismatch`-with-comps cases.
+
+Not actionable as a fix tonight. Captured for next-session strategic discussion before Phase 4a kickoff.
+
+**Diagnostic source:** Check 1 + Check 2 + Check 2.5 of the synthetic-soak abort diagnostic, 2026-05-21 PM session. (The synthetic-soak workstream itself was aborted before execution; this finding emerged from the contamination-hypothesis investigation that followed.)
+
 ## W6.4 conclusion
 
 MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-main/mcp-server/` (added PR #78, commit `e0852a4`, 2026-05-19), deployed to the `compiq-mcp` Web App. Single canonical implementation; OneDrive and `C:/temp/hobbyiq-*` copies are identical-or-older snapshots of the same authoring window. GitHub `HobbyIQ` user has 3 other repos (`HobbyIQ-app`, `hobbyiq-backend`, `hobbyiq-conductor`) — all stale scaffolding, none MCP-protocol. Git history has zero hits for `cache_layer`, `comp_cache`, `pricing_cache`, or `model context protocol`. `backend/src/modules/compiq/services/pricing/infra/PricingCache.ts` (7 lines) and `PricingLogger.ts` (10 lines) exist but are unwired stubs from the early monorepo phase. Phase 0 success criterion ("MCP repo found OR confirmed to need building") **satisfied**. Adoption-vs-greenfield framing for Phase 4a kickoff (Weeks 5–6) is preserved in `docs/phase0/mcp_repo_discovery.md` (commit `24aab9e`); not decided here.
@@ -546,3 +565,4 @@ MCP repo is **not greenfield**. `mcp-server/` exists in-tree at `C:/dev/hobbyiq-
 - Finding 4: add App Insights `hobbyiq-insights` component-naming note to `copilot-instructions.md` Part 9.
 - Finding 2: roadmap edit to move Phase 4a p95-reduction baseline from "Phase 0 baseline (doesn't exist)" to "Day-10 post-PR-A1."
 - Workstream 3 (this prompt): extend LESSONS section in `copilot-instructions.md` with Finding 11.
+- Phase 4a / Phase 5 design open question: how to address the DailyIQ niche-prospect-auto coverage gap. Three candidate approaches captured in Finding 12; decision deferred to Phase 4a kickoff or earlier strategic session.
