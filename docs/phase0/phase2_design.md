@@ -618,3 +618,104 @@ If hit rate stays at 0% on the warm pass, key normalization needs a second look 
 
 **New open question** for the implementing session:
 - The Phase 1 commit (`5c9d561`) is currently on `main` and deployed. After Phase 2 ships, an LRU cache *invalidation* may be needed if any of the warming target card numbers turn out to be wrong (per Q1, Witt Jr's number from CH was USC35 but Cardsight's Witt 2022 TCU Base candidates are 8722ee0e and 6134bc63 — Cardsight may have its own catalog numbering different from CH's USC35). Verify each warming target's cardNumber against Cardsight's `getCardDetail` `.number` field before locking in CACHE_WARM_TARGETS.
+
+---
+
+## Warming-target cardNumber audit (2026-05-23 PM, follow-up to addendum)
+
+Verifies the previous addendum's open question: do CH and Cardsight catalog `number` fields agree for each of the 10 CACHE_WARM_TARGETS?
+
+### Audit table (read-only, both catalogs queried with player+release+year)
+
+| Warming target | CH `number` (displayLabel source) | Cardsight Base Set `number` (top hit) | Match? |
+|---|---|---|---|
+| Mike Trout 2011 Topps Update | US175 | US175 | **YES** |
+| Aaron Judge 2017 Topps Update | US99 | US166 | NO |
+| Cody Bellinger 2017 Topps Update | US50 | US38 | NO |
+| Shohei Ohtani 2018 Topps Update | US285 | US153 | NO |
+| Ronald Acuna Jr 2018 Topps Update | US250 | US252 | NO |
+| Juan Soto 2018 Topps Update | US104 | US104 | **YES** |
+| Gleyber Torres 2018 Topps Update | HMT9 | US200 | NO |
+| Bobby Witt Jr 2022 Topps Chrome | USC35 | YQ-1 | NO |
+| Paul Skenes 2024 Topps Chrome Update | USC88 | 89CU-1 | NO |
+| Caleb Bonemer 2024 Bowman Draft Chrome | CPA-CBO | BD-31 | NO |
+
+**Agreement: 2/10. Disagreement: 8/10.** Exceeds the >50% disagreement threshold from the diagnostic's hard rule.
+
+### parseCardQuery on iOS displayLabel — all 10 return null (defect #8 confirmed universal)
+
+For every one of the 10 CH displayLabels, `parseCardQuery(displayLabel).cardNumber === null`. Confirms defect #8 is not a per-card edge case — it affects every warming target's displayLabel. The regex misses `US175`, `US99`, `USC35`, `CPA-CBO`, `HMT9`, etc. uniformly.
+
+**The displayLabels themselves are CH-format** (e.g. `"2011 Topps Update Baseball Mike Trout US175 Base"` for Trout, `"2018 Topps Update Baseball Ronald Acuna Jr. US250 Base - Rookie Debut"` for Acuna). When defect #8's regex is fixed, parseCardQuery WILL extract CH-format numbers because that's what's in the source string. The "third variant" risk from the diagnostic's hard rule does not materialize — parser output post-fix aligns with CH-side numbers, NOT Cardsight-side.
+
+### Why the disagreement matters (and why it doesn't break cache key alignment)
+
+The 8/10 catalog disagreement is NOT a cache-key alignment problem. It IS a downstream resolution problem in `resolveCardId`:
+
+1. **Cache key alignment** depends on warming-side cardNumber matching the request-side cardNumber (parsed from iOS displayLabel). Both are CH-format. Warming + request use the same source-of-truth (CH /search-list). Cache keys can be made to match by populating CACHE_WARM_TARGETS with CH numbers — same numbers iOS displayLabels carry, same numbers parser will extract post-defect-#8.
+
+2. **`resolveCardId` cardNumber disambiguation** uses `getCardDetail.number` (Cardsight-side). When the user's iOS-shape query carries `US285` (CH number) and Cardsight's Base Set candidate detail returns `US153` (Cardsight number), the existing cardNumber-disambiguation logic at [cardsight.mapper.ts:178-201](../../backend/src/services/compiq/cardsight.mapper.ts#L178-L201) would falsely reject the data-bearing Cardsight candidate. **This is a real defect** — call it **defect #9**.
+
+### Defect #9 — `resolveCardId` cardNumber disambiguation assumes 1:1 catalog mapping
+
+**Location:** [backend/src/services/compiq/cardsight.mapper.ts:178-201](../../backend/src/services/compiq/cardsight.mapper.ts#L178-L201) (the `if (input.cardNumber && candidates.length > 1)` block from Phase 1's selection logic).
+
+**Current behavior:** When multiple candidates remain after release filter AND `input.cardNumber` is set, fetch `getCardDetail` for top-K candidates and filter to those whose `detail.number` exactly matches the user's `cardNumber`. Single match wins, skipping the pricing probe.
+
+**The mismatch case:** User's `input.cardNumber` comes from iOS displayLabel (CH-format, e.g. US285 for Ohtani). Cardsight's `detail.number` for the data-bearing Topps Update Base candidate is US153 (Cardsight-format for the same logical card). The exact-match filter rejects the data-bearing candidate. Falls through to "no match in top-N detail probes" → pricing probe runs on the original candidate set → still picks the right card via highest-records, but Phase 1's optimization is wasted AND there's a slim chance the pricing probe top-3 is also wrong.
+
+**Required behavior:** Treat the cardNumber detail-probe as best-effort optimization. When zero candidates match by number, fall through to pricing probe without warning (current code already does this — line 207: `else if (probeSet.length === candidates.length) { log.warn cardnumber_filter_no_match }` and falls through). The log warning would fire 8/10 times in production but doesn't break the resolution path.
+
+**Verification of current code under disagreement:** Re-reading [cardsight.mapper.ts:177-201](../../backend/src/services/compiq/cardsight.mapper.ts#L177-L201) — when `byNumber.length === 0` AND we probed every candidate, the code logs `cardnumber_filter_no_match` and falls through to the pricing probe with the ORIGINAL candidates list. The pricing probe then picks correctly. **So Phase 1's existing code already handles the catalog disagreement case gracefully** — it just emits a warning log for every disagreement. Defect #9 is real but does NOT block cache key alignment or 5/5 demo gate.
+
+**Estimated scope for an explicit fix:** Could downgrade the warning log to debug-level, or add a comment in the code that this is expected under cross-catalog disagreement. Either is ~2 LOC. **Recommendation: defer to a polish PR. Not required for Phase 2 ship gate.**
+
+### Final locked CACHE_WARM_TARGETS (cardNumber field added)
+
+Use **CH-format numbers** (the iOS displayLabel source-of-truth, the same numbers parser extracts post-defect-#8):
+
+```typescript
+const CACHE_WARM_TARGETS: ReadonlyArray<CompIQQueryInput> = [
+  { playerName: "Mike Trout",      cardYear: 2011, product: "Topps Update",        cardNumber: "US175" },
+  { playerName: "Aaron Judge",     cardYear: 2017, product: "Topps Update",        cardNumber: "US99"  },
+  { playerName: "Cody Bellinger",  cardYear: 2017, product: "Topps Update",        cardNumber: "US50"  },
+  { playerName: "Shohei Ohtani",   cardYear: 2018, product: "Topps Update",        cardNumber: "US285" },
+  { playerName: "Ronald Acuna Jr", cardYear: 2018, product: "Topps Update",        cardNumber: "US250" },
+  { playerName: "Juan Soto",       cardYear: 2018, product: "Topps Update",        cardNumber: "US104" },
+  { playerName: "Gleyber Torres",  cardYear: 2018, product: "Topps Update",        cardNumber: "HMT9"  },
+  { playerName: "Bobby Witt Jr",   cardYear: 2022, product: "Topps Chrome Update", cardNumber: "USC35" },
+  { playerName: "Paul Skenes",     cardYear: 2024, product: "Topps Chrome Update", cardNumber: "USC88" },
+  { playerName: "Caleb Bonemer",   cardYear: 2024, product: "Bowman Draft Chrome", cardNumber: "CPA-CBO" },
+];
+```
+
+**Two adjustments from the prior CACHE_WARM_TARGETS:**
+1. `cardNumber` field added per Option B (cache key alignment).
+2. Bobby Witt Jr's `product` corrected from `"Topps Chrome"` to `"Topps Chrome Update"` — matches the locked demo card (USC35 is in Topps Chrome Update, not flagship Topps Chrome). Paul Skenes already correct.
+
+### Phase 2 scope adjustment — defect #9 deferred, scope unchanged
+
+The audit surfaced defect #9 (cardNumber detail-probe rejecting data-bearing Cardsight candidates due to catalog-format mismatch), but Phase 1's existing fall-through logic handles it gracefully. **Defect #9 is documented and deferred to a polish PR.** Phase 2's scope stays at the prior estimate (~115-170 LOC).
+
+### Resolved open questions
+
+1. ~~Cardsight `releaseName` values~~ — RESOLVED (prior addendum)
+2. ~~Bowman Chrome regression risk~~ — RESOLVED (prior addendum)
+3. ~~Cache key normalization~~ — RESOLVED (prior addendum + defect #8)
+4. ~~Warming target cardNumbers against catalogs~~ — RESOLVED. Use CH-format numbers (locked above). 2/10 cross-catalog agreement is a downstream resolution concern (defect #9), not a cache key concern.
+
+### Implementing session checklist
+
+When Phase 2 PR is opened, the implementer should:
+1. Apply defect #6 (sport-suffix NOISE) — 1 line
+2. Apply defect #8 (cardNumber regex expansion) — 3-5 lines
+3. Verify defect #8 against the 10 CH displayLabels: each parseCardQuery call returns the expected CH-format cardNumber
+4. Apply defect #3a (Bowman Draft Chrome SET_PATTERN) — 1 line
+5. Apply defect #3b (Topps Update dictionary + Bowman Chrome correction) — 2 lines
+6. Apply queryContext plumbing — ~25 lines + 1 test
+7. Apply Step A routing — ~30 lines
+8. Update CACHE_WARM_TARGETS with the locked table above
+9. Run unit tests
+10. Smoke ship gate: 5/5 demo cards via /price + /price-by-id + /estimate; cache hit rate ≥60% on warm pass; 4 historical Bowman Chrome ok-rows still pass
+
+No further design questions outstanding. Phase 2 implementation can proceed in a focused session.
