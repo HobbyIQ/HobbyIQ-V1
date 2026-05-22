@@ -703,33 +703,10 @@ async function fetchComps(
     return { comps: [], card: null, variantWarning: [], aiCategory: null };
   }
 
-  // ----- Phase 1 CH removal — meaningful-query fall-through -----------
-  // Per docs/phase0/ch_removal_translator_design.md (commit c285c33):
-  // when the iOS client sent a meaningful `query` text alongside
-  // cardHedgeCardId, fall through to the query-based path. That path
-  // routes through findCompsRouted → resolveCardId → Cardsight
-  // getPricing under CARDSIGHT_MODE=exclusive. cardHedgeCardId remains
-  // the prediction cache key (see compiq.routes.ts:786) — only the
-  // fetch path changes.
-  //
-  // "Meaningful query" = non-empty trimmed string AND not equal to
-  // cardHedgeCardId. The cardId-equality check guards against iOS sending
-  // the opaque cardHedgeCardId as the query (CompIQVariantHit.resolvedLabel
-  // falls back to cardHedgeCardId when no display label, title, or parts
-  // are available — see HobbyIQ/CompIQSearchModels.swift:27-32).
-  const trimmedQuery = (query ?? "").trim();
-  const hasMeaningfulQuery =
-    trimmedQuery.length > 0 &&
-    pinnedCardId !== undefined &&
-    trimmedQuery !== pinnedCardId.trim();
-
-  // ----- Legacy cardId-only pinned path ---------------------------------
-  // Reached only when iOS didn't send a parseable query (the legacy
-  // path also still applies when pinnedCardId is set but query is
-  // missing/opaque). Under CARDSIGHT_MODE=exclusive this returns []
-  // — Phase 1 CH removal aims to bypass it via the meaningful-query
-  // branch above.
-  if (pinnedCardId && !hasMeaningfulQuery) {
+  // ----- Card-Ladder-style pinned card_id path --------------------------
+  // When the iOS client picked a specific Card Hedge card from the search
+  // list, skip identity resolution entirely and pull sales directly.
+  if (pinnedCardId) {
     const sales = await getCardSalesRouted(pinnedCardId, grade, 25, { cardIdSource: "cardhedge" });
     // Pull set/player/variant for display by looking up via search (best effort).
     let identityCard: any = null;
