@@ -942,3 +942,88 @@ CH `/search-list` and Cardsight catalog disagree on card numbers for 8/10 warmin
 - compiq-mcp deployed: `5fad0a2` (pre-WS3 blob-reading code)
 - App settings unchanged
 - Feature branch `feature/step-a-part1-meaningful-query-fallthrough` preserved at `origin/f5cd3e7` for Phase 2 to consume
+
+---
+
+# 2026-05-24 PM — PR #113 shipped (Cosmos guard); diagnostic OUTCOME C — guard insufficient, real cause still TBD
+
+## What shipped
+
+PR #113 — `fix(player-score): defensive guard against invalid Cosmos id in upsertPlayerScore` — squash-merged on `main` (`81f5c7b`) and deployed to hobbyiq3 at 2026-05-22T20:28Z. `/api/health` verified post-restart at `81f5c7b`. Full backend suite green (735/735, +10 from this PR).
+
+## Outcome of post-deploy verification: (C) — hypothesis was wrong
+
+The empty-`playerId` hypothesis from [cosmos_21_failure_rate_investigation.md](phase0/cosmos_21_failure_rate_investigation.md) is NOT the actual cause of the 22.6% failure rate. Evidence:
+
+| Signal | Pre-deploy | Post-deploy (~40 min) |
+|---|---|---|
+| `POST player_trends/docs` failure rate | 22.6% (30d) | **27.2%** (40 min, 875 ops / 238 failed) |
+| `playerScore_upsert_skipped_invalid_id` log events | n/a | **0** |
+| `playerScore_upsert_stats` log events (5-min throttle) | n/a | 0 (likely under throttle threshold OR stats path didn't trigger) |
+| Code on wwwroot | n/a | ✓ `isValidCosmosId` verified via VFS read |
+
+**0 guard skips means every upsert was reaching Cosmos with valid `id` and `playerId`.** The 400 rejection is in some other field of the PlayerScore document.
+
+## Two unexpected sub-findings worth recording
+
+### 1. CompIQ-path upserts succeed 100%; DailyIQ-path upserts fail ~33%
+
+Operation-name attribution on failed `POST player_trends/docs` (7d, including post-deploy):
+
+| `operation_Name` | total POSTs | failed | rate |
+|---|---:|---:|---:|
+| `GET /api/dailyiq/brief` | 28,976 | 9,790 | 33.8% |
+| `GET /api/dailyiq/` | 7,069 | 2,365 | 33.5% |
+| `GET /api/dailyiq` | 4,279 | 1,547 | 36.2% |
+| `GET /api/dailyiq/players/top/mlb` | 4,170 | 1,394 | 33.4% |
+| `GET /api/dailyiq/players/top/milb` | 3,224 | 1,080 | 33.5% |
+| `POST /api/compiq/search` | 188 | 0 | 0% |
+| `POST /api/compiq/estimate` | 7 | 0 | 0% |
+| `GET /api/playeriq/<player>` | 13 | 4 | ~30% |
+
+CompIQ-triggered upserts are clean (~200 calls, 0 failures). DailyIQ-triggered upserts fail uniformly ~33%. The bad-payload source is whatever DailyIQ's flow constructs as the PlayerScore document.
+
+### 2. No `[playerScore] upsert failed:` traces in App Insights despite Cosmos rejections
+
+Pre-deploy or post-deploy, the catch-block `console.warn` at [playerScore.service.ts:303](../backend/src/services/playerScore/playerScore.service.ts#L303) produces zero entries in App Insights `traces`. This is inconsistent with the dependency-table evidence of Cosmos rejections. Either:
+- The catch block isn't being reached (some other code path is producing the writes, NOT `upsertPlayerScore`)
+- App Insights' auto-collected console capture is dropping these specifically
+- The error path returns before logging for some reason
+
+Worth investigating before another fix attempt. If a separate code path is upserting to player_trends (bypassing `upsertPlayerScore` entirely), my guard's scope was wrong from the start.
+
+## What this means for next session
+
+**The guard is defensively correct and ships zero regressions** (5/5 demo cards still resolve on /price + /estimate, no test failures, code on wwwroot confirmed). It defends against the empty-id failure mode IF that mode occurs. But it does NOT address the 22-27% Cosmos rejection rate observed in production.
+
+**Next diagnostic needs to find the actual writer.** Specifically:
+1. Identify whether DailyIQ has its own code path writing to player_trends (bypasses `upsertPlayerScore`)
+2. If it does, characterize what the path is and what document shape it produces
+3. If `upsertPlayerScore` IS the writer, instrument it to log the actual Cosmos error message (the response body for 400s) so we can see what Cosmos is complaining about
+
+This is a **different defect than originally characterized**. The 22.6% rate is real; the empty-id hypothesis was a plausible candidate that turned out to be incorrect.
+
+## Carry-forwards
+
+- **PR #113 stays merged.** It's a no-op for current production (0 skips), defensively correct, and doesn't regress anything. Future bad-id inputs would be caught.
+- **Real Cosmos 22-27% defect remains open.** Re-characterize in a focused diagnostic session: find the actual upsert path, capture the Cosmos error body.
+- **24h post-deploy check (still scheduled, not blocking):** tomorrow 2026-05-25, verify the rate is unchanged from today's 27.2% (confirms guard alone isn't the answer). If rate drops without further work, something else changed; investigate.
+- **Pre-existing carry-forwards unchanged:** Phase 2 implementation, Defects #4/#2/#7/#9, MCP rewire, fn-cardhedge-comps decommission, Day-10 soak review (2026-05-31), iOS workstream.
+
+## Production state at end of session
+
+- `origin/main` HEAD: `81f5c7b` (PR #113 squash-merge) + this handoff commit
+- hobbyiq3 deployed: `81f5c7b` (verified via /api/health)
+- compiq-mcp deployed: `5fad0a2` (unchanged)
+- App settings unchanged
+
+## Next session entry point
+
+**Re-investigate the Cosmos 22-27% rate root cause.** Suggested approach:
+
+1. Grep for ALL Cosmos `items.upsert/create` calls targeting `player_trends` container (not just `playerScore.service.ts`)
+2. If alternate writer found: characterize its document shape, identify the bad field
+3. If `playerScore.service.ts` is the only writer: instrument the catch block with the full Cosmos error response (the `error.body` or `error.substatus` fields usually have actionable diagnostic data) and redeploy; wait one cycle to capture real error messages
+4. With the actual error body in hand, design a targeted guard for the specific field
+
+**Out of scope for next session:** any other workstream until this Cosmos defect characterization completes OR is explicitly deferred again. Don't add complexity to PR #113's guard until the real cause is known.
