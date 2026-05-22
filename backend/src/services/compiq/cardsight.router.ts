@@ -48,7 +48,7 @@ type RoutedResult = {
   aiCategory: string | null;
 };
 
-type QueryContext = {
+export type QueryContext = {
   playerName?: string;
   cardYear?: string | number;
   product?: string;
