@@ -45,6 +45,7 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   // --- BRAND + SET --- (more specific first)
   const SET_PATTERNS: [RegExp, string, string][] = [
     [/bowman\s+chrome\s+draft/i, "Bowman", "Bowman Chrome Draft"],
+    [/bowman\s+draft\s+chrome/i, "Bowman", "Bowman Draft Chrome"],
     [/bowman\s+chrome/i, "Bowman", "Bowman Chrome"],
     [/bowman\s+draft/i, "Bowman", "Bowman Draft"],
     [/bowman\s+platinum/i, "Bowman", "Bowman Platinum"],
@@ -148,9 +149,19 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     text.match(/\bnumbered\s+to\s+(\d{1,4})\b/i);
   const printRun = printRunMatch ? parseInt(printRunMatch[1], 10) : null;
 
-  // --- CARD NUMBER --- "#BD-31", "BD-31"
-  const cardNumMatch = text.match(/#([A-Z]{1,3}-?\d+)\b/i) ||
-                       text.match(/\b([A-Z]{1,3}-\d+)\b/);
+  // --- CARD NUMBER --- "#BD-31", "BD-31", "US175", "CPA-CBO", "C24-CBO"
+  // Ordering matters (first match wins):
+  //   1. Hashed (case-insensitive): "#CPA-CBO", "#BD-31", "#US175"
+  //   2. Hyphenated: "BD-31", "CPA-CBO", "C24-CBO" — start with a letter,
+  //      then 0-3 letters/digits, then "-", then 1+ letters/digits. Allows
+  //      letter+digit prefix ("C24-CBO") which the prior regex missed.
+  //   3. Unhyphenated last: "US175", "USC35", "HMT9" — letters followed by
+  //      digits, no hyphen. Must run last so it doesn't swallow "BD" from
+  //      "BD-31".
+  const cardNumMatch =
+    text.match(/#([A-Z0-9]{1,5}-?[A-Z0-9]+)\b/i) ||
+    text.match(/\b([A-Z][A-Z0-9]{0,3}-[A-Z0-9]+)\b/) ||
+    text.match(/\b([A-Z]{1,4}\d+)\b/);
   const cardNumber = cardNumMatch ? cardNumMatch[1].toUpperCase() : null;
 
   // --- GRADE + GRADING COMPANY ---
@@ -213,6 +224,7 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     "bowman", "topps", "panini", "donruss", "prizm", "select",
     "upper", "deck", "fleer", "score", "prospect", "prospects",
     "border", "raw", "signed", "signature", "wave", "shimmer",
+    "baseball", "football", "basketball", "hockey", "soccer",
   ];
   for (const noise of NOISE) {
     remaining = remaining.replace(new RegExp(`\\b${noise}\\b`, "gi"), " ");
