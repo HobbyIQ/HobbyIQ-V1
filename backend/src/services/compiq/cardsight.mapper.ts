@@ -75,7 +75,14 @@ const CARDSIGHT_SET_PATTERNS: Record<string, RegExp> = {
 // data, just metadata); pricing probes are expensive (~9s p50 first-call).
 // Bound fanout so worst-case latency stays under iOS's 60s timeout.
 const MAX_DETAIL_PROBES = 5;
-const MAX_PRICING_PROBES = 3;
+// Phase 2 v2 — raised from 3 to 8 per implementation finding. Cardsight catalog
+// returns up to 16 candidates for some queries (e.g. Shohei Ohtani 2018 Topps
+// Update returned 16, with data-bearing cardIds ranked at positions 4 and 10).
+// The prior cap of 3 caused candidates[0] fallback for cards where the
+// data-bearing entry was ranked deeper. Probe budget applies request-side
+// only; results are cache-protected after the first call. See
+// docs/phase0/phase2_design.md Implementation findings (2026-05-25).
+const MAX_PRICING_PROBES = 8;
 
 function lookupReleaseName(product: string): string | null {
   if (!product) return null;
