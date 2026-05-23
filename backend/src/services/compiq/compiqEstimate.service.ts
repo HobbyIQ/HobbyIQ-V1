@@ -1108,6 +1108,11 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     cardYear: body.cardYear ?? parsed?.year ?? undefined,
     product: body.product ?? parsed?.set ?? undefined,
     parallel: body.parallel ?? parsed?.parallel ?? undefined,
+    // Phase 2 v2 defect #11 — thread cardNumber so resolveCardId disambiguates
+    // via detail-probe + LRU cache key includes it. Body's cardNumber comes
+    // from /price route's requestFromParsed (set in this PR); parsed.cardNumber
+    // is the /price-by-id defensive parse of an iOS displayLabel.
+    cardNumber: body.cardNumber ?? parsed?.cardNumber ?? undefined,
     gradeCompany: normalizedGradeCompany ?? parsed?.gradingCompany ?? undefined,
     gradeValue:
       body.gradeValue !== undefined

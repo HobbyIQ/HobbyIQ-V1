@@ -154,6 +154,10 @@ function requestFromParsed(parsed: ParsedCardQuery): CompIQEstimateRequest {
     cardYear: parsed.year ?? undefined,
     product: parsed.set ?? parsed.brand ?? undefined,
     parallel: parsed.parallel ?? undefined,
+    // Phase 2 v2 defect #11 — propagate parsed cardNumber so downstream
+    // computeEstimate + queryContext + resolveCardId can use it for
+    // disambiguation and proper cache-key construction.
+    cardNumber: parsed.cardNumber ?? undefined,
     isAuto: parsed.isAuto || undefined,
     gradeCompany: parsed.gradingCompany ?? undefined,
     gradeValue: parsed.grade && parsed.grade !== "raw" ? Number(parsed.grade) : undefined,

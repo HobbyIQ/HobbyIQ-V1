@@ -114,4 +114,39 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
     expect(opts.queryContext.cardYear).toBe(2024);
     expect(opts.queryContext.product).toBe("Bowman Draft Chrome");
   });
+
+  // Phase 2 v2 defect #11 — cardNumber threading
+
+  it("defect #11: queryContext.cardNumber populated from defensive parseCardQuery of iOS displayLabel", async () => {
+    await computeEstimate({
+      playerName: "2011 Topps Update Baseball Mike Trout US175 Base",
+      cardHedgeCardId: "fake-pinned-id-trout",
+    } as any);
+
+    const [, opts] = mockFindCompsRouted.mock.calls[0];
+    expect(opts.queryContext.cardNumber).toBe("US175");
+  });
+
+  it("defect #11: queryContext.cardNumber populated from body.cardNumber when structured (e.g. /price via requestFromParsed)", async () => {
+    await computeEstimate({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft Chrome",
+      cardNumber: "CPA-CBO",
+    } as any);
+
+    const [, opts] = mockFindCompsRouted.mock.calls[0];
+    expect(opts.queryContext.cardNumber).toBe("CPA-CBO");
+  });
+
+  it("defect #11: queryContext.cardNumber is undefined when neither body nor parse produced one (warming-compatible cache key)", async () => {
+    await computeEstimate({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+    } as any);
+
+    const [, opts] = mockFindCompsRouted.mock.calls[0];
+    expect(opts.queryContext.cardNumber).toBeUndefined();
+  });
 });

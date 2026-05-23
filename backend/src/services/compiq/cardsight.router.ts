@@ -53,6 +53,12 @@ export type QueryContext = {
   cardYear?: string | number;
   product?: string;
   parallel?: string;
+  // Phase 2 v2 — defect #11: cardNumber threaded through so resolveCardId can
+  // disambiguate via detail-probe AND so the LRU cache key includes it for
+  // proper per-cardNumber cache entries. Without this field, parsed.cardNumber
+  // from iOS displayLabels (post-defect-#8 fix) was silently dropped at the
+  // router boundary.
+  cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: string;
 };
@@ -98,6 +104,7 @@ function toCardsightQuery(query: string, opts: FindCompsRoutedOptions) {
     cardYear: ctx.cardYear,
     product: ctx.product,
     parallel: ctx.parallel,
+    cardNumber: ctx.cardNumber,
     gradeCompany: opts.gradeCompany ?? ctx.gradeCompany,
     gradeValue: opts.gradeValue ?? ctx.gradeValue,
   };

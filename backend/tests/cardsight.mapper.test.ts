@@ -319,6 +319,50 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
   });
 });
 
+describe("buildCacheKey — Phase 2 v2 defect #11 (cache-key alignment trace)", () => {
+  // Verifies the request-side key (built from queryContext fields) matches
+  // the warming-side key (built from CACHE_WARM_TARGETS) for the same logical
+  // card. Post-defect-#10 fix, warming targets carry NO cardNumber. Post-
+  // defect-#11 fix, the request side may or may not carry cardNumber
+  // depending on which endpoint produced the queryContext:
+  //   - /price + /estimate with no cardNumber in body  → cardNumber=undefined → KEY MATCHES warming
+  //   - /price-by-id parsed from iOS displayLabel       → cardNumber populated → KEY DIFFERS from warming (separate lazy cache entry, by design)
+
+  const buildCacheKey = __resolveCardIdInternals.buildCacheKey;
+
+  it("warming-side key for Mike Trout 2011 Topps Update == /price-side key (cardNumber undefined on both)", () => {
+    const warmingKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      // no cardNumber — matches post-defect-#10 CACHE_WARM_TARGETS shape
+    });
+    const priceKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      // /price + /estimate with no cardNumber field → undefined
+    });
+    expect(priceKey).toBe(warmingKey);
+  });
+
+  it("/price-by-id key (with cardNumber) DIFFERS from warming key (lazy-cache by design)", () => {
+    const warmingKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+    });
+    const priceByIdKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      cardNumber: "US175",
+    });
+    expect(priceByIdKey).not.toBe(warmingKey);
+    expect(priceByIdKey).toContain("us175");
+  });
+});
+
 describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load reduction)", () => {
   // CACHE_WARM_TARGETS post-defect-#10 fix has NO cardNumber field on any
   // target. This means warmResolveCardIdCache must NOT trigger the cardNumber
