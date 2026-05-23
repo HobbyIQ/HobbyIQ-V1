@@ -9,6 +9,30 @@
 // (the MEDIUM-block prompt with H6/H10 enforcement) and returns a response
 // shaped for the existing CompIQService.swift contract.
 
+import * as appInsights from "applicationinsights";
+
+// Initialize App Insights — must be called before the server handles requests.
+// The Azure App Service agent (ApplicationInsightsAgent_EXTENSION_VERSION=~3)
+// handles deep instrumentation; this SDK call enables custom telemetry and live metrics.
+// Reports to the shared hobbyiq-insights AppI resource (same as hobbyiq3) for
+// cross-service correlation during the upcoming MCP rewire workstream.
+if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
+  try {
+    appInsights
+      .setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING)
+      .setAutoCollectRequests(true)
+      .setAutoCollectPerformance(true, true)
+      .setAutoCollectExceptions(true)
+      .setAutoCollectDependencies(true)
+      .setAutoCollectConsole(true, true)
+      .setSendLiveMetrics(true)
+      .start();
+    console.log("[AppInsights] Telemetry active");
+  } catch (err: any) {
+    console.warn("[AppInsights] Init failed:", err.message);
+  }
+}
+
 import express, { type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import { BlobServiceClient } from "@azure/storage-blob";
