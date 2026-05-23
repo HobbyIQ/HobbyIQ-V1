@@ -3,7 +3,8 @@ import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { type CardHedgeCard } from "./cardhedge.client.js";
-import { findCompsRouted, searchCardsRouted, getCardSalesRouted } from "./cardsight.router.js";
+import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
+import { parseCardQuery } from "./cardQueryParser.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
@@ -696,17 +697,43 @@ async function fetchBroaderTrend(
 async function fetchComps(
   query: string,
   grade: string = "Raw",
-  pinnedCardId?: string
+  pinnedCardId?: string,
+  queryContext?: QueryContext
 ): Promise<FetchedComps> {
   if (!process.env.CARD_HEDGE_API_KEY) {
     console.warn("[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []");
     return { comps: [], card: null, variantWarning: [], aiCategory: null };
   }
 
+  // ----- Phase 2 — meaningful-query fall-through ------------------------
+  // Re-applies the routing change from PR #110 (originally shipped as
+  // commit 9124e54, reverted as 83ea415, attempted as Step A standalone
+  // PR as commit f5cd3e7, rolled back same-day pending Phase 2's
+  // queryContext plumbing + dictionary expansion).
+  //
+  // When the iOS client sends a meaningful `query` text alongside
+  // cardHedgeCardId, fetchComps falls through to findCompsRouted →
+  // resolveCardId → Cardsight getPricing under CARDSIGHT_MODE=exclusive.
+  // The cardHedgeCardId remains the prediction cache key in the route
+  // layer — only the fetch path changes.
+  //
+  // The `query !== pinnedCardId` check guards against iOS sending the
+  // opaque cardId as the query (iOS resolvedLabel falls back to cardId
+  // when displayLabel/title are both empty — see
+  // HobbyIQ/CompIQSearchModels.swift).
+  const trimmedQuery = (query ?? "").trim();
+  const hasMeaningfulQuery =
+    trimmedQuery.length > 0 &&
+    pinnedCardId !== undefined &&
+    trimmedQuery !== pinnedCardId.trim();
+
   // ----- Card-Ladder-style pinned card_id path --------------------------
   // When the iOS client picked a specific Card Hedge card from the search
-  // list, skip identity resolution entirely and pull sales directly.
-  if (pinnedCardId) {
+  // list AND no meaningful free-text query came along, take the legacy
+  // cardhedge-namespace path. Under CARDSIGHT_MODE=exclusive this returns
+  // [] (router's cardIdSource=cardhedge guard fires) — the correct
+  // fallback when there's no text to drive a Cardsight catalog lookup.
+  if (pinnedCardId && !hasMeaningfulQuery) {
     const sales = await getCardSalesRouted(pinnedCardId, grade, 25, { cardIdSource: "cardhedge" });
     // Pull set/player/variant for display by looking up via search (best effort).
     let identityCard: any = null;
@@ -753,7 +780,7 @@ async function fetchComps(
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
-  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, { grade, limit: 25 });
+  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, { grade, limit: 25, queryContext });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
@@ -1050,7 +1077,50 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       : null;
   const inferredGrade = explicitGrade ? null : parseGradeFromQuery(cardTitle);
   const cardHedgeGrade = explicitGrade ?? inferredGrade ?? "Raw";
-  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId);
+
+  // Phase 2 — queryContext plumbing.
+  //
+  // Threads body's structured fields through fetchComps → findCompsRouted →
+  // toCardsightQuery → resolveCardId so the catalog lookup uses the user's
+  // intended playerName / year / product / parallel instead of the joined
+  // cardTitle string (which contained sport-suffix + cardNumber noise that
+  // contaminated playerName extraction inside the router).
+  //
+  // /price arrives structured (parseCardQuery already ran upstream in the
+  // /price route via requestFromParsed). /estimate arrives structured per
+  // CompIQEstimateRequest. /price-by-id sends body.playerName as the free-
+  // text iOS displayLabel; we defensively re-parse it here when structured
+  // fields are absent so the catalog lookup still gets clean inputs.
+  const needsParseFallback =
+    !body.cardYear &&
+    !body.product &&
+    typeof body.playerName === "string" &&
+    /\b(19|20)\d{2}\b/.test(body.playerName);
+  const parsed = needsParseFallback ? parseCardQuery(body.playerName!) : null;
+
+  // When the defensive parse fires (parsed != null), body.playerName is the
+  // raw iOS displayLabel — prefer parsed.playerName which has sport-suffix /
+  // cardNumber / set-name noise stripped. When parse didn't fire, body's
+  // playerName is already structured (set by /price's requestFromParsed or
+  // /estimate's structured client body). Same logic for the other fields.
+  const queryContext: QueryContext = {
+    playerName: parsed?.playerName ?? body.playerName ?? undefined,
+    cardYear: body.cardYear ?? parsed?.year ?? undefined,
+    product: body.product ?? parsed?.set ?? undefined,
+    parallel: body.parallel ?? parsed?.parallel ?? undefined,
+    // Phase 2 v2 defect #11 — thread cardNumber so resolveCardId disambiguates
+    // via detail-probe + LRU cache key includes it. Body's cardNumber comes
+    // from /price route's requestFromParsed (set in this PR); parsed.cardNumber
+    // is the /price-by-id defensive parse of an iOS displayLabel.
+    cardNumber: body.cardNumber ?? parsed?.cardNumber ?? undefined,
+    gradeCompany: normalizedGradeCompany ?? parsed?.gradingCompany ?? undefined,
+    gradeValue:
+      body.gradeValue !== undefined
+        ? String(body.gradeValue)
+        : parsed?.grade ?? undefined,
+  };
+
+  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId, queryContext);
 
   // ── Sport-scope guard ────────────────────────────────────────────────────
   // CompIQ currently supports baseball only (issue #7). If Card Hedge's AI

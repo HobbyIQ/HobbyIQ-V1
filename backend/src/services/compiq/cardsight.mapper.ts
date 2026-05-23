@@ -51,7 +51,14 @@ export interface CardsightResolution {
 const COMPIQ_TO_CARDSIGHT_RELEASES: Record<string, string> = {
   "topps chrome": "Topps Chrome",
   "topps chrome update": "Topps Chrome Update",
-  "bowman chrome": "Bowman Draft Chrome",
+  // Phase 2 — covers Mike Trout 2011, Ohtani 2018, Judge 2017, Acuna 2018.
+  // Cardsight catalog confirmed releaseName "Topps Update" via live probe
+  // (docs/phase0/phase2_design.md Q1 addendum).
+  "topps update": "Topps Update",
+  // Phase 2 correction — flagship Bowman Chrome was previously mismapped to
+  // "Bowman Draft Chrome". Cardsight has both releases distinct; the flagship
+  // string should map to itself.
+  "bowman chrome": "Bowman Chrome",
   "bowman draft": "Bowman Draft",
   "bowman draft chrome": "Bowman Draft Chrome",
   "panini prizm": "Panini Prizm",
@@ -68,12 +75,63 @@ const CARDSIGHT_SET_PATTERNS: Record<string, RegExp> = {
 // data, just metadata); pricing probes are expensive (~9s p50 first-call).
 // Bound fanout so worst-case latency stays under iOS's 60s timeout.
 const MAX_DETAIL_PROBES = 5;
-const MAX_PRICING_PROBES = 3;
+// Phase 2 v2 — raised from 3 to 8 per implementation finding. Cardsight catalog
+// returns up to 16 candidates for some queries (e.g. Shohei Ohtani 2018 Topps
+// Update returned 16, with data-bearing cardIds ranked at positions 4 and 10).
+// The prior cap of 3 caused candidates[0] fallback for cards where the
+// data-bearing entry was ranked deeper. Probe budget applies request-side
+// only; results are cache-protected after the first call. See
+// docs/phase0/phase2_design.md Implementation findings (2026-05-25).
+const MAX_PRICING_PROBES = 8;
 
 function lookupReleaseName(product: string): string | null {
   if (!product) return null;
   const normalized = product.toLowerCase().trim();
   return COMPIQ_TO_CARDSIGHT_RELEASES[normalized] ?? null;
+}
+
+// Phase 2 v2 defect #12 — cardNumber-pattern dispatch (resolves the 2020 Witt
+// "Bowman Chrome Refractor BDC-1" regression from PR #114).
+//
+// When a user types "Bowman Chrome" but the cardNumber prefix indicates a
+// Bowman Draft Chrome realm card (BDC-N prospects, CPA-XXX autographs, etc.),
+// override the product so resolveCardId searches the broader Bowman Draft
+// catalog space instead of flagship Bowman Chrome. The Phase 2 dictionary
+// correction ("bowman chrome" → "Bowman Chrome") is semantically correct but
+// surfaces wrong-card answers for these cardNumber-prefixed queries because
+// flagship Bowman Chrome and Bowman Draft Chrome share player+year but use
+// different setNames in Cardsight catalog.
+//
+// Verified cardNumber pattern coverage (2026-05-25, Cardsight catalog probe +
+// hobby convention):
+//   BDC-  Bowman Draft Chrome main prospects (e.g. 2020 Witt BDC-1)
+//   BD-   Bowman Draft base
+//   CPA-  Chrome Prospect Autographs (e.g. Bonemer CPA-CBO)
+//   CDA-  Chrome Draft Autographs (verified in 2020 Bowman Draft probe)
+//   BCRP- Bowman Chrome Rookie Prospects (rare variant)
+//   BBPA- Bowman Black Prospect Autographs
+//
+// Explicitly NOT in the override (these are flagship Bowman Chrome, not BDC):
+//   BCP-  Bowman Chrome Prospects (releaseName="Bowman Chrome", setName="Prospects")
+//   BSP-  Bowman Sapphire Prospects (different release entirely)
+const BOWMAN_DRAFT_CHROME_NUMBER_PATTERN = /^(BD-|BDC-|CPA-|CDA-|BCRP-|BBPA-)/i;
+
+function applyCardNumberDisambiguation(
+  product: string | undefined,
+  cardNumber: string | undefined,
+): string | undefined {
+  if (!product || !cardNumber) return product;
+  if (product.toLowerCase().trim() === "bowman chrome" &&
+      BOWMAN_DRAFT_CHROME_NUMBER_PATTERN.test(cardNumber)) {
+    log.info("release_fallback_cardnumber_dispatch", {
+      originalProduct: product,
+      cardNumber,
+      resolvedProduct: "Bowman Draft Chrome",
+      endpoint: "resolveCardId",
+    });
+    return "Bowman Draft Chrome";
+  }
+  return product;
 }
 
 function tokenizeParallel(name: string): string[] {
@@ -83,10 +141,30 @@ function tokenizeParallel(name: string): string[] {
     .filter((t) => t.length > 0);
 }
 
+// Phase 2 v2 — defect #2 fix: exact set-equality on tokens (sorted-array
+// equal), replacing the prior subset check.
+//
+// Prior behavior: `inputTokens.every(t => candidateTokens.includes(t))` treated
+// the input as a subset of the candidate. This caused "Refractor" to falsely
+// match "Chrome Blue Refractor" (and similar over-permissive matches), which
+// then drove `Array.find()` to return whichever multi-word refractor parallel
+// appeared first in detail.parallels[] — semantically wrong, and the
+// downstream getPricing(cardId, {parallelId}) call would filter to a parallel
+// the user never asked for, often returning zero records.
+//
+// New behavior: token sets must be exactly equal post-sort. "Refractor" only
+// matches a parallel literally named "Refractor". "Blue Wave Refractor" only
+// matches "Blue Wave Refractor" (also order-independent: "Refractor Blue
+// Wave" matches the same — order in tokenized form is normalized out).
+//
+// Safety fallback: when no parallel matches strictly, parallelId stays null
+// and getPricing is called without a parallel filter — returns the full
+// pricing pool, downstream filtering can disambiguate.
 function parallelMatches(input: string, candidate: string): boolean {
-  const inputTokens = tokenizeParallel(input);
-  const candidateTokens = tokenizeParallel(candidate);
-  return inputTokens.every((t) => candidateTokens.includes(t));
+  const inputTokens = tokenizeParallel(input).sort();
+  const candidateTokens = tokenizeParallel(candidate).sort();
+  if (inputTokens.length !== candidateTokens.length) return false;
+  return inputTokens.every((t, i) => t === candidateTokens[i]);
 }
 
 // ───── Internal: resolution worker (uncached) ────────────────────────────────
@@ -96,8 +174,15 @@ async function _resolveCardId(
 ): Promise<CardsightResolution> {
   const warnings: string[] = [];
 
-  let releaseName: string | null = input.product ? lookupReleaseName(input.product) : null;
-  if (input.product && !releaseName) {
+  // Phase 2 v2 defect #12 — apply cardNumber-pattern dispatch BEFORE dictionary
+  // lookup, so an input.product="Bowman Chrome" with input.cardNumber="BDC-1"
+  // resolves through the Bowman Draft Chrome catalog path instead of flagship.
+  // input.product is preserved for log/warning text (user-facing reflection of
+  // what they actually typed); effectiveProduct drives catalog routing.
+  const effectiveProduct = applyCardNumberDisambiguation(input.product, input.cardNumber);
+
+  let releaseName: string | null = effectiveProduct ? lookupReleaseName(effectiveProduct) : null;
+  if (effectiveProduct && !releaseName) {
     warnings.push(
       `Product "${input.product}" not in Cardsight release dictionary — searching by player name only.`,
     );
@@ -127,11 +212,12 @@ async function _resolveCardId(
   let candidates: CardsightCatalogResult[] = results;
 
   // Release-name filter (case-insensitive exact match). Falls through to
-  // input.product when the dictionary misses — gives unmapped products
-  // (e.g. "topps update", "bowman draft chrome" pending Phase 2 dictionary
-  // expansion) a chance to still narrow against catalog's releaseName field.
-  if (input.product) {
-    const expectedRelease = (releaseName ?? input.product).toLowerCase().trim();
+  // effectiveProduct (post-dispatch) when the dictionary misses — gives
+  // unmapped products a chance to still narrow against catalog's releaseName
+  // field. Using effectiveProduct rather than input.product so the dispatch
+  // also informs the post-fetch narrowing step, not just the dictionary lookup.
+  if (effectiveProduct) {
+    const expectedRelease = (releaseName ?? effectiveProduct).toLowerCase().trim();
     const exactMatch = results.filter(
       (r) => r.releaseName?.toLowerCase() === expectedRelease,
     );
@@ -415,21 +501,35 @@ export async function resolveCardId(
 // changes. Telemetry (resolveCardId_cache_stats logs) guides re-prime
 // cadence.
 
+// Phase 2 v2 — cardNumber field REMOVED per defect #10 mitigation (warming API
+// load reduction). The Option B cache-alignment approach from addendum 8a51dd5
+// was found to (1) trip Cardsight rate limit due to cardNumber detail-probe
+// fan-out × 10 parallel warming targets at startup (~80-90 calls), and (2) not
+// actually align with /price + /estimate request keys anyway because those
+// paths don't populate cardNumber in queryContext (typical iOS usage).
+//
+// Trade-off: /price-by-id with iOS displayLabels (which DO carry cardNumber via
+// defect #11 threading) pays cold-path latency on first request per logical
+// card, then the result is cached lazily by resolveCardId's LRU and subsequent
+// requests hit the cache. /price + /estimate hit warming-cache immediately.
+//
+// Witt Jr product correction preserved from Phase 2: "Topps Chrome" → "Topps
+// Chrome Update" (USC35 is in the Update set, not flagship Topps Chrome).
 const CACHE_WARM_TARGETS: ReadonlyArray<CompIQQueryInput> = [
   // 2011 Topps Update — Mike Trout RC class (demo-critical)
-  { playerName: "Mike Trout", cardYear: 2011, product: "Topps Update" },
+  { playerName: "Mike Trout",      cardYear: 2011, product: "Topps Update" },
   // 2017-2018 Topps Update — modern superstar RCs (demo-critical)
-  { playerName: "Aaron Judge", cardYear: 2017, product: "Topps Update" },
-  { playerName: "Cody Bellinger", cardYear: 2017, product: "Topps Update" },
-  { playerName: "Shohei Ohtani", cardYear: 2018, product: "Topps Update" },
+  { playerName: "Aaron Judge",     cardYear: 2017, product: "Topps Update" },
+  { playerName: "Cody Bellinger",  cardYear: 2017, product: "Topps Update" },
+  { playerName: "Shohei Ohtani",   cardYear: 2018, product: "Topps Update" },
   { playerName: "Ronald Acuna Jr", cardYear: 2018, product: "Topps Update" },
-  { playerName: "Juan Soto", cardYear: 2018, product: "Topps Update" },
-  { playerName: "Gleyber Torres", cardYear: 2018, product: "Topps Update" },
-  // Modern Topps Chrome + Chrome Update
-  { playerName: "Bobby Witt Jr", cardYear: 2022, product: "Topps Chrome" },
-  { playerName: "Paul Skenes", cardYear: 2024, product: "Topps Chrome Update" },
+  { playerName: "Juan Soto",       cardYear: 2018, product: "Topps Update" },
+  { playerName: "Gleyber Torres",  cardYear: 2018, product: "Topps Update" },
+  // Modern Topps Chrome Update
+  { playerName: "Bobby Witt Jr",   cardYear: 2022, product: "Topps Chrome Update" },
+  { playerName: "Paul Skenes",     cardYear: 2024, product: "Topps Chrome Update" },
   // DailyIQ-style Bowman Draft Chrome prospect
-  { playerName: "Caleb Bonemer", cardYear: 2024, product: "Bowman Draft Chrome" },
+  { playerName: "Caleb Bonemer",   cardYear: 2024, product: "Bowman Draft Chrome" },
 ];
 
 export async function warmResolveCardIdCache(): Promise<void> {

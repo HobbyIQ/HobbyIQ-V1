@@ -1,8 +1,9 @@
 /**
  * Regression test for the /api/compiq/price-by-id production bug where the
- * player-identity guard wiped valid pinned-card-id comps.
+ * player-identity guard wiped valid pinned-card-id comps, PLUS a Phase 2
+ * test for the CH-removal meaningful-query fall-through path.
  *
- * Root cause (pre-fix):
+ * Root cause of legacy bug (pre-fix):
  *   fetchComps(query, grade, pinnedCardId) pulls authoritative sales via
  *   getCardSales(card_id). It then looks up identity cosmetically via
  *   searchCards(query) and returns a STUB { title:null, player:null, ... }
@@ -10,16 +11,25 @@
  *   "Player-identity guard" treats that stub as a fuzzy mismatch and wipes
  *   every comp it just fetched.
  *
- * Fix:
+ * Legacy fix:
  *   Skip the guard when `body.cardHedgeCardId` is present — pinned-card-id
  *   pulls are authoritative and don't need fuzzy-match defence.
  *
- * This test asserts: given a pinned cardHedgeCardId whose getCardSales
- * returns N comps but whose searchCards results DO NOT include that card_id,
- * computeEstimate must surface N comps (compsUsed > 0), not 0.
+ * Phase 2 CH-removal change (re-applies f5cd3e7's meaningful-query
+ * fall-through): when iOS sends a meaningful `query` text alongside
+ * cardHedgeCardId, fetchComps falls through to the query path
+ * (findCompsRouted → resolveCardId → Cardsight) instead of the legacy
+ * cardId-keyed getCardSalesRouted path. The legacy path is reached ONLY when
+ * the query is missing or equal to cardHedgeCardId (the iOS resolvedLabel
+ * worst-case fallback per CompIQSearchModels.swift).
  *
- * Without the fix this test fails (compsUsed === 0, source === "no-recent-comps").
- * With the fix it passes.
+ * Tests:
+ *  1. Legacy-path regression (query === cardHedgeCardId) — scoped to the
+ *     legacy branch.
+ *  2. Meaningful-query fall-through (Phase 2) — new path routes via
+ *     findCompsByQuery (the cardhedge variant of findCompsRouted under
+ *     CARDSIGHT_MODE=off test default; under exclusive mode in prod it
+ *     routes to Cardsight).
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
@@ -28,22 +38,21 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 // when it resolves its dependency. The path must match the literal specifier
 // used by the source: `./cardhedge.client.js` from compiqEstimate.service.ts.
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  // Pinned-id path uses getCardSales — N fresh sales for our fake card.
+  // Legacy pinned-id path uses getCardSales — N fresh sales for our fake card.
   getCardSales: vi.fn(),
-  // Pinned-id path uses searchCards only for cosmetic identity. Return hits
-  // that do NOT contain the pinned card_id so fetchComps falls back to the
-  // stub identity (title:null, player:null) — the exact production scenario.
+  // Legacy pinned-id path uses searchCards only for cosmetic identity.
   searchCards: vi.fn(),
-  // Not exercised on the pinned path but must exist for import resolution.
+  // Phase 2 meaningful-query fall-through routes via findCompsRouted which
+  // under CARDSIGHT_MODE=off (test default) calls findCompsByQuery here.
   findCompsByQuery: vi.fn(),
 }));
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
 import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
 
-describe("computeEstimate — pinned cardHedgeCardId path (regression for /price-by-id wipe)", () => {
+describe("computeEstimate — pinned cardHedgeCardId path", () => {
   const PINNED_ID = "1733687840609x910533527660592800";
-  const QUERY = "2024 Topps Chrome Paul Skenes";
+  const REAL_QUERY = "2024 Topps Chrome Paul Skenes";
 
   beforeAll(() => {
     process.env.CARD_HEDGE_API_KEY = "test-key";
@@ -53,12 +62,12 @@ describe("computeEstimate — pinned cardHedgeCardId path (regression for /price
     vi.clearAllMocks();
   });
 
-  it("keeps comps when searchCards identity lookup misses the pinned card_id", async () => {
-    // 12 fresh sales (today / yesterday / 2 days ago, rotating).
+  // Helper: 12 fresh sales (today / yesterday / 2 days ago, rotating).
+  function makeFreshSales() {
     const today = new Date();
     const isoDaysAgo = (n: number) =>
       new Date(today.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
-    const sales = Array.from({ length: 12 }, (_, i) => ({
+    return Array.from({ length: 12 }, (_, i) => ({
       price: 40 + i,
       date: isoDaysAgo(i % 5),
       grade: "Raw",
@@ -67,8 +76,17 @@ describe("computeEstimate — pinned cardHedgeCardId path (regression for /price
       title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
       url: null,
     }));
-    (cardHedge.getCardSales as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(sales);
+  }
 
+  it("LEGACY path: keeps comps when searchCards identity lookup misses the pinned card_id", async () => {
+    // Force the legacy branch by making query === pinnedCardId (the iOS
+    // resolvedLabel worst-case fallback). Per Phase 2's CH-removal change,
+    // meaningful queries (query !== cardId) bypass this path entirely.
+    const QUERY_EQUALS_PINNED = PINNED_ID;
+
+    (cardHedge.getCardSales as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeFreshSales(),
+    );
     // searchCards returns OTHER cards — pinned card_id not present. Forces
     // fetchComps into the stub-identity branch (title:null, player:null).
     (cardHedge.searchCards as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -77,7 +95,7 @@ describe("computeEstimate — pinned cardHedgeCardId path (regression for /price
     ]);
 
     const result = (await computeEstimate({
-      playerName: QUERY,
+      playerName: QUERY_EQUALS_PINNED,
       cardHedgeCardId: PINNED_ID,
     } as any)) as Record<string, unknown>;
 
@@ -85,16 +103,53 @@ describe("computeEstimate — pinned cardHedgeCardId path (regression for /price
     expect(result.compsUsed).toBeGreaterThan(0);
     expect(result.source).not.toBe("no-recent-comps");
 
-    // Sanity: getCardSales was called with the pinned id.
+    // Sanity: legacy path called getCardSales with the pinned id.
     expect(cardHedge.getCardSales).toHaveBeenCalledWith(
       PINNED_ID,
       expect.any(String),
-      expect.any(Number)
+      expect.any(Number),
     );
 
     // Sanity: variantWarning must NOT contain "player_mismatch" — that was
     // the literal symptom of the bug.
     const variantWarning = (result.variantWarning as string[] | undefined) ?? [];
     expect(variantWarning).not.toContain("player_mismatch");
+  });
+
+  it("PHASE 2: meaningful query falls through to findCompsRouted (bypasses legacy cardId path)", async () => {
+    const sales = makeFreshSales();
+    // findCompsByQuery returns the RoutedResult shape (under CARDSIGHT_MODE=off,
+    // findCompsRouted delegates here directly).
+    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      card: {
+        card_id: PINNED_ID,
+        title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
+        player: "Paul Skenes",
+        set: "2024 Topps Chrome Update",
+        year: 2024,
+        number: "USC150",
+        variant: "Base",
+      },
+      sales,
+      variantWarning: [],
+      aiCategory: null,
+    });
+
+    const result = (await computeEstimate({
+      playerName: REAL_QUERY, // meaningful query, different from PINNED_ID
+      cardHedgeCardId: PINNED_ID,
+    } as any)) as Record<string, unknown>;
+
+    // The new path must surface comps.
+    expect(result.compsUsed).toBeGreaterThan(0);
+    expect(result.source).not.toBe("no-recent-comps");
+
+    // The new path must call findCompsByQuery (the cardhedge variant of
+    // findCompsRouted under CARDSIGHT_MODE=off test default).
+    expect(cardHedge.findCompsByQuery).toHaveBeenCalled();
+
+    // The new path must NOT call the legacy getCardSales — meaningful-query
+    // requests bypass it.
+    expect(cardHedge.getCardSales).not.toHaveBeenCalled();
   });
 });

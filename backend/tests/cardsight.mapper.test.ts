@@ -17,6 +17,7 @@ vi.mock("../src/services/compiq/cardsight.client.js", () => ({
 import * as cs from "../src/services/compiq/cardsight.client.js";
 import {
   resolveCardId,
+  warmResolveCardIdCache,
   __resolveCardIdInternals,
 } from "../src/services/compiq/cardsight.mapper";
 
@@ -239,6 +240,365 @@ describe("resolveCardId — LRU cache behavior", () => {
     await resolveCardId({ playerName: "  mike   trout  ", cardYear: 2011, product: "TOPPS UPDATE" });
 
     expect(cs.searchCatalog).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RELEASES)", () => {
+  it("'topps update' maps to 'Topps Update' (new entry — covers Trout/Ohtani/Judge demo cards)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("trout-tu", "Topps Update"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "topps update",
+    });
+
+    expect(r.cardId).toBe("trout-tu");
+    // searchCatalog should have been called with query containing the
+    // dictionary-resolved release name (not the raw product string).
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Topps Update",
+      expect.objectContaining({ year: 2011 }),
+    );
+  });
+
+  it("'bowman chrome' maps to 'Bowman Chrome' (corrected from prior 'Bowman Draft Chrome' mismap)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("trout-bc", "Bowman Chrome"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2024,
+      product: "bowman chrome",
+    });
+
+    expect(r.cardId).toBe("trout-bc");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("'bowman draft chrome' still maps to 'Bowman Draft Chrome' (existing entry — no regression)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("bonemer-bdc", "Bowman Draft Chrome"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "bowman draft chrome",
+    });
+
+    expect(r.cardId).toBe("bonemer-bdc");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Caleb Bonemer Bowman Draft Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("'topps chrome update' still maps to 'Topps Chrome Update' (existing entry — no regression)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("witt-tcu", "Topps Chrome Update"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2022,
+      product: "topps chrome update",
+    });
+
+    expect(r.cardId).toBe("witt-tcu");
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Topps Chrome Update",
+      expect.objectContaining({ year: 2022 }),
+    );
+  });
+});
+
+describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-pattern dispatch)", () => {
+  // When user types product="Bowman Chrome" with a cardNumber prefix indicating
+  // Bowman Draft Chrome realm (BDC-, BD-, CPA-, CDA-, BCRP-, BBPA-), the
+  // dispatch overrides effectiveProduct to "Bowman Draft Chrome" so the catalog
+  // search lands on the broader Bowman Draft space rather than flagship Bowman
+  // Chrome (which would surface BCP-N Prospects — semantically different card).
+
+  it("overrides 'Bowman Chrome' to 'Bowman Draft Chrome' when cardNumber starts with BDC-", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("witt-bdc", "Bowman Draft Chrome"),
+    ]);
+
+    await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2020,
+      product: "bowman chrome",
+      cardNumber: "BDC-1",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Bowman Draft Chrome",
+      expect.objectContaining({ year: 2020 }),
+    );
+  });
+
+  it("overrides 'Bowman Chrome' to 'Bowman Draft Chrome' when cardNumber starts with CPA-", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("bonemer-bdc", "Bowman Draft Chrome")]);
+
+    await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "bowman chrome",
+      cardNumber: "CPA-CBO",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Caleb Bonemer Bowman Draft Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("does NOT override when cardNumber is BCP- (flagship Bowman Chrome Prospects)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("trout-bcp", "Bowman Chrome")]);
+
+    await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2024,
+      product: "bowman chrome",
+      cardNumber: "BCP-1",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("does NOT override when product is NOT 'Bowman Chrome' (e.g. Topps Update)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("trout-tu", "Topps Update")]);
+
+    await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "topps update",
+      cardNumber: "BDC-99",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Topps Update",
+      expect.objectContaining({ year: 2011 }),
+    );
+  });
+
+  it("does NOT override when cardNumber is missing", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("witt-bc", "Bowman Chrome")]);
+
+    await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2024,
+      product: "bowman chrome",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("covers BD-/CDA-/BCRP-/BBPA- prefixes (full pattern coverage)", async () => {
+    const prefixes = ["BD-31", "CDA-X1", "BCRP-AB", "BBPA-ZZ"];
+    for (const cardNumber of prefixes) {
+      (cs.searchCatalog as any).mockClear();
+      (cs.searchCatalog as any).mockResolvedValue([catalog("x", "Bowman Draft Chrome")]);
+      __resolveCardIdInternals.clearCache();
+
+      await resolveCardId({
+        playerName: "Test Player",
+        cardYear: 2024,
+        product: "bowman chrome",
+        cardNumber,
+      });
+
+      expect(cs.searchCatalog).toHaveBeenCalledWith(
+        "Test Player Bowman Draft Chrome",
+        expect.objectContaining({ year: 2024 }),
+      );
+    }
+  });
+});
+
+describe("buildCacheKey — Phase 2 v2 defect #11 (cache-key alignment trace)", () => {
+  // Verifies the request-side key (built from queryContext fields) matches
+  // the warming-side key (built from CACHE_WARM_TARGETS) for the same logical
+  // card. Post-defect-#10 fix, warming targets carry NO cardNumber. Post-
+  // defect-#11 fix, the request side may or may not carry cardNumber
+  // depending on which endpoint produced the queryContext:
+  //   - /price + /estimate with no cardNumber in body  → cardNumber=undefined → KEY MATCHES warming
+  //   - /price-by-id parsed from iOS displayLabel       → cardNumber populated → KEY DIFFERS from warming (separate lazy cache entry, by design)
+
+  const buildCacheKey = __resolveCardIdInternals.buildCacheKey;
+
+  it("warming-side key for Mike Trout 2011 Topps Update == /price-side key (cardNumber undefined on both)", () => {
+    const warmingKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      // no cardNumber — matches post-defect-#10 CACHE_WARM_TARGETS shape
+    });
+    const priceKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      // /price + /estimate with no cardNumber field → undefined
+    });
+    expect(priceKey).toBe(warmingKey);
+  });
+
+  it("/price-by-id key (with cardNumber) DIFFERS from warming key (lazy-cache by design)", () => {
+    const warmingKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+    });
+    const priceByIdKey = buildCacheKey({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      cardNumber: "US175",
+    });
+    expect(priceByIdKey).not.toBe(warmingKey);
+    expect(priceByIdKey).toContain("us175");
+  });
+});
+
+describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load reduction)", () => {
+  // CACHE_WARM_TARGETS post-defect-#10 fix has NO cardNumber field on any
+  // target. This means warmResolveCardIdCache must NOT trigger the cardNumber
+  // detail-probe path in resolveCardId (which would fan out
+  // MAX_DETAIL_PROBES=5 getCardDetail calls per target = 50 extra Cardsight
+  // calls = rate-limit storm).
+
+  it("calls searchCatalog once per warming target and never calls getCardDetail (no cardNumber means no detail-probe)", async () => {
+    // Mock searchCatalog to return a single candidate per warming target so
+    // the cardNumber detail-probe step (`candidates.length > 1`) doesn't fire
+    // for an unrelated reason.
+    (cs.searchCatalog as any).mockImplementation((query: string) =>
+      Promise.resolve([catalog(`only-${query.slice(0, 10)}`, "Topps Update")]),
+    );
+    (cs.getCardDetail as any).mockResolvedValue(detail("x", "?"));
+    (cs.getPricing as any).mockResolvedValue(pricing(0));
+
+    await warmResolveCardIdCache();
+
+    // 10 warming targets x 1 searchCatalog call each
+    expect(cs.searchCatalog).toHaveBeenCalledTimes(10);
+    // Defect #10 acceptance — NO detail probes during warming
+    expect(cs.getCardDetail).not.toHaveBeenCalled();
+    // Pricing probes only fire when there are multiple candidates; with
+    // single-candidate mock above, no pricing probes either.
+    expect(cs.getPricing).not.toHaveBeenCalled();
+  });
+
+  it("warming targets in CACHE_WARM_TARGETS do NOT carry cardNumber field (defect #10 fix preserved)", async () => {
+    // Capture every CompIQQueryInput passed to searchCatalog via the resolver
+    const inputs: Array<{ query: string; year: unknown }> = [];
+    (cs.searchCatalog as any).mockImplementation((query: string, opts: any) => {
+      inputs.push({ query, year: opts?.year });
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+    });
+
+    await warmResolveCardIdCache();
+
+    expect(inputs.length).toBe(10);
+    // No query should contain a cardNumber-like token (US/USC/HMT/CPA prefix
+    // with digits or letters). Warming queries are player + releaseName only.
+    for (const i of inputs) {
+      expect(/\b(US\d+|USC\d+|HMT\d+|CPA-)/i.test(i.query)).toBe(false);
+    }
+  });
+});
+
+describe("resolveCardId — Phase 2 v2 defect #2 (parallelMatches sorted-array equality)", () => {
+  // Prior behavior: "Refractor" matched "Chrome Blue Refractor" (subset). Now:
+  // strict set-equality on tokens. Tests the disambiguation path in
+  // resolveParallelOnCandidate, which uses parallelMatches via Array.find.
+
+  function setupParallel(parallels: Array<{ id: string; name: string }>) {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("p2-card", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "p2-card", name: "x", number: "", releaseName: "Topps Update", setName: "Base Set",
+      year: 2020, parallels: parallels.map(p => ({ id: p.id, name: p.name, numberedTo: null })),
+    });
+  }
+
+  it("exact 1-token match: input 'Refractor' matches parallel 'Refractor' only", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+      { id: "refractor", name: "Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    expect(r.parallelId).toBe("refractor");
+  });
+
+  it("rejects subset (the 2020 Witt regression case): 'Refractor' does NOT match 'Chrome Blue Refractor'", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+      { id: "chrome-gold-refractor", name: "Chrome Gold Refractor" },
+      { id: "chrome", name: "Chrome" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    // No plain 'Refractor' in the parallels list — strict equality finds
+    // none. parallelId stays null; getPricing fires without parallel filter.
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("rejects subset: 'Blue Refractor' does NOT match 'Blue Wave Refractor'", async () => {
+    setupParallel([
+      { id: "blue-wave-refractor", name: "Blue Wave Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Blue Refractor",
+    });
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("exact multi-token match: 'Blue Wave Refractor' matches 'Blue Wave Refractor' parallel only", async () => {
+    setupParallel([
+      { id: "blue-refractor", name: "Blue Refractor" },
+      { id: "blue-wave-refractor", name: "Blue Wave Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Blue Wave Refractor",
+    });
+    expect(r.parallelId).toBe("blue-wave-refractor");
+  });
+
+  it("token-order independence (sorted equality): 'Refractor Blue' matches 'Blue Refractor'", async () => {
+    setupParallel([
+      { id: "blue-refractor", name: "Blue Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor Blue",
+    });
+    expect(r.parallelId).toBe("blue-refractor");
+  });
+
+  it("when no strict match exists, parallelId is null and pricing fetch fires without parallel filter", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    expect(r.parallelId).toBeNull();
+    // Resolution still completes successfully with cardId; just no parallel narrow.
+    expect(r.cardId).toBe("p2-card");
   });
 });
 

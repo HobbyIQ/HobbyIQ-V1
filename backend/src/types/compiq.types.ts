@@ -3,6 +3,14 @@ export interface CompIQEstimateRequest {
   cardYear?: number;
   product?: string;
   parallel?: string;
+  /**
+   * Phase 2 v2 — defect #11: cardNumber propagated from parsed query (set by
+   * `requestFromParsed` in compiq.routes.ts) so it can reach `resolveCardId`
+   * via queryContext for cardNumber detail-probe disambiguation AND so the
+   * LRU cache key correctly includes it. iOS clients calling /estimate may
+   * also pass it directly.
+   */
+  cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: number;
   isAuto?: boolean;
