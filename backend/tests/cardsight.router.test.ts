@@ -249,6 +249,38 @@ describe("cardsight.router", () => {
 
     expect(out.variantWarning).toContain("cardsight_no_catalog_match");
   });
+
+  // Defect #7 — when Cardsight pricing.card has no `player` field (the
+  // typical case), baseCard.player must fall back to pricing.card.name so
+  // the downstream CH-identity guard in compiqEstimate.service.ts builds a
+  // haystack that actually contains the player surname.
+  it("defect #7: baseCard.player falls back to pricing.card.name when pricing.card.player is undefined", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+    mockGetPricing.mockResolvedValue({
+      card: { id: "cs-1", name: "Mike Trout", setName: "Topps Update", year: 2011, number: "US175" /* no player field */ },
+      raw: { count: 1, records: [] },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: "2026-05-01" },
+    } as any);
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out.card?.player).toBe("Mike Trout");
+  });
+
+  it("defect #7: baseCard.player preserves pricing.card.player when both fields populated (no regression)", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+    mockGetPricing.mockResolvedValue({
+      card: { id: "cs-1", name: "Mike Trout title string", player: "Mike Trout", setName: "Topps Update", year: 2011, number: "US175" },
+      raw: { count: 1, records: [] },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: "2026-05-01" },
+    } as any);
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out.card?.player).toBe("Mike Trout");
+  });
 });
 
 

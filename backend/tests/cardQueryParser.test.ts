@@ -6,7 +6,7 @@
  * fallback. Each test mirrors a locked demo card or close variant.
  */
 import { describe, it, expect } from "vitest";
-import { parseCardQuery } from "../src/services/compiq/cardQueryParser.js";
+import { parseCardQuery, isCompVariantMatch } from "../src/services/compiq/cardQueryParser.js";
 
 describe("parseCardQuery — Phase 2 defect #3a (Bowman Draft Chrome SET_PATTERN)", () => {
   it("matches 'Bowman Draft Chrome' before 'Bowman Draft'", () => {
@@ -149,5 +149,63 @@ describe("parseCardQuery — combined Phase 2 fixes (5/5 demo cards via iOS disp
     expect(parsed.set).toBe("Bowman Draft Chrome");
     expect(parsed.cardNumber).toBe("CPA-CBO");
     expect(parsed.isAuto).toBe(true);
+  });
+});
+
+describe("isCompVariantMatch — defect #4 (AUTO regex coverage for Autographs / (AU,)", () => {
+  // Defect #4: prior regex /\bauto(graph(ed)?)?\b/ missed "Autographs" (plural
+  // — trailing 's' breaks the word boundary). AUTO_PREFIX_RE prior terminator
+  // '[- ]' missed "(AU, RC)" format (comma after prefix). Both forms appear
+  // in real Cardsight title strings.
+
+  const autoParsed = parseCardQuery("Mike Trout 2024 Bowman Chrome Auto");
+  const baseParsed = parseCardQuery("Mike Trout 2024 Bowman Chrome");
+
+  it("matches 'Autographs' (plural — e.g. 'Chrome Prospect Autographs' subset)", () => {
+    const r = isCompVariantMatch("2024 Bowman Chrome Prospect Autographs CPA-MT Mike Trout", autoParsed);
+    expect(r.match).toBe(true);
+  });
+
+  it("matches 'autos' (colloquial plural)", () => {
+    const r = isCompVariantMatch("2024 Bowman Chrome Mike Trout autos", autoParsed);
+    expect(r.match).toBe(true);
+  });
+
+  it("matches '(AU, RC)' format — prefix followed by comma", () => {
+    const r = isCompVariantMatch("2024 Bowman Chrome Mike Trout (AU, RC)", autoParsed);
+    expect(r.match).toBe(true);
+  });
+
+  it("matches '(AU)' format — prefix followed by close-paren", () => {
+    const r = isCompVariantMatch("2024 Bowman Chrome Mike Trout (AU)", autoParsed);
+    expect(r.match).toBe(true);
+  });
+
+  it("preserves existing 'auto' / 'autograph' / 'autographed' matches (no regression)", () => {
+    expect(isCompVariantMatch("Mike Trout 2024 Bowman Chrome auto", autoParsed).match).toBe(true);
+    expect(isCompVariantMatch("Mike Trout 2024 Bowman Chrome autograph", autoParsed).match).toBe(true);
+    expect(isCompVariantMatch("Mike Trout 2024 Bowman Chrome autographed", autoParsed).match).toBe(true);
+  });
+
+  it("preserves CPA-/BPA- prefix matches (no regression)", () => {
+    // Use parsed objects whose playerName matches the title so the downstream
+    // PLAYER check doesn't interfere with the AUTO_PREFIX_RE assertion.
+    const bonemerAuto = parseCardQuery("Caleb Bonemer 2024 Bowman Draft Chrome Auto");
+    expect(isCompVariantMatch("2024 BDC CPA-CBO Caleb Bonemer", bonemerAuto).match).toBe(true);
+    const troutAuto = parseCardQuery("Mike Trout 2024 Bowman Auto");
+    expect(isCompVariantMatch("2024 Bowman BPA-MT Mike Trout", troutAuto).match).toBe(true);
+  });
+
+  it("still rejects auto-bearing comp when user query is not auto (no false negative)", () => {
+    // base query, auto comp -> comp_has_unwanted_auto
+    const r = isCompVariantMatch("Mike Trout 2024 Bowman Chrome Autographs", baseParsed);
+    expect(r.match).toBe(false);
+    expect(r.reason).toBe("comp_has_unwanted_auto");
+  });
+
+  it("still rejects base comp when user query is auto (no false positive)", () => {
+    const r = isCompVariantMatch("Mike Trout 2024 Bowman Chrome Base", autoParsed);
+    expect(r.match).toBe(false);
+    expect(r.reason).toBe("comp_missing_auto");
   });
 });

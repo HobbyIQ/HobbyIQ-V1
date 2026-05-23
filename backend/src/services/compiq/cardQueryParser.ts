@@ -311,9 +311,14 @@ export function isCompVariantMatch(
   // Card-number prefixes also indicate autograph SKUs (e.g. "CPA-CBO" =
   // Chrome Prospect Autograph) — seller listings often write the card number
   // without the word "auto".
-  const AUTO_PREFIX_RE = /\b(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa|bbpa)[- ]/i;
+  // Defect #4 fix: extend AUTO_PREFIX_RE terminator to accept ',', ')' (e.g.
+  // titles like "(AU, RC)") in addition to the prior '[- ]'. Extend the auto
+  // word regex to match "Autographs" (plural — common subset name) and "autos"
+  // (colloquial plural), in addition to the prior "auto", "autograph",
+  // "autographed".
+  const AUTO_PREFIX_RE = /\b(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa)[-,)\s]/i;
   const hasAuto =
-    /\bauto(graph(ed)?)?\b/.test(title) ||
+    /\bauto(graph(s|ed)?|s)?\b/i.test(title) ||
     /\brpa\b/.test(title) ||
     AUTO_PREFIX_RE.test(title);
   if (parsed.isAuto && !hasAuto) {
