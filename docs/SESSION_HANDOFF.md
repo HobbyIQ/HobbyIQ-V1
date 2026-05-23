@@ -1209,3 +1209,62 @@ Pre-Phase-2 (per [q1_warn_log_baseline.md](phase0/q1_warn_log_baseline.md)) the 
 Both can run in the same session; (1) is the deeper diagnostic, (2) is a quick observability check that closes out Phase 2 v2's deferred acceptance verification.
 
 **Out of scope for next session unless explicitly authorized:** Defects #4, #7, #9. They're independent small PRs; don't bundle into the Cosmos diagnostic session.
+
+---
+
+# 2026-05-23 — Three defect ships in one session
+
+## What shipped
+
+- **Defect #13 v2** (PR #116 squash `bb75a27`) — warming serialized.
+  - Root cause: defect #5's `MAX_PRICING_PROBES` raise (3 → 8) interacted with warming's 10 parallel targets to produce ~80 concurrent Cardsight calls at startup. First defect #13 attempt (asymmetric cap warming=3, request=8) eliminated the cascade but regressed Ohtani-shape deep-catalog cards.
+  - Final fix: structural serialization of `warmResolveCardIdCache` (Promise.all → for-await loop). Same `MAX_PRICING_PROBES=8` for both paths; sequential pacing eliminates parallel-storm.
+  - Production verification: **19/19 smoke × 2 runs (5 min apart)**. Warming completed in 24.2s (`primed:10/0, elapsedMs:24210`), 26 429-retries across 30 min window all succeeded via backoff. Ohtani resolves to data-bearing `23084701-7511-4a` (1826 records / 120 comps) reliably.
+
+- **Defects #4 / #7 / #9** (PR #117 squash `190604b`) — three bundled fixes from post-Phase-2 carry-forward.
+  - **#4** — `isCompVariantMatch` AUTO regex extended to match `Autographs` (plural), `autos` (colloquial), `(AU,` and `(AU)` formats. Prior regex missed common Cardsight title patterns, causing `comp_missing_auto` false rejections.
+  - **#7** — `cardsight.router.ts` `baseCard.player` falls back to `pricing.card?.name` when `pricing.card?.player` is undefined. Cardsight's pricing.card has no separate `player` field; the fallback restores the CH-identity-guard haystack on `/price` queries.
+  - **#9** — `cardnumber_filter_no_match` / `cardnumber_filter_inconclusive` log severity downgraded from `warn` to `info`. These events fire on ~80% of `/price-by-id` requests due to expected cross-catalog cardNumber disagreement (structural noise, not error). Verified post-deploy: severityLevel=1 (Information) in App Insights.
+  - Production verification: **19/19 smoke run**. Same cardIds + comp counts as defect #13 v2 prod runs — no regression. WS1's parser/router changes orthogonal to resolveCardId/warming path as predicted.
+
+- **All v2 plan defects now closed** (defects #1-#12 from PR #112 onward; defect #13 from this session).
+
+## What didn't happen (deferred to next session)
+
+- **WS2 — Cosmos 22-27% diagnostic.** Authorized today as part of the three-workstream day plan but did NOT start. PR #113's defensive guard remains live (was OUTCOME C — guard correct, not the real cause). Carry-forward priority.
+- **WS3 — MCP rewire design doc.** Authorized today as part of the three-workstream day plan but did NOT start. Carry-forward.
+
+Both were skipped because today's session focused energy on resolving defect #13 (which surfaced mid-WS1 implementation) before completing WS1, and then capping the session after WS1 ship rather than starting WS2/WS3 with ~3.75 hours of budget remaining. Pattern: defects surfaced mid-implementation in three of the last four sessions; running a fresh single-workstream session for WS2 + WS3 separately is more reliable than three-workstream batching.
+
+## Net production change
+
+- **2 PRs merged + deployed.** main HEAD `190604b` (was `908599d` at session start).
+- **4 defects resolved** (#13 v2, #4, #7, #9).
+- **19/19 smoke maintained throughout** — three production smoke verifications across two deploys (defect #13 v2 × 2 runs, WS1 × 1 run). No regression observed at any point.
+- hobbyiq3 deployed SHA: `190604b`.
+
+## Updated carry-forwards
+
+**New (this session):**
+- None — all in-session findings (defect #13) resolved this session.
+
+**From prior sessions (unchanged, repriortized):**
+- **Cosmos 22-27% real cause** (alternate writer hypothesis from PR #113 outcome C). Next session high-priority candidate. Entry point: grep all `player_trends` writers, instrument catch block with full Cosmos error body, redeploy, capture diagnostic data.
+- **MCP /predict architectural mismatch** — biggest remaining workstream. Deserves focused fresh session (design + impl + smoke + ship is a full day's work). Three sub-options (per `ch_removal_v2_plan.md`): MCP changes query shape, backend grows player-level endpoint, or MCP gets its own Cardsight client.
+- **24h `primary_mode_cardhedge_namespace_only` warn count check** at appropriate time (Phase 2 v2 deploy + 24h was 2026-05-26T01:00Z per prior handoff). Expected: single digits.
+- **Day-10 PR #113 soak review:** scheduled 2026-05-31T17:44:32Z.
+- **`fn-cardhedge-comps` decommission** — gated on MCP rewire + Step B (compsLoader) completion.
+
+## Next session entry point
+
+**Decide between two posture choices, then run a single workstream:**
+
+1. **Stability-first** — Cosmos 22-27% diagnostic (carry-forward from PR #113 outcome C) → MCP App Insights wiring (small follow-up) → smoke any unverified iOS endpoints → THEN MCP rewire design. Each as its own session.
+
+2. **Architecture-first** — MCP rewire design (WS3 from today's deferred plan) → fn-cardhedge-comps decommission → cleanup. Pushes Cosmos to a later session.
+
+**Recommendation: stability-first.** Cosmos failure rate has been sitting at 22-27% since 2026-05-22 (per the Q1 baseline doc); diagnosing the real cause unblocks the App Insights signal-to-noise improvement and de-risks any concurrent MCP work that touches Cosmos. MCP rewire is bigger but doesn't have a similar drift risk.
+
+**Either path: single workstream per session given the recent pattern of defects surfacing mid-implementation.** Three sessions ago surfaced defects #10/#11/#12 mid-Phase-2; this session surfaced defect #13 mid-WS1. Batching three workstreams in one day didn't pay off either time. Single focused workstream per session is the durable pattern.
+
+**Out of scope for next session unless explicitly authorized:** Bundling. If MCP rewire is the focus, defer Cosmos. If Cosmos is the focus, defer MCP.
