@@ -174,7 +174,14 @@ async function findCompsViaCardsight(
     const baseCard: CardHedgeCard = {
       card_id: mapped.cardId,
       title: pricing.card?.name ?? undefined,
-      player: pricing.card?.player ?? undefined,
+      // Defect #7 fix: Cardsight's pricing.card object has no `player` field
+      // (player name lives in `name`). Without the fallback, baseCard.player
+      // is always undefined under Cardsight, and the CH-identity guard in
+      // compiqEstimate.service.ts builds a haystack that's just `card.title`
+      // — trip-prone for any player whose surname isn't in the title string
+      // (which under Cardsight equals `pricing.card.name`, often just the
+      // bare player name with no surname differentiation).
+      player: pricing.card?.player ?? pricing.card?.name ?? undefined,
       set: pricing.card?.setName ?? undefined,
       year: pricing.card?.year ?? undefined,
       number: pricing.card?.number ?? undefined,
