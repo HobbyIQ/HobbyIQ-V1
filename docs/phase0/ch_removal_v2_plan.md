@@ -244,7 +244,32 @@ Each phase has at least one query whose outcome shifts from broken-to-working wh
 
 ### Phase 2 — Defect #3 + queryContext plumbing + Step A routing (expanded scope, 2026-05-23)
 
-**Status (2026-05-25): ATTEMPTED; DEFERRED FOR RE-DESIGN.**
+**Status (2026-05-25 PM): SHIPPED.** PR #115 merged at squash SHA `4ccd95f`; hobbyiq3 deployed and verified 19/19 in production. Includes defects #10/#11/#12 fixes from Phase 2 v2 re-design + authorized in-session scope expansion for defects #5 + #2.
+
+**Shipped fixes (full list):**
+- Defect #3a — parser SET_PATTERN: 'Bowman Draft Chrome' before 'Bowman Draft'
+- Defect #3b — dictionary: 'topps update' -> 'Topps Update'; 'bowman chrome' -> 'Bowman Chrome' (corrected)
+- Defect #6 — parser NOISE: sport stopwords
+- Defect #8 — parser cardNumber regex expansion (US175 / CPA-CBO / C24-CBO patterns)
+- queryContext plumbing through fetchComps -> findCompsRouted
+- Step A meaningful-query fall-through routing in fetchComps
+- Defect #10 — remove cardNumber from CACHE_WARM_TARGETS (warming load reduction)
+- Defect #11 — thread cardNumber through QueryContext + CompIQEstimateRequest + toCardsightQuery
+- Defect #12 — cardNumber-pattern dispatch in resolveCardId (Bowman Chrome -> Bowman Draft Chrome on BD/BDC/CPA/CDA/BCRP/BBPA prefixes)
+- Defect #5 — raise MAX_PRICING_PROBES from 3 to 8 (in-session scope expansion authorized)
+- Defect #2 — parallelMatches sorted-array equality (in-session scope expansion authorized, was Phase 3 scope)
+
+**Ship verification (2026-05-25 PM):**
+- Local smoke: 19/19 (5×3 demos + 4 regressions)
+- Production smoke at SHA 4ccd95f: 19/19
+- LRU cache hit rate observed: 33.3% (was 0% pre-Phase-2 — defect #11 fix activates the cache alignment)
+- Defect #12 dispatch fires correctly in production (`release_fallback_cardnumber_dispatch` event observed once during smoke for 2020 Witt BDC-1)
+
+**Branch disposition:**
+- `feature/phase2-v2-with-defect-10-11-12-fixes` — merged + deleted on origin
+- `feature/phase2-parser-dict-querycontext-stepa` — preserved on origin (PR #114 close-out artifact)
+
+**Original status note (2026-05-25 AM — PR #114 closed) — historical reference:**
 
 Phase 2 was implemented per the design above on branch `feature/phase2-parser-dict-querycontext-stepa` and opened as **PR #114** (closed, not merged). Vitest 766/766 passed + tsc clean, but pre-merge local endpoint smoke surfaced three implementation-time issues that block the 5/5 ship gate. PR #114 closed to defer; branch preserved on origin for re-design consumption.
 
@@ -308,13 +333,20 @@ Phase 2 was implemented per the design above on branch `feature/phase2-parser-di
 
 **What still doesn't:** Specific-parallel queries (Blue Refractor vs Blue Wave Refractor) — Phase 3 territory. Parser sport-suffix tokens corrupt playerName for /price (defect #6, own PR). CH-identity guard's haystack relies on card.title under Cardsight (defect #7, only manifests on /price with corrupt playerName).
 
-### Phase 3 — Defect #2 (parallelMatches set-equality) and any remaining tightening
+### Phase 3 — (reduced scope; defect #2 already shipped in Phase 2 v2)
 
-**Scope:** Small PR. Change `every-input-token-in-candidate` to sorted-array equality OR add a "prefer-shortest-among-subset-matches" tiebreaker. Add unit tests covering the Blue Refractor / Blue Wave Refractor case.
+**Status (2026-05-25 PM):** Defect #2 (parallelMatches sorted-array equality) **shipped in PR #115** as authorized in-session scope expansion alongside defect #5 (MAX_PRICING_PROBES=8). Phase 3's original sole-defect scope is now complete. Remaining defects deferred from Phase 3 are independent and don't share a coherent phase boundary; they ship individually as defect-specific PRs.
 
-**What works after:** Parallel-specific queries route to the correct `parallel_id` in `getPricing`. Numbered parallels that *do* have Cardsight sale data return correctly; thin/empty parallels return `no-recent-comps` honestly (vs picking a sibling's data).
+**Remaining open defects (no longer "Phase 3" — track individually):**
+- Defect #4 — `isCompVariantMatch` AUTO regex misses "Autographs" / "(AU," (~5-10 LOC + tests, own PR, can ship anytime)
+- Defect #7 — CH-identity guard's haystack doesn't include Cardsight's actual player field (~10 LOC, only manifests on /price; needs design decision on whether to relax/skip guard under exclusive mode)
+- Defect #9 — `resolveCardId` cardNumber detail-probe cross-catalog mismatch (deferred per Phase 2 design audit; Phase 1's fall-through handles gracefully but emits `cardnumber_filter_no_match` warn on ~80% of /price-by-id calls; ~2 LOC to downgrade warn to debug, or a more substantive normalization fix)
 
-**What still doesn't:** Anything not addressed above — vendor-side gaps that remain after consumption fixes (likely small), thin-market parallels with low print runs that genuinely have 0 sales.
+**Original Phase 3 scope (now complete):** Defect #2 parallelMatches set-equality. Shipped in PR #115 at `cardsight.mapper.ts:144-167` with 6 new unit tests covering exact match, subset rejection, multi-token match, token-order independence, and the 2020 Witt BDC-1 regression case.
+
+**What works after Phase 2 v2 ship:** Parallel-specific queries now route to the correct `parallel_id` in `getPricing` (or no parallel filter when no strict match — safer fallback). The 2020 Witt BDC-1 Refractor historical query returns 3 comps post-deploy.
+
+**What still doesn't (post-Phase-2-v2):** Defect #9 detail-probe noise in warnings (cosmetic). Defect #7 only manifests on /price with corrupt playerName (defect #6 mostly resolves the corruption case). Thin-market parallels with low print runs that genuinely have 0 sales return `no-recent-comps` honestly.
 
 ## 6. Post-defect CH removal sequencing
 

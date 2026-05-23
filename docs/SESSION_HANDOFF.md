@@ -1099,3 +1099,113 @@ Choose one to start. If Phase 2 re-design picks up first, the entry point is:
 4. Then re-implement, consuming the preserved `feature/phase2-parser-dict-querycontext-stepa` branch where useful
 
 If Cosmos diagnostic picks up first, follow the prior session's entry-point notes (grep player_trends writers + instrument catch block). PR #113's defensive guard remains live; do not modify it until the real cause is characterized.
+
+---
+
+# 2026-05-25 PM — Phase 2 v2 shipped; PR #115 merged + deployed; 19/19 acceptance verified
+
+## Disposition
+
+- **PR #115** merged at squash SHA `4ccd95f` on `origin/main`.
+- **hobbyiq3 deployed** at SHA `4ccd95f` (`/api/health` build.shaShort verified post-restart).
+- **Production smoke 19/19** confirmed against live hobbyiq3 (5×3 demos + 4 regressions).
+- **Local smoke 19/19** confirmed pre-merge.
+- **Branch disposition:** `feature/phase2-v2-with-defect-10-11-12-fixes` merged + deleted on origin. `feature/phase2-parser-dict-querycontext-stepa` preserved (PR #114 close-out artifact).
+
+## What shipped (5-defect bundle on top of original Phase 2 scope)
+
+Phase 2 v2 re-design consumed PR #114's preserved branch (cherry-pick), added three fixes for yesterday's findings (defects #10/#11/#12), then mid-session authorized in-session scope expansion to fix defects #5 and #2 surfaced during local smoke.
+
+**Cherry-picked from PR #114 (closed) preserved Phase 2 work:**
+- Defect #3a — parser SET_PATTERN: `Bowman Draft Chrome` before `Bowman Draft`
+- Defect #3b — dictionary: `topps update` -> `Topps Update`; `bowman chrome` corrected to `Bowman Chrome`
+- Defect #6 — parser NOISE: sport-suffix stopwords (baseball/football/etc.)
+- Defect #8 — parser cardNumber regex: US175 / CPA-CBO / C24-CBO patterns
+- queryContext plumbing through `fetchComps -> findCompsRouted`
+- Step A meaningful-query fall-through routing in `fetchComps`
+
+**New (yesterday's findings, fixed today):**
+- Defect #10 — remove cardNumber from CACHE_WARM_TARGETS (warming API load returns to pre-Phase-2 baseline; no rate-limit storm)
+- Defect #11 — cardNumber threaded through QueryContext + CompIQEstimateRequest + toCardsightQuery + requestFromParsed + computeEstimate queryContext build
+- Defect #12 — cardNumber-pattern dispatch in `_resolveCardId`: when `product = "Bowman Chrome"` AND cardNumber matches `/^(BD-|BDC-|CPA-|CDA-|BCRP-|BBPA-)/i`, override to `Bowman Draft Chrome`. Logged via `release_fallback_cardnumber_dispatch` event for observability. Pattern regex verified against Cardsight catalog probe (BCP- excluded — that's flagship Bowman Chrome Prospects territory)
+
+**Authorized in-session scope expansion (defects #5 + #2):**
+- Defect #5 — `MAX_PRICING_PROBES` raised from 3 to 8. Cardsight returns up to 16 candidates for some queries (Ohtani 2018 TU); the prior cap caused `candidates[0]` fallback to non-data-bearing card. Cap raise let resolveCardId find the data-rich cardId
+- Defect #2 — `parallelMatches` switched from token-subset to sorted-array equality. `Refractor` no longer falsely matches `Chrome Blue Refractor` candidate. Restores 2020 Witt BDC-1 Refractor regression query. (Was Phase 3 scope — folded in here)
+
+## 19/19 acceptance verification
+
+**Local smoke** (CARDSIGHT_MODE=exclusive, post-warming + 15s cooldown):
+
+| Card | /price | /price-by-id | /estimate |
+|---|---|---|---|
+| Mike Trout 2011 TU US175 | PASS (15 comps, fmv=$333) | PASS (15 comps) | PASS (15 comps) |
+| Shohei Ohtani 2018 TU US285 | PASS (11 comps, cardId=ec18b06a) | PASS (11) | PASS (11) |
+| Aaron Judge 2017 TU US99 | PASS (77 comps, cardId=1c810c2c) | PASS (77) | PASS (77) |
+| Bobby Witt Jr 2022 TCU USC35 | PASS (115 comps) | PASS (115) | PASS (115) |
+| Caleb Bonemer 2024 BDC CPA-CBO | PASS (4 comps) | PASS (4) | PASS (4) |
+
+| Regression | Local | Production |
+|---|---|---|
+| 2020 Witt Bowman Chrome BDC-1 Refractor | PASS (3 comps, dispatch fired) | PASS (3 comps) |
+| 2024 Bowman Chrome Mike Trout | PASS (5 comps) | PASS (5) |
+| 2018 Ohtani Topps Chrome RC | PASS (48 comps) | PASS (48) |
+| 2019 Vladdy Jr Topps Chrome RC | PASS (50 comps) | PASS (50) |
+
+**Production smoke** (post-deploy at SHA 4ccd95f, 19/19):
+- Ohtani prod resolved to `23084701-7511-4a` (1826 records, 120 comps) — the data-richest of 16 candidates. Defect #5 cap raise enabled the probe to reach it.
+- Defect #12 dispatch fired once (`release_fallback_cardnumber_dispatch` event for 2020 Witt BDC-1).
+- All other resolutions consistent with local smoke.
+
+## LRU cache hit rate observation
+
+Pre-Phase-2: 0% sustained (request keys never matched warming keys).
+
+Post-Phase-2-v2 first 15 min in production (App Insights `resolveCardId_cache_stats`):
+- t=startup+0min: `hits=0, misses=1, size=0` (post-restart cold cache)
+- t=startup+5min (post-smoke): `hits=10, misses=20, size=19, hitRatePct=33.3`
+
+**Hit rate 33.3% confirms defect #11's cache alignment works.** 33.3% (not 60%+) because /price-by-id with cardNumber-bearing iOS displayLabel produces a separate cache entry from warming (lazy-cache; first hit misses, subsequent hits cache). /price + /estimate (the dominant iOS paths) hit warming entries on the first cold call after restart.
+
+## Initial warn-log observation (24h check carry-forward)
+
+`primary_mode_cardhedge_namespace_only` warn count, first 30 min post-deploy: **6**.
+
+Pre-Phase-2 (per [q1_warn_log_baseline.md](phase0/q1_warn_log_baseline.md)) the structural rate was ~100% of `/price-by-id` requests under exclusive mode. Phase 2's Step A meaningful-query fall-through should drop this to single digits per 24h (only the opaque-cardId iOS resolvedLabel fallback case). 30-min count of 6 is consistent with expected post-deploy floor; **24h check at 2026-05-26T01:00Z** will confirm.
+
+## v2 plan updated
+
+- `docs/phase0/ch_removal_v2_plan.md` Phase 2 section marked SHIPPED with full fix list and PR ref.
+- Phase 3 section updated: defect #2 marked already-shipped; remaining defects (#4, #7, #9) no longer share a coherent phase boundary, now tracked individually as defect-specific PRs.
+
+## Carry-forwards
+
+**New:**
+- 24h `primary_mode_cardhedge_namespace_only` warn count check at 2026-05-26T01:00Z (expected: single digits)
+- 24h `release_fallback_cardnumber_dispatch` event count (expected: low — only fires for Bowman Chrome + BDC/CPA/etc. cardNumber queries)
+- Defect #9 warning noise — `cardnumber_filter_no_match` fires on ~80% of /price-by-id calls due to cross-catalog disagreement; minor observability nuisance (~2 LOC to downgrade to debug log, can be its own PR)
+
+**Unchanged:**
+- Cosmos 22-27% failure rate real cause TBD (carry-forward from 2026-05-24 PM PR #113 outcome C). Next-session entry-point notes from prior handoff still apply.
+- Day-10 PR #113 soak review: 2026-05-31T17:44:32Z.
+- MCP /predict architectural mismatch — still queued.
+- fn-cardhedge-comps decommission — still gated on Step B (MCP rewire) + Step C completion.
+- 2024-2025 Topps Chrome Update Base catalog-duplicate diagnostic — still open.
+
+## Remaining open defects (no longer phased)
+
+- **Defect #4** — `isCompVariantMatch` AUTO regex misses "Autographs" / "(AU,". ~5-10 LOC + tests. Own PR, can ship anytime.
+- **Defect #7** — CH-identity guard's haystack doesn't include Cardsight's actual player field. Only manifests on /price under exclusive mode with corrupt playerName (mostly resolved by defect #6 stopword fix). Needs design decision on whether to relax/skip guard under exclusive mode.
+- **Defect #9** — cardNumber detail-probe cross-catalog mismatch produces noisy warnings. ~2 LOC to downgrade warn to debug, or a more substantive normalization fix.
+
+## Next session entry point
+
+**Two priorities, choose one:**
+
+1. **Cosmos 22-27% failure rate diagnostic** (carry-forward priority from 2026-05-24 PM). PR #113 defensive guard ineffective on real cause. Entry point: grep all `player_trends` writers + instrument the catch block with full Cosmos error response body, redeploy, capture real error messages. PR #113's guard stays live.
+
+2. **24h Phase 2 v2 acceptance check at 2026-05-26T01:00Z.** Query App Insights for `primary_mode_cardhedge_namespace_only` warn count over the post-deploy 24h window. Expected: single digits. If still in dozens, Step A routing didn't fully activate (would need diagnostic). Also confirm LRU cache hit rate trend remains non-zero.
+
+Both can run in the same session; (1) is the deeper diagnostic, (2) is a quick observability check that closes out Phase 2 v2's deferred acceptance verification.
+
+**Out of scope for next session unless explicitly authorized:** Defects #4, #7, #9. They're independent small PRs; don't bundle into the Cosmos diagnostic session.
