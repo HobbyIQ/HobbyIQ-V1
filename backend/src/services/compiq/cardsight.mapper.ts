@@ -141,10 +141,30 @@ function tokenizeParallel(name: string): string[] {
     .filter((t) => t.length > 0);
 }
 
+// Phase 2 v2 — defect #2 fix: exact set-equality on tokens (sorted-array
+// equal), replacing the prior subset check.
+//
+// Prior behavior: `inputTokens.every(t => candidateTokens.includes(t))` treated
+// the input as a subset of the candidate. This caused "Refractor" to falsely
+// match "Chrome Blue Refractor" (and similar over-permissive matches), which
+// then drove `Array.find()` to return whichever multi-word refractor parallel
+// appeared first in detail.parallels[] — semantically wrong, and the
+// downstream getPricing(cardId, {parallelId}) call would filter to a parallel
+// the user never asked for, often returning zero records.
+//
+// New behavior: token sets must be exactly equal post-sort. "Refractor" only
+// matches a parallel literally named "Refractor". "Blue Wave Refractor" only
+// matches "Blue Wave Refractor" (also order-independent: "Refractor Blue
+// Wave" matches the same — order in tokenized form is normalized out).
+//
+// Safety fallback: when no parallel matches strictly, parallelId stays null
+// and getPricing is called without a parallel filter — returns the full
+// pricing pool, downstream filtering can disambiguate.
 function parallelMatches(input: string, candidate: string): boolean {
-  const inputTokens = tokenizeParallel(input);
-  const candidateTokens = tokenizeParallel(candidate);
-  return inputTokens.every((t) => candidateTokens.includes(t));
+  const inputTokens = tokenizeParallel(input).sort();
+  const candidateTokens = tokenizeParallel(candidate).sort();
+  if (inputTokens.length !== candidateTokens.length) return false;
+  return inputTokens.every((t, i) => t === candidateTokens[i]);
 }
 
 // ───── Internal: resolution worker (uncached) ────────────────────────────────

@@ -520,6 +520,88 @@ describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load red
   });
 });
 
+describe("resolveCardId — Phase 2 v2 defect #2 (parallelMatches sorted-array equality)", () => {
+  // Prior behavior: "Refractor" matched "Chrome Blue Refractor" (subset). Now:
+  // strict set-equality on tokens. Tests the disambiguation path in
+  // resolveParallelOnCandidate, which uses parallelMatches via Array.find.
+
+  function setupParallel(parallels: Array<{ id: string; name: string }>) {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("p2-card", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "p2-card", name: "x", number: "", releaseName: "Topps Update", setName: "Base Set",
+      year: 2020, parallels: parallels.map(p => ({ id: p.id, name: p.name, numberedTo: null })),
+    });
+  }
+
+  it("exact 1-token match: input 'Refractor' matches parallel 'Refractor' only", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+      { id: "refractor", name: "Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    expect(r.parallelId).toBe("refractor");
+  });
+
+  it("rejects subset (the 2020 Witt regression case): 'Refractor' does NOT match 'Chrome Blue Refractor'", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+      { id: "chrome-gold-refractor", name: "Chrome Gold Refractor" },
+      { id: "chrome", name: "Chrome" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    // No plain 'Refractor' in the parallels list — strict equality finds
+    // none. parallelId stays null; getPricing fires without parallel filter.
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("rejects subset: 'Blue Refractor' does NOT match 'Blue Wave Refractor'", async () => {
+    setupParallel([
+      { id: "blue-wave-refractor", name: "Blue Wave Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Blue Refractor",
+    });
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("exact multi-token match: 'Blue Wave Refractor' matches 'Blue Wave Refractor' parallel only", async () => {
+    setupParallel([
+      { id: "blue-refractor", name: "Blue Refractor" },
+      { id: "blue-wave-refractor", name: "Blue Wave Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Blue Wave Refractor",
+    });
+    expect(r.parallelId).toBe("blue-wave-refractor");
+  });
+
+  it("token-order independence (sorted equality): 'Refractor Blue' matches 'Blue Refractor'", async () => {
+    setupParallel([
+      { id: "blue-refractor", name: "Blue Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor Blue",
+    });
+    expect(r.parallelId).toBe("blue-refractor");
+  });
+
+  it("when no strict match exists, parallelId is null and pricing fetch fires without parallel filter", async () => {
+    setupParallel([
+      { id: "chrome-blue-refractor", name: "Chrome Blue Refractor" },
+    ]);
+    const r = await resolveCardId({
+      playerName: "X", cardYear: 2020, product: "topps update", parallel: "Refractor",
+    });
+    expect(r.parallelId).toBeNull();
+    // Resolution still completes successfully with cardId; just no parallel narrow.
+    expect(r.cardId).toBe("p2-card");
+  });
+});
+
 describe("resolveCardId — parallel resolution preserved", () => {
   it("resolves parallelId when input.parallel present and detail.parallels has match", async () => {
     (cs.searchCatalog as any).mockResolvedValue([catalog("only-id", "Topps Update")]);
