@@ -319,6 +319,116 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
   });
 });
 
+describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-pattern dispatch)", () => {
+  // When user types product="Bowman Chrome" with a cardNumber prefix indicating
+  // Bowman Draft Chrome realm (BDC-, BD-, CPA-, CDA-, BCRP-, BBPA-), the
+  // dispatch overrides effectiveProduct to "Bowman Draft Chrome" so the catalog
+  // search lands on the broader Bowman Draft space rather than flagship Bowman
+  // Chrome (which would surface BCP-N Prospects — semantically different card).
+
+  it("overrides 'Bowman Chrome' to 'Bowman Draft Chrome' when cardNumber starts with BDC-", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("witt-bdc", "Bowman Draft Chrome"),
+    ]);
+
+    await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2020,
+      product: "bowman chrome",
+      cardNumber: "BDC-1",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Bowman Draft Chrome",
+      expect.objectContaining({ year: 2020 }),
+    );
+  });
+
+  it("overrides 'Bowman Chrome' to 'Bowman Draft Chrome' when cardNumber starts with CPA-", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("bonemer-bdc", "Bowman Draft Chrome")]);
+
+    await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "bowman chrome",
+      cardNumber: "CPA-CBO",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Caleb Bonemer Bowman Draft Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("does NOT override when cardNumber is BCP- (flagship Bowman Chrome Prospects)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("trout-bcp", "Bowman Chrome")]);
+
+    await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2024,
+      product: "bowman chrome",
+      cardNumber: "BCP-1",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("does NOT override when product is NOT 'Bowman Chrome' (e.g. Topps Update)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("trout-tu", "Topps Update")]);
+
+    await resolveCardId({
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "topps update",
+      cardNumber: "BDC-99",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Mike Trout Topps Update",
+      expect.objectContaining({ year: 2011 }),
+    );
+  });
+
+  it("does NOT override when cardNumber is missing", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("witt-bc", "Bowman Chrome")]);
+
+    await resolveCardId({
+      playerName: "Bobby Witt Jr",
+      cardYear: 2024,
+      product: "bowman chrome",
+    });
+
+    expect(cs.searchCatalog).toHaveBeenCalledWith(
+      "Bobby Witt Jr Bowman Chrome",
+      expect.objectContaining({ year: 2024 }),
+    );
+  });
+
+  it("covers BD-/CDA-/BCRP-/BBPA- prefixes (full pattern coverage)", async () => {
+    const prefixes = ["BD-31", "CDA-X1", "BCRP-AB", "BBPA-ZZ"];
+    for (const cardNumber of prefixes) {
+      (cs.searchCatalog as any).mockClear();
+      (cs.searchCatalog as any).mockResolvedValue([catalog("x", "Bowman Draft Chrome")]);
+      __resolveCardIdInternals.clearCache();
+
+      await resolveCardId({
+        playerName: "Test Player",
+        cardYear: 2024,
+        product: "bowman chrome",
+        cardNumber,
+      });
+
+      expect(cs.searchCatalog).toHaveBeenCalledWith(
+        "Test Player Bowman Draft Chrome",
+        expect.objectContaining({ year: 2024 }),
+      );
+    }
+  });
+});
+
 describe("buildCacheKey — Phase 2 v2 defect #11 (cache-key alignment trace)", () => {
   // Verifies the request-side key (built from queryContext fields) matches
   // the warming-side key (built from CACHE_WARM_TARGETS) for the same logical

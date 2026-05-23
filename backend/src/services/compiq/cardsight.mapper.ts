@@ -83,6 +83,50 @@ function lookupReleaseName(product: string): string | null {
   return COMPIQ_TO_CARDSIGHT_RELEASES[normalized] ?? null;
 }
 
+// Phase 2 v2 defect #12 — cardNumber-pattern dispatch (resolves the 2020 Witt
+// "Bowman Chrome Refractor BDC-1" regression from PR #114).
+//
+// When a user types "Bowman Chrome" but the cardNumber prefix indicates a
+// Bowman Draft Chrome realm card (BDC-N prospects, CPA-XXX autographs, etc.),
+// override the product so resolveCardId searches the broader Bowman Draft
+// catalog space instead of flagship Bowman Chrome. The Phase 2 dictionary
+// correction ("bowman chrome" → "Bowman Chrome") is semantically correct but
+// surfaces wrong-card answers for these cardNumber-prefixed queries because
+// flagship Bowman Chrome and Bowman Draft Chrome share player+year but use
+// different setNames in Cardsight catalog.
+//
+// Verified cardNumber pattern coverage (2026-05-25, Cardsight catalog probe +
+// hobby convention):
+//   BDC-  Bowman Draft Chrome main prospects (e.g. 2020 Witt BDC-1)
+//   BD-   Bowman Draft base
+//   CPA-  Chrome Prospect Autographs (e.g. Bonemer CPA-CBO)
+//   CDA-  Chrome Draft Autographs (verified in 2020 Bowman Draft probe)
+//   BCRP- Bowman Chrome Rookie Prospects (rare variant)
+//   BBPA- Bowman Black Prospect Autographs
+//
+// Explicitly NOT in the override (these are flagship Bowman Chrome, not BDC):
+//   BCP-  Bowman Chrome Prospects (releaseName="Bowman Chrome", setName="Prospects")
+//   BSP-  Bowman Sapphire Prospects (different release entirely)
+const BOWMAN_DRAFT_CHROME_NUMBER_PATTERN = /^(BD-|BDC-|CPA-|CDA-|BCRP-|BBPA-)/i;
+
+function applyCardNumberDisambiguation(
+  product: string | undefined,
+  cardNumber: string | undefined,
+): string | undefined {
+  if (!product || !cardNumber) return product;
+  if (product.toLowerCase().trim() === "bowman chrome" &&
+      BOWMAN_DRAFT_CHROME_NUMBER_PATTERN.test(cardNumber)) {
+    log.info("release_fallback_cardnumber_dispatch", {
+      originalProduct: product,
+      cardNumber,
+      resolvedProduct: "Bowman Draft Chrome",
+      endpoint: "resolveCardId",
+    });
+    return "Bowman Draft Chrome";
+  }
+  return product;
+}
+
 function tokenizeParallel(name: string): string[] {
   return name
     .split(/[\s\-/]+/)
@@ -103,8 +147,15 @@ async function _resolveCardId(
 ): Promise<CardsightResolution> {
   const warnings: string[] = [];
 
-  let releaseName: string | null = input.product ? lookupReleaseName(input.product) : null;
-  if (input.product && !releaseName) {
+  // Phase 2 v2 defect #12 — apply cardNumber-pattern dispatch BEFORE dictionary
+  // lookup, so an input.product="Bowman Chrome" with input.cardNumber="BDC-1"
+  // resolves through the Bowman Draft Chrome catalog path instead of flagship.
+  // input.product is preserved for log/warning text (user-facing reflection of
+  // what they actually typed); effectiveProduct drives catalog routing.
+  const effectiveProduct = applyCardNumberDisambiguation(input.product, input.cardNumber);
+
+  let releaseName: string | null = effectiveProduct ? lookupReleaseName(effectiveProduct) : null;
+  if (effectiveProduct && !releaseName) {
     warnings.push(
       `Product "${input.product}" not in Cardsight release dictionary — searching by player name only.`,
     );
@@ -134,11 +185,12 @@ async function _resolveCardId(
   let candidates: CardsightCatalogResult[] = results;
 
   // Release-name filter (case-insensitive exact match). Falls through to
-  // input.product when the dictionary misses — gives unmapped products
-  // (e.g. "topps update", "bowman draft chrome" pending Phase 2 dictionary
-  // expansion) a chance to still narrow against catalog's releaseName field.
-  if (input.product) {
-    const expectedRelease = (releaseName ?? input.product).toLowerCase().trim();
+  // effectiveProduct (post-dispatch) when the dictionary misses — gives
+  // unmapped products a chance to still narrow against catalog's releaseName
+  // field. Using effectiveProduct rather than input.product so the dispatch
+  // also informs the post-fetch narrowing step, not just the dictionary lookup.
+  if (effectiveProduct) {
+    const expectedRelease = (releaseName ?? effectiveProduct).toLowerCase().trim();
     const exactMatch = results.filter(
       (r) => r.releaseName?.toLowerCase() === expectedRelease,
     );
