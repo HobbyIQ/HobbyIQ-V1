@@ -520,6 +520,98 @@ describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load red
   });
 });
 
+describe("warmResolveCardIdCache — defect #13 v2 (serialized warming, single-cap symmetry)", () => {
+  // Defect #13 v2 — first attempt used asymmetric cap (warming=3, request=8)
+  // but regressed Ohtani-shape cards (deep-catalog data-bearing). Second
+  // attempt serializes warming instead: one target at a time, full cap=8.
+  // No rate-limit cascade because resolutions don't overlap. No cap
+  // asymmetry, so warming reaches data-bearing cardIds at deep catalog
+  // positions just like request-side does.
+
+  it("warming completes for all 10 targets sequentially (no Promise.all parallelism)", async () => {
+    // Track call ordering to verify serial execution.
+    const callOrder: string[] = [];
+    (cs.searchCatalog as any).mockImplementation(async (query: string) => {
+      callOrder.push(`start:${query.slice(0, 20)}`);
+      // Add small delay to amplify the parallel-vs-serial signal
+      await new Promise((r) => setTimeout(r, 5));
+      callOrder.push(`end:${query.slice(0, 20)}`);
+      return [catalog(`c-${query.slice(0, 8)}`, "x")];
+    });
+    (cs.getPricing as any).mockResolvedValue(pricing(0));
+
+    await warmResolveCardIdCache();
+
+    expect(cs.searchCatalog).toHaveBeenCalledTimes(10);
+    // Serial: each `start:X` is immediately followed by its `end:X` before
+    // the next `start:Y` begins. Parallel (Promise.all) would interleave.
+    for (let i = 0; i < callOrder.length; i += 2) {
+      const startEntry = callOrder[i];
+      const endEntry = callOrder[i + 1];
+      expect(startEntry.startsWith("start:")).toBe(true);
+      expect(endEntry.startsWith("end:")).toBe(true);
+      expect(startEntry.slice(6)).toBe(endEntry.slice(4));
+    }
+  });
+
+  it("warming uses full MAX_PRICING_PROBES=8 (same as request-side — no asymmetric cap)", async () => {
+    const cands = Array.from({ length: 16 }, (_, i) => catalog(`w${i}`, "Topps Update"));
+    // Catalog mock returns 16 candidates only for one specific warming target;
+    // other targets get single-candidate (no pricing-probe fanout) to keep
+    // the math clean.
+    (cs.searchCatalog as any).mockImplementation((query: string) => {
+      if (query.includes("Shohei Ohtani")) return Promise.resolve(cands);
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+    });
+    (cs.getPricing as any).mockResolvedValue(pricing(10));
+
+    await warmResolveCardIdCache();
+
+    // Shohei Ohtani warming target alone should fire 8 pricing probes
+    // (defect #5's MAX_PRICING_PROBES cap). The other 9 single-candidate
+    // targets fire 0 pricing probes. Total: 8.
+    expect(cs.getPricing).toHaveBeenCalledTimes(8);
+  });
+
+  it("Ohtani-shape deep-ranked card resolves correctly during warming (defect #13 v2 acceptance)", async () => {
+    // 16 candidates; data-bearing at position 4 (o3). Cap=8 reaches it.
+    const cands = Array.from({ length: 16 }, (_, i) => catalog(`o${i}`, "Topps Update"));
+    (cs.searchCatalog as any).mockImplementation((query: string) => {
+      if (query.includes("Shohei Ohtani")) return Promise.resolve(cands);
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+    });
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const recs = id === "o3" ? 600 : id === "o9" ? 1200 : 0;
+      return Promise.resolve(pricing(recs));
+    });
+
+    await warmResolveCardIdCache();
+
+    // Pricing probe selected o3 (600 records, position 4, within cap=8 reach).
+    // o9 (1200 records) is at position 10, beyond cap — not selected.
+    // Verify the cache now holds the correct cardId for the Ohtani warming key.
+    const r = await resolveCardId({
+      playerName: "Shohei Ohtani",
+      cardYear: 2018,
+      product: "topps update",
+    });
+    expect(r.cardId).toBe("o3");
+    // Top-8 probed contains only o3 with data (o9 at position 10 is beyond
+    // cap=8). dataBearingCount=1 in the probe set → matchConfidence="exact".
+    expect(r.matchConfidence).toBe("exact");
+  });
+
+  it("request-side resolution uses MAX_PRICING_PROBES=8 (single cap, no asymmetry)", async () => {
+    const cands = Array.from({ length: 16 }, (_, i) => catalog(`r${i}`, "Topps Update"));
+    (cs.searchCatalog as any).mockResolvedValue(cands);
+    (cs.getPricing as any).mockResolvedValue(pricing(10));
+
+    await resolveCardId({ playerName: "Different Player", cardYear: 2018, product: "topps update" });
+
+    expect(cs.getPricing).toHaveBeenCalledTimes(8);
+  });
+});
+
 describe("resolveCardId — Phase 2 v2 defect #2 (parallelMatches sorted-array equality)", () => {
   // Prior behavior: "Refractor" matched "Chrome Blue Refractor" (subset). Now:
   // strict set-equality on tokens. Tests the disambiguation path in

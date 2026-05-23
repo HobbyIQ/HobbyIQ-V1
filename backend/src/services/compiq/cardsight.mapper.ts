@@ -79,9 +79,9 @@ const MAX_DETAIL_PROBES = 5;
 // returns up to 16 candidates for some queries (e.g. Shohei Ohtani 2018 Topps
 // Update returned 16, with data-bearing cardIds ranked at positions 4 and 10).
 // The prior cap of 3 caused candidates[0] fallback for cards where the
-// data-bearing entry was ranked deeper. Probe budget applies request-side
-// only; results are cache-protected after the first call. See
-// docs/phase0/phase2_design.md Implementation findings (2026-05-25).
+// data-bearing entry was ranked deeper. Defect #13 v2 makes warming use the
+// same cap (single source of truth) by serializing warming targets instead
+// of throttling per-target probe count. See warmResolveCardIdCache below.
 const MAX_PRICING_PROBES = 8;
 
 function lookupReleaseName(product: string): string | null {
@@ -536,23 +536,36 @@ export async function warmResolveCardIdCache(): Promise<void> {
   const start = Date.now();
   let primed = 0;
   let failed = 0;
-  await Promise.all(
-    CACHE_WARM_TARGETS.map(async (target) => {
-      try {
-        const result = await resolveCardId(target);
-        if (result.cardId) primed++;
-        else failed++;
-      } catch (err: any) {
-        failed++;
-        log.warn("warm_target_failed", {
-          target: target.playerName,
-          year: target.cardYear,
-          product: target.product,
-          error: err?.message ?? String(err),
-        });
-      }
-    }),
-  );
+  // Defect #13 v2 — serialize warming targets to eliminate the parallel
+  // rate-limit cascade. Prior Promise.all + 10 targets × MAX_PRICING_PROBES=8
+  // produced ~80 concurrent Cardsight calls at startup, tripping the rate
+  // limit and poisoning the LRU with candidates[0] fallback resolutions.
+  // The first defect #13 attempt (asymmetric cap: warming=3, request=8)
+  // eliminated the cascade but regressed deep-catalog cards (Ohtani-shape:
+  // data-bearing cardId ranked >3 in catalog order). Serializing instead
+  // means one resolution at a time, full MAX_PRICING_PROBES=8 per target,
+  // no rate-limit cascade, no Ohtani-shape trade-off.
+  //
+  // Startup cost: ~10s parallel → ~3-4 min sequential. Acceptable because
+  // warmResolveCardIdCache is invoked fire-and-forget after app.listen
+  // (server.ts) — /api/health is responsive immediately; users in the
+  // warming window pay cold-path latency on uncached queries (same as if
+  // warming hadn't run).
+  for (const target of CACHE_WARM_TARGETS) {
+    try {
+      const result = await resolveCardId(target);
+      if (result.cardId) primed++;
+      else failed++;
+    } catch (err: any) {
+      failed++;
+      log.warn("warm_target_failed", {
+        target: target.playerName,
+        year: target.cardYear,
+        product: target.product,
+        error: err?.message ?? String(err),
+      });
+    }
+  }
   log.info("resolveCardId_cache_warmed", {
     primed,
     failed,
