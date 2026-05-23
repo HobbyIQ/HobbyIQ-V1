@@ -1426,3 +1426,96 @@ Three architectural options recap (from prior sessions):
 Design picks one with reasoning + identifies implementation phasing + acceptance criteria. Doc-only commit at end of design session. Implementation is a follow-up workstream.
 
 **Out of scope for next session unless explicitly authorized:** MCP implementation code, any other workstream. Design only.
+
+---
+
+# 2026-05-26 — Five-workstream day; MCP rewire foundation + smoke findings
+
+## What shipped
+
+- **compiq-mcp App Insights wiring** (PR #118 squash SHA `b959dc3`) — production observability for MCP-side now matches hobbyiq3. Three layers verified GREEN: requests + dependencies + traces all populated for `cloud_RoleName=compiq-mcp`. Approach: Azure App Service auto-instrumentation agent + manual SDK init. Resolves the multi-session carry-forward and is a prerequisite for MCP rewire diagnostics.
+
+- **Cosmos finding inverted** (docs-only commit `3852e62`) — re-characterized the historical 22-27% `POST player_trends/docs` failure rate from "upsert defect on player_trends" → "cross-partition query optimization in `getPlayerScoreByName`." Only one writer to player_trends exists (`upsertPlayerScore`); DailyIQ reads via cross-partition query that the Cosmos SDK issues as POST /docs, sharing the dependency-name format with upserts. PR #113's defensive guard stays in production as defensive coverage of a non-problem.
+
+- **MCP rewire design** (docs-only commit `f38438c`) — `docs/phase0/mcp_rewire_design.md`. Recommendation: **Option B** — backend grows `/api/compiq/comps-by-player`; MCP's `compsLoader` becomes a thin HTTP client. Single Cardsight integration point, backtest preserved, reuses Phase 2 v2 infrastructure. Two-phase implementation: Phase 1 backend endpoint, Phase 2 MCP rewire.
+
+- **MCP rewire Phase 1 pre-implementation diagnostic** (no commit — halted before doc write) — Q1 surfaced a structural finding that invalidates the design's player-only catalog enumeration assumption. Captured durably below under "New findings."
+
+- **Unverified endpoints smoke** (docs-only commit `ffe6170`) — `docs/phase0/unverified_endpoints_smoke.md`. /search works correctly for full structured queries. /bulk-estimate does not exist (actual endpoint is /bulk). /bulk has a High-severity latent defect (CH-identity guard interaction wipes comps). /analyze does not exist as a route.
+
+## Net production change today
+
+- 1 PR merged + deployed (`b959dc3` on compiq-mcp)
+- 3 App Service config additions on compiq-mcp matching hobbyiq3 (`APPLICATIONINSIGHTS_CONNECTION_STRING`, `ApplicationInsightsAgent_EXTENSION_VERSION=~3`, `XDT_MicrosoftApplicationInsights_Mode=default`)
+- 3 docs-only commits (3852e62 Cosmos inversion, f38438c MCP rewire design, ffe6170 endpoint smoke)
+- main HEAD: `c74250b` → `ffe6170` (5 commits ahead)
+
+## New findings captured this session
+
+### F1 — `/api/compiq/bulk` returns no-recent-comps for set-bearing queries
+
+**Severity: High.** Same query that works on `/search` and `/estimate` returns no-recent-comps on `/bulk`. Root cause: `/bulk` handler at [compiq.routes.ts:934](../backend/src/routes/compiq.routes.ts#L934) passes the whole free-text query as `body.playerName` (no upstream parsing). The CH-identity guard at [compiqEstimate.service.ts:1194-1219](../backend/src/services/compiq/compiqEstimate.service.ts#L1194-L1219) then tokenizes that raw string into `["mike","trout","topps","update"]`, requires all tokens to appear in `card.player + card.title` haystack (under Cardsight: just `"Mike Trout"`), finds `"topps"` and `"update"` missing → wipes all comps. iOS `PortfolioIQViewModel.refreshPortfolio()` is the documented consumer.
+
+**Fix scope:** ~5-10 LOC. Recommended approach: `/bulk` handler does `parseCardQuery` upstream (matches `/search` pattern via `requestFromParsed`). Independent small PR. Full characterization in `docs/phase0/unverified_endpoints_smoke.md`.
+
+### F3 — `/api/compiq/analyze` does not exist as a route
+
+**Severity: Unknown** (depends on iOS call patterns). No `router.post("/analyze"...)` registration anywhere in `backend/src/routes/**`. Only reference is a stale comment in `compiqService.ts:1` calling it a "legacy/mock" service. Iso may or may not be calling it; if so, getting 404 silently in production.
+
+**Verification next step:** App Insights `requests` table query for `name=POST /api/compiq/analyze` over last 24h + iOS source grep. ~15 min read-only.
+
+### Q1 finding — Cardsight player-only catalog search doesn't reliably surface demo cards
+
+**Pre-implementation diagnostic surfaced a structural finding.** `searchCatalog("Aaron Judge", year=2017, take=50)` does NOT include the Topps Update Base Set RC. Top 50 are Bowman/Donruss/Finest/Panini Chronicles. The Judge TU Base IS in the catalog (cardId `411dbd50`) — Cardsight's text-relevance ranking buries it for the player-only query. Product-narrowed `searchCatalog("Aaron Judge Topps Update", year=2017)` reliably surfaces it at position 4.
+
+**Implication for MCP rewire design:** The design's Phase 1 endpoint signature `searchCatalog(playerName, {year, take=25})` doesn't work as written for Judge (and Ohtani returns the "Japan's Finest" combo card instead of the pure RC). The endpoint needs to **require product as input**, not just player+year — turning it into "comps by player AND product" rather than "comps by player." MCP's caller has `body.set` available; backtest can group by player+product instead of just player.
+
+**Design revision required before Phase 1 implementation.** Documented inline in this handoff entry until a formal addendum lands in `mcp_rewire_design.md`. Did NOT halt Q2/Q3 today because the design first needs revision direction confirmed by user.
+
+## Updated carry-forwards
+
+**New (from this session):**
+- **F1 /bulk fix** — high priority, small PR workstream candidate. ~5-10 LOC. Recommended pattern: match /search's parseCardQuery upstream.
+- **F3 /analyze verification** — App Insights query + iOS grep to determine severity.
+- **MCP rewire Phase 1 design revision** — small addendum to `mcp_rewire_design.md` per Q1 finding (require product in endpoint signature; update backtest interaction; rename endpoint accordingly).
+- **MCP rewire Phase 1 implementation** — after design revision lands.
+- **MCP rewire Phase 2 implementation** — after Phase 1 ships and stabilizes.
+- **Q2 latency budget + Q3 cache strategy** — pending design revision; will need re-derivation against revised flow.
+- **Cosmos `success=False` on compiq-mcp GETs** — DefaultAzureCredential pattern issue; now observable via the just-shipped App Insights wiring. Investigate when MCP rewire begins.
+- **App Insights dependency retention investigation** — ~1h retention observed; limits historical analysis. Worth exploring tier/sampling config.
+
+**Re-characterized (this session):**
+- **Cosmos 22-27% real cause** was "alternate writer / upsert defect"; now "`getPlayerScoreByName` cross-partition query optimization, deferred until DailyIQ traffic resumes."
+
+**Unchanged from prior sessions:**
+- **MCP /predict architectural mismatch** — design shipped today; implementation pending.
+- **24h `primary_mode_cardhedge_namespace_only` warn count check** at appropriate time.
+- **Day-10 PR #113 soak review:** scheduled 2026-05-31T17:44:32Z.
+- **`fn-cardhedge-comps` decommission** — gated on MCP rewire shipping.
+
+**Closed (this session):**
+- compiq-mcp App Insights wiring (SHIPPED, PR #118).
+- Stability-first sequence (effectively complete — Cosmos deferred, observability shipped, MCP rewire design ready).
+
+## Next session entry point
+
+**Decision required between two paths.** Neither is wrong; they have different load profiles.
+
+**Path 1: F1 /bulk fix first (recommended).** Small, high-value, independent. ~30-60 min total including PR + deploy + post-deploy verification. Reduces a real iOS-portfolio-affecting defect before any MCP rewire work begins. Sequence:
+
+1. Fresh session: open small PR matching the /search pattern (parseCardQuery upstream in /bulk handler)
+2. Local smoke covering content correctness (5 demo cards via /bulk should return non-zero comps)
+3. PR open → eyeball → merge → deploy → 30-min smoke
+4. Then return to MCP rewire stream — design revision per Q1, then Phase 1 implementation
+
+**Path 2: MCP rewire design revision first.** Smaller scope (doc addendum, no code). Then Q2 latency + Q3 cache strategy diagnostics. Then Phase 1 implementation. Defers F1 to a later session. ~30-45 min for design revision; Q2/Q3 each ~15-20 min.
+
+**My recommendation: Path 1.** F1 is a discrete, well-characterized defect with high real-world impact (iOS portfolio refresh) and a small fix surface. Shipping it produces an immediate win and proves the parseCardQuery pattern further before the MCP rewire (which depends on similar parsing infrastructure). Path 2's design revision is doc-only and doesn't burn down the F1 carry-forward.
+
+**Either path: single workstream per session.** This session's five-workstream count was an unusually high outlier (observability + Cosmos doc + design + diagnostic + smoke). Going forward, single-workstream-per-session remains the durable pattern.
+
+## Session summary
+
+Five-workstream day — observability shipped, two design/diagnostic docs committed, one re-characterization, one smoke surface. Single PR merged + deployed. Three new findings durably captured. No production regressions. Stability-first sequence effectively complete to the extent achievable without DailyIQ traffic. MCP rewire foundation in place with one known design revision required before implementation begins.
+
+This session was the largest single-day output of this multi-session arc. Genuine stop point.
