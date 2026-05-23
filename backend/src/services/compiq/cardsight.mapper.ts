@@ -276,14 +276,20 @@ async function _resolveCardId(
     } else if (probeSet.length === candidates.length) {
       // We probed every candidate and none matched the number — fall back to
       // pricing-probe selection on the original set rather than failing here.
-      log.warn("cardnumber_filter_no_match", {
+      // Defect #9: this is expected fallthrough behavior under cross-catalog
+      // disagreement (CH and Cardsight have different card numbers for ~80%
+      // of cards per the Phase 2 warming-target audit). Logged at info, not
+      // warn, since downstream pricing-probe handles it correctly and the
+      // event is structural noise rather than an error condition.
+      log.info("cardnumber_filter_no_match", {
         cardNumber: input.cardNumber,
         candidatesProbed: probeSet.length,
       });
     } else {
       // Probed only top-N; cardNumber may match a non-probed candidate.
       // Fall back to pricing probe; don't claim failure.
-      log.warn("cardnumber_filter_inconclusive", {
+      // Defect #9: same rationale as cardnumber_filter_no_match — info level.
+      log.info("cardnumber_filter_inconclusive", {
         cardNumber: input.cardNumber,
         candidatesProbed: probeSet.length,
         totalCandidates: candidates.length,
