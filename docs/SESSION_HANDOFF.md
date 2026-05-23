@@ -1344,3 +1344,85 @@ Two PRs, not one — observation cycle between them is important.
 Alternative: **App Insights retention/sampling investigation** as a small read-only follow-up before MCP rewire. ~30 min. Surfaces whether dependency retention can be extended (e.g., switch from Basic to Standard tier, adjust sampling settings, configure custom retention) so future diagnostics have longer historical windows.
 
 Either is a good next-session start.
+
+---
+
+# 2026-05-26 — Cosmos finding inverted + compiq-mcp observability shipped
+
+## What shipped
+
+- **Cosmos 22% finding inversion** committed at `3852e62` (docs-only). Re-characterized the historical 22-27% `POST player_trends/docs` failure rate from "upsert defect on player_trends" → "cross-partition query optimization in `getPlayerScoreByName`." Only one writer to player_trends exists (`upsertPlayerScore`); DailyIQ reads via cross-partition query that the Cosmos SDK issues as POST /docs, sharing the dependency-name format with upserts. Full characterization in [cosmos_21_failure_rate_investigation.md "Re-investigation 2026-05-26"](phase0/cosmos_21_failure_rate_investigation.md). PR #113's defensive guard stays in production as defensive coverage of a non-problem.
+
+- **PR #118 (compiq-mcp App Insights wiring)** merged at squash SHA `b959dc3` and deployed (Kudu status=4). Three layers verified GREEN in production:
+  - **Requests** — 3× `POST /api/compiq/predict` success + `GET /health` success captured for `cloud_RoleName=compiq-mcp`
+  - **Dependencies** — Azure OpenAI calls + Cosmos calls + DefaultAzureCredential IMDS calls all visible
+  - **Traces** — `[AppInsights] Telemetry active` + `[compiq-mcp] listening on :8080` both confirmed via App Insights query
+  - Approach: Azure App Service auto-instrumentation agent (env vars matching hobbyiq3 verbatim) + manual SDK init for console capture and live metrics
+  - Diagnostic finding captured: mcp-server uses ES modules while hobbyiq3 uses commonjs; SDK-only init can't auto-instrument requests under ES modules due to import hoisting. Agent runs before user code loads and patches Node http first, working around the load-order issue. Documented in PR #118 description for future MCP module-structure decisions.
+
+- **Multi-session carry-forward closed:** compiq-mcp observability. MCP-side issues can now be queried in App Insights instead of requiring log diving. This was a prerequisite for the upcoming MCP rewire workstream.
+
+## Net production change today
+
+- 1 PR merged + deployed (`b959dc3`)
+- 3 App Service config additions on compiq-mcp (`APPLICATIONINSIGHTS_CONNECTION_STRING`, `ApplicationInsightsAgent_EXTENSION_VERSION=~3`, `XDT_MicrosoftApplicationInsights_Mode=default`) — all values copied from hobbyiq3 to point at the same `hobbyiq-insights` AppI resource (InstrumentationKey prefix `02dca1c0`)
+- Docs-only commit (`3852e62`) inverting the Cosmos finding (no code change)
+- main HEAD: `b959dc3` (was `c74250b` at session start)
+
+## New findings surfaced from compiq-mcp telemetry
+
+Now-observable patterns surfaced by the just-shipped instrumentation:
+
+- **Cosmos calls showing `success=False`** on `GET /` to `hobbyiq-comps.documents.azure.com` (40ms duration). Looks like DefaultAzureCredential token-negotiation pattern issue. Characterized as pre-existing — present in both pre-merge agent verification AND post-deploy Step 8 verification. Not a regression. Worth investigating when MCP rewire begins (now diagnosable via telemetry).
+- **`169.254.169.254` IMDS calls failing** — Azure Instance Metadata Service token fetch attempts by DefaultAzureCredential. Expected behavior when managed identity isn't assigned to the App Service. Not a defect; visible now where it wasn't before.
+
+Both patterns existed pre-PR-#118 — the agent surfacing them IS the diagnostic value we wanted. No action required.
+
+## Updated carry-forwards
+
+**New (this session, observable but not yet investigated):**
+- Cosmos `success=False` GET / calls from compiq-mcp — investigate when MCP rewire begins (now diagnosable)
+- IMDS failures — non-issue but visible
+
+**Re-characterized (this session):**
+- "Cosmos 22-27% failure rate real cause" — was "alternate writer hypothesis"; now "`getPlayerScoreByName` cross-partition query optimization, deferred until DailyIQ traffic resumes." Triggers to revisit: iOS launch / scheduled DailyIQ job / synthetic traffic.
+
+**Unchanged from prior sessions:**
+- **MCP /predict architectural mismatch (rewire design)** — next session priority. Biggest remaining workstream. Three sub-options characterized in `ch_removal_v2_plan.md`.
+- **24h `primary_mode_cardhedge_namespace_only` warn count check** at appropriate time.
+- **Day-10 PR #113 soak review:** scheduled 2026-05-31T17:44:32Z.
+- **`fn-cardhedge-comps` decommission** — gated on MCP rewire + Step B (compsLoader) completion.
+
+**Closed (this session):**
+- compiq-mcp App Insights wiring — SHIPPED.
+
+## Stability-first sequence status
+
+| Item | Status |
+|---|---|
+| Cosmos 22% fix | DEFERRED (until DailyIQ traffic resumes; finding inverted to query-side) |
+| compiq-mcp App Insights | **SHIPPED** ✓ |
+| Smoke unverified endpoints | NOT DONE (deferred or skipped) |
+| MCP rewire | NEXT SESSION |
+
+Stability-first sequence is effectively complete to the extent it can be without DailyIQ traffic. MCP rewire is now the natural next focus.
+
+## Next session entry point
+
+**MCP /predict rewire design workstream.** Outputs `docs/phase0/mcp_rewire_design.md` — design only, no code. Code implementation is a separate subsequent workstream.
+
+Reference reading for the design session:
+- `mcp-server/compsLoader.ts` — the player-level query shape
+- `mcp-server/server.ts` — the `/api/compiq/predict` handler
+- `mcp-server/pricing.ts` — `getPredictedPrice` flow
+- `backend/src/services/compiq/cardsight.router.ts` — backend-side Cardsight integration
+- `docs/phase0/ch_removal_v2_plan.md` — three sub-options already characterized for the rewire
+
+Three architectural options recap (from prior sessions):
+- **(A)** MCP changes query shape — call backend's `/price-by-id` with structured identity per prediction. Requires backtest runner to also supply card-level identity.
+- **(B)** Backend grows player-level comps endpoint — `/api/compiq/comps-by-player` aggregating Cardsight resolution. MCP keeps current call shape, just points at new URL.
+- **(C)** MCP gets its own Cardsight client — port cardsight integration to mcp-server, handle aggregation locally.
+
+Design picks one with reasoning + identifies implementation phasing + acceptance criteria. Doc-only commit at end of design session. Implementation is a follow-up workstream.
+
+**Out of scope for next session unless explicitly authorized:** MCP implementation code, any other workstream. Design only.
