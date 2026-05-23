@@ -17,6 +17,7 @@ vi.mock("../src/services/compiq/cardsight.client.js", () => ({
 import * as cs from "../src/services/compiq/cardsight.client.js";
 import {
   resolveCardId,
+  warmResolveCardIdCache,
   __resolveCardIdInternals,
 } from "../src/services/compiq/cardsight.mapper";
 
@@ -315,6 +316,53 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
       "Bobby Witt Jr Topps Chrome Update",
       expect.objectContaining({ year: 2022 }),
     );
+  });
+});
+
+describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load reduction)", () => {
+  // CACHE_WARM_TARGETS post-defect-#10 fix has NO cardNumber field on any
+  // target. This means warmResolveCardIdCache must NOT trigger the cardNumber
+  // detail-probe path in resolveCardId (which would fan out
+  // MAX_DETAIL_PROBES=5 getCardDetail calls per target = 50 extra Cardsight
+  // calls = rate-limit storm).
+
+  it("calls searchCatalog once per warming target and never calls getCardDetail (no cardNumber means no detail-probe)", async () => {
+    // Mock searchCatalog to return a single candidate per warming target so
+    // the cardNumber detail-probe step (`candidates.length > 1`) doesn't fire
+    // for an unrelated reason.
+    (cs.searchCatalog as any).mockImplementation((query: string) =>
+      Promise.resolve([catalog(`only-${query.slice(0, 10)}`, "Topps Update")]),
+    );
+    (cs.getCardDetail as any).mockResolvedValue(detail("x", "?"));
+    (cs.getPricing as any).mockResolvedValue(pricing(0));
+
+    await warmResolveCardIdCache();
+
+    // 10 warming targets x 1 searchCatalog call each
+    expect(cs.searchCatalog).toHaveBeenCalledTimes(10);
+    // Defect #10 acceptance — NO detail probes during warming
+    expect(cs.getCardDetail).not.toHaveBeenCalled();
+    // Pricing probes only fire when there are multiple candidates; with
+    // single-candidate mock above, no pricing probes either.
+    expect(cs.getPricing).not.toHaveBeenCalled();
+  });
+
+  it("warming targets in CACHE_WARM_TARGETS do NOT carry cardNumber field (defect #10 fix preserved)", async () => {
+    // Capture every CompIQQueryInput passed to searchCatalog via the resolver
+    const inputs: Array<{ query: string; year: unknown }> = [];
+    (cs.searchCatalog as any).mockImplementation((query: string, opts: any) => {
+      inputs.push({ query, year: opts?.year });
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+    });
+
+    await warmResolveCardIdCache();
+
+    expect(inputs.length).toBe(10);
+    // No query should contain a cardNumber-like token (US/USC/HMT/CPA prefix
+    // with digits or letters). Warming queries are player + releaseName only.
+    for (const i of inputs) {
+      expect(/\b(US\d+|USC\d+|HMT\d+|CPA-)/i.test(i.query)).toBe(false);
+    }
   });
 });
 

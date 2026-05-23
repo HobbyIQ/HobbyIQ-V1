@@ -422,30 +422,35 @@ export async function resolveCardId(
 // changes. Telemetry (resolveCardId_cache_stats logs) guides re-prime
 // cadence.
 
-// Phase 2 — cardNumber field added per Option B (cache key alignment between
-// warming and request-side parser output). Numbers are CH-format (iOS
-// displayLabel source-of-truth — same numbers parser extracts from
-// /search-list displayLabels post-defect-#8). Cross-catalog disagreement with
-// Cardsight `getCardDetail.number` is downstream resolution territory (defect
-// #9, deferred — Phase 1's pricing-probe fall-through handles it gracefully).
+// Phase 2 v2 — cardNumber field REMOVED per defect #10 mitigation (warming API
+// load reduction). The Option B cache-alignment approach from addendum 8a51dd5
+// was found to (1) trip Cardsight rate limit due to cardNumber detail-probe
+// fan-out × 10 parallel warming targets at startup (~80-90 calls), and (2) not
+// actually align with /price + /estimate request keys anyway because those
+// paths don't populate cardNumber in queryContext (typical iOS usage).
 //
-// Witt Jr product corrected from "Topps Chrome" to "Topps Chrome Update":
-// USC35 is in the Update set, not flagship Topps Chrome.
+// Trade-off: /price-by-id with iOS displayLabels (which DO carry cardNumber via
+// defect #11 threading) pays cold-path latency on first request per logical
+// card, then the result is cached lazily by resolveCardId's LRU and subsequent
+// requests hit the cache. /price + /estimate hit warming-cache immediately.
+//
+// Witt Jr product correction preserved from Phase 2: "Topps Chrome" → "Topps
+// Chrome Update" (USC35 is in the Update set, not flagship Topps Chrome).
 const CACHE_WARM_TARGETS: ReadonlyArray<CompIQQueryInput> = [
   // 2011 Topps Update — Mike Trout RC class (demo-critical)
-  { playerName: "Mike Trout",      cardYear: 2011, product: "Topps Update",        cardNumber: "US175" },
+  { playerName: "Mike Trout",      cardYear: 2011, product: "Topps Update" },
   // 2017-2018 Topps Update — modern superstar RCs (demo-critical)
-  { playerName: "Aaron Judge",     cardYear: 2017, product: "Topps Update",        cardNumber: "US99"  },
-  { playerName: "Cody Bellinger",  cardYear: 2017, product: "Topps Update",        cardNumber: "US50"  },
-  { playerName: "Shohei Ohtani",   cardYear: 2018, product: "Topps Update",        cardNumber: "US285" },
-  { playerName: "Ronald Acuna Jr", cardYear: 2018, product: "Topps Update",        cardNumber: "US250" },
-  { playerName: "Juan Soto",       cardYear: 2018, product: "Topps Update",        cardNumber: "US104" },
-  { playerName: "Gleyber Torres",  cardYear: 2018, product: "Topps Update",        cardNumber: "HMT9"  },
+  { playerName: "Aaron Judge",     cardYear: 2017, product: "Topps Update" },
+  { playerName: "Cody Bellinger",  cardYear: 2017, product: "Topps Update" },
+  { playerName: "Shohei Ohtani",   cardYear: 2018, product: "Topps Update" },
+  { playerName: "Ronald Acuna Jr", cardYear: 2018, product: "Topps Update" },
+  { playerName: "Juan Soto",       cardYear: 2018, product: "Topps Update" },
+  { playerName: "Gleyber Torres",  cardYear: 2018, product: "Topps Update" },
   // Modern Topps Chrome Update
-  { playerName: "Bobby Witt Jr",   cardYear: 2022, product: "Topps Chrome Update", cardNumber: "USC35" },
-  { playerName: "Paul Skenes",     cardYear: 2024, product: "Topps Chrome Update", cardNumber: "USC88" },
+  { playerName: "Bobby Witt Jr",   cardYear: 2022, product: "Topps Chrome Update" },
+  { playerName: "Paul Skenes",     cardYear: 2024, product: "Topps Chrome Update" },
   // DailyIQ-style Bowman Draft Chrome prospect
-  { playerName: "Caleb Bonemer",   cardYear: 2024, product: "Bowman Draft Chrome", cardNumber: "CPA-CBO" },
+  { playerName: "Caleb Bonemer",   cardYear: 2024, product: "Bowman Draft Chrome" },
 ];
 
 export async function warmResolveCardIdCache(): Promise<void> {
