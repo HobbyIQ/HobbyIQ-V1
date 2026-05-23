@@ -1268,3 +1268,79 @@ Both were skipped because today's session focused energy on resolving defect #13
 **Either path: single workstream per session given the recent pattern of defects surfacing mid-implementation.** Three sessions ago surfaced defects #10/#11/#12 mid-Phase-2; this session surfaced defect #13 mid-WS1. Batching three workstreams in one day didn't pay off either time. Single focused workstream per session is the durable pattern.
 
 **Out of scope for next session unless explicitly authorized:** Bundling. If MCP rewire is the focus, defer Cosmos. If Cosmos is the focus, defer MCP.
+
+---
+
+# 2026-05-26 — Cosmos 22-27% diagnostic re-investigation; hypothesis (C) inversion captured, fix deferred until traffic resumes
+
+## What happened
+
+Started today's session with the Cosmos 22-27% failure rate diagnostic (the "stability-first" carry-forward from prior session). Read-only investigation per the WS2 spec — inventory all `player_trends` writers, trace DailyIQ flow, evaluate alternate-writer hypothesis.
+
+**Conclusion arrived at: (C) — something else entirely.** The "upsert failure" framing in `cosmos_21_failure_rate_investigation.md` (the doc's durable findings 3-4 and the fix recommendation) was wrong. PR #113's defensive guard, while correct as a guard, doesn't address the actual rate because the actual rate isn't upsert failures.
+
+## Key findings (full characterization in [cosmos_21_failure_rate_investigation.md "Re-investigation 2026-05-26"](phase0/cosmos_21_failure_rate_investigation.md))
+
+1. **Only ONE writer to `player_trends` exists:** `upsertPlayerScore` at [playerScore.service.ts:361](../backend/src/services/playerScore/playerScore.service.ts#L361). Alternate-writer hypothesis from PR #113 outcome C is **ruled out**.
+
+2. **DailyIQ doesn't write to `player_trends`** — it READS via cross-partition query through [`getPlayerScoreByName`](../backend/src/services/playerScore/playerScore.service.ts#L413-L428). The Cosmos SDK issues queries as `POST /dbs/.../colls/player_trends/docs` — the same URL pattern as upserts. App Insights' dependency `name` field doesn't distinguish them.
+
+3. **The 22-27% failure rate was almost certainly cross-partition QUERY failures, not upsert failures.** The prior diagnostic's "33% DailyIQ-path failure" is consistent with cross-partition fan-out failures on certain inputs, not bad-payload upserts. Zero `[playerScore] upsert failed:` traces ever observed in App Insights — consistent with no actual upsert failures.
+
+4. **Can't verify or fix today.** Two blockers: (a) zero DailyIQ traffic in last 7 days, so the failure pattern isn't reproducible in real-time; (b) App Insights dependency retention is ~1 hour observed today, so historical 30-day failure-rate data from prior diagnostics is no longer queryable.
+
+## Disposition
+
+- **HALT the fix workstream.** Captured findings in docs; no code changes today.
+- **PR #113 stays in production.** It's defensive coverage of a non-problem — correct guard for an edge case that may or may not occur in practice; doesn't hurt; doesn't fix the historical 22-27% rate. Don't remove.
+- **Carry-forward re-characterized** (was alternate-writer investigation → now `getPlayerScoreByName` cross-partition query optimization, deferred).
+
+## Re-characterized carry-forward
+
+**Was (per 2026-05-25 PM handoff):** "Cosmos 22-27% real cause (alternate writer hypothesis from PR #113 outcome C). Next session high-priority candidate. Entry point: grep all `player_trends` writers, instrument catch block with full Cosmos error body, redeploy, capture diagnostic data."
+
+**Now:** "`getPlayerScoreByName` cross-partition query optimization, deferred until DailyIQ traffic resumes." The defect is real (queries failing at 22-27% in historical data) but not currently reproducible. Fix surface is well-characterized; verification surface is not (no traffic).
+
+**Triggers to revisit:**
+- iOS launch produces organic DailyIQ traffic
+- Scheduled DailyIQ refresh job activated
+- Synthetic DailyIQ traffic generated to reproduce the failure pattern
+- App Insights retention/sampling reconfigured to give us a longer historical window
+
+**Recommended next-session work for this defect when traffic resumes:**
+
+1. **Option (3) — instrumentation first.** Add structured `playerScore_getByName_failed` log event with the player name + Cosmos error response body. ~5 LOC. Deploy. Wait one DailyIQ-active cycle. Confirm the rate matches the hypothesis.
+2. **Option (1) or (2) — the actual fix.** Either provide partition key (derive `playerId` via `playerNameSlug`) or switch to point-read. ~10 LOC. Deploy. Verify rate drops post-deploy.
+
+Two PRs, not one — observation cycle between them is important.
+
+## What PR #113 actually addresses (vs what we thought)
+
+| Aspect | What we thought 2026-05-22 | What re-investigation confirms |
+|---|---|---|
+| Failure mode | Upsert returning 400 due to bad `id` / `playerId` | Cross-partition query returning 400 (likely) |
+| PR #113's effect on 22-27% rate | Should drop rate toward 0% | No effect — guards a different code path |
+| PR #113's correctness | Correct guard for stated problem | Correct guard for an edge case that may or may not occur in practice; doesn't hurt; doesn't fix the historical rate |
+| Real fix location | `upsertPlayerScore` document validation | `getPlayerScoreByName` partition-key / point-read |
+
+## Carry-forwards updated
+
+**Resolved understanding (this session):**
+- Cosmos 22-27% failure rate — re-characterized from upsert/alternate-writer to cross-partition query. Fix deferred until traffic resumes. PR #113 stays as defensive coverage of a non-problem.
+
+**Unchanged from prior session:**
+- **MCP /predict architectural mismatch** — biggest remaining workstream. Deserves focused fresh session.
+- **24h `primary_mode_cardhedge_namespace_only` warn count check** at appropriate time.
+- **Day-10 PR #113 soak review:** scheduled 2026-05-31T17:44:32Z. Still valid as a "did anything break?" check; not as a "did PR #113 fix the rate?" check (re-investigation says no, by design).
+- **`fn-cardhedge-comps` decommission** — gated on MCP rewire + Step B (compsLoader) completion.
+
+**New from this session:**
+- **App Insights retention/sampling investigation.** Dependency retention is ~1 hour for hobbyiq-insights AppI. Either it's always been this short and our prior 30-day analyses were against now-purged data, OR retention/sampling settings changed recently. Worth investigating before relying on dependency-table queries for future diagnostics.
+
+## Next session entry point
+
+**MCP /predict rewire (now the highest-priority remaining workstream).** Per prior session's "stability-first" recommendation: stability is now address as far as it can be without traffic to verify against. Cosmos is documented, queued, and waiting for traffic. MCP rewire becomes the next focal point.
+
+Alternative: **App Insights retention/sampling investigation** as a small read-only follow-up before MCP rewire. ~30 min. Surfaces whether dependency retention can be extended (e.g., switch from Basic to Standard tier, adjust sampling settings, configure custom retention) so future diagnostics have longer historical windows.
+
+Either is a good next-session start.

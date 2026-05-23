@@ -181,3 +181,104 @@ If a specific bad-field hypothesis emerges, a tiny defensive guard (`if (Number.
 4. **Pattern is deterministic per payload, not bursty or temporal.** ~25% of player_trends documents being upserted fail Cosmos validation.
 5. **Error is silently swallowed at the app layer** — no user-facing impact, but 40k wasted RU and PlayerIQ chart data gaps per 30d.
 6. **Recommended fix scope: small.** One defensive guard in `upsertPlayerScore` after identifying the malformed field. Out of scope for this diagnostic.
+
+---
+
+## Re-investigation 2026-05-26 — hypothesis (C) inversion
+
+**Status:** The "upsert failure" framing in the durable findings above (items 3, 4, and the fix recommendation in item 6) **was wrong**. PR #113 shipped a defensive guard for `upsertPlayerScore` based on it (OUTCOME C — guard correct, but didn't address the real rate). Today's read-only diagnostic re-investigated and inverted the hypothesis.
+
+### What this re-investigation found
+
+**1. Only ONE writer exists to the `player_trends` container.**
+
+Inventoried every `items.upsert` and `items.create` call in `backend/src/`. The only writer to `player_trends` is [`upsertPlayerScore` at `playerScore.service.ts:361`](../../backend/src/services/playerScore/playerScore.service.ts#L361). PR #113's `isValidCosmosId` guard (lines 344-356) already gates it. No alternate writer found. The "alternate writer hypothesis" from PR #113 OUTCOME C handoff is **ruled out**.
+
+**2. DailyIQ doesn't write to `player_trends` — it reads via cross-partition query.**
+
+The 2026-05-24 PM diagnostic attributed 33% of `POST player_trends/docs` failures to DailyIQ endpoints (vs 0% from CompIQ). But DailyIQ has no `upsertPlayerScore` calls. What it does have is [`enrichWithPlayerIQ` at `dailyiq.routes.ts:46-67`](../../backend/src/routes/dailyiq.routes.ts#L46-L67), which calls [`getPlayerScoreByName`](../../backend/src/services/playerScore/playerScore.service.ts#L413-L428) for every player in a brief response. That function issues:
+
+```typescript
+await trendsContainer.items
+  .query<PlayerScore>({
+    query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
+    parameters: [{ name: "@name", value: playerName.trim().toLowerCase() }],
+  })
+  .fetchAll();
+```
+
+This is a **cross-partition Cosmos query** (no partition key — the container is partitioned by `/playerId`, not `/playerName`). The Cosmos SDK issues queries as **HTTP `POST /dbs/hobbyiq/colls/player_trends/docs`** — the **same URL pattern as upserts**.
+
+**3. App Insights' dependency `name` field doesn't distinguish queries from upserts.**
+
+Both `items.upsert(doc)` and `items.query({...}).fetchAll()` produce dependency entries named `POST /dbs/hobbyiq/colls/player_trends/docs`. The prior diagnostic interpreted these as upserts; that interpretation was incorrect.
+
+### The actual likely cause
+
+**The "22-27% upsert failure rate" was almost certainly cross-partition query failures from `getPlayerScoreByName`.** Evidence:
+
+- Only one writer exists (rules out alternate writer)
+- DailyIQ doesn't write but DOES query cross-partition; DailyIQ attributed 33% of failures
+- Zero `[playerScore] upsert failed:` traces in App Insights at any point in prior or current diagnostics — consistent with NO actual upsert failures (the catch block in `upsertPlayerScore` is never reached because upserts succeed)
+- App Insights groups query POST and upsert POST under the same dependency name; failure rate quoted in earlier diagnostic was the SUM of both, not exclusively upserts
+
+The query failure mode is consistent with Cosmos cross-partition query behavior on certain inputs:
+- Cross-partition queries fan out to every partition; any partition's failure can return 400 to the client
+- `LOWER(c["playerName"])` on documents where `playerName` is missing/null could produce 400 in some Cosmos engine versions
+- Inputs that produce unusual SQL escaping behavior
+
+### Why we can't verify this today (or fix it cleanly)
+
+**Two data-availability blockers:**
+
+- **Zero DailyIQ traffic in last 7 days.** App Insights `requests` table shows no `/api/dailyiq/*` requests across the entire retention window. Without traffic, the query-failure pattern can't be reproduced in real-time.
+- **App Insights dependency retention is short (~1 hour observed).** Total dependencies in retention window: 104 entries spanning ~1h. The 30-day historical data from 2026-05-22's diagnostic that showed 177,588 calls / 40,171 failed is no longer queryable. We can't go back and re-classify the prior failures as queries vs upserts directly.
+
+### Fix surface (when traffic resumes)
+
+Three options in `getPlayerScoreByName`:
+
+1. **Provide a partition key.** Derive `playerId` from `playerNameSlug(playerName)` and pass `{ partitionKey: playerId }` to the query options. Single-partition query; eliminates the cross-partition fan-out failure mode. ~5 LOC + slug-equivalence test.
+2. **Switch to point-read.** If the document id is deterministic from playerName (e.g., `playerNameSlug(playerName)`), use `container.item(id, playerId).read()` instead of `items.query(...)`. Faster (sub-100ms vs ~1s for query), no cross-partition fanout, no 400 failure mode. ~10 LOC.
+3. **Improve error logging first.** Add `console.warn("[playerScore] getByName failed:", err)` to the catch block (it already exists at line 425) and add a structured `playerScore_getByName_failed` event with the player name + Cosmos error body, so future failures produce queryable traces. ~5 LOC. Diagnostic-only.
+
+Recommended sequence when DailyIQ traffic resumes:
+- Land option (3) first (instrumentation), wait one DailyIQ-active cycle, confirm the rate is what we suspect
+- Then land option (1) or (2) (the fix), confirm rate drops to near-zero post-deploy
+
+### Why we're not shipping today
+
+- **No traffic to verify against.** Even if option (1)/(2) is correct and zero-risk, we can't measure before/after impact without DailyIQ requests hitting the path
+- **Short App Insights retention** limits any verification window to ~1h post-deploy
+- **PR #113 stays in production as defensive coverage of a non-problem.** It doesn't hurt anything (defensive guards on edge-case input are rarely harmful), and removing it would be additional code churn. Document scope: it defends against empty/oversized/special-char `id` values that `playerNameSlug` could theoretically produce; this defense is correct but NOT the fix for the historical 22-27% rate
+
+### What PR #113 actually addresses (vs what we thought)
+
+| Aspect | What we thought 2026-05-22 | What re-investigation confirms |
+|---|---|---|
+| Failure mode | Upsert returning 400 due to bad `id` / `playerId` field | Cross-partition query returning 400 (likely) |
+| PR #113's effect on 22-27% rate | Should drop rate toward 0% | No effect — guards a different code path |
+| PR #113's correctness | Correct guard for stated problem | Correct guard for an edge case that may or may not occur; doesn't hurt; doesn't fix the historical rate |
+| Real fix location | `upsertPlayerScore` document validation | `getPlayerScoreByName` partition-key / point-read |
+
+PR #113 stays merged. It defends against a real edge case (empty/malformed Cosmos IDs in upserts) even if that edge case isn't what produced the 22-27% rate. Remove later only if the defensive guard becomes load-bearing for something else's removal — not worth churn otherwise.
+
+### Re-characterized carry-forward
+
+**Was:** "Cosmos 22-27% real cause — alternate writer hypothesis from PR #113."
+
+**Now:** "`getPlayerScoreByName` cross-partition query optimization, deferred until DailyIQ traffic resumes." Trigger to revisit:
+
+- iOS launch produces organic DailyIQ traffic, OR
+- Scheduled DailyIQ refresh job activated, OR
+- Synthetic DailyIQ traffic generated to reproduce the failure pattern
+
+Recommended next-session work for this defect: option (3) instrumentation + option (1) or (2) fix in two PRs, with App Insights observation cycle between them. NOT before traffic exists to verify against.
+
+### Findings durable (updated 2026-05-26)
+
+7. **Only ONE writer to `player_trends`** — `upsertPlayerScore` at `playerScore.service.ts:361`. No alternate writer.
+8. **DailyIQ reads `player_trends` via cross-partition query** (`getPlayerScoreByName`). The 2026-05-24 diagnostic's "33% DailyIQ-path failure" is almost certainly query failures, not upsert failures.
+9. **App Insights dependency `POST player_trends/docs` is ambiguous** — both queries and upserts hit this URL. Future diagnostics need to disambiguate (e.g., by adding structured logs around each writer/reader).
+10. **App Insights dependency retention is ~1 hour for this AppI instance.** Historical 30-day failure-rate analysis is not currently possible. Worth investigating retention/sampling config before relying on dependency-table analysis for future diagnostics.
+11. **PR #113 stays in production as defensive guard for a non-problem.** It doesn't address the 22-27% rate; that rate is in `getPlayerScoreByName` query path.
