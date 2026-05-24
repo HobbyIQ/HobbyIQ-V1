@@ -2768,3 +2768,185 @@ configuration measured then; whether re-running with production now
 matching changes any numbers is what WS2 tests.
 
 End of session extension.
+
+# 2026-05-24 — Session extension: CF-COMPSLOADER-GRADE-FLOW WS2 (N=15 re-baseline)
+
+## Headline
+
+Re-ran the same N=15 cohort after the production grade-flow fix landed.
+Result: **same verdict class (insufficient_data) but AGGREGATE DIRECTION
+FLIPPED between v3 and v4** — exposing that OpenAI nondeterminism
+dominates at N=14, not the methodology change.
+
+Per the user's pre-committed outcome branches, this fires
+**insufficient_data with INCONSISTENT direction** → N=100 cohort
+expansion has a WEAKER empirical case (multiplies noise without
+addressing it). Surfaced three sequenced options for user decision;
+not auto-firing N=100.
+
+## v3 vs v4 comparison
+
+Full breakdown:
+[docs/phase0/backtest_runs/20260524-182700-n15-v4/comparison_v3_vs_v4.md](phase0/backtest_runs/20260524-182700-n15-v4/comparison_v3_vs_v4.md)
+
+| Metric | v3 (production grade-broken at run) | v4 (production grade-aware at run) | Direction |
+|---|---:|---:|---|
+| MAPE delta 72h | -4.79 | +1.39 | **flipped** (6.18pt swing) |
+| MAPE delta 7d | -0.71 | +3.76 | **flipped** (4.47pt swing) |
+| Wilcoxon p 7d | 0.683 | 0.638 | both >> 0.05 |
+| Direction acc on | 42.86% | 28.57% | swapped |
+| Direction acc off | 28.57% | 42.86% | swapped |
+| Direction acc delta | +14.29pp | -14.29pp | **mirror image** |
+| Verdict | insufficient_data | insufficient_data | same |
+
+The exact mirror image (+14.29 → -14.29) at n=14 is the result of 2
+cards flipping which arm got direction right between runs. That's
+how much OpenAI noise dominates the small-sample aggregate.
+
+## Methodology clarification surfaced during WS2
+
+WS2's spec framed v3 → v4 as "harness grade-aware + production
+grade-broken → harness + production both grade-aware." That framing
+slightly oversells what changed:
+
+**The backtest hits the backend directly via `fetchCompsForBacktest()`
+in scripts/backtest_signal_value.ts. It does NOT call production
+/predict or import from compsLoader.ts.** PR #122 doesn't change
+what the backtest measures — it brings PRODUCTION /predict into
+alignment with what backtest has been measuring all along.
+
+So WS2 is functionally a STABILITY CHECK on v3's measurement:
+- v3 → v4 differences are OpenAI nondeterminism + a few hours of
+  ground-truth window drift
+- NOT methodology changes
+- Production fix matters for production behavior; not for backtest
+
+## Per-card stability — more useful than aggregate
+
+About 9 of 14 categorizable cards keep the same arm-winner direction
+across both runs. Aggregate flips, per-card mostly holds.
+
+**Consistent helpers** (signals closer to actual in both runs):
+- Mike Trout PSA 10 ($50-60 closer)
+- Bobby Witt Jr raw ($1.50-2.50 closer)
+- Paul Skenes raw ($8-10 closer)
+
+**Consistent hurters** (signals further from actual in both runs):
+- Mike Trout raw ($80-90 further)
+- Aaron Judge PSA 10 ($15-35 further)
+- Paul Skenes PSA 10 ($8-12 further)
+- Caleb Bonemer ($5-12 further)
+
+Two cards flipped (Ohtani raw, Acuna PSA 10).
+
+## Hypothesis worth testing (NOT a finding)
+
+The Trout pair pattern: signal-on helps PSA 10 ($50-60 closer) but
+hurts raw ($80-90 further). Both arms have the same signal payload
+(signals are per-player, not per-grade). If signals push predictions
+UP (rising trends, pre-show catalyst), that's correct direction for
+PSA 10 (whose actuals are rising) but wrong direction for raw (whose
+market behaves differently).
+
+**Hypothesis:** per-player signal multiplier doesn't model per-grade
+interaction. Same player's raw and graded markets may move opposite
+directions in some windows.
+
+1 cohort entry pair × 2 runs = n=2 observations. Not strong enough
+to draw a conclusion. Captured as a hypothesis-to-test, not a finding.
+
+## Outcome branch determination (pre-committed)
+
+Per the user's WS2 spec:
+
+> Insufficient data with weak/inconsistent direction: N=100 expansion
+> has weaker case.
+
+**Verdict: insufficient_data; INCONSISTENT aggregate direction across
+two consecutive runs.** N=100 expansion (~$2-4 + multi-hour cohort
+assembly) doesn't address the root cause — OpenAI nondeterminism at
+small effective N. Multiplying noise 7× will probably produce a
+similarly noisy result.
+
+## Recommended next-workstream options (user decides; not auto-fired)
+
+Three options ordered by cost/learning ratio:
+
+### 1. `--repeats N` for multi-run aggregation (CHEAPEST)
+- ~$0.30 × N runs (e.g., 5 repeats = ~$1.50)
+- ~10 min code (add CLI flag; aggregate per-card MAPE across repeats)
+- No methodology change
+- Tests whether aggregate signal stabilizes when averaged across runs
+- If yes → expand cohort with confidence
+- If no → noise isn't the bottleneck; expansion won't help
+
+### 2. Lock OpenAI nondeterminism (`temperature: 0` + `seed`)
+- ~30 min code change to mcp-server/pricing.ts
+- Makes backtest deterministic (same inputs → same predictions across runs)
+- Risk: changes model behavior subtly; absolute predictions may differ
+  from production temp=1 behavior. Comparison validity preserved (both
+  arms see the same model behavior) but production-realism reduced.
+- Pairs well with option 1: locked nondeterminism + multi-run aggregation
+  removes both noise dimensions.
+
+### 3. N=100 cohort expansion (ORIGINAL PLAN)
+- ~$2-4 + multi-hour operator-supervised cohort assembly
+- Addresses sample size, not noise
+- Probably still insufficient_data if noise dominates at N=100
+- Should be sequenced AFTER methodology is locked (option 1 or 2)
+
+Best sequenced strategy: option 1 first, option 2 if needed, option 3
+only after methodology is locked.
+
+## Status of carry-forwards as of WS2 close
+
+| CF | Status | Notes |
+|---|---|---|
+| CF-PHASE4B-BACKTEST.1 | ✅ shipped | a061fb9, 73cae0d, c80b6ca, 4756104 |
+| CF-COMPSLOADER-GRADE-FLOW | ✅ shipped | 4d4bd8c (PR #122), deployed |
+| CF-PHASE4B-BACKTEST WS2 | ✅ shipped | 1f8a528 |
+| CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
+| CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
+| CF-BACKTEST-COSMOS-GRADE-FLOW | open | ~5 min |
+| CF-BACKTEST-PARALLEL-FILTER | open | ~60 min |
+| CF-PHASE4B-BACKTEST.2 (cohort expansion) | open, weakened case | user decision per above |
+| **CF-BACKTEST-REPEATS** | NEW, open | option 1 above; ~10 min code + per-run cost |
+| **CF-BACKTEST-DETERMINISTIC** | NEW, open | option 2 above; ~30 min code |
+
+## Next session priority
+
+Three viable backend tracks (any can fire next), plus iOS as parallel:
+
+1. **CF-BACKTEST-REPEATS** then re-run N=15 with --repeats=3 or 5.
+   Cheapest learning. If aggregate signal stabilizes, that's evidence
+   for cohort expansion. If it doesn't, "signals are essentially
+   neutral at this scale" hypothesis gets stronger.
+
+2. **CF-COMPSLOADER-GRADE-FLOW follow-ups** — CF-BACKTEST-COSMOS-
+   GRADE-FLOW (5 min) and CF-HEALTH-SIGNAL-URL-CHECK (30 min) are
+   small, complete-the-arc work. Doesn't move backtest forward but
+   tightens surrounding code.
+
+3. **iOS state assessment** — independent track per earlier framing.
+
+## Anti-drift note for next session
+
+The "insufficient_data" verdict has been honest across two
+consecutive N=15 runs. Both with sign-flipped aggregate direction.
+The responsible next move is NOT "run N=100 and hope it works" — it's
+"address why N=15 doesn't stabilize first."
+
+Watch for two failure modes in future iterations:
+
+- **Optimism bias**: per-card patterns look encouraging (Trout PSA 10
+  helped both times), but aggregate noise drowns them out. Don't let
+  the encouraging per-card pattern push toward premature expansion.
+- **Pessimism bias**: the aggregate flip might lead to "signals don't
+  work." Also unsupported — both runs are insufficient_data. No
+  directional claim is honest yet.
+
+The honest answer is "we don't know whether signals help yet, and the
+sample size needed to find out depends on whether we can reduce
+OpenAI noise first."
+
+End of session extension.
