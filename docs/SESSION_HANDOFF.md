@@ -1,6 +1,6 @@
-# HobbyIQ Session Handoff — 2026-05-21
+# HobbyIQ Session Handoff — 2026-05-24
 
-(updated end of multi-session day spanning 2026-05-20 → 2026-05-21; PR D batch appended)
+(updated 2026-05-24 — iOS state assessment appended; PR D batch from Windows session preserved)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -2958,3 +2958,31 @@ sample size needed to find out depends on whether we can reduce
 OpenAI noise first."
 
 End of session extension.
+
+---
+
+## 2026-05-24 session — iOS state assessment (Mac)
+
+- Read-only characterization, no code changes
+- Full assessment written to `docs/phase0/ios_state_assessment.md`
+- Key findings:
+  - Build succeeds, 15/15 tests pass on Mac (HEAD 0511ed6 at time of assessment; main has since advanced to d3884c2 on Windows)
+  - Bug 1 (refresh wipe): appears fixed via `preserveExistingSummaryOnError` guard
+  - Bug 2 (card tap): confirmed — uses sheet not NavigationLink
+  - Bug 3 (image auto-populate): cannot characterize — no auto-image logic exists on iOS
+  - Bug 4 (photo removal): confirmed — delete logic exists but likely UX/timing issue
+  - PR D.2 (OAuth): complete
+  - PR D.3 (listing draft): complete
+  - PR D.4 (publish/revise/end/polling): partial — only publish exists on iOS
+  - PR D.6 (ITEM_SOLD): backend complete (PR #100), iOS automation missing
+  - PR E (reconciliation): not started
+  - ITEM_SOLD readiness: ~30% iOS-side — manual sale path works, eBay automation plumbing not yet on iOS
+
+### Updated priority for next iOS session
+
+Now that backend D.6 (ITEM_SOLD ledger) is live (PR #100), iOS priorities shift:
+1. D.4 iOS — status polling so iOS knows when a listing sells
+2. D.6 iOS — receive ITEM_SOLD push notification → auto-create CardSaleRecord
+3. Bug 2 fix (card tap navigation) — quick win
+4. Bug 4 fix (photo removal) — needs manual testing first
+5. PR E (reconciliation) — depends on D.6 iOS
