@@ -119,7 +119,7 @@ export interface SignalPayload {
   updated_at?: string;
 }
 
-const NEUTRAL_SIGNAL: SignalPayload = {
+export const NEUTRAL_SIGNAL: SignalPayload = {
   final_multiplier: 1.0,
   predicted_direction: "stable",
   signal_flags: ["signal_unavailable"],
@@ -630,7 +630,19 @@ function validatePriceResult(raw: unknown): PriceResult {
 // Public entry point
 // -------------------------------------------------------------------------
 
-export async function getPredictedPrice(card: Card): Promise<PriceResult> {
+export interface GetPredictedPriceOptions {
+  // Backtest-only: bypass fetchSignals and inject a pre-captured (or neutral)
+  // SignalPayload directly into the prompt. Used by the synthetic backtest
+  // harness (mcp-server/scripts/backtest_signal_value.ts) to compare
+  // signal-on vs signal-off arms with deterministic signal context.
+  // Production paths MUST NOT pass this — they should always fetchSignals.
+  signalsOverride?: SignalPayload;
+}
+
+export async function getPredictedPrice(
+  card: Card,
+  options?: GetPredictedPriceOptions
+): Promise<PriceResult> {
   if (!card.playerName) {
     throw new Error("getPredictedPrice: card.playerName is required");
   }
@@ -653,7 +665,9 @@ export async function getPredictedPrice(card: Card): Promise<PriceResult> {
     .map((s) => String(s).trim())
     .join("|");
   const [signals, floorDoc] = await Promise.all([
-    fetchSignals(card.playerName),
+    options?.signalsOverride
+      ? Promise.resolve(options.signalsOverride)
+      : fetchSignals(card.playerName),
     fetchPriceFloor(cardId),
   ]);
   const floorValue = floorDoc?.floor ?? null;
