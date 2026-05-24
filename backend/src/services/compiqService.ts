@@ -1,4 +1,4 @@
-// Legacy/mock CompIQ analysis for /price, /search, /analyze only. Not used for /estimate.
+// Legacy/mock CompIQ analysis for /price and /search only. Not used for /estimate.
 async function analyzeCompiq(input: any) {
   const player = input.player || '';
   const card = input.card || '';
