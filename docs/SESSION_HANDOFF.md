@@ -2359,3 +2359,85 @@ audit — applies again here. Roadmap text described intended work but didn't
 verify current state.
 
 End of session extension.
+
+# 2026-05-24 — Session extension: CF-PHASE4B-BACKTEST design (doc-only)
+
+## Headline
+
+Backtest harness design landed as `docs/phase0/phase4b_backtest_design.md`.
+Doc-only. No code changes. Next workstream is CF-PHASE4B-BACKTEST.1
+(implementation).
+
+Discovered while drafting: a prediction-accuracy backtest harness ALREADY
+EXISTS (`mcp-server/backtest.ts` + `compiq_backtest` Cosmos container + admin
+endpoints + `BacktestAdminView.swift`). It measures predicted-vs-actual
+accuracy bucketed by confidence band, but does NOT measure signal value.
+This is a parallel framing-inversion to the predecessor diagnostic — the
+roadmap framed Phase 4b as "build the backtest" when the accuracy-measurement
+piece is already built; the missing piece is the signal-on vs signal-off
+counterfactual arm.
+
+## What shipped
+
+- `docs/phase0/phase4b_backtest_design.md` (~770 lines, 10 sections)
+- Carry-forward: CF-PHASE4B-BACKTEST.1 (implementation, next session)
+
+## Load-bearing design decisions
+
+| Section | Decision | Rationale |
+|---|---|---|
+| §1 measurement target | Paired MAPE delta primary; direction-accuracy delta secondary; confidence-band calibration tertiary | MAPE not MAE because card prices span $5-$5k; paired-design because both arms run on same card at same time |
+| §2 outcome source | Cardsight comps via `fetchPlayerComps` | Already in production, 6h cached, identical to existing backtest's source |
+| §3 mechanic | Option C (synthetic backtest, signals-on vs signals-off run NOW against recent observed sales as ground truth) — NOT Option A (retrospective re-run of predictionLog) | predictionLog has only ~7 rows; Option C requires no aging; Option D (hybrid C→A) is the documented evolution path |
+| §4 where it runs | Standalone script `mcp-server/scripts/backtest_signal_value.ts` | Not cron, not endpoint — operator-gated, OpenAI billing concentrated, local-only iteration 1 |
+| §6 per-signal attribution | DEFERRED to iteration 2 | Iteration 1 answers binary "do signals help?" first |
+| §7 sample size | N=100 cards target (~$2-5 per run at 2 OpenAI calls per card) | 30 too noisy; 100 supports paired Wilcoxon p<0.05 for 1.5-2pt MAPE delta |
+
+## Critical implementation point captured for next session
+
+§8 Step 3 (data-window split): the synthetic backtest must enforce a temporal
+split — prediction input uses `[now - 60d, now - 14d]` comps; ground truth
+uses `[now - 14d, now]` comps. Without this split the prediction has a copy
+of the answer in its input. This is the single most likely bug for the
+implementer to introduce; doc calls it out as "critical implementation
+point."
+
+## Risk acknowledged: Cardsight retrospective leakage
+
+Signal payload references catalysts (show dates, news) that may have already
+moved the comps used for ground truth. Iteration 1 measurement is an UPPER
+BOUND on signal value — if signal-on still doesn't beat signal-off under
+leakage, signals don't help. If it beats, the win is bounded by leakage
+contribution. Iteration 2 may freeze signal snapshots to 14-day-old state if
+`fn-signal-aggregator` blob history is preserved (open question).
+
+## Outcome-driven next-workstream branches
+
+Per §8 Step 8 table, the iteration-1 verdict determines next workstream:
+- MAPE delta > 2pt, p < 0.05 → CF-SIGNAL-CREDENTIAL-REPAIR justified
+- MAPE delta 0.5-2pt, p < 0.05 → per-signal attribution before repair
+- MAPE delta < 0.5 or p > 0.05 → CF-PHASE4B-PROMPT-AUDIT (is OpenAI even using signal context?)
+- MAPE delta < 0 → CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS (signals are HURTING)
+
+The branching is captured in the design doc so the implementer doesn't have
+to decide post-hoc what counts as a positive/negative result.
+
+## Next session priority
+
+CF-PHASE4B-BACKTEST.1 (implementation). Per §8:
+1. Assemble `mcp-server/scripts/backtest_cohort_v1.json` (N=100 cards)
+2. Write `mcp-server/scripts/backtest_signal_value.ts`
+3. Run + commit results to `docs/phase0/backtest_runs/{run_id}/`
+4. Update handoff with verdict
+5. Optionally refactor `pricing.ts` to accept `signalsOverride` param (1 line)
+
+Estimated 4-5 hour session. May want to split cohort assembly (operator
+card-selection, ~90 min) from script-build + run (~3 hours).
+
+## Anti-drift note (from §10)
+
+Don't expand the measurement before producing iteration 1's first verdict.
+One measurement at a time. Partial-signal arms, multi-cohort runs,
+time-bucketed splits — all iteration 2+ scope, not iteration 1.
+
+End of session extension.
