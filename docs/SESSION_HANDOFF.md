@@ -2735,7 +2735,7 @@ present arc is concerned with.
 |---|---|---|
 | CF-PHASE4B-BACKTEST.1 | ✅ shipped | a061fb9 + 73cae0d + c80b6ca + 4756104 |
 | CF-COMPSLOADER-GRADE-FLOW | ✅ shipped | 4d4bd8c (PR #122), deployed |
-| CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
+| CF-HEALTH-SIGNAL-URL-CHECK | ✅ shipped | c30685e (PR #123), deployed to compiq-mcp. Post-deploy `/health` confirms `signal_url.status=URL_OK` (status_code=400, latency=893ms) and `floor_url.status=URL_OK` (status_code=400, latency=765ms). Today's 404 misconfig would have surfaced as URL_NOT_FOUND. 21 unit tests in scripts/healthChecks.test.ts. |
 | CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
 | CF-BACKTEST-COSMOS-GRADE-FLOW | open (NEW) | ~5 min, low priority |
 | CF-BACKTEST-PARALLEL-FILTER | open | ~60 min; would refine PSA 10 actuals further |
@@ -2905,7 +2905,7 @@ only after methodology is locked.
 | CF-PHASE4B-BACKTEST.1 | ✅ shipped | a061fb9, 73cae0d, c80b6ca, 4756104 |
 | CF-COMPSLOADER-GRADE-FLOW | ✅ shipped | 4d4bd8c (PR #122), deployed |
 | CF-PHASE4B-BACKTEST WS2 | ✅ shipped | 1f8a528 |
-| CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
+| CF-HEALTH-SIGNAL-URL-CHECK | ✅ shipped | c30685e (PR #123), deployed to compiq-mcp. Post-deploy `/health` confirms `signal_url.status=URL_OK` (status_code=400, latency=893ms) and `floor_url.status=URL_OK` (status_code=400, latency=765ms). Today's 404 misconfig would have surfaced as URL_NOT_FOUND. 21 unit tests in scripts/healthChecks.test.ts. |
 | CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
 | CF-BACKTEST-COSMOS-GRADE-FLOW | ✅ shipped | b55f1ec — multi-line (not the originally-spec'd 1-liner; pre-commit trace surfaced regression risk; mirrors 73cae0d pattern) |
 | CF-DAILY-REFRESH-CONSISTENCY | ✅ shipped | edf53da — daily-refresh.yml now sets the full GIT_SHA / GIT_SHA_SHORT / GIT_BRANCH / DEPLOYED_AT quad; effect visible at next cron fire (~5-6 AM ET window) |
