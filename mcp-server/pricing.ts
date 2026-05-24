@@ -15,6 +15,7 @@ import {
   type CompsAnalytics,
 } from "./compsAnalytics.js";
 import { lookupCatalyst, type CatalystResult } from "./catalystCalendar.js";
+import { trackHttpDependency } from "./telemetry.js";
 
 const SIGNAL_URL = process.env.AZURE_SIGNAL_FUNCTION_URL ?? "";
 const SIGNAL_KEY = process.env.AZURE_SIGNAL_FUNCTION_KEY ?? "";
@@ -224,14 +225,26 @@ export async function fetchSignals(
 ): Promise<SignalPayload> {
   if (!SIGNAL_URL) return { ...NEUTRAL_SIGNAL };
 
-  try {
-    const url = new URL(SIGNAL_URL);
-    url.searchParams.set("player", playerName);
-    if (SIGNAL_KEY) url.searchParams.set("code", SIGNAL_KEY);
+  const url = new URL(SIGNAL_URL);
+  url.searchParams.set("player", playerName);
+  if (SIGNAL_KEY) url.searchParams.set("code", SIGNAL_KEY);
+  const fullUrl = url.toString();
+  const start = Date.now();
 
-    const resp = await fetch(url.toString(), {
+  // CF-FETCH-SIGNAL-FLOOR-TELEMETRY: manual trackDependency around the fetch
+  // so failures surface in App Insights `dependencies` table (Node 18+ fetch()
+  // is NOT auto-instrumented). Graceful fallback to NEUTRAL_SIGNAL preserved.
+  try {
+    const resp = await fetch(fullUrl, {
       // 5s budget — pricing is interactive, can't block on a slow blob fetch
       signal: AbortSignal.timeout(5_000),
+    });
+    trackHttpDependency({
+      name: "signal_service",
+      url: fullUrl,
+      startMs: start,
+      resultCode: resp.status,
+      success: resp.ok,
     });
     if (!resp.ok) return { ...NEUTRAL_SIGNAL };
 
@@ -244,7 +257,15 @@ export async function fetchSignals(
       signal_flags: data.signal_flags ?? [],
       components: data.components ?? {},
     };
-  } catch {
+  } catch (err) {
+    trackHttpDependency({
+      name: "signal_service",
+      url: fullUrl,
+      startMs: start,
+      resultCode: 0,
+      success: false,
+      error: err as Error,
+    });
     return { ...NEUTRAL_SIGNAL };
   }
 }
@@ -263,12 +284,28 @@ export async function fetchPriceFloor(
   cardId: string
 ): Promise<FloorResponse | null> {
   if (!FLOOR_URL || !cardId) return null;
+
+  const url = new URL(FLOOR_URL);
+  url.searchParams.set("cardId", cardId);
+  if (FLOOR_KEY) url.searchParams.set("code", FLOOR_KEY);
+  const fullUrl = url.toString();
+  const start = Date.now();
+
+  // CF-FETCH-SIGNAL-FLOOR-TELEMETRY: same pattern as fetchSignals above.
+  // Note: 404 here often means "no floor stored yet" (legitimate empty state),
+  // not a misconfiguration — but we still record it as success=false so the
+  // operator can distinguish (a) no floors ever stored vs (b) all floors
+  // returning 404 because the URL path is wrong.
   try {
-    const url = new URL(FLOOR_URL);
-    url.searchParams.set("cardId", cardId);
-    if (FLOOR_KEY) url.searchParams.set("code", FLOOR_KEY);
-    const resp = await fetch(url.toString(), {
+    const resp = await fetch(fullUrl, {
       signal: AbortSignal.timeout(5_000),
+    });
+    trackHttpDependency({
+      name: "price_floor_service",
+      url: fullUrl,
+      startMs: start,
+      resultCode: resp.status,
+      success: resp.ok,
     });
     if (!resp.ok) return null;
     const data = (await resp.json()) as Partial<FloorResponse>;
@@ -278,7 +315,15 @@ export async function fetchPriceFloor(
       comp_count_90d: data.comp_count_90d,
       updated_at: data.updated_at,
     };
-  } catch {
+  } catch (err) {
+    trackHttpDependency({
+      name: "price_floor_service",
+      url: fullUrl,
+      startMs: start,
+      resultCode: 0,
+      success: false,
+      error: err as Error,
+    });
     return null;
   }
 }
