@@ -1,21 +1,27 @@
-name: CH Access Tripwire Monitor
+name: CH Access Tripwire Monitor (DISABLED 2026-05-27)
 
-# Phase 3a — Card Hedge access tripwire (Option D per
-# docs/phase0/phase3a_ch_monitor_scope.md).
+# DISABLED 2026-05-27 — post MCP rewire Phase 2, this monitor watches blobs
+# that have ZERO production consumers (compiq-mcp no longer reads
+# cardhedge.json; Phase 2 verified). Keeping the monitor active would
+# generate false signals if/when the zombie fn-cardhedge-comps eventually
+# fails or is disabled. Disabled by removing the schedule + adding
+# `if: ${{ false }}` gate. Re-enable only if fn-cardhedge-comps becomes
+# a production data source again.
 #
-# Fires once daily at 02:30 UTC (30 min after fn-cardhedge-comps's
-# 02:00 UTC nightly run). Reads the 5 active players' cardhedge.json
-# blobs from stcompiqfnotgm2 and creates/comments on a GitHub Issue if
-# any player's comp_count drops below threshold OR the blob's
-# lastModified is older than the staleness window.
+# HISTORICAL CONTEXT (Phase 3a, 2026-05-21):
+# Card Hedge access tripwire (Option D per docs/phase0/phase3a_ch_monitor_scope.md).
+# Fired once daily at 02:30 UTC (30 min after fn-cardhedge-comps's 02:00 UTC
+# nightly run). Read 5 active players' cardhedge.json blobs and created/
+# commented on a GitHub Issue on threshold breach.
 #
 # Auth: federated identity via user-assigned managed identity
 # `ch-monitor-oidc` in rg-hobbyiq-dev, with Storage Blob Data Reader
 # on stcompiqfnotgm2.
 
 on:
-  schedule:
-    - cron: '30 2 * * *'  # 02:30 UTC daily
+  # Schedule removed 2026-05-27 — workflow now only runs on manual dispatch
+  # (for ad-hoc debugging if needed); the `if: ${{ false }}` gate on the job
+  # blocks execution even on dispatch.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -37,6 +43,7 @@ env:
 
 jobs:
   monitor:
+    if: ${{ false }}  # DISABLED 2026-05-27 — see header for rationale
     runs-on: ubuntu-latest
     steps:
       - name: Azure login (federated managed identity)

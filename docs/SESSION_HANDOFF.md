@@ -2089,7 +2089,187 @@ Function continues to fire nightly at 02:00Z writing blobs that zero production 
 - CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
 - CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
 - CF-COSMOS-MI — managed identity migration (larger arch)
-- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap (~resolved by ch-monitor.yml disable in WS4; the wider "other Cosmos-writing functions" gap remains)
 - CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
 - F1 /bulk fix
 - Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+
+# 2026-05-27 — Session extension: WS4 code deletion sweep (partial) + iOS pivot
+
+## Headline
+
+8-workstream day. MCP rewire arc effectively complete + deploy infrastructure
+hardened + code cleanup partial. WS4 (code deletion sweep) closed with honest
+partial state captured. Backend arc is at a natural pause point; pivoting to
+iOS for subsequent sessions. CH residual state documented across
+[copilot-instructions.md CURRENT STATE section](../.github/copilot-instructions.md)
+and the carry-forwards below.
+
+## WS4 outcome (code deletion sweep — partial)
+
+### WS4.1 inventory
+
+Comprehensive grep across `backend/`, `mcp-server/`, `backend/tests/`,
+`.github/`, `scripts/` for `cardhedge|card hedge|cardhedger.com|
+CARD_HEDGE_API_KEY|cardHedgeCardId|card_hedge`: **42 files** matched.
+Classified as production code (a), historical/docs (b), schema fields (c),
+test fixtures (d), env-var refs (e).
+
+### WS4.2 cardhedge.client.ts deletion — DEFERRED
+
+Grep for active imports surfaced **4 production sites** still importing
+`backend/src/services/compiq/cardhedge.client.ts`:
+
+- `compiqEstimate.service.ts:5` — type-only (`CardHedgeCard`)
+- `cardsight.router.ts:28` — used in off/shadow/primary modes, bypassed
+  under `CARDSIGHT_MODE=exclusive`
+- `compiq.routes.ts:6` + `:735` — used in `/api/compiq/search-list` route
+  (dead-path per W6.2 zero-traffic finding, but code still imports)
+
+Plus 13 test files importing for testing purposes.
+
+Per WS4.2 hard rule "If grep returns active import: HALT", deletion deferred
+to **CF-CARDHEDGE-CLIENT-DELETE** (see updated scope below).
+
+### WS4.3 env var removal — partial + regression-and-recovery
+
+| Service | Action | Result |
+| --- | --- | --- |
+| compiq-mcp | `CARD_HEDGE_API_KEY` removed | ✓ `/health` shows `has_card_hedge: false` post-restart; `/predict` continues to work (no CH dependency post-Phase-2) |
+| HobbyIQ3 | `CARD_HEDGE_API_KEY` removed → REGRESSION → restored | `/price` + `/estimate` returned `source=no-recent-comps comps=0` during ~7-min window. Per spec hard rule "If env var removal causes service health regression, restore and HALT" → restored. `/estimate` recovered immediately; `/price` recovered as Redis cache entries TTL'd out (~13 min). HobbyIQ3 still has `CARD_HEDGE_API_KEY` set. |
+| fn-compiq | `CARD_HEDGE_API_KEY` kept | per zombie-preservation reading of WS4.3 spec |
+
+**WS4.3 NEW FINDING:** HobbyIQ3 has a hidden runtime CH dependency that
+contradicts finding5 v2's framing of CH as "near-dormant under exclusive
+mode." Some code path inside `cardsight.router.ts` or
+`compiqEstimate.service.ts` reaches `cardhedge.client.ts`'s `_headers()`
+function or a lazy-loaded import. Precise consumer NOT YET IDENTIFIED.
+Captured as updated CF-CARDHEDGE-CLIENT-DELETE scope.
+
+### WS4.4 copilot-instructions.md updated
+
+Added a new "CURRENT STATE (as of 2026-05-27)" section to
+`.github/copilot-instructions.md` documenting:
+
+- Cardsight as primary comp source (post-Phase-2)
+- CH residual state (zombie function, dormant client imports, env-var
+  asymmetry across 3 services)
+- Deploy infrastructure (hobbyiq3 hardened-script vs compiq-mcp manual)
+- Daily-refresh.yml's silent scheduled deploys
+- Cosmos auth state (PRIMARY/SECONDARY distribution post-CF-COSMOS-ROT)
+
+Old sections (architecture diagram, signal weights, "Card Hedge AI — Primary"
+header, env vars, "WHAT YOU NEVER DO" CH rules) updated with HISTORICAL
+markers + cross-references to CURRENT STATE. Direct commit to main.
+
+### WS4.4b ch-monitor.yml workflow disabled
+
+`.github/workflows/ch-monitor.yml` Phase 3a monitor disabled via:
+
+- Schedule trigger removed (only `workflow_dispatch` remains)
+- `if: ${{ false }}` gate on the `monitor` job
+- Header comment documents disable rationale + re-enable trigger
+
+Rationale: monitor watches blobs that have zero production consumers
+post-Phase-2. Keeping it active would generate false signals if fn-cardhedge-comps
+eventually fails or is durably disabled.
+
+### WS4.5 schema rename decision — DEFER
+
+**`cardHedgeCardId` field naming debt accepted, no migration planned.**
+Field name no longer matches data source (which is now Cardsight via
+`/api/compiq/comps-by-player`). Rename would require Cosmos data migration;
+cost > benefit for pre-launch single-user app. Future workstream can
+revisit if/when (a) iOS launches and the field name appears in user-facing
+state, or (b) Cosmos schema migration is scheduled for other reasons.
+
+## What shipped today (8 workstreams)
+
+1. **CF-DEPLOY-INFRA-HARDEN** (PR #120 `ddf9209`) — hardened deploy script + runbook
+2. **CF-PHASE1-RETRY** (deploy `ddf9209`) — Phase 1 backend endpoint production-live
+3. **Mid-session investigation** — daily-refresh.yml's silent scheduled deploys characterized
+4. **MCP rewire Phase 2** (PR #121 `eb87559`) — compsLoader rewires to HTTP backend
+5. **Deploy documentation** — compiq-mcp source-deploy runbook section
+6. **fn-cardhedge-comps decommission** — DEFERRED (Linux Function App read-only constraint)
+7. **WS4 code deletion sweep** — PARTIAL (env vars partially cleaned, copilot-instructions updated, ch-monitor disabled, cardhedge.client.ts deletion deferred, schema rename deferred)
+8. **WS4.6 SESSION_HANDOFF** (this commit)
+
+## CH-arc completion status (honest)
+
+| Layer | Status |
+| --- | --- |
+| Architectural intent (no production code path REQUIRES CH for predictions) | **MOSTLY ACHIEVED** — compiq-mcp `/predict` clean; hobbyiq3 `/price`/`/estimate`/`/price-by-id` clean per acceptance smoke; but hobbyiq3 has a hidden CH dependency surfaced by WS4.3 regression |
+| Runtime CH dependency | **PARTIAL** — fn-cardhedge-comps still fires nightly (zombie); hobbyiq3 still requires `CARD_HEDGE_API_KEY` env var (consumer not identified) |
+| Code presence | `cardhedge.client.ts` still in repo with 4 production imports; 13 test files still reference it |
+| Monitoring | ch-monitor.yml disabled (was watching unread blobs) |
+| Env vars | compiq-mcp: removed ✓; HobbyIQ3: restored after regression; fn-compiq: kept for zombie preservation |
+
+## Updated carry-forwards (this session)
+
+**New (this session):**
+
+- **CF-CARDHEDGE-CLIENT-DELETE** (UPDATED scope, ~2-3h workstream). Original
+  scope: cascade-remove `cardhedge.client.ts` and its 4 production imports
+  (cardsight.router off/shadow/primary branches ~60-100 LOC, /search-list
+  route ~50 LOC, CardHedgeCard type refactor ~10 LOC, 13 test files).
+  **Revised scope per WS4.3 finding:** investigation step REQUIRED to
+  identify the hidden hobbyiq3 runtime consumer of `CARD_HEDGE_API_KEY`
+  before cascade can proceed safely. Decision to make first: preserve
+  `CARDSIGHT_MODE` optionality (refactor to remove CH branches but keep
+  mode framework) OR burn the bridge (remove mode-switching entirely,
+  commit to Cardsight permanently).
+- **CF-FN-CARDHEDGE-DISABLE** (~5-10 min when bundled). Durably disable
+  the zombie function via `function.json` `"disabled": true`. Bundle with
+  first future fn-compiq redeploy workstream (likely candidates: CF-FN-SILENT-FAIL
+  fix, COSMOS_KEY rotation re-check, adding a new function).
+- **CF-DAILY-REFRESH-CONSISTENCY** (~5 LOC, low priority). Patch
+  `.github/workflows/daily-refresh.yml` line 119 to set all 4 GIT_* env vars
+  on the post-deploy `az webapp config appsettings set` step.
+
+**Unchanged from prior session entries:**
+
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap (~resolved by ch-monitor.yml disable; broader "other Cosmos-writing functions" gap remains)
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
+- F1 /bulk fix
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+
+## iOS pivot framing
+
+**BACKEND ARC EFFECTIVELY COMPLETE — pivoting to iOS for subsequent sessions.**
+
+Backend state is well-documented and stable. The MCP rewire arc that's been
+the multi-week strategic concern reached its architectural milestone today
+(compiq-mcp no longer reads CH blobs). Remaining backend carry-forwards
+(CF-CARDHEDGE-CLIENT-DELETE, CF-FN-CARDHEDGE-DISABLE, CF-DAILY-REFRESH-CONSISTENCY,
+F1, etc.) are operational cleanup that can fit between iOS workstreams without
+blocking.
+
+**Next session priority: iOS state assessment.**
+
+1. Open Xcode project at `C:/Users/dvabu/OneDrive - Just the Boys and Cards LLC/Desktop/HobbyIQ-V1/` (or wherever iOS source lives — confirm path during assessment)
+2. Attempt build, document failures
+3. Attempt install on iPhone, document
+4. Verify iOS env config points at hobbyiq3 production (`https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net`)
+5. Triage 4 known iOS bugs (refresh wiping inventory, card tap, image auto-population, photo removal — see copilot-instructions.md "KNOWN BUGS" section)
+6. Produce findings doc at `docs/phase0/ios_state_assessment.md` (or similar)
+
+Estimated 1-2 hour workstream. Read-only against iOS code first; remediation
+in a subsequent session.
+
+## Session summary (8-workstream day, backend arc → iOS pivot)
+
+The yesterday-incident → today-recovery → today-Phase1-retry → today-Phase2
+sequence collapsed three workstreams into a single arc that landed cleanly.
+WS3 + WS4 surfaced honest partial state: fn-cardhedge-comps disable is
+blocked by Azure Linux constraints; cardhedge.client.ts deletion is blocked
+by an unidentified runtime consumer on hobbyiq3. Neither blocker affects
+the architectural milestone (CH no longer on the critical pricing path);
+both are captured as carry-forwards with explicit scope.
+
+Backend operating model is stable enough to set down for now. iOS state
+assessment is the natural next workstream.
+
+End of session.
