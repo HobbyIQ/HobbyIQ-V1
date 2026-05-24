@@ -428,3 +428,254 @@ Open design questions (called out in §8 + above) for the implementing session t
 - Card-set selection strategy (year filter default, releaseName narrowing)
 - `cardId` in CardComp inclusion decision
 - LRU cache warming inclusion decision
+
+---
+
+## Pre-implementation diagnostic (2026-05-27)
+
+Three open questions from §10 + §8 answered. **Q1's finding invalidated the design's Phase 1 endpoint signature** — captured below along with the revised design, Q2 latency budget, and Q3 cache strategy.
+
+### Q1 — Cardsight player-only catalog search is unreliable for demo cards
+
+**Method:** Direct `searchCatalog` probes against `https://api.cardsight.ai/v1/catalog/search` for each demo player + year combination, with and without product narrowing.
+
+#### Player+year only (the original design's Phase 1 query shape)
+
+| Query | Total candidates | Topps Update Base RC position |
+|---|---:|---|
+| `searchCatalog("Mike Trout", year=2011)` | 16 | position 9 ✓ |
+| `searchCatalog("Shohei Ohtani", year=2018)` | 25 (50 with take=50) | position 8 — but it's `"Japan's Finest (Shohei Ohtani / Ichiro)"` combo, NOT pure RC |
+| `searchCatalog("Aaron Judge", year=2017)` | 25 (50 with take=50) | **NOT FOUND in top 50** |
+
+Judge year=2017 top-50 returned only Bowman / Bowman Chrome / Bowman Chrome Mini / Bowman Platinum / Bowman's Best / Bowman High Tek / Donruss / Donruss Optic / Finest / Panini Chronicles — Topps Update entirely absent.
+
+#### Product-narrowed (the existing /price flow pattern)
+
+| Query | Total candidates | Topps Update Base RC position |
+|---|---:|---|
+| `searchCatalog("Mike Trout Topps Update", year=2011)` | 1 | position 0 ✓ |
+| `searchCatalog("Aaron Judge Topps Update", year=2017)` | 18 | position 4 ✓ (cardId `411dbd50`) |
+| `searchCatalog("Shohei Ohtani Topps Update", year=2018)` | 21 | position 1 ✓ (pure Ohtani, not the combo) |
+
+#### Conclusion
+
+Cardsight's catalog text-relevance ranking systematically buries `Topps Update` Base Sets for some players when only the player name is provided. The card exists (verified by product-narrowed query); it's the RANK ORDER that fails the demo-relevance goal. The existing Phase 2 v2 `/price` flow works because `lookupReleaseName(product)` injects `"Topps Update"` into the search query string, which causes Cardsight to elevate Topps Update results.
+
+**Implication: the original design's Phase 1 endpoint signature is wrong.** `searchCatalog(playerName, {year, take=25})` doesn't reliably find demo cards. The endpoint needs to **require product as input**.
+
+#### Edge-case probes (separate from main finding)
+
+- `searchCatalog("Mickey Mantle", year=1956)` — 1 candidate (Topps Base Set). Vintage queries work but minimal data.
+- `searchCatalog("Smith")` — returns multi-player combo cards (e.g., "1963 Rookie Stars (Steve Dalkowski / Fred Newman / Carl Bouldin / Jack Smith)"). Catalog `name` field is the full card name, not player-disambiguated. **Common-name disambiguation requires year+product narrowing too.**
+- Year filter is strict: `searchCatalog("Mike Trout", year=2011)` returned 16/16 with year=2011, no off-year leaks.
+
+### Design revision summary
+
+The following revisions supersede the original §5 Phase 1 spec + §10 implementer checklist for the Phase 1 endpoint:
+
+#### Endpoint signature change
+
+**Was (original §5):**
+```
+POST /api/compiq/comps-by-player
+Input: { playerName, cardYear?, product?, parallel?, grade? }
+```
+
+**Now (post-Q1):**
+```
+POST /api/compiq/comps-by-player
+Input: { playerName REQUIRED, product REQUIRED, cardYear?, parallel?, grade? }
+```
+
+**Endpoint name preserved** (still `/comps-by-player`) but `product` becomes a required input — same shape change as Phase 2's QueryContext, which has been internally consistent since Phase 2 v1. Keeping the name avoids cascading rename churn through downstream documentation and the implementer checklist.
+
+400 response when `product` is missing: `{ error: "product field is required" }`.
+
+#### Handler implementation pattern change
+
+**Was (original §10 step 3):**
+```
+1. Call searchCatalog(playerName, { year: opts.cardYear, take: 25 })
+2. Filter candidates by releaseName when opts.product provided
+3. For top-K candidates, fetch getPricing
+```
+
+**Now (post-Q1):**
+```
+1. Resolve releaseName via lookupReleaseName(product) (reuses Phase 2 dictionary)
+2. Build query string: `${playerName.trim()} ${releaseName ?? product}`
+3. Call searchCatalog(queryString, { year: cardYear, take: 25 })
+4. Filter candidates by releaseName exact-match (Phase 2 v2 pattern)
+5. For top-K (≤ MAX_PRICING_PROBES=8), fetch getPricing in parallel
+6. Aggregate translateResponse outputs into flat CardComp[]
+```
+
+This is the **exact same flow `resolveCardId` already does for /price/estimate** — just stops at "aggregate sales" instead of "pick best cardId." The implementation effort estimate revises from ~80-120 LOC down to ~50-80 LOC because much of the logic is already in `cardsight.mapper.ts` and only needs aggregation-mode refactoring.
+
+#### Backtest interaction change
+
+**Was (original §6):** "backtest.ts still calls `fetchPlayerComps(player)` with no change to its call shape. Player-level batching preserved."
+
+**Now (post-Q1):** Backtest's `fetchPlayerComps(player)` becomes `fetchPlayerComps(player, product)` — backtest groups predictions by **player+product** (using `prediction.set` as the product) instead of just player. Per [predictionLog.ts](../../mcp-server/predictionLog.ts), predictions log the `set` field, so the data is available.
+
+Backtest grouping change: ~5-10 LOC in `mcp-server/backtest.ts`. The "fetch once per group, score N predictions in group" optimization is preserved; the group key just becomes `${player}|${product}` instead of `${player}`.
+
+Worst-case backtest fetch-count impact: 2-3× the prior fetch count (a player with predictions across 2-3 products produces 2-3 groups instead of 1). Acceptable trade-off for the data-quality improvement (each fetch is now narrowed to the correct product and returns demo-relevant cards).
+
+#### MCP-side caller change
+
+**Was (original §10 Phase 2 step 3):** "mcp-server/compsLoader.ts rewritten: HTTP call to backend with `playerName` only."
+
+**Now (post-Q1):** `fetchPlayerComps(playerName, productGrade?, product?)` — MCP must pass `product` (the set name from the request body). Server.ts /predict handler already has `body.set` available; passes it through to compsLoader. ~2-3 additional LOC in compsLoader signature + 1 LOC at the call site in server.ts /predict.
+
+#### Residual risk (replaces original §8 "Cardsight catalog gaps" entry)
+
+**Q1-residual risk:** Predictions where `product` isn't well-known (legacy backtest data without `set` field populated, manual entries, future ingest pipelines). When product is unknown, the endpoint returns 400 and the caller must fall back to either: (a) skip the prediction, (b) attempt product-inference from other fields, (c) reach for the legacy CH-blob path until that's decommissioned.
+
+For backtest: any prediction logged WITHOUT `set` is currently a small minority (verifiable via predictionLog audit, future workstream). For MCP /predict from iOS: `body.set` is always provided per the existing API contract.
+
+### Q2 — Latency budget against revised flow
+
+**Method:** Direct measurements against production hobbyiq3 (cache-warmed) + compiq-mcp + Cardsight API. App Insights data largely retention-gapped; supplemented with fresh smoke calls during this diagnostic.
+
+#### Baselines
+
+| Path | Measurement | p50 / p95 |
+|---|---|---|
+| MCP `/predict` (inline comps, no upstream fetch) | 3 fresh calls | ~5-10s (dominated by OpenAI; ~5s warm, ~10s cold) |
+| MCP `/predict` (current with blob fetch, no telemetry) | Inferred | OpenAI ~5-10s + blob read ~50-200ms ≈ ~5-10s |
+| Backend `/price` (cache-warmed Trout TU) | 3 fresh calls | p50=4ms, p95=618ms (~400ms typical) |
+| Backend `/price-by-id` (cache-warmed) | App Insights last 4h | p50=8ms, p95=27ms |
+| Cardsight searchCatalog (direct from Q1 probes) | Single calls | ~95-800ms |
+| Cardsight getPricing cold (per prior session findings) | Phase 2 v2 traces | ~2-9s |
+| Cardsight getPricing warm (cacheWrap 6h TTL) | Phase 2 v2 traces | ~10-100ms |
+
+#### Theoretical revised Phase 1 endpoint latency
+
+Per-call breakdown:
+1. **searchCatalog (product-narrowed):** 1 call. ~100-800ms.
+2. **getPricing parallel fanout:** ≤8 calls in parallel. Bounded by max(individual call latencies).
+   - All-cold: max(~2-9s) ≈ ~5s p95
+   - All-warm (cacheWrap hit): max(~10-100ms) ≈ ~100ms p95
+3. **Aggregation + translateResponse:** in-memory, sub-10ms.
+
+**Cold path total: searchCatalog + max(8 parallel getPricing)** ≈ ~5-10s p95.
+**Warm path total (everything cached via cacheWrap):** ≈ ~200-900ms p95.
+
+#### MCP `/predict` latency after rewire
+
+Cold path: MCP→backend HTTP hop + backend cold endpoint + OpenAI
+≈ ~50ms (HTTP) + ~5-10s (backend cold) + ~5s (OpenAI) = ~10-15s p95
+
+Warm path: MCP→backend HTTP hop + backend warm endpoint + OpenAI
+≈ ~50ms + ~200-900ms + ~5s = ~5-6s p95
+
+**Comparison to current CH-blob baseline (~5-10s):**
+
+- Cold path: ~1.5-2× current (cold backend endpoint is the new cost; OpenAI dominates either way)
+- Warm path: ~1.0-1.2× current (negligible HTTP overhead vs blob read)
+
+#### Verdict on 1.5× p95 acceptance gate (from original §10)
+
+- **Warm path: comfortably within gate** (~1.0-1.2×).
+- **Cold path: at or slightly above gate** (~1.5-2.0×). Mitigations:
+  - Warming the demo-player+product targets at backend startup (see Q3) → moves cold path to warm for the most-requested aggregations
+  - Cardsight's 6h cacheWrap TTL absorbs the cold-call cost over time
+  - Worst case (genuinely cold player+product never warmed): ~10s vs ~5s current — still well under iOS's 60s timeout
+
+**Recommended revised gate: p95 within 2× of pre-rewire baseline on cold path, within 1.3× on warm path.** Original 1.5× was a guess; the data supports a slightly relaxed cold-path ceiling because OpenAI cost dominates.
+
+#### Rate-limit risk at expected concurrency
+
+Per defect #13 v2 work: Cardsight rate-limits at roughly 30 concurrent calls per tenant. Single Phase 1 endpoint call generates ≤9 calls (1 searchCatalog + ≤8 getPricing). Several concurrent iOS requests would multiply: 3 concurrent MCP /predict calls hitting cold cards = 3 × 9 = 27 concurrent Cardsight calls — at the rate-limit edge. Mitigation:
+
+- LRU cache (Q3) absorbs most production traffic to single-call cache hits
+- `getPricing` already cacheWrap-cached at the Cardsight client level — warm hits don't go to Cardsight
+- Backend's defect #13 v2 serialized warming pattern proves Cardsight tolerates well-paced workloads
+
+**Verdict: rate-limit safe under expected iOS pre-launch volume. Worth monitoring post-launch.**
+
+### Q3 — Cache strategy
+
+#### Recommendation: two-layer cache, both at 6h TTL
+
+| Layer | What's cached | Where it lives | Cache key | TTL |
+|---|---|---|---|---|
+| **Aggregate** (NEW) | Final `CompsByPlayerResponse` (`{ comps, cardCount, cardIds, source, warnings }`) | New LRU in `compsByPlayer.service.ts` | `${playerName.toLowerCase().trim()}\|${product.toLowerCase().trim()}\|${cardYear ?? ""}\|${parallel ?? ""}\|${grade ?? ""}` | 6h (matches underlying pricing TTL) |
+| **Per-cardId pricing** (EXISTING) | Individual `getPricing` responses | `cardsight.client.ts` `cacheWrap` | Cardsight's internal key shape | 6h (PRICING_TTL_SEC) |
+| **Per-cardId resolution** (EXISTING) | `resolveCardId` outputs (cardId selection logic) | `cardsight.mapper.ts` LRU | `CompIQQueryInput` shape | 7 days (RESOLVE_CACHE_TTL_MS) |
+
+The new aggregate layer is the only addition. The two existing layers (per-cardId pricing + per-cardId resolution) already serve the underlying calls — keeping them avoids cache-key invalidation cascades.
+
+**Why a separate aggregate cache instead of reusing existing LRU:**
+- Existing `resolveCardId` LRU keys on per-card `CompIQQueryInput` (includes `cardNumber`). The aggregate endpoint operates at a coarser grain (player+product, no cardNumber). Different key shapes = different cache instance.
+- New cache sized at 1000-2000 entries (smaller than resolveCardId's 5000 — fewer unique player+product combinations than unique card resolutions).
+- LRU pattern reuses the existing `cardsight.mapper.ts` cache utilities for consistency.
+
+#### Warming inclusion: YES, warm demo-player+product set at startup
+
+Per Phase 2 v2 defect #13 v2: warming is now serialized. Extending to the new endpoint adds ~10-15 player+product warming targets:
+
+| Player | Product |
+|---|---|
+| Mike Trout | Topps Update |
+| Aaron Judge | Topps Update |
+| Cody Bellinger | Topps Update |
+| Shohei Ohtani | Topps Update |
+| Ronald Acuna Jr | Topps Update |
+| Juan Soto | Topps Update |
+| Gleyber Torres | Topps Update |
+| Bobby Witt Jr | Topps Chrome Update |
+| Paul Skenes | Topps Chrome Update |
+| Caleb Bonemer | Bowman Draft Chrome |
+
+Same 10 targets as `CACHE_WARM_TARGETS` for `resolveCardId`, now extended with `product`. Serialized warming cost: 10 targets × ~5s each (cold) ≈ ~50s additional startup time on top of the existing ~25s for `resolveCardId` warming = ~75s total. Acceptable for fire-and-forget background warming.
+
+**Optional optimization (deferred):** Could warm only a subset on startup (e.g., 5 demo players) and lazy-cache the rest as they're requested. Trade-off is startup latency vs first-request latency. Default to full warming for symmetry with Phase 2 v2's pattern.
+
+#### Cache invalidation strategy
+
+**6h TTL absorbs underlying pricing changes naturally.** Cardsight's pricing data updates at most daily; 6h TTL means stale-data window is ≤ 6h. For pricing data this is acceptable.
+
+**No active invalidation on the aggregate cache.** When a particular cardId's pricing changes, the per-cardId cache invalidates on next read (cacheWrap TTL), but the aggregate cache continues serving the stale aggregate until ITS TTL expires. Worst case: aggregate returns a 6h-stale comp set. Acceptable for v1.
+
+**Future optimization (deferred):** Active invalidation hook — when a per-cardId pricing fetch returns significantly different data than the cached aggregate's view of that card, evict the aggregate. Adds complexity; skip for v1.
+
+### Summary of revisions to Phase 1 spec
+
+| Item | Original | Revised (post-Q1/Q2/Q3) |
+|---|---|---|
+| Endpoint signature | `playerName, cardYear?, product?, parallel?, grade?` | `playerName REQUIRED, product REQUIRED, cardYear?, parallel?, grade?` |
+| Handler search call | `searchCatalog(playerName, {year, take})` | `searchCatalog(playerName + releaseName(product), {year, take})` — reuses Phase 2 v2 pattern |
+| Backtest call shape | `fetchPlayerComps(player)` | `fetchPlayerComps(player, product)` — groups by player+product |
+| LOC estimate | ~80-120 LOC backend | ~50-80 LOC backend (more reuse) |
+| Acceptance criteria latency gate | "p95 within 1.5× baseline" | "p95 within 2× cold, 1.3× warm" |
+| Cache strategy | Deferred | Two-layer (aggregate + per-card), 6h TTL, warm 10 demo player+product targets at startup |
+
+### New open questions (continue or defer per implementer's judgment)
+
+1. **Per-prediction backtest audit:** what % of historical predictions in `predictionLog` lack a `set` field? If significant, backtest's group-by-player+product needs a fallback. Read-only audit ~15 min.
+
+2. **Product input normalization:** the new endpoint accepts `product` as a string. Should it normalize (lowercase, trim, dictionary-canonicalize) before cache key construction? Phase 2 v2's resolveCardId LRU does `.toLowerCase().trim()` — recommend matching pattern. ~2 LOC.
+
+3. **Aggregate cache size sizing:** 1000-2000 entries is a guess. Production iOS volume (post-launch) determines real working set. Worth re-tuning post-launch based on cache hit rate observation.
+
+4. **Response shape `cardIds: string[]` field utility:** the new endpoint returns `cardIds` in addition to `comps`. Does any downstream consumer use it? If no current consumer, drop it from the response and let comps' embedded `cardId` field (additive, optional) carry the data. ~3 LOC savings. Decide during implementation.
+
+No 5th open question surfaced. Q1's invalidation was the load-bearing finding; Q2 and Q3 derive cleanly against the revised flow.
+
+### Implementer checklist deltas (supersedes §10 inline content for Phase 1 implementation)
+
+When the implementing session begins, the following deltas apply to §10:
+
+- Step 3 (compsByPlayer.service.ts): handler signature requires `product`; use `lookupReleaseName(product)` + `searchCatalog(queryString)` pattern matching `resolveCardId`
+- Step 4 (route): validation requires `product` field; 400 response when missing
+- Step 5 (tests): add test case for missing-product 400 response; rename existing tests from "single-candidate" / "multi-candidate" to reflect product-narrowed input
+- Step 6 (warming): YES, include — list of 10 player+product pairs from Q3
+- Phase 2 step 3 (compsLoader): signature becomes `fetchPlayerComps(playerName, product, preferredGrade?)`; pass through `body.set` from server.ts /predict handler
+
+### Doc anti-drift (updated)
+
+The Q1 finding + design revision + Q2 + Q3 are captured in this addendum. The original §5 Phase 1 spec and §10 implementer checklist remain in the doc as historical context but **are superseded by this addendum for implementation purposes**.
+
+When the implementing session begins, read this addendum FIRST, then refer back to §1-§4 (current state, mismatch characterization, options analysis, recommendation) for the strategic context.
