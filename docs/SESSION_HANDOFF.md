@@ -2983,6 +2983,14 @@ End of session extension.
 Now that backend D.6 (ITEM_SOLD ledger) is live (PR #100), iOS priorities shift:
 1. D.4 iOS — status polling so iOS knows when a listing sells
 2. D.6 iOS — receive ITEM_SOLD push notification → auto-create CardSaleRecord
-3. Bug 2 fix (card tap navigation) — quick win
+3. ~~Bug 2 fix (card tap navigation) — quick win~~ **FIXED** (see below)
 4. Bug 4 fix (photo removal) — needs manual testing first
 5. PR E (reconciliation) — depends on D.6 iOS
+
+### Bug 2 fix — card tap navigation (Workstream B)
+
+- **Root cause**: `InventoryIQView.swift` had two `.sheet` modifiers on the same `ZStack` view — `.sheet(isPresented: $isAddingCard)` at line 63 and `.sheet(item: $selectedCard)` at line 68. SwiftUI silently suppresses the second sheet when two `.sheet` modifiers are attached to the same view.
+- **Fix**: Moved `.sheet(item: $selectedCard)` from the `ZStack` to the `ScrollView` (its child), so each sheet is on a different view in the hierarchy.
+- **Scope**: Single file (`InventoryIQView.swift`), 9 lines moved, no logic change.
+- **Build verification**: Swift compilation clean. Xcode `actool` plugin failure is a pre-existing environment issue (unrelated to code change).
+- **Manual test needed**: Verify card tap presents detail sheet, add-card button still works.

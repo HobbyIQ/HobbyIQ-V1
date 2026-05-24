@@ -54,6 +54,15 @@ struct InventoryIQView: View {
                     .refreshable {
                         await vm.refresh()
                     }
+                    .sheet(item: $selectedCard) { card in
+                        PortfolioHoldingDetailSheet(
+                            viewModel: vm,
+                            card: card,
+                            onUpdated: {
+                                Task { await vm.refresh() }
+                            }
+                        )
+                    }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -64,15 +73,6 @@ struct InventoryIQView: View {
                 AddPortfolioCardView(viewModel: AddPortfolioCardViewModel()) {
                     Task { await vm.refresh() }
                 }
-            }
-            .sheet(item: $selectedCard) { card in
-                PortfolioHoldingDetailSheet(
-                    viewModel: vm,
-                    card: card,
-                    onUpdated: {
-                        Task { await vm.refresh() }
-                    }
-                )
             }
             .onAppear {
                 if vm.summary == nil {
