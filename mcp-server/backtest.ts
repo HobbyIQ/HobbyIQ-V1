@@ -227,6 +227,14 @@ export async function runBacktest(opts: RunOpts = {}): Promise<BacktestSummary> 
   // narrowed by product once compsLoader is rewired (Phase 2) to call the new
   // backend `/api/compiq/comps-by-player` endpoint.
   //
+  // CF-BACKTEST-COSMOS-GRADE-FLOW (2026-05-24) — grouping now also keys on
+  // grade. Before this change, raw + PSA 10 predictions for the same
+  // player+product shared a fetch, and the cached comps were reused across
+  // grade variants → mixed-grade actuals, asymmetric scoring. Mirrors the
+  // synthetic backtest's grade-aware grouping (scripts/backtest_signal_value.ts
+  // groupCohort + groupKey at commit 73cae0d). Predictions without grade
+  // collapse to "__raw__" so backward compatibility is preserved.
+  //
   // Worst-case backtest impact per Q2 finding: 2-3× the prior fetch count
   // for players with predictions across multiple products. Phase 1 keeps the
   // blob-read shape (fetchPlayerComps(player) only), so the per-player
@@ -234,24 +242,31 @@ export async function runBacktest(opts: RunOpts = {}): Promise<BacktestSummary> 
   // Phase 2 replaces the cache with one fetch per (player, product) cohort.
   const UNKNOWN_PRODUCT_FALLBACK = "__unknown_product__";
   type PredItem = PredictionDoc & { ts: string; setName?: string };
-  const byPlayerProduct = new Map<string, PredItem[]>();
+  const normalizeGradeKey = (g?: string): string => {
+    const key = (g ?? "").trim().toLowerCase() || "raw";
+    return key === "raw" ? "__raw__" : (g as string);
+  };
+  const byPlayerProductGrade = new Map<string, PredItem[]>();
   for (const p of predictions) {
     const product = p.setName ?? p.set ?? UNKNOWN_PRODUCT_FALLBACK;
-    const key = `${p.player}|${product}`;
-    const arr = byPlayerProduct.get(key) ?? [];
+    const normGrade = normalizeGradeKey(p.grade);
+    const key = `${p.player}|${product}|${normGrade}`;
+    const arr = byPlayerProductGrade.get(key) ?? [];
     arr.push(p);
-    byPlayerProduct.set(key, arr);
+    byPlayerProductGrade.set(key, arr);
   }
 
   const bucketRows = new Map<string, BacktestRow[]>();
-  // Phase 2 of MCP rewire: cache key now includes product (per-cohort)
-  // because fetchPlayerComps's signature requires product. Group keys are
-  // already ${player}|${product} so we reuse them as cache keys.
+  // Cache key matches the group key (player|product|grade), so each grade
+  // variant gets its own grade-filtered comp set.
   const compsCacheByGroup = new Map<string, CardComp[]>();
 
-  for (const [groupKey, preds] of byPlayerProduct.entries()) {
+  for (const [groupKey, preds] of byPlayerProductGrade.entries()) {
     const player = preds[0].player;
     const product = preds[0].setName ?? preds[0].set ?? UNKNOWN_PRODUCT_FALLBACK;
+    // All preds in this group share the same normalized grade, so preds[0].grade
+    // represents the whole group.
+    const grade = preds[0].grade;
     let comps: CardComp[];
     try {
       const cached = compsCacheByGroup.get(groupKey);
@@ -260,10 +275,13 @@ export async function runBacktest(opts: RunOpts = {}): Promise<BacktestSummary> 
       } else {
         // Pass the prediction's year so the backend can year-filter the
         // catalog search; preds in a group can span multiple years but
-        // share player+product, so we use the first pred's year as the
+        // share player+product+grade, so we use the first pred's year as the
         // representative (good-enough for backtest scoring).
         const year = Number.isFinite(preds[0].year) ? preds[0].year : undefined;
-        comps = await fetchPlayerComps(player, product, { cardYear: year });
+        comps = await fetchPlayerComps(player, product, {
+          cardYear: year,
+          preferredGrade: grade,
+        });
         compsCacheByGroup.set(groupKey, comps);
       }
     } catch (err) {
