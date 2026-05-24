@@ -3003,3 +3003,24 @@ Now that backend D.6 (ITEM_SOLD ledger) is live (PR #100), iOS priorities shift:
 ### Roadmap rebaseline — see docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md addendum 2026-05-27
 
 Phase target rebaseline committed (63d23a8). Today's session output + framing inversions compressed Phases 1-4b significantly. Phase 4c-4e greenfield work unchanged. End-of-July ERP target HIGH confidence, mid-September moat target MODERATE confidence. Next-session priority picks should reference rebaseline alongside original roadmap.
+
+---
+
+### Strategic design decisions locked today
+
+- **Expense tracking V1 addendum** — DEFERRED to CF-EXPENSE-ADDENDUM-PENDING-SYNC. Mac-side `docs/phase0/expense_tracking_design.md` baseline exists but has not synced to this repo's `origin/main`. Today's locked refinements (3 new categories — PayPal, phone, internet; mileage as own entry type with federal rate calculation; phone/internet business-use direct entry; PayPal fees period-level for V1; grading flow Option C with GradingSubmission entity + per-card status; "Being graded" inventory section distinct from Active/Sold) need to append to baseline once synced. ~30-45 min when available.
+- **Financial system V1/V2 design** — shipped at e35b108 (`docs/phase0/financial_system_design.md`). Strategic scope split: V1 (~68-100 hours: FIFO cost basis + acquisition detail + receipts + aging report + year-end tax export CSV) preserves mid-September moat target. V2 (~265-415 hours if all built: trades, damage/loss, donations, entity-specific reports, full Schedule C/D output, reports beyond P&L, audit trail, snapshots, bank integration, multi-currency) for post-launch prioritization.
+- V1 effort estimate: ~68-100 hours iOS work; calendar 4-7 weeks sustainable, 2-3 weeks dedicated.
+- V2 captured for post-launch prioritization (Q4 2026 / Q1 2027 work, subset selection expected).
+- iOS workstream calendar absorbs V1 within mid-September moat timeline.
+
+New carry-forwards captured:
+
+- **CF-EXPENSE-ADDENDUM-PENDING-SYNC** — Mac-side `expense_tracking_design.md` baseline exists but hasn't synced to this repo. Today's locked refinements (per above) need to append to baseline once synced. ~30-45 min.
+- **CF-FINANCIAL-SYSTEM-V2** — post-launch scope per V2.1 through V2.10 in `financial_system_design.md`. Prioritize by real usage patterns after V1 ships.
+- **CF-EXPENSE-TRACKING-V2** — additional categories raised in future sessions (per expense addendum spec, even though baseline not yet synced).
+
+Cross-references:
+- `docs/phase0/expense_tracking_design.md` (pending sync — Mac-side baseline)
+- `docs/phase0/financial_system_design.md` (shipped at e35b108)
+- `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` addendum 2026-05-27 (rebaselined moat targets)
