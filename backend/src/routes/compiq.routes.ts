@@ -919,7 +919,19 @@ router.post("/price-by-id", async (req, res, next) => {
 });
 
 // POST /api/compiq/bulk
-// Accepts { queries: string[] } â€” used by PortfolioIQViewModel.refreshPortfolio()
+// Accepts { queries: string[] } — per-item bulk pricing for free-text queries.
+//
+// No observed consumer in 7d App Insights window or in iOS Swift source as of
+// 2026-05-27. (Prior comment attributed this to PortfolioIQViewModel.refreshPortfolio;
+// iOS actually uses a TaskGroup over per-card /api/compiq/estimate calls and
+// never reaches this endpoint.)
+//
+// Defect F1 characterized in docs/phase0/unverified_endpoints_smoke.md remains
+// open pending consumer identification: set-bearing queries return
+// source=no-recent-comps because the handler passes the raw query as
+// playerName and the CH-identity guard at compiqEstimate.service.ts:1194-1219
+// tokenizes the full string, then wipes comps when tokens like "topps"/"update"
+// aren't in card.player + card.title haystack.
 router.post("/bulk", async (req, res, next) => {
   const handlerStart = Date.now();
   try {

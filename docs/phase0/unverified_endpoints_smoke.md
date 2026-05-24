@@ -154,6 +154,16 @@ Two options, both small:
 
 **Recommendation: Option A.** Matches /search's existing parsing pattern. No risk to other endpoints. Future PR scope ~5-10 LOC including a test.
 
+**Update 2026-05-27: Pre-implementation verification revised the F1 characterization.**
+
+iOS `PortfolioIQViewModel.refreshPortfolio` uses a `TaskGroup` over per-card `/api/compiq/estimate` calls (via `APIService.shared.estimateCardDirect` at [CompatibilityShims.swift:2848-2883](../../HobbyIQ/CompatibilityShims.swift#L2848-L2883)), **NOT `/bulk`**. The endpoint has zero observed traffic in 7d App Insights window and no observed consumer in iOS Swift source as of 2026-05-27. The route's prior comment attributing it to `PortfolioIQViewModel.refreshPortfolio()` was stale or aspirational.
+
+Defect remains real (set-bearing queries return `no-recent-comps` per yesterday's smoke). **Severity downgraded** from "High — affects portfolio refresh" to "broken endpoint with no current consumer."
+
+Fix deferred until consumer identification. If the MCP rewire workstream's Phase 1 (`/api/compiq/comps-by-player` endpoint) produces an internal consumer for player-level aggregation, F1's fix may become a prerequisite for that consumer — the parseCardQuery-upstream pattern (Option A above) would be the same pattern applied to a different endpoint.
+
+The `/bulk` route comment in `compiq.routes.ts` updated this session to reflect the actual state.
+
 ### Finding 2: `/api/compiq/search` returns wrong card for partial year-only queries — behavior gap, not defect
 
 **Severity:** Low. iOS DashboardView likely sends full structured queries; partial queries are unusual. But the behavior surfaces as "$79 fmv for Mike Trout 2011" which looks like the demo Trout RC ($333) without being it.
