@@ -242,3 +242,31 @@ This is a focused workstream of its own (CF-PHASE4B-BACKTEST below). Out of scop
 ## Anti-drift note
 
 The diagnostic surfaced one big finding (signal integration already built) and one smaller finding (4 of 7 signals degraded). The next workstream's design pressure will be to want to repair signals first (because credential acquisition feels concrete and accomplishable). Resist that pressure until backtest validates that signals improve accuracy. Otherwise, the team buys 4 API keys to amplify an unmeasured effect.
+
+## Addendum 2026-05-24 — major correction to §2
+
+**Discovery during Phase 4b backtest implementation (CF-PHASE4B-BACKTEST.1):** the `AZURE_SIGNAL_FUNCTION_URL` value on compiq-mcp App Settings was set to `https://fn-compiq.azurewebsites.net/api/serve-signals` — a 404 path. The actual function route per `fn-serve-signals/function.json:10` is `signals`, resolving to `https://fn-compiq.azurewebsites.net/api/signals`. **Effect:** every prediction compiq-mcp made since this URL was first set has silently fallen back to `NEUTRAL_SIGNAL` via `fetchSignals`'s `!resp.ok` and `catch` branches ([pricing.ts:236, 247](../../mcp-server/pricing.ts#L236-L249)). No telemetry surfaced this because the function returns the neutral payload as if everything succeeded.
+
+**Correction to §2:** the original §2 architecture diagram and the closing line *"Predictions running on compiq-mcp today are receiving signal context"* were wrong. Actual state at time of the original diagnostic: signal collectors (7 functions) + aggregator + serve-signals all working AND writing fresh blobs; consumer (compiq-mcp `/predict`) had been silently signal-off for the entire duration the wrong URL was set. The pipeline existed end-to-end except for the last hop, and the last hop's failure was masked by `fetchSignals`'s error swallowing.
+
+**How the original diagnostic missed this:** the inference rested on three observations — (1) `/health` reports `has_signal_url: true`, (2) aggregator blobs are fresh, (3) wiring exists in code. (1) only checks the env var is non-empty, not that the URL resolves. (2) is independent of whether `serve-signals` is read by anyone. (3) doesn't imply (the consumer's URL is correct). The leap from (1)+(2)+(3) to "signals reach predictions" was not validated by an end-to-end probe.
+
+**Production fix shipped 2026-05-24:** App Setting on compiq-mcp corrected via `az webapp config appsettings set -g rg-hobbyiq-dev -n compiq-mcp --settings "AZURE_SIGNAL_FUNCTION_URL=https://fn-compiq.azurewebsites.net/api/signals"`. App auto-restarted; `/health` still reports `has_signal_url: true`; live probe of `/api/signals?player=Mike%20Trout&code=…` returns HTTP 200 with a valid SignalPayload. Signals now reach predictions.
+
+**Framing inversion pattern:** this is the fourth in the current arc, alongside (a) MCP-mediated cache already partial, (b) App Insights wiring already partial, (c) signal integration assumed built when actually broken at the consumer. The pattern: **project actual state has been ahead of, or different from, documented state in significant ways.** Read code first, plan second is the same lesson surfacing again — extended now to "verify the wire end-to-end, not just the wire's existence."
+
+### Implication for the backtest
+
+The backtest harness shipped at commit a061fb9 (CF-PHASE4B-BACKTEST.1) operates with whatever `AZURE_SIGNAL_FUNCTION_URL` is set in its environment. Two consequences:
+
+- **Signal-on arm** with the corrected URL tests the configuration production is NOW running (post-fix). This is the first time signal context will reach the prediction prompt for these cards.
+- **Signal-off arm** (NEUTRAL_SIGNAL via `signalsOverride`) tests the configuration production WAS running until the fix landed. Effectively backfilling the counterfactual that compiq-mcp has been running unintentionally.
+
+The comparison is meaningful in both directions: it measures the lift signals provide *and* the silent loss the misconfiguration was causing.
+
+### New carry-forwards captured
+
+- **CF-HEALTH-SIGNAL-URL-CHECK** (~30 min) — `mcp-server/server.ts:127`'s `has_signal_url` health check verifies env var presence only. Should additionally probe the URL on startup (or on `/health` request) and report `signal_url_resolves: true|false`. Would have surfaced this misconfiguration on the first deploy after the URL was set.
+- **CF-SIGNAL-SILENT-FAILURE-AUDIT** (~60-90 min) — audit codebase for silent-failure patterns matching `fetchSignals` + `fetchPriceFloor`: errors swallowed, callers continue with degraded behavior, no telemetry, no operator-visible signal that the dependency is dead. Targets to start with: every `.catch { return null }` / `.catch { return DEFAULT }` in MCP + backend. Likely candidates beyond signal fetch: floor fetch, cardhedge readers (now removed), any provider client with `||` default-on-error.
+
+Both carry-forwards are downstream of the present backtest work and not implemented in this session.
