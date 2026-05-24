@@ -180,6 +180,76 @@ describe("fetchCompsByPlayer — happy path aggregation", () => {
   });
 });
 
+describe("fetchCompsByPlayer — setName Chrome fallback (Bonemer pre-merge finding)", () => {
+  it("Bonemer 2024 Bowman Draft Chrome: narrows to setName containing 'Chrome' when releaseName exact-match misses", async () => {
+    // Cardsight encodes Bonemer's chrome variant as releaseName="Bowman Draft"
+    // + setName="Chrome Prospect Autographs". Exact-match on
+    // releaseName="Bowman Draft Chrome" yields zero, so the fallback narrows
+    // by setName containing "Chrome" — picks the CPA-CBO card, NOT the
+    // BD-31 Base Set card.
+    (cs.searchCatalog as any).mockResolvedValue([
+      {
+        id: "bonemer-base",
+        name: "Caleb Bonemer",
+        number: "BD-31",
+        releaseName: "Bowman Draft",
+        setName: "Base Set",
+        year: 2024,
+      },
+      {
+        id: "bonemer-chrome-auto",
+        name: "Caleb Bonemer",
+        number: "CPA-CBO",
+        releaseName: "Bowman Draft",
+        setName: "Chrome Prospect Autographs",
+        year: 2024,
+      },
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) =>
+      Promise.resolve(
+        pricingWithRecords(1, [
+          { title: `sale-${id}`, price: 100, date: "2026-05-20T00:00:00Z" },
+        ]),
+      ),
+    );
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Caleb Bonemer",
+      product: "Bowman Draft Chrome",
+      cardYear: 2024,
+    });
+
+    expect(r.cardIds).toEqual(["bonemer-chrome-auto"]);
+    expect(r.comps).toHaveLength(1);
+    expect(r.comps[0].cardId).toBe("bonemer-chrome-auto");
+    expect(
+      r.warnings.some((w) => w.includes('setName containing "Chrome"')),
+    ).toBe(true);
+  });
+
+  it("setName Chrome fallback does NOT fire for non-Chrome products", async () => {
+    // Mike Trout 2011 Topps Update — product doesn't contain "Chrome", so
+    // even if releaseName exact-match misses (e.g., catalog returns a
+    // different releaseName variant), the fallback is skipped and the code
+    // falls through to top-K aggregation.
+    (cs.searchCatalog as any).mockResolvedValue([
+      { id: "weird-id", name: "?", number: "?", releaseName: "Topps Series 2", setName: "Base Set", year: 2011 },
+    ]);
+    (cs.getPricing as any).mockResolvedValue(pricingWithRecords(0));
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Mike Trout",
+      product: "Topps Update",
+      cardYear: 2011,
+    });
+
+    // Falls through to top-K (the single weird candidate)
+    expect(r.cardIds).toEqual(["weird-id"]);
+    expect(r.warnings.some((w) => w.includes("aggregating top-ranked"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("Chrome"))).toBe(false);
+  });
+});
+
 describe("fetchCompsByPlayer — filtering + warnings", () => {
   it("releases match filter fall-through: warns when product not in dictionary", async () => {
     (cs.searchCatalog as any).mockResolvedValue([

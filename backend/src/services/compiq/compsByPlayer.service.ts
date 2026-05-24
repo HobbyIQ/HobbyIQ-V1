@@ -194,18 +194,45 @@ export async function fetchCompsByPlayer(
     (r) => (r.releaseName ?? "").toLowerCase().trim() === expectedRelease,
   );
   if (candidates.length === 0) {
-    warnings.push(
-      `No catalog candidates matched release "${expectedRelease}" — aggregating top-ranked results instead.`,
-    );
-    log.warn("aggregate_release_filter_no_match", {
-      query,
-      expectedRelease,
-      topCandidates: catalogResults
-        .slice(0, 3)
-        .map((r) => r.releaseName ?? "")
-        .join(" | "),
-    });
-    candidates = catalogResults;
+    // setName "Chrome" fallback (pre-merge confirmation finding, 2026-05-27).
+    // Cardsight encodes some chrome variants in setName rather than
+    // releaseName — Caleb Bonemer 2024 "Bowman Draft Chrome" returns 2 cards
+    // both with releaseName="Bowman Draft": one Base Set (BD-31, not chrome)
+    // and one Chrome Prospect Autograph (CPA-CBO, the chrome variant). Naive
+    // top-K fall-through mixes them. When the user's product implies "chrome"
+    // but releaseName exact-match returns nothing, narrow to candidates whose
+    // setName contains "chrome" (case-insensitive). If that also yields
+    // nothing, fall through to the all-top-K aggregator with a warning.
+    if (/chrome/i.test(input.product)) {
+      const chromeFiltered = catalogResults.filter((r) =>
+        /chrome/i.test(r.setName ?? ""),
+      );
+      if (chromeFiltered.length > 0) {
+        candidates = chromeFiltered;
+        warnings.push(
+          `No catalog candidates matched release "${expectedRelease}" exactly — narrowed by setName containing "Chrome" (${chromeFiltered.length} candidates).`,
+        );
+        log.info("aggregate_setname_chrome_fallback", {
+          query,
+          expectedRelease,
+          chromeFilteredCount: chromeFiltered.length,
+        });
+      }
+    }
+    if (candidates.length === 0) {
+      warnings.push(
+        `No catalog candidates matched release "${expectedRelease}" — aggregating top-ranked results instead.`,
+      );
+      log.warn("aggregate_release_filter_no_match", {
+        query,
+        expectedRelease,
+        topCandidates: catalogResults
+          .slice(0, 3)
+          .map((r) => r.releaseName ?? "")
+          .join(" | "),
+      });
+      candidates = catalogResults;
+    }
   }
 
   // Top-K parallel pricing probe. Failures per-candidate are tolerated.
