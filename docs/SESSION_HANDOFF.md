@@ -1519,3 +1519,106 @@ Design picks one with reasoning + identifies implementation phasing + acceptance
 Five-workstream day — observability shipped, two design/diagnostic docs committed, one re-characterization, one smoke surface. Single PR merged + deployed. Three new findings durably captured. No production regressions. Stability-first sequence effectively complete to the extent achievable without DailyIQ traffic. MCP rewire foundation in place with one known design revision required before implementation begins.
 
 This session was the largest single-day output of this multi-session arc. Genuine stop point.
+
+# 2026-05-27 — Three-workstream batch: F3 docs ship + Cosmos key-rotation discovery + Finding 5 v2 addendum
+
+## What shipped
+
+- **F3 `/api/compiq/analyze` verification — outcome (B) stale comment** (commit `ec85857` direct-to-main). iOS source grep confirms zero `/api/compiq/analyze` URL construction; `APIService.analyzeComp()` posts to `/api/compiq/estimate` despite the misleading function name. App Insights 30d shows zero traffic to any URL containing `analyze`; backend telemetry pipeline verified live (HobbyIQ3 71 req/7d). Bounded one-line comment edit on [compiqService.ts:1](../backend/src/services/compiqService.ts#L1) removing `/analyze` from the legacy-mock route list.
+
+- **Finding 5 v2 addendum** (docs commit — this commit). Appended to [docs/phase0/finding5_deeper_consumer_analysis.md](phase0/finding5_deeper_consumer_analysis.md). Re-verifies all 7 original findings (3 unchanged, 1 obsolete, 1 narrowed); adds 3 new operational findings driven by the MCP Phase 1 Step 1 Cosmos diagnostic discovery and the just-shipped compiq-mcp App Insights wiring.
+
+## What didn't ship (deferred by HALT discipline)
+
+- **MCP rewire Phase 1 implementation** — Step 1 pre-implementation diagnostic ran cleanly: 0% set-field gap across 30d/60d/90d windows (proceed-as-designed answered). But Step 1 surfaced a separate critical operational finding (Cosmos key rotation) that the user routed into the three-workstream batch instead of absorbing into Phase 1. Phase 1 implementation remains pending, queued for a future session after CF-COSMOS-ROT is addressed.
+
+## Net production change today
+
+- 1 commit direct-to-main on backend (`ec85857` F3 docs)
+- 1 commit direct-to-main on docs (this commit, Finding 5 v2 addendum + this SESSION_HANDOFF entry)
+- main HEAD: `61e2d5c` → `ec85857` → (this commit)
+- No deploys (docs-only changes; F3 was source-comment-only with no behavior change)
+
+## New findings captured this session
+
+### CF-COSMOS-ROT — Cosmos master-key rotation broke 3 env-var surfaces
+
+**Severity: High** (operational; observability gap). The Cosmos master-key on `hobbyiq-comps` was rotated around 2026-05-12 but three env-var surfaces were never updated. Verified 2026-05-23 by comparing live keys (`az cosmosdb keys list`) against configured values:
+
+- `compiq-mcp` `COSMOS_CONNECTION_STRING` — matches none of the 4 live connection-strings
+- `HobbyIQ3` `COSMOS_CONNECTION_STRING` — matches none of the 4 live connection-strings
+- `fn-compiq` `COSMOS_KEY` — matches neither live primary nor secondary master key
+
+**Live production symptoms:**
+
+- `compiq_predictions` Cosmos container: only 6 rows all-time, latest 2026-05-12T18:54:27Z (11 days of silent write failure). `mcp-server/predictionLog.ts:108-119` uses fire-and-forget try/catch + `console.warn`, so auth failures never raise visible exceptions.
+- `fn-price-floor` Cosmos 401 loop: 3/3 executions over 7d log Sev-2 `Cosmos container init failed: (Unauthorized) The input authorization token can't serve the request`. Functions report "Succeeded" at host level despite producing zero useful work. Last 401 at 2026-05-24T00:17:55Z.
+
+**Fix scope:** ~15 min bounded workstream — refresh 3 env vars across 2 webapps + 1 functionapp, restart apps, verify with a single `/predict` request landing a fresh predictionLog row and a single `fn-price-floor` invocation succeeding. Document the env-var refresh runbook so future key rotations don't recur.
+
+### CF-MONITOR-COVERAGE — Phase 3a ch-monitor scope gap, now actively triggered
+
+**Severity: Medium** (a real gap with live impact). The just-shipped Phase 3a ch-monitor (`.github/workflows/ch-monitor.yml`) is correctly scoped for `fn-cardhedge-comps`'s blob output (mtime > 25h, comp_count < 10). It does NOT cover other Cosmos-writing functions sharing the same `fn-compiq` function app. CF-COSMOS-ROT demonstrates this gap is manifesting in production *right now* — `fn-price-floor` is in a Cosmos 401 loop and the ch-monitor is structurally incapable of detecting it.
+
+This is **not a defect in the Phase 3a monitor** — it was correctly scoped to one function for clean shippable scope. But the previously-documented "future workstream" for broader function-health monitoring is **now urgent**.
+
+**Fix scope:** Separate workstream — either extend ch-monitor with an App Insights query `traces | where message contains 'Cosmos container init failed' | summarize by operation_Name`, or add a per-function "wrote a Cosmos row in last N hours" tripwire.
+
+### CF-PREDICTIONLOG-VOLUME — backtest dataset structurally tiny even pre-rotation
+
+**Severity: Low-medium** (deferrable). Independent of CF-COSMOS-ROT: even pre-2026-05-12 only 6 rows existed total. The backtest loop has been operating against a tiny dataset its entire lifetime. Likely causes (not investigated): sampling rate, `source: predict` filter excluding `prime`, bot/synthetic-only traffic, or fire-and-forget write failures predating today's rotation discovery.
+
+**Investigation scope:** Separate finding when relevant — likely worth diagnosing before serious backtest-driven calibration work begins, but not blocking.
+
+### Original finding #2 obsolete — compiq-mcp now HAS App Insights wiring
+
+Original 2026-05-22 finding5 doc claimed compiq-mcp had no App Insights wiring. PR #118 (shipped in the 2026-05-26 five-workstream day) closed this gap. Telemetry verified flowing 2026-05-23: 3 req/7d from `cloud_RoleName=compiq-mcp`. Observability bifurcation no longer extends to MCP. v2 addendum supersedes original finding #2.
+
+### Original finding #3 narrowed — MCP IS affected by rotation, just via different env-var surface
+
+Original 2026-05-22 finding5 doc claimed MCP was "not affected by W2's stale-COSMOS_KEY defect" because MCP uses `COSMOS_CONNECTION_STRING` not `COSMOS_KEY`. The *auth mechanism* statement holds, but the underlying rotation event hit the CS surface too. v2 addendum narrows the finding accordingly.
+
+## Updated carry-forwards
+
+**New (this session):**
+
+- **CF-COSMOS-ROT** — High priority. Refresh 3 env vars, restart apps, verify a predict request lands a fresh predictionLog row. ~15 min. See finding5 v2-5 / v2-8.
+- **CF-MONITOR-COVERAGE** — Medium priority. Extend ch-monitor or add a per-function write-tripwire. Separate workstream. See finding5 v2-6 / v2-8.
+- **CF-PREDICTIONLOG-VOLUME** — Low-medium, deferrable. Diagnose sparse predictionLog writes pre-2026-05-12. See finding5 v2-8.
+
+**Unchanged from prior sessions:**
+
+- F1 /bulk fix — high priority, ~5-10 LOC, no consumer observed (was iOS-attributed; comment updated 2026-05-26 to remove the stale attribution).
+- MCP rewire Phase 1 implementation — pending; Step 1 diagnostic answered (0% set-field gap, proceed-as-designed); blocked behind CF-COSMOS-ROT for cleanest data shape but technically can proceed since Phase 1's endpoint reads Cardsight not predictionLog.
+- MCP rewire Phase 2 implementation — after Phase 1 ships and stabilizes.
+- Q2 latency budget + Q3 cache strategy — captured in mcp_rewire_design.md addendum (61e2d5c) per prior session.
+- Cosmos `success=False` on compiq-mcp GETs — DefaultAzureCredential pattern issue; now observable via shipped App Insights wiring.
+- App Insights dependency retention investigation — ~1h retention observed.
+- Day-10 PR #113 soak review: scheduled 2026-05-31T17:44:32Z.
+- `fn-cardhedge-comps` decommission — gated on MCP rewire shipping.
+
+**Closed (this session):**
+
+- **F3 /analyze verification** — outcome (B) shipped as `ec85857`.
+- **Finding 5 deeper consumer analysis re-verification** — v2 addendum committed (this commit).
+- **Original finding #2** (compiq-mcp App Insights wiring) — superseded by 2026-05-26 PR #118; v2 records the closure.
+
+## Upcoming external events (outside session)
+
+- **ch-monitor first scheduled production fire: 02:30 UTC ~2026-05-24** (cron `30 2 * * *` in `.github/workflows/ch-monitor.yml`). Per user direction, glance at the run when convenient to confirm production schedule behavior matches the dry-run. Likely after this session ends.
+
+## Next session entry point
+
+**Three live workstream candidates, ordered by recommended sequence:**
+
+1. **CF-COSMOS-ROT fix** (recommended first). ~15 min bounded workstream. Refresh `COSMOS_CONNECTION_STRING` on compiq-mcp + HobbyIQ3 and `COSMOS_KEY` on fn-compiq from `az cosmosdb keys list`. Restart apps. Verify with a single `/predict` request landing a new predictionLog row + a manual `fn-price-floor` invocation succeeding. Unlocks: predictionLog data flow resumes, fn-price-floor work resumes, MCP rewire Phase 2 has fresh data to read.
+2. **CF-MONITOR-COVERAGE extension** (after #1). Now that the gap is demonstrated live, extend ch-monitor's query envelope or add a per-function write-tripwire. ~45-60 min.
+3. **MCP rewire Phase 1 implementation** (any time, but cleaner post-#1). Step 1 diagnostic already answered (0% set-field gap, proceed as designed). Steps 2-11 ready per the workstream spec.
+
+**Either Path 1 or Path 2 from yesterday's handoff** (F1 /bulk fix, MCP rewire design revision) remain viable but lower-priority than CF-COSMOS-ROT.
+
+## Session summary
+
+Three-workstream batch — F3 docs cleanup shipped, MCP Phase 1 Step 1 diagnostic produced a critical operational discovery (Cosmos key rotation broke 3 env-var surfaces silently), Finding 5 v2 addendum captures the discovery + re-verifies the prior 7 findings + adds 3 new carry-forwards. No production code changes; one minor docs-comment commit. CF-COSMOS-ROT is the recommended highest-priority next workstream.
+
+The Phase 1 Step 1 HALT was the right call: absorbing CF-COSMOS-ROT into Phase 1 would have violated the "single workstream per session" and "no scope expansion" rules. Cleaner to ship Phase 1 against a working data plane than against a frozen one.
