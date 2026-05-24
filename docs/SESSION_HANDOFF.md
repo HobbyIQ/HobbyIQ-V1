@@ -2919,8 +2919,8 @@ only after methodology is locked.
 | CF-DAILY-REFRESH-CONSISTENCY | ✅ shipped | edf53da — daily-refresh.yml now sets the full GIT_SHA / GIT_SHA_SHORT / GIT_BRANCH / DEPLOYED_AT quad; effect visible at next cron fire (~5-6 AM ET window) |
 | CF-BACKTEST-PARALLEL-FILTER | open | ~60 min |
 | CF-PHASE4B-BACKTEST.2 (cohort expansion) | open, weakened case | user decision per above |
-| **CF-BACKTEST-REPEATS** | NEW, open | option 1 above; ~10 min code + per-run cost |
-| **CF-BACKTEST-DETERMINISTIC** | NEW, open | option 2 above; ~30 min code |
+| **CF-BACKTEST-REPEATS** | ✅ shipped | eb0c7ff — --repeats N flag + multi-run aggregation (per-run, cross-run stats, per-card consistency, verdict-recommendation embedded). N=5×2 smoke + N=15×5 full run shipped. N=15×5 verdict: **unstable_high_variance** (sign stability 0.4 on MAPE delta 7d, < 0.7 threshold; cross-run stdev 20.03). Per-card pattern more decisive than aggregate: **0 stable signal-helpers, 6 stable signal-hurters (Judge PSA 10, Ohtani raw/PSA 10, Acuna PSA 10, Skenes raw/PSA 10), 8 flipping cards**. Pre-committed recommendation fired: proceed to CF-BACKTEST-DETERMINISTIC (lock temperature=0 + seed) BEFORE N=100 expansion. Hypothesis worth testing: per-player signal multiplier consistently pushes wrong-way for 6 stable-hurter cards. |
+| **CF-BACKTEST-DETERMINISTIC** | NEW, open, **recommended next** | ~30 min code + ~$0.30 run. Pre-committed-branch recommendation from CF-BACKTEST-REPEATS verdict. Add `--deterministic` CLI flag → OpenAI calls use `temperature: 0` + fixed `seed`. Re-run N=15 cohort, compare to N=15×5 unstable_high_variance baseline. If deterministic results match the cross-run mean directionally: noise was the bottleneck; methodology now usable for N=100 expansion. If deterministic results diverge: temp=1 stochasticity was material; investigate which signals drive divergence. |
 
 ## Next session priority
 
