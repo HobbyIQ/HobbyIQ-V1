@@ -81,6 +81,36 @@ describe("/api/compiq/bulk — per-item shape contract", () => {
     }
   });
 
+  it("F1 regression: parses set-bearing query into structured body before computeEstimate", async () => {
+    // Pre-fix bug: handler passed `{ playerName: query.trim() }`, so a query like
+    // "Mike Trout 2011 Topps Update" became playerName="Mike Trout 2011 Topps Update".
+    // CH-identity guard (compiqEstimate.service.ts:1194-1219) tokenized that into
+    // ["mike","trout","2011","topps","update"], couldn't find "2011"/"topps"/"update"
+    // in card.player ("Mike Trout") + card.title haystack, wiped comps as
+    // identity-mismatch → source=no-recent-comps regardless of comp availability.
+    //
+    // Post-fix: handler calls parseCardQuery + requestFromParsed first, so
+    // computeEstimate receives a STRUCTURED body with year, product, etc broken
+    // out, and playerName stripped of set tokens.
+    const svc = await import("../src/services/compiq/compiqEstimate.service.js");
+    const mockFn = svc.computeEstimate as any;
+    mockFn.mockClear();
+
+    await request(app)
+      .post("/api/compiq/bulk")
+      .send({ queries: ["Mike Trout 2011 Topps Update US175"] });
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+    const passedBody = mockFn.mock.calls[0][0];
+    // After parsing, playerName should be just "Mike Trout" (the player name),
+    // NOT the raw query containing year/set/cardNumber tokens.
+    expect(passedBody.playerName).toBe("Mike Trout");
+    // Year, product, and cardNumber should be broken out as structured fields.
+    expect(passedBody.cardYear).toBe(2011);
+    expect(passedBody.product).toMatch(/Topps Update/i);
+    expect(passedBody.cardNumber).toBe("US175");
+  });
+
   it("writes fairMarketValueLive: null when the engine produces no FMV", async () => {
     // Re-mock for this single test to simulate a zero/missing FMV.
     const svc = await import("../src/services/compiq/compiqEstimate.service.js");

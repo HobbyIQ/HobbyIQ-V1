@@ -981,12 +981,16 @@ router.post("/price-by-id", async (req, res, next) => {
 // iOS actually uses a TaskGroup over per-card /api/compiq/estimate calls and
 // never reaches this endpoint.)
 //
-// Defect F1 characterized in docs/phase0/unverified_endpoints_smoke.md remains
-// open pending consumer identification: set-bearing queries return
-// source=no-recent-comps because the handler passes the raw query as
-// playerName and the CH-identity guard at compiqEstimate.service.ts:1194-1219
-// tokenizes the full string, then wipes comps when tokens like "topps"/"update"
-// aren't in card.player + card.title haystack.
+// Defect F1 fixed 2026-05-24 — set-bearing queries previously returned
+// source=no-recent-comps because the handler passed the raw query as
+// playerName, and the CH-identity guard at compiqEstimate.service.ts:1194-1219
+// tokenized the full string, then wiped comps when tokens like "topps"/"update"
+// weren't in the card.player + card.title haystack. Fix: parse the query
+// into structured fields (parseCardQuery + requestFromParsed) before calling
+// computeEstimate — same pattern /search (line 356-357) and /price (line
+// 567-568) already use. Preventive ship: no current consumer (App Insights 7d
+// + iOS Swift source confirm), but next time someone wires this endpoint
+// up, the guard won't wipe set-bearing queries.
 router.post("/bulk", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
@@ -998,7 +1002,9 @@ router.post("/bulk", async (req, res, next) => {
 
     const settled = await Promise.allSettled(
       safeQueries.map(async (query) => {
-        const est = await computeEstimate({ playerName: query.trim() });
+        const parsed = parseCardQuery(query);
+        const body: CompIQEstimateRequest = requestFromParsed(parsed);
+        const est = await computeEstimate(body);
 
         // Unsupported-sport short-circuit â€” per-item. Bulk responses can
         // include a mix of baseball + non-baseball queries; each item gets
