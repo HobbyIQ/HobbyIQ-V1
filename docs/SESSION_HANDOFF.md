@@ -2273,3 +2273,89 @@ Backend operating model is stable enough to set down for now. iOS state
 assessment is the natural next workstream.
 
 End of session.
+
+# 2026-05-27 — Session extension: Phase 4b kickoff (diagnostic-only, reframed)
+
+## Headline
+
+Phase 4b kickoff started per the original roadmap workstream spec; the
+sub-workstream 1 diagnostic surfaced a **framing inversion**: signal
+integration is **already built end-to-end** (MCP `pricing.ts:fetchSignals`
+calls `fn-serve-signals` on every prediction; `fn-signal-aggregator`
+combines per-signal blobs every 2hr). What the roadmap described as Phase
+4b's work — "build signal reader for each," "implement weighted blender" —
+exists in production today.
+
+Sub-workstream 2 was reframed: instead of writing a design for building
+what's already built, captured the diagnostic durably + planned a
+measurement-first follow-up workstream.
+
+## What shipped this session extension
+
+[docs/phase0/phase4b_diagnostic_findings.md](phase0/phase4b_diagnostic_findings.md)
+(NEW, ~280 lines): characterization of the current signal integration
+architecture, per-signal health classification (3 of 7 useful + 4 of 7
+degraded), roadmap-vs-reality reconciliation, and three carry-forwards
+sized for follow-up workstreams.
+
+## Diagnostic headlines
+
+- **Pipeline state:** 7 signal functions write blobs (2hr-6hr cadence) →
+  `fn-signal-aggregator` blends every 2hr → `fn-serve-signals` exposes
+  HTTP → `mcp-server/pricing.ts:fetchSignals` reads per-prediction with
+  5s timeout → SignalPayload injected into OpenAI prompt context.
+- **Per-signal health:**
+  - **(A) operational + useful:** trends (multiplier=1.167), news
+    (multiplier=1.15, headline_count=20), stats (multiplier=0.953) —
+    these 3 work via free/unauthenticated APIs (pytrends, RSS, MLB Stats)
+  - **(E) degraded:** ebay (`signal: auth_failed` with present creds —
+    OAuth issue), reddit (`auth_failed` — credentials missing), odds
+    (`no_api_key`), youtube (`no_api_key`) — all emit fallback 1.0
+- **Coverage math:** information-carrying weight = 0.30 (trends 0.15 +
+  news 0.05 + stats 0.10); no-op weight = 0.65 (ebay 0.20 + reddit 0.15 +
+  odds 0.15 + youtube 0.15); Cardsight comps separately at 0.20.
+- **No backtest exists.** No measurement of whether the existing signal
+  integration improves prediction accuracy. Repairing degraded signals
+  before knowing the answer is investment without evidence.
+
+## Carry-forwards (this session)
+
+- **CF-PHASE4B-BACKTEST** (next major workstream, 3-5 hour design + multi-session
+  implementation). Design and implement a backtest harness measuring whether
+  the existing signal integration improves prediction accuracy. Blocking issue:
+  `compiq_predictions` Cosmos volume is small (~7 rows as of 2026-05-27 per
+  WS3 v2 addendum); offline replay may be needed to expand sample.
+- **CF-SIGNAL-CREDENTIAL-REPAIR** (gated on backtest results, ~1-2 hours).
+  Restore 4 degraded signal sources: ebay (OAuth debug), reddit (acquire
+  credentials), odds (acquire API key), youtube (acquire API key). Bundle or
+  prioritize per backtest outcome.
+- **CF-PHASE4B-AGGREGATOR-OWNERSHIP** (architectural note, not actionable today).
+  Weighted blender lives in `fn-signal-aggregator` (Python); weight changes
+  require fn-compiq redeploy (same Linux read-only constraints as
+  CF-FN-CARDHEDGE-DISABLE).
+
+## Updated next session priority
+
+Two viable paths for the next session:
+
+1. **CF-PHASE4B-BACKTEST design** — write the backtest harness design doc
+   per the diagnostic findings §6 framing. Measurement-first sequencing.
+2. **iOS state assessment** — per the prior session's end-of-day framing
+   (backend arc effectively complete; iOS pivot). Independent of CF-PHASE4B.
+
+Both are reasonable. The prior session ended with iOS pivot framing; this
+session's diagnostic doesn't change that, but does add a viable backend
+workstream that's measurement-first rather than build-first.
+
+## Session summary (Phase 4b kickoff diagnostic)
+
+Phase 4b's original "kickoff" framing presumed a build workstream. Diagnostic
+revealed the build is already shipped, just unmeasured and partially degraded.
+Reframed sub-workstream 2 to capture findings durably + carry forwards for
+the actual missing work (backtest harness, then conditional repair).
+
+The pattern (read code first, plan second) — same lesson as the deploy infra
+audit — applies again here. Roadmap text described intended work but didn't
+verify current state.
+
+End of session extension.
