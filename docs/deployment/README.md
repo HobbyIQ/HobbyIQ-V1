@@ -2,7 +2,7 @@
 
 **Scope:** App Service deploys for `hobbyiq3` (backend). compiq-mcp follows the same pattern; differences noted inline.
 
-**Last verified:** 2026-05-25 (post deploy-infra-harden PR).
+**Last verified:** 2026-05-25 (post deploy-infra-harden PR; no-op deploy test verified script end-to-end).
 
 ## TL;DR
 
@@ -98,6 +98,7 @@ The script now surfaces `status_text`, `message`, and `log_url`. Open the `log_u
 - **Container build cache issues.** Try the deploy a second time; sometimes transient.
 
 Production state depends on what Kudu did before failing. Typically:
+
 - If `/api/health` returns 200: production is unchanged (Kudu failed before rsync touched wwwroot).
 - If `/api/health` returns 503: container is crash-looping; wwwroot likely partially overwritten. **Recovery:** redeploy a known-good SHA per the rollback procedure below.
 
