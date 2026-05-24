@@ -84,7 +84,7 @@ const MAX_DETAIL_PROBES = 5;
 // of throttling per-target probe count. See warmResolveCardIdCache below.
 const MAX_PRICING_PROBES = 8;
 
-function lookupReleaseName(product: string): string | null {
+export function lookupReleaseName(product: string): string | null {
   if (!product) return null;
   const normalized = product.toLowerCase().trim();
   return COMPIQ_TO_CARDSIGHT_RELEASES[normalized] ?? null;
@@ -116,7 +116,7 @@ function lookupReleaseName(product: string): string | null {
 //   BSP-  Bowman Sapphire Prospects (different release entirely)
 const BOWMAN_DRAFT_CHROME_NUMBER_PATTERN = /^(BD-|BDC-|CPA-|CDA-|BCRP-|BBPA-)/i;
 
-function applyCardNumberDisambiguation(
+export function applyCardNumberDisambiguation(
   product: string | undefined,
   cardNumber: string | undefined,
 ): string | undefined {

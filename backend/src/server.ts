@@ -4,6 +4,7 @@ import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
+import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
 
 // Initialize App Insights — must be called before the server handles requests.
 // The Azure App Service agent (ApplicationInsightsAgent_EXTENSION_VERSION=~3)
@@ -48,7 +49,17 @@ app.listen(port, "0.0.0.0", () => {
   // restart doesn't pay the multi-candidate disambiguation cold-path.
   // Fire-and-forget — failure is non-fatal (queries still resolve, just slow
   // on first hit per card).
-  warmResolveCardIdCache().catch((err) => {
-    console.warn("[server] warmResolveCardIdCache failed:", err?.message ?? err);
-  });
+  //
+  // MCP rewire Phase 1: warm the aggregate-cache after resolveCardId warming
+  // completes (NOT in parallel — both share Cardsight rate-limit headroom).
+  // ~50s additional cold-path on top of resolveCardId's ~3-4 min.
+  warmResolveCardIdCache()
+    .catch((err) => {
+      console.warn("[server] warmResolveCardIdCache failed:", err?.message ?? err);
+    })
+    .finally(() => {
+      warmCompsByPlayerCache().catch((err) => {
+        console.warn("[server] warmCompsByPlayerCache failed:", err?.message ?? err);
+      });
+    });
 });
