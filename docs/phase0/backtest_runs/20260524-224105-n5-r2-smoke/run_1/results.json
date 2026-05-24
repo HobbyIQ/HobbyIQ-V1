@@ -1,0 +1,621 @@
+{
+  "aggregate": {
+    "run_id": "2026-05-24T22-41-14-308Z-r1",
+    "cohort_id": "v1-seed",
+    "asOfDate": "2026-05-24T22:41:14.308Z",
+    "prediction_input_window_days": {
+      "from_days_ago": 60,
+      "to_days_ago": 14
+    },
+    "ground_truth_window_days": {
+      "from_days_ago": 14,
+      "to_days_ago": 0
+    },
+    "cohort_size": 5,
+    "scored_pairs": 5,
+    "skipped": {
+      "no_actuals": 0,
+      "prediction_failed": 0
+    },
+    "aggregate": {
+      "mape_on_72h": 42.84,
+      "mape_off_72h": 32.44,
+      "mape_delta_72h": -10.4,
+      "mape_on_7d": 59.18,
+      "mape_off_7d": 37.27,
+      "mape_delta_7d": -21.91,
+      "wilcoxon_pvalue_72h": null,
+      "wilcoxon_pvalue_7d": null,
+      "direction_acc_on": 20,
+      "direction_acc_off": 20,
+      "direction_acc_delta": 0
+    },
+    "by_confidence_band": {
+      "conf_80_plus": {
+        "n": 0,
+        "mape_on": null,
+        "mape_off": null,
+        "delta": null
+      },
+      "conf_60_79": {
+        "n": 0,
+        "mape_on": null,
+        "mape_off": null,
+        "delta": null
+      },
+      "conf_40_59": {
+        "n": 5,
+        "mape_on": 59.176245225649964,
+        "mape_off": 37.269639353189135,
+        "delta": -21.90660587246083
+      },
+      "conf_under_40": {
+        "n": 0,
+        "mape_on": null,
+        "mape_off": null,
+        "delta": null
+      }
+    },
+    "verdict_branch": "insufficient_data"
+  },
+  "per_card": [
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|raw|base",
+      "cohortIndex": 0,
+      "playerName": "Mike Trout",
+      "year": 2011,
+      "set": "Topps Update",
+      "cardNumber": "US175",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-24T22:41:14.308Z",
+      "prediction_input_window": {
+        "from": "2026-03-26T16:20:50.550721Z",
+        "to": "2026-05-09T16:05:55Z",
+        "n": 49
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:28:14.599970Z",
+        "to": "2026-05-23T16:18:21.328886Z",
+        "n": 11
+      },
+      "actualMedian": 350,
+      "actualMedian_source": "median of 11 comps in [now-14d, now]",
+      "inputMedian": 350,
+      "signals_on": {
+        "predicted_price_72h": 350,
+        "predicted_price_7d": 400,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo creating buzz and potential interest in sales",
+          "Current market sentiment showing slight upward momentum despite recent injury flag",
+          "Recent transaction volatility indicating renewed interest and potential for higher sales"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 394.8% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.04,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "cardhedge_comps_rising",
+            "pre_show: Chicagoland Sports Card Expo in 13 days"
+          ],
+          "components": {
+            "cardhedge": 1.133,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1.155,
+            "odds": 1,
+            "stats": 0.953,
+            "news": 0.85,
+            "youtube": 1
+          },
+          "player": "Mike Trout",
+          "component_signals": {
+            "cardhedge": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "rising",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "no_api_key"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 13,
+          "show_multiplier": 1.01,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-24T20:50:00.217256"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 280,
+        "predicted_price_7d": 350,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent significant sales fluctuations indicating a price correction opportunity.",
+          "Upcoming National Sports Collectors Convention expected to drive interest and demand.",
+          "Current card market volatility allowing for price rebound potential."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 394.8% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 0,
+        "abs_error_off_72h": 70,
+        "abs_error_on_7d": 50,
+        "abs_error_off_7d": 0,
+        "pct_error_on_72h": 0,
+        "pct_error_off_72h": 20,
+        "pct_error_on_7d": 14.29,
+        "pct_error_off_7d": 0,
+        "direction_correct_on": false,
+        "direction_correct_off": true,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": true,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|PSA 10|base",
+      "cohortIndex": 1,
+      "playerName": "Mike Trout",
+      "year": 2011,
+      "set": "Topps Update",
+      "cardNumber": "US175",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-24T22:41:14.308Z",
+      "prediction_input_window": {
+        "from": "2026-03-25T23:17:38Z",
+        "to": "2026-05-09T16:31:09.417502Z",
+        "n": 59
+      },
+      "ground_truth_window": {
+        "from": "2026-05-11T16:33:22.156409Z",
+        "to": "2026-05-23T16:18:21.328886Z",
+        "n": 18
+      },
+      "actualMedian": 1224.995,
+      "actualMedian_source": "median of 18 comps in [now-14d, now]",
+      "inputMedian": 1249.99,
+      "signals_on": {
+        "predicted_price_72h": 1141.49,
+        "predicted_price_7d": 1216.46,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo",
+          "Stable Google Trends",
+          "Strong historical price performance"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 193.3% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.04,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "cardhedge_comps_rising",
+            "pre_show: Chicagoland Sports Card Expo in 13 days"
+          ],
+          "components": {
+            "cardhedge": 1.133,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1.155,
+            "odds": 1,
+            "stats": 0.953,
+            "news": 0.85,
+            "youtube": 1
+          },
+          "player": "Mike Trout",
+          "component_signals": {
+            "cardhedge": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "rising",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "no_api_key"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 13,
+          "show_multiplier": 1.01,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-24T20:50:00.217256"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 1620,
+        "predicted_price_7d": 1550,
+        "predicted_direction": "volatile",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming National Sports Collectors Convention as a potential catalyst for increased demand.",
+          "Recent price fluctuations that indicate volatility and market interest.",
+          "The current high average price for recent PSA 10 comps, suggesting potential for price recovery."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "market_volatility",
+          "high_price_variance: 193.3% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 83.50499999999988,
+        "abs_error_off_72h": 395.0050000000001,
+        "abs_error_on_7d": 8.534999999999854,
+        "abs_error_off_7d": 325.0050000000001,
+        "pct_error_on_72h": 6.82,
+        "pct_error_off_72h": 32.25,
+        "pct_error_on_7d": 0.7,
+        "pct_error_off_7d": 26.53,
+        "direction_correct_on": true,
+        "direction_correct_off": false,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": true,
+      "signal_on_wins_7d": true
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|raw|base",
+      "cohortIndex": 2,
+      "playerName": "Aaron Judge",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US87",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-24T22:41:14.308Z",
+      "prediction_input_window": {
+        "from": "2026-03-26T16:17:06.866931Z",
+        "to": "2026-05-10T16:28:11.855221Z",
+        "n": 228
+      },
+      "ground_truth_window": {
+        "from": "2026-05-11T00:00:01Z",
+        "to": "2026-05-23T00:00:01Z",
+        "n": 76
+      },
+      "actualMedian": 39.99,
+      "actualMedian_source": "median of 76 comps in [now-14d, now]",
+      "inputMedian": 37,
+      "signals_on": {
+        "predicted_price_72h": 38.5,
+        "predicted_price_7d": 34,
+        "predicted_direction": "falling",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales have shown a wide variance with low volume.",
+          "Pre-show excitement and prior comp trends influenced inflated prices which may retract.",
+          "Market signals are mixed and show injury risk potential for the player."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 733.2% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 0.993,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "pre_show: Chicagoland Sports Card Expo in 13 days"
+          ],
+          "components": {
+            "cardhedge": 0.943,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 0.909,
+            "odds": 1,
+            "stats": 0.961,
+            "news": 1.15,
+            "youtube": 1
+          },
+          "player": "Aaron Judge",
+          "component_signals": {
+            "cardhedge": "stable",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "no_api_key"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 13,
+          "show_multiplier": 1.01,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-24T20:50:00.698276"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 38,
+        "predicted_price_7d": 35,
+        "predicted_direction": "falling",
+        "confidence": 55,
+        "key_drivers": [
+          "High volatility in recent sales",
+          "Recent sales prices are diverging and generally decreasing",
+          "Low sales volume suggests market weakness"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 733.2% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 1.490000000000002,
+        "abs_error_off_72h": 1.990000000000002,
+        "abs_error_on_7d": 5.990000000000002,
+        "abs_error_off_7d": 4.990000000000002,
+        "pct_error_on_72h": 3.73,
+        "pct_error_off_72h": 4.98,
+        "pct_error_on_7d": 14.98,
+        "pct_error_off_7d": 12.48,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": true,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|PSA 10|base",
+      "cohortIndex": 3,
+      "playerName": "Aaron Judge",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US87",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-24T22:41:14.308Z",
+      "prediction_input_window": {
+        "from": "2026-03-28T00:00:45Z",
+        "to": "2026-05-07T16:20:42.050626Z",
+        "n": 18
+      },
+      "ground_truth_window": {
+        "from": "2026-05-11T01:00:00Z",
+        "to": "2026-05-22T16:15:11.534442Z",
+        "n": 8
+      },
+      "actualMedian": 292,
+      "actualMedian_source": "median of 8 comps in [now-14d, now]",
+      "inputMedian": 235.035,
+      "signals_on": {
+        "predicted_price_72h": 230,
+        "predicted_price_7d": 210,
+        "predicted_direction": "stable",
+        "confidence": 45,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 13 days",
+          "Recent sale variations indicating potential interest",
+          "Card's rookie status contributing to overall demand"
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days",
+          "high_price_variance: 106.1% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 0.993,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "pre_show: Chicagoland Sports Card Expo in 13 days"
+          ],
+          "components": {
+            "cardhedge": 0.943,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 0.909,
+            "odds": 1,
+            "stats": 0.961,
+            "news": 1.15,
+            "youtube": 1
+          },
+          "player": "Aaron Judge",
+          "component_signals": {
+            "cardhedge": "stable",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "no_api_key"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 13,
+          "show_multiplier": 1.01,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-24T20:50:00.698276"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 235,
+        "predicted_price_7d": 210,
+        "predicted_direction": "falling",
+        "confidence": 45,
+        "key_drivers": [
+          "thin market with less than 5 comps in 30 days",
+          "no recent sales indicating reduced demand",
+          "upcoming National Sports Collectors Convention could stir future interest but not immediately"
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days",
+          "high_price_variance: 106.1% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 62,
+        "abs_error_off_72h": 57,
+        "abs_error_on_7d": 82,
+        "abs_error_off_7d": 82,
+        "pct_error_on_72h": 21.23,
+        "pct_error_off_72h": 19.52,
+        "pct_error_on_7d": 28.08,
+        "pct_error_off_7d": 28.08,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Cody Bellinger|2017|Topps Update|US159|raw|base",
+      "cohortIndex": 4,
+      "playerName": "Cody Bellinger",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US159",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-24T22:41:14.308Z",
+      "prediction_input_window": {
+        "from": "2026-03-26T16:17:06.130532Z",
+        "to": "2026-05-10T16:28:11.855221Z",
+        "n": 83
+      },
+      "ground_truth_window": {
+        "from": "2026-05-11T16:26:42.912016Z",
+        "to": "2026-05-20T16:15:33.069788Z",
+        "n": 23
+      },
+      "actualMedian": 2.96,
+      "actualMedian_source": "median of 23 comps in [now-14d, now]",
+      "inputMedian": 4.99,
+      "signals_on": {
+        "predicted_price_72h": 8.36,
+        "predicted_price_7d": 10,
+        "predicted_direction": "rising",
+        "confidence": 42,
+        "key_drivers": [
+          "The upcoming National Sports Collectors Convention could increase interest and demand in the card market.",
+          "The card is a rookie which typically gets a price premium as demand can fluctuate based on player performance and market conditions.",
+          "Recent comp prices have hit a local peak of $45.99, indicating potential reversals and speculation around price increases."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 548.1% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "signal_unavailable"
+          ],
+          "components": {}
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 5.49,
+        "predicted_price_7d": 6.49,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Similarly priced recent sales indicate potential upward momentum.",
+          "The National Sports Collectors Convention could boost demand and prices.",
+          "Bellinger's performance and fan engagement may increase interest."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 548.1% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 5.3999999999999995,
+        "abs_error_off_72h": 2.5300000000000002,
+        "abs_error_on_7d": 7.04,
+        "abs_error_off_7d": 3.5300000000000002,
+        "pct_error_on_72h": 182.43,
+        "pct_error_off_72h": 85.47,
+        "pct_error_on_7d": 237.84,
+        "pct_error_off_7d": 119.26,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "falling"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "run_id": "2026-05-24T22-41-14-308Z",
+  "cohort_id": "v1-seed",
+  "repeats": 2,
+  "cohort_size": 5,
+  "prediction_input_window_days": {
+    "from_days_ago": 60,
+    "to_days_ago": 14
+  },
+  "ground_truth_window_days": {
+    "from_days_ago": 14,
+    "to_days_ago": 0
+  },
+  "per_run": [
+    {
+      "run_index": 1,
+      "run_id": "2026-05-24T22-41-14-308Z-r1",
+      "scored_pairs": 5,
+      "mape_delta_72h": -10.4,
+      "mape_delta_7d": -21.91,
+      "direction_acc_delta": 0,
+      "wilcoxon_pvalue_7d": null,
+      "verdict_branch": "insufficient_data"
+    },
+    {
+      "run_index": 2,
+      "run_id": "2026-05-24T22-41-14-308Z-r2",
+      "scored_pairs": 5,
+      "mape_delta_72h": 11.61,
+      "mape_delta_7d": 4.78,
+      "direction_acc_delta": 0,
+      "wilcoxon_pvalue_7d": null,
+      "verdict_branch": "insufficient_data"
+    }
+  ],
+  "cross_run_stats": {
+    "mape_delta_72h_mean": 0.6,
+    "mape_delta_72h_stdev": 15.56,
+    "mape_delta_72h_sign_stability": 0.5,
+    "mape_delta_7d_mean": -8.56,
+    "mape_delta_7d_stdev": 18.87,
+    "mape_delta_7d_sign_stability": 0.5,
+    "direction_acc_delta_mean": 0,
+    "direction_acc_delta_stdev": 0
+  },
+  "per_card_consistency": [
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|raw|base",
+      "runs_scored": 2,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0.5,
+      "direction_correct_off_rate": 0.5,
+      "mean_pct_error_on_7d": 14.29,
+      "mean_pct_error_off_7d": 1.43,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|PSA 10|base",
+      "runs_scored": 2,
+      "signal_on_wins_7d_rate": 0.5,
+      "direction_correct_on_rate": 0.5,
+      "direction_correct_off_rate": 0.5,
+      "mean_pct_error_on_7d": 3.41,
+      "mean_pct_error_off_7d": 14.29,
+      "stable_arm_winner_7d": "mixed"
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|raw|base",
+      "runs_scored": 2,
+      "signal_on_wins_7d_rate": 0.5,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 10.01,
+      "mean_pct_error_off_7d": 24.98,
+      "stable_arm_winner_7d": "mixed"
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|PSA 10|base",
+      "runs_scored": 2,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 26.37,
+      "mean_pct_error_off_7d": 21.23,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Cody Bellinger|2017|Topps Update|US159|raw|base",
+      "runs_scored": 2,
+      "signal_on_wins_7d_rate": 0.5,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 153.21,
+      "mean_pct_error_off_7d": 102.54,
+      "stable_arm_winner_7d": "mixed"
+    }
+  ],
+  "multi_run_verdict": "insufficient_data",
+  "next_workstream_recommendation": "Too few scored pairs even with repeats. Investigate cardsight comp coverage in ground-truth window before expanding cohort."
+}

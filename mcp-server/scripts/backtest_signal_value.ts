@@ -852,6 +852,293 @@ async function writeMarkdownOutput(
   await fs.writeFile(outputPath, lines.join("\n"), "utf8");
 }
 
+// ─── Multi-run summary (--repeats N) ────────────────────────────────────────
+
+interface PerCardConsistency {
+  cardId: string;
+  runs_scored: number;
+  signal_on_wins_7d_rate: number | null; // 0..1 (fraction of runs signal-on closer)
+  direction_correct_on_rate: number | null;
+  direction_correct_off_rate: number | null;
+  mean_pct_error_on_7d: number | null;
+  mean_pct_error_off_7d: number | null;
+  stable_arm_winner_7d: "on" | "off" | "mixed" | "no_actuals";
+}
+
+interface MultiRunSummary {
+  run_id: string;
+  cohort_id: string;
+  repeats: number;
+  cohort_size: number;
+  prediction_input_window_days: AggregateResult["prediction_input_window_days"];
+  ground_truth_window_days: AggregateResult["ground_truth_window_days"];
+  per_run: Array<{
+    run_index: number;
+    run_id: string;
+    scored_pairs: number;
+    mape_delta_72h: number | null;
+    mape_delta_7d: number | null;
+    direction_acc_delta: number | null;
+    wilcoxon_pvalue_7d: number | null;
+    verdict_branch: VerdictBranch;
+  }>;
+  cross_run_stats: {
+    mape_delta_72h_mean: number | null;
+    mape_delta_72h_stdev: number | null;
+    mape_delta_72h_sign_stability: number | null; // fraction of runs matching mean sign
+    mape_delta_7d_mean: number | null;
+    mape_delta_7d_stdev: number | null;
+    mape_delta_7d_sign_stability: number | null;
+    direction_acc_delta_mean: number | null;
+    direction_acc_delta_stdev: number | null;
+  };
+  per_card_consistency: PerCardConsistency[];
+  multi_run_verdict:
+    | "stable_signals_help"      // sign stable + delta > 0.5pt
+    | "stable_signals_hurt"      // sign stable + delta < -0.5pt
+    | "stable_neutral"           // sign stable + |delta| < 0.5pt
+    | "unstable_high_variance"   // sign unstable across runs — noise dominates
+    | "insufficient_data";       // too few scored pairs
+  next_workstream_recommendation: string;
+}
+
+function stdev(xs: number[]): number | null {
+  const filtered = xs.filter((v) => Number.isFinite(v));
+  if (filtered.length < 2) return null;
+  const m = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+  const variance = filtered.reduce((a, b) => a + (b - m) * (b - m), 0) / (filtered.length - 1);
+  return Math.sqrt(variance);
+}
+
+function signStability(values: Array<number | null>, mean: number | null): number | null {
+  const v = values.filter((x): x is number => x !== null && Number.isFinite(x));
+  if (v.length === 0 || mean === null || mean === 0) return null;
+  const meanSign = Math.sign(mean);
+  const matching = v.filter((x) => Math.sign(x) === meanSign).length;
+  return matching / v.length;
+}
+
+function computeMultiRunSummary(
+  perRunResults: PerCardResult[][],
+  perRunAggregates: AggregateResult[],
+  runId: string,
+  cohortId: string,
+  repeats: number,
+): MultiRunSummary {
+  const cohortSize = perRunResults[0]?.length ?? 0;
+  // Per-run summary records
+  const per_run = perRunAggregates.map((a, i) => ({
+    run_index: i + 1,
+    run_id: a.run_id,
+    scored_pairs: a.scored_pairs,
+    mape_delta_72h: a.aggregate.mape_delta_72h,
+    mape_delta_7d: a.aggregate.mape_delta_7d,
+    direction_acc_delta: a.aggregate.direction_acc_delta,
+    wilcoxon_pvalue_7d: a.aggregate.wilcoxon_pvalue_7d,
+    verdict_branch: a.verdict_branch,
+  }));
+
+  // Cross-run stats over the per-run deltas
+  const d72 = per_run.map((r) => r.mape_delta_72h);
+  const d7d = per_run.map((r) => r.mape_delta_7d);
+  const dDir = per_run.map((r) => r.direction_acc_delta);
+  const d72clean = d72.filter((v): v is number => v !== null);
+  const d7dclean = d7d.filter((v): v is number => v !== null);
+  const dDirclean = dDir.filter((v): v is number => v !== null);
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const m72 = mean(d72clean);
+  const m7d = mean(d7dclean);
+  const mDir = mean(dDirclean);
+
+  const cross_run_stats = {
+    mape_delta_72h_mean: round2(m72),
+    mape_delta_72h_stdev: round2(stdev(d72clean)),
+    mape_delta_72h_sign_stability: round2(signStability(d72, m72)),
+    mape_delta_7d_mean: round2(m7d),
+    mape_delta_7d_stdev: round2(stdev(d7dclean)),
+    mape_delta_7d_sign_stability: round2(signStability(d7d, m7d)),
+    direction_acc_delta_mean: round2(mDir),
+    direction_acc_delta_stdev: round2(stdev(dDirclean)),
+  };
+
+  // Per-card consistency: walk perRunResults grouped by cardId
+  const byCard = new Map<string, PerCardResult[]>();
+  for (const runResults of perRunResults) {
+    for (const r of runResults) {
+      const arr = byCard.get(r.cardId) ?? [];
+      arr.push(r);
+      byCard.set(r.cardId, arr);
+    }
+  }
+  const per_card_consistency: PerCardConsistency[] = [];
+  for (const [cardId, runs] of byCard.entries()) {
+    const wins = runs
+      .map((r) => r.signal_on_wins_7d)
+      .filter((v): v is boolean => v !== null);
+    const dirOn = runs
+      .map((r) => r.deltas.direction_correct_on)
+      .filter((v): v is boolean => v !== null);
+    const dirOff = runs
+      .map((r) => r.deltas.direction_correct_off)
+      .filter((v): v is boolean => v !== null);
+    const pctOn = runs
+      .map((r) => r.deltas.pct_error_on_7d)
+      .filter((v): v is number => v !== null);
+    const pctOff = runs
+      .map((r) => r.deltas.pct_error_off_7d)
+      .filter((v): v is number => v !== null);
+    const onWinRate = wins.length ? wins.filter(Boolean).length / wins.length : null;
+    let stableWinner: PerCardConsistency["stable_arm_winner_7d"] = "no_actuals";
+    if (wins.length === 0) stableWinner = "no_actuals";
+    else if (onWinRate !== null && onWinRate >= 0.7) stableWinner = "on";
+    else if (onWinRate !== null && onWinRate <= 0.3) stableWinner = "off";
+    else stableWinner = "mixed";
+    per_card_consistency.push({
+      cardId,
+      runs_scored: wins.length,
+      signal_on_wins_7d_rate: onWinRate === null ? null : round2(onWinRate),
+      direction_correct_on_rate: dirOn.length ? round2(dirOn.filter(Boolean).length / dirOn.length) : null,
+      direction_correct_off_rate: dirOff.length ? round2(dirOff.filter(Boolean).length / dirOff.length) : null,
+      mean_pct_error_on_7d: pctOn.length ? round2(pctOn.reduce((a, b) => a + b, 0) / pctOn.length) : null,
+      mean_pct_error_off_7d: pctOff.length ? round2(pctOff.reduce((a, b) => a + b, 0) / pctOff.length) : null,
+      stable_arm_winner_7d: stableWinner,
+    });
+  }
+
+  // Verdict
+  const stability = cross_run_stats.mape_delta_7d_sign_stability;
+  const delta = cross_run_stats.mape_delta_7d_mean;
+  const meanScored = per_run.length ? per_run.reduce((a, r) => a + r.scored_pairs, 0) / per_run.length : 0;
+  let verdict: MultiRunSummary["multi_run_verdict"];
+  let recommendation: string;
+  if (meanScored < 6) {
+    verdict = "insufficient_data";
+    recommendation = "Too few scored pairs even with repeats. Investigate cardsight comp coverage in ground-truth window before expanding cohort.";
+  } else if (stability === null || stability < 0.7) {
+    verdict = "unstable_high_variance";
+    recommendation =
+      "Aggregate signs flip across runs → OpenAI nondeterminism dominates at this N. " +
+      "Recommended next: CF-BACKTEST-DETERMINISTIC (lock temperature=0 + seed) " +
+      "rather than CF-PHASE4B-BACKTEST.2 (N=100 expansion — would just multiply the noise).";
+  } else if (delta === null) {
+    verdict = "insufficient_data";
+    recommendation = "Aggregate delta unavailable; check per-run aggregates for errors.";
+  } else if (Math.abs(delta) < 0.5) {
+    verdict = "stable_neutral";
+    recommendation =
+      "Stable result: signals neither help nor hurt meaningfully. " +
+      "Recommended next: CF-PHASE4B-PROMPT-AUDIT — investigate whether OpenAI is using signal context at all.";
+  } else if (delta < 0) {
+    verdict = "stable_signals_hurt";
+    recommendation =
+      "Stable result: signals consistently HURT accuracy across runs. " +
+      "Recommended next: CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS — investigate which signals contribute negatively.";
+  } else {
+    // delta > 0.5
+    verdict = "stable_signals_help";
+    recommendation =
+      delta > 2
+        ? "Stable result: signals materially help (>2pt MAPE delta). Recommended next: CF-PHASE4B-SIGNAL-REPAIR — credential acquisition for 4 degraded signals."
+        : "Stable result: signals marginally help (0.5-2pt MAPE delta). Recommended next: CF-PHASE4B-PER-SIGNAL-ATTRIBUTION — figure out which signals contribute.";
+  }
+
+  return {
+    run_id: runId,
+    cohort_id: cohortId,
+    repeats,
+    cohort_size: cohortSize,
+    prediction_input_window_days: perRunAggregates[0]?.prediction_input_window_days ?? { from_days_ago: 60, to_days_ago: 14 },
+    ground_truth_window_days: perRunAggregates[0]?.ground_truth_window_days ?? { from_days_ago: 14, to_days_ago: 0 },
+    per_run,
+    cross_run_stats,
+    per_card_consistency,
+    multi_run_verdict: verdict,
+    next_workstream_recommendation: recommendation,
+  };
+}
+
+async function writeMultiRunMarkdown(
+  outputPath: string,
+  m: MultiRunSummary,
+): Promise<void> {
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  const fmt = (n: number | null) => (n === null ? "—" : String(n));
+  const lines: string[] = [];
+  lines.push(`# Multi-run backtest — ${m.run_id} (--repeats=${m.repeats})`);
+  lines.push("");
+  lines.push(`**Cohort:** ${m.cohort_id} | **N=${m.cohort_size} × ${m.repeats} runs**`);
+  lines.push(`**Windows:** prediction-input [now-${m.prediction_input_window_days.from_days_ago}d, now-${m.prediction_input_window_days.to_days_ago}d) | ground-truth [now-${m.ground_truth_window_days.from_days_ago}d, now]`);
+  lines.push("");
+  lines.push(`## Verdict — \`${m.multi_run_verdict}\``);
+  lines.push("");
+  lines.push(`**Recommendation:** ${m.next_workstream_recommendation}`);
+  lines.push("");
+  lines.push(`## Per-run aggregates`);
+  lines.push("");
+  lines.push(`| run | scored | MAPE delta 72h | MAPE delta 7d | Wilcoxon p (7d) | Dir-acc delta | verdict |`);
+  lines.push(`|---:|---:|---:|---:|---:|---:|---|`);
+  for (const r of m.per_run) {
+    lines.push(`| ${r.run_index} | ${r.scored_pairs} | ${fmt(r.mape_delta_72h)} | ${fmt(r.mape_delta_7d)} | ${fmt(r.wilcoxon_pvalue_7d)} | ${fmt(r.direction_acc_delta)} | ${r.verdict_branch} |`);
+  }
+  lines.push("");
+  lines.push(`## Cross-run stats`);
+  lines.push("");
+  lines.push(`| Metric | mean | stdev | sign stability |`);
+  lines.push(`|---|---:|---:|---:|`);
+  lines.push(`| MAPE delta 72h | ${fmt(m.cross_run_stats.mape_delta_72h_mean)} | ${fmt(m.cross_run_stats.mape_delta_72h_stdev)} | ${fmt(m.cross_run_stats.mape_delta_72h_sign_stability)} |`);
+  lines.push(`| MAPE delta 7d | ${fmt(m.cross_run_stats.mape_delta_7d_mean)} | ${fmt(m.cross_run_stats.mape_delta_7d_stdev)} | ${fmt(m.cross_run_stats.mape_delta_7d_sign_stability)} |`);
+  lines.push(`| Direction-acc delta | ${fmt(m.cross_run_stats.direction_acc_delta_mean)} | ${fmt(m.cross_run_stats.direction_acc_delta_stdev)} | — |`);
+  lines.push("");
+  lines.push(`Sign stability = fraction of runs where the per-run delta has the same sign as the cross-run mean. 1.0 = perfectly stable; ≤ 0.7 = unstable / noise-dominated.`);
+  lines.push("");
+  lines.push(`## Per-card consistency (stable winners across runs)`);
+  lines.push("");
+  const consistentHelpers = m.per_card_consistency.filter((c) => c.stable_arm_winner_7d === "on");
+  const consistentHurters = m.per_card_consistency.filter((c) => c.stable_arm_winner_7d === "off");
+  const mixed = m.per_card_consistency.filter((c) => c.stable_arm_winner_7d === "mixed");
+  lines.push(`- **Stable signal-helpers** (signal-on wins ≥70% of runs): ${consistentHelpers.length}`);
+  lines.push(`- **Stable signal-hurters** (signal-on wins ≤30% of runs): ${consistentHurters.length}`);
+  lines.push(`- **Mixed/flipping** (signal-on wins 31-69% of runs): ${mixed.length}`);
+  lines.push("");
+  if (consistentHelpers.length > 0) {
+    lines.push(`### Cards where signals CONSISTENTLY help`);
+    lines.push("");
+    lines.push(`| Card | runs scored | on win-rate | mean on err% | mean off err% |`);
+    lines.push(`|---|---:|---:|---:|---:|`);
+    for (const c of consistentHelpers) {
+      lines.push(`| ${c.cardId} | ${c.runs_scored} | ${fmt(c.signal_on_wins_7d_rate)} | ${fmt(c.mean_pct_error_on_7d)} | ${fmt(c.mean_pct_error_off_7d)} |`);
+    }
+    lines.push("");
+  }
+  if (consistentHurters.length > 0) {
+    lines.push(`### Cards where signals CONSISTENTLY hurt`);
+    lines.push("");
+    lines.push(`| Card | runs scored | on win-rate | mean on err% | mean off err% |`);
+    lines.push(`|---|---:|---:|---:|---:|`);
+    for (const c of consistentHurters) {
+      lines.push(`| ${c.cardId} | ${c.runs_scored} | ${fmt(c.signal_on_wins_7d_rate)} | ${fmt(c.mean_pct_error_on_7d)} | ${fmt(c.mean_pct_error_off_7d)} |`);
+    }
+    lines.push("");
+  }
+  if (mixed.length > 0) {
+    lines.push(`### Cards that FLIP across runs (noise candidates)`);
+    lines.push("");
+    lines.push(`| Card | runs scored | on win-rate |`);
+    lines.push(`|---|---:|---:|`);
+    for (const c of mixed) {
+      lines.push(`| ${c.cardId} | ${c.runs_scored} | ${fmt(c.signal_on_wins_7d_rate)} |`);
+    }
+    lines.push("");
+  }
+  lines.push(`## What this run does NOT prove`);
+  lines.push("");
+  lines.push(`- Multi-run aggregation reduces OpenAI nondeterminism but doesn't address parallel-mixing in actuals (CF-BACKTEST-PARALLEL-FILTER).`);
+  lines.push(`- Per-card stability is more informative than aggregate for individual recommendations; aggregate is for "does this signal pipeline help in general."`);
+  lines.push(`- If verdict is \`unstable_high_variance\`, address the noise (CF-BACKTEST-DETERMINISTIC) before expanding the cohort.`);
+  lines.push("");
+  await fs.writeFile(outputPath, lines.join("\n"), "utf8");
+}
+
 // ─── Driver ──────────────────────────────────────────────────────────────────
 
 interface CliOpts {
@@ -861,6 +1148,7 @@ interface CliOpts {
   outputJson: string | null;
   outputMd: string | null;
   limit: number | null;
+  repeats: number;
 }
 
 function parseArgs(argv: string[]): CliOpts {
@@ -871,6 +1159,7 @@ function parseArgs(argv: string[]): CliOpts {
     outputJson: null,
     outputMd: null,
     limit: null,
+    repeats: 1,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -880,6 +1169,7 @@ function parseArgs(argv: string[]): CliOpts {
     else if (a === "--output-json") opts.outputJson = argv[++i];
     else if (a === "--output-md") opts.outputMd = argv[++i];
     else if (a === "--limit") opts.limit = Number(argv[++i]);
+    else if (a === "--repeats") opts.repeats = Math.max(1, Number(argv[++i]));
     else throw new Error(`Unknown flag: ${a}`);
   }
   return opts;
@@ -957,7 +1247,17 @@ async function main(): Promise<void> {
     }
   }
 
-  // Per-card pipeline
+  // Per-card pipeline — extracted to a function so --repeats N can call it
+  // multiple times over the same comp data (comps don't change in seconds;
+  // OpenAI nondeterminism is what we're measuring across repeats).
+  async function executePredictionRun(runIndex: number, totalRuns: number): Promise<PerCardResult[]> {
+    if (totalRuns > 1) console.log(`\n[backtest] === RUN ${runIndex + 1} of ${totalRuns} ===`);
+    const runResults: PerCardResult[] = await runPerCardLoop();
+    return runResults;
+  }
+
+  // The actual per-card loop. Closed over groups, groupComps, asOf, asOfStr, opts.
+  async function runPerCardLoop(): Promise<PerCardResult[]> {
   const results: PerCardResult[] = [];
   for (const g of groups) {
     const key = groupKey(g);
@@ -1080,17 +1380,54 @@ async function main(): Promise<void> {
     }
   }
 
+  return results;
+  } // end runPerCardLoop
+
   if (opts.dryRun) {
+    // Dry run still executes the loop once (logs DRY messages)
+    await executePredictionRun(0, 1);
     console.log("\n[backtest] DRY-RUN complete — no predictions made, no output files written.");
     return;
   }
 
-  const agg = aggregate(results, runId, cohort.cohort_id, asOf);
-  await writeJsonOutput(opts.outputJson, agg, results);
-  await writeMarkdownOutput(opts.outputMd, agg, results);
-  console.log(`\n[backtest] DONE. Verdict: ${agg.verdict_branch}`);
-  console.log(`  JSON: ${opts.outputJson}`);
-  console.log(`  MD:   ${opts.outputMd}`);
+  // Multi-run execution: loop N times, collect per-run results.
+  // Comp data is fetched once above; only predictions repeat (where the noise is).
+  const perRunResults: PerCardResult[][] = [];
+  const perRunAggregates: AggregateResult[] = [];
+  for (let r = 0; r < opts.repeats; r++) {
+    const runResults = await executePredictionRun(r, opts.repeats);
+    perRunResults.push(runResults);
+    const runId_r = opts.repeats > 1 ? `${runId}-r${r + 1}` : runId;
+    const agg = aggregate(runResults, runId_r, cohort.cohort_id, asOf);
+    perRunAggregates.push(agg);
+  }
+
+  if (opts.repeats === 1) {
+    // Single-run mode — preserve original output behavior
+    await writeJsonOutput(opts.outputJson, perRunAggregates[0], perRunResults[0]);
+    await writeMarkdownOutput(opts.outputMd, perRunAggregates[0], perRunResults[0]);
+    console.log(`\n[backtest] DONE. Verdict: ${perRunAggregates[0].verdict_branch}`);
+    console.log(`  JSON: ${opts.outputJson}`);
+    console.log(`  MD:   ${opts.outputMd}`);
+    return;
+  }
+
+  // Multi-run mode — write per-run outputs to subdirectories + multi-run summary
+  const outputDir = path.dirname(opts.outputJson);
+  for (let r = 0; r < opts.repeats; r++) {
+    const runDir = path.join(outputDir, `run_${r + 1}`);
+    await fs.mkdir(runDir, { recursive: true });
+    await writeJsonOutput(path.join(runDir, "results.json"), perRunAggregates[r], perRunResults[r]);
+    await writeMarkdownOutput(path.join(runDir, "report.md"), perRunAggregates[r], perRunResults[r]);
+  }
+  const multiRun = computeMultiRunSummary(perRunResults, perRunAggregates, runId, cohort.cohort_id, opts.repeats);
+  await fs.writeFile(opts.outputJson, JSON.stringify(multiRun, null, 2), "utf8");
+  await writeMultiRunMarkdown(opts.outputMd, multiRun);
+  console.log(`\n[backtest] DONE (${opts.repeats} runs).`);
+  console.log(`  Per-run dirs:    ${outputDir}/run_{1..${opts.repeats}}/`);
+  console.log(`  Multi-run JSON:  ${opts.outputJson}`);
+  console.log(`  Multi-run MD:    ${opts.outputMd}`);
+  console.log(`  Verdict:         ${multiRun.multi_run_verdict}`);
 }
 
 function makeSkipResult(
