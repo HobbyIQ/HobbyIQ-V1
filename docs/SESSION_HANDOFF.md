@@ -2052,3 +2052,44 @@ Estimated Phase 3 scope: ~30 min disable + ~15 min observation + ~15 min cleanup
 The deploy infrastructure incident from 2026-05-24 (5h14m outage) is fully resolved AND the MCP rewire arc — which had been pending across multiple sessions — is now complete. Three production deploys today, all clean. Phase 1 backend endpoint and Phase 2 MCP client rewire both live and verified. fn-cardhedge-comps decommission unblocked. Tomorrow's session has ~3-7 day soak before Phase 3 becomes urgent; smaller follow-ups available immediately.
 
 End of session.
+
+# 2026-05-27 — Session extension: fn-cardhedge-comps decommission attempt (incomplete by design)
+
+## WS3 outcome
+
+Attempted to disable `fn-cardhedge-comps` (the nightly CH-blob writer) post-Phase-2-soak. **Function NOT disabled in this workstream.** Azure Linux Function App read-only constraints prevent ad-hoc disable via `az` CLI; durable disable requires `fn-compiq` redeploy with `function.json` modification (deploy pattern not documented in repo, separate workstream).
+
+Three disable paths attempted, all blocked:
+
+| Method | Result |
+| --- | --- |
+| App setting `AzureWebJobs.fn-cardhedge-comps.Disabled=true` | Azure rejects — hyphens not allowed in app setting names (dot/underscore variants both rejected) |
+| `az resource update --set properties.isDisabled=true` | `(BadRequest) Your app is currently in read only mode` |
+| `az functionapp function delete` | Silently fails (read-only); function still listed `isDisabled=false` |
+
+### Disposition: accept the harmless nightly fire
+
+Function continues to fire nightly at 02:00Z writing blobs that zero production consumers read (verified 24h post-Phase-2). Cost ~$0/month, runtime ~30s/day. Phase 3a ch-monitor continues to function correctly against the valid blobs.
+
+**Architectural intent of CH removal (no production code depends on CH data) achieved at end of MCP rewire Phase 2.** Real function disable deferred to future fn-compiq redeploy workstream (CF-FN-CARDHEDGE-DISABLE below).
+
+## New carry-forward
+
+**CF-FN-CARDHEDGE-DISABLE** (~5-10 min addition when bundled). Durably disable `fn-cardhedge-comps` via `function.json` `"disabled": true`. Requires fn-compiq deploy pattern documentation/discovery. Bundle with first future fn-compiq redeploy workstream (likely candidates: CF-FN-SILENT-FAIL fix, COSMOS_KEY rotation re-check, adding a new function).
+
+## Updated carry-forwards summary
+
+**New (this session extension):**
+
+- CF-FN-CARDHEDGE-DISABLE — durably disable the zombie function via function.json redeploy
+
+**Unchanged from prior session entries:**
+
+- CF-DAILY-REFRESH-CONSISTENCY — patch GHA workflow to set all 4 GIT_* env vars
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
+- F1 /bulk fix
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
