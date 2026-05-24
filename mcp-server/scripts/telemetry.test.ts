@@ -1,85 +1,141 @@
-// Unit tests for trackHttpDependency (CF-FETCH-SIGNAL-FLOOR-TELEMETRY).
+// Unit tests for trackHttpDependency (CF-FETCH-SIGNAL-FLOOR-TELEMETRY +
+// CF-FETCH-TELEMETRY-V3-FIX).
 //
-// Verifies:
-// - Calls into App Insights' trackDependency with the right shape
-// - Extracts target/data from URL (hostname/pathname only — no query string,
-//   so function keys don't leak into telemetry)
-// - On error: calls trackException too
-// - Never throws even when the underlying client throws (telemetry must not
-//   break the prediction path)
-// - No-op when App Insights isn't initialized (defaultClient is null)
+// Verifies the post-V3-migration helper:
+// - Uses @opentelemetry/api directly (not the legacy SDK shim that the
+//   App Service Agent conflict broke)
+// - Creates CLIENT-kind spans with semantic-conventions attributes
+//   (http.url, http.status_code, peer.service)
+// - Sanitizes URL — pathname only, no ?code= query string in attributes
+// - On error: calls the exception tracker (legacy SDK trackException shim
+//   still used here since OTel logs migration is separate scope)
+// - Never throws even when the underlying tracer throws
+// - No-op when tracer is no-op (test simulates production-without-agent)
 //
 // Run: cd mcp-server && npx tsx --test scripts/telemetry.test.ts
 
 import { describe, it, before, after, beforeEach } from "node:test";
 import * as assert from "node:assert/strict";
 
+import {
+  type Tracer,
+  type Span,
+  type SpanOptions,
+  SpanKind,
+  SpanStatusCode,
+  type Context,
+} from "@opentelemetry/api";
+
 let trackHttpDependency: typeof import("../telemetry.js").trackHttpDependency;
-let _setClientResolverForTests: typeof import("../telemetry.js")._setClientResolverForTests;
-let _resetClientResolverForTests: typeof import("../telemetry.js")._resetClientResolverForTests;
+let _setTracerResolverForTests: typeof import("../telemetry.js")._setTracerResolverForTests;
+let _resetTracerResolverForTests: typeof import("../telemetry.js")._resetTracerResolverForTests;
+let _setExceptionTrackerForTests: typeof import("../telemetry.js")._setExceptionTrackerForTests;
+let _resetExceptionTrackerForTests: typeof import("../telemetry.js")._resetExceptionTrackerForTests;
 
-// In-memory capture for App Insights calls
-let capturedDependencies: Array<{
+interface CapturedSpan {
   name: string;
-  target: string;
-  data: string;
-  duration: number;
-  resultCode: string;
-  success: boolean;
-  dependencyTypeName: string;
-}> = [];
-let capturedExceptions: Array<{ exception: Error }> = [];
-
-interface FakeClient {
-  trackDependency: (args: {
-    name: string;
-    target: string;
-    data: string;
-    duration: number;
-    resultCode: string;
-    success: boolean;
-    dependencyTypeName: string;
-  }) => void;
-  trackException: (args: { exception: Error }) => void;
+  kind?: SpanKind;
+  attributes: Record<string, unknown>;
+  startTime?: Date;
+  status?: { code: SpanStatusCode; message?: string };
+  endTime?: number;
 }
 
-function installFakeClient(opts: { throws?: boolean } = {}): void {
-  const fake: FakeClient = {
-    trackDependency: (a) => {
-      if (opts.throws) throw new Error("simulated AI failure");
-      capturedDependencies.push(a);
+let capturedSpans: CapturedSpan[] = [];
+let capturedExceptions: Error[] = [];
+
+function makeFakeSpan(captured: CapturedSpan): Span {
+  // OTel Span has many methods; we only need setStatus + end. The rest are
+  // no-ops returning `this` for chainable interface compliance.
+  const span = {
+    setStatus(s: { code: SpanStatusCode; message?: string }): Span {
+      captured.status = s;
+      return span;
     },
-    trackException: (a) => {
-      if (opts.throws) throw new Error("simulated AI failure");
-      capturedExceptions.push(a);
+    end(time?: number): void {
+      captured.endTime = time ?? Date.now();
     },
-  };
-  _setClientResolverForTests(() => fake);
+    spanContext() {
+      return { traceId: "00000000000000000000000000000000", spanId: "0000000000000000", traceFlags: 0 };
+    },
+    setAttribute(): Span { return span; },
+    setAttributes(): Span { return span; },
+    addEvent(): Span { return span; },
+    addLink(): Span { return span; },
+    addLinks(): Span { return span; },
+    updateName(): Span { return span; },
+    recordException(): void {},
+    isRecording(): boolean { return true; },
+  } as unknown as Span;
+  return span;
 }
 
-function clearClient(): void {
-  _setClientResolverForTests(() => null);
+function makeFakeTracer(opts: { throwOnStartSpan?: boolean } = {}): Tracer {
+  return {
+    startSpan(name: string, options?: SpanOptions, _ctx?: Context): Span {
+      if (opts.throwOnStartSpan) throw new Error("simulated tracer failure");
+      const cap: CapturedSpan = {
+        name,
+        kind: options?.kind,
+        attributes: (options?.attributes ?? {}) as Record<string, unknown>,
+        startTime: options?.startTime as Date | undefined,
+      };
+      capturedSpans.push(cap);
+      return makeFakeSpan(cap);
+    },
+    startActiveSpan() { throw new Error("not used"); },
+  } as unknown as Tracer;
+}
+
+function makeNoopTracer(): Tracer {
+  // Mirror OTel's no-op tracer behavior — startSpan returns a non-recording
+  // span that swallows all calls. Simulates the case where the agent didn't
+  // register a global provider (e.g., local dev without app insights).
+  return {
+    startSpan(): Span {
+      return {
+        setStatus() { return this; },
+        end() {},
+        spanContext() { return { traceId: "0", spanId: "0", traceFlags: 0 }; },
+        setAttribute() { return this; },
+        setAttributes() { return this; },
+        addEvent() { return this; },
+        addLink() { return this; },
+        addLinks() { return this; },
+        updateName() { return this; },
+        recordException() {},
+        isRecording() { return false; },
+      } as unknown as Span;
+    },
+    startActiveSpan() { throw new Error("not used"); },
+  } as unknown as Tracer;
 }
 
 before(async () => {
   const mod = await import("../telemetry.js");
   trackHttpDependency = mod.trackHttpDependency;
-  _setClientResolverForTests = mod._setClientResolverForTests;
-  _resetClientResolverForTests = mod._resetClientResolverForTests;
+  _setTracerResolverForTests = mod._setTracerResolverForTests;
+  _resetTracerResolverForTests = mod._resetTracerResolverForTests;
+  _setExceptionTrackerForTests = mod._setExceptionTrackerForTests;
+  _resetExceptionTrackerForTests = mod._resetExceptionTrackerForTests;
+  // Replace the real exception tracker with a capturing stub for the duration
+  // of the test suite.
+  _setExceptionTrackerForTests((err) => capturedExceptions.push(err));
 });
 
 beforeEach(() => {
-  capturedDependencies = [];
+  capturedSpans = [];
   capturedExceptions = [];
 });
 
 after(() => {
-  _resetClientResolverForTests();
+  _resetTracerResolverForTests();
+  _resetExceptionTrackerForTests();
 });
 
 describe("trackHttpDependency — happy paths", () => {
-  it("records a successful dependency with target=hostname and data=pathname", () => {
-    installFakeClient();
+  it("creates CLIENT-kind span with http.url/http.status_code/peer.service attributes", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "signal_service",
       url: "https://fn-compiq.azurewebsites.net/api/signals?player=Mike%20Trout&code=secret",
@@ -87,21 +143,21 @@ describe("trackHttpDependency — happy paths", () => {
       resultCode: 200,
       success: true,
     });
-    assert.equal(capturedDependencies.length, 1);
-    const d = capturedDependencies[0];
-    assert.equal(d.name, "signal_service");
-    assert.equal(d.target, "fn-compiq.azurewebsites.net");
-    // CRITICAL: data is pathname ONLY — must not include ?code=secret query string
-    assert.equal(d.data, "/api/signals");
-    assert.equal(d.resultCode, "200");
-    assert.equal(d.success, true);
-    assert.equal(d.dependencyTypeName, "HTTP");
-    assert.ok(d.duration >= 240 && d.duration < 5000, `duration=${d.duration}`);
+    assert.equal(capturedSpans.length, 1);
+    const s = capturedSpans[0];
+    assert.equal(s.name, "signal_service");
+    assert.equal(s.kind, SpanKind.CLIENT);
+    // CRITICAL: http.url is pathname ONLY — must not contain ?code=secret
+    assert.equal(s.attributes["http.url"], "/api/signals");
+    assert.equal(s.attributes["http.status_code"], "200");
+    assert.equal(s.attributes["peer.service"], "fn-compiq.azurewebsites.net");
+    assert.deepEqual(s.status, { code: SpanStatusCode.OK });
+    assert.ok(s.endTime !== undefined && s.endTime > 0);
     assert.equal(capturedExceptions.length, 0);
   });
 
-  it("records HTTP 4xx as success=false (e.g., 404 URL_NOT_FOUND)", () => {
-    installFakeClient();
+  it("records HTTP 4xx as ERROR status (e.g. 404 URL_NOT_FOUND)", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "signal_service",
       url: "https://fn-compiq.azurewebsites.net/api/serve-signals",
@@ -109,14 +165,12 @@ describe("trackHttpDependency — happy paths", () => {
       resultCode: 404,
       success: false,
     });
-    assert.equal(capturedDependencies.length, 1);
-    assert.equal(capturedDependencies[0].resultCode, "404");
-    assert.equal(capturedDependencies[0].success, false);
-    assert.equal(capturedExceptions.length, 0);
+    assert.equal(capturedSpans[0].attributes["http.status_code"], "404");
+    assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
   });
 
-  it("records HTTP 5xx as success=false", () => {
-    installFakeClient();
+  it("records HTTP 5xx as ERROR status", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "price_floor_service",
       url: "https://fn-compiq.azurewebsites.net/api/price-floor",
@@ -124,14 +178,31 @@ describe("trackHttpDependency — happy paths", () => {
       resultCode: 503,
       success: false,
     });
-    assert.equal(capturedDependencies[0].resultCode, "503");
-    assert.equal(capturedDependencies[0].success, false);
+    assert.equal(capturedSpans[0].attributes["http.status_code"], "503");
+    assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
+  });
+
+  it("computes startTime from startMs + duration", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
+    const startMs = Date.now() - 500;
+    trackHttpDependency({
+      name: "signal_service",
+      url: "https://fn-compiq.azurewebsites.net/api/signals",
+      startMs,
+      resultCode: 200,
+      success: true,
+    });
+    const s = capturedSpans[0];
+    assert.ok(s.startTime instanceof Date);
+    // startTime should be approximately startMs (within ms of jitter)
+    const startDiff = Math.abs((s.startTime!).getTime() - startMs);
+    assert.ok(startDiff < 50, `startTime diff=${startDiff}ms`);
   });
 });
 
 describe("trackHttpDependency — error paths", () => {
-  it("records network failure with resultCode=0 + trackException", () => {
-    installFakeClient();
+  it("records network failure as ERROR + calls exception tracker", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
     const networkErr = new Error("ECONNREFUSED");
     trackHttpDependency({
       name: "signal_service",
@@ -141,16 +212,15 @@ describe("trackHttpDependency — error paths", () => {
       success: false,
       error: networkErr,
     });
-    assert.equal(capturedDependencies.length, 1);
-    assert.equal(capturedDependencies[0].resultCode, "0");
-    assert.equal(capturedDependencies[0].success, false);
+    assert.equal(capturedSpans[0].attributes["http.status_code"], "0");
+    assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
     assert.equal(capturedExceptions.length, 1);
-    assert.equal(capturedExceptions[0].exception, networkErr);
+    assert.equal(capturedExceptions[0], networkErr);
   });
 
-  it("records timeout error (AbortError) with trackException", () => {
-    installFakeClient();
-    const abortErr = new Error("The operation was aborted due to timeout");
+  it("records timeout (AbortError) with exception tracker", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
+    const abortErr = new Error("operation aborted due to timeout");
     abortErr.name = "TimeoutError";
     trackHttpDependency({
       name: "signal_service",
@@ -160,29 +230,13 @@ describe("trackHttpDependency — error paths", () => {
       success: false,
       error: abortErr,
     });
-    assert.equal(capturedExceptions[0].exception, abortErr);
+    assert.equal(capturedExceptions[0], abortErr);
   });
 });
 
 describe("trackHttpDependency — robustness", () => {
-  it("no-ops silently when appInsights.defaultClient is null (not initialized)", () => {
-    clearClient();
-    // Should not throw
-    trackHttpDependency({
-      name: "signal_service",
-      url: "https://fn-compiq.azurewebsites.net/api/signals",
-      startMs: Date.now(),
-      resultCode: 200,
-      success: true,
-    });
-    // No captures because the fake client isn't installed
-    assert.equal(capturedDependencies.length, 0);
-    assert.equal(capturedExceptions.length, 0);
-  });
-
-  it("does not throw when the App Insights client itself throws", () => {
-    installFakeClient({ throws: true });
-    // Should swallow the simulated AI failure — telemetry must never break callers
+  it("does not throw when the tracer itself throws on startSpan", () => {
+    _setTracerResolverForTests(() => makeFakeTracer({ throwOnStartSpan: true }));
     assert.doesNotThrow(() => {
       trackHttpDependency({
         name: "signal_service",
@@ -192,10 +246,28 @@ describe("trackHttpDependency — robustness", () => {
         success: true,
       });
     });
+    // No span captured; no exception captured (the span-creation throw is
+    // swallowed before reaching the exception-tracker call)
+    assert.equal(capturedSpans.length, 0);
   });
 
-  it("does not throw on malformed URL — falls back to raw string as data", () => {
-    installFakeClient();
+  it("no-ops gracefully when tracer is no-op (e.g., no global provider)", () => {
+    _setTracerResolverForTests(() => makeNoopTracer());
+    assert.doesNotThrow(() => {
+      trackHttpDependency({
+        name: "signal_service",
+        url: "https://fn-compiq.azurewebsites.net/api/signals",
+        startMs: Date.now(),
+        resultCode: 200,
+        success: true,
+      });
+    });
+    // No-op tracer doesn't capture anything in our test list
+    assert.equal(capturedSpans.length, 0);
+  });
+
+  it("does not throw on malformed URL — falls back to raw string for http.url", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "signal_service",
       url: "not a valid url",
@@ -203,21 +275,53 @@ describe("trackHttpDependency — robustness", () => {
       resultCode: 200,
       success: true,
     });
-    // Still records something
-    assert.equal(capturedDependencies.length, 1);
-    assert.equal(capturedDependencies[0].target, "unknown");
-    assert.equal(capturedDependencies[0].data, "not a valid url");
+    assert.equal(capturedSpans.length, 1);
+    assert.equal(capturedSpans[0].attributes["peer.service"], "unknown");
+    assert.equal(capturedSpans[0].attributes["http.url"], "not a valid url");
   });
 
   it("clamps negative duration to 0 (defensive — startMs in future)", () => {
-    installFakeClient();
+    _setTracerResolverForTests(() => makeFakeTracer());
+    const startMs = Date.now() + 10000; // 10s in the future
     trackHttpDependency({
       name: "signal_service",
       url: "https://fn-compiq.azurewebsites.net/api/signals",
-      startMs: Date.now() + 10000,  // 10s in the future
+      startMs,
       resultCode: 200,
       success: true,
     });
-    assert.equal(capturedDependencies[0].duration, 0);
+    const s = capturedSpans[0];
+    // duration clamped to 0 → startTime should equal endTime
+    assert.ok(s.startTime instanceof Date);
+    assert.ok(s.endTime !== undefined);
+    const startToEnd = s.endTime! - s.startTime!.getTime();
+    // Allow small jitter from time.now() calls between startTime computation
+    // and endTime read
+    assert.ok(Math.abs(startToEnd) < 50, `startToEnd=${startToEnd}ms`);
+  });
+
+  it("does not call exception tracker when error not provided (success path)", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
+    trackHttpDependency({
+      name: "signal_service",
+      url: "https://fn-compiq.azurewebsites.net/api/signals",
+      startMs: Date.now(),
+      resultCode: 200,
+      success: true,
+    });
+    assert.equal(capturedExceptions.length, 0);
+  });
+
+  it("does not call exception tracker when error not provided (HTTP-error path)", () => {
+    _setTracerResolverForTests(() => makeFakeTracer());
+    trackHttpDependency({
+      name: "signal_service",
+      url: "https://fn-compiq.azurewebsites.net/api/signals",
+      startMs: Date.now(),
+      resultCode: 500,
+      success: false,
+      // no error — HTTP-error path without exception
+    });
+    assert.equal(capturedExceptions.length, 0);
   });
 });
