@@ -1711,3 +1711,122 @@ Three viable next workstreams; recommended sequence:
 ## Session summary
 
 CF-COSMOS-ROT shipped — 11 days of silent predictionLog write failure resolved. Verification chain: setting-change → restart → /predict → row 7/7 landed → 200/201 Cosmos traces. Scope corrected mid-flight from "3 services affected" to "2 services affected" (HobbyIQ3 was always fresh). Blast-radius distributed across PRIMARY/SECONDARY slots. Three new carry-forwards captured (CF-COSMOS-AUDIT, CF-FN-SILENT-FAIL, CF-COSMOS-MI) but not expanded into this session. MCP rewire Phase 1 is now unblocked for next session.
+
+# 2026-05-27 — Production incident: Phase 1 deploy failure, 5h14m outage, deploy infra audit
+
+## Headline
+
+PR #119 (MCP rewire Phase 1) merged to main as `b6ec8a3` after clean local smoke + 2 rounds of eyeball confirmation. **Deploy to hobbyiq3 failed at Kudu (status=3); the failed deploy left wwwroot in inconsistent state (`dist/` present, `node_modules/` missing); container crash-looped with `Cannot find module 'express'`; production was 503 for ~5h14m.** Recovery: disabled Oryx (`SCM_DO_BUILD_DURING_DEPLOYMENT=false` + `ENABLE_ORYX_BUILD=false`), redeployed the rollback SHA `190604b` (Kudu id `b9bcf9d3`, status=4, active=true). Production restored.
+
+**No customer-impacting calls observed during the window** (pre-launch iOS traffic is sparse). No data loss.
+
+**Phase 1 code is in main at `b6ec8a3` but NOT in production. Production is on `190604b` (PR #117).** Main is one commit ahead of production. Intentional, durable state until deploy infra is hardened.
+
+## Incident timeline (UTC)
+
+| Time | Event |
+| --- | --- |
+| 02:34:32 | Phase 1 deploy attempt 1 (`b6ec8a3`) — Kudu status=3 FAILED |
+| ~02:35 | Container crash-loop begins (`Cannot find module 'express'`) — /api/health 503 |
+| 03:03:23 | Rollback deploy attempt 1 (`190604b`) — Kudu status=3 FAILED identically |
+| 03:15 | `az webapp stop/start` cycle — still 503 |
+| 07:46 | Root cause identified: wwwroot has `dist/` but no `node_modules/` (LogFiles/StartupLogs failure log) |
+| 07:46 | `SCM_DO_BUILD_DURING_DEPLOYMENT=false` + `ENABLE_ORYX_BUILD=false` set on hobbyiq3 |
+| 07:48:13 | Rollback redeploy (`190604b`, Kudu id `b9bcf9d3`) — SUCCESS in 19s |
+| 07:49 | /api/health OK, build.sha=190604b, production recovered |
+
+**Downtime: 5h 14m.**
+
+## Root cause
+
+Oryx (Azure App Service's build orchestrator) was enabled via `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (yesterday's setting, working at the time). With Oryx enabled AND our zip containing pre-baked `dist/` + `node_modules/`, the deploy entered a brittle state:
+
+1. Oryx ran `npm install` (regenerated `node_modules`, 424 packages)
+2. Oryx ran `npm run build` → `tsc` (no `tsconfig.json` or `src/` in zip, so tsc printed help and exited 0)
+3. Oryx reported "Build Summary: 0 errors, 0 warnings"
+4. Post-build rsync to `/home/site/wwwroot` failed silently — `compress_node_modules=tar-gz` step + restart-mid-flight race likely cause
+5. wwwroot got `dist/` updated but lost `node_modules`
+6. Container restart → `Cannot find module 'express'` → exit 1 → crash loop
+
+The same env-var state (`SCM_DO_BUILD=true`) had succeeded across 8+ deploys in the 24h prior. **Today's failure is the latent edge case finally biting us under unknown infrastructure conditions.** Yesterday-style deploys are non-deterministic — Oryx + zip-with-node_modules is structurally fragile.
+
+Full characterization in [docs/phase0/deploy_infra_audit.md](phase0/deploy_infra_audit.md) (committed this session).
+
+## Recovery state
+
+- **main HEAD:** `b6ec8a3` (PR #119 squash-merge with Phase 1 implementation + setName chrome fallback fix)
+- **Production hobbyiq3:** `190604b` (PR #117), active Kudu deploy `b9bcf9d3`
+- **App Settings changed (durable until next session decides):**
+  - `SCM_DO_BUILD_DURING_DEPLOYMENT=false` (was `true`)
+  - `ENABLE_ORYX_BUILD=false` (was absent/default)
+- **Existing endpoints verified live post-recovery:**
+  - /api/health → 200 OK, SHA `190604b`
+  - /api/compiq/price (Mike Trout 2011 TU) → 200, source=live, 10 comps
+  - /api/compiq/estimate (Aaron Judge 2017 TU) → 200, source=live, 10 comps, FMV=42
+  - /api/compiq/price-by-id (Mike Trout 2011 TU by CH cardId) → 200, source=live, 10 comps
+- **App Insights post-recovery:** normal request/dependency traffic. 1 expected 404 on `/api/compiq/comps-by-player` (endpoint doesn't exist in `190604b` — feature probe from this session's diagnostic).
+
+## What shipped
+
+- Production rollback to `190604b` via Kudu deploy `b9bcf9d3` (App Service config: Oryx disabled)
+- [docs/phase0/deploy_infra_audit.md](phase0/deploy_infra_audit.md) (NEW, ~7000 chars) — 7-section audit: timeline, Oryx+SCM_DO_BUILD interaction, deploy history comparison, deploy script invariants, Finding 11 connection, required state for safe Phase 1 retry, recommendations
+
+## What didn't ship (Phase 1 deferred)
+
+- **Phase 1 code (`b6ec8a3`)** is merged to main but NOT deployed. No revert. Phase 1 is paused — not abandoned — and will be retried in a future session AFTER the deploy infra hardening workstream ships.
+
+## New carry-forwards
+
+- **CF-DEPLOY-INFRA-HARDEN** (High priority, ~2-3h next session) — implement audit's §7 recommendations:
+  - Add pre-deploy invariant check to `scripts/deploy-with-build-info.ps1` (~30-40 LOC) — verify zip-vs-App-Settings match BEFORE [1/5]
+  - Fix Kudu poll `Write-Error` swallowing bug (~3 LOC) — script currently polls forever on `status=3`
+  - Replace `/api/health` SHA verification with feature-probe (~15 LOC) — close Finding 11's residual hazard
+  - Make Oryx-disabled App Settings durable (Bicep/ARM template or runbook doc, ~10-20 LOC)
+  - Optional: zip-content audit in `zip.js` (~10-15 LOC, defense-in-depth)
+- **CF-PHASE1-RETRY** (Medium, ~30 min next session after CF-DEPLOY-INFRA-HARDEN ships) — re-attempt `b6ec8a3` deploy with hardened infra. main is already at `b6ec8a3`, no code work needed.
+
+## Process learning
+
+Today's "compressed ceremony" for the deploy (chained merge → build → zip → deploy in one PowerShell invocation) worked for the CODE work but **failed for the DEPLOY work**. Future sessions: even for low-traffic / pre-launch services, deploy ceremony is full ceremony. Specifically:
+
+- Deploy script invariants must be verified before touching App Settings
+- Deploy failure recovery must NOT depend on the same script that just failed
+- Production rollback procedure should be a separate, well-tested runbook
+- App Settings changes that trigger restart should be batched with deploy success — not done speculatively before deploy
+
+This is a process learning, not a blame point. The script that broke today has worked many times. Edge cases bite eventually; the lesson is to build invariant checks before the script bites again.
+
+## Updated carry-forwards summary
+
+**New (this session):**
+
+- **CF-DEPLOY-INFRA-HARDEN** — High priority. Pre-deploy invariant check + Kudu poll bug + feature-probe verification + durable Oryx-disabled state. ~2-3h.
+- **CF-PHASE1-RETRY** — Medium. Re-attempt `b6ec8a3` after deploy infra hardens. ~30 min.
+
+**Unchanged from prior sessions:**
+
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
+- F1 /bulk fix
+- MCP rewire Phase 2 implementation (gated on Phase 1 shipping)
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+- `fn-cardhedge-comps` decommission (gated on rewire)
+
+## Next session entry point
+
+**Priority order:**
+
+1. **CF-DEPLOY-INFRA-HARDEN** (recommended first). Two consecutive deploy failures today exposed the deploy script as a known-broken instrument. Until it's hardened, every deploy is incident-class risk.
+2. **CF-PHASE1-RETRY** (after #1 ships). Re-attempt `b6ec8a3` with hardened deploy. Code work already complete.
+3. **MCP rewire Phase 2** (after #1 and #2 ship). Per prior plan.
+
+**Do NOT begin Phase 2 work or other code workstreams against the current broken deploy infra.** A working deploy script is the prerequisite gate.
+
+## Session summary (production incident closure)
+
+PR #119 was the correct PR — clean code, clean local smoke, two clean eyeball passes. The deploy *infrastructure* failed, not the PR. Production recovered to a known-good SHA; main is one commit ahead carrying the Phase 1 implementation safely; deploy infra audit captured as a follow-up workstream. Phase 1 is paused, not lost.
+
+**No more deploys today.** The next deploy will be the deploy-infra-hardening PR; Phase 1 retry follows that.
