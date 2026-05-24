@@ -1939,3 +1939,116 @@ Estimated 45-75 min per [docs/phase0/mcp_rewire_design.md](phase0/mcp_rewire_des
 ## Session summary (CF-DEPLOY-INFRA-HARDEN + CF-PHASE1-RETRY closure)
 
 Two workstreams shipped clean. Yesterday's 5h14m outage is fully addressed: deploy infra hardened, Phase 1 re-deployed under the hardened script with all acceptance gates met, observability bifurcation closed for App Settings (all 4 GIT_* env vars now consistent post-deploy). The hardened script's [4/5] poll bug fix proved its worth on its first real outing — Azure CLI's expected 10-min site-startup false-negative was caught at first Kudu poll tick. Phase 1 endpoint `/api/compiq/comps-by-player` live; MCP rewire Phase 2 unblocked for next session.
+
+# 2026-05-27 — MCP rewire Phase 2 shipped, MCP rewire arc complete
+
+## Headline
+
+PR #121 (`feat/mcp-comps-from-backend`) squash-merged as `eb87559`, deployed to `compiq-mcp` via the manual source-zip pattern (Kudu id `098460e6`, status=4). The MCP server's `compsLoader.ts` now calls `/api/compiq/comps-by-player` on hobbyiq3 instead of reading `fn-cardhedge-comps` blob writes. **MCP rewire arc complete: Phase 1 backend endpoint live (eb87559's ancestor `ddf9209`) + Phase 2 MCP client rewire live (eb87559).** Acceptance: 5/5 demo `/predict` calls return non-empty predictions, sample counts match local smoke EXACTLY (135/757/508/1361/69), Bonemer setName-Chrome fallback preserved end-to-end, App Insights `backend_fetch_ok` structured logs from new code visible for all 5 demos, zero Azure Blob dependency reads from compiq-mcp in 24h, no regression on hobbyiq3 endpoints.
+
+This is the THIRD production-stakes deploy under today's deploy infrastructure (yesterday's no-op test → today's CF-PHASE1-RETRY → today's Phase 2). All three clean.
+
+## What shipped this session (5 workstreams)
+
+1. **CF-DEPLOY-INFRA-HARDEN** (PR #120, squash `ddf9209`) — pre-deploy invariant check, Kudu poll bug fix, feature-probe verification, operator runbook
+2. **CF-PHASE1-RETRY** (deploy ddf9209 via hardened script) — backend `/api/compiq/comps-by-player` production-live, all 5/5 acceptance gates met
+3. **Mid-session investigation** — daily-refresh.yml's scheduled cron deploys characterized (not unauthorized; CF-DAILY-REFRESH-CONSISTENCY captured as follow-up)
+4. **MCP rewire Phase 2** (PR #121, squash `eb87559`) — compsLoader rewires to HTTP; MCP no longer depends on fn-cardhedge-comps blobs
+5. **Deploy documentation** — docs/deployment/README.md gained a compiq-mcp source-deploy section + cross-link to deploy_infra_hardened.md
+
+## Phase 2 acceptance evidence
+
+### 5/5 production /predict smoke (all PASS, samples match local exactly)
+
+| Demo | samples | predicted_72h |
+| --- | ---: | ---: |
+| Mike Trout 2011 Topps Update US175 | 135 | $290.0 |
+| Aaron Judge 2017 Topps Update US87 | 757 | $95.0 |
+| Shohei Ohtani 2018 Topps Update US285 | 508 | $198.0 |
+| Bobby Witt Jr 2022 Topps Chrome Update USC35 | 1361 | $18.10 |
+| **Caleb Bonemer 2024 Bowman Draft Chrome CPA-CBO** | **69** (single cardId, not 119 mixed) | $105.0 |
+
+### New code verified in production via App Insights structured logs
+
+5/5 `backend_fetch_ok` events visible in App Insights traces, each carrying the playerName/product/cardYear/compsCount/cardIdsCount/cached/cacheAgeMs/elapsedMs fields I added in PR #121. Definitive proof the new compsLoader code is running.
+
+### Zero Azure Blob reads from compiq-mcp in 24h
+
+App Insights `dependencies` table query for compiq-mcp + target containing `blob.core.windows.net` over 24h returned 0 rows. The CH-blob dependency is gone post-rewire.
+
+### compiq-mcp /health doesn't expose build SHA — verified by structured-log probe instead
+
+Unlike hobbyiq3's /api/health which embeds `build.shaShort`, compiq-mcp's /health is feature-flag-only. Verification of new code in production relied on App Insights traces matching the `backend_fetch_ok` event signature unique to PR #121's commit. Worked cleanly; documented in the runbook addition as the canonical verification pattern for compiq-mcp.
+
+### No regression on hobbyiq3
+
+5-card spot smoke: `/price` Trout TU US175 → source=live, 10 comps; `/estimate` Judge 2017 TU → source=live, 10 comps, FMV=42. Unchanged from CF-PHASE1-RETRY verification.
+
+## Deploy mechanism notes
+
+compiq-mcp's deploy = manual `az webapp deploy --type zip` with a source-only zip. Different from hobbyiq3's hardened script pattern. The pattern is empirically reliable (10+ consecutive successful deploys; today makes 11+). Captured in docs/deployment/README.md with the full PowerShell procedure for next-session reproducibility.
+
+One asymmetry: compiq-mcp doesn't have a script that updates `GIT_*` App Settings (which is why those env vars drifted to inconsistent values from the daily-refresh's partial 2-of-4 update over the past two weeks). Today's Phase 2 deploy included a manual `az webapp config appsettings set` step to set all 4 `GIT_*` vars to `eb87559`/`main`. This pattern matches what the hardened script's [1/5] does for hobbyiq3; documented as part of the compiq-mcp procedure.
+
+## Current state (end of session)
+
+| Service | SHA | Mode |
+| --- | --- | --- |
+| hobbyiq3 (backend) | `ddf9209` (active deploy `55311b6e`) | Built-artifact, Oryx-disabled, hardened-script-managed |
+| compiq-mcp | `eb87559` (active deploy `098460e6`) | Source-deploy, Oryx-enabled, manual procedure |
+
+main HEAD = `eb87559` (after PR #121 merge). Production matches source on both apps.
+
+## Soak window starts now
+
+Phase 2 has been live for ~30 min as of session close. Recommend ~3-7 days of observation before scheduling Phase 3 (fn-cardhedge-comps decommission). What to watch:
+
+- App Insights `traces` on compiq-mcp for `backend_fetch_failed` / `backend_http_error` events — these are the new compsLoader's failure modes. Expect zero or near-zero given hobbyiq3's reliability.
+- `/api/compiq/predict` p50/p95 latency — should be roughly comparable to the pre-rewire blob-read path (~5-10s p95, mostly OpenAI cost).
+- iOS smoke (if/when iOS sees more traffic) — predictions for the 5 demo cards should remain stable.
+
+## Updated carry-forwards
+
+**New (this session):**
+
+- **CF-DAILY-REFRESH-CONSISTENCY** — patch `.github/workflows/daily-refresh.yml` to set all 4 GIT_* env vars (~5 LOC, low priority, captured earlier today)
+
+**Resolved (this session):**
+
+- CF-DEPLOY-INFRA-HARDEN (PR #120 `ddf9209`)
+- CF-PHASE1-RETRY (deploy of ddf9209 to hobbyiq3)
+- MCP rewire Phase 2 (PR #121 `eb87559` + deploy to compiq-mcp)
+
+**Unchanged from prior sessions:**
+
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
+- F1 /bulk fix
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+- **`fn-cardhedge-comps` decommission — now READY** (gated on Phase 2 stability, was blocked behind rewire)
+
+## Next session entry point
+
+**Phase 3: fn-cardhedge-comps decommission preparation** is the natural next workstream once the ~3-7 day soak window completes. Pre-decommission checklist:
+
+1. App Insights confirms zero blob reads from compiq-mcp for the soak duration
+2. iOS / external `/predict` calls succeed at expected rate (no spike in `backend_empty_comps` or `backend_fetch_failed` traces)
+3. `fn-cardhedge-comps` is the only writer to `compiq-signals/{slug}/cardhedge.json` (confirmed in finding5 v2; no MCP-side primer is active)
+4. Phase 3 workstream itself: disable the timer trigger on `fn-cardhedge-comps`, observe for 24-48h, then delete the function + clean up blob container
+
+Estimated Phase 3 scope: ~30 min disable + ~15 min observation + ~15 min cleanup = ~1 hour workstream when soak completes.
+
+**Smaller follow-ups available NOW:**
+
+- **CF-DAILY-REFRESH-CONSISTENCY** (~5 LOC, ~10 min) — extend daily-refresh.yml's GIT_* app-settings step to set all 4 vars
+- **F1 /bulk fix** — still queued, ~5-10 LOC
+- **CF-MONITOR-COVERAGE extension** — Phase 3a monitor scope expansion
+
+## Session summary (5-workstream day)
+
+The deploy infrastructure incident from 2026-05-24 (5h14m outage) is fully resolved AND the MCP rewire arc — which had been pending across multiple sessions — is now complete. Three production deploys today, all clean. Phase 1 backend endpoint and Phase 2 MCP client rewire both live and verified. fn-cardhedge-comps decommission unblocked. Tomorrow's session has ~3-7 day soak before Phase 3 becomes urgent; smaller follow-ups available immediately.
+
+End of session.

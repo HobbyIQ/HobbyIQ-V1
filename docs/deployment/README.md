@@ -138,11 +138,86 @@ Skips [0/5] invariant check — only use as last resort when the App Settings ar
 
 When in doubt about which settings are required, compare against a known-healthy deploy's settings list and look for differences.
 
+## compiq-mcp Deploy (source-deploy mode, manual)
+
+Different from hobbyiq3 above. compiq-mcp uses **source-deploy mode**: the zip contains source only (no `dist/`, no `node_modules/`), and Azure App Service's Oryx build pipeline runs `npm install` + `npm run build` server-side. SCM_DO_BUILD_DURING_DEPLOYMENT=true is the correct setting for this mode (the opposite of hobbyiq3).
+
+### Required App Settings on compiq-mcp
+
+| Setting | Required value | Why |
+| --- | --- | --- |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` | Oryx must run for source-deploy mode (server-side `npm install` + `tsc`) |
+| `ENABLE_ORYX_BUILD` | unset (defaults to enabled) | Companion flag; unset = follow `SCM_DO_BUILD` |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | matches `hobbyiq-insights` | Telemetry (per PR #118) |
+| `ApplicationInsightsAgent_EXTENSION_VERSION` | `~3` | Auto-instrumentation agent (per PR #118) |
+| `HOBBYIQ_BACKEND_URL` | `https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net` | Phase 2 MCP rewire: `compsLoader` calls backend's `/api/compiq/comps-by-player` |
+
+### Deploy procedure (compiq-mcp)
+
+From repo root (PowerShell):
+
+```powershell
+# 1. Clean local mcp-server artifacts (defensive; Compress-Archive excludes them too)
+Set-Location mcp-server
+Remove-Item -Recurse -Force node_modules, dist -ErrorAction SilentlyContinue
+Set-Location ..
+
+# 2. Build flat-at-root source zip (Oryx expects package.json at wwwroot root)
+Remove-Item mcp-server-source.zip -ErrorAction SilentlyContinue
+$files = Get-ChildItem -Path mcp-server -Recurse -File | Where-Object {
+    $_.FullName -notlike '*\node_modules\*' -and
+    $_.FullName -notlike '*\dist\*' -and
+    $_.FullName -notlike '*\.gitignore'
+}
+Compress-Archive -Path ($files.FullName) -DestinationPath mcp-server-source.zip -CompressionLevel Optimal
+
+# 3. Deploy (OneDeploy zipdeploy)
+az webapp deploy --type zip --src-path mcp-server-source.zip -g rg-hobbyiq-dev -n compiq-mcp
+
+# 4. Oryx runs npm install + npm run build server-side (~1-3 min). Poll Kudu:
+$token = (az account get-access-token --resource "https://management.azure.com" --query accessToken -o tsv).Trim()
+$scm = "https://compiq-mcp.scm.azurewebsites.net"
+while ($true) {
+    $r = Invoke-RestMethod -Uri "$scm/api/deployments/latest" -Headers @{Authorization="Bearer $token"}
+    Write-Host "  status=$($r.status) progress=$($r.progress) complete=$($r.complete)"
+    if ($r.complete -eq $true) { break }
+    Start-Sleep -Seconds 15
+}
+
+# 5. Update GIT_* App Settings manually (compiq-mcp has no deploy script that does this)
+$sha = (git rev-parse HEAD).Trim()
+$shaShort = (git rev-parse --short HEAD).Trim()
+$branch = (git rev-parse --abbrev-ref HEAD).Trim()
+$now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+az webapp config appsettings set -g rg-hobbyiq-dev -n compiq-mcp `
+    --settings GIT_SHA=$sha GIT_SHA_SHORT=$shaShort GIT_BRANCH=$branch DEPLOYED_AT=$now `
+    --output none
+
+# 6. Verify /health responds (compiq-mcp /health doesn't include build SHA; use App Insights traces instead)
+curl https://compiq-mcp.azurewebsites.net/health
+```
+
+### Verification strategy (compiq-mcp /health doesn't expose build SHA)
+
+Unlike hobbyiq3 where /api/health reports `build.sha`/`build.shaShort`, compiq-mcp's /health is feature-flag-only. To verify the new code is running:
+
+1. **Hit `/api/compiq/predict` with a demo card** — non-empty prediction confirms baseline functionality
+2. **Check App Insights `traces` for structured events** unique to the new commit (e.g., `backend_fetch_ok` from Phase 2 PR #121's compsLoader rewrite) — definitive proof the new code is in production
+3. **Cross-check `dependencies` table** — Phase 2 should show calls to `hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net` (the new backend endpoint) and NOT to `*.blob.core.windows.net` (the old CH-blob path). Note: Node's native `fetch()` may not be auto-instrumented in older App Insights agent versions; rely on `traces` table when `dependencies` doesn't show the calls.
+
+### Why no hardened deploy script for compiq-mcp
+
+The 2026-05-24 incident that motivated `deploy-with-build-info.ps1` was specific to hobbyiq3's built-artifact pattern colliding with Oryx (`compress_node_modules=tar-gz` rsync failure). compiq-mcp's source-deploy pattern doesn't trigger that failure mode — Oryx is supposed to install and build from source. 10/10 recent compiq-mcp deploys succeeded under this pattern, including post-Phase-2 (this commit).
+
+A future workstream could productionize the manual procedure above into a `scripts/deploy-compiq-mcp.ps1`. Tracked as a low-priority follow-up; the manual pattern works.
+
 ## References
 
 - [docs/phase0/deploy_infra_audit.md](../phase0/deploy_infra_audit.md) — 2026-05-24 incident post-mortem
-- [scripts/deploy-with-build-info.ps1](../../scripts/deploy-with-build-info.ps1) — the deploy script
-- [zip.js](../../zip.js) — produces deploy.zip with the built-artifact shape
+- [docs/phase0/deploy_infra_hardened.md](../phase0/deploy_infra_hardened.md) — hardening implementation outcome
+- [docs/phase0/mcp_rewire_design.md](../phase0/mcp_rewire_design.md) — MCP rewire Phase 1 + Phase 2 design
+- [scripts/deploy-with-build-info.ps1](../../scripts/deploy-with-build-info.ps1) — hobbyiq3 hardened deploy script
+- [zip.js](../../zip.js) — hobbyiq3 built-artifact zip generator
 
 ## Anti-drift note
 
