@@ -41,16 +41,119 @@ import type {
 } from "../pricing.js";
 
 // Runtime imports (pricing.ts pulls openai/cosmos) are dynamic — see loadDeps().
+// compsLoader.ts is INTENTIONALLY NOT imported: it doesn't forward grade params
+// to the backend (sixth framing inversion of this arc — captured as a separate
+// finding). The backtest uses fetchCompsForBacktest() below which calls the
+// backend directly with gradeCompany + gradeValue so ground truth is
+// grade-accurate.
 type PricingModule = typeof import("../pricing.js");
-type CompsLoaderModule = typeof import("../compsLoader.js");
 
 let pricing: PricingModule | null = null;
-let compsLoader: CompsLoaderModule | null = null;
 
-async function loadDeps(): Promise<{ pricing: PricingModule; compsLoader: CompsLoaderModule }> {
+async function loadDeps(): Promise<{ pricing: PricingModule }> {
   if (!pricing) pricing = await import("../pricing.js");
-  if (!compsLoader) compsLoader = await import("../compsLoader.js");
-  return { pricing, compsLoader };
+  return { pricing };
+}
+
+// ─── Grade parsing + backend fetcher (bypasses compsLoader's lossy path) ─────
+
+interface ParsedGrade {
+  gradeCompany?: string;
+  gradeValue?: string;
+}
+
+// Convert cohort `grade` field ("raw" | "PSA 10" | "BGS 9.5" | ...) into the
+// backend endpoint's gradeCompany + gradeValue query-param shape. The backend's
+// translateResponse uses gradeCompany to dispatch raw vs graded paths and
+// gradeValue to narrow within a graded company.
+function parseGradeForBackend(grade?: string): ParsedGrade {
+  if (!grade) return {};
+  const trimmed = grade.trim();
+  if (!trimmed) return {};
+  const low = trimmed.toLowerCase();
+  if (low === "raw" || low === "ungraded" || low === "none") return {};
+  // Match "PSA 10" / "BGS 9.5" / "SGC 9" / "CGC 10" — company + numeric value
+  const m = trimmed.match(/^([A-Za-z]+)\s+(\d+(?:\.\d+)?)$/);
+  if (m) return { gradeCompany: m[1].toUpperCase(), gradeValue: m[2] };
+  // Unknown format — log via the caller; default to raw path
+  return {};
+}
+
+interface BackendCompsByPlayerResponse {
+  player: string;
+  product: string;
+  cardYear?: number;
+  cardIds: string[];
+  comps: Array<{
+    cardId: string;
+    price: number;
+    date: string;
+    title: string;
+    source: string;
+  }>;
+  cached: boolean;
+  cacheAge?: number;
+  warnings: string[];
+}
+
+// Direct backend fetcher with grade-filter pass-through. Returns the
+// translated comps already filtered by gradeCompany/gradeValue server-side
+// (see backend/src/services/compiq/cardsight.translator.ts §5.3 ADR).
+// Each returned comp's `grade` field reflects the requested grade for
+// downstream rendering — the underlying sales are server-filtered.
+async function fetchCompsForBacktest(
+  player: string,
+  product: string,
+  year: number | undefined,
+  gradeLabel: string | undefined,
+): Promise<CardComp[]> {
+  const backendUrl =
+    process.env.HOBBYIQ_BACKEND_URL?.trim() ??
+    process.env.COMPIQ_BACKEND_URL?.trim() ??
+    "";
+  if (!backendUrl) {
+    throw new Error("fetchCompsForBacktest: HOBBYIQ_BACKEND_URL not set");
+  }
+  const params = new URLSearchParams({
+    playerName: player.trim(),
+    product: product.trim(),
+  });
+  if (year != null && Number.isFinite(year)) params.set("cardYear", String(year));
+  const parsed = parseGradeForBackend(gradeLabel);
+  if (parsed.gradeCompany) params.set("gradeCompany", parsed.gradeCompany);
+  if (parsed.gradeValue) params.set("gradeValue", parsed.gradeValue);
+
+  const url = `${backendUrl.replace(/\/$/, "")}/api/compiq/comps-by-player?${params}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      console.warn(`[fetchCompsForBacktest] HTTP ${res.status} for ${player}|${product}|${year}|grade=${gradeLabel ?? "raw"}`);
+      return [];
+    }
+    const body = (await res.json()) as BackendCompsByPlayerResponse;
+    if (!Array.isArray(body?.comps) || body.comps.length === 0) {
+      console.warn(`[fetchCompsForBacktest] empty comps for ${player}|${product}|${year}|grade=${gradeLabel ?? "raw"} (cardIds=${body?.cardIds?.length ?? 0}, warnings=${JSON.stringify(body?.warnings ?? [])})`);
+      return [];
+    }
+    return body.comps.map((c) => ({
+      price: Number(c.price),
+      date: c.date,
+      grade: gradeLabel ?? "raw",
+      source: c.source ?? "cardsight",
+      title: c.title,
+    }));
+  } catch (err) {
+    console.warn(`[fetchCompsForBacktest] failed for ${player}|${product}|${year}|grade=${gradeLabel ?? "raw"}: ${(err as Error).message}`);
+    return [];
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -383,18 +486,28 @@ interface CohortGroup {
   player: string;
   product: string;
   year: number;
+  // Grade label included so each grade variant fetches its own grade-filtered
+  // comps from the backend. Without this, ground-truth medians mix raw + PSA
+  // sales (e.g., raw card's "actual" = PSA 10 median).
+  grade?: string;
   members: Array<{ entry: CohortEntry; index: number }>;
 }
 
 function groupCohort(cohort: CohortEntry[]): CohortGroup[] {
   const map = new Map<string, CohortGroup>();
   cohort.forEach((entry, index) => {
-    const key = `${entry.playerName}|${entry.set}|${entry.year}`;
+    // Normalize grade for grouping: undefined / "" / "raw" all collapse to
+    // "__raw__" so they share a fetch. Graded variants ("PSA 10") get their
+    // own key.
+    const gradeKey = (entry.grade ?? "").trim().toLowerCase() || "raw";
+    const normGrade = gradeKey === "raw" ? "__raw__" : entry.grade;
+    const key = `${entry.playerName}|${entry.set}|${entry.year}|${normGrade}`;
     if (!map.has(key)) {
       map.set(key, {
         player: entry.playerName,
         product: entry.set,
         year: entry.year,
+        grade: entry.grade,
         members: [],
       });
     }
@@ -815,19 +928,27 @@ async function main(): Promise<void> {
   const groups = groupCohort(cards);
   console.log(`[backtest] cohort-groups (player+product+year): ${groups.length}`);
 
-  // Fetch comps per group once, then filter per-card
+  // Fetch comps per (player, product, year, grade) group — grade-aware so
+  // ground-truth medians for raw cards aren't contaminated by PSA 10 sales
+  // (and vice versa). Bypasses compsLoader.fetchPlayerComps because that
+  // helper doesn't forward grade params to the backend (production gap
+  // captured as a separate finding).
   const groupComps = new Map<string, CardComp[]>();
+  const groupKey = (g: CohortGroup) => {
+    const gradeKey = (g.grade ?? "").trim().toLowerCase() || "raw";
+    const normGrade = gradeKey === "raw" ? "__raw__" : g.grade;
+    return `${g.player}|${g.product}|${g.year}|${normGrade}`;
+  };
   for (const g of groups) {
-    const key = `${g.player}|${g.product}|${g.year}`;
+    const key = groupKey(g);
     if (opts.dryRun) {
-      console.log(`[backtest] DRY: would fetchPlayerComps(${g.player}, ${g.product}, year=${g.year})`);
+      console.log(`[backtest] DRY: would fetchCompsForBacktest(${g.player}, ${g.product}, year=${g.year}, grade=${g.grade ?? "raw"})`);
       groupComps.set(key, []);
       continue;
     }
     try {
-      console.log(`[backtest] fetching comps: ${g.player} | ${g.product} | ${g.year}`);
-      const { compsLoader: cl } = await loadDeps();
-      const comps = await cl.fetchPlayerComps(g.player, g.product, { cardYear: g.year });
+      console.log(`[backtest] fetching comps: ${g.player} | ${g.product} | ${g.year} | grade=${g.grade ?? "raw"}`);
+      const comps = await fetchCompsForBacktest(g.player, g.product, g.year, g.grade);
       groupComps.set(key, comps);
       console.log(`  → ${comps.length} comps returned`);
     } catch (err) {
@@ -839,7 +960,7 @@ async function main(): Promise<void> {
   // Per-card pipeline
   const results: PerCardResult[] = [];
   for (const g of groups) {
-    const key = `${g.player}|${g.product}|${g.year}`;
+    const key = groupKey(g);
     const allComps = groupComps.get(key) ?? [];
     const inputComps = filterPredictionInputComps(allComps, asOf);
     const gtComps = filterGroundTruthComps(allComps, asOf);
