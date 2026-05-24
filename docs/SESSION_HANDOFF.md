@@ -2906,7 +2906,13 @@ only after methodology is locked.
 | CF-COMPSLOADER-GRADE-FLOW | ✅ shipped | 4d4bd8c (PR #122), deployed |
 | CF-PHASE4B-BACKTEST WS2 | ✅ shipped | 1f8a528 |
 | CF-HEALTH-SIGNAL-URL-CHECK | ✅ shipped | c30685e (PR #123), deployed to compiq-mcp. Post-deploy `/health` confirms `signal_url.status=URL_OK` (status_code=400, latency=893ms) and `floor_url.status=URL_OK` (status_code=400, latency=765ms). Today's 404 misconfig would have surfaced as URL_NOT_FOUND. 21 unit tests in scripts/healthChecks.test.ts. |
-| CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
+| CF-SIGNAL-SILENT-FAILURE-AUDIT | ✅ shipped | `docs/phase0/signal_silent_failure_audit.md`. 26 `fetch()` call sites cataloged (5 mcp + ~21 backend); ALL bypass App Insights `dependencies` auto-instrumentation. 2 HIGH (mcp `fetchSignals` + `fetchPriceFloor` — prediction-path silent fallbacks). 5-6 MEDIUM. Rest LOW or anti-findings. Produced 4 new candidate CFs below. |
+| **CF-FETCH-SIGNAL-FLOOR-TELEMETRY** | NEW, open, **HIGH** | ~30-45 min. Audit's load-bearing recommendation. Add `trackDependency` + `trackEvent` + structured `console.warn` to fetchSignals + fetchPriceFloor in mcp-server/pricing.ts. Closes the 2 HIGH-severity findings. |
+| **CF-EBAY-IDENTITY-LOGGING** | NEW, open, MEDIUM | ~10 min. backend/src/services/ebay/ebayAuth.service.ts:136 uses `console.log` instead of structured `console.warn` when Identity API fails. Trivial upgrade. |
+| **CF-PREDICTIONLOG-WRITE-DETECT** | NEW, open, MEDIUM | ~15-20 min, deferred. predictionLog.ts fire-and-forget Cosmos writes have no retry/backfill. Defer until prediction volume >100/day. |
+| **CF-FETCH-TELEMETRY-WRAPPER** | NEW, open, LOW (optional) | ~2-4h. Systemic `trackedFetch()` wrapper. Only justified if cluster pattern recurs in a future incident. |
+| **CF-EBAY-FETCH-AUDIT** | NEW, open, MEDIUM-LOW, deferred | ~60-90 min. Per-line audit of eBay fetch paths (listing, identity) — sample-only in today's audit. Defer until eBay listing incident. |
+| **CF-AZURE-FUNCTIONS-SILENT-FAIL-AUDIT** | NEW, open, LOW, deferred | ~60-90 min. Python silent-failure audit for compiq-functions/. Defer until function-level incident. |
 | CF-BACKTEST-COSMOS-GRADE-FLOW | ✅ shipped | b55f1ec — multi-line (not the originally-spec'd 1-liner; pre-commit trace surfaced regression risk; mirrors 73cae0d pattern) |
 | CF-DAILY-REFRESH-CONSISTENCY | ✅ shipped | edf53da — daily-refresh.yml now sets the full GIT_SHA / GIT_SHA_SHORT / GIT_BRANCH / DEPLOYED_AT quad; effect visible at next cron fire (~5-6 AM ET window) |
 | CF-BACKTEST-PARALLEL-FILTER | open | ~60 min |
