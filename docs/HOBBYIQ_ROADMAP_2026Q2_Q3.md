@@ -340,3 +340,109 @@ When a phase completes: update phase header with `**COMPLETE** (date, commit SHA
 This is the plan. Execute, measure, adjust, ship.
 
 End of roadmap.
+
+## Addendum 2026-05-27 — Phase target rebaseline post-execution session
+
+Original roadmap drafted 2026-05-21 against pre-execution assumptions. Today's session output + multiple framing inversions justify formal rebaseline.
+
+### Phases shipped or near-complete
+
+- **Phase 1 (Stop the bleeding):** COMPLETE today — compsByPlayer endpoint shipped + grade-flow fix (PR #122, 4d4bd8c).
+- **Phase 2 (Replace router bypasses):** COMPLETE today — MCP rewire Phase 2 (the compsLoader now routes through `/api/compiq/comps-by-player` and forwards `gradeCompany`/`gradeValue` to the backend; production /predict path is grade-correct).
+- **Phase 3 (Decommission CH):** PARTIAL → COMPLETE in 1-2 sessions. Remaining: CF-CARDHEDGE-CLIENT-DELETE (2-3h), CF-FN-CARDHEDGE-DISABLE (bundled).
+- **Phase 4a (MCP cache):** PARTIAL → COMPLETE in 1 focused session. Remaining: dashboard, formal invalidation, stale-flag (vs current implicit cache via 6h Redis TTL in `compsByPlayer.service.ts`).
+- **Phase 4b (Signal integration):** foundation built (framing-inversion discovery), URL fixed (today — `AZURE_SIGNAL_FUNCTION_URL` corrected from `/api/serve-signals` 404 → `/api/signals` 200), backtest methodology in progress (Workstreams 2-3 of the current Windows queue: `--repeats` multi-run aggregation + `temperature=0` determinism). Estimated complete: 1-2 sessions after methodology stabilizes + credentials repaired.
+
+### Rebaselined target horizons
+
+- **Original:** End of July 2026 — CompIQ formalization + ERP reconciliation
+- **Rebaselined:** Mid-June 2026 — Phases 1-4b complete, signal value validated (**4-6 weeks earlier than original**)
+
+- **Original:** Mid-September 2026 — ML moat realized (Phase 4e)
+- **Rebaselined:** Late August → Early September 2026 — narrowed but uncertain (**1-3 weeks earlier than original**; Phase 4c/4d greenfield work still gates this)
+
+### Week-by-week schedule (rebaselined as-of 2026-05-27)
+
+| Week of | Workstreams | Phase milestone |
+|---|---|---|
+| 2026-05-26 (current) | Windows queue WS2-WS3: CF-BACKTEST-REPEATS + CF-BACKTEST-DETERMINISTIC; CF-CARDHEDGE-CLIENT-DELETE prep; iOS bugs/D.4 | Phase 4b methodology stabilizing; Phase 3 cleanup begins |
+| 2026-06-02 | Phase 4b credential repair (if backtest validates) OR CF-PHASE4B-PROMPT-AUDIT (if backtest neutral); Phase 3 cleanup completion; Phase 4a dashboard | Phase 3 + Phase 4a COMPLETE |
+| 2026-06-09 | Phase 4b validation final pass | Phase 4b COMPLETE |
+| **2026-06-16** | **Mid-June milestone — Phases 1-4b complete (REBASELINED HIGH-CONFIDENCE TARGET)** | Phase 4b validation milestone; iOS catch-up |
+| 2026-06-23 | Phase 4c kickoff — AutoML setup, training data pipeline | Phase 4c begins |
+| 2026-06-30 | Phase 4c model training + evaluation; iOS PR E reconciliation UX | Phase 4c mid-flight |
+| 2026-07-07 | Phase 4c complete, Phase 4d kickoff | Phase 4c COMPLETE → Phase 4d begins |
+| 2026-07-14 | Phase 4d ML serving infrastructure; iOS expense tracking implementation | Phase 4d mid-flight |
+| 2026-07-21 | Phase 4d A/B harness + outcome tracking expansion | Phase 4d advancing |
+| **2026-07-28** | **End of July milestone — CompIQ formalization + ERP reconciliation (HIGH CONFIDENCE; 0-2 weeks early vs original)** | Phase 4d production-serving milestone |
+| 2026-08-04 | Phase 4d production observation; iOS pricing × portfolio integration | Phase 4d settling |
+| 2026-08-11 | Phase 4d COMPLETE; Phase 4e begins | Phase 4d → Phase 4e |
+| 2026-08-18 | Phase 4e iteration + competitive analysis | Phase 4e mid-flight |
+| 2026-08-25 → 2026-09-08 | Phase 4e production observation + iteration cycles | **ML moat realized milestone (MODERATE CONFIDENCE, late-Aug to early-Sep)** |
+
+### Phase 4c-4e detail (greenfield, unchanged scope)
+
+- **Phase 4c — ML training pipeline** (2 weeks focused, per original)
+  - Cannot compress: AutoML setup, training data pipeline, model evaluation
+  - Earliest start: after Phase 4b validation complete (mid-June)
+  - Earliest complete: end of June 2026
+- **Phase 4d — ML serving production traffic** (4 weeks per original)
+  - Cannot compress significantly: serving infrastructure, A/B testing harness, outcome tracking expansion, rollback safety nets
+  - Earliest start: early July 2026
+  - Earliest complete: end of July 2026
+- **Phase 4e — ML moat realized** (3 weeks per original)
+  - Cannot compress: requires production observation, iteration cycles, competitive analysis documentation
+  - Earliest start: late July 2026
+  - Earliest complete: mid-August to early September 2026
+
+### iOS workstream parallel track
+
+- **Original:** Weeks 4-16 parallel, paced by solo capacity
+- **Rebaselined:** today's session shipped 4 iOS commits (Bug 2 + Bug 4 + ITEM_SOLD consumer + expense tracking design). Remaining: Bug 3 (device-test), ITEM_SOLD remaining 40%, D.4 completion, PR E reconciliation UX, expense tracking implementation.
+- **Realistic iOS pace:** 1-2 focused sessions per major workstream
+  - Total iOS remaining: ~6-8 focused sessions
+  - Calendar: 3-4 weeks at moderate pace, 1-2 weeks if dedicated focus
+- **Distribution across schedule:** late May - June (bugs + ITEM_SOLD + D.4); July - August (PR E reconciliation + expense tracking); August - September (pricing × portfolio integration)
+
+### What this rebaseline assumes
+
+- **Sustainable pace going forward.** Today's session shipped 17 commits + 8 carry-forwards across multiple workstreams. That is NOT a sustainable daily cadence — it was a single-day burst with the operator on-call. Forward scheduling assumes 1-2 focused sessions per major workstream, not multi-workstream days.
+- **Solo capacity bounded.** No contractor / pair-programmer brought in (per original roadmap's "Outside help" section). All workstreams sequenced through one operator.
+- **Framing-inversion gains don't recur in 4c-4e greenfield.** Today's compressions came from discovering pre-existing infrastructure (Phase 4b signal integration was already wired; backtest harness already existed; compsLoader already had partial grade-flow). Phase 4c-4e are NET-NEW work — AutoML training pipelines, ML serving infrastructure, outcome tracking expansion. No "already-built" surprise expected to compress those phases.
+- **Production incidents bounded.** Today's velocity assumes no major production incident pulls operator focus away. One serious incident (e.g., HobbyIQ3 outage requiring full investigation) could absorb 1-2 days and push every dependent milestone back by that amount.
+- **Phase 4c-4e estimates remain conservative.** Original 2-4-3 week estimates kept as-is despite today's compression on earlier phases. ML work has its own pace; don't extrapolate.
+
+### Risk factors that could push timeline back
+
+1. **Phase 4b backtest methodology proves more complex** than current Workstreams 2-3 — e.g., per-card noise reduction doesn't stabilize even with `--repeats` + `temperature=0`, forcing N=100 cohort expansion before any per-signal attribution can land.
+2. **Phase 4c AutoML experiments don't justify productionization on first iteration** — model accuracy < production heuristic, or training data sparsity hits learning bound. Iteration cycle adds 1-2 weeks per pivot.
+3. **Phase 4d ML serving surfaces production incidents** — today's velocity assumes incidents bounded. ML serving introduces new failure modes (model drift, prediction skew, latency surges) that may not be caught in pre-prod and require operator triage.
+4. **iOS workstream queue grows** — D.4 surfaces unexpected scope, PR E reconciliation UX proves larger than estimated, expense tracking implementation needs UX iteration.
+5. **Solo capacity constraints** — today's pace not sustainable daily; sustained illness, travel, or competing priorities can absorb a week without progress.
+
+### Risk factors that could pull timeline forward
+
+1. **Phase 4c framing inversion** (some training pipeline infrastructure already exists somewhere — pattern recurring today). Today's session surfaced framing inversions in 6 separate places; not impossible that 4c has analogous "we already started this" surprises.
+2. **Phase 4d uses existing Azure ML quickstart templates** rather than greenfield infrastructure. If the SDK + templates compose cleanly, several weeks of plumbing collapse to days of configuration.
+3. **iOS workstream consolidation** — some items merge or overlap rather than sequence (e.g., PR E reconciliation UX and expense tracking share a UX layer that can be built once).
+
+### Comparison to original
+
+| Milestone | Original (2026-05-21 roadmap) | Rebaselined (2026-05-27) | Delta | Confidence |
+|---|---|---|---|---|
+| Phases 1-4b complete | end of June 2026 | mid-June 2026 | 2 weeks early | HIGH |
+| CompIQ formalization + ERP | end of July 2026 | end of July 2026 (max 2 weeks early) | 0-2 weeks early | **HIGH** |
+| ML moat realized (Phase 4e) | mid-September 2026 | late August → early September 2026 | 1-3 weeks early | **MODERATE** |
+
+### What to commit explicitly
+
+- **End of July target — CompIQ formalization + ERP: HIGH CONFIDENCE.** Today's gains banked. Greenfield ML work bounded by Phase 4d's 4-week estimate which starts on-time per rebaselined schedule.
+- **Mid-September target — ML moat realized: MODERATE CONFIDENCE.** Greenfield ML work (Phase 4c-4e) is the gating factor — not compressed by today's gains. Earliest realistic landing is late August; mid-September retains buffer for the 5 risk factors above. If any 2 of those fire, target slips to original mid-September timeline.
+
+### Anti-drift note (for next planner)
+
+This rebaseline is OPTIMISTIC about phases 1-4b (today's framing-inversion gains banked) and CONSERVATIVE about phases 4c-4e (greenfield, no surprises expected). The HIGH-confidence end-of-July target rests on Phase 4c starting on time mid-June — if Phase 4b backtest methodology slips past mid-June, Phase 4c slips with it, and end-of-July becomes MODERATE rather than HIGH confidence.
+
+Re-check this rebaseline at end of June 2026. If Phase 4b is complete + Phase 4c has begun: HIGH confidence holds. If Phase 4b is still in flight: re-baseline again with a 1-2 week shift.
+
+End of addendum 2026-05-27.
