@@ -2907,7 +2907,7 @@ only after methodology is locked.
 | CF-PHASE4B-BACKTEST WS2 | ✅ shipped | 1f8a528 |
 | CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
 | CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
-| CF-BACKTEST-COSMOS-GRADE-FLOW | open | ~5 min |
+| CF-BACKTEST-COSMOS-GRADE-FLOW | ✅ shipped | b55f1ec — multi-line (not the originally-spec'd 1-liner; pre-commit trace surfaced regression risk; mirrors 73cae0d pattern) |
 | CF-BACKTEST-PARALLEL-FILTER | open | ~60 min |
 | CF-PHASE4B-BACKTEST.2 (cohort expansion) | open, weakened case | user decision per above |
 | **CF-BACKTEST-REPEATS** | NEW, open | option 1 above; ~10 min code + per-run cost |
