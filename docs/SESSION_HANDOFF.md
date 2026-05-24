@@ -2994,3 +2994,9 @@ Now that backend D.6 (ITEM_SOLD ledger) is live (PR #100), iOS priorities shift:
 - **Scope**: Single file (`InventoryIQView.swift`), 9 lines moved, no logic change.
 - **Build verification**: Swift compilation clean. Xcode `actool` plugin failure is a pre-existing environment issue (unrelated to code change).
 - **Manual test needed**: Verify card tap presents detail sheet, add-card button still works.
+
+---
+
+### Roadmap rebaseline — see docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md addendum 2026-05-27
+
+Phase target rebaseline committed (63d23a8). Today's session output + framing inversions compressed Phases 1-4b significantly. Phase 4c-4e greenfield work unchanged. End-of-July ERP target HIGH confidence, mid-September moat target MODERATE confidence. Next-session priority picks should reference rebaseline alongside original roadmap.
