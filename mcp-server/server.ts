@@ -46,6 +46,7 @@ import { fetchPlayerComps } from "./compsLoader.js";
 import { primePlayerComps, lookupCardImage } from "./cardhedge.js";
 import { logPrediction } from "./predictionLog.js";
 import { runBacktest, backtestSummary } from "./backtest.js";
+import { checkUrlReachable, isUrlHealthy } from "./healthChecks.js";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const app = express();
@@ -115,17 +116,32 @@ app.post("/api/compiq/image", async (req: Request, res: Response) => {
   }
 });
 
-app.get("/health", (_req: Request, res: Response) => {
+app.get("/health", async (_req: Request, res: Response) => {
   const hasAzureOpenAI = Boolean(
     process.env.AZURE_OPENAI_ENDPOINT &&
       (process.env.AZURE_OPENAI_API_KEY || process.env.AZURE_OPENAI_KEY) &&
       process.env.AZURE_OPENAI_DEPLOYMENT
   );
+  // CF-HEALTH-SIGNAL-URL-CHECK: real URL resolution probes for URL-based
+  // dependencies (vs the prior env-var-presence-only check that masked the
+  // 2026-05-24 signal URL misconfiguration for an unknown duration). Probes
+  // run in parallel so /health total latency is max(probes), not sum.
+  const [signalUrl, floorUrl] = await Promise.all([
+    checkUrlReachable("AZURE_SIGNAL_FUNCTION_URL", "AZURE_SIGNAL_FUNCTION_KEY"),
+    checkUrlReachable("AZURE_PRICE_FLOOR_URL", "AZURE_PRICE_FLOOR_KEY"),
+  ]);
   res.json({
     ok: true,
     service: "compiq-mcp",
-    has_signal_url: Boolean(process.env.AZURE_SIGNAL_FUNCTION_URL),
-    has_floor_url: Boolean(process.env.AZURE_PRICE_FLOOR_URL),
+    // Backward-compat booleans (true iff URL_OK per real probe — was
+    // previously env-var-presence; semantics tightened per CF-HEALTH-
+    // SIGNAL-URL-CHECK so a misconfigured URL no longer reports true).
+    has_signal_url: isUrlHealthy(signalUrl),
+    has_floor_url: isUrlHealthy(floorUrl),
+    // Per-URL detail (new)
+    signal_url: signalUrl,
+    floor_url: floorUrl,
+    // Non-URL deps — env-var-presence check is appropriate for credentials
     has_blob_conn: Boolean(process.env.AZURE_BLOB_CONNECTION_STRING),
     has_openai_key: Boolean(process.env.OPENAI_API_KEY),
     has_azure_openai: hasAzureOpenAI,
