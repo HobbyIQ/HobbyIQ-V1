@@ -1,0 +1,55 @@
+{
+  "captured_at": "2026-05-24T18:03:02.050Z",
+  "endpoint": "https://compiq-mcp.azurewebsites.net/api/compiq/predict",
+  "scope": "pre-deploy baseline for CF-COMPSLOADER-GRADE-FLOW (production currently grade-broken)",
+  "psa10": {
+    "query_grade": "PSA 10",
+    "predicted_price_72h": 392.53,
+    "predicted_price_7d": 359.19,
+    "predicted_direction": "falling",
+    "confidence": 55,
+    "anchor_price": 309,
+    "comp_range": {
+      "low": 105,
+      "median": 309,
+      "high": 2781.1
+    },
+    "comp_count": 135,
+    "comp_grades_seen": [
+      "PSA 10"
+    ],
+    "comp_price_min": 105,
+    "comp_price_max": 2781.1,
+    "comp_price_median": 309
+  },
+  "raw": {
+    "query_grade": "raw",
+    "predicted_price_72h": 309,
+    "predicted_price_7d": 321,
+    "predicted_direction": "rising",
+    "confidence": 55,
+    "anchor_price": 309,
+    "comp_range": {
+      "low": 105,
+      "median": 309,
+      "high": 2781.1
+    },
+    "comp_count": 135,
+    "comp_grades_seen": [
+      "raw"
+    ],
+    "comp_price_min": 105,
+    "comp_price_max": 2781.1,
+    "comp_price_median": 309
+  },
+  "observations": {
+    "psa10_vs_raw_72h_diff": 83.52999999999997,
+    "psa10_vs_raw_7d_diff": 38.19,
+    "psa10_grade_set": [
+      "PSA 10"
+    ],
+    "raw_grade_set": [
+      "raw"
+    ]
+  }
+}
