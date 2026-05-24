@@ -1,0 +1,73 @@
+{
+  "captured_at": "2026-05-24T18:19:38.422Z",
+  "endpoint": "https://compiq-mcp.azurewebsites.net/api/compiq/predict",
+  "scope": "post-deploy smoke for CF-COMPSLOADER-GRADE-FLOW",
+  "deployed_sha": "4d4bd8c (squash of 4e39231)",
+  "baseline_file": "docs/phase0/compsloader_grade_flow_baseline_20260524-180248.json",
+  "psa10": {
+    "query_grade": "PSA 10",
+    "predicted_price_72h": 1290,
+    "predicted_price_7d": 1210,
+    "predicted_direction": "stable",
+    "confidence": 55,
+    "anchor_price": 1000,
+    "comp_range": {
+      "low": 177.5,
+      "median": 1000,
+      "high": 5255
+    },
+    "comp_count": 186,
+    "comp_grades_seen": [
+      "PSA 10"
+    ],
+    "comp_price_min": 177.5,
+    "comp_price_max": 5255,
+    "comp_price_median": 1000
+  },
+  "raw": {
+    "query_grade": "raw",
+    "predicted_price_72h": 434.65,
+    "predicted_price_7d": 399,
+    "predicted_direction": "stable",
+    "confidence": 55,
+    "anchor_price": 309,
+    "comp_range": {
+      "low": 105,
+      "median": 309,
+      "high": 2781.1
+    },
+    "comp_count": 135,
+    "comp_grades_seen": [
+      "raw"
+    ],
+    "comp_price_min": 105,
+    "comp_price_max": 2781.1,
+    "comp_price_median": 309
+  },
+  "baseline_vs_postdeploy": {
+    "psa10_comp_count": {
+      "baseline": 135,
+      "postdeploy": 186
+    },
+    "raw_comp_count": {
+      "baseline": 135,
+      "postdeploy": 135
+    }
+  },
+  "compare": {
+    "metric": "pre-deploy → post-deploy",
+    "psa10_comp_count": "135 → 186",
+    "psa10_comp_min": "105 → 177.5",
+    "psa10_comp_med": "309 → 1000",
+    "psa10_comp_max": "2781.1 → 5255",
+    "psa10_pred_72h": "392.53 → 1290",
+    "psa10_pred_7d": "359.19 → 1210",
+    "raw_comp_count": "135 → 135",
+    "raw_comp_min": "105 → 105",
+    "raw_comp_med": "309 → 309",
+    "raw_comp_max": "2781.1 → 2781.1",
+    "raw_pred_72h": "309 → 434.65",
+    "raw_pred_7d": "321 → 399",
+    "psa10_vs_raw_7d_diff": "baseline=38.19 postdeploy=811.00"
+  }
+}

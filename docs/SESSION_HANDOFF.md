@@ -2627,3 +2627,144 @@ The session also doubled the framing-inversion count for this arc (4 → 6).
 Pattern continues: "verify the wire end-to-end, not just its existence."
 
 End of session extension.
+
+# 2026-05-24 — Session extension: CF-COMPSLOADER-GRADE-FLOW production fix
+
+## Headline
+
+Production /predict on compiq-mcp now passes grade to the backend. Before
+today's fix, every /predict call got the raw-records path regardless of
+the caller's requested grade. PSA 10 vs raw queries returned the SAME
+underlying 135 comps with only the local label differing.
+
+**Acceptance evidence:** PSA 10 vs raw 7d predicted_price gap went from
+$38 (pre-fix mixed-grade noise) to $811 (post-fix grade-distinct).
+
+This is the production version of today's earlier backtest-side fix at
+73cae0d. The backtest was already grade-aware via a script-local
+fetcher; production /predict is now too.
+
+## What shipped
+
+### Code (PR #122, merged at 4d4bd8c on main, deployed to compiq-mcp)
+
+- `mcp-server/compsLoader.ts` (+43 lines): exported `parseGradeForBackend()`
+  helper. Forwards `gradeCompany` + `gradeValue` to backend URLSearchParams
+  when `preferredGrade` is non-raw + parseable. Backward-compatible:
+  unset / "Raw" / "ungraded" / unparseable → no params (existing raw path).
+- `mcp-server/scripts/compsLoader_grade.test.ts` (new, 183 lines):
+  19 `node:test` cases covering parser edge cases + URL construction via
+  stubbed fetch. All passing.
+
+### Production state changes
+
+- compiq-mcp deployed at SHA 4e39231 (≡ 4d4bd8c on main; pre-squash branch
+  commit and squash commit have identical trees). RuntimeSuccessful via
+  Azure zipdeploy + Oryx build. App restart 80s.
+- GIT_SHA / GIT_SHA_SHORT / DEPLOYED_AT updated on compiq-mcp App Settings.
+- /health still reports has_signal_url:true, has_floor_url:true, etc. — no
+  feature regression.
+
+### Evidence chain (committed)
+
+- `docs/phase0/compsloader_grade_flow_baseline_20260524-180248.json` —
+  pre-deploy behavior, PSA 10 and raw returning identical 135 comps.
+- `docs/phase0/compsloader_grade_flow_postdeploy_20260524-181914.json` —
+  post-deploy behavior with the $811 7d-prediction gap.
+
+## Trace findings
+
+| Hop | File:Line | Behavior |
+|---|---|---|
+| /predict receives `body.grade` | server.ts:229 | ✅ |
+| /predict → fetchPlayerComps with preferredGrade | server.ts:253 | ✅ |
+| fetchPlayerComps accepts preferredGrade opt | compsLoader.ts:75-77 | ✅ |
+| **fetchPlayerComps forwards to backend** | **compsLoader.ts:109-115** | **❌ → ✅ (this PR)** |
+| Backend accepts gradeCompany+gradeValue params | compiq.routes.ts:259-275 | ✅ |
+| translateResponse raw vs graded dispatch | cardsight.translator.ts:44 | ✅ |
+
+Single-file defect; single-file fix.
+
+## Post-deploy comparison
+
+| Metric | Pre-deploy | Post-deploy | Notes |
+|---|---:|---:|---|
+| PSA 10 comp count | 135 | 186 | filter path now active |
+| PSA 10 price range | $105-$2781 | $177-$5255 | PSA 10 universe (incl. parallels) |
+| PSA 10 median | $309 | $1000 | 3.2× — was getting raw response |
+| PSA 10 predicted 7d | $359 | $1210 | 3.4× — now PSA-appropriate |
+| Raw comp count | 135 | 135 | raw path unchanged |
+| Raw predicted 7d | $321 | $399 | OpenAI nondeterminism |
+| **PSA 10 vs raw 7d diff** | **$38** | **$811** | acceptance criterion met |
+
+The "PSA 10 median goes to $1000" surfaces the parallel-mixing issue
+captured earlier (CF-BACKTEST-PARALLEL-FILTER): the backend's grade
+filter selects by company+value but NOT by parallel. PSA 10 sales include
+base + Diamond Anniversary + Gold + Chrome variants all aggregated.
+Production /predict's PSA 10 prediction now reflects "PSA 10 across all
+parallels," not "base PSA 10." This is the next axis to refine, but
+out of scope for CF-COMPSLOADER-GRADE-FLOW.
+
+## New carry-forward captured
+
+### CF-BACKTEST-COSMOS-GRADE-FLOW (~5 min, low priority)
+
+The Cosmos-resident accuracy harness at `mcp-server/backtest.ts:266` still
+calls `fetchPlayerComps(player, product, { cardYear: year })` without
+preferredGrade. So its retrospective scoring still uses grade-mixed comps
+to compare predictions against actuals — same defect class as today's
+fix but in a different call site.
+
+**1-line fix:**
+```ts
+comps = await fetchPlayerComps(player, product, {
+  cardYear: year,
+  preferredGrade: preds[0].grade,  // ← add this
+});
+```
+
+The grade is already on PredictionDoc (predictionLog.ts:75:
+`grade?: string`). Bundle with next mcp-server PR or own micro-PR. Not
+blocking anything because the Cosmos backtest is the existing accuracy
+harness (predicted-vs-actual), separate from the synthetic backtest the
+present arc is concerned with.
+
+## Status of all sixth-arc carry-forwards as of this session
+
+| CF | Status | Notes |
+|---|---|---|
+| CF-PHASE4B-BACKTEST.1 | ✅ shipped | a061fb9 + 73cae0d + c80b6ca + 4756104 |
+| CF-COMPSLOADER-GRADE-FLOW | ✅ shipped | 4d4bd8c (PR #122), deployed |
+| CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
+| CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
+| CF-BACKTEST-COSMOS-GRADE-FLOW | open (NEW) | ~5 min, low priority |
+| CF-BACKTEST-PARALLEL-FILTER | open | ~60 min; would refine PSA 10 actuals further |
+| CF-PHASE4B-BACKTEST.2 (N=100 expansion) | open | user-decision after WS2 re-baseline |
+
+## Next session priority
+
+**Workstream 2 is the immediate next workstream of this arc: re-run N=15
+backtest against production-matching grade flow.** Per the user's WS2
+spec:
+
+- Same N=15 cohort, same harness (already grade-aware via 73cae0d)
+- Compare v4 (production grade-aware) to v3 (today's N=15, production
+  grade-broken at the time)
+- If results closely match: today's verdict was a fair proxy; production
+  now matches measurement
+- If they differ significantly: characterize and surface
+- Apply outcome branches; surface N=100 decision if insufficient_data
+  recurs
+
+iOS state assessment remains a viable parallel track per earlier framing.
+
+## Anti-drift note
+
+The arc's grade-flow story is now consistent: backtest harness and
+production /predict both pass grade params to backend. Both are still
+subject to parallel-mixing in the actuals (separate carry-forward). The
+"insufficient_data" verdict from today's N=15 was honest under the
+configuration measured then; whether re-running with production now
+matching changes any numbers is what WS2 tests.
+
+End of session extension.
