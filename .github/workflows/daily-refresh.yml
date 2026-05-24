@@ -110,13 +110,21 @@ jobs:
       # DEPLOYED_AT stay stale after workflow-triggered deploys and /api/health
       # reports the wrong build metadata. Refresh them here so observability
       # reflects what was actually deployed. See issue #83.
+      #
+      # CF-DAILY-REFRESH-CONSISTENCY (2026-05-24): also refresh GIT_SHA_SHORT
+      # and GIT_BRANCH so this workflow matches the quad written by
+      # scripts/deploy-with-build-info.ps1. Before this change, the workflow
+      # set only GIT_SHA + DEPLOYED_AT, leaving GIT_SHA_SHORT + GIT_BRANCH
+      # stale from prior operator-initiated deploys — asymmetric drift
+      # discovered during a mid-session investigation.
       - name: Update build metadata App Settings
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
+          SHA_SHORT="${GITHUB_SHA:0:7}"
           az webapp config appsettings set \
             --resource-group rg-hobbyiq-dev \
             --name HobbyIQ3 \
-            --settings GIT_SHA=${{ github.sha }} DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --settings GIT_SHA=${{ github.sha }} GIT_SHA_SHORT=$SHA_SHORT GIT_BRANCH=${{ github.ref_name }} DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --output none
 
       # Wait for the app to finish restarting before warming cache
