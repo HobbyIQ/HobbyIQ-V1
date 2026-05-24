@@ -2441,3 +2441,189 @@ One measurement at a time. Partial-signal arms, multi-cohort runs,
 time-bucketed splits — all iteration 2+ scope, not iteration 1.
 
 End of session extension.
+
+# 2026-05-24 — Session extension: CF-PHASE4B-BACKTEST.1 implementation + first valid run
+
+## Headline
+
+Synthetic backtest harness shipped. First valid run (N=15, grade-aware) verdict:
+**insufficient_data**. Aggregate MAPE delta roughly neutral with slight negative
+tilt (-0.71pt 7d, p=0.683 — far from significance). Direction-accuracy delta
++14.29pp in favor of signals, but at n=14 that's 2 cards either way.
+
+The session surfaced two additional framing inversions on top of the four
+captured yesterday — the URL misconfiguration (production /predict had been
+silently signal-off; fixed) and the compsLoader grade-flow gap (production
+/predict doesn't forward grade params to backend; captured, not fixed).
+
+## What shipped this session
+
+### Code
+
+- `mcp-server/pricing.ts` (commit a061fb9): exported `NEUTRAL_SIGNAL`; added
+  optional `signalsOverride` parameter to `getPredictedPrice()`. Non-breaking;
+  used only by backtest. Production paths unchanged.
+- `mcp-server/scripts/backtest_signal_value.ts` (commits a061fb9, 73cae0d):
+  ~900-line synthetic backtest harness. Two prediction arms (signal-on with
+  captured aggregator payload, signal-off with NEUTRAL_SIGNAL), grade-aware
+  direct backend fetcher, temporal-window split verified by 9-case self-test,
+  paired Wilcoxon stats, JSON + markdown output.
+- `mcp-server/scripts/backtest_cohort_v1.json` (commit a061fb9): seed cohort.
+  15 cards across 7 players, 4 products, raw + PSA 10 variants.
+
+### Production state changes
+
+- compiq-mcp App Setting `AZURE_SIGNAL_FUNCTION_URL`:
+  `https://fn-compiq.azurewebsites.net/api/serve-signals` (404) →
+  `https://fn-compiq.azurewebsites.net/api/signals` (200). App auto-restarted;
+  verified live via test POST to /predict — response now contains signal-
+  derived content (Chicagoland Sports Card Expo catalyst, injury_risk flag,
+  Google trends references) that was impossible pre-fix.
+
+### Docs
+
+- `docs/phase0/phase4b_diagnostic_findings.md` (commit e26db5d): addendum
+  correcting §2's claim that "signals reach compiq-mcp predictions." Honest
+  about the inference leap. Captures CF-HEALTH-SIGNAL-URL-CHECK and
+  CF-SIGNAL-SILENT-FAILURE-AUDIT.
+- `docs/phase0/backtest_runs/{20260524-172640-smoke, 20260524-173836-smoke-v2,
+  20260524-174221-n15}/` (commit c80b6ca): three runs captured. v1 smoke
+  shows methodology artifact; v2 smoke shows post-fix sign flip; N=15 is the
+  first valid run.
+
+## Iteration history (load-bearing for next session)
+
+1. **Iteration 0 (smoke N=5, grade-broken)** — MAPE delta -7.68/-4.07.
+   compsLoader.fetchPlayerComps didn't forward grade params to the backend.
+   Result: every group's ground-truth median mixed grades. Raw cards
+   compared to PSA-dominated medians. Verdict was a methodology artifact.
+
+2. **Iteration 0 → 1 fix** — Replaced compsLoader.fetchPlayerComps with a
+   backtest-local fetcher that calls the backend's /api/compiq/comps-by-player
+   directly with parsed gradeCompany + gradeValue. Cohort grouping shifts to
+   (player, product, year, grade).
+
+3. **Iteration 1 smoke v2 N=5** — MAPE delta +6.65/+5.26. Sign FLIPPED.
+   Confirmed v1 verdict was an artifact, not signal-quality finding.
+
+4. **Iteration 1 full N=15** — MAPE delta -4.79 (p=0.753) / -0.71 (p=0.683).
+   Direction accuracy delta +14.29pp. Sample size below Wilcoxon threshold.
+   Verdict: insufficient_data.
+
+The v2 smoke→N=15 transition is worth noting: smoke showed +5pt MAPE delta
+favoring signals, full N=15 showed slight negative tilt. The smoke's
+direction was small-sample noise; the full N=15 picture is "roughly neutral
+with high per-card variance."
+
+## Pre-committed outcome branches (per design §8 Step 8)
+
+The N=15 verdict fires the `insufficient_data` branch:
+
+| Branch | Threshold | Actual | Fired? |
+|---|---|---|---|
+| signals_help_strong | delta>2pt, p<0.05 | n/a | no |
+| signals_help_marginal | 0.5<delta<2pt, p<0.05 | n/a | no |
+| signals_neutral | \|delta\|<0.5 OR p>=0.05 | -0.71pt, p=0.683 | borderline (delta just outside 0.5, p well above 0.05) |
+| signals_hurt | delta<0, p<0.05 | delta=-0.71, p=0.683 | no (not significant) |
+| **insufficient_data** | **n<20 OR p_value null** | **n=14<20** | **YES** |
+
+Per user's hard rule "Insufficient data → document, surface N=100 expansion
+as user decision" — surfacing as decision below, NOT auto-firing.
+
+## Direction-accuracy subfinding
+
+Aggregate price-MAPE is neutral, but **direction accuracy delta is +14.29pp
+in favor of signals** (signal-on 42.86% correct, signal-off 28.57% correct
+out of 14 scored pairs). At N=14 this is 2 cards' difference and could be
+noise — but the gap is meaningfully larger in magnitude than the MAPE gap.
+
+Possible interpretation: signals carry information that helps the model pick
+the *direction* of price movement (rising/falling/stable) but the same
+information confuses the model on absolute price magnitude. If true, this
+matters for product framing — direction-of-movement is what users actually
+need for "sell now vs hold" decisions, not penny-perfect predictions.
+
+Or: it's noise at N=14. The honest answer is "we don't know yet."
+
+## Per-card variance is high
+
+Same-player raw vs PSA 10 often diverge:
+- Trout PSA 10: signal-on closer by $60 (HELPS)
+- Trout raw: signal-on further by $80 (HURTS)
+- Judge raw + PSA 10: signal-off closer in both (both HURT)
+- Ohtani raw: signal-on closer by $12 (HELPS)
+- Acuna PSA 10: signal-off closer by $19 (HURTS)
+
+Signal multipliers are computed per-player, not per-grade. A single player-
+level multiplier that helps PSA 10 predictions may hurt raw predictions
+(different price levels, different demand elasticities, different parallel
+distributions). Iteration 2 might examine this.
+
+## New findings surfaced this session (beyond CF-PHASE4B-BACKTEST.1)
+
+- **Fifth framing inversion (production /predict was signal-off)** — captured
+  in phase4b_diagnostic_findings.md addendum (commit e26db5d). Fixed via
+  App Setting URL correction. CF-HEALTH-SIGNAL-URL-CHECK and
+  CF-SIGNAL-SILENT-FAILURE-AUDIT captured.
+- **Sixth framing inversion (compsLoader doesn't forward grade params)** —
+  Discovered during smoke v1→v2 methodology fix. mcp-server/compsLoader.ts
+  lines 109-117 only send playerName + product + cardYear to the backend.
+  Every production /predict call gets the raw-path response regardless of
+  card grade. New carry-forward: **CF-COMPSLOADER-GRADE-FLOW** (~30 min
+  fix: forward gradeCompany + gradeValue from preferredGrade through to the
+  URLSearchParams). Production /predict's MAPE on graded cards is probably
+  worse than it could be because of this; the backtest's grade-aware mode
+  shows what /predict *would* do if this gap were closed.
+- **App Insights blind spot for fetch()** — Node 18+'s global `fetch()` is
+  NOT auto-instrumented by the applicationinsights SDK. fetchSignals (and
+  the backtest fetcher) bypass dependency telemetry. Concretizes
+  CF-SIGNAL-SILENT-FAILURE-AUDIT.
+- **Parallel-mixing in ground-truth** — backend's gradeCompany filter
+  narrows by grade but not by parallel. "Trout raw" actual at $350 mixes
+  base + Gold + Diamond Anniversary raw sales. Both backtest arms see the
+  same noise so paired delta remains directionally fair, but absolute MAPE
+  reflects parallel-mixing as much as prediction quality. New carry-forward:
+  **CF-BACKTEST-PARALLEL-FILTER** (~60 min: add title-token filter to
+  isolate base from parallels in ground-truth window).
+
+## Next session priority — user decision
+
+Three viable paths, surfaced per the hard rule "don't auto-scale."
+
+1. **Expand cohort to N=100, re-run** (CF-PHASE4B-BACKTEST.2 per design §7)
+   Targets statistical power. At ~$2-5 OpenAI cost per run, ~3-5h operator
+   time to assemble + verify a 100-card cohort. The direct path to a
+   confident verdict on whether signals help, hurt, or are neutral.
+   Risk: 7x cost, still might be insufficient if effect size is genuinely
+   small and noise is genuinely high.
+
+2. **Investigate direction-accuracy lead before expanding cohort**
+   The +14.29pp direction-accuracy gap is the most interesting subfinding.
+   At N=14 it could be noise. Could be tested faster by re-running the same
+   15-card cohort 3-5 times to see if direction-accuracy gap is stable
+   across runs (~$1-2 cost, half a session). If stable across re-runs at
+   N=15, that's evidence enough to expand. If unstable, cohort expansion
+   needed anyway.
+
+3. **Fix CF-COMPSLOADER-GRADE-FLOW first, then re-baseline**
+   The backtest's grade-aware mode is artificially better than production's
+   grade-broken /predict path. Closing that production gap (~30 min code
+   change in compsLoader.ts) would make production /predict match what the
+   backtest measures. Then the N=15 result becomes a baseline for the new
+   production behavior, not a what-if comparison. Could be sequenced before
+   N=100.
+
+iOS state assessment remains a viable parallel track per the prior session's
+end-of-day framing; it's independent of the backtest decision.
+
+## Anti-drift note
+
+The N=15 result is honest about what we don't know. Don't overweight the
++14.29pp direction-accuracy lead or the -0.71pt price-MAPE tilt — neither
+clears statistical significance at this sample size. The next decision
+should be data-driven, not narrative-driven.
+
+The session also doubled the framing-inversion count for this arc (4 → 6).
+Pattern continues: "verify the wire end-to-end, not just its existence."
+
+End of session extension.
