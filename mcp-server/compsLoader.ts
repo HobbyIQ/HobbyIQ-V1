@@ -72,8 +72,43 @@ interface CompsByPlayerResponse {
 export interface FetchPlayerCompsOpts {
   /** Card year — narrows the catalog search and bypasses year-mismatched cards. */
   cardYear?: number;
-  /** Preferred grade label applied to each returned CardComp (raw default). */
+  /**
+   * Preferred grade label. Two roles:
+   *  1. Forwarded to the backend as `gradeCompany` + `gradeValue` query params
+   *     so the backend's translateResponse selects the matching graded path
+   *     (or raw path when label is missing / "Raw" / "Ungraded"). Without
+   *     this, the backend defaults to the raw-records path regardless of
+   *     caller intent — see CF-COMPSLOADER-GRADE-FLOW.
+   *  2. Applied as the `grade` field on each returned CardComp for downstream
+   *     rendering.
+   * Accepts "PSA 10", "BGS 9.5", "SGC 9", "Raw", undefined, etc.
+   */
   preferredGrade?: string;
+}
+
+/**
+ * Parse a grade label like "PSA 10" into the backend endpoint's
+ * gradeCompany + gradeValue shape. Raw / ungraded / unparseable inputs
+ * return an empty object (backend takes the raw-records path).
+ *
+ * Logic mirrors mcp-server/scripts/backtest_signal_value.ts at commit
+ * 73cae0d (parseGradeForBackend) so production behavior aligns with what
+ * today's grade-aware backtest measures.
+ */
+export function parseGradeForBackend(grade?: string): {
+  gradeCompany?: string;
+  gradeValue?: string;
+} {
+  if (!grade) return {};
+  const trimmed = grade.trim();
+  if (!trimmed) return {};
+  const low = trimmed.toLowerCase();
+  if (low === "raw" || low === "ungraded" || low === "none") return {};
+  // Match "PSA 10" / "BGS 9.5" / "SGC 9" / "CGC 10" — letters + numeric value
+  const m = trimmed.match(/^([A-Za-z]+)\s+(\d+(?:\.\d+)?)$/);
+  if (m) return { gradeCompany: m[1].toUpperCase(), gradeValue: m[2] };
+  // Unparseable (e.g. "PSA" alone, "MINT 10"); fall through to raw path
+  return {};
 }
 
 /**
@@ -113,6 +148,13 @@ export async function fetchPlayerComps(
   if (opts.cardYear != null && Number.isFinite(opts.cardYear)) {
     params.set("cardYear", String(opts.cardYear));
   }
+  // CF-COMPSLOADER-GRADE-FLOW: forward grade to the backend's translateResponse.
+  // Before this fix, opts.preferredGrade was used only for local labeling
+  // (line 153 below) but never reached the backend — so every /predict call
+  // got the raw-records path regardless of the caller's intended grade.
+  const parsedGrade = parseGradeForBackend(opts.preferredGrade);
+  if (parsedGrade.gradeCompany) params.set("gradeCompany", parsedGrade.gradeCompany);
+  if (parsedGrade.gradeValue) params.set("gradeValue", parsedGrade.gradeValue);
 
   const url = `${BACKEND_URL.replace(/\/$/, "")}/api/compiq/comps-by-player?${params}`;
   const controller = new AbortController();
