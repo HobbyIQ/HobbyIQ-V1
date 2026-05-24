@@ -1830,3 +1830,112 @@ This is a process learning, not a blame point. The script that broke today has w
 PR #119 was the correct PR — clean code, clean local smoke, two clean eyeball passes. The deploy *infrastructure* failed, not the PR. Production recovered to a known-good SHA; main is one commit ahead carrying the Phase 1 implementation safely; deploy infra audit captured as a follow-up workstream. Phase 1 is paused, not lost.
 
 **No more deploys today.** The next deploy will be the deploy-infra-hardening PR; Phase 1 retry follows that.
+
+# 2026-05-27 — CF-DEPLOY-INFRA-HARDEN shipped + CF-PHASE1-RETRY shipped
+
+## Headline
+
+Two workstreams completed back-to-back: (1) CF-DEPLOY-INFRA-HARDEN merged as PR #120 (`ddf9209`, squash), implementing all four audit §7 recommendations; (2) CF-PHASE1-RETRY deployed `ddf9209` to hobbyiq3 using the hardened script, **5/5 demo smoke PASS** + **5/5 regression PASS** + **cache hit + warming (10/10/0failed/81ms) PASS** + Bonemer setName-Chrome-fallback verified live (1 cardId CPA-CBO only). Phase 1 (`/api/compiq/comps-by-player`) is now production-live. No production regressions. The hardened script demonstrated identical robust behavior on its first real-stakes run as on yesterday's no-op test (az 10-min false-negative → [4/5] catches Kudu success at first 15s tick → [5/5] verifies in attempt 1).
+
+## What shipped
+
+### CF-DEPLOY-INFRA-HARDEN (PR #120, squash `ddf9209`)
+
+- `scripts/deploy-with-build-info.ps1` (+219 LOC, -26): pre-deploy invariant check ([0/5]) + Kudu poll bug fix ([4/5]) + feature-probe SHA verification ([5/5])
+- `docs/deployment/README.md` (NEW, 149 LOC): operator runbook
+- `docs/phase0/deploy_infra_hardened.md` (NEW, 77 LOC): implementation outcome doc
+
+### CF-PHASE1-RETRY (deploy, no code change)
+
+- Kudu deploy `55311b6e-4d49-4efa-b3a3-6fe61c3dbe86`, status=4, end_time `2026-05-24T12:57:XXZ`
+- /api/health build = `ddf9209` (all 4 GIT_* env vars consistent; cleaned up the daily-refresh-introduced drift)
+- Feature-probe `/api/compiq/normalization-dictionary` verified loaded
+- Phase 1 endpoint `/api/compiq/comps-by-player` live + responding
+
+## Acceptance evidence
+
+### CF-PHASE1-RETRY 5/5 demo smoke (all PASS)
+
+| # | Demo | cardIds | comps | notes |
+| --- | --- | ---: | ---: | --- |
+| 1 | Mike Trout 2011 Topps Update | 1 | 135 | canonical RC |
+| 2 | Aaron Judge 2017 Topps Update | 8 | 757 | Q1 case: product-narrowing recovers RC |
+| 3 | Shohei Ohtani 2018 Topps Update | 8 | 508 | pure RC, not combo |
+| 4 | Bobby Witt Jr 2022 Topps Chrome Update | 5 | 1361 | |
+| 5 | **Caleb Bonemer 2024 Bowman Draft Chrome** | **1** | **69** | setName Chrome fallback fix verified live (was 2 mixed cardIds + 119 comps pre-fix) |
+
+### 5/5 regression smoke (no regression on existing Phase 2 v2 endpoints)
+
+- `/price` (Mike Trout 2011 TU US175): source=live, 10 comps
+- `/estimate` (Aaron Judge 2017 TU): source=live, 10 comps, FMV=42
+- `/price-by-id` (Trout cardHedgeCardId): source=live, 10 comps
+- `/estimate` (Shohei Ohtani 2018 TU): source=live, 10 comps, FMV=119
+- `/price` (Bobby Witt Jr 2022 TCU): source=live, 10 comps
+
+### Cache + warming
+
+- Cache hit: cacheAge increments correctly (8265952ms → 8267486ms over a 1s sleep + curl latency) — cacheGet/cacheSet via Redis working
+- Warming completed: `resolveCardId_cache_warmed` primed=10 failed=0 in 383ms + `compsByPlayer_cache_warmed` primed=10 failed=0 in 81ms — fast because Redis cache hits from daily-refresh's earlier deploys, NO 429 rate-limit cascade
+
+### Hardened deploy script's first real-stakes outing — works as designed
+
+- `[0/5]` invariant check PASS (SCM_DO_BUILD=false, ENABLE_ORYX=false, zip has dist+node_modules+package.json)
+- `[1/5]` App Settings set to ddf9209 — fixed the GIT_* drift (daily-refresh's partial 2-of-4 update left GIT_SHA_SHORT=26a7232 and GIT_BRANCH=harden/deploy-pipeline stale; hardened script's all-4 update restored consistency)
+- `[2/5]` az hit 10-min site-startup false-negative at Time=632s — EAP=Continue scope handled it as documented
+- `[4/5]` Kudu poll caught `status=4 SUCCESS at 15s` (first poll tick) — the bug fix doing its job; yesterday's incident would have looped here forever
+- `[5/5]` `/api/health build.shaShort=ddf9209` verified attempt 1 + feature-probe `200 OK dictionary keys=2` attempt 1
+- Final: `Deploy complete. SHA ddf9209 live on HobbyIQ3`
+
+## Investigation surfaced mid-session: daily-refresh.yml had been silently deploying
+
+Step 1 of CF-PHASE1-RETRY surfaced unexpected production state: `/api/health` reported inconsistent SHA fields (`sha=5cb25b8`, `shaShort=26a7232`, `branch=harden/deploy-pipeline`) and a `deployedAt=2026-05-24T11:19:30Z` that didn't match any of this session's actions. Read-only investigation confirmed:
+
+- **Source:** `.github/workflows/daily-refresh.yml` cron `'0 9 * * *'` + `'0 10 * * *'` fired twice today (both EDT-gated UTC schedules pass during EDT) — Kudu deploys `a673f0a5` (end 10:45Z) and `8177b804` (end 11:19Z), both `status=4` success
+- **Deployed code:** `5cb25b8` tree, which has Phase 1 backend code (5cb25b8 is AFTER the b6ec8a3 PR #119 merge — incident-handoff commit on top of Phase 1). Phase 1 had been LIVE in production since ~10:43Z today via this scheduled workflow, unbeknownst to us
+- **App Settings drift root cause:** `daily-refresh.yml` line 119 only sets `GIT_SHA + DEPLOYED_AT` (not `GIT_SHA_SHORT` + `GIT_BRANCH`), leaving the latter two stale from this session's earlier hardened-script runs
+- **Disposition:** Classification (A) mundane CI/CD; no security concern, all OIDC-authenticated GHA action
+
+This finding doesn't invalidate CF-PHASE1-RETRY — the deploy still re-applied Phase 1 code (effectively a no-op on backend code since ddf9209's backend matches 5cb25b8's backend) AND cleaned up the App Settings drift. But it does add a follow-up workstream (CF-DAILY-REFRESH-CONSISTENCY below).
+
+## New carry-forwards (this session)
+
+- **CF-DAILY-REFRESH-CONSISTENCY** (Low priority, ~5 LOC, ~10 min). Patch `.github/workflows/daily-refresh.yml` line 119 to set all 4 GIT_* env vars (currently only sets 2 of 4), so future daily-refresh deploys don't re-create the App Settings drift on hobbyiq3. Not blocking — the hardened script's [1/5] step resets all 4 on the next operator-initiated deploy. Worth fixing when convenient.
+
+## Resolved carry-forwards (this session)
+
+- **CF-DEPLOY-INFRA-HARDEN** — Shipped as PR #120 squash `ddf9209`. Hardened script's behavior verified twice now: yesterday's no-op test + today's Phase 1 retry. Both ran identical paths and exited cleanly.
+- **CF-PHASE1-RETRY** — Shipped via hardened script. Phase 1 production-live and serving the new endpoint.
+
+## Updated carry-forwards summary
+
+**New (this session):**
+
+- CF-DAILY-REFRESH-CONSISTENCY — patch GHA workflow to set all 4 GIT_* env vars (~5 LOC)
+
+**Unchanged from prior sessions:**
+
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — fn-price-floor host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging
+- F1 /bulk fix
+- MCP rewire Phase 2 implementation (now READY — Phase 1 backend endpoint live in production)
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+- `fn-cardhedge-comps` decommission (gated on rewire)
+
+## Next session entry point
+
+**MCP rewire Phase 2 implementation** is now the primary next workstream. Phase 1 is production-stable:
+
+- `compsLoader.ts` rewrite to call `/api/compiq/comps-by-player` via HTTP instead of blob read (signature change to `(playerName, product, preferredGrade?)`)
+- compiq-mcp App Setting `COMPIQ_BACKEND_URL=https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net`
+- MCP-side test (mock HTTP call, verify CardComp shape preserved)
+- Latency budget per design Q2 (cold path ≤2× baseline, warm path ≤1.3×)
+- Acceptance gate: 3 demo cards via `/api/compiq/predict` round-trip end-to-end against the new backend dependency
+
+Estimated 45-75 min per [docs/phase0/mcp_rewire_design.md](phase0/mcp_rewire_design.md) §10 Phase 2 checklist.
+
+## Session summary (CF-DEPLOY-INFRA-HARDEN + CF-PHASE1-RETRY closure)
+
+Two workstreams shipped clean. Yesterday's 5h14m outage is fully addressed: deploy infra hardened, Phase 1 re-deployed under the hardened script with all acceptance gates met, observability bifurcation closed for App Settings (all 4 GIT_* env vars now consistent post-deploy). The hardened script's [4/5] poll bug fix proved its worth on its first real outing — Azure CLI's expected 10-min site-startup false-negative was caught at first Kudu poll tick. Phase 1 endpoint `/api/compiq/comps-by-player` live; MCP rewire Phase 2 unblocked for next session.
