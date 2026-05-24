@@ -2908,6 +2908,7 @@ only after methodology is locked.
 | CF-HEALTH-SIGNAL-URL-CHECK | open | ~30 min |
 | CF-SIGNAL-SILENT-FAILURE-AUDIT | open | ~60-90 min |
 | CF-BACKTEST-COSMOS-GRADE-FLOW | ✅ shipped | b55f1ec — multi-line (not the originally-spec'd 1-liner; pre-commit trace surfaced regression risk; mirrors 73cae0d pattern) |
+| CF-DAILY-REFRESH-CONSISTENCY | ✅ shipped | edf53da — daily-refresh.yml now sets the full GIT_SHA / GIT_SHA_SHORT / GIT_BRANCH / DEPLOYED_AT quad; effect visible at next cron fire (~5-6 AM ET window) |
 | CF-BACKTEST-PARALLEL-FILTER | open | ~60 min |
 | CF-PHASE4B-BACKTEST.2 (cohort expansion) | open, weakened case | user decision per above |
 | **CF-BACKTEST-REPEATS** | NEW, open | option 1 above; ~10 min code + per-run cost |
