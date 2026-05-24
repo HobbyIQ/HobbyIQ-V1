@@ -9,6 +9,7 @@ import {
   buildCompSearchQuery,
   type ParsedCardQuery,
 } from "../services/compiq/cardQueryParser.js";
+import { fetchCompsByPlayer } from "../services/compiq/compsByPlayer.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
 import {
   classifyRegime,
@@ -220,6 +221,60 @@ router.post("/what-if", async (req, res, next) => {
     }
     const result = await simulateWhatIf(req.body || {});
     res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// MCP rewire Phase 1 — backend grows player+product comp aggregation so
+// mcp-server's compsLoader can drop the fn-cardhedge-comps blob dependency.
+// Design: docs/phase0/mcp_rewire_design.md (61e2d5c) — see addendum.
+// product is REQUIRED per Q1 finding (Cardsight catalog text-relevance buries
+// Topps Update Base Sets under player-only queries; product narrowing fixes
+// it). 400 when product missing.
+//
+// Query params: playerName (req), product (req), cardYear, parallel,
+// gradeCompany, gradeValue.
+router.get("/comps-by-player", async (req, res, next) => {
+  try {
+    const playerName = typeof req.query.playerName === "string" ? req.query.playerName.trim() : "";
+    const product = typeof req.query.product === "string" ? req.query.product.trim() : "";
+    if (!playerName) {
+      return res.status(400).json({ error: "playerName query parameter is required" });
+    }
+    if (!product) {
+      return res.status(400).json({ error: "product query parameter is required" });
+    }
+
+    const cardYearRaw = typeof req.query.cardYear === "string" ? req.query.cardYear.trim() : "";
+    let cardYear: number | undefined;
+    if (cardYearRaw) {
+      const parsed = Number(cardYearRaw);
+      if (!Number.isFinite(parsed) || parsed < 1900 || parsed > 2100) {
+        return res.status(400).json({ error: "cardYear must be a 4-digit year between 1900 and 2100" });
+      }
+      cardYear = parsed;
+    }
+
+    const parallel = typeof req.query.parallel === "string" && req.query.parallel.trim()
+      ? req.query.parallel.trim()
+      : undefined;
+    const gradeCompany = typeof req.query.gradeCompany === "string" && req.query.gradeCompany.trim()
+      ? req.query.gradeCompany.trim()
+      : undefined;
+    const gradeValue = typeof req.query.gradeValue === "string" && req.query.gradeValue.trim()
+      ? req.query.gradeValue.trim()
+      : undefined;
+
+    const result = await fetchCompsByPlayer({
+      playerName,
+      product,
+      cardYear,
+      parallel,
+      gradeCompany,
+      gradeValue,
+    });
+    res.json(result);
   } catch (err) {
     next(err);
   }

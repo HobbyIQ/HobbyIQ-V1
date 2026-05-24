@@ -223,22 +223,42 @@ export async function runBacktest(opts: RunOpts = {}): Promise<BacktestSummary> 
 
   summary.scanned = predictions.length;
 
-  // Group by player so we only fetch comps once per player
-  const byPlayer = new Map<string, (PredictionDoc & { ts: string; setName?: string })[]>();
+  // MCP rewire Phase 1 — group by player+product so each cohort's fetch can be
+  // narrowed by product once compsLoader is rewired (Phase 2) to call the new
+  // backend `/api/compiq/comps-by-player` endpoint.
+  //
+  // Worst-case backtest impact per Q2 finding: 2-3× the prior fetch count
+  // for players with predictions across multiple products. Phase 1 keeps the
+  // blob-read shape (fetchPlayerComps(player) only), so the per-player
+  // compsCache below collapses repeated player keys back to one blob fetch.
+  // Phase 2 replaces the cache with one fetch per (player, product) cohort.
+  const UNKNOWN_PRODUCT_FALLBACK = "__unknown_product__";
+  type PredItem = PredictionDoc & { ts: string; setName?: string };
+  const byPlayerProduct = new Map<string, PredItem[]>();
   for (const p of predictions) {
-    const arr = byPlayer.get(p.player) ?? [];
+    const product = p.setName ?? p.set ?? UNKNOWN_PRODUCT_FALLBACK;
+    const key = `${p.player}|${product}`;
+    const arr = byPlayerProduct.get(key) ?? [];
     arr.push(p);
-    byPlayer.set(p.player, arr);
+    byPlayerProduct.set(key, arr);
   }
 
   const bucketRows = new Map<string, BacktestRow[]>();
+  const compsCacheByPlayer = new Map<string, CardComp[]>();
 
-  for (const [player, preds] of byPlayer.entries()) {
+  for (const [groupKey, preds] of byPlayerProduct.entries()) {
+    const player = preds[0].player;
     let comps: CardComp[];
     try {
-      comps = await fetchPlayerComps(player);
+      const cached = compsCacheByPlayer.get(player);
+      if (cached) {
+        comps = cached;
+      } else {
+        comps = await fetchPlayerComps(player);
+        compsCacheByPlayer.set(player, comps);
+      }
     } catch (err) {
-      summary.errors.push(`${player}: ${(err as Error).message}`);
+      summary.errors.push(`${groupKey}: ${(err as Error).message}`);
       continue;
     }
 
