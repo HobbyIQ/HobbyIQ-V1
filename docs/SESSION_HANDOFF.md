@@ -1622,3 +1622,92 @@ Original 2026-05-22 finding5 doc claimed MCP was "not affected by W2's stale-COS
 Three-workstream batch — F3 docs cleanup shipped, MCP Phase 1 Step 1 diagnostic produced a critical operational discovery (Cosmos key rotation broke 3 env-var surfaces silently), Finding 5 v2 addendum captures the discovery + re-verifies the prior 7 findings + adds 3 new carry-forwards. No production code changes; one minor docs-comment commit. CF-COSMOS-ROT is the recommended highest-priority next workstream.
 
 The Phase 1 Step 1 HALT was the right call: absorbing CF-COSMOS-ROT into Phase 1 would have violated the "single workstream per session" and "no scope expansion" rules. Cleaner to ship Phase 1 against a working data plane than against a frozen one.
+
+# 2026-05-27 — CF-COSMOS-ROT resolved + key-slot distribution
+
+## What shipped
+
+- **CF-COSMOS-ROT resolved** (this commit, docs-only). Cosmos credentials refreshed on the two stale services. Blast-radius distributed: HobbyIQ3 stays on PRIMARY, compiq-mcp + fn-compiq now on SECONDARY. Next rotation affects at most one slot, not all three services simultaneously.
+
+  Settings changed (no code changes, no PR):
+  - `compiq-mcp` `COSMOS_CONNECTION_STRING` → SECONDARY CS-form (tail `r3C13w==`)
+  - `fn-compiq` `COSMOS_KEY` → SECONDARY raw key (tail `r3C13w==`)
+  - `HobbyIQ3` untouched (was already on PRIMARY tail `M0MP9g==`)
+
+  Verified via az setting-list + restart sequence. Both services explicitly restarted via `az webapp restart` / `az functionapp restart` to bypass the cached-failed-init pattern (see operational learning below).
+
+## Scope correction from yesterday's CF-COSMOS-ROT framing
+
+Yesterday's [WS3 v2-5 finding](phase0/finding5_deeper_consumer_analysis.md) claimed three services were affected. Re-verification today narrowed the scope to two. The over-claim came from inferring HobbyIQ3 was stale based on `length=163 + endpoint-prefix-matches-compiq-mcp` without doing the actual byte-equality check against the live keys. Today's direct check showed:
+
+- HobbyIQ3 `COSMOS_CONNECTION_STRING` embedded key tail `0MP9g==` = current live PRIMARY ✓ (always fresh)
+- compiq-mcp `COSMOS_CONNECTION_STRING` embedded key tail `JVIWQ==` = matches none of 4 live keys → STALE
+- fn-compiq `COSMOS_KEY` raw tail `JVIWQ==` = matches none of 4 live keys → STALE (identical value to MCP's embedded key)
+
+App Insights `dependencies` over 7d corroborated: HobbyIQ3 had 202 successful Cosmos calls in 7d (0 failures); compiq-mcp had 12 calls, all 401 (100% fail rate).
+
+The likely scenario for the partial-stale state: someone manually refreshed HobbyIQ3's CS at some past point (post-rotation) and did not propagate to compiq-mcp or fn-compiq. Cosmos rotation timing itself could not be confirmed from Azure-side logs (Cosmos does not publish `regenerateKey` events to the standard activity log; would require explicit diagnostic settings to Log Analytics — see CF-COSMOS-AUDIT below).
+
+## Verification evidence
+
+Step 4 sequence — all PASS:
+
+| Verification | Pre-fix | Post-fix | Source |
+| --- | --- | --- | --- |
+| compiq-mcp `GET /` to `documents.azure.com` | 401 every 5 min (12/12 in 7d) | **200** at 01:34:46Z | App Insights dependencies |
+| compiq-mcp `POST /dbs/hobbyiq/colls/compiq_predictions/docs` | n/a (init blocked) | **201 Created** at 01:34:47Z | App Insights dependencies |
+| predictionLog row count | 6 all-time (latest 2026-05-12T18:54:27Z) | **7** (new row at 2026-05-24T01:34:46.540Z) | Cosmos query against `compiq_predictions` |
+| fn-price-floor Cosmos init | `Cosmos container init failed: (Unauthorized)` Sev-2 | **200** on `GET /`, `200` on `GET /dbs/compiq`, `200` on container read, `404` on doc lookup (expected — card not in floor table) | fn-compiq App Insights traces at 01:34:42Z |
+| HobbyIQ3 `/api/health` | OK (build 190604b, 2026-05-23T09:58:54Z deploy) | OK (unchanged) | direct curl |
+
+## New carry-forwards (capture only, no expansion)
+
+- **CF-COSMOS-AUDIT** — Medium priority. Enable Cosmos diagnostic settings to a Log Analytics workspace so future key-regenerate / listKeys events ARE captured. Today's investigation could not confirm when/why the rotation happened because Cosmos doesn't publish these to the standard activity log by default. ~30 min Azure-config workstream. Adds: ControlPlaneRequests + AccountKeyRotations log categories → LAW.
+
+- **CF-FN-SILENT-FAIL** — Medium priority. fn-price-floor reports "Succeeded" at the Functions host level despite Cosmos init failures producing zero useful work (yesterday's evidence: 3/3 host-Succeeded with Sev-2 `Cosmos container init failed`). Same anti-pattern as predictionLog's fire-and-forget. Investigation scope: should Cosmos init failure trip the function's exit code so the host records it as Failed? Trade-off: host-level Failed status would surface in standard Functions metrics but may break retry behavior or alerting volume. Separate workstream.
+
+- **CF-COSMOS-MI** — Larger architectural. Migrate from master-key-in-app-setting to Managed Identity + RBAC. Eliminates the entire "stale shared-key" failure class. Three services + Cosmos RBAC role assignments + code changes to use `DefaultAzureCredential` for Cosmos SDK init. Significant scope — defer until at least one of (a) compiq-mcp has stable predict traffic that depends on Cosmos, (b) cumulative time lost to key rotations justifies the migration cost. Reference for when ready: `mcp-server/predictionLog.ts:27-38` three-tier auth chain already supports the same pattern shift via env-var presence.
+
+## Operational learnings
+
+1. **Singleton init failure caches itself across the process lifetime.** [predictionLog.ts:18-58](../mcp-server/predictionLog.ts#L18-L58) memoizes `initPromise` even on failure. After the first `getContainer()` call fails at the Cosmos auth boundary, the cached `Promise<null>` is returned on every subsequent call for the lifetime of the Node process. This means **App Settings changes do not auto-recover the running container** — explicit restart is required. Even though Azure App Service "auto-restarts on appsettings change," the restart is async and existing requests may complete on the old instance; the first /predict after my Step 3a setting change at 01:30:21Z did not write because it landed on a pre-restart instance with cached failed init. Manual `az webapp restart` at 01:33Z forced a clean start and the next /predict (01:34:46Z) wrote successfully.
+
+2. **Azure Functions doesn't cache init across invocations the same way.** fn-price-floor picked up the new COSMOS_KEY at its next invocation (01:34:42Z) without explicit restart needed. Python function runtime appears to re-init Cosmos client per cold start or per invocation. Difference vs. Node singleton pattern is worth keeping in mind for cross-service operational fixes.
+
+3. **Distribute keys across PRIMARY/SECONDARY slots, don't pile all services on PRIMARY.** Today's fix put compiq-mcp + fn-compiq on SECONDARY while HobbyIQ3 stays on PRIMARY. Next rotation event touches at most one slot's worth of services, not the full production fleet.
+
+## Updated carry-forwards summary
+
+**New (this session):**
+
+- CF-COSMOS-AUDIT — enable Cosmos diagnostic logs to LAW
+- CF-FN-SILENT-FAIL — host-Succeeded despite Cosmos init failure
+- CF-COSMOS-MI — managed identity migration (larger arch)
+
+**Resolved (this session):**
+
+- CF-COSMOS-ROT — compiq-mcp + fn-compiq refreshed to SECONDARY, verified
+
+**Unchanged from prior sessions:**
+
+- CF-MONITOR-COVERAGE — Phase 3a monitor scope gap (still live)
+- CF-PREDICTIONLOG-VOLUME — pre-rotation sparse logging (separate from rotation event)
+- F1 /bulk fix
+- MCP rewire Phase 1 implementation (now unblocked — predictionLog data flow resumed)
+- MCP rewire Phase 2 implementation
+- Day-10 PR #113 soak review 2026-05-31T17:44:32Z
+- `fn-cardhedge-comps` decommission
+
+## Next session entry point
+
+Three viable next workstreams; recommended sequence:
+
+1. **MCP rewire Phase 1 implementation** (recommended next). Now that predictionLog data flow is restored, Phase 1's Step 1 diagnostic premise (0% set-field gap, proceed-as-designed) holds against a working data plane. ~3-5 hour focused workstream per the existing spec.
+
+2. **CF-MONITOR-COVERAGE extension** (parallel candidate). Add per-function "wrote a Cosmos row in last N hours" tripwire or extend ch-monitor's query envelope. Would have caught today's CF-COSMOS-ROT 11 days earlier. ~45-60 min.
+
+3. **CF-COSMOS-AUDIT** (~30 min). Enable Cosmos diagnostic logs to LAW so future rotation events ARE audit-trail-visible.
+
+## Session summary
+
+CF-COSMOS-ROT shipped — 11 days of silent predictionLog write failure resolved. Verification chain: setting-change → restart → /predict → row 7/7 landed → 200/201 Cosmos traces. Scope corrected mid-flight from "3 services affected" to "2 services affected" (HobbyIQ3 was always fresh). Blast-radius distributed across PRIMARY/SECONDARY slots. Three new carry-forwards captured (CF-COSMOS-AUDIT, CF-FN-SILENT-FAIL, CF-COSMOS-MI) but not expanded into this session. MCP rewire Phase 1 is now unblocked for next session.
