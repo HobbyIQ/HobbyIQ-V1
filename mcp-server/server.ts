@@ -239,12 +239,19 @@ app.post("/api/compiq/predict", async (req: Request, res: Response) => {
   const setName = (body.set ?? "").trim();
   const cardNumber = (body.cardNumber ?? "").trim();
 
-  // Load comps: caller-provided wins; otherwise pull from blob cache.
+  // Load comps: caller-provided wins; otherwise pull from backend
+  // /api/compiq/comps-by-player. Phase 2 of MCP rewire (61e2d5c addendum):
+  // product is REQUIRED on the new endpoint. When body.set is empty,
+  // fetchPlayerComps returns [] and pricing.ts's neutral-multiplier path
+  // takes over — same behavior as the prior blob-miss case.
   let comps: CardComp[] = Array.isArray(body.recentComps)
     ? body.recentComps
     : [];
   if (!comps.length) {
-    comps = await fetchPlayerComps(playerName, body.grade);
+    comps = await fetchPlayerComps(playerName, setName, {
+      cardYear: year,
+      preferredGrade: body.grade,
+    });
   }
 
   // Hard-filter on title tokens (year + player surname + set) to drop
