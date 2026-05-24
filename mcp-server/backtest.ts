@@ -244,18 +244,27 @@ export async function runBacktest(opts: RunOpts = {}): Promise<BacktestSummary> 
   }
 
   const bucketRows = new Map<string, BacktestRow[]>();
-  const compsCacheByPlayer = new Map<string, CardComp[]>();
+  // Phase 2 of MCP rewire: cache key now includes product (per-cohort)
+  // because fetchPlayerComps's signature requires product. Group keys are
+  // already ${player}|${product} so we reuse them as cache keys.
+  const compsCacheByGroup = new Map<string, CardComp[]>();
 
   for (const [groupKey, preds] of byPlayerProduct.entries()) {
     const player = preds[0].player;
+    const product = preds[0].setName ?? preds[0].set ?? UNKNOWN_PRODUCT_FALLBACK;
     let comps: CardComp[];
     try {
-      const cached = compsCacheByPlayer.get(player);
+      const cached = compsCacheByGroup.get(groupKey);
       if (cached) {
         comps = cached;
       } else {
-        comps = await fetchPlayerComps(player);
-        compsCacheByPlayer.set(player, comps);
+        // Pass the prediction's year so the backend can year-filter the
+        // catalog search; preds in a group can span multiple years but
+        // share player+product, so we use the first pred's year as the
+        // representative (good-enough for backtest scoring).
+        const year = Number.isFinite(preds[0].year) ? preds[0].year : undefined;
+        comps = await fetchPlayerComps(player, product, { cardYear: year });
+        compsCacheByGroup.set(groupKey, comps);
       }
     } catch (err) {
       summary.errors.push(`${groupKey}: ${(err as Error).message}`);
