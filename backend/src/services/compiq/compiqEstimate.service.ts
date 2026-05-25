@@ -607,7 +607,11 @@ async function fetchBroaderTrend(
     basedOn,
   });
 
-  if (!process.env.CARD_HEDGE_API_KEY) return blankOut("insufficient");
+  // CARD_HEDGE_API_KEY gate removed 2026-05-25 — Cardsight-exclusive mode
+  // routes searchCardsRouted + getCardSalesRouted through Cardsight; the
+  // CardHedge key is no longer a real prerequisite for this code path.
+  // See CF-CARDHEDGE-FULL-REMOVAL for the broader cleanup of the
+  // cardhedge.client module + fn-cardhedge-comps function.
 
   const player = (card.player ?? "").trim();
   const set = (card.set ?? "").trim();
@@ -712,10 +716,10 @@ async function fetchComps(
   pinnedCardId?: string,
   queryContext?: QueryContext
 ): Promise<FetchedComps> {
-  if (!process.env.CARD_HEDGE_API_KEY) {
-    console.warn("[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []");
-    return { comps: [], card: null, variantWarning: [], aiCategory: null };
-  }
+  // CARD_HEDGE_API_KEY gate removed 2026-05-25 — see fetchBroaderTrend
+  // comment above. Under CARDSIGHT_MODE=exclusive (production setting),
+  // findCompsRouted goes directly to Cardsight; CardHedge auth is not a
+  // dependency of this path.
 
   // ----- Phase 2 — meaningful-query fall-through ------------------------
   // Re-applies the routing change from PR #110 (originally shipped as
