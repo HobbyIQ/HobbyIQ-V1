@@ -39,6 +39,18 @@ const OPENAI_MODEL = useAzureOpenAI
   ? AZURE_OPENAI_DEPLOYMENT
   : process.env.COMPIQ_OPENAI_MODEL ?? "gpt-4o";
 
+// CF-BACKTEST-DETERMINISTIC: lock temperature + seed to stabilize backtest
+// runs. Prior multi-run backtests with default temperature produced
+// unstable_high_variance verdicts (sign-stability 0.4-0.6 across 5 repeats).
+// Temperature=0 + a fixed seed is OpenAI's "best effort" determinism contract.
+// Model version is pinned at deployment time on Azure OpenAI (the deployment
+// name in AZURE_OPENAI_DEPLOYMENT resolves to a specific snapshot); the
+// non-Azure fallback path uses COMPIQ_OPENAI_MODEL env var to pin if desired.
+export const OPENAI_DETERMINISTIC_CONFIG = {
+  temperature: 0,
+  seed: 42,
+} as const;
+
 const openai: OpenAI = useAzureOpenAI
   ? new AzureOpenAI({
       endpoint: AZURE_OPENAI_ENDPOINT,
@@ -742,6 +754,7 @@ export async function getPredictedPrice(
   const response = await openai.chat.completions.create({
     model: OPENAI_MODEL,
     max_tokens: 600,
+    ...OPENAI_DETERMINISTIC_CONFIG,
     response_format: { type: "json_object" },
     messages: [{ role: "user", content: prompt }],
   });

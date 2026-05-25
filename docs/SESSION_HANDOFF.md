@@ -8,6 +8,54 @@
 
 ---
 
+## CF-BACKTEST-DETERMINISTIC — temperature + seed lock shipped (2026-05-25 PM)
+
+OpenAI sampling locked at `mcp-server/pricing.ts` via new exported const:
+
+```ts
+export const OPENAI_DETERMINISTIC_CONFIG = {
+  temperature: 0,
+  seed: 42,
+} as const;
+```
+
+Spread into the `openai.chat.completions.create` call so every prediction
+uses the same sampling contract. Model version is pinned at Azure deployment
+time (production deployment is `gpt-4o-mini` per compiq-mcp App Service
+settings); non-Azure fallback can pin via `COMPIQ_OPENAI_MODEL` env var.
+
+**Unit test:** `mcp-server/scripts/pricing_deterministic.test.ts` —
+4 assertions covering the const shape + the call-site spread. Runs via
+`npx tsx --test`. All 4 pass.
+
+**Empirical sign-stability self-test:**
+
+Pulled Azure OpenAI credentials from `compiq-mcp` App Service settings into
+the test shell (no secrets committed or logged). Ran a 3-repeat smoke
+against `getPredictedPrice()` with identical Card input + NEUTRAL_SIGNAL
+override. Result:
+
+```text
+run 1: 72h=$1210  7d=$1185  dir=stable  conf=60
+run 2: 72h=$1210  7d=$1185  dir=stable  conf=60
+run 3: 72h=$1210  7d=$1185  dir=stable  conf=60
+```
+
+All 3 runs produced **byte-identical outputs** on every numeric + enum
+field. Sign-stability = 1.0 trivially. Cost: ~$0.015 against Azure OpenAI
+gpt-4o-mini. Well above the ≥0.9 target.
+
+Compare to yesterday's pre-lock `--repeats 5` run
+([backtest_runs/20260524-224322-n15-r5/multirun_summary.md](phase0/backtest_runs/20260524-224322-n15-r5/multirun_summary.md)):
+sign-stability was 0.4-0.6 (`unstable_high_variance` verdict). Today's
+empirical smoke shows the lock collapses run-to-run variance to zero on a
+single card. Sub-workstream 4 (cohort-wide re-baseline) will measure
+cross-card sign-stability after credential restorations.
+
+**CF-BACKTEST-DETERMINISTIC status:** SHIPPED.
+
+---
+
 ## CF-RESTORE-SIGNAL-CREDS — YouTube restored (2026-05-25 PM)
 
 YouTube Data API v3 key provisioned and staged on `fn-compiq` App Service
