@@ -2,8 +2,58 @@
 
 (updated 2026-05-24 — iOS state assessment appended; PR D batch from Windows session preserved)
 (updated 2026-05-25 — fn-compiq backend investigation findings appended; see [phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md))
+(updated 2026-05-25 PM — YouTube signal credentials restored on fn-compiq; CF-RESTORE-SIGNAL-CREDS partial close)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
+
+---
+
+## CF-RESTORE-SIGNAL-CREDS — YouTube restored (2026-05-25 PM)
+
+YouTube Data API v3 key provisioned and staged on `fn-compiq` App Service
+via `az functionapp config appsettings set`. Manual invokes of
+`fn-youtube-signals` (admin endpoint) and `fn-signal-aggregator` confirmed
+end-to-end emission.
+
+**Verification matrix (post-credential, 5 tracked players):**
+
+| Player | YouTube signal | multiplier | recent 7d | prior 21d |
+| --- | --- | ---: | ---: | ---: |
+| Shohei Ohtani | softening | 0.95 | 213 | 1071 |
+| Mike Trout | softening | 0.95 | 42 | 205 |
+| Aaron Judge | stable | 1.00 | 182 | 395 |
+| Paul Skenes | softening | 0.95 | 29 | 148 |
+| Bobby Witt Jr | spiking | 1.20 | 23 | 0 |
+| Ronald Acuna Jr | softening | 0.95 | 13 | 67 |
+
+Aggregator output now reflects the live YouTube signal: Ohtani's
+`components.youtube=0.95` (was 1.0 neutral default) and
+`component_signals.youtube=softening` (was `no_api_key`).
+`final_multiplier` shifted 1.037 → 1.030 (YouTube pulling the social-
+blend average down slightly).
+
+**Reddit deferred** by user choice this cycle. Will be picked up in a
+follow-up workstream when convenient. **Odds + eBay** still degraded —
+odds awaits paid API key provisioning; eBay awaits credential re-
+attestation cycle.
+
+**CF-RESTORE-SIGNAL-CREDS status:** PARTIAL CLOSE.
+
+- ✅ YouTube — restored (this entry)
+- ⏸ Reddit — deferred by user
+- ⏸ Odds — pending API key provisioning
+- ⏸ eBay — pending credential re-attestation
+
+**Operational notes:**
+
+- `fn-youtube-signals` schedule is `0 15 */6 * * *` (every 6 hours at
+  :15). Manual invoke via `/admin/functions/fn-youtube-signals` with the
+  function-app master key works for cycle-skipping verification.
+- `fn-signal-aggregator` schedule is `0 50 */2 * * *` (every 2 hours at
+  :50, even hours — 00:50 / 02:50 / 04:50 / ... / 22:50). Earlier
+  characterization said "every 2 hours at :50" without the even-hour
+  qualifier; capturing here so future verification doesn't expect odd-
+  hour fires.
 
 ---
 
