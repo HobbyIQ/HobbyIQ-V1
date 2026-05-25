@@ -882,6 +882,9 @@ router.post("/price-by-id", async (req, res, next) => {
           predictedPrice: null,
           predictedPriceRange: null,
           predictedPriceAttribution: null,
+          // TrendIQ — null on unsupported-sport short-circuit. Field
+          // present for response-shape stability across all branches.
+          trendIQ: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -930,6 +933,12 @@ router.post("/price-by-id", async (req, res, next) => {
         predictedPrice: null,
         predictedPriceRange: null,
         predictedPriceAttribution: null,
+        // TrendIQ Phase 1 — forward-looking composite score. Same shape
+        // as /price; computeEstimate populates est.trendIQ in all happy-
+        // path branches. Layer 3 currently null in production pending
+        // CF-CARDSIGHT-SIBLING-DISCOVERY; composite is two-layer
+        // (player + card) until then.
+        trendIQ: (est as any).trendIQ ?? null,
         confidence,
         source,
         trendAnalysis: {
@@ -1029,6 +1038,9 @@ router.post("/bulk", async (req, res, next) => {
             predictedPrice: null,
             predictedPriceRange: null,
             predictedPriceAttribution: null,
+            // TrendIQ — null on unsupported-sport short-circuit (per-item
+            // in bulk). Shape stability across all branches.
+            trendIQ: null,
             confidence: 0,
             trendAnalysis: { market_direction: "flat" },
             source: "unsupported_sport",
@@ -1071,6 +1083,10 @@ router.post("/bulk", async (req, res, next) => {
           predictedPrice: null,
           predictedPriceRange: null,
           predictedPriceAttribution: null,
+          // TrendIQ Phase 1 — per-item composite score. Same shape as
+          // /price and /price-by-id. Layer 3 currently null in
+          // production pending CF-CARDSIGHT-SIBLING-DISCOVERY.
+          trendIQ: (est as any).trendIQ ?? null,
           confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
           trendAnalysis: {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
