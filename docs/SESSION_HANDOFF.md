@@ -1,8 +1,55 @@
 # HobbyIQ Session Handoff — 2026-05-24
 
 (updated 2026-05-24 — iOS state assessment appended; PR D batch from Windows session preserved)
+(updated 2026-05-25 — fn-compiq backend investigation findings appended; see [phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md))
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
+
+---
+
+## fn-compiq Backend Investigations — 2026-05-25 (Sub-workstream 3)
+
+Three sub-investigations completed; findings doc shipped as
+[phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md).
+
+**Headlines:**
+
+1. **fn-cardhedge-comps is fully operational.** Daily 02:00 UTC fire,
+   wrote 7088-7365 byte payloads to per-player blobs today (Ohtani:
+   multiplier=1.085 / signal=rising / 27 comps). The CF-CARDHEDGE-
+   SIGNAL-RENAME design rests on a still-functional source.
+2. **Degraded signals root cause: missing API credentials.** Reddit,
+   Odds, YouTube credentials missing from fn-compiq app settings;
+   eBay credentials present but rejected by eBay's OAuth endpoint.
+   New CF surfaced: **CF-RESTORE-SIGNAL-CREDS (MEDIUM)** — bundled
+   credential restore. Reddit + YouTube are the cheap quick wins
+   (~30 min total, free APIs); eBay is longest tail (re-attestation
+   may be required).
+3. **Re-baseline backtest DEFERRED with explicit reasoning** despite
+   $0.75 authorization. Yesterday's N=15×5 multi-run already returned
+   `unstable_high_variance` with an explicit recommendation to fix
+   CF-BACKTEST-DETERMINISTIC (lock temperature=0 + seed) before any
+   further cohort runs. Re-running today reproduces noise, not a
+   baseline. Aggregator readiness (10 players fresh) IS confirmed —
+   the defer is on quality grounds, not freshness grounds.
+
+**New CFs surfaced (this investigation):**
+
+- CF-RESTORE-SIGNAL-CREDS (MEDIUM) — credential restore for reddit /
+  odds / youtube / ebay
+- CF-SIGNAL-TELEMETRY-COMPLETENESS (LOW) — 6 of 9 functions emit no
+  App Insights traces despite producing blob output
+
+**Updated CFs:**
+
+- CF-BACKTEST-DETERMINISTIC — confirmed as prerequisite for next
+  backtest re-baseline
+- CF-CARDHEDGE-SIGNAL-RENAME — design committed (80e9971); scope
+  validated by this investigation
+
+**Recommended priority order** (see findings doc §5): reddit + youtube
+creds first → CF-BACKTEST-DETERMINISTIC → odds creds → re-run backtest
+→ eBay re-attestation → signal-rename impl → telemetry completeness.
 
 ---
 
