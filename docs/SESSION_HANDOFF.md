@@ -3305,3 +3305,93 @@ in the findings doc for future reference.
 
 **Next step**: implementation workstream is a SEPARATE authorization.
 Investigation does not auto-pivot to implementation.
+
+---
+
+## CF-CARDSIGHT-SIBLING-DISCOVERY — implementation shipped (2026-05-25)
+
+Approach A implementation landed on `main` (commit per next push). Production
+SHA on hobbyiq3 still pre-fix (`a5d5151`); deployment of this fix is a
+separate authorization.
+
+**Implementation summary:**
+
+- `fetchSiblingSales` body replaced with a wrap of `fetchCompsByPlayer +
+  exact-card-id exclusion`. External signature unchanged — callers
+  untouched.
+- New helper `parseGradeStringForCardsight()` parses "PSA 10" / "BGS 9.5"
+  into the `{gradeCompany, gradeValue}` shape that `fetchCompsByPlayer`
+  accepts. Raw / ungraded / unparseable inputs pass undefined for both
+  fields (segment then pools all grades — appropriate for raw queries).
+- Diagnostic logs evolved: old funnel-collapse lines retired; new lines
+  surface `fetchCompsByPlayer` cache state, warning count, and per-card
+  exclusion counts.
+- 15 new unit tests at `backend/tests/fetchSiblingSales.test.ts` covering:
+  - Wrap behavior + exact-card exclusion
+  - Early-return gates (missing player, missing product)
+  - Fallback population from `parsedQuery`-derived fields
+  - fetchCompsByPlayer error handling
+  - Invalid date / non-positive price filtering
+  - Grade string parsing (PSA 10, BGS 9.5, Raw, garbage)
+  - cardYear string→number coercion
+
+**Live smoke verification:**
+
+- **Torres (rare-card case)** — anchor 65d, fetchCompsByPlayer 8/48,
+  post-exclusion 7 siblings / 16 sales → **Layer 3 POPULATED (first time ever)**
+- **Ohtani (high-volume)** — anchor 5.9d, fetchCompsByPlayer 4/75,
+  post-exclusion 3 siblings / 6 sales → null (locked <7d rule)
+- **Bonemer (chrome rare)** — anchor 8.5d, fetchCompsByPlayer 1/69,
+  post-exclusion 0/0 → null (chrome-fallback collapse)
+- **Griffey (untracked)** — anchor 0.7d, fetchCompsByPlayer 1/1,
+  post-exclusion 0/0 → null (dictionary miss + anchor too recent)
+
+**Critical proof**: Torres reaches `coverage=no_card` with composite =
+0.30 × playerMomentum.multiplier(1.044) + 0.70 ×
+segmentTrajectory.multiplier(1.04) = **1.041 exact match**. Layer 3
+provides forward-looking signal for a card where Layer 2 was null (no
+direct comps in the 14d recent window). This is the "rare card" use
+case Layer 3 was specifically designed for, working end-to-end for the
+first time.
+
+**Findings on per-card behavior (worth noting):**
+
+- **High-volume cards (Ohtani, Judge, Griffey)** routinely have anchor
+  ages <7d → Layer 3 returns null via the locked
+  `anchor_too_recent` gate. This is methodology working as designed —
+  high-volume cards don't need Layer 3 because their Layer 2 cardTrajectory
+  is reliable.
+- **Sparse-direct-comp + active-segment cards (Torres, future Skenes
+  prospect autos)** are the Layer 3 win case. Layer 2 returns null
+  (no recent direct comps), Layer 3 fires with segment data.
+- **Bonemer chrome-fallback collapse**: For "Bowman Draft Chrome"
+  queries on rare prospect autos, `fetchCompsByPlayer`'s chrome fallback
+  narrows by `setName contains "Chrome"`. For Bonemer specifically,
+  only the exact card itself matches the chrome filter, so post-
+  exclusion the sibling pool is empty. Quality limitation worth noting
+  for CF-CARDSIGHT-COVERAGE expansion.
+- **Dictionary misses (Griffey "Upper Deck")**: products not in
+  `COMPIQ_TO_CARDSIGHT_RELEASES` degrade to literal-string search;
+  in Griffey's case only 1 candidate (the exact card) returned, post-
+  exclusion empty. Resolution: expand the dictionary as part of
+  CF-CARDSIGHT-COVERAGE.
+
+**Secondary gap also closed**: `/price-by-id` fallback edge case auto-
+resolves under Approach A because `fetchCompsByPlayer` accepts
+structured fields directly via its function signature. Smoke verified.
+
+**Production deploy of this fix**: separate authorization. Code on
+`main`; production still at `a5d5151` pre-fix. When deployed:
+
+- Tracked-player rare-card queries (Torres-class) will start surfacing
+  `coverage=no_card` with Layer 3 populated
+- High-volume queries (Ohtani-class) will continue showing
+  `coverage=no_segment` (anchor too recent), no behavior change
+- App Insights `[compiq.trendIQ.L3.fetch]` traces will show non-zero
+  sibling counts in production for the first time
+- App Service env vars unchanged; no new dependencies
+
+**CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS**: still open. Approach A
+works around the gap (parsedQuery fallback feeds structured fields).
+Retiring the fallback is a quality improvement worth ~1-2h when
+prioritized.

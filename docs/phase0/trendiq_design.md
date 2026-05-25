@@ -249,14 +249,22 @@ TrendIQ Phase 1 shipped to production at SHA `a5d5151`.
   rich-comp cards (Ohtani, Griffey). Multipliers correctly clamped to
   [0.70, 1.50] with the asymmetric multiplier behavior documented in
   the unit tests.
-- ⏸ **Layer 3 (segment trajectory)** — implementation complete,
-  blocked in production behind two related gaps:
-  - **CF-CARDSIGHT-SIBLING-DISCOVERY (primary)**: Cardsight catalog
-    data model differs structurally from CardHedge. Cards organized
-    by release + subset + parallel; player attribution not on
-    catalog cards in the expected shape. `fetchSiblingSales`
-    returns empty pool for all Cardsight cards. Sibling-discovery
-    rebuild required for production utility.
+- 🛠 **Layer 3 (segment trajectory)** — CF-CARDSIGHT-SIBLING-DISCOVERY
+  Approach A implementation shipped to `main` 2026-05-25; deployment to
+  production is a separate authorization (still at `a5d5151` pre-fix
+  at time of this update). Local smoke verified: Torres (rare-card
+  case, anchor 65d) reaches `coverage=no_card` with `segmentTrajectory`
+  populated for the first time ever — 7 siblings / 16 sales discovered
+  via `fetchCompsByPlayer` wrap. High-volume cards (Ohtani 5.9d anchor)
+  remain `null` via the locked `<7d` rule (methodology working as
+  designed for that case).
+  - **CF-CARDSIGHT-SIBLING-DISCOVERY (primary)** — RESOLVED via
+    Approach A: `fetchSiblingSales` body replaced with a wrap of
+    `fetchCompsByPlayer` + exact-card-id exclusion. Implementation
+    composition over the production-tested `compsByPlayer.service.ts`
+    (shipped 2026-05-27 for adjacent MCP-rewire flow). Inherits the
+    `lookupReleaseName` dictionary, chrome fallback, top-K pricing
+    fanout, and 6h aggregate cache.
   - **`/price-by-id` fallback path gap (secondary, observed in
     production traces 2026-05-25)**: the `parsedQuery` fallback
     added in B.4.c works for `/price` (which goes through

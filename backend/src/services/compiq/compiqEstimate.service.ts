@@ -32,6 +32,10 @@ import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplier
 // shape is stable across the phased rollout — missing layers just
 // shift the weights per the locked matrix.
 import { fetchPlayerSignals } from "../signals/fetchSignals.js";
+// CF-CARDSIGHT-SIBLING-DISCOVERY (2026-05-25 investigation, Approach A) —
+// fetchSiblingSales wraps fetchCompsByPlayer + exact-card-id exclusion.
+// See docs/phase0/cardsight_sibling_discovery_investigation.md.
+import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import {
   buildPlayerMomentumComponent,
   computeCardTrajectory,
@@ -621,89 +625,121 @@ export interface SiblingSalesFallback {
   year?: number | string | null;
 }
 
-const SIBLING_LIMIT = 8;
-const SAMPLES_PER_SIBLING = 10;
+/**
+ * Parse a grade string ("PSA 10" / "BGS 9.5" / "Raw") into the
+ * gradeCompany + gradeValue shape that fetchCompsByPlayer accepts.
+ *
+ * Returns empty object for raw / ungraded / unparseable inputs — segment
+ * trajectory then pools all grades, which is the right behavior for raw-
+ * card queries (no graded-tier scoping makes sense).
+ */
+function parseGradeStringForCardsight(
+  grade: string,
+): { gradeCompany?: string; gradeValue?: string } {
+  if (!grade) return {};
+  const lower = grade.toLowerCase().trim();
+  if (lower === "" || lower === "raw" || lower === "ungraded") return {};
+  const m = grade.match(/^(PSA|BGS|SGC|CGC)\s*([0-9]+(?:\.5)?)$/i);
+  if (!m) return {};
+  return { gradeCompany: m[1].toUpperCase(), gradeValue: m[2] };
+}
 
 export async function fetchSiblingSales(
   card: NonNullable<FetchedComps["card"]>,
   grade: string,
   fallback?: SiblingSalesFallback,
 ): Promise<SiblingSalesPool> {
+  // CF-CARDSIGHT-SIBLING-DISCOVERY Approach A (2026-05-25):
+  // Wrap fetchCompsByPlayer + exact-card-id exclusion. fetchCompsByPlayer is
+  // a production-tested service (shipped 2026-05-27 for adjacent MCP-rewire
+  // flow) that handles searchCatalog + releaseName dictionary lookup +
+  // chrome-fallback + top-K pricing fanout + 6h aggregate cache + dedupe.
+  // See docs/phase0/cardsight_sibling_discovery_investigation.md for the
+  // investigation that picked Approach A over B/C/D.
+  //
+  // Same-grade scoping: parse the grade string and pass to
+  // fetchCompsByPlayer so PSA 10's segment pool is built from PSA 10 sales
+  // of related cards (not raw or other grades). Raw queries pass undefined
+  // → segment includes all grades.
   const player =
     (card.player ?? "").trim() ||
     (fallback?.player ?? "").trim();
-  const set =
+  const product =
     (card.set ?? "").trim() ||
     (fallback?.set ?? "").trim();
   const yearRaw = card.year ?? fallback?.year ?? null;
-  const year = yearRaw != null ? String(yearRaw).trim() : "";
-  // B.4.c.3 diagnostic — surfaces sibling-discovery funnel collapse. TODO:
-  // pare back to summary after a few production cycles confirm shape.
+  const cardYear =
+    yearRaw != null && Number.isFinite(Number(yearRaw))
+      ? Number(yearRaw)
+      : undefined;
+  const parsedGrade = parseGradeStringForCardsight(grade);
+
   console.log(
-    `[compiq.trendIQ.L3.fetch] player="${player}" set="${set}" year="${year}" ` +
-      `(card.set=${JSON.stringify(card.set)} card.year=${JSON.stringify(card.year)} ` +
-      `fallback.set=${JSON.stringify(fallback?.set)} fallback.year=${JSON.stringify(fallback?.year)})`,
+    `[compiq.trendIQ.L3.fetch] player="${player}" product="${product}" ` +
+      `year=${cardYear ?? "null"} grade="${grade}" ` +
+      `gradeParsed=${JSON.stringify(parsedGrade)} ` +
+      `(cardIdentity.set=${JSON.stringify(card.set)} ` +
+      `fallback.set=${JSON.stringify(fallback?.set)})`,
   );
-  if (!player || !set) {
-    console.log(`[compiq.trendIQ.L3.fetch] early-return: missing player or set`);
+
+  if (!player || !product) {
+    console.log(
+      `[compiq.trendIQ.L3.fetch] early-return: missing player or product`,
+    );
     return { siblingCardIds: [], sales: [] };
   }
 
-  // Sibling discovery: same player + year + set, any variant.
-  let siblings: CardHedgeCard[] = [];
+  // Outer try/catch — fetchCompsByPlayer can throw on aggregate-level errors
+  // (its per-candidate failures are already tolerated internally).
+  let result;
   try {
-    siblings = await searchCardsRouted(`${year} ${set} ${player}`.trim(), 20);
-  } catch {
-    siblings = [];
-  }
-
-  // Filter, drop exact card_id, cap to SIBLING_LIMIT.
-  const playerLc = player.toLowerCase();
-  const setLc = set.toLowerCase();
-  const yearLc = year.toLowerCase();
-  const f1 = siblings.filter((s) => (s.player ?? "").toLowerCase() === playerLc);
-  const f2 = f1.filter((s) => (s.set ?? "").toLowerCase() === setLc);
-  const f3 = f2.filter((s) => !yearLc || String(s.year ?? "").toLowerCase() === yearLc);
-  const f4 = f3.filter((s) => s.card_id !== card.card_id);
-  console.log(
-    `[compiq.trendIQ.L3.fetch] searchCardsRouted returned ${siblings.length} ` +
-      `→ filter(player)=${f1.length} → filter(set)=${f2.length} ` +
-      `→ filter(year)=${f3.length} → drop-exact=${f4.length}`,
-  );
-  // Diagnostic: show first 3 raw siblings to understand what Cardsight returns.
-  if (siblings.length > 0) {
+    result = await fetchCompsByPlayer({
+      playerName: player,
+      product,
+      cardYear,
+      gradeCompany: parsedGrade.gradeCompany,
+      gradeValue: parsedGrade.gradeValue,
+    });
+  } catch (err) {
     console.log(
-      `[compiq.trendIQ.L3.fetch] sample siblings (first 3): ` +
-        JSON.stringify(siblings.slice(0, 3).map((s) => ({
-          card_id: s.card_id,
-          player: s.player,
-          set: s.set,
-          year: s.year,
-        }))),
+      `[compiq.trendIQ.L3.fetch] fetchCompsByPlayer threw: ` +
+        `${(err as Error)?.message ?? err}`,
     );
+    return { siblingCardIds: [], sales: [] };
   }
-  const siblingCardIds = f4.slice(0, SIBLING_LIMIT).map((s) => s.card_id);
 
-  // Per-sibling sales fetch, in parallel, individually try/catched.
-  const siblingSales = await Promise.all(
-    siblingCardIds.map(async (id) => {
-      try {
-        return await getCardSalesRouted(id, grade, SAMPLES_PER_SIBLING, { cardIdSource: "cardhedge" });
-      } catch {
-        return [];
-      }
-    }),
-  );
+  // Exclude exact card_id from both cardIds + comps. Segment-trajectory
+  // semantics per locked B.2 design: pool is SIBLINGS only (related cards
+  // in the same player + product + year segment, EXCLUDING the exact card
+  // being valued).
+  const exactCardId = card.card_id;
+  const siblingCardIds = result.cardIds.filter((id) => id !== exactCardId);
+  const excludedCardIds = result.cardIds.length - siblingCardIds.length;
 
-  // Flatten + filter for valid date + positive price.
   const sales: Array<{ price: number; ts: number }> = [];
-  for (const arr of siblingSales) {
-    for (const s of arr) {
-      const ts = Date.parse(s.date || "");
-      if (Number.isFinite(ts) && s.price > 0) {
-        sales.push({ price: s.price, ts });
-      }
+  let excludedComps = 0;
+  for (const c of result.comps) {
+    if (c.cardId === exactCardId) {
+      excludedComps++;
+      continue;
     }
+    const ts = Date.parse(c.date || "");
+    if (Number.isFinite(ts) && c.price > 0) {
+      sales.push({ price: c.price, ts });
+    }
+  }
+
+  console.log(
+    `[compiq.trendIQ.L3.fetch] fetchCompsByPlayer returned ` +
+      `cardIds=${result.cardIds.length} comps=${result.comps.length} ` +
+      `cached=${result.cached} warnings=${result.warnings.length}; ` +
+      `post-exclusion siblings=${siblingCardIds.length} sales=${sales.length} ` +
+      `(excluded cardIds=${excludedCardIds} comps=${excludedComps})`,
+  );
+  if (result.warnings.length > 0) {
+    console.log(
+      `[compiq.trendIQ.L3.fetch] warnings: ${JSON.stringify(result.warnings)}`,
+    );
   }
 
   return { siblingCardIds, sales };
