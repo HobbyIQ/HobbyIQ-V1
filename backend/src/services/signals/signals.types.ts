@@ -14,6 +14,11 @@ export interface SignalPayload {
   predicted_direction?: "rising" | "falling" | "stable";
   signal_flags?: string[];
   components?: {
+    // CF-CARDHEDGE-SIGNAL-RENAME (2026-05-25): compsMomentum replaces the
+    // prior un-typed `cardhedge` key from the aggregator. The interface
+    // never enumerated `cardhedge` (it flowed via `Record<string, number>`
+    // at runtime); adding compsMomentum here documents the new contract.
+    compsMomentum?: number;
     ebay?: number;
     reddit?: number;
     trends?: number;

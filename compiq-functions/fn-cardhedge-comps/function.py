@@ -1,10 +1,16 @@
-"""Per-player Card Hedge comp prefetch — primary sold-data source.
+"""Per-player comp-momentum prefetch — primary sold-data source.
 
 Runs nightly at 02:00 UTC. For each tracked player:
   1. POST /cards/search → top hit's `id` becomes the canonical card_id.
   2. GET /cards/{id}/sales → most recent 25 sold comps (newest first).
-  3. Reduce to a Card Hedge signal payload (multiplier, median price, etc.)
-     and persist to compiq-signals/{slug}/cardhedge.json.
+  3. Reduce to a comps-momentum signal payload (multiplier, median price,
+     recent_7_avg / prior_7_avg ratio) and persist to
+     compiq-signals/{slug}/compsMomentum.json.
+
+CF-CARDHEDGE-SIGNAL-RENAME (2026-05-25, design at 80e9971): signal output
+name is `compsMomentum` (decoupled from the CardHedge data-source brand).
+Source function file name (`fn-cardhedge-comps`) deferred — name still
+reflects the underlying CardHedge API consumed by `shared.cardhedge`.
 
 Cache TTL: comps 12 hours, market price 6 hours. The aggregator reads only
 the cached JSON — never call Card Hedge live at prediction time.

@@ -8,6 +8,81 @@
 
 ---
 
+## CF-CARDHEDGE-SIGNAL-RENAME — SHIPPED to production (2026-05-25 PM)
+
+**Status:** CLOSED. Design (`80e9971`) → implementation → production deploy
+all completed in the same arc.
+
+**Code changes (5 files):**
+
+- `compiq-functions/fn-signal-aggregator/function.py` — WEIGHTS dict key
+  `cardhedge` → `compsMomentum`; flag-emit block updated; component
+  dicts auto-update via WEIGHTS iteration
+- `compiq-functions/fn-cardhedge-comps/__init__.py` — signal-type label
+  passed to `run_for_all_players()` changed `"cardhedge"` →
+  `"compsMomentum"`; source function now writes to
+  `compiq-signals/{slug}/compsMomentum.json`
+- `compiq-functions/fn-cardhedge-comps/function.py` — docstring updated
+  to reflect new blob path + new signal-output semantic
+- `backend/src/services/signals/signals.types.ts` — added
+  `compsMomentum?: number` to `SignalPayload.components` (optional cleanup
+  per design Section 8.2; the type never enumerated `cardhedge` either)
+- `mcp-server/pricing.ts` — same `compsMomentum?: number` addition for
+  port-with-provenance sync
+
+**Deploy:** fn-compiq published via `func azure functionapp publish
+fn-compiq --python --build remote`. All 16 functions registered (vs 14
+prior — this deploy also registered `fn-player-score-refresh` and
+`fn-price-alert-checker` which existed in source but weren't previously
+on production; benign side-effect).
+
+**Production smoke (Ohtani):**
+
+Pre-deploy aggregated.json:
+
+```text
+components.cardhedge       = 1.085
+component_signals.cardhedge = rising
+signal_flags includes:      cardhedge_comps_rising
+```
+
+Post-deploy aggregated.json (after manual invokes of `fn-cardhedge-comps`
+and `fn-signal-aggregator`):
+
+```text
+components.cardhedge        = (absent)
+components.compsMomentum    = 1.20
+component_signals.cardhedge = (absent)
+component_signals.compsMomentum = rising
+signal_flags includes:        compsMomentum_rising
+```
+
+Blob path verified:
+
+```text
+shohei-ohtani/cardhedge.json     = 2026-05-25T02:00:07Z (stale, no longer read)
+shohei-ohtani/compsMomentum.json = 2026-05-25T23:39:04Z (new, freshly written)
+```
+
+**Backend deploy NOT required.** Backend reads `componentSignals` as
+`Record<string, number>` opaquely — the TS type change is documentation
+only. Production backend will start seeing the new field name on the
+next aggregator cycle (or on every cycle now, since this manual invoke
+already wrote it).
+
+**Old `cardhedge.json` blobs:** retained per design's graceful-
+degradation strategy. fn-cardhedge-comps no longer writes them; they
+become read-stale immediately. Could be deleted later as cleanup but
+not load-bearing.
+
+**Cross-refs:**
+
+- `80e9971` — design lock (in-place coordinated deploy, all 4 locks)
+- `5a5b1b7` — CF-BACKTEST-DETERMINISTIC (independent, same arc)
+- `567d55c` — backtest re-baseline (revealed signal-harm, separate CF)
+
+---
+
 ## Backtest Re-Baseline — Deterministic + 5 of 7 Signals (2026-05-25 PM)
 
 **Run:** `docs/phase0/backtest_runs/20260525-225825-deterministic-creds-restored/`

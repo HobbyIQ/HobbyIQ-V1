@@ -16,7 +16,13 @@ from shared.career_arc import career_arc_signal
 from shared.playoff_calendar import get_playoff_signal
 
 WEIGHTS = {
-    "cardhedge": 0.20,
+    # CF-CARDHEDGE-SIGNAL-RENAME (2026-05-25, design at 80e9971): renamed
+    # signal output key from "cardhedge" -> "compsMomentum" so the signal
+    # name reflects what it measures (recent_7_avg / prior_7_avg comp price
+    # momentum) rather than the data-source vendor. fn-cardhedge-comps
+    # source function file name DEFERRED per design (function reflects data
+    # source, factually accurate).
+    "compsMomentum": 0.20,
     "ebay": 0.20,
     "reddit": 0.15,
     "trends": 0.15,
@@ -68,13 +74,13 @@ def aggregate_signals(player_name: str) -> dict:
         flags.append(f"milestone: {signals['stats']['milestone']}")
     if signals["news"].get("keyword_flags", {}).get("injury"):
         flags.append("injury_risk")
-    ch = signals.get("cardhedge", {})
-    if ch.get("signal") == "rising":
-        flags.append("cardhedge_comps_rising")
-    elif ch.get("signal") == "falling":
-        flags.append("cardhedge_comps_falling")
-    elif ch.get("signal") in {"no_data", "no_match", "no_id"}:
-        flags.append("cardhedge_no_data")
+    cm = signals.get("compsMomentum", {})
+    if cm.get("signal") == "rising":
+        flags.append("compsMomentum_rising")
+    elif cm.get("signal") == "falling":
+        flags.append("compsMomentum_falling")
+    elif cm.get("signal") in {"no_data", "no_match", "no_id"}:
+        flags.append("compsMomentum_no_data")
 
     # H5 — surface BIN trend at the aggregate level so the MCP can include
     # it in the pricing prompt without a second blob read.
