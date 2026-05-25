@@ -3569,9 +3569,15 @@ in next sub-workstream):**
 
 **Open:**
 
-- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (MEDIUM): Approach A's
-  parsedQuery fallback works around the cardIdentity completeness gap,
-  but retiring the fallback would make cardIdentity the true source of
-  truth. ~1-2h research + implementation.
+- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (MEDIUM, **investigation
+  COMPLETE 2026-05-25**): full findings at
+  [docs/phase0/cardsight_cardidentity_completeness_investigation.md](phase0/cardsight_cardidentity_completeness_investigation.md).
+  Outcome: `getCardDetail` endpoint DOES return rich metadata
+  (`releaseName`, `setName`, `releaseYear`, `parallels[]`, `attributes[]`,
+  `releaseId`/`setId`) that `pricing.card` lacks. Implementation feasible:
+  fix pre-existing mapper bug (`_getCardDetail` reads `body.year` but API
+  returns `body.releaseYear` as string), augment `findCompsViaCardsight`
+  to call `getCardDetail` alongside `getPricing`, retire parsedQuery
+  fallback. Scope ~1.5-2h. Implementation pending separate authorization.
 - **CF-CARDHEDGE-FULL-REMOVAL** (MEDIUM): yesterday's pre-existing.
 - **CF-CARDHEDGE-SIGNAL-RENAME** (LOW): yesterday's pre-existing.
