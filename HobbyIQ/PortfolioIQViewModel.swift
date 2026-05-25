@@ -324,7 +324,9 @@ final class PortfolioIQViewModel: ObservableObject {
                 confidence: card.confidence,
                 method: card.method,
                 summary: card.summary,
-                isAuto: card.isAuto
+                isAuto: card.isAuto,
+                photos: card.photos,
+                clientId: card.clientId
             )
 
             let currentInventory = inventoryCards.isEmpty ? await LocalPortfolioProvider.shared.getInventory() : inventoryCards

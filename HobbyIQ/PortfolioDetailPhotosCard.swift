@@ -262,7 +262,9 @@ struct PortfolioDetailPhotosCard: View {
             confidence: card.confidence,
             method: card.method,
             summary: card.summary,
-            isAuto: card.isAuto
+            isAuto: card.isAuto,
+            photos: card.photos,
+            clientId: card.clientId
         )
 
         do {
