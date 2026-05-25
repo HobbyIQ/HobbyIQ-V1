@@ -3056,3 +3056,37 @@ Post-deploy smoke `POST /api/compiq/bulk` with `{"queries":["Mike Trout 2011 Top
 - `summary: "Hold — fair value, but momentum is improving."`
 
 F1 closed. No current consumer wired up; preventive ship lands cleanly. Next session can wire iOS to /api/compiq/bulk with confidence the set-bearing-query bug won't bite.
+
+---
+
+### CF-CARDHEDGE-SIGNAL-RENAME (surfaced 2026-05-25 during B.4.a smoke verification)
+
+The aggregator's `cardhedge` signal source (visible in TrendIQ's
+`componentSignals.cardhedge` field — e.g., Ohtani's payload showed
+`cardhedge: 1.085`) is named after the deprecated CardHedge comp-fetch
+path. This is **distinct from CF-CARDHEDGE-CLIENT-DELETE / CF-CARDHEDGE-
+FULL-REMOVAL** (which remove the backend's comp-fetch path entirely).
+The signal here is the `fn-cardhedge-comps` Azure Function's
+contribution to player-momentum aggregation — still functioning,
+still useful as a signal, but the NAME is a brand inconsistency.
+
+Decisions deferred (not blocking; ship-and-rename later):
+
+- New name aligned with HobbyIQ vocabulary (candidates: `compsRising`,
+  `marketActivity`, `tradingMomentum`, `compsTrend` — needs product
+  call)
+- Migration strategy for existing `aggregated.json` blobs that carry
+  the old `cardhedge` field name (rename in-place on next aggregator
+  cycle? dual-write transition? backfill?)
+- Log query updates wherever Kusto / App Insights references the field
+- iOS / UI label updates if the field ever surfaces in user-visible
+  copy (it currently doesn't — only in `trendIQ.components.player
+  Momentum.componentSignals` which is detail-view depth)
+
+Estimated 2-4 hour focused workstream when prioritized. Cross-refs:
+
+- Surfaced via Ohtani smoke 2026-05-25: composite=1.041, multiplier
+  flowed correctly; cardhedge=1.085 contributing weight was the trigger
+  for capturing this followup
+- Related: CF-CARDHEDGE-FULL-REMOVAL (separate; backend comp-fetch
+  cleanup, NOT the signal source)

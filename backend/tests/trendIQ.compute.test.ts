@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildPlayerMomentumComponent,
+  computeCardTrajectory,
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "../src/services/compiq/trendIQ.compute.js";
@@ -241,6 +242,228 @@ describe("buildPlayerMomentumComponent", () => {
     expect(result!.sourceUrl).toBe(
       "https://example.azurewebsites.net/api/serve-signals",
     );
+  });
+});
+
+describe("computeCardTrajectory — Layer 2 card-level comp trajectory", () => {
+  // Pin "now" so day-based windowing is deterministic. 2026-05-25T12:00Z.
+  const NOW = Date.parse("2026-05-25T12:00:00Z");
+  const dayAgo = (n: number) => new Date(NOW - n * 24 * 3600 * 1000).toISOString();
+
+  it("returns null when recent window has <2 comps", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(5) },  // recent (only 1)
+        { price: 110, soldDate: dayAgo(20) },
+        { price: 105, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  it("returns null when older window has <2 comps", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(2) },
+        { price: 110, soldDate: dayAgo(5) },
+        { price: 105, soldDate: dayAgo(30) }, // older (only 1)
+      ],
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  it("returns null when both windows empty", () => {
+    const r = computeCardTrajectory([], NOW);
+    expect(r).toBeNull();
+  });
+
+  it("computes positive trajectory (recent > older)", () => {
+    const r = computeCardTrajectory(
+      [
+        // recent (0..14d): median 110
+        { price: 105, soldDate: dayAgo(2) },
+        { price: 110, soldDate: dayAgo(5) },
+        { price: 115, soldDate: dayAgo(10) },
+        // older (15..45d): median 100
+        { price: 95, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+        { price: 105, soldDate: dayAgo(40) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.recentMedian).toBe(110);
+    expect(r!.olderMedian).toBe(100);
+    expect(r!.pctChange).toBe(10);            // (110-100)/100*100 = 10
+    expect(r!.multiplier).toBe(1.1);          // 1 + 10/100
+    expect(r!.recentCount).toBe(3);
+    expect(r!.olderCount).toBe(3);
+    expect(r!.windowRecentDays).toBe(14);
+    expect(r!.windowOlderDays).toBe(30);
+  });
+
+  it("computes negative trajectory (recent < older)", () => {
+    const r = computeCardTrajectory(
+      [
+        // recent: median 80
+        { price: 75, soldDate: dayAgo(3) },
+        { price: 80, soldDate: dayAgo(7) },
+        { price: 85, soldDate: dayAgo(12) },
+        // older: median 100
+        { price: 95, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(28) },
+        { price: 105, soldDate: dayAgo(40) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(-20);           // (80-100)/100*100 = -20
+    expect(r!.multiplier).toBe(0.8);
+  });
+
+  it("flat trajectory returns multiplier 1.0", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(2) },
+        { price: 100, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(35) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(0);
+    expect(r!.multiplier).toBe(1);
+  });
+
+  it("clamps pctChange to +50 (big move up)", () => {
+    const r = computeCardTrajectory(
+      [
+        // recent median 200 (older 100 → +100% raw, clamped to +50)
+        { price: 200, soldDate: dayAgo(2) },
+        { price: 200, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(50);
+    expect(r!.multiplier).toBe(1.5);
+  });
+
+  it("clamps pctChange to -50 (big move down); multiplier clamped further to 0.70", () => {
+    // Design quirk worth knowing: pctChange clamps at ±50 but multiplier
+    // separately clamps to [0.70, 1.50]. A -50% trend therefore reports
+    // pctChange=-50 in the component (transparent to UI) but contributes
+    // multiplier=0.70 to the composite (1 + -50/100 = 0.50, then clamped
+    // up to 0.70). Composite-implied downside is therefore capped at -30%
+    // even when a layer's raw trend is -50%. Upside is symmetric:
+    // pctChange=+50 → multiplier=1.50 (no further clamp). Asymmetry
+    // matches the player-momentum aggregator's own [0.70, 1.50] clamp.
+    const r = computeCardTrajectory(
+      [
+        { price: 25, soldDate: dayAgo(2) },
+        { price: 25, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(-50);
+    expect(r!.multiplier).toBe(0.7);
+  });
+
+  it("ignores future-dated comps", () => {
+    const future = new Date(NOW + 2 * 24 * 3600 * 1000).toISOString();
+    const r = computeCardTrajectory(
+      [
+        { price: 9999, soldDate: future },     // ignored
+        { price: 100, soldDate: dayAgo(2) },
+        { price: 110, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.recentCount).toBe(2);            // future skipped
+  });
+
+  it("ignores invalid prices (zero, negative, NaN)", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 0, soldDate: dayAgo(2) },     // ignored
+        { price: -5, soldDate: dayAgo(2) },    // ignored
+        { price: NaN, soldDate: dayAgo(2) },   // ignored
+        { price: 100, soldDate: dayAgo(5) },
+        { price: 110, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.recentCount).toBe(2);
+  });
+
+  it("ignores comps older than 45 days", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(2) },
+        { price: 100, soldDate: dayAgo(10) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+        { price: 9999, soldDate: dayAgo(60) },    // ignored
+        { price: 9999, soldDate: dayAgo(100) },   // ignored
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.olderCount).toBe(2);
+    expect(r!.olderMedian).toBe(100);          // 9999s excluded
+  });
+
+  it("comp at exactly 14 days goes to recent window (inclusive boundary)", () => {
+    const r = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(0) },
+        { price: 105, soldDate: dayAgo(14) },   // boundary → recent
+        { price: 200, soldDate: dayAgo(15) },   // → older
+        { price: 210, soldDate: dayAgo(40) },
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.recentCount).toBe(2);
+    expect(r!.olderCount).toBe(2);
+  });
+
+  it("computeTrendIQ propagates real Layer 2 with null L1/L3 → card_only", () => {
+    const cardTraj = computeCardTrajectory(
+      [
+        { price: 110, soldDate: dayAgo(2) },
+        { price: 115, soldDate: dayAgo(5) },
+        { price: 100, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(30) },
+      ],
+      NOW,
+    );
+    const r = computeTrendIQ({
+      playerMomentum: null,
+      cardTrajectory: cardTraj,
+      segmentTrajectory: null,
+    });
+    expect(r.coverage).toBe("card_only");
+    expect(r.weights).toEqual({
+      playerMomentum: 0,
+      cardTrajectory: 1,
+      segmentTrajectory: 0,
+    });
+    expect(r.composite).toBe(cardTraj!.multiplier);
   });
 });
 

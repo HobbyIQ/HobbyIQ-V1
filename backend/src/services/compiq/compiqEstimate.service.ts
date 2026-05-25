@@ -34,6 +34,7 @@ import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplier
 import { fetchPlayerSignals } from "../signals/fetchSignals.js";
 import {
   buildPlayerMomentumComponent,
+  computeCardTrajectory,
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "./trendIQ.compute.js";
@@ -1936,13 +1937,16 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     predictedRangePhase3 = null;
   }
 
-  // ── TrendIQ composite (Phase 1 B.4.a: Layer 1 only) ───────────────────
-  // L2 cardTrajectory and L3 segmentTrajectory remain null until B.4.b/c
-  // land; the composite function handles all 8 weight-table rows so the
-  // response shape is stable across the phased rollout.
+  // ── TrendIQ composite (Phase 1 B.4.a + B.4.b: Layers 1 + 2) ───────────
+  // Layer 2 reads from fetched.comps (the unfiltered card-id-level pool)
+  // — see computeCardTrajectory's coupling note. Layer 3 still null
+  // until B.4.c.
+  const cardTrajectory = computeCardTrajectory(
+    fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+  );
   const trendIQ = computeTrendIQ({
     playerMomentum,
-    cardTrajectory: null,
+    cardTrajectory,
     segmentTrajectory: null,
   });
   console.log(formatTrendIQLogLine(trendIQ));

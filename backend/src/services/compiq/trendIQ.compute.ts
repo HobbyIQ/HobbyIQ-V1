@@ -8,6 +8,7 @@
 // component objects.
 
 import {
+  type CardTrajectoryComponent,
   type PlayerMomentumComponent,
   type TrendIQComponents,
   type TrendIQCoverage,
@@ -45,6 +46,98 @@ function deriveDirection(composite: number): TrendIQDirection {
   if (composite < 0.97) return "down";
   if (composite > 1.03) return "up";
   return "flat";
+}
+
+// ─── Layer 2: card-level comp trajectory ────────────────────────────────────
+//
+// Locked methodology (docs/phase0/trendiq_design.md "Phase 1 methodology
+// locks"):
+//   - Recent window: 0..14 days from now (inclusive)
+//   - Older window: (14, 45] days from now
+//   - Minimum: 2 comps in recent AND 2 in older — else null
+//   - pctChange clamp: ±50%
+//   - Multiplier conversion: clamp(0.70, 1.50, 1 + pctChange / 100)
+//
+// Median choice: plain unweighted median per window (NOT
+// computeWeightedMedian from compiqEstimate.service.ts). For trend
+// comparison we want each window's median to fairly represent that
+// window's price level; velocity weighting inside the older window
+// (which decays from 1.0x at 15-21d to 0.1x past 30d) would bias the
+// older median upward toward the recent edge and dampen apparent trend
+// changes. The median is also naturally outlier-robust, so we skip the
+// `applyCompQualityFilter` pre-filter that the pricing path uses.
+//
+// Coupling note: we intentionally do NOT apply variant / parallel /
+// grade filters here. The caller (computeEstimate) passes its raw
+// `fetched.comps` set — comps for the resolved card_id, all variants.
+// Same-card variants tend to move directionally together (a hot player
+// pulls all his cards), so the trend signal is meaningful without the
+// extra filter. Layer 3 (segment trajectory) and the pricing path
+// handle finer-grained filtering for their own purposes.
+
+interface CardTrajectoryInput {
+  price: number;
+  soldDate: string | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function simpleMedian(values: ReadonlyArray<number>): number | null {
+  if (values.length === 0) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+export function computeCardTrajectory(
+  comps: ReadonlyArray<CardTrajectoryInput>,
+  nowMs: number = Date.now(),
+): CardTrajectoryComponent | null {
+  const recent: number[] = [];
+  const older: number[] = [];
+
+  for (const c of comps) {
+    if (!c.soldDate) continue;
+    if (!Number.isFinite(c.price) || c.price <= 0) continue;
+    const ts = Date.parse(c.soldDate);
+    if (!Number.isFinite(ts)) continue;
+    const ageDays = (nowMs - ts) / DAY_MS;
+    if (ageDays < 0) continue;             // future-dated comp — skip
+    if (ageDays <= 14) {
+      recent.push(c.price);
+    } else if (ageDays <= 45) {
+      older.push(c.price);
+    }
+  }
+
+  if (recent.length < 2 || older.length < 2) return null;
+
+  const recentMedian = simpleMedian(recent);
+  const olderMedian = simpleMedian(older);
+  if (
+    recentMedian === null ||
+    olderMedian === null ||
+    olderMedian <= 0
+  ) {
+    return null;
+  }
+
+  const rawPct = ((recentMedian - olderMedian) / olderMedian) * 100;
+  const pctChange = clamp(rawPct, -50, 50);
+  const multiplier = clamp(1 + pctChange / 100, 0.70, 1.50);
+
+  return {
+    multiplier: Math.round(multiplier * 1000) / 1000,
+    pctChange: Math.round(pctChange * 10) / 10,
+    recentMedian: Math.round(recentMedian * 100) / 100,
+    olderMedian: Math.round(olderMedian * 100) / 100,
+    recentCount: recent.length,
+    olderCount: older.length,
+    windowRecentDays: 14,
+    windowOlderDays: 30, // duration span 15..45 = 30 days
+  };
 }
 
 /** Build the Layer 1 component from a signal fetch result. Returns null when
