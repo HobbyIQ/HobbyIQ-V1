@@ -25,6 +25,18 @@ import {
   type MultiplierAnchoredResult,
 } from "./predictedRangeMultiplierAnchored.js";
 import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplierAnchoredPredictedPrice.js";
+// TrendIQ Phase 1 (docs/phase0/trendiq_design.md) — forward-looking
+// composite score. B.4.a wires Layer 1 only (player momentum from the
+// signal aggregator); Layers 2 and 3 follow in B.4.b/c. The composite
+// function already handles all 8 weight-table rows, so the response
+// shape is stable across the phased rollout — missing layers just
+// shift the weights per the locked matrix.
+import { fetchPlayerSignals } from "../signals/fetchSignals.js";
+import {
+  buildPlayerMomentumComponent,
+  computeTrendIQ,
+  formatTrendIQLogLine,
+} from "./trendIQ.compute.js";
 
 // Issue #25 Phase 3 — trim peer-pool diagnostics for the wire response.
 // We keep counts only; sample comp data is not surfaced to the client.
@@ -1529,14 +1541,22 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     };
   }
 
-  // --- Broader-pool trend signal -------------------------------------------
-  // Anchor stays on the exact card_id's direct sales (handled in pricing
-  // pipeline below). Trend % comes from every similar card in the same
-  // player + year + set, so even a thin/rare variant gets a market-wide
-  // direction reading.
-  const broaderTrend = cardIdentity
-    ? await fetchBroaderTrend(cardIdentity, cardHedgeGrade, fetched.comps).catch(() => null)
-    : null;
+  // --- Broader-pool trend signal + TrendIQ Layer 1 fetch -------------------
+  // broaderTrend: existing fixed-window 14d/15-45d sibling-pool trend.
+  // playerSignalsResult: TrendIQ Layer 1 — aggregator's player multiplier.
+  // Both run in parallel so signal fetch doesn't add to wall-clock latency
+  // when broaderTrend's sibling-sale fetch dominates.
+  const playerNameForSignals =
+    cardIdentity?.player?.trim() || body.playerName?.trim() || "";
+  const [broaderTrend, playerSignalsResult] = await Promise.all([
+    cardIdentity
+      ? fetchBroaderTrend(cardIdentity, cardHedgeGrade, fetched.comps).catch(() => null)
+      : Promise.resolve(null),
+    playerNameForSignals
+      ? fetchPlayerSignals(playerNameForSignals).catch(() => ({ payload: null, sourceUrl: null }))
+      : Promise.resolve({ payload: null, sourceUrl: null }),
+  ]);
+  const playerMomentum = buildPlayerMomentumComponent(playerSignalsResult);
 
   // Find the most recent exact-match sale to serve as the anchor.
   const sortedExact = fetched.comps
@@ -1912,6 +1932,17 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     predictedRangePhase3 = null;
   }
 
+  // ── TrendIQ composite (Phase 1 B.4.a: Layer 1 only) ───────────────────
+  // L2 cardTrajectory and L3 segmentTrajectory remain null until B.4.b/c
+  // land; the composite function handles all 8 weight-table rows so the
+  // response shape is stable across the phased rollout.
+  const trendIQ = computeTrendIQ({
+    playerMomentum,
+    cardTrajectory: null,
+    segmentTrajectory: null,
+  });
+  console.log(formatTrendIQLogLine(trendIQ));
+
   return {
     cardTitle,
     verdict: result.verdict ?? "Hold",
@@ -1924,6 +1955,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     predictedPriceRange: null,
     predictedPriceAttribution: null,
     premiumValue,
+    trendIQ,
     explanation: result.explanationBullets?.length
       ? result.explanationBullets
       : ["Estimate based on available market data."],

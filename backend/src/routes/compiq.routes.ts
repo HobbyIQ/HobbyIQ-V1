@@ -589,6 +589,9 @@ router.post("/price", async (req, res, next) => {
           predictedPrice: null,
           predictedPriceRange: null,
           predictedPriceAttribution: null,
+          // TrendIQ — null on unsupported-sport short-circuit. Field
+          // present for response-shape stability across all /price branches.
+          trendIQ: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -664,6 +667,10 @@ router.post("/price", async (req, res, next) => {
         predictedPrice: null,
         predictedPriceRange: null,
         predictedPriceAttribution: null,
+        // TrendIQ Phase 1 — forward-looking composite score (Layer 1 only
+        // in B.4.a; L2/L3 follow). Always present in the happy path; null
+        // on the short-circuit branches above.
+        trendIQ: (est as any).trendIQ ?? null,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
