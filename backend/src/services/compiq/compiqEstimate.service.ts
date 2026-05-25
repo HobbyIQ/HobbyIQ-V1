@@ -616,15 +616,6 @@ export interface SiblingSalesPool {
   sales: Array<{ price: number; ts: number }>;
 }
 
-export interface SiblingSalesFallback {
-  /** Parsed/structured player name (e.g. from parseCardQuery). */
-  player?: string | null;
-  /** Parsed/structured set (e.g. "Bowman Chrome", "Topps Update"). */
-  set?: string | null;
-  /** Parsed/structured year. */
-  year?: number | string | null;
-}
-
 /**
  * Parse a grade string ("PSA 10" / "BGS 9.5" / "Raw") into the
  * gradeCompany + gradeValue shape that fetchCompsByPlayer accepts.
@@ -647,7 +638,6 @@ function parseGradeStringForCardsight(
 export async function fetchSiblingSales(
   card: NonNullable<FetchedComps["card"]>,
   grade: string,
-  fallback?: SiblingSalesFallback,
 ): Promise<SiblingSalesPool> {
   // CF-CARDSIGHT-SIBLING-DISCOVERY Approach A (2026-05-25):
   // Wrap fetchCompsByPlayer + exact-card-id exclusion. fetchCompsByPlayer is
@@ -657,17 +647,22 @@ export async function fetchSiblingSales(
   // See docs/phase0/cardsight_sibling_discovery_investigation.md for the
   // investigation that picked Approach A over B/C/D.
   //
+  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (2026-05-25):
+  // Previously took a `fallback?: SiblingSalesFallback` parameter populated
+  // from parsedQuery, because cardIdentity.set/year were structurally
+  // undefined for Cardsight-exclusive cards. Phase 2 of this CF augments
+  // findCompsViaCardsight to populate cardIdentity from getCardDetail's
+  // rich response, eliminating the gap. The fallback is no longer needed
+  // and has been retired — cardIdentity is now the true source of truth
+  // for player + product + year.
+  //
   // Same-grade scoping: parse the grade string and pass to
   // fetchCompsByPlayer so PSA 10's segment pool is built from PSA 10 sales
   // of related cards (not raw or other grades). Raw queries pass undefined
   // → segment includes all grades.
-  const player =
-    (card.player ?? "").trim() ||
-    (fallback?.player ?? "").trim();
-  const product =
-    (card.set ?? "").trim() ||
-    (fallback?.set ?? "").trim();
-  const yearRaw = card.year ?? fallback?.year ?? null;
+  const player = (card.player ?? "").trim();
+  const product = (card.set ?? "").trim();
+  const yearRaw = card.year ?? null;
   const cardYear =
     yearRaw != null && Number.isFinite(Number(yearRaw))
       ? Number(yearRaw)
@@ -677,14 +672,14 @@ export async function fetchSiblingSales(
   console.log(
     `[compiq.trendIQ.L3.fetch] player="${player}" product="${product}" ` +
       `year=${cardYear ?? "null"} grade="${grade}" ` +
-      `gradeParsed=${JSON.stringify(parsedGrade)} ` +
-      `(cardIdentity.set=${JSON.stringify(card.set)} ` +
-      `fallback.set=${JSON.stringify(fallback?.set)})`,
+      `gradeParsed=${JSON.stringify(parsedGrade)}`,
   );
 
   if (!player || !product) {
     console.log(
-      `[compiq.trendIQ.L3.fetch] early-return: missing player or product`,
+      `[compiq.trendIQ.L3.fetch] early-return: missing player or product ` +
+        `on cardIdentity (CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS post-fix; ` +
+        `if this fires often, getCardDetail augmentation may be degrading)`,
     );
     return { siblingCardIds: [], sales: [] };
   }
@@ -1675,18 +1670,14 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   // playerSignalsResult: TrendIQ Layer 1 — aggregator's player multiplier.
   const playerNameForSignals =
     cardIdentity?.player?.trim() || body.playerName?.trim() || "";
-  // Sibling-discovery fallback (Option A — CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS):
-  // Cardsight-exclusive resolved identities often have `set` / `year` = null
-  // even when the parsed query has them. Pass the parsed/structured fields as
-  // fallback so fetchSiblingSales can still build the sibling-search query.
-  const siblingFallback: SiblingSalesFallback = {
-    player: queryContext.playerName,
-    set: queryContext.product,
-    year: queryContext.cardYear,
-  };
+  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (2026-05-25): parsedQuery
+  // fallback retired. findCompsViaCardsight now augments cardIdentity
+  // from getCardDetail (rich metadata: releaseName, setName, year),
+  // so cardIdentity reliably carries the player/product/year fields
+  // sibling-discovery needs.
   const [siblingPool, playerSignalsResult] = await Promise.all([
     cardIdentity
-      ? fetchSiblingSales(cardIdentity, cardHedgeGrade, siblingFallback).catch(() => ({
+      ? fetchSiblingSales(cardIdentity, cardHedgeGrade).catch(() => ({
           siblingCardIds: [] as string[],
           sales: [] as Array<{ price: number; ts: number }>,
         }))

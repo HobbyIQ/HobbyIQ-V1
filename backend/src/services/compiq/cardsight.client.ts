@@ -298,13 +298,22 @@ async function _getCardDetail(cardId: string): Promise<CardsightCardDetail> {
       return _notFoundDetail(cardId);
     }
     const body: any = await res.json();
+    // Cardsight returns the year as `releaseYear` (string, e.g. "2018"), NOT
+    // `year`. Bug existed in this mapper since the Cardsight migration but
+    // was dormant — no caller consumed detail.year until CF-CARDSIGHT-
+    // CARDIDENTITY-COMPLETENESS (investigation: a6c6dd9). Coerce to number
+    // so the interface contract (year: number) holds.
+    const rawYear = body.releaseYear ?? body.year ?? null;
+    const year = rawYear != null && Number.isFinite(Number(rawYear))
+      ? Number(rawYear)
+      : 0;
     return {
       id: body.id ?? cardId,
       name: body.name ?? "",
       number: body.number ?? "",
       releaseName: body.releaseName ?? "",
       setName: body.setName ?? "",
-      year: body.year ?? 0,
+      year,
       parallels: Array.isArray(body.parallels) ? (body.parallels as CardsightParallel[]) : [],
     };
   } catch (err: any) {

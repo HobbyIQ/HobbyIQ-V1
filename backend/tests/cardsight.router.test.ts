@@ -20,6 +20,7 @@ vi.mock("../src/services/compiq/cardsight.client.js", () => {
 
   return {
     getPricing: vi.fn(),
+    getCardDetail: vi.fn(),
     searchCatalog: vi.fn(),
     CardsightTimeoutError,
   };
@@ -32,7 +33,7 @@ vi.mock("../src/services/compiq/cardsight.translator.js", () => ({
 
 import { findCompsByQuery } from "../src/services/compiq/cardhedge.client.js";
 import { resolveCardId } from "../src/services/compiq/cardsight.mapper.js";
-import { getPricing, CardsightTimeoutError } from "../src/services/compiq/cardsight.client.js";
+import { getPricing, getCardDetail, CardsightTimeoutError } from "../src/services/compiq/cardsight.client.js";
 import { translateResponse } from "../src/services/compiq/cardsight.translator.js";
 import { findCompsRouted } from "../src/services/compiq/cardsight.router.js";
 import { searchCardsRouted, getCardSalesRouted } from "../src/services/compiq/cardsight.router.js";
@@ -43,6 +44,7 @@ const mockTranslateResponse = vi.mocked(translateResponse);
 const mockFindCompsByQuery = vi.mocked(findCompsByQuery);
 const mockResolveCardId = vi.mocked(resolveCardId);
 const mockGetPricing = vi.mocked(getPricing);
+const mockGetCardDetail = vi.mocked(getCardDetail);
 
 const chResult = {
   card: { card_id: "ch-1", player: "Mike Trout", set: "Topps Chrome", year: 2018, title: "CH title" },
@@ -66,6 +68,21 @@ beforeEach(() => {
     raw: { count: 1, records: [] },
     graded: [],
     meta: { total_records: 1, last_sale_date: "2026-05-01" },
+  } as any);
+  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS: findCompsViaCardsight now calls
+  // getCardDetail in parallel with getPricing to enrich cardIdentity.
+  // Default mock returns notFound=true so existing tests fall back to the
+  // pricing.card behavior they were written against; per-test overrides
+  // demonstrate the augmented path.
+  mockGetCardDetail.mockResolvedValue({
+    id: "cs-1",
+    name: "",
+    number: "",
+    releaseName: "",
+    setName: "",
+    year: 0,
+    parallels: [],
+    notFound: true,
   } as any);
   mockTranslateResponse.mockReturnValue([
     { price: 99, title: "CS Comp 1", soldDate: "2026-05-02", source: "cardsight" },
@@ -280,6 +297,64 @@ describe("cardsight.router", () => {
     const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
 
     expect(out.card?.player).toBe("Mike Trout");
+  });
+
+  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS — Phase 2 augmentation:
+  // findCompsViaCardsight now calls getCardDetail alongside getPricing,
+  // populating cardIdentity.set from detail.releaseName (the product
+  // line) and cardIdentity.year from detail.year (numeric, post-mapper-
+  // fix). These tests verify the augmented path produces richer
+  // cardIdentity than the prior pricing.card-only construction.
+  it("CF-CARDIDENTITY: cardIdentity.set populated from detail.releaseName (product line) when getCardDetail succeeds", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+    mockGetCardDetail.mockResolvedValue({
+      id: "cs-1",
+      name: "Shohei Ohtani",
+      number: "1",
+      releaseName: "Bowman Chrome",  // product line — what callers expect on cardIdentity.set
+      setName: "Base Set",            // subset — would have been the wrong value
+      year: 2018,                     // numeric, per Phase 1 mapper fix
+      parallels: [],
+    } as any);
+
+    const out = await findCompsRouted("Shohei Ohtani", { grade: "Raw" });
+
+    expect(out.card?.set).toBe("Bowman Chrome");  // releaseName, NOT setName
+    expect(out.card?.year).toBe(2018);
+  });
+
+  it("CF-CARDIDENTITY: cardIdentity falls back to pricing.card when getCardDetail returns notFound (graceful degradation)", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+    // Default mock has notFound=true; pricing.card.setName is the fallback
+    mockGetPricing.mockResolvedValue({
+      card: { id: "cs-1", name: "X", setName: "FallbackSet", year: 2020, number: "1" },
+      raw: { count: 1, records: [] },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: "2026-05-01" },
+    } as any);
+
+    const out = await findCompsRouted("X", { grade: "Raw" });
+
+    // Falls back to pricing.card.setName + pricing.card.year (prior behavior)
+    expect(out.card?.set).toBe("FallbackSet");
+    expect(out.card?.year).toBe(2020);
+  });
+
+  it("CF-CARDIDENTITY: cardIdentity gracefully degrades when getCardDetail throws", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+    mockGetCardDetail.mockRejectedValue(new Error("network failure"));
+    mockGetPricing.mockResolvedValue({
+      card: { id: "cs-1", name: "X", setName: "EmergencySet", year: 2021, number: "1" },
+      raw: { count: 1, records: [] },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: "2026-05-01" },
+    } as any);
+
+    const out = await findCompsRouted("X", { grade: "Raw" });
+
+    // Should still return cardIdentity from pricing.card fallback, not throw
+    expect(out.card?.set).toBe("EmergencySet");
+    expect(out.card?.year).toBe(2021);
   });
 });
 

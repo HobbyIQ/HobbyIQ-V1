@@ -3570,15 +3570,23 @@ in next sub-workstream):**
 **Open:**
 
 - **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (MEDIUM, **investigation
-  COMPLETE 2026-05-25**): full findings at
+  COMPLETE 2026-05-25 + IMPLEMENTATION SHIPPED to main 2026-05-25**):
+  full investigation findings at
   [docs/phase0/cardsight_cardidentity_completeness_investigation.md](phase0/cardsight_cardidentity_completeness_investigation.md).
-  Outcome: `getCardDetail` endpoint DOES return rich metadata
-  (`releaseName`, `setName`, `releaseYear`, `parallels[]`, `attributes[]`,
-  `releaseId`/`setId`) that `pricing.card` lacks. Implementation feasible:
-  fix pre-existing mapper bug (`_getCardDetail` reads `body.year` but API
-  returns `body.releaseYear` as string), augment `findCompsViaCardsight`
-  to call `getCardDetail` alongside `getPricing`, retire parsedQuery
-  fallback. Scope ~1.5-2h. Implementation pending separate authorization.
+  Implementation shipped: 3 coordinated changes — (1) fixed pre-existing
+  `_getCardDetail` mapper bug (was reading `body.year`; API returns
+  `body.releaseYear` as string, now coerced to number); (2) augmented
+  `findCompsViaCardsight` to call `getCardDetail` in parallel with
+  `getPricing`, populating `cardIdentity.set` from `detail.releaseName`
+  (the product line, NOT subset) and `cardIdentity.year` from
+  `detail.year`; (3) retired the parsedQuery fallback in
+  `fetchSiblingSales` — cardIdentity is now the true source of truth.
+  Live smoke confirmed trendIQ output unchanged across all production
+  paths AND cardIdentity now carries set+year for all queries (was
+  null/null pre-fix). Production deploy is separate authorization.
+  Player attribution still gapped (getCardDetail doesn't return player
+  either) — preserved the existing `pricing.card.player ?? pricing.card.name`
+  fallback chain for that.
 - **CF-CARDHEDGE-FULL-REMOVAL** (MEDIUM): yesterday's pre-existing.
 - **CF-CARDHEDGE-SIGNAL-RENAME** (LOW): yesterday's pre-existing.
 

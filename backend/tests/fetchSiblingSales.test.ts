@@ -116,7 +116,13 @@ describe("fetchSiblingSales — Approach A wrap behavior", () => {
 });
 
 describe("fetchSiblingSales — early-return gates", () => {
-  it("returns empty pool when player is missing on cardIdentity AND fallback", async () => {
+  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (2026-05-25): the parsedQuery
+  // fallback parameter was retired. cardIdentity is now the true source
+  // of truth (populated by findCompsViaCardsight's getCardDetail
+  // augmentation). If cardIdentity lacks player or set, the function
+  // gracefully returns an empty pool and logs a diagnostic note that
+  // the augmentation may be degrading.
+  it("returns empty pool when player is missing on cardIdentity", async () => {
     const result = await fetchSiblingSales(
       makeCard({ player: null }),
       "Raw",
@@ -126,7 +132,7 @@ describe("fetchSiblingSales — early-return gates", () => {
     expect(mockedFetchCompsByPlayer).not.toHaveBeenCalled();
   });
 
-  it("returns empty pool when set/product is missing on cardIdentity AND fallback", async () => {
+  it("returns empty pool when set/product is missing on cardIdentity", async () => {
     const result = await fetchSiblingSales(
       makeCard({ set: null }),
       "Raw",
@@ -136,19 +142,17 @@ describe("fetchSiblingSales — early-return gates", () => {
     expect(mockedFetchCompsByPlayer).not.toHaveBeenCalled();
   });
 
-  it("uses fallback fields when cardIdentity has nulls", async () => {
+  it("passes cardIdentity fields directly to fetchCompsByPlayer (no fallback indirection)", async () => {
     mockedFetchCompsByPlayer.mockResolvedValue(
       mockResponse(["sib-a"], [
         { cardId: "sib-a", price: 100, date: "2026-05-15T00:00:00Z" },
       ]),
     );
     const result = await fetchSiblingSales(
-      makeCard({ set: null, year: null }),
+      makeCard({ player: "Shohei Ohtani", set: "Bowman Chrome", year: 2018 }),
       "Raw",
-      { player: "Shohei Ohtani", set: "Bowman Chrome", year: 2018 },
     );
     expect(result.siblingCardIds).toEqual(["sib-a"]);
-    // Verify fetchCompsByPlayer was called with fallback fields, not nulls
     expect(mockedFetchCompsByPlayer).toHaveBeenCalledWith(
       expect.objectContaining({
         playerName: "Shohei Ohtani",

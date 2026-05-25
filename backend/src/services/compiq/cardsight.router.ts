@@ -26,7 +26,7 @@ import {
   type CardHedgeCard,
   type CardHedgeSale,
 } from "./cardhedge.client.js";
-import { searchCatalog, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
+import { searchCatalog, getCardDetail, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
 import { resolveCardId } from "./cardsight.mapper.js";
 import { translateResponse } from "./cardsight.translator.js";
 
@@ -162,13 +162,40 @@ async function findCompsViaCardsight(
     }
     cardId = mapped.cardId;
 
-    const pricing = await getPricing(mapped.cardId, {
-      parallelId: mapped.parallelId ?? undefined,
-    });
+    // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (investigation a6c6dd9):
+    // /pricing/{id}'s embedded `card` object is SPARSE — setName/year
+    // come back undefined for Cardsight-exclusive resolved cards.
+    // /catalog/cards/{id} (getCardDetail) returns RICH metadata
+    // (releaseName, setName, releaseYear, parallels[]). Fetch both in
+    // parallel; build cardIdentity preferring detail's fields with
+    // graceful degradation to pricing.card if detail fails.
+    const [pricing, detail] = await Promise.all([
+      getPricing(mapped.cardId, { parallelId: mapped.parallelId ?? undefined }),
+      getCardDetail(mapped.cardId).catch((err) => {
+        log.warn("getCardDetail_failed", {
+          cardId: mapped.cardId,
+          error: (err as Error)?.message ?? String(err),
+        });
+        return null;
+      }),
+    ]);
 
     const translated = translateResponse(pricing, {
       gradeCompany: opts.gradeCompany,
       gradeValue: opts.gradeValue,
+    });
+
+    // Detail is usable when present and the API didn't 404. detail.notFound
+    // is the sentinel _getCardDetail returns when Cardsight returned 404.
+    const detailOk = detail !== null && !detail.notFound;
+
+    log.info("identity_source", {
+      cardId: mapped.cardId,
+      source: detailOk ? "getCardDetail" : (detail === null ? "degraded" : "not_found"),
+      set: detailOk
+        ? detail!.releaseName
+        : (pricing.card?.setName ?? null),
+      year: detailOk ? detail!.year : (pricing.card?.year ?? null),
     });
 
     const baseCard: CardHedgeCard = {
@@ -181,9 +208,24 @@ async function findCompsViaCardsight(
       // — trip-prone for any player whose surname isn't in the title string
       // (which under Cardsight equals `pricing.card.name`, often just the
       // bare player name with no surname differentiation).
+      //
+      // Player attribution gap still open post-Phase-2: getCardDetail also
+      // doesn't return `player`. The pricing.card.player ?? pricing.card.name
+      // fallback chain is preserved (investigation noted player attribution
+      // is a separate concern out of scope for this CF).
       player: pricing.card?.player ?? pricing.card?.name ?? undefined,
-      set: pricing.card?.setName ?? undefined,
-      year: pricing.card?.year ?? undefined,
+      // cardIdentity.set carries the PRODUCT LINE ("Bowman Chrome") that
+      // sibling-discovery callers expect. Cardsight's `releaseName` is the
+      // product line; `setName` is the subset within a release ("Base Set",
+      // "Chrome Prospect Autographs"). Prior code mapped pricing.card.setName
+      // here which was BOTH semantically misaligned (subset not product) AND
+      // structurally broken (undefined in practice).
+      set: detailOk
+        ? detail!.releaseName
+        : (pricing.card?.setName ?? undefined),
+      year: detailOk
+        ? detail!.year
+        : (pricing.card?.year ?? undefined),
       number: pricing.card?.number ?? undefined,
       variant: mapped.parallelId ?? undefined,
     };
