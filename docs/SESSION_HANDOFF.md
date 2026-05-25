@@ -50,7 +50,33 @@ Implications:
 - CardHedge cannot be deleted from active code until picker migration
   ships
 
-### CF-PICKER-MIGRATE-TO-CARDSIGHT (NEW, MEDIUM-HIGH priority)
+### CF-PICKER-MIGRATE-TO-CARDSIGHT (MEDIUM-HIGH priority, **DESIGN COMPLETE 2026-05-25**)
+
+Full design locked at
+[docs/phase0/picker_migration_design.md](phase0/picker_migration_design.md).
+Four design questions resolved under D-clean (coordinated iOS + backend
+deploy via TrendIQ Phase 2):
+
+- **Question A** locked **A5**: separate `parallelId` field; renames
+  `cardHedgeCardId` → `cardId`, `card_number` → `cardNumber`,
+  `image_url` → `imageUrl` per camelCase consistency. Combined
+  `variant` string per worked examples (e.g., `"Blue Refractor Auto /150"`).
+- **Question B** locked **B3 hybrid**: `isAutograph` computed from
+  `attributes?.includes("AUTO") || /\b(auto|autograph|autographs|signature|signed)\b/i.test(setName)`.
+  `AUTO_NUMBER_RE` prefix-regex dropped (Cardsight tags autographs
+  explicitly via `attributes[]` + `setName`).
+- **Question C** locked **C.i.a**: single `imageUrl` field on
+  `/cardsearch` only; `/v1/images/cards/{cardId}` with Cardsight
+  placeholder fallback. `/search-list` remains text-only.
+- **Question D** locked **D-clean**: coordinated iOS + backend deploy.
+  Field renames complete contract debt cleanup.
+
+**Implementation scope (honest)**: ~6-9h focused work, single PR.
+Implementation authorization is separate from this design ship.
+
+**Original CF (below) preserved for context:**
+
+---
 
 Migrate `/cardsearch` and `/search-list` from CardHedge to Cardsight
 equivalents. Underlying primitive: Cardsight's `searchCatalog` (already
