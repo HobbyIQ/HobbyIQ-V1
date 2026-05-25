@@ -8,6 +8,69 @@
 
 ---
 
+## CF-EBAY-LISTING-SIGNAL-REWORK (NEW, MEDIUM, design complete 2026-05-25 PM)
+
+**Status:** Design locked. Implementation **BLOCKED on CF-PHASE4B-
+SIGNAL-HARM-DIAGNOSIS** + **CF-RESTORE-SIGNAL-CREDS eBay portion**.
+
+**Design doc:** [phase0/ebay_listing_signal_design.md](phase0/ebay_listing_signal_design.md)
+
+**Headline:** Refocus `fn-ebay-signals` on active-listing data only.
+The current code already partially uses listing data (BIN price), but
+mixes it with broken sold-data dependencies (`soldDateRange` filter
+silently ignored by eBay's server) and restricted-field reads
+(`watchCount` requires App Check approval, returns null otherwise).
+
+**Six design questions locked:**
+
+- **Q1 primary signal:** **supply velocity** — count of distinct active
+  listings, recent 7d vs prior 7d, with per-seller cap to mitigate
+  inventory-dump false positives. Single-input methodology aligns with
+  future ablation testing.
+- **Q2 methodology:** count-based ratio with INVERTED multiplier
+  semantics (rising supply = bearish, opposite of compsMomentum's
+  rising-sales-bullish). Symmetric clamp 0.85-1.20.
+- **Q3 weight allocation:** keep existing 0.20 slot, rename key from
+  `ebay` to something semantic-preserving at impl time (open question).
+  Don't couple to odds-slot redistribution.
+- **Q4 implementation gate:** BLOCKED on CF-PHASE4B-SIGNAL-HARM-
+  DIAGNOSIS. Three diagnosis-outcome scenarios captured with
+  implementation-scope adjustments per outcome.
+- **Q5 eBay API requirements:** Browse API client-credentials OAuth,
+  scope `api_scope`, 5,000 calls/day limit (HobbyIQ projected usage
+  60/day — trivial). Verified soldDateRange filter is broken at API
+  level; watchCount requires separate App Check approval.
+- **Q6 scope:** ~4-6h focused implementation (function rewrite +
+  aggregator + TS types + smoke). Risk additions if eBay OAuth fix
+  takes longer than expected.
+
+**Implementation scope estimate:** ~4-6h after both blockers resolve.
+
+**Why blocked on harm diagnosis:** S4 backtest verdict
+`stable_signals_hurt` (commit `567d55c`) shows the existing signal
+pipeline consistently hurts predictions. Adding a new signal before
+diagnosing why current signals hurt risks compounding the harm.
+Design captures three possible diagnosis outcomes (some signals net-
+positive, all net-negative, methodology-not-content is the harm
+vector) and how implementation scope adjusts under each.
+
+**Notable finding during design research:** Current `fn-ebay-signals`
+has THREE independent failure modes, not one — OAuth auth (separate
+operational issue), soldDateRange filter (broken at eBay API level
+per community reports), watchCount field (approval-gated). User's
+framing of "sold-data approval blocked" understated; actually most of
+the function's inputs are degraded or broken in some way. Rework
+explicitly removes all three dependencies and rebuilds on the
+listing-only foundation that does work.
+
+**Cross-refs:**
+
+- `567d55c` — S4 backtest revealing harm requiring diagnosis
+- `aee64a4` — fn-compiq investigations §2 (original eBay finding)
+- `80e9971` / `e2115cb` — design-phase pattern precedents
+
+---
+
 ## CF-CARDHEDGE-SIGNAL-RENAME — SHIPPED to production (2026-05-25 PM)
 
 **Status:** CLOSED. Design (`80e9971`) → implementation → production deploy
