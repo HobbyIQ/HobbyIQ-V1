@@ -307,6 +307,15 @@ TrendIQ Phase 1 shipped to production at SHA `a5d5151`.
 - `AZURE_SIGNAL_FUNCTION_KEY` set on hobbyiq3
 - (Pulled from `compiq-mcp` config, same Azure Function endpoint)
 
+**Identity-completeness (CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS, deployed
+2026-05-25 at `220f783`):** `findCompsViaCardsight` now augments
+`cardIdentity` with `getCardDetail`'s rich metadata.
+`cardIdentity.set` carries the product line (e.g. "Bowman Chrome");
+`cardIdentity.year` is numeric. iOS clients receive these on responses
+where they were previously null. The `parsedQuery` fallback in
+`fetchSiblingSales` introduced during B.4.c has been retired —
+`cardIdentity` is now the true source of truth.
+
 **Production telemetry pattern observed:**
 
 - Tracked players (Ohtani, Skenes, etc.) return `200 OK` from signal

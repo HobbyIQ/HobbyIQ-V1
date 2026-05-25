@@ -3569,8 +3569,16 @@ in next sub-workstream):**
 
 **Open:**
 
-- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (MEDIUM, **investigation
-  COMPLETE 2026-05-25 + IMPLEMENTATION SHIPPED to main 2026-05-25**):
+- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (CLOSED 2026-05-25 —
+  investigation + implementation + production deploy all shipped same
+  day. Production at `220f783`. iOS clients now receive
+  `cardIdentity.set` ("Bowman Chrome", "Topps Update", "Upper Deck") and
+  `cardIdentity.year` (numeric, e.g. 2018) on Cardsight-exclusive
+  responses — previously null. Diagnostic
+  `{"event":"identity_source","source":"getCardDetail",...}` traces
+  visible in App Insights for real iOS production traffic, confirming
+  augmentation firing reliably. trendIQ output unchanged across all
+  three smoke cards pre/post-deploy. No methodology drift.):
   full investigation findings at
   [docs/phase0/cardsight_cardidentity_completeness_investigation.md](phase0/cardsight_cardidentity_completeness_investigation.md).
   Implementation shipped: 3 coordinated changes — (1) fixed pre-existing
