@@ -3277,37 +3277,57 @@ closed; iOS decode should treat null as "data not yet available" not
 
 ---
 
-### CF-CARDHEDGE-SIGNAL-RENAME (surfaced 2026-05-25 during B.4.a smoke verification)
+### CF-CARDHEDGE-SIGNAL-RENAME — Phase 2 design complete (2026-05-25)
 
-The aggregator's `cardhedge` signal source (visible in TrendIQ's
-`componentSignals.cardhedge` field — e.g., Ohtani's payload showed
-`cardhedge: 1.085`) is named after the deprecated CardHedge comp-fetch
-path. This is **distinct from CF-CARDHEDGE-CLIENT-DELETE / CF-CARDHEDGE-
-FULL-REMOVAL** (which remove the backend's comp-fetch path entirely).
-The signal here is the `fn-cardhedge-comps` Azure Function's
-contribution to player-momentum aggregation — still functioning,
-still useful as a signal, but the NAME is a brand inconsistency.
+**Status:** Design locked. Implementation deferred to a separate
+authorized workstream (~2-4h).
 
-Decisions deferred (not blocking; ship-and-rename later):
+**All four design locks recorded in
+[docs/phase0/cardhedge_signal_rename_design.md](phase0/cardhedge_signal_rename_design.md):**
 
-- New name aligned with HobbyIQ vocabulary (candidates: `compsRising`,
-  `marketActivity`, `tradingMomentum`, `compsTrend` — needs product
-  call)
-- Migration strategy for existing `aggregated.json` blobs that carry
-  the old `cardhedge` field name (rename in-place on next aggregator
-  cycle? dual-write transition? backfill?)
-- Log query updates wherever Kusto / App Insights references the field
-- iOS / UI label updates if the field ever surfaces in user-visible
-  copy (it currently doesn't — only in `trendIQ.components.player
-  Momentum.componentSignals` which is detail-view depth)
+1. **New name: `compsMomentum`** — semantic accuracy (recent_7_avg /
+   prior_7_avg = price momentum), nests cleanly under TrendIQ Layer 1's
+   `playerMomentum`, brand-neutral.
+2. **Migration strategy: Strategy 1 (in-place rename, coordinated deploy)**
+   — D-clean context (sole-user, pre-launch, monorepo control of every
+   reader) eliminates dual-write's risk-reduction value. Single-PR
+   single-deploy is the right answer; transitional dual-key complexity
+   is pure cost here.
+3. **Flag strings: `compsMomentum_rising` / `_falling` / `_no_data`** —
+   repo-wide grep confirmed zero literal-match consumers (no iOS, no
+   backend, no mcp-server pattern-match). Rename is safe with no
+   coordinated-update surface beyond the aggregator emit.
+4. **`fn-cardhedge-comps` Azure Function file name: DEFERRED.** Function
+   reflects data source ("we fetch from CardHedge"), which remains
+   factually accurate. The rename here decouples *signal output name*
+   from *data-source brand* — the actual semantic goal. Function file
+   rename is a separate, larger blast-radius workstream if/when the
+   data source itself changes.
+5. **Blob handling: graceful degradation, no backfill** — old
+   `cardhedge.json` blobs become unread after deploy; next nightly cycle
+   of `fn-cardhedge-comps` writes `compsMomentum.json` and the signal
+   returns to live. One cycle of `multiplier=1.0` default for tracked
+   players is acceptable.
 
-Estimated 2-4 hour focused workstream when prioritized. Cross-refs:
+**Scope inventory (per design doc Section 8):**
 
-- Surfaced via Ohtani smoke 2026-05-25: composite=1.041, multiplier
-  flowed correctly; cardhedge=1.085 contributing weight was the trigger
-  for capturing this followup
-- Related: CF-CARDHEDGE-FULL-REMOVAL (separate; backend comp-fetch
-  cleanup, NOT the signal source)
+- Aggregator: WEIGHTS dict key + flag-emit block (no change to
+  `components`/`component_signals` dicts — they auto-update from WEIGHTS)
+- Source function: signal-label string passed to `save_signal()`
+- Optional type-def doc cleanup in `signals.types.ts` + `pricing.ts`
+- Aggregator tests in `compiq-functions/tests/`
+- iOS verified safe (zero literal matches)
+- Saved Kusto/App Insights queries: operator follow-up
+
+**Cross-refs:**
+
+- Surfaced via Ohtani smoke 2026-05-25: composite=1.041, cardhedge=1.085
+  contributing weight was the trigger.
+- `aff2245` — CardHedge scope correction commit (separated this CF from
+  CF-CARDHEDGE-FULL-REMOVAL).
+- `e2115cb` — picker migration design; D-clean methodology precedent.
+- `843b210` — TrendIQ Phase 1 methodology lock; defines the
+  `playerMomentum` hierarchy `compsMomentum` nests under.
 
 ---
 
