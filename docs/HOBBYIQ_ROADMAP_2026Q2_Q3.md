@@ -74,21 +74,47 @@ Known gaps carried forward:
 
 Folded into Phase 1 Track B. The original Phase 2 ("replace router bypasses") and Phase 1 ("stop the bleeding via mapper") collapsed once CH was confirmed disconnected at the router — the work is one coherent PR-A2 surface, not two phases.
 
-### Phase 3 — CH cleanup (half-day, single PR; timing after Phase 1 Track B)
+### Phase 3 — CH cleanup (PARTIAL; blocked on picker migration)
 
-Card Hedge already cancelled (2026-05-19) and router-disconnected (Phase 0 finding). Phase 3 is now pure code/config cleanup, not decommissioning.
+**Status update 2026-05-25:** Phase 3 was over-scoped relative to what
+the Cardsight migration actually shipped. The PRICING path is fully
+Cardsight-exclusive (`/price`, `/price-by-id`, `/bulk` via
+`computeEstimate` → `cardsight.router` exclusive branch). The PICKER
+path is NOT migrated: `/api/compiq/cardsearch` and `/api/compiq/search-list`
+still call `cardhedge.client.searchCards` directly to serve iOS variant-
+picker and card-picker UIs. CardHedge cannot be deleted from active code
+until the picker path also migrates.
 
-**Scope:**
+CardHedge subscription cancelled 2026-05-19; production pricing path
+Cardsight-disconnected since the same migration. Picker path still live
+against CardHedge API (assumes API key remains live through billing
+cycle).
+
+**Blocking prerequisite:**
+
+- **CF-PICKER-MIGRATE-TO-CARDSIGHT** (NEW, MEDIUM-HIGH, ~4-6h dedicated
+  session) — migrate `/cardsearch` and `/search-list` from CardHedge's
+  `searchCards` to Cardsight's `searchCatalog` equivalent. Resolve
+  variant-disambiguation / autograph-detection / image_url-normalization
+  / iOS-contract-preservation design questions before implementation.
+  Details captured in `SESSION_HANDOFF.md` under that CF heading.
+
+**Phase 3 deferred scope (after CF-PICKER-MIGRATE-TO-CARDSIGHT ships):**
+
 - Delete `services/compiq/cardhedge.client.ts`.
+- Delete 6 CH-specific test files (`tests/cardhedge*.test.ts`).
 - Remove `CARD_HEDGE_API_KEY` and other CH-* env vars from App Service settings.
 - Disable `fn-cardhedge-comps` via `function.json` (runtime app-setting disable blocked on this Linux Consumption SKU per Phase 0 finding).
 - Update `copilot-instructions.md` to remove CH references.
-- Remove vestigial `CARD_HEDGE_API_KEY` guard at `compiqEstimate.service.ts` L700-704.
+- Optional: strip `cardsight.router.ts` non-exclusive mode branches (off/shadow/primary) — small, can bundle with this workstream.
 - Decide `cardHedgeCardId` schema column rename vs naming debt (data migration cost vs permanent column name).
 
-**Estimated:** half-day of work, single PR.
+**Estimated (post-prerequisite):** ~1-2 hours actual deletion work,
+single PR. Originally framed as "half-day"; revised down because the
+prerequisite picker migration is now where the real work lives.
 
-**Phase 3 success criteria:**
+**Phase 3 success criteria (unchanged):**
+
 - Zero references to Card Hedge in active code paths.
 - Documented architecture matches deployed reality.
 

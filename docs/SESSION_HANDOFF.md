@@ -4,6 +4,103 @@
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
+---
+
+## CF-CARDHEDGE-FULL-REMOVAL — scope correction (2026-05-25)
+
+Attempted today; HALTed in Phase 1 inventory when grep surfaced that
+CardHedge is NOT fully replaced by Cardsight. Two iOS-facing production
+endpoints remain CardHedge-direct:
+
+- `/api/compiq/cardsearch` — iOS variant picker
+  ([compiq.routes.ts:292-301](backend/src/routes/compiq.routes.ts#L292-L301)).
+  Server-side proxy to Card Hedge `/cards/card-search`; cap 50; iOS Search
+  UI consumes this for variant disambiguation.
+- `/api/compiq/search-list` — iOS card picker
+  ([compiq.routes.ts:736-745](backend/src/routes/compiq.routes.ts#L736-L745)).
+  Card Hedge `searchCards` via dynamic import; iOS picker UI consumes
+  this and feeds the resolved `cardHedgeCardId` into `/price-by-id`.
+
+Both use `cardhedge.client.searchCards` directly. No Cardsight equivalent
+built for the picker shape (variant disambiguation, autograph detection,
+image_url normalization).
+
+Additional non-blocking findings:
+
+- `cardsight.router.ts` non-exclusive branches (`off`/`shadow`/`primary`
+  modes) still import `searchCards`/`getCardSales`/`findCompsByQuery`.
+  Dead in production (`CARDSIGHT_MODE=exclusive`) but compiled.
+- `cardhedge.client.ts` internal callgraph: `searchCards` is called
+  recursively by `identifyCard` and `findCompsByQuery` within the file
+  itself.
+
+**Mental model update:** the Cardsight migration was partial.
+
+- ✅ PRICING path (`/price`, `/price-by-id`, `/bulk` via `computeEstimate`)
+  is fully Cardsight-exclusive.
+- ❌ PICKER path (`/cardsearch`, `/search-list`) is still CardHedge-direct.
+
+Implications:
+
+- Production app's iOS card-search/variant-picker experience is still
+  CardHedge-backed
+- Roadmap Phase 3 "Decommission Card Hedge" was over-scoped relative to
+  what was actually shipped — re-scoped in this commit (see roadmap
+  update)
+- CardHedge cannot be deleted from active code until picker migration
+  ships
+
+### CF-PICKER-MIGRATE-TO-CARDSIGHT (NEW, MEDIUM-HIGH priority)
+
+Migrate `/cardsearch` and `/search-list` from CardHedge to Cardsight
+equivalents. Underlying primitive: Cardsight's `searchCatalog` (already
+wrapped in `cardsight.client.ts`).
+
+**Design questions to resolve before implementation:**
+
+- **Variant disambiguation**: how does the Cardsight-backed picker handle
+  variants (parallel/autograph/numbered)? Cardsight nests parallels under
+  a single `card_id`; CardHedge returned siblings as separate cards. The
+  shape difference may affect iOS picker UX — same card with multiple
+  parallels vs distinct rows per parallel.
+- **Autograph detection**: CardHedge response had explicit autograph
+  signals via text patterns (`Auto`, `CPA-`, etc). Cardsight's `setName`
+  ("Chrome Prospect Autographs" etc) is the signal — need to verify all
+  autograph products surface correctly via Cardsight's catalog data.
+- **image_url normalization**: CardHedge served images at known URLs
+  (front_image_url, image_url, front_image, image, images[]). Cardsight's
+  image strategy needs characterization.
+- **iOS contract preservation**: response shape must stay the same to
+  avoid forcing an iOS update simultaneously with this backend change.
+  Picker response format defined by existing /cardsearch + /search-list
+  output (image_url, isAutograph, sort priority, etc).
+
+**Estimated scope:** ~2-3 hours design + ~2-3 hours implementation +
+smoke. Total ~4-6 hours. Worth its own dedicated session.
+
+### CF-CARDHEDGE-FULL-REMOVAL — re-scoped (deferred)
+
+**Prerequisites:**
+
+- CF-PICKER-MIGRATE-TO-CARDSIGHT must complete first (otherwise removes
+  load-bearing code)
+- Optional: strip `cardsight.router.ts` non-exclusive mode branches
+  (small, can bundle with this workstream)
+
+**After prerequisites met, this workstream becomes ~1-2 hours of actual
+deletion work:**
+
+- Delete `cardhedge.client.ts` and any `cardhedge.*` helper files
+- Delete 6 CH-specific test files
+  (`cardhedge*.test.ts`)
+- Remove `CARD_HEDGE_API_KEY` env var references from config
+- Update remaining documentation
+- Cancel CardHedge subscription (business action, separate from code —
+  per earlier handoff note CH subscription was cancelled 2026-05-19, but
+  the API key may still be live until billing cycle closes)
+
+---
+
 ## Production state
 
 - HobbyIQ3 (Azure App Service, rg-hobbyiq-dev, Central US)
