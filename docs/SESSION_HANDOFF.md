@@ -8,6 +8,70 @@
 
 ---
 
+## Backtest Re-Baseline — Deterministic + 5 of 7 Signals (2026-05-25 PM)
+
+**Run:** `docs/phase0/backtest_runs/20260525-225825-deterministic-creds-restored/`
+**Verdict:** `stable_signals_hurt`
+**Cost:** ~$0.15 against Azure OpenAI gpt-4o-mini
+
+**Headline outcomes:**
+
+1. **Determinism lock works.** Variance collapsed 4-5×: MAPE 72h stdev
+   12.5 → 3.38, MAPE 7d stdev 20.03 → 3.81, sign-stability 0.6/0.4 →
+   1.0/1.0. The temperature=0 + seed=42 contract from `5a5b1b7`
+   delivers exactly what CF-BACKTEST-DETERMINISTIC promised.
+
+2. **Signal pipeline is hurting predictions, not helping.** Now that
+   noise is gone, the true underlying signal effect is clear:
+   - MAPE delta 72h mean: **-3.74** (signal-on 3.74 pp worse)
+   - MAPE delta 7d mean: **-9.37** (signal-on 9.37 pp worse)
+   - Direction-acc delta: **-11.43** (signal-on worse on direction too)
+   - 9 of 15 cards stably hurt; 4 stably helped; 1 flips
+
+3. **Phase 4c kickoff is NOT READY.** Training a model on signal-
+   driven inputs would inherit and amplify the negative lift observed.
+   Methodology iteration required first.
+
+**Per-card insight:** newer cards (2022, 2024 — Witt, Skenes, Bonemer)
+all consistently hurt by signals; same player different grade flips
+direction (Judge raw helps, PSA10 hurts; Ohtani PSA10 helps, raw
+hurts). Suggests signals interact with grade and card-recency in ways
+the current prompt doesn't capture.
+
+**Catastrophic outlier:** Juan Soto 2018 raw — signal-on 204% MAPE vs
+signal-off 107%. Worth investigating which component pushed the
+prediction so far off.
+
+---
+
+## CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS (NEW, HIGH priority, 2026-05-25 PM)
+
+Phase 4c blocker. Per-signal ablation + per-card-segment analysis to
+identify which signals contribute negative lift.
+
+**Hypotheses to test:**
+
+1. **Per-signal ablation:** force each signal to multiplier=1.0
+   individually in a series of N=15×5 runs. The signal that, when
+   disabled, MOST IMPROVES aggregate MAPE is the most-harmful.
+2. **Per-card-segment patterns:** newer cards (2022+) all hurt;
+   per-grade direction-flip pattern visible. Look for systematic
+   interactions.
+3. **Catastrophic-outlier post-mortem:** Soto raw 204% — trace the
+   per-component contribution to the 2× overshoot.
+4. **Aggregator weight tuning:** current weights assume rough
+   equivalence in informativeness. If 2-3 sources harmful, the
+   combined 0.45-0.55 weight is dragging the others.
+
+**Cost estimate:** 4× ablation runs at ~$0.15 each = ~$0.60 + per-card
+diagnostic analysis time = ~3-5h.
+
+**Pre-requisite for Phase 4c.** Don't expand cohort to N=100 until
+this lands — yesterday's CF-PHASE4B-BACKTEST.2 expansion is
+superseded by this CF.
+
+---
+
 ## CF-RESTORE-SIGNAL-CREDS — odds portion CLOSED as "wrong provider" (2026-05-25 PM)
 
 **Not a credential restoration.** the-odds-api credential was provisioned
