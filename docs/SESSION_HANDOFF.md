@@ -3185,3 +3185,86 @@ Estimated 2-4 hour focused workstream when prioritized. Cross-refs:
   for capturing this followup
 - Related: CF-CARDHEDGE-FULL-REMOVAL (separate; backend comp-fetch
   cleanup, NOT the signal source)
+
+---
+
+## TrendIQ Phase 1 — COMPLETE (2026-05-25)
+
+Phase 1 milestone reached. TrendIQ first user-visible in production
+on this date via SHA `a5d5151` ship.
+
+**Shipped commits:**
+
+- `843b210` design(trendiq): amend Phase 1 methodology locks + add TS types
+- `05f52d9` feat(trendiq): Phase 1 B.4.a - Layer 1 (player momentum) wire-up
+- `fbea6a9` fix(compiq): remove dead CARD_HEDGE_API_KEY gates under Cardsight-exclusive mode
+- `c0a6f1a` feat(trendiq): Phase 1 B.4.b - Layer 2 (card-level comp trajectory)
+- `2ce306d` feat(trendiq): Phase 1 B.4.c - Layer 3 segment trajectory (Cardsight-blocked in production)
+- `a5d5151` feat(trendiq): Phase 1 B.5 - propagate trendIQ to /price-by-id + /bulk
+- [B.8 commit] docs(trendiq): Phase 1 production deployment status + handoff closeout
+
+**Production state:**
+
+- Layer 1 + Layer 2 active; Layer 3 deferred behind upstream Cardsight gap.
+- All three endpoints (`/price`, `/price-by-id`, `/bulk`) carry trendIQ.
+- App Service env vars `AZURE_SIGNAL_FUNCTION_URL` + `AZURE_SIGNAL_FUNCTION_KEY`
+  set on hobbyiq3 (pulled from compiq-mcp's matching config).
+- App Insights telemetry firing: both the dependencies table (signal
+  fetches) and the traces table (trendIQ composite + L3 diagnostic
+  logs) are populated.
+
+**Production smoke verified across all three endpoints:**
+
+- `/price` Ohtani: coverage=`no_segment`, composite=1.108, Layer 1+2 active
+- `/price` Griffey: coverage=`card_only`, composite=1.10, Layer 2 only
+- `/price-by-id` Ohtani (UUID + query): same shape as /price
+- `/bulk` Ohtani + Griffey: per-item trendIQ, requested=2 succeeded=2 failed=0
+
+Composite math verified live: `0.3 × 1.041 + 0.7 × 1.136 = 1.108` ✓
+
+**Production observation surfaced during B.7.14 telemetry verification:**
+
+The `/price-by-id` endpoint's minimal body shape (`{cardHedgeCardId,
+playerName, ...}` only — no `product`/`cardYear`) bypasses the B.4.c
+Option A parsedQuery fallback. Real iOS production traffic on
+`/price-by-id` produces `fallback.set=undefined fallback.year=undefined`
+log lines and Layer 3 returns null for that reason on top of the
+primary Cardsight sibling-discovery block. Doesn't block production
+(Layers 1+2 still work); folded into **CF-CARDSIGHT-SIBLING-DISCOVERY
+scope** as a sub-task rather than a separate CF.
+
+**Outstanding TrendIQ-related follow-ups:**
+
+- **CF-CARDSIGHT-SIBLING-DISCOVERY (HIGH)** — unblocks Layer 3 in
+  production; includes `/price-by-id` fallback fix in scope. 3-6h
+  research + implementation.
+- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (MEDIUM)** — retire
+  parsedQuery fallback if Cardsight exposes setName/year directly.
+  1-2h.
+- **CF-CARDHEDGE-FULL-REMOVAL (MEDIUM)** — yesterday's pre-existing;
+  strip cardhedge.client module + fn-cardhedge-comps function.
+- **CF-CARDHEDGE-SIGNAL-RENAME (LOW)** — yesterday's pre-existing;
+  rename aggregator's `componentSignals.cardhedge` field.
+
+**Phase 1 architectural decisions captured in this work:**
+
+- Option C anchor-relative pre-window (resolves the spec arithmetic
+  conflict between `windowDays=60` and `effectiveAnchor=now-90d` on
+  re-anchored cards). Pre-window is always 30 days immediately before
+  `effectiveAnchorDate`; total span varies (60d normal case, 120d
+  re-anchored).
+- Asymmetric multiplier clamp: pctChange clamps ±50% but multiplier
+  separately clamps to [0.70, 1.50]. A -50% pctChange contributes
+  multiplier=0.70 (not 0.50) to composite. Matches the aggregator's
+  own range.
+- Diagnostic logs kept in production (`[compiq.trendIQ]` +
+  `[compiq.trendIQ.L3]` + `[compiq.trendIQ.L3.fetch]`) for visibility
+  into composite state + Layer 3 null reasons until upstream gap
+  resolved.
+
+**Phase 2 + Phase 3 + Phase 4 are next workstreams when prioritized:**
+
+- Phase 2 — iOS CompIQ result UI redesign with TrendIQ headline
+- Phase 3 — surface across PortfolioIQ, Dashboard, InventoryIQ,
+  DailyIQ
+- Phase 4 — methodology help screen

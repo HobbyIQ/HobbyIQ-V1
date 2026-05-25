@@ -234,6 +234,91 @@ have data. Segment takes over when card is sparse (the rare-card case).
 - Related CFs: CF-CROSS-COMPANY-COMPS (BGS/CGC inclusion becomes more
   important when Layer 3 segment trajectory pulls parallels)
 
+## Production Status (2026-05-25)
+
+TrendIQ Phase 1 shipped to production at SHA `a5d5151`.
+
+**Active in production:**
+
+- ✅ **Layer 1 (player momentum)** — verified live with tracked players
+  via `/api/compiq/price` smoke. Real signal multipliers flow from
+  aggregator (`fn-compiq.azurewebsites.net/api/signals`) through
+  `fetchPlayerSignals` to the composite. App Insights `dependencies`
+  table populated with sanitized URLs + duration + status codes.
+- ✅ **Layer 2 (card-level comp trajectory)** — verified live with
+  rich-comp cards (Ohtani, Griffey). Multipliers correctly clamped to
+  [0.70, 1.50] with the asymmetric multiplier behavior documented in
+  the unit tests.
+- ⏸ **Layer 3 (segment trajectory)** — implementation complete,
+  blocked in production behind two related gaps:
+  - **CF-CARDSIGHT-SIBLING-DISCOVERY (primary)**: Cardsight catalog
+    data model differs structurally from CardHedge. Cards organized
+    by release + subset + parallel; player attribution not on
+    catalog cards in the expected shape. `fetchSiblingSales`
+    returns empty pool for all Cardsight cards. Sibling-discovery
+    rebuild required for production utility.
+  - **`/price-by-id` fallback path gap (secondary, observed in
+    production traces 2026-05-25)**: the `parsedQuery` fallback
+    added in B.4.c works for `/price` (which goes through
+    `parseCardQuery + requestFromParsed` and produces a structured
+    `body.product`/`body.cardYear`) but is bypassed on
+    `/price-by-id`'s minimal-body path where `body.product` is
+    undefined. iOS production traffic on `/price-by-id` produces
+    `fallback.set=undefined fallback.year=undefined` log lines and
+    Layer 3 returns null for that reason on top of the primary gap.
+    Folded into CF-CARDSIGHT-SIBLING-DISCOVERY scope.
+- ✅ **Composite weighting** — verified live for `no_segment`
+  (Ohtani: weights {0.30, 0.70, 0.00}) and `card_only` (Griffey:
+  weights {0.00, 1.00, 0.00}) coverage states. The 4 coverage states
+  involving Layer 3 (`full`, `no_card`, `segment_only`, and the
+  `full (no L1)` row) will activate once Layer 3 unblocks.
+- ✅ **Composite math verified live**: `0.3 × 1.041 + 0.7 × 1.136 =
+  1.108` matches returned composite within float tolerance.
+
+**All three CompIQ endpoints surface trendIQ:**
+
+- `/api/compiq/price` — verified prod
+- `/api/compiq/price-by-id` — verified prod
+- `/api/compiq/bulk` — verified prod (per-item trendIQ, Promise.allSettled
+  isolates failures)
+
+**Diagnostic logs visible via App Insights `hobbyiq-insights` resource:**
+
+- `[compiq.trendIQ] composite=X.XX direction=Y coverage=Z weights=p:X.XX/c:X.XX/s:X.XX`
+- `[compiq.trendIQ.L3] null reason=... siblings=N poolSales=N ...`
+  (surfaces null causes for Layer 3 in real time)
+- `[compiq.trendIQ.L3.fetch] player="..." set="..." year="..." ...`
+  (fetchSiblingSales funnel diagnostic)
+
+**App Service env vars configured:**
+
+- `AZURE_SIGNAL_FUNCTION_URL` set on hobbyiq3
+- `AZURE_SIGNAL_FUNCTION_KEY` set on hobbyiq3
+- (Pulled from `compiq-mcp` config, same Azure Function endpoint)
+
+**Production telemetry pattern observed:**
+
+- Tracked players (Ohtani, Skenes, etc.) return `200 OK` from signal
+  endpoint with real multipliers and signal flags.
+- Untracked players (Griffey, etc.) return `404 Not Found` from signal
+  endpoint; `fetchPlayerSignals` correctly returns `null` payload;
+  `buildPlayerMomentumComponent` returns null component; composite
+  falls back to L2-only weights `{0, 1, 0}`.
+
+**Next priorities (in order):**
+
+1. **CF-CARDSIGHT-SIBLING-DISCOVERY** — unblock Layer 3 in production
+   (3-6h research + implementation; includes the `/price-by-id`
+   fallback edge case as in-scope)
+2. **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** — retire parsedQuery
+   fallback if Cardsight exposes setName/year via different endpoint
+   (1-2h)
+3. **TrendIQ Phase 2** — iOS surfacing (CompIQ result UI redesign
+   with TrendIQ headline)
+4. **TrendIQ Phase 3** — surface across PortfolioIQ, Dashboard,
+   InventoryIQ
+5. **TrendIQ Phase 4** — methodology help screen
+
 ## V2 considerations (post-V1 implementation)
 
 - Cross-company segment expansion (include BGS/CGC parallels in
