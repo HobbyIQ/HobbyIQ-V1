@@ -38,9 +38,17 @@ import {
   type Attributes,
 } from "@opentelemetry/api";
 import {
-  SEMATTRS_HTTP_URL,
-  SEMATTRS_HTTP_STATUS_CODE,
-  SEMATTRS_PEER_SERVICE,
+  // Newer OTel string conventions — Azure Monitor's OTel exporter maps these
+  // to the `target` / `data` / `resultCode` columns in `dependencies` table.
+  // CF-FETCH-TELEMETRY-COLUMN-MAPPING (2026-05-27): the deprecated v1.x
+  // constants (SEMATTRS_HTTP_URL/SEMATTRS_PEER_SERVICE/SEMATTRS_HTTP_STATUS_CODE)
+  // produced spans whose attributes the exporter didn't map to column fields —
+  // entries appeared with `target = span.name` and `data` empty. The newer
+  // ATTR_* constants are what Azure Monitor expects post-OTel-migration.
+  ATTR_URL_FULL,
+  ATTR_SERVER_ADDRESS,
+  ATTR_HTTP_RESPONSE_STATUS_CODE,
+  ATTR_HTTP_REQUEST_METHOD,
 } from "@opentelemetry/semantic-conventions";
 import * as appInsights from "applicationinsights";
 
@@ -90,15 +98,18 @@ export interface TrackHttpDependencyArgs {
 export function trackHttpDependency(args: TrackHttpDependencyArgs): void {
   try {
     let target = "unknown";
-    let data = args.url;
+    // Build a sanitized full URL (scheme + host + pathname, no query) for
+    // `url.full` semantic. The query string is stripped because Azure Monitor
+    // function keys arrive as `?code=<KEY>` — we must not leak them into the
+    // dependencies-table `data` column.
+    let sanitizedFullUrl = args.url;
     try {
       const u = new URL(args.url);
       target = u.hostname;
-      // Pathname only — exclude query string so function-key (`?code=`) params
-      // don't leak into App Insights records.
-      data = u.pathname;
+      sanitizedFullUrl = `${u.protocol}//${u.host}${u.pathname}`;
     } catch {
-      // Malformed URL — fall back to raw string
+      // Malformed URL — fall back to raw string for the full-url field;
+      // server.address remains "unknown"
     }
 
     const duration = Math.max(0, Date.now() - args.startMs);
@@ -106,9 +117,10 @@ export function trackHttpDependency(args: TrackHttpDependencyArgs): void {
     const startTime = new Date(endTime - duration);
 
     const attributes: Attributes = {
-      [SEMATTRS_HTTP_URL]: data,
-      [SEMATTRS_HTTP_STATUS_CODE]: String(args.resultCode),
-      [SEMATTRS_PEER_SERVICE]: target,
+      [ATTR_URL_FULL]: sanitizedFullUrl,
+      [ATTR_SERVER_ADDRESS]: target,
+      [ATTR_HTTP_RESPONSE_STATUS_CODE]: args.resultCode,
+      [ATTR_HTTP_REQUEST_METHOD]: "GET",
     };
 
     const tracer = _tracerResolver();

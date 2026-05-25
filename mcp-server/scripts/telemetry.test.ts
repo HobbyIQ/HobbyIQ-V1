@@ -1,12 +1,15 @@
 // Unit tests for trackHttpDependency (CF-FETCH-SIGNAL-FLOOR-TELEMETRY +
 // CF-FETCH-TELEMETRY-V3-FIX).
 //
-// Verifies the post-V3-migration helper:
+// Verifies the post-V3-migration helper (with CF-FETCH-TELEMETRY-COLUMN-MAPPING
+// upgrade to newer ATTR_* string conventions):
 // - Uses @opentelemetry/api directly (not the legacy SDK shim that the
 //   App Service Agent conflict broke)
-// - Creates CLIENT-kind spans with semantic-conventions attributes
-//   (http.url, http.status_code, peer.service)
-// - Sanitizes URL — pathname only, no ?code= query string in attributes
+// - Creates CLIENT-kind spans with newer OTel semantic-conventions attributes
+//   (url.full, server.address, http.response.status_code, http.request.method)
+//   so Azure Monitor's OTel exporter populates target/data/resultCode columns
+// - Sanitizes URL — full URL with scheme+host+path but no query string
+//   (so ?code= function keys don't leak into the dependencies table)
 // - On error: calls the exception tracker (legacy SDK trackException shim
 //   still used here since OTel logs migration is separate scope)
 // - Never throws even when the underlying tracer throws
@@ -134,7 +137,7 @@ after(() => {
 });
 
 describe("trackHttpDependency — happy paths", () => {
-  it("creates CLIENT-kind span with http.url/http.status_code/peer.service attributes", () => {
+  it("creates CLIENT-kind span with url.full/server.address/http.response.status_code attributes", () => {
     _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "signal_service",
@@ -147,10 +150,11 @@ describe("trackHttpDependency — happy paths", () => {
     const s = capturedSpans[0];
     assert.equal(s.name, "signal_service");
     assert.equal(s.kind, SpanKind.CLIENT);
-    // CRITICAL: http.url is pathname ONLY — must not contain ?code=secret
-    assert.equal(s.attributes["http.url"], "/api/signals");
-    assert.equal(s.attributes["http.status_code"], "200");
-    assert.equal(s.attributes["peer.service"], "fn-compiq.azurewebsites.net");
+    // CRITICAL: url.full is scheme+host+pathname ONLY — must not contain ?code=secret
+    assert.equal(s.attributes["url.full"], "https://fn-compiq.azurewebsites.net/api/signals");
+    assert.equal(s.attributes["http.response.status_code"], 200);
+    assert.equal(s.attributes["server.address"], "fn-compiq.azurewebsites.net");
+    assert.equal(s.attributes["http.request.method"], "GET");
     assert.deepEqual(s.status, { code: SpanStatusCode.OK });
     assert.ok(s.endTime !== undefined && s.endTime > 0);
     assert.equal(capturedExceptions.length, 0);
@@ -165,7 +169,7 @@ describe("trackHttpDependency — happy paths", () => {
       resultCode: 404,
       success: false,
     });
-    assert.equal(capturedSpans[0].attributes["http.status_code"], "404");
+    assert.equal(capturedSpans[0].attributes["http.response.status_code"], 404);
     assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
   });
 
@@ -178,7 +182,7 @@ describe("trackHttpDependency — happy paths", () => {
       resultCode: 503,
       success: false,
     });
-    assert.equal(capturedSpans[0].attributes["http.status_code"], "503");
+    assert.equal(capturedSpans[0].attributes["http.response.status_code"], 503);
     assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
   });
 
@@ -212,7 +216,7 @@ describe("trackHttpDependency — error paths", () => {
       success: false,
       error: networkErr,
     });
-    assert.equal(capturedSpans[0].attributes["http.status_code"], "0");
+    assert.equal(capturedSpans[0].attributes["http.response.status_code"], 0);
     assert.deepEqual(capturedSpans[0].status, { code: SpanStatusCode.ERROR });
     assert.equal(capturedExceptions.length, 1);
     assert.equal(capturedExceptions[0], networkErr);
@@ -266,7 +270,7 @@ describe("trackHttpDependency — robustness", () => {
     assert.equal(capturedSpans.length, 0);
   });
 
-  it("does not throw on malformed URL — falls back to raw string for http.url", () => {
+  it("does not throw on malformed URL — falls back to raw string for url.full", () => {
     _setTracerResolverForTests(() => makeFakeTracer());
     trackHttpDependency({
       name: "signal_service",
@@ -276,8 +280,8 @@ describe("trackHttpDependency — robustness", () => {
       success: true,
     });
     assert.equal(capturedSpans.length, 1);
-    assert.equal(capturedSpans[0].attributes["peer.service"], "unknown");
-    assert.equal(capturedSpans[0].attributes["http.url"], "not a valid url");
+    assert.equal(capturedSpans[0].attributes["server.address"], "unknown");
+    assert.equal(capturedSpans[0].attributes["url.full"], "not a valid url");
   });
 
   it("clamps negative duration to 0 (defensive — startMs in future)", () => {
