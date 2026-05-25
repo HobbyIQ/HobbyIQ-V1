@@ -3581,3 +3581,34 @@ in next sub-workstream):**
   fallback. Scope ~1.5-2h. Implementation pending separate authorization.
 - **CF-CARDHEDGE-FULL-REMOVAL** (MEDIUM): yesterday's pre-existing.
 - **CF-CARDHEDGE-SIGNAL-RENAME** (LOW): yesterday's pre-existing.
+
+---
+
+## CF-FETCH-TELEMETRY-COLUMN-MAPPING — follow-up verification (2026-05-25)
+
+Verified yesterday's fix (`fba6e89` in mcp-server, ported to backend in
+B.4.a / `05f52d9`) continues producing stable App Insights output. No
+drift, no regression.
+
+**Production verification (1h window, `hobbyiq3` cloud_RoleName):**
+
+- **Field-presence summary**: 1334 / 1334 dependency entries (100%)
+  have `target`, `data`, `resultCode`, `success`, `duration` populated.
+- **Sample inspection** (12 most recent signal-related entries): all
+  consistent with the locked schema — `target = fn-compiq.azurewebsites.net`,
+  `data = https://fn-compiq.azurewebsites.net/api/signals`
+  (scheme+host+path, NO query string), `resultCode = 200/404`,
+  `success = True/False`, `duration` numeric ms.
+- **Sanitization gap check**: 0 entries with `?code=` substring in
+  `data` column. The query-string stripping in `trackHttpDependency`
+  continues to hold; no auth-key leakage observed.
+
+The newer ATTR_* OTel constants
+(`ATTR_URL_FULL`, `ATTR_SERVER_ADDRESS`,
+`ATTR_HTTP_RESPONSE_STATUS_CODE`, `ATTR_HTTP_REQUEST_METHOD`) used by
+both `mcp-server/telemetry.ts` and `backend/src/services/signals/telemetry.ts`
+are mapping cleanly to App Insights columns in production. The
+auto-generated `name` field (`"METHOD PATH"` format, e.g.
+`"GET /api/signals"`) is also stable.
+
+**CF closed.**
