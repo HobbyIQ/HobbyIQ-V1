@@ -3268,3 +3268,40 @@ scope** as a sub-task rather than a separate CF.
 - Phase 3 — surface across PortfolioIQ, Dashboard, InventoryIQ,
   DailyIQ
 - Phase 4 — methodology help screen
+
+---
+
+## CF-CARDSIGHT-SIBLING-DISCOVERY — investigation complete (2026-05-25)
+
+Investigation findings shipped: [docs/phase0/cardsight_sibling_discovery_investigation.md](phase0/cardsight_sibling_discovery_investigation.md).
+
+**Outcome**: working solution exists in codebase (`fetchCompsByPlayer` at
+`backend/src/services/compiq/compsByPlayer.service.ts`, shipped 2026-05-27
+for adjacent MCP-rewire flow). Approach A approved: wrap
+`fetchCompsByPlayer` + exact-card-id exclusion.
+
+**Revised scope estimate**:
+
+- **Original CF**: 3-6h research + implementation, unknown scope
+- **Revised**: ~2-3h total (research complete; implementation ~1-2h
+  composition + ~30-60min tests + ~15-30min smoke)
+- **Risk**: low — composition over working infrastructure, not invention
+
+**Methodology alignment**: "same player + year + set" from the locked B.2
+design maps naturally to Cardsight's "player + release" model via the
+`COMPIQ_TO_CARDSIGHT_RELEASES` dictionary at `cardsight.mapper.ts:51-66`.
+
+**Secondary gap auto-resolved**: B.7's `/price-by-id` fallback edge case
+closes automatically under Approach A (fetchCompsByPlayer takes structured
+fields directly via function signature). Single workstream closes both
+gaps.
+
+**V2 candidate held in reserve**: Approach B (parallel enumeration via
+`getCardDetail`) captures parallel-level momentum; revisit after
+production observation of Approach A behavior.
+
+**Approaches B, C, D considered and rejected** with reasoning preserved
+in the findings doc for future reference.
+
+**Next step**: implementation workstream is a SEPARATE authorization.
+Investigation does not auto-pivot to implementation.
