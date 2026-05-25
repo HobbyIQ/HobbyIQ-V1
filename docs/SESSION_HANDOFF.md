@@ -8,6 +8,102 @@
 
 ---
 
+## CF-RESTORE-SIGNAL-CREDS — odds portion CLOSED as "wrong provider" (2026-05-25 PM)
+
+**Not a credential restoration.** the-odds-api credential was provisioned
+and verified working (auth succeeds, 200 OK on metadata endpoints). But
+the API catalog does NOT include the markets our code consumes:
+
+- Code in [fn-odds-signals/function.py:14-21](compiq-functions/fn-odds-signals/function.py#L14-L21)
+  expects 6 hardcoded player-level award futures markets:
+  `baseball_mlb_award_al_mvp`, `baseball_mlb_award_nl_mvp`,
+  `baseball_mlb_award_al_cy_young`, `baseball_mlb_award_nl_cy_young`,
+  `baseball_mlb_award_al_roy`, `baseball_mlb_award_nl_roy`
+- All 6 keys return **404 Not Found** against the live API
+- the-odds-api catalog probe (`/v4/sports/?all=true`) confirms ZERO
+  player-level award futures markets exist — for ANY sport. Only 12
+  outright markets total, all team/event-level (World Series winner,
+  Super Bowl winner, NBA Championship winner, Masters winner, etc.)
+- The only baseball outrights market available is
+  `baseball_mlb_world_series_winner` — team-level, not player-level
+
+**Operational outcome:**
+
+- Credential verified working but produces `signal: no_data multiplier: 1.0`
+  for every tracked player (functionally identical to the prior
+  `no_api_key signal: 1.0` state)
+- Subscription value: zero for current code shape
+- ODDS_API_KEY unset on fn-compiq via
+  `az functionapp config appsettings delete --setting-names ODDS_API_KEY`
+  (no point keeping a key paid for an API that can't supply our signal)
+- User to cancel the-odds-api subscription externally
+
+**Research gap acknowledged:** Step 3.1 covered pricing, registration,
+and env var format but did NOT verify the specific market keys the code
+targets actually exist in the API catalog. This is the lesson — when
+validating an integration with an external provider, probe the
+provider's actual endpoint catalog against the code's hardcoded
+identifiers, not just the credential's auth status.
+
+**CF-RESTORE-SIGNAL-CREDS revised status:**
+
+- ✅ YouTube — restored
+- ⏸ Reddit — deferred by user (still open)
+- ❌ Odds — CLOSED as "wrong provider" (subscription cancelled, key unset)
+- ⏸ eBay — pending credential re-attestation (still open)
+
+---
+
+## CF-ODDS-API-REWORK (NEW, MEDIUM priority, 2026-05-25 PM)
+
+Two paths to investigate before resubscribing to any odds provider:
+
+**(a) Rework signal to consume the-odds-api's World Series futures + map
+tracked players to teams**
+
+- Methodology shift: "player award momentum" → "team contention
+  momentum." Different semantic.
+- Implementation: static dict mapping tracked player → MLB team, fetch
+  `baseball_mlb_world_series_winner` outrights, derive multiplier from
+  player's team's implied probability
+- Cost: $30/mo Starter tier of the-odds-api would cover ~50-100
+  cycles/month at 1 call/cycle = well within free tier even
+- Tradeoff: loses player-specific information (e.g., Witt on a non-
+  contender wouldn't get the same boost as Skenes on the Pirates)
+
+**(b) Research alternate provider that exposes player-level award
+futures markets**
+
+- Candidates to investigate: SportsDataIO, OddsJam, BetMGM API (rate-
+  limited public), DraftKings/FanDuel public futures pages (scraping),
+  SportradarUS
+- May not exist as a clean API; might require scraping
+- Cost: unknown, potentially significant
+
+**Decision points:**
+
+1. Should the odds signal exist at all? Award-prediction is a small
+   contribution to the composite (weight=0.15) and the markets only
+   meaningfully exist mid-to-late season. Could simply be retired.
+2. If retained, which semantic — team-level (path a) or player-level
+   (path b)?
+
+**Scope:** ~2-3h investigation + methodology lock decision + ~2-3h
+implementation if approved.
+
+**Budget gate:** the-odds-api Starter subscription stays cancelled
+until this CF resolves with either a clear "yes, repoint to World
+Series" (then re-subscribe + implement) or "yes, alternate provider X
+exists" (subscribe to X + implement).
+
+**Cross-refs:**
+
+- `aee64a4` — fn-compiq investigations §2 (original "ODDS_API_KEY
+  MISSING" finding that triggered Step 3.1)
+- CF-RESTORE-SIGNAL-CREDS odds-portion closure entry (above)
+
+---
+
 ## CF-BACKTEST-DETERMINISTIC — temperature + seed lock shipped (2026-05-25 PM)
 
 OpenAI sampling locked at `mcp-server/pricing.ts` via new exported const:
