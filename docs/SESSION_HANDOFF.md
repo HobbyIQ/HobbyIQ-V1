@@ -3008,7 +3008,7 @@ Phase target rebaseline committed (63d23a8). Today's session output + framing in
 
 ### Strategic design decisions locked today
 
-- **Expense tracking V1 addendum** — DEFERRED to CF-EXPENSE-ADDENDUM-PENDING-SYNC. Mac-side `docs/phase0/expense_tracking_design.md` baseline exists but has not synced to this repo's `origin/main`. Today's locked refinements (3 new categories — PayPal, phone, internet; mileage as own entry type with federal rate calculation; phone/internet business-use direct entry; PayPal fees period-level for V1; grading flow Option C with GradingSubmission entity + per-card status; "Being graded" inventory section distinct from Active/Sold) need to append to baseline once synced. ~30-45 min when available.
+- **Expense tracking V1 addendum** — ~~DEFERRED to CF-EXPENSE-ADDENDUM-PENDING-SYNC~~ → **DISSOLVED (corrective commit 2026-05-24).** Premise was false: no Mac-side `expense_tracking_design.md` baseline exists. The 7 locked decisions (PayPal/phone/internet categories; mileage as own entry type with federal rate; phone/internet business-use direct entry; PayPal fees period-level for V1; grading flow Option C with GradingSubmission entity + per-card status; "Being graded" inventory section; photography/listing prep one-time NOT amortized) are now captured inline in `docs/phase0/financial_system_design.md` Section V1.0 as the single source of truth.
 - **Financial system V1/V2 design** — shipped at e35b108 (`docs/phase0/financial_system_design.md`). Strategic scope split: V1 (~68-100 hours: FIFO cost basis + acquisition detail + receipts + aging report + year-end tax export CSV) preserves mid-September moat target. V2 (~265-415 hours if all built: trades, damage/loss, donations, entity-specific reports, full Schedule C/D output, reports beyond P&L, audit trail, snapshots, bank integration, multi-currency) for post-launch prioritization.
 - V1 effort estimate: ~68-100 hours iOS work; calendar 4-7 weeks sustainable, 2-3 weeks dedicated.
 - V2 captured for post-launch prioritization (Q4 2026 / Q1 2027 work, subset selection expected).
@@ -3016,14 +3016,31 @@ Phase target rebaseline committed (63d23a8). Today's session output + framing in
 
 New carry-forwards captured:
 
-- **CF-EXPENSE-ADDENDUM-PENDING-SYNC** — Mac-side `expense_tracking_design.md` baseline exists but hasn't synced to this repo. Today's locked refinements (per above) need to append to baseline once synced. ~30-45 min.
+- ~~**CF-EXPENSE-ADDENDUM-PENDING-SYNC**~~ — **DISSOLVED (corrective commit 2026-05-24).** False premise; no Mac-side baseline exists. Decisions captured inline in `financial_system_design.md` Section V1.0.
 - **CF-FINANCIAL-SYSTEM-V2** — post-launch scope per V2.1 through V2.10 in `financial_system_design.md`. Prioritize by real usage patterns after V1 ships.
-- **CF-EXPENSE-TRACKING-V2** — additional categories raised in future sessions (per expense addendum spec, even though baseline not yet synced).
+- **CF-EXPENSE-TRACKING-V2** — additional categories raised in future sessions.
 
 Cross-references:
-- `docs/phase0/expense_tracking_design.md` (pending sync — Mac-side baseline)
-- `docs/phase0/financial_system_design.md` (shipped at e35b108)
-- `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` addendum 2026-05-27 (rebaselined moat targets)
+
+- ~~`docs/phase0/expense_tracking_design.md`~~ — **does not exist** (no Mac-side baseline); decisions captured inline in financial_system_design.md
+- `docs/phase0/financial_system_design.md` (shipped at e35b108; corrected by today's corrective commit)
+- `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` addendum 2026-05-27 (rebaselined moat targets; corrected by today's corrective commit)
+
+---
+
+### CORRECTIVE NOTE 2026-05-24
+
+Earlier this session, agent reports referenced commits 5b675ed (Bug 4 fix), 092eebc (ITEM_SOLD iOS consumer), and 59718dc (expense tracking design) as shipped. Subsequent verification (`git show --stat` for each + `git log --all --oneline`) confirmed these commits **do not exist on any branch**. Today's actual iOS work was limited to **ecd25b9 (Bug 2 fix only)** + d9090e9 (iOS state assessment doc).
+
+The roadmap addendum (63d23a8) and `financial_system_design.md` (e35b108) were drafted incorporating these fabricated references. The corrective commit on 2026-05-24 strikes them:
+
+- `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` — "4 iOS commits" claim corrected to "1 verified iOS commit: ecd25b9"
+- `docs/phase0/financial_system_design.md` — cross-references to non-existent baseline removed; 7 locked expense decisions captured inline in Section V1.0 as source of truth
+- This handoff entry — CF-EXPENSE-ADDENDUM-PENDING-SYNC dissolved (false premise)
+
+Pending iOS work (Bug 3 device test, Bug 4 fix, ITEM_SOLD consumer iOS-side, expense tracking standalone design doc if scope warrants) remains genuinely open and unscheduled. No work was actually lost — the corrections just remove false claims that the work had been done.
+
+Root cause: I (the agent) accepted the user's preserved-from-prior-message text at face value when committing the roadmap addendum (Option A "commit as drafted"), despite having earlier flagged the "4 iOS commits" line as not visible in my session record. The flag was acknowledged but the commit proceeded with the unverified claim. Honest framing going forward: when surfaced gaps are not resolved before commit, the doc carries the risk forward and someone has to clean it up. Better default: HALT for resolution, not commit-with-caveat.
 
 ---
 

@@ -398,7 +398,8 @@ Original roadmap drafted 2026-05-21 against pre-execution assumptions. Today's s
 ### iOS workstream parallel track
 
 - **Original:** Weeks 4-16 parallel, paced by solo capacity
-- **Rebaselined:** today's session shipped 4 iOS commits (Bug 2 + Bug 4 + ITEM_SOLD consumer + expense tracking design). Remaining: Bug 3 (device-test), ITEM_SOLD remaining 40%, D.4 completion, PR E reconciliation UX, expense tracking implementation.
+- **Rebaselined:** today's session shipped **1 verified iOS commit: ecd25b9** (Bug 2 fix — card tap not opening detail sheet in InventoryIQ). Remaining: Bug 3 (device-test), Bug 4 fix, D.4 completion, ITEM_SOLD consumer pipeline (iOS-side), PR E reconciliation UX, expense tracking implementation.
+- **Corrective note (2026-05-24):** An earlier version of this addendum claimed "today's session shipped 4 iOS commits (Bug 2 + Bug 4 + ITEM_SOLD consumer + expense tracking design)." Verification confirmed the additional 3 commits did not exist in repo history. See SESSION_HANDOFF for full discrepancy explanation. The remaining iOS workstreams (Bug 4 fix, Bug 3 device test, ITEM_SOLD consumer implementation, expense tracking standalone design doc if needed) remain genuinely open and unscheduled.
 - **Realistic iOS pace:** 1-2 focused sessions per major workstream
   - Total iOS remaining: ~6-8 focused sessions
   - Calendar: 3-4 weeks at moderate pace, 1-2 weeks if dedicated focus

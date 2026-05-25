@@ -7,24 +7,79 @@
 
 User raised the question: what's missing from running a complete financial system for a card business? Today's session locked V1 vs V2 scope decisions. This doc captures the strategic split and implementation phasing.
 
-Today's iOS work shipped:
-- Expense tracking design (see `expense_tracking_design.md` when Mac-side commit syncs; addendum capturing today's V1 refinements pending — **CF-EXPENSE-ADDENDUM-PENDING-SYNC**)
-- ITEM_SOLD consumer pipeline (PR #100 backend + today's iOS work)
-- Backend D.6 PortfolioLedgerEntry with granular fee fields
+Today's repo state (verified 2026-05-24):
+- 1 verified iOS commit: ecd25b9 (Bug 2 fix — card tap not opening detail sheet in InventoryIQ)
+- ITEM_SOLD consumer pipeline: backend PR #100 shipped; iOS-side consumer NOT yet implemented
+- Backend D.6 PortfolioLedgerEntry with granular fee fields (PR #100)
 
-This doc covers everything beyond those.
+This doc covers the broader financial system V1/V2 scope decided in conversation. Today's expense tracking V1 decisions are captured **inline in this doc** as the single source of truth (Section 3 below).
 
-### Note on cross-references
+### Corrective note (2026-05-24)
 
-Two cross-environment-sync gaps exist as of this doc's creation:
+An earlier version of this doc cross-referenced a `docs/phase0/expense_tracking_design.md` baseline as if it existed in a Mac-side environment awaiting sync. Subsequent verification confirmed no such file exists in this repo or in any branch on origin. The cross-reference was based on an incorrect understanding of repo state.
 
-1. **`docs/phase0/expense_tracking_design.md`** baseline was committed on the Mac-side work environment but has not synced to this repo's `origin/main` as of writing. References below point at the expected location; addendum capturing today's locked refinements (3 new categories, mileage entry type, business-use direct entry, PayPal heterogeneity, grading Option C with submission entity, "Being graded" inventory section) lands once the baseline syncs. Tracked as **CF-EXPENSE-ADDENDUM-PENDING-SYNC** — estimated ~30-45 min when baseline available.
-
-2. References below to specific design specifics (FIFO methodology, acquisition source enum values, etc.) reflect today's locked decisions; should be verified against any Mac-side design docs once cross-environment sync completes.
+As of this corrective commit, expense tracking V1 design decisions (categories, mileage, business-use, PayPal, grading flow, inventory section) are captured **inline in Section V1.0 below** rather than via cross-reference. A standalone `expense_tracking_design.md` may be created in a future session if scope warrants, but is not pending.
 
 ## V1 implementation scope
 
 Load-bearing for launch. Ships before mid-September moat target.
+
+### V1.0 — Expense tracking V1 (inline source-of-truth, per corrective note above)
+
+Decisions captured in conversation 2026-05-24. Inlined here because the previously-cross-referenced `expense_tracking_design.md` does not exist.
+
+**13 categories (locked):**
+
+1. Subscriptions — recurring
+2. Supplies — one-time or recurring
+3. Shipping supplies — one-time or recurring
+4. Postage — per-transaction
+5. Shows — per-event (table fees, parking, food, hotel)
+6. Travel for acquisitions — per-trip (gas, mileage, food, hotel)
+7. PayPal fees — period-level for V1 (heterogeneous handling deferred to V2)
+8. Phone fees — recurring (user enters business portion directly)
+9. Internet fees — recurring (user enters business portion directly)
+10. Photography/listing prep — one-time (NOT amortized)
+11. Storage — recurring
+12. Grading costs — via per-card flow (see grading section)
+13. Other — catch-all
+
+**Mileage as own entry type:** distinct from cash expense. User enters miles + date + purpose; system applies current federal mileage rate at entry time. Stored value: miles + dollars-at-rate. Re-calculation on annual federal rate updates uses stored miles, not stored dollars. Per-trip metadata: from/to, purpose, optional notes.
+
+**Phone/internet business-use:** user enters business portion directly (e.g., "$30 monthly for HobbyIQ portion of $100 phone bill"). System stores entered amount as full deductible. No separate business-use percentage field; user does the math at entry time. Rationale: simpler UI; user knows actual business-use ratio better than system can infer.
+
+**PayPal fees (period-level for V1):** V1 captures PayPal fees as period-level expense entries (transfer fees, currency conversion, withdrawal fees). V2 deferred: heterogeneous sale-attached PayPal fee handling (attach to PortfolioLedgerEntry like eBay fees per backend D.6). Most PayPal fees in practice are aggregate, not per-card.
+
+**Grading flow — Option C (dual-tracking):**
+
+- Aggregate level: `GradingSubmission` entity (separate first-class entity)
+  - Schema: id, userId, submissionDate, gradingCompany (PSA/BGS/SGC/etc), serviceLevelTier (Bulk/Express/etc), totalCost, status (submitted/atGrader/returned), cards array, notes
+  - UX: user logs submission as batch entity; specifies service tier per card
+- Per-card level: `CardItem` gains `gradingStatus` + `pendingGradingCost` + `gradingSubmissionId` + `finalGrade`
+  - `gradingStatus`: enum (none, submitted, atGrader, returned) — defaults to none
+  - When card returns: user marks "as returned" with finalGrade + finalCost. Status updates to "returned." If part of submission, submission status updates when all cards returned.
+  - When card sells: `finalCost` flows to `PortfolioLedgerEntry.gradingCost` (backend D.6 field already exists)
+- Backend D.6 link confirmed: gradingCost flows to PortfolioLedgerEntry at sale time
+
+**"Being graded" inventory section:** three sections in main inventory view — Active (in possession), **Being graded** (NEW; cards currently submitted/atGrader), Sold (existing ledger). Cards in submitted or atGrader status move to Being graded section. Return to Active when status updates to returned.
+
+Visual indicators on card list rows:
+
+- Active: no badge
+- Being graded: "📤 [Company] pending" badge
+- Returned (but not sold): "✓ [Grade]" badge
+
+**Photography/listing prep: one-time expense (NOT amortized)** per locked decision.
+
+**V1.0 effort estimate:**
+
+- Phase E.1 backend schema: expenses + GradingSubmission entities + endpoints → ~6-8 hours
+- Phase E.2 iOS model: Expense + GradingSubmission Codable types + CardItem grading fields → ~4-5 hours
+- Phase E.3 iOS UI: expense flow + grading submission flow + per-card grading actions → ~7-10 hours
+- Phase E.4 iOS UI: Being graded inventory section + summary/P&L view → ~4-5 hours
+- Phase E.5 recurring automation: subscriptions only → ~2-3 hours
+
+**Total V1.0: ~22-30 hours focused work.**
 
 ### V1.1 — FIFO cost basis methodology
 
@@ -186,15 +241,15 @@ V1 preserves the mid-September moat target by keeping iOS workstream calendar bo
 
 ## Cross-references
 
-- `docs/phase0/expense_tracking_design.md` — V1 expense tracking baseline (see CF-EXPENSE-ADDENDUM-PENDING-SYNC; Mac-side commit not yet synced to this repo's origin/main as of 2026-05-27)
-- `docs/phase0/ios_state_assessment.md` — today's iOS baseline
+- ~~`docs/phase0/expense_tracking_design.md`~~ — **does not exist (corrective commit 2026-05-24)**. V1 expense tracking decisions are inline in Section V1.0 of this doc.
+- `docs/phase0/ios_state_assessment.md` — iOS baseline (commit d9090e9)
 - `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` — overall roadmap (rebaseline addendum at end-of-doc; this V1/V2 split feeds the mid-September moat target buffer)
 - Backend PR #100 — D.6 ITEM_SOLD ledger with granular fee fields
 - PR E reconciliation UX (pending; per-card sale-time expense editing)
 
 ## Carry-forwards captured by this doc
 
-- **CF-EXPENSE-ADDENDUM-PENDING-SYNC** — Mac-side `expense_tracking_design.md` baseline exists but hasn't synced to this repo's origin/main. Today's locked refinements (3 new categories, mileage entry type, business-use direct entry, PayPal heterogeneity, grading Option C with submission entity, "Being graded" inventory section) need to append to baseline once synced. Estimated 30-45 min when baseline available.
+- ~~**CF-EXPENSE-ADDENDUM-PENDING-SYNC**~~ — **DISSOLVED (corrective commit 2026-05-24).** The carry-forward was created based on a false premise (a Mac-side `expense_tracking_design.md` baseline awaiting sync). Verification confirmed no such file exists in any environment. The 7 locked decisions are now captured inline in Section V1.0 above. No work pending under this CF.
 - **CF-FINANCIAL-SYSTEM-V2** — Post-launch scope per this design doc (V2.1 through V2.10). Prioritize by real usage patterns after V1 ships. Total estimated V2 effort: ~265-415 hours across 10 sub-items if all built; subset selection expected.
 
 ## Open questions
