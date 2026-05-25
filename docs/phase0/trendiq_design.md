@@ -87,7 +87,6 @@ and were authorized explicitly before B.4 implementation began.
 - Pool: siblings via `searchCardsRouted` for `${year} ${set} ${player}`,
   filtered to same player + same year + same set, exact card_id
   excluded. Caps: 8 siblings, 10 samples each (same as broaderTrend).
-- Window: 60 days max from now
 - Anchor handling:
   - `originalAnchorDate`: this card's true last-sale ISO date, or null
     if never sold
@@ -98,12 +97,34 @@ and were authorized explicitly before B.4 implementation began.
     uses 90-day window"
   - If anchor < 7 days ago: post-anchor window too short → layer = null
   - If `originalAnchorDate == null` (no exact sales): layer = null
+- Windowing (Option C resolution, locked 2026-05-26):
+  - **Pre-window**: ALWAYS 30 days immediately before
+    `effectiveAnchorDate`. Decoupled from `windowDays` to fix an
+    arithmetic conflict in the original spec (with `windowDays = 60`
+    and re-anchor moving effectiveAnchorDate to `now-90d`, the original
+    `soldDate >= (now − 60d)` floor produced an empty `[now-60d,
+    now-90d]` pre-anchor interval, defeating the re-anchor feature).
+  - **Post-window**: `(effectiveAnchorDate, now]`.
+  - **Total `windowDays` reported**: `30 + (days from effective anchor
+    to now)`. Normal case (anchor ~30d ago) = 60 days. Re-anchored
+    case (effective = now-90d) = 120 days.
 - Pre-anchor pool: sibling sales with `soldDate <= effectiveAnchorDate
-  AND soldDate >= (now − windowDays)`
+  AND soldDate >= (effectiveAnchorDate − 30d)`
 - Post-anchor pool: sibling sales with `soldDate > effectiveAnchorDate
   AND soldDate <= now`
 - Minimum: 2 in pre-anchor AND 2 in post-anchor — below → layer null
 - pctChange clamp: ±50%
+
+**Production status (B.4.c ship, 2026-05-26):** Layer 3 is implemented
+against this spec but blocked behind CF-CARDSIGHT-SIBLING-DISCOVERY.
+Cardsight's catalog data model differs structurally from CardHedge —
+cards organized by release + subset + parallel with player attribution
+outside the catalog card. `searchCardsRouted + filter` returns 0
+siblings in production, so segment trajectory is always null until
+upstream sibling discovery is rebuilt for Cardsight. Composite falls
+back to two-layer (player + card) in the meantime. Diagnostic logs
+`[compiq.trendIQ.L3]` surface the null reason in stdout for ops
+visibility.
 
 **Composite weighting (8-row availability matrix):**
 

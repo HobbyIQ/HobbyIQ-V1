@@ -3059,6 +3059,101 @@ F1 closed. No current consumer wired up; preventive ship lands cleanly. Next ses
 
 ---
 
+### CF-CARDSIGHT-SIBLING-DISCOVERY (surfaced 2026-05-26 during B.4.c.3 live smoke) — HIGH priority
+
+Cardsight's catalog data model differs structurally from CardHedge. Cards
+are organized by release + subset + parallel; player attribution does NOT
+live on the catalog card in the expected shape. `fetchSiblingSales`
+returns empty pool for ALL Cardsight cards because:
+
+1. `searchCardsRouted` returns cards from Cardsight catalog (working —
+   2 results returned for a typical Bonemer query)
+2. Returned cards have **no `player` field** populated by `csToChCard`
+   (Cardsight's `cs.player` is undefined for search results)
+3. Returned cards have `setName` = the SUBSET ("Base Set", "Chrome
+   Prospect Autographs") NOT the product line ("Bowman Draft Chrome")
+4. Filter `s.player === playerLc && s.set === setLc` drops all results
+
+Consequence: TrendIQ Layer 3 (segment trajectory) is shipped against
+the locked spec but produces `null` in production until sibling
+discovery is rebuilt for Cardsight's data model. Pre-existing
+`fetchBroaderTrend` has the same upstream blocker — it's been
+silently labeling 'broader trend' from exact-comp-only pool since
+the Cardsight migration. Diagnostic logs `[compiq.trendIQ.L3]` now
+surface the null reason in stdout for ops visibility.
+
+Investigation needed:
+
+- What endpoints does Cardsight expose for catalog queries beyond
+  `searchCatalog`? (e.g., a player-id lookup, a release enumeration)
+- Is `player` available on a different Cardsight resource (e.g., on
+  the `pricing` response but not catalog search)?
+- Can we discover siblings via a different query strategy (enumerate
+  all cards in release + filter to player after)?
+- Or does the segment definition need to change to match Cardsight-
+  native grouping (e.g., per-release instead of per-product-line)?
+
+Estimated: 3-6 hours research + implementation. Unblocks Layer 3 in
+production. Until resolved, TrendIQ ships as effective two-layer
+composite (player momentum + card trajectory) with composite weights
+{0.30, 0.70} when Layer 1 is present; {0.00, 1.00} for untracked
+players.
+
+Cross-references:
+
+- B.4.c ship commit (this session)
+- `docs/phase0/trendiq_design.md` "Production status" note in Layer 3 section
+- Pre-existing related: `fetchBroaderTrend` quietly broken (same root
+  cause) since Cardsight migration
+
+### CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (surfaced 2026-05-26) — MEDIUM priority
+
+`cardIdentity` returned by the Cardsight-exclusive path lacks
+`setName` and `year` fields. `findCompsViaCardsight` builds
+`baseCard.set` and `baseCard.year` from `pricing.card?.setName` and
+`pricing.card?.year` — both come back `undefined` for the cards
+tested in B.4.c.3 smoke (Ohtani, Bonemer, Griffey, Torres).
+
+Worked around in B.4.c via Option A parsedQuery fallback — caller
+passes `{player, set, year}` from `parseCardQuery` results as fallback
+to `fetchSiblingSales` when cardIdentity is sparse. Fallback unblocks
+the outer `!player || !set` gate but the deeper sibling-discovery
+issue (CF-CARDSIGHT-SIBLING-DISCOVERY) remains.
+
+Investigation needed:
+
+- Does Cardsight expose `setName` / `year` via a different endpoint
+  (e.g., `/cards/{id}` detail probe vs `/pricing/{id}`)?
+- Is the data available in the `pricing` response on a different
+  field that csToChCard / findCompsViaCardsight isn't mapping?
+- If data exists: populate cardIdentity at the source and retire the
+  parsedQuery fallback (cardIdentity becomes true source of truth).
+- If data doesn't exist: fallback becomes a permanent abstraction and
+  we should document its role in the cardIdentity shape contract.
+
+Estimated: 1-2 hours research + 30 min implementation if data exists.
+Distinct from CF-CARDSIGHT-SIBLING-DISCOVERY scope.
+
+### TrendIQ Phase 1 strategic framing (post-B.4.c)
+
+TrendIQ Phase 1 ships as **architectural three-layer composite with two
+layers active in production**. Honest external framing:
+
+- "Three-layer composite" — accurate to architecture
+- "Three layers active in production" — NOT accurate until
+  CF-CARDSIGHT-SIBLING-DISCOVERY resolves
+- Layer 3 (segment trajectory) is **designed and shipping behind a data
+  integration block** — code is in main, spec is locked, but
+  production Cardsight integration prevents it from producing signal
+
+iOS Phase 2 work + external pitches should reflect the two-layer
+effective state. Layer 3 metadata fields (segmentTrajectory object)
+will appear in API responses as `null` until the upstream gap is
+closed; iOS decode should treat null as "data not yet available" not
+"signal not present."
+
+---
+
 ### CF-CARDHEDGE-SIGNAL-RENAME (surfaced 2026-05-25 during B.4.a smoke verification)
 
 The aggregator's `cardhedge` signal source (visible in TrendIQ's

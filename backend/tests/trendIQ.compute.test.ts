@@ -10,8 +10,10 @@ import { describe, it, expect } from "vitest";
 import {
   buildPlayerMomentumComponent,
   computeCardTrajectory,
+  computeSegmentTrajectory,
   computeTrendIQ,
   formatTrendIQLogLine,
+  type SegmentPoolInput,
 } from "../src/services/compiq/trendIQ.compute.js";
 
 describe("computeTrendIQ — 8-row weight table", () => {
@@ -464,6 +466,303 @@ describe("computeCardTrajectory — Layer 2 card-level comp trajectory", () => {
       segmentTrajectory: 0,
     });
     expect(r.composite).toBe(cardTraj!.multiplier);
+  });
+});
+
+describe("computeSegmentTrajectory — Layer 3 segment trajectory", () => {
+  const NOW = Date.parse("2026-05-25T12:00:00Z");
+  const daysAgo = (n: number) => NOW - n * 24 * 3600 * 1000;
+  const isoAgo = (n: number) => new Date(daysAgo(n)).toISOString();
+
+  /** Build a sibling pool from {price, daysAgo} pairs. */
+  const pool = (
+    sales: Array<{ price: number; daysAgo: number }>,
+    siblingCount = 5,
+  ): SegmentPoolInput => ({
+    siblingCardIds: Array.from({ length: siblingCount }, (_, i) => `sibling-${i}`),
+    sales: sales.map((s) => ({ price: s.price, ts: daysAgo(s.daysAgo) })),
+  });
+
+  it("returns null when newestTs <= 0 (no anchor — card never sold)", () => {
+    const r = computeSegmentTrajectory(pool([]), 0, NOW);
+    expect(r).toBeNull();
+  });
+
+  it("returns null when newestTs is NaN (defensive)", () => {
+    const r = computeSegmentTrajectory(pool([]), NaN, NOW);
+    expect(r).toBeNull();
+  });
+
+  it("returns null when anchor is < 7 days ago (post-window too short)", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        { price: 100, daysAgo: 2 },
+        { price: 100, daysAgo: 4 },
+        { price: 100, daysAgo: 10 },
+        { price: 100, daysAgo: 15 },
+      ]),
+      daysAgo(5), // anchor 5 days ago
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  it("returns null when sibling pool is empty", () => {
+    const r = computeSegmentTrajectory(pool([]), daysAgo(30), NOW);
+    expect(r).toBeNull();
+  });
+
+  it("returns null with < 2 pre-anchor comps", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        // anchor at 30d. pre-window: [60d, 30d]. only 1 in pre window.
+        { price: 100, daysAgo: 45 },
+        // 5 in post window (anchor, now)
+        { price: 110, daysAgo: 25 },
+        { price: 115, daysAgo: 20 },
+        { price: 120, daysAgo: 15 },
+        { price: 125, daysAgo: 10 },
+        { price: 130, daysAgo: 5 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  it("returns null with < 2 post-anchor comps", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        // 5 in pre window
+        { price: 100, daysAgo: 35 },
+        { price: 102, daysAgo: 40 },
+        { price: 104, daysAgo: 45 },
+        { price: 106, daysAgo: 50 },
+        { price: 108, daysAgo: 55 },
+        // only 1 in post (anchor, now)
+        { price: 120, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).toBeNull();
+  });
+
+  it("computes happy-path trajectory (anchor 30d ago, real pre/post pools)", () => {
+    const r = computeSegmentTrajectory(
+      pool(
+        [
+          // pre-window [60d, 30d]: median 100
+          { price: 95, daysAgo: 55 },
+          { price: 100, daysAgo: 45 },
+          { price: 105, daysAgo: 35 },
+          // post-window (30d, now]: median 120
+          { price: 115, daysAgo: 20 },
+          { price: 120, daysAgo: 15 },
+          { price: 125, daysAgo: 5 },
+        ],
+        7, // siblingCount
+      ),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.preAnchorMedian).toBe(100);
+    expect(r!.postAnchorMedian).toBe(120);
+    expect(r!.pctChange).toBe(20); // (120-100)/100*100
+    expect(r!.multiplier).toBe(1.2);
+    expect(r!.preAnchorCount).toBe(3);
+    expect(r!.postAnchorCount).toBe(3);
+    expect(r!.siblingsScanned).toBe(7);
+    expect(r!.totalSamples).toBe(6);
+    expect(r!.originalAnchorDate).toBe(isoAgo(30));
+    expect(r!.effectiveAnchorDate).toBe(isoAgo(30)); // not re-anchored
+    expect(r!.windowDays).toBe(60); // 30 pre + 30 post
+  });
+
+  it("re-anchors when originalAnchor > 180 days ago (Option C resolution)", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        // anchor at 250 days ago → effectiveAnchor = now-90d
+        // pre-window [now-120d, now-90d]: 2 comps
+        { price: 100, daysAgo: 110 },
+        { price: 100, daysAgo: 95 },
+        // post-window (now-90d, now]: 2 comps
+        { price: 130, daysAgo: 30 },
+        { price: 130, daysAgo: 10 },
+      ]),
+      daysAgo(250),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.originalAnchorDate).toBe(isoAgo(250));
+    // effectiveAnchorDate should be ~now - 90d (allowing ms-level fuzz on Date roundtrip)
+    expect(r!.effectiveAnchorDate).not.toBe(r!.originalAnchorDate);
+    expect(r!.pctChange).toBe(30);
+    expect(r!.multiplier).toBe(1.3);
+    expect(r!.windowDays).toBe(120); // 30 pre + 90 post
+  });
+
+  it("re-anchor: originalAnchorDate preserved while effectiveAnchorDate is now-90d", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        { price: 50, daysAgo: 115 },
+        { price: 50, daysAgo: 95 },
+        { price: 50, daysAgo: 30 },
+        { price: 50, daysAgo: 10 },
+      ]),
+      daysAgo(200),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.originalAnchorDate).toBe(isoAgo(200));
+    // Parse effective and verify it's ~90 days ago (within 1 second tolerance)
+    const effTs = Date.parse(r!.effectiveAnchorDate);
+    const expectedTs = daysAgo(90);
+    expect(Math.abs(effTs - expectedTs)).toBeLessThan(1000);
+  });
+
+  it("clamps positive pctChange to +50 (multiplier 1.50)", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        // pre median 100, post median 250 → raw pct +150 → clamped to +50
+        { price: 100, daysAgo: 35 },
+        { price: 100, daysAgo: 45 },
+        { price: 250, daysAgo: 20 },
+        { price: 250, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(50);
+    expect(r!.multiplier).toBe(1.5);
+  });
+
+  it("clamps negative pctChange to -50 AND multiplier asymmetrically to 0.70", () => {
+    // Same asymmetric clamp as Layer 2 — locked methodology characteristic.
+    // pctChange=-50 yields raw multiplier 0.50 which clamps UP to 0.70.
+    // Composite-implied downside is capped at -30% per layer.
+    const r = computeSegmentTrajectory(
+      pool([
+        // pre median 200, post median 20 → raw pct -90 → clamped to -50
+        { price: 200, daysAgo: 35 },
+        { price: 200, daysAgo: 45 },
+        { price: 20, daysAgo: 20 },
+        { price: 20, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.pctChange).toBe(-50);
+    expect(r!.multiplier).toBe(0.7);
+  });
+
+  it("ignores sales with invalid prices (zero, negative, NaN)", () => {
+    const r = computeSegmentTrajectory(
+      pool([
+        { price: 0, daysAgo: 35 }, // ignored
+        { price: -10, daysAgo: 45 }, // ignored
+        { price: NaN, daysAgo: 50 }, // ignored
+        { price: 100, daysAgo: 35 },
+        { price: 100, daysAgo: 45 },
+        { price: 110, daysAgo: 20 },
+        { price: 110, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.preAnchorCount).toBe(2); // zero/neg/NaN filtered
+  });
+
+  it("excludes sales outside both windows (older than pre-window, future)", () => {
+    // daysAgo(-5) = NOW + 5d (future); daysAgo(100) is older than pre-window
+    // start when anchor is 30d ago (pre-window = [60d, 30d]).
+    const r = computeSegmentTrajectory(
+      pool([
+        { price: 999, daysAgo: 100 }, // older than 60d (outside pre window)
+        { price: 999, daysAgo: -5 }, // future date (outside post window)
+        { price: 100, daysAgo: 35 },
+        { price: 100, daysAgo: 50 },
+        { price: 110, daysAgo: 20 },
+        { price: 110, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.preAnchorCount).toBe(2); // 100d sale excluded
+    expect(r!.postAnchorCount).toBe(2); // future date excluded
+  });
+
+  it("computeTrendIQ propagates Layer 3 with null L1/L2 → segment_only", () => {
+    const segment = computeSegmentTrajectory(
+      pool([
+        { price: 100, daysAgo: 35 },
+        { price: 100, daysAgo: 45 },
+        { price: 110, daysAgo: 20 },
+        { price: 110, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    const r = computeTrendIQ({
+      playerMomentum: null,
+      cardTrajectory: null,
+      segmentTrajectory: segment,
+    });
+    expect(r.coverage).toBe("segment_only");
+    expect(r.weights).toEqual({
+      playerMomentum: 0,
+      cardTrajectory: 0,
+      segmentTrajectory: 1,
+    });
+    expect(r.composite).toBe(segment!.multiplier);
+  });
+
+  it("computeTrendIQ with all three layers populated → coverage='full', weights {0.20, 0.40, 0.40}", () => {
+    const segment = computeSegmentTrajectory(
+      pool([
+        { price: 100, daysAgo: 35 },
+        { price: 100, daysAgo: 45 },
+        { price: 120, daysAgo: 20 },
+        { price: 120, daysAgo: 10 },
+      ]),
+      daysAgo(30),
+      NOW,
+    );
+    const cardTraj = computeCardTrajectory(
+      [
+        { price: 150, soldDate: new Date(daysAgo(2)).toISOString() },
+        { price: 155, soldDate: new Date(daysAgo(10)).toISOString() },
+        { price: 130, soldDate: new Date(daysAgo(20)).toISOString() },
+        { price: 130, soldDate: new Date(daysAgo(30)).toISOString() },
+      ],
+      NOW,
+    );
+    const r = computeTrendIQ({
+      playerMomentum: {
+        multiplier: 1.05,
+        flags: [],
+        componentSignals: {},
+        lastUpdated: null,
+        sourceUrl: null,
+      },
+      cardTrajectory: cardTraj,
+      segmentTrajectory: segment,
+    });
+    expect(r.coverage).toBe("full");
+    expect(r.weights).toEqual({
+      playerMomentum: 0.2,
+      cardTrajectory: 0.4,
+      segmentTrajectory: 0.4,
+    });
+    // composite = 0.2*1.05 + 0.4*cardTraj.mult + 0.4*segment.mult
+    const expected =
+      0.2 * 1.05 + 0.4 * cardTraj!.multiplier + 0.4 * segment!.multiplier;
+    expect(r.composite).toBeCloseTo(expected, 2);
   });
 });
 

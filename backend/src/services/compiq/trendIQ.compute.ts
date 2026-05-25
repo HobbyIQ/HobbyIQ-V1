@@ -10,6 +10,7 @@
 import {
   type CardTrajectoryComponent,
   type PlayerMomentumComponent,
+  type SegmentTrajectoryComponent,
   type TrendIQComponents,
   type TrendIQCoverage,
   type TrendIQDirection,
@@ -137,6 +138,162 @@ export function computeCardTrajectory(
     olderCount: older.length,
     windowRecentDays: 14,
     windowOlderDays: 30, // duration span 15..45 = 30 days
+  };
+}
+
+// ─── Layer 3: segment trajectory anchored to card's last sale date ──────────
+//
+// Locked methodology (docs/phase0/trendiq_design.md "Phase 1 methodology
+// locks") + 2026-05-26 re-anchor resolution (Option C — anchor-relative
+// pre-window):
+//
+//   - Anchor source: this card's most recent sale timestamp (`newestTs` from
+//     fetched.comps). `originalAnchorDate` = the true last-sale date.
+//   - If `newestTs <= 0` (card never sold): return null.
+//   - If anchor < 7 days ago: post-window too short → return null.
+//   - Re-anchoring: when anchor > 180 days ago, `effectiveAnchorDate` moves
+//     forward to `now - 90d` so re-anchored cards still get a meaningful
+//     segment trajectory. `originalAnchorDate` stays the true last-sale date
+//     so the UI can show "Last sale: 250 days ago — segment trajectory uses
+//     90-day window".
+//   - Pre-window: ALWAYS 30 days immediately before `effectiveAnchorDate`.
+//     This decouples pre-window length from `windowDays` and resolves a
+//     spec inconsistency:
+//       Original spec said `windowDays = 60` AND `preAnchor: soldDate >=
+//       (now - windowDays)`. When re-anchor moved effectiveAnchorDate to
+//       now-90d, the original preAnchor pool became `[now-60d, now-90d]` =
+//       empty interval, defeating the re-anchor mechanism. Option C
+//       (anchor-relative 30d pre-window) makes pre/post windows consistent
+//       regardless of anchor position. Total span = 30 + (now - eff anchor).
+//   - Post-window: `(effectiveAnchorDate, now]`.
+//   - Pool: SIBLING sales only (exact card_id excluded — see fetchSiblingSales
+//     in compiqEstimate.service.ts). fetchBroaderTrend uses the same pool
+//     but folds in exactComps; computeSegmentTrajectory does NOT.
+//   - Minimum: 2 comps in pre-anchor AND 2 in post-anchor — else null.
+//   - pctChange clamp: ±50%
+//   - Multiplier: clamp(0.70, 1.50, 1 + pctChange / 100). Same asymmetric
+//     clamp as Layer 2 — a -50% pctChange contributes 0.70 (not 0.50) to
+//     the composite. See trendiq_design.md and Layer 2 test for rationale.
+//   - Median: same plain unweighted median as Layer 2 (no velocity
+//     weighting — would bias the window-edge data).
+
+/** Minimal shape this function needs from the sibling-sales pool. Structurally
+ *  compatible with `SiblingSalesPool` from compiqEstimate.service.ts; defining
+ *  it locally avoids a circular import. */
+export interface SegmentPoolInput {
+  siblingCardIds: ReadonlyArray<string>;
+  sales: ReadonlyArray<{ price: number; ts: number }>;
+}
+
+const PRE_WINDOW_DAYS = 30;
+const POST_WINDOW_MIN_AGE_DAYS = 7;
+const REANCHOR_AGE_THRESHOLD_DAYS = 180;
+const REANCHOR_TARGET_AGE_DAYS = 90;
+
+export function computeSegmentTrajectory(
+  pool: SegmentPoolInput,
+  newestTs: number,
+  nowMs: number = Date.now(),
+): SegmentTrajectoryComponent | null {
+  // Temporary diagnostic for B.4.c.3 live smoke — emits null reason + pool
+  // sizes per call so we can verify which gate fires in production paths.
+  // TODO: remove this `nullDiag` block once Layer 3 behavior is verified
+  // in the wild and we have confidence in the production cohort.
+  const nullDiag = (reason: string, extra?: Record<string, unknown>) => {
+    console.log(
+      `[compiq.trendIQ.L3] null reason=${reason} ` +
+        `siblings=${pool.siblingCardIds.length} ` +
+        `poolSales=${pool.sales.length}` +
+        (extra
+          ? " " +
+            Object.entries(extra)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(" ")
+          : ""),
+    );
+  };
+
+  // No anchor — card has never sold (or no usable timestamp). Layer 3 needs
+  // a pivot point; no anchor means no trajectory.
+  if (!Number.isFinite(newestTs) || newestTs <= 0) {
+    nullDiag("no_anchor");
+    return null;
+  }
+
+  const originalAnchorDate = new Date(newestTs).toISOString();
+  const anchorAgeDays = (nowMs - newestTs) / DAY_MS;
+
+  // Recent anchor — post-window would be < 7 days, too short for a meaningful
+  // post-anchor median.
+  if (anchorAgeDays < POST_WINDOW_MIN_AGE_DAYS) {
+    nullDiag("anchor_too_recent", { anchorAgeDays: anchorAgeDays.toFixed(1) });
+    return null;
+  }
+
+  // Re-anchor very-old anchors to keep Layer 3 useful for stale-last-sale
+  // cards. Surface BOTH dates so the UI can communicate the re-anchor
+  // transparently.
+  const isReanchored = anchorAgeDays > REANCHOR_AGE_THRESHOLD_DAYS;
+  const effectiveAnchorTs = isReanchored
+    ? nowMs - REANCHOR_TARGET_AGE_DAYS * DAY_MS
+    : newestTs;
+  const effectiveAnchorDate = new Date(effectiveAnchorTs).toISOString();
+
+  // Pre-window: [effectiveAnchor - 30d, effectiveAnchor]
+  // Post-window: (effectiveAnchor, now]
+  const preWindowStart = effectiveAnchorTs - PRE_WINDOW_DAYS * DAY_MS;
+  const totalWindowDays = Math.round(
+    (nowMs - preWindowStart) / DAY_MS,
+  );
+
+  const preAnchor: number[] = [];
+  const postAnchor: number[] = [];
+  for (const s of pool.sales) {
+    if (!Number.isFinite(s.price) || s.price <= 0) continue;
+    if (!Number.isFinite(s.ts)) continue;
+    if (s.ts > effectiveAnchorTs && s.ts <= nowMs) {
+      postAnchor.push(s.price);
+    } else if (s.ts <= effectiveAnchorTs && s.ts >= preWindowStart) {
+      preAnchor.push(s.price);
+    }
+  }
+
+  if (preAnchor.length < 2 || postAnchor.length < 2) {
+    nullDiag("sparse_pool", {
+      anchorAgeDays: anchorAgeDays.toFixed(1),
+      pre: preAnchor.length,
+      post: postAnchor.length,
+      reanchored: isReanchored,
+    });
+    return null;
+  }
+
+  const preAnchorMedian = simpleMedian(preAnchor);
+  const postAnchorMedian = simpleMedian(postAnchor);
+  if (
+    preAnchorMedian === null ||
+    postAnchorMedian === null ||
+    preAnchorMedian <= 0
+  ) {
+    return null;
+  }
+
+  const rawPct = ((postAnchorMedian - preAnchorMedian) / preAnchorMedian) * 100;
+  const pctChange = clamp(rawPct, -50, 50);
+  const multiplier = clamp(1 + pctChange / 100, 0.70, 1.50);
+
+  return {
+    multiplier: Math.round(multiplier * 1000) / 1000,
+    pctChange: Math.round(pctChange * 10) / 10,
+    effectiveAnchorDate,
+    originalAnchorDate,
+    windowDays: totalWindowDays,
+    preAnchorMedian: Math.round(preAnchorMedian * 100) / 100,
+    postAnchorMedian: Math.round(postAnchorMedian * 100) / 100,
+    preAnchorCount: preAnchor.length,
+    postAnchorCount: postAnchor.length,
+    siblingsScanned: pool.siblingCardIds.length,
+    totalSamples: pool.sales.length,
   };
 }
 

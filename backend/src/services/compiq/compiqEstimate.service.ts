@@ -35,6 +35,7 @@ import { fetchPlayerSignals } from "../signals/fetchSignals.js";
 import {
   buildPlayerMomentumComponent,
   computeCardTrajectory,
+  computeSegmentTrajectory,
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "./trendIQ.compute.js";
@@ -584,15 +585,138 @@ export function buildSellingGuidance(params: {
   };
 }
 
+// ── Sibling-sales pool (shared by fetchBroaderTrend + Layer 3 trajectory) ─
+//
+// Pre-fetches sales for same-player + same-year + same-set siblings of the
+// resolved card_id (exact card_id excluded). Both fetchBroaderTrend (existing
+// fixed-from-now trend) and computeSegmentTrajectory (new TrendIQ Layer 3
+// last-sale-anchored trend) consume this same pool so we never double-fetch
+// the same sibling sales across one estimate request.
+//
+// Caps: 8 siblings, 10 samples each. Same as the pre-refactor inlined values.
+//
+// Fallback param (Option A — added 2026-05-26 during B.4.c.3 live smoke):
+// The Cardsight-exclusive resolved card identity often lacks `setName` /
+// `year` (gap captured as CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS). Without
+// fallback, fetchSiblingSales gate-tripped on `!set` for every Cardsight
+// card and returned an empty pool — affecting both Layer 3 (no segment
+// trajectory ever fired) AND the pre-existing fetchBroaderTrend (which
+// silently fell back to exact-comp-only pool, mislabeling its 'broader
+// trend' for unknown duration). Caller now passes `parsedQuery`-derived
+// fields as fallback; sibling discovery uses them when cardIdentity is
+// sparse.
+export interface SiblingSalesPool {
+  /** Sibling card_ids actually fetched (0..8 after filtering + cap). */
+  siblingCardIds: string[];
+  /** Flat sale list, pre-filtered for valid Date.parse + price > 0. */
+  sales: Array<{ price: number; ts: number }>;
+}
+
+export interface SiblingSalesFallback {
+  /** Parsed/structured player name (e.g. from parseCardQuery). */
+  player?: string | null;
+  /** Parsed/structured set (e.g. "Bowman Chrome", "Topps Update"). */
+  set?: string | null;
+  /** Parsed/structured year. */
+  year?: number | string | null;
+}
+
+const SIBLING_LIMIT = 8;
+const SAMPLES_PER_SIBLING = 10;
+
+export async function fetchSiblingSales(
+  card: NonNullable<FetchedComps["card"]>,
+  grade: string,
+  fallback?: SiblingSalesFallback,
+): Promise<SiblingSalesPool> {
+  const player =
+    (card.player ?? "").trim() ||
+    (fallback?.player ?? "").trim();
+  const set =
+    (card.set ?? "").trim() ||
+    (fallback?.set ?? "").trim();
+  const yearRaw = card.year ?? fallback?.year ?? null;
+  const year = yearRaw != null ? String(yearRaw).trim() : "";
+  // B.4.c.3 diagnostic — surfaces sibling-discovery funnel collapse. TODO:
+  // pare back to summary after a few production cycles confirm shape.
+  console.log(
+    `[compiq.trendIQ.L3.fetch] player="${player}" set="${set}" year="${year}" ` +
+      `(card.set=${JSON.stringify(card.set)} card.year=${JSON.stringify(card.year)} ` +
+      `fallback.set=${JSON.stringify(fallback?.set)} fallback.year=${JSON.stringify(fallback?.year)})`,
+  );
+  if (!player || !set) {
+    console.log(`[compiq.trendIQ.L3.fetch] early-return: missing player or set`);
+    return { siblingCardIds: [], sales: [] };
+  }
+
+  // Sibling discovery: same player + year + set, any variant.
+  let siblings: CardHedgeCard[] = [];
+  try {
+    siblings = await searchCardsRouted(`${year} ${set} ${player}`.trim(), 20);
+  } catch {
+    siblings = [];
+  }
+
+  // Filter, drop exact card_id, cap to SIBLING_LIMIT.
+  const playerLc = player.toLowerCase();
+  const setLc = set.toLowerCase();
+  const yearLc = year.toLowerCase();
+  const f1 = siblings.filter((s) => (s.player ?? "").toLowerCase() === playerLc);
+  const f2 = f1.filter((s) => (s.set ?? "").toLowerCase() === setLc);
+  const f3 = f2.filter((s) => !yearLc || String(s.year ?? "").toLowerCase() === yearLc);
+  const f4 = f3.filter((s) => s.card_id !== card.card_id);
+  console.log(
+    `[compiq.trendIQ.L3.fetch] searchCardsRouted returned ${siblings.length} ` +
+      `→ filter(player)=${f1.length} → filter(set)=${f2.length} ` +
+      `→ filter(year)=${f3.length} → drop-exact=${f4.length}`,
+  );
+  // Diagnostic: show first 3 raw siblings to understand what Cardsight returns.
+  if (siblings.length > 0) {
+    console.log(
+      `[compiq.trendIQ.L3.fetch] sample siblings (first 3): ` +
+        JSON.stringify(siblings.slice(0, 3).map((s) => ({
+          card_id: s.card_id,
+          player: s.player,
+          set: s.set,
+          year: s.year,
+        }))),
+    );
+  }
+  const siblingCardIds = f4.slice(0, SIBLING_LIMIT).map((s) => s.card_id);
+
+  // Per-sibling sales fetch, in parallel, individually try/catched.
+  const siblingSales = await Promise.all(
+    siblingCardIds.map(async (id) => {
+      try {
+        return await getCardSalesRouted(id, grade, SAMPLES_PER_SIBLING, { cardIdSource: "cardhedge" });
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  // Flatten + filter for valid date + positive price.
+  const sales: Array<{ price: number; ts: number }> = [];
+  for (const arr of siblingSales) {
+    for (const s of arr) {
+      const ts = Date.parse(s.date || "");
+      if (Number.isFinite(ts) && s.price > 0) {
+        sales.push({ price: s.price, ts });
+      }
+    }
+  }
+
+  return { siblingCardIds, sales };
+}
+
 async function fetchBroaderTrend(
   card: NonNullable<FetchedComps["card"]>,
   grade: string,
   exactComps: RawComp[],
+  pool: SiblingSalesPool,
 ): Promise<BroaderTrend> {
   const RECENT_DAYS = 14;
   const OLDER_DAYS = 45; // 15..45-day window
-  const SIBLING_LIMIT = 8;
-  const SAMPLES_PER_SIBLING = 10;
 
   const blankOut = (basedOn: BroaderTrend["basedOn"]): BroaderTrend => ({
     impliedTrendPct: 0,
@@ -608,71 +732,31 @@ async function fetchBroaderTrend(
     basedOn,
   });
 
-  // CARD_HEDGE_API_KEY gate removed 2026-05-25 — Cardsight-exclusive mode
-  // routes searchCardsRouted + getCardSalesRouted through Cardsight; the
-  // CardHedge key is no longer a real prerequisite for this code path.
-  // See CF-CARDHEDGE-FULL-REMOVAL for the broader cleanup of the
-  // cardhedge.client module + fn-cardhedge-comps function.
-
   const player = (card.player ?? "").trim();
   const set = (card.set ?? "").trim();
-  const year = card.year != null ? String(card.year).trim() : "";
   if (!player || !set) return blankOut("insufficient");
 
-  // Find sibling cards: same player + year + set, any variant.
-  let siblings: CardHedgeCard[] = [];
-  try {
-    siblings = await searchCardsRouted(`${year} ${set} ${player}`.trim(), 20);
-  } catch {
-    siblings = [];
-  }
-
-  // Filter to same player + set, drop the exact card_id (already in exactComps),
-  // cap to SIBLING_LIMIT to bound Card Hedge API cost (cached 12h after first hit).
-  const playerLc = player.toLowerCase();
-  const setLc = set.toLowerCase();
-  const yearLc = year.toLowerCase();
-  const siblingIds = siblings
-    .filter((s) => (s.player ?? "").toLowerCase() === playerLc)
-    .filter((s) => (s.set ?? "").toLowerCase() === setLc)
-    .filter((s) => !yearLc || String(s.year ?? "").toLowerCase() === yearLc)
-    .filter((s) => s.card_id !== card.card_id)
-    .slice(0, SIBLING_LIMIT)
-    .map((s) => s.card_id);
-
-  // Pull sales for each sibling in parallel (each call cached individually).
-  const siblingSales = await Promise.all(
-    siblingIds.map(async (id) => {
-      try {
-        return await getCardSalesRouted(id, grade, SAMPLES_PER_SIBLING, { cardIdSource: "cardhedge" });
-      } catch {
-        return [];
-      }
-    }),
-  );
-
-  // Pool: sibling sales + exact comps (treat exact as part of the trend pool too).
-  type DatedPrice = { price: number; ts: number };
-  const pool: DatedPrice[] = [];
-  for (const arr of siblingSales) {
-    for (const s of arr) {
-      const ts = Date.parse(s.date || "");
-      if (Number.isFinite(ts) && s.price > 0) pool.push({ price: s.price, ts });
-    }
-  }
+  // Combine sibling pool with exact comps for the trend math. fetchBroaderTrend
+  // intentionally pools exact + siblings together (existing behavior, pre-
+  // refactor). Layer 3 segment trajectory consumes the SAME `pool` but does
+  // NOT fold in exact comps — see computeSegmentTrajectory.
+  const siblingIds = pool.siblingCardIds;
+  const combined: Array<{ price: number; ts: number }> = [...pool.sales];
   for (const c of exactComps) {
     const ts = Date.parse(c.soldDate || "");
-    if (Number.isFinite(ts) && c.price > 0) pool.push({ price: c.price, ts });
+    if (Number.isFinite(ts) && c.price > 0) {
+      combined.push({ price: c.price, ts });
+    }
   }
 
-  if (pool.length === 0) return blankOut("insufficient");
+  if (combined.length === 0) return blankOut("insufficient");
 
   const now = Date.now();
   const recentCutoff = now - RECENT_DAYS * 24 * 3600 * 1000;
   const olderCutoff = now - OLDER_DAYS * 24 * 3600 * 1000;
 
-  const recent = pool.filter((p) => p.ts >= recentCutoff);
-  const older = pool.filter((p) => p.ts < recentCutoff && p.ts >= olderCutoff);
+  const recent = combined.filter((p) => p.ts >= recentCutoff);
+  const older = combined.filter((p) => p.ts < recentCutoff && p.ts >= olderCutoff);
 
   const recentMed = computeWeightedMedian(recent.map((p) => ({ price: p.price, date: p.ts })));
   const olderMed = computeWeightedMedian(older.map((p) => ({ price: p.price, date: p.ts })));
@@ -686,7 +770,7 @@ async function fetchBroaderTrend(
       recentCount: recent.length,
       olderCount: older.length,
       similarCardsScanned: siblingIds.length,
-      totalSamples: pool.length,
+      totalSamples: combined.length,
     };
   }
 
@@ -704,7 +788,7 @@ async function fetchBroaderTrend(
     recentCount: recent.length,
     olderCount: older.length,
     similarCardsScanned: siblingIds.length,
-    totalSamples: pool.length,
+    totalSamples: combined.length,
     windowRecentDays: RECENT_DAYS,
     windowOlderDays: OLDER_DAYS,
     basedOn: siblingIds.length > 0 ? "broader" : "exact",
@@ -1546,21 +1630,41 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     };
   }
 
-  // --- Broader-pool trend signal + TrendIQ Layer 1 fetch -------------------
-  // broaderTrend: existing fixed-window 14d/15-45d sibling-pool trend.
+  // --- Sibling-sales pool fetch + TrendIQ Layer 1 fetch (parallel) ---------
+  // siblingPool: one-shot sibling-sale fetch shared between fetchBroaderTrend
+  //              (existing fixed-window trend) and computeSegmentTrajectory
+  //              (TrendIQ Layer 3 last-sale-anchored trend). Both run in
+  //              parallel with the player-signal fetch since they are
+  //              independent network ops.
   // playerSignalsResult: TrendIQ Layer 1 — aggregator's player multiplier.
-  // Both run in parallel so signal fetch doesn't add to wall-clock latency
-  // when broaderTrend's sibling-sale fetch dominates.
   const playerNameForSignals =
     cardIdentity?.player?.trim() || body.playerName?.trim() || "";
-  const [broaderTrend, playerSignalsResult] = await Promise.all([
+  // Sibling-discovery fallback (Option A — CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS):
+  // Cardsight-exclusive resolved identities often have `set` / `year` = null
+  // even when the parsed query has them. Pass the parsed/structured fields as
+  // fallback so fetchSiblingSales can still build the sibling-search query.
+  const siblingFallback: SiblingSalesFallback = {
+    player: queryContext.playerName,
+    set: queryContext.product,
+    year: queryContext.cardYear,
+  };
+  const [siblingPool, playerSignalsResult] = await Promise.all([
     cardIdentity
-      ? fetchBroaderTrend(cardIdentity, cardHedgeGrade, fetched.comps).catch(() => null)
-      : Promise.resolve(null),
+      ? fetchSiblingSales(cardIdentity, cardHedgeGrade, siblingFallback).catch(() => ({
+          siblingCardIds: [] as string[],
+          sales: [] as Array<{ price: number; ts: number }>,
+        }))
+      : Promise.resolve({
+          siblingCardIds: [] as string[],
+          sales: [] as Array<{ price: number; ts: number }>,
+        }),
     playerNameForSignals
       ? fetchPlayerSignals(playerNameForSignals).catch(() => ({ payload: null, sourceUrl: null }))
       : Promise.resolve({ payload: null, sourceUrl: null }),
   ]);
+  const broaderTrend = cardIdentity
+    ? await fetchBroaderTrend(cardIdentity, cardHedgeGrade, fetched.comps, siblingPool).catch(() => null)
+    : null;
   const playerMomentum = buildPlayerMomentumComponent(playerSignalsResult);
 
   // Find the most recent exact-match sale to serve as the anchor.
@@ -1937,17 +2041,21 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     predictedRangePhase3 = null;
   }
 
-  // ── TrendIQ composite (Phase 1 B.4.a + B.4.b: Layers 1 + 2) ───────────
-  // Layer 2 reads from fetched.comps (the unfiltered card-id-level pool)
-  // — see computeCardTrajectory's coupling note. Layer 3 still null
-  // until B.4.c.
+  // ── TrendIQ composite (Phase 1 B.4.a + B.4.b + B.4.c: all 3 layers) ────
+  // Layer 2 reads from fetched.comps (exact-card pool) — see
+  // computeCardTrajectory's coupling note.
+  // Layer 3 reads from siblingPool (sibling-sales only, exact excluded)
+  // and uses the exact card's most-recent-sale timestamp (newestTs,
+  // computed above) as the anchor. Re-anchor + pre-window resolution
+  // documented in computeSegmentTrajectory header.
   const cardTrajectory = computeCardTrajectory(
     fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
   );
+  const segmentTrajectory = computeSegmentTrajectory(siblingPool, newestTs);
   const trendIQ = computeTrendIQ({
     playerMomentum,
     cardTrajectory,
-    segmentTrajectory: null,
+    segmentTrajectory,
   });
   console.log(formatTrendIQLogLine(trendIQ));
 
