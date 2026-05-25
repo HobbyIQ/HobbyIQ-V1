@@ -1,7 +1,9 @@
 # TrendIQ Design
 
 **Created:** 2026-05-25
-**Status:** V1 design locked; implementation pending
+**Status:** V1 design locked; Phase 1 implementation in progress.
+Methodology locks added 2026-05-25 (see "Phase 1 methodology locks"
+section below).
 **Strategic positioning:** Headline forward-looking score for CompIQ
 predictions. Comps demoted to reference data. Makes HobbyIQ's
 predictive intelligence (the strategic moat) visible in product UI.
@@ -34,16 +36,22 @@ calculation method, "sparse" threshold).
 
 **3. Market segment trajectory anchored to last sale date**
 Source: comps for related parallels — same player + same year +
-same brand — over a dynamic window from this card's last sale
-date to present.
+same **set** (e.g. "Bowman Chrome Prospects") — over a dynamic
+window from this card's last sale date to present.
 Captures: how the broader market segment has moved since this
 specific card was last priced by an actual transaction.
 Solves: low-pop parallel valuation problem (rare cards with sparse
 direct comps still get meaningful trend signal from segment).
+Refined 2026-05-25: segment scoped to "set" rather than "brand".
+Set-level segments capture product-line momentum cleanly; brand-
+level would pool unrelated product lines under the same manufacturer
+(e.g. Topps Bowman Chrome vs Topps Heritage have different
+collector bases and shouldn't share a trajectory).
 
 ## Composite weighting
 
 Dynamic, not fixed. Weighting shifts based on data density:
+
 - Common cards with rich card-level comp data: card-level trajectory
   carries primary weight; segment trajectory provides supporting context
 - Rare cards with sparse direct comps: segment trajectory anchored to
@@ -51,37 +59,121 @@ Dynamic, not fixed. Weighting shifts based on data density:
   card-specific trend)
 - Player momentum always contributes as broader-market context
 
-Exact weighting math deferred to implementation time. Default starting
-point: 50/50 between card-level and segment-level when both have data,
-shifting toward segment-level as card data thins.
+Locked weight table — see "Phase 1 methodology locks" section below
+for the full 8-row availability matrix.
 
 ## Display approach (Approach C — locked)
 
 Single composite headline number per card with tap-to-details
 breakdown showing all three components.
 
-## Deferred to implementation time
+## Phase 1 methodology locks (2026-05-25)
+
+Everything below was deferred at design time and is now locked for the
+Phase 1 backend implementation. These bake in math the user will see
+and were authorized explicitly before B.4 implementation began.
+
+**Layer 2 — card-level comp trajectory:**
+
+- Recent window: 0..14 days from now (inclusive)
+- Older window: 15..45 days from now
+- Minimum: 2 comps in recent AND 2 in older — below threshold, layer
+  reports null and drops out of composite
+- pctChange clamp: ±50% (tighter than broaderTrend's ±60% — card-level
+  is noisier)
+
+**Layer 3 — segment trajectory:**
+
+- Pool: siblings via `searchCardsRouted` for `${year} ${set} ${player}`,
+  filtered to same player + same year + same set, exact card_id
+  excluded. Caps: 8 siblings, 10 samples each (same as broaderTrend).
+- Window: 60 days max from now
+- Anchor handling:
+  - `originalAnchorDate`: this card's true last-sale ISO date, or null
+    if never sold
+  - `effectiveAnchorDate`: the date actually used as window pivot
+  - If anchor > 180 days ago: re-anchor to `now - 90d` (i.e.
+    effectiveAnchorDate = now-90d); both dates surfaced so UI can
+    transparently say "Last sale: 250 days ago — segment trajectory
+    uses 90-day window"
+  - If anchor < 7 days ago: post-anchor window too short → layer = null
+  - If `originalAnchorDate == null` (no exact sales): layer = null
+- Pre-anchor pool: sibling sales with `soldDate <= effectiveAnchorDate
+  AND soldDate >= (now − windowDays)`
+- Post-anchor pool: sibling sales with `soldDate > effectiveAnchorDate
+  AND soldDate <= now`
+- Minimum: 2 in pre-anchor AND 2 in post-anchor — below → layer null
+- pctChange clamp: ±50%
+
+**Composite weighting (8-row availability matrix):**
+
+`Y` = layer populated, `N` = layer null/missing.
+
+| L1 player | L2 card | L3 segment | weights {p, c, s}  | coverage     |
+|-----------|---------|------------|--------------------|--------------|
+| Y         | Y       | Y          | {0.20, 0.40, 0.40} | full         |
+| Y         | Y       | N          | {0.30, 0.70, 0.00} | no_segment   |
+| Y         | N       | Y          | {0.30, 0.00, 0.70} | no_card      |
+| Y         | N       | N          | {1.00, 0.00, 0.00} | player_only  |
+| N         | Y       | Y          | {0.00, 0.50, 0.50} | full (no L1) |
+| N         | Y       | N          | {0.00, 1.00, 0.00} | card_only    |
+| N         | N       | Y          | {0.00, 0.00, 1.00} | segment_only |
+| N         | N       | N          | composite=1.0 flat | insufficient |
+
+Rationale: player momentum is "broader market context" — never primary
+when comp-derived layers exist. Card and segment are co-equal when both
+have data. Segment takes over when card is sparse (the rare-card case).
+
+**Composite math:**
+
+- Per-layer multiplier conversion: `m = clamp(0.70, 1.50, 1 + pct/100)`
+- Composite: `clamp(0.70, 1.50, w₁·m₁ + w₂·m₂ + w₃·m₃)`
+- impliedPct: `round((composite − 1) × 100, 1)`
+
+**Direction deadband:**
+
+- composite ∈ [0.97, 1.03] → "flat" (±3% suppresses noise display)
+- < 0.97 → "down"
+- &gt; 1.03 → "up"
+
+**Caching strategy:**
+
+- Sibling sales fetched once per estimate, shared between
+  `fetchBroaderTrend` (existing) and `computeSegmentTrajectory` (new)
+- Cardsight LRU handles per-sibling cache
+- Route-level `cacheWrap(CACHE_TTL_SECONDS)` covers full /price response
+- Signal fetch uncached for V1 (~50ms typical; aggregator updates every
+  ~2h so fresh-ish always)
+
+**Telemetry:**
+
+- Single grep-able production log per estimate:
+  `[compiq.trendIQ] composite=X.XX direction=Y coverage=Z weights=p:X.XX/c:X.XX/s:X.XX`
+- `trackHttpDependency` wrap on signal fetch IF backend already has
+  `@opentelemetry/api`. Otherwise HALT before pulling in new dep.
+
+**Shared-folder structure:**
+
+- `fetchSignals` + types ported into `backend/src/services/signals/`
+  with PROVENANCE comment referencing `mcp-server/pricing.ts:223`.
+- FOLLOWUP marker for extraction into a shared workspace if a third
+  consumer ever appears.
+
+## Deferred to Phase 2+ (still open)
 
 - Display format (signed delta vs 100% baseline vs directional words
-  like "Up 12%")
+  like "Up 12%") — iOS work
 - Color coding specifics (green/gray/red spectrum, exact shades,
-  accessibility)
-- Card-level comp trajectory calculation method (window size,
-  algorithm)
-- Composite weighting math (exact formulas, dynamic adjustment
-  thresholds)
-- Segment definition refinement (player+year+brand confirmed as
-  baseline; whether to distinguish product line within brand)
-- Edge cases:
-  - Cards with no public sale history (no anchor date available)
-  - Cards with very recent last sale (window too short)
-  - Cards with very old last sale (recency weighting needed)
-  - Cards with no meaningful parallels in segment
-- Display threshold for "since last sale" framing in details view
+  accessibility) — iOS work
+- Display threshold for "since last sale" framing in details view —
+  iOS work
+- Methodology graduation (currently binary on/off per layer; could
+  graduate weights based on sample-count density in V2)
 
 ## Implementation phases (~16-25 hours total)
 
 ### Phase 1 — Backend exposure (~8-12 hours)
+
 - Modify /api/compiq/price response to include trendIQ object
 - Include: composite multiplier, last-updated timestamp, signal flags,
   component breakdown (player/card/segment values), coverage status,
@@ -93,16 +185,19 @@ breakdown showing all three components.
 - Source-deploy via hardened script
 
 ### Phase 2 — iOS CompIQ result view redesign (~4-6 hours)
+
 - Decode trendIQ from backend response
 - Display format decision (see deferred section)
 - UI: TrendIQ headline, color coding, tap-to-details breakdown
 - Demote recent comps to "reference data" section
 
 ### Phase 3 — Surface across other views (~3-5 hours)
+
 - PortfolioIQView, DashboardView, InventoryIQView, DailyIQView
 - Consistent display per Phase 2 decisions
 
 ### Phase 4 — Methodology help screen (~2-3 hours)
+
 - Explain TrendIQ to users
 - Show component signals + which are active
 - Set expectations: forward-looking estimate, not guarantee
