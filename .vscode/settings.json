@@ -1,0 +1,37 @@
+{
+  // Copilot agent auto-approval policy for HobbyIQ canonical repo.
+  //
+  // Master toggle stays OFF — workstream halt-discipline relies on
+  // explicit approval gates between phases. See
+  // .github/copilot-instructions.md "LESSONS FROM PRIOR SESSIONS".
+  //
+  // Terminal allowlist auto-approves read-only inspection commands
+  // (the bulk of Phase 0 / W6.x discovery work) while keeping all
+  // writes, deploys, secret rotations, and destructive ops gated.
+  "chat.tools.autoApprove": false,
+  "chat.tools.terminal.enableAutoApprove": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^git (status|log|diff|show|branch|ls-tree|ls-files|rev-parse|remote|config --get)/": true,
+    "/^Get-ChildItem/": true,
+    "/^Select-String/": true,
+    "/^Get-Content/": true,
+    "/^Get-FileHash/": true,
+    "/^Test-Path/": true,
+    "/^Measure-Object/": true,
+    "/^Where-Object/": true,
+    "/^Sort-Object/": true,
+    "/^Format-Table/": true,
+    "/^Out-String/": true,
+    "/^az [a-z-]+ (list|show|get)/": true,
+    "rm": false,
+    "rm -rf": false,
+    "Remove-Item": false,
+    "git push": false,
+    "git push --force": false,
+    "git reset --hard": false,
+    "az storage account keys renew": false,
+    "az webapp deploy": false,
+    "az functionapp deployment": false,
+    "az group delete": false
+  }
+}
