@@ -3395,3 +3395,86 @@ structured fields directly via its function signature. Smoke verified.
 works around the gap (parsedQuery fallback feeds structured fields).
 Retiring the fallback is a quality improvement worth ~1-2h when
 prioritized.
+
+---
+
+## CF-CARDSIGHT-SIBLING-DISCOVERY — production-deployed (2026-05-25)
+
+Approach A implementation deployed to production via hardened source-
+deploy. Production now at SHA `e2d5864` (was `a5d5151`).
+
+**Deploy verification clean:**
+
+- `[4/5]` Kudu poll: `status=4 complete=True` at 15s (same trajectory
+  as yesterday's deploy — az reports false-negative at ~650s, Kudu
+  reports real state immediately)
+- `[5/5]` /api/health SHA verification: flipped `a5d5151` → `e2d5864`
+- Feature-probe: 200 OK on `/api/compiq/normalization-dictionary`
+
+**Production smoke matrix (5 endpoints, post-30s warmup wait):**
+
+- `/price` Ohtani — `coverage=no_segment`, composite=1.106, segment=null
+  (anchor_too_recent, locked rule firing as designed)
+- `/price` Torres — `coverage=no_card`, composite=1.041,
+  **segment=POPULATED** (mult=1.04, pre=3, post=7, siblings=7) — **first
+  time Layer 3 has ever fired in production**
+- `/price` Griffey — `coverage=card_only`, composite=1.10, segment=null
+  (untracked + anchor too recent)
+- `/price-by-id` Ohtani UUID + query — same shape as `/price` (secondary
+  /price-by-id fallback gap now closed via fetchCompsByPlayer's
+  direct-structured-fields signature)
+- `/bulk` Ohtani + Torres — per-item trendIQ correct, Torres carries
+  segment populated, Ohtani null
+
+**Composite math verified in production**: Torres composite 1.041 =
+0.30 × playerMomentum.multiplier(1.044) + 0.70 ×
+segmentTrajectory.multiplier(1.04). Exact match.
+
+**App Insights telemetry verified:**
+
+Production traces show the new `[compiq.trendIQ.L3.fetch]` diagnostic
+format:
+
+```text
+[compiq.trendIQ.L3.fetch] fetchCompsByPlayer returned cardIds=8 comps=48 
+  cached=true warnings=0; post-exclusion siblings=7 sales=16 
+  (excluded cardIds=1 comps=32)
+```
+
+Key observation: `cached=true` on both Ohtani and Torres traces by the
+time telemetry was queried. The 6h aggregate cache from
+`compsByPlayer.service.ts` is now shared between segment-trajectory and
+the existing `/api/compiq/comps-by-player` flow — repeat queries serve
+from cache without additional Cardsight API calls.
+
+**Closed:**
+
+- CF-CARDSIGHT-SIBLING-DISCOVERY (primary blocker — Cardsight catalog
+  data-model gap resolved via Approach A composition)
+- `/price-by-id` fallback edge case (secondary, closed automatically by
+  Approach A's function signature)
+
+**Layer 3 production behavior characterization (preliminary, expanded
+in next sub-workstream):**
+
+- **High-volume cards** (Ohtani-tier, anchor <7 days): Layer 3 gated by
+  locked `anchor_too_recent` methodology rule. Two-layer composite
+  (player + card) remains active. This is methodology working as
+  designed — high-volume cards don't need Layer 3 because their Layer 2
+  cardTrajectory is reliable.
+- **Rare-card cases** (Torres-class, sparse direct comps + older
+  anchor): Layer 3 fires with segment data substituting for missing
+  Layer 2 cardTrajectory. The designed-for use case working in
+  production.
+- Distribution of these states under real production traffic to be
+  characterized in CF-CARDSIGHT-SIBLING-DISCOVERY follow-up
+  investigation (see next entry).
+
+**Open:**
+
+- **CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS** (MEDIUM): Approach A's
+  parsedQuery fallback works around the cardIdentity completeness gap,
+  but retiring the fallback would make cardIdentity the true source of
+  truth. ~1-2h research + implementation.
+- **CF-CARDHEDGE-FULL-REMOVAL** (MEDIUM): yesterday's pre-existing.
+- **CF-CARDHEDGE-SIGNAL-RENAME** (LOW): yesterday's pre-existing.

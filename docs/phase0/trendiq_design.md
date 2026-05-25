@@ -249,22 +249,25 @@ TrendIQ Phase 1 shipped to production at SHA `a5d5151`.
   rich-comp cards (Ohtani, Griffey). Multipliers correctly clamped to
   [0.70, 1.50] with the asymmetric multiplier behavior documented in
   the unit tests.
-- 🛠 **Layer 3 (segment trajectory)** — CF-CARDSIGHT-SIBLING-DISCOVERY
-  Approach A implementation shipped to `main` 2026-05-25; deployment to
-  production is a separate authorization (still at `a5d5151` pre-fix
-  at time of this update). Local smoke verified: Torres (rare-card
-  case, anchor 65d) reaches `coverage=no_card` with `segmentTrajectory`
-  populated for the first time ever — 7 siblings / 16 sales discovered
-  via `fetchCompsByPlayer` wrap. High-volume cards (Ohtani 5.9d anchor)
-  remain `null` via the locked `<7d` rule (methodology working as
-  designed for that case).
+- ✅ **Layer 3 (segment trajectory)** — ACTIVE in production at SHA
+  `e2d5864` (deployed 2026-05-25). Production smoke verified: Torres
+  (rare-card case, anchor 65d) reaches `coverage=no_card` with
+  `segmentTrajectory` POPULATED (mult=1.04, 7 siblings / 16 sales).
+  High-volume cards (Ohtani 5.9d anchor) gated by locked `<7d`
+  `anchor_too_recent` rule — methodology working as designed (those
+  cards don't need Layer 3 because their Layer 2 cardTrajectory is
+  reliable). The "rare card" use case Layer 3 was specifically
+  designed for is now serving real production traffic.
   - **CF-CARDSIGHT-SIBLING-DISCOVERY (primary)** — RESOLVED via
     Approach A: `fetchSiblingSales` body replaced with a wrap of
     `fetchCompsByPlayer` + exact-card-id exclusion. Implementation
     composition over the production-tested `compsByPlayer.service.ts`
     (shipped 2026-05-27 for adjacent MCP-rewire flow). Inherits the
     `lookupReleaseName` dictionary, chrome fallback, top-K pricing
-    fanout, and 6h aggregate cache.
+    fanout, and 6h aggregate cache. The 6h cache is now shared between
+    the segment-trajectory path and the existing
+    `/api/compiq/comps-by-player` flow — fewer Cardsight API calls,
+    better latency on repeat queries.
   - **`/price-by-id` fallback path gap (secondary, observed in
     production traces 2026-05-25)**: the `parsedQuery` fallback
     added in B.4.c works for `/price` (which goes through
