@@ -3024,3 +3024,18 @@ Cross-references:
 - `docs/phase0/expense_tracking_design.md` (pending sync — Mac-side baseline)
 - `docs/phase0/financial_system_design.md` (shipped at e35b108)
 - `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` addendum 2026-05-27 (rebaselined moat targets)
+
+---
+
+### WS4 (F1 /bulk fix) verification — ✅ live on hobbyiq3
+
+PR #126 (847b205) merged + deployed via hardened script. az reported async false-negative ("Site failed to start") at 623s; hardened script's Kudu poll caught real `status=4` complete=True at 15s + /api/health SHA verified (847b205) + feature-probe `/api/compiq/normalization-dictionary` returned 200 OK.
+
+Post-deploy smoke `POST /api/compiq/bulk` with `{"queries":["Mike Trout 2011 Topps Update US175"]}`:
+- HTTP 200 in 0.28s
+- `source: "live"` (NOT `no-recent-comps` — broken-tokenization symptom resolved)
+- `fairMarketValueLive: $312`
+- `compsUsed: 17` (comps survived CH-identity guard)
+- `summary: "Hold — fair value, but momentum is improving."`
+
+F1 closed. No current consumer wired up; preventive ship lands cleanly. Next session can wire iOS to /api/compiq/bulk with confidence the set-bearing-query bug won't bite.
