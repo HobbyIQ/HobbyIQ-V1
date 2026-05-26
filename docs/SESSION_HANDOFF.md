@@ -6,8 +6,124 @@
 (updated 2026-05-26 — PR E partial shipped with quality gaps (6a37c76); TrendIQ Phase 2 plumbing shipped (9f73eb6); photo field fix shipped (67a1095); 4 new CFs surfaced for Day 2)
 (updated 2026-05-26 PM — third photo/clientId erasure site fixed (6b324fb); CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR surfaced)
 (updated 2026-05-26 PM2 — InventoryCard backend field name mismatch fixed (13fe547); CF-INVENTORY-REFRESH-WIRING surfaced)
+(updated 2026-05-26 PM3 — CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING shipped to prod; 0/24 production rescues — two follow-up CFs surfaced explaining why)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
+
+---
+
+## CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — SHIPPED with honest verification finding (2026-05-26 PM3)
+
+**Status:** Shipped to production. Fix correct + tested + deployed. Zero
+visible rescues for current user's 24 holdings — two follow-up CFs
+surfaced to address the actual blockers.
+
+**Code:** computeEstimate's thin-data short-circuit now tries sibling-pool
+rescue before returning `no-recent-comps`. Approach A pattern from
+CF-CARDSIGHT-SIBLING-DISCOVERY (e2d5864). Confidence capped at 65 for
+sibling-derived pricing. Verdict text locked: "Estimated from similar
+cards — variant unverified".
+
+**Production smoke result (24 holdings):**
+
+| Source | Count |
+| --- | ---: |
+| `live` (direct match) | 3 |
+| **`sibling-pool` (new branch)** | **0** |
+| `no-recent-comps` | 19 |
+| `variant-mismatch` | 2 |
+
+Fix delivers value when ALL THREE preconditions hold:
+
+1. Direct Cardsight search returns thin comps
+2. cardIdentity is correctly resolved (Cardsight catalog finds the right card)
+3. Sibling pool has data for that correct cardIdentity
+
+None of the 24 current holdings hit all three.
+
+**Why each failure path didn't get rescued:**
+
+- 19/24 hit `no-recent-comps` with WRONG cardIdentity (e.g., sparse Skenes
+  params → catalog guesses "Bowman 2026" instead of "Bowman Chrome 2024").
+  My branch fires `fetchSiblingSales` against the wrong card → empty pool
+  → falls through to existing `no-recent-comps`.
+- 2/24 hit `variant-mismatch` (variant filter rejects fetched comps for
+  `comp_missing_auto` etc.). Not the path my fix touches.
+
+**Verification artifacts:**
+
+- Unit test `backend/tests/compiqEstimate.siblingRescue.test.ts` — mocks
+  produce all three preconditions; rescue branch fires; response shape
+  matches design lock
+- 883/883 backend tests pass; no regressions
+- /api/health returns SHA `4b88fb5` (deployed code)
+- Production response sources categorized via read-only smoke script
+  (not committed)
+
+---
+
+### CF-VARIANT-FILTER-LOOSENING (NEW, HIGH, ~2-4h design + impl)
+
+Variant filter inside `computeEstimate` rejects legitimately-matching
+comps for the variant cohort. Skenes example: 66 comps fetched, all
+rejected for `comp_missing_auto` despite the search target being
+explicitly `isAuto: true`. This is the dominant blocker for the 2/24
+variant-mismatch cohort and likely scales as more variant cards are
+added.
+
+**Design questions to lock before implementation:**
+
+- When is a comp valid for a variant cohort? (Title regex isn't catching
+  legitimate auto-bearing comp titles)
+- Should the variant filter relax when a sibling-pool-style fallback
+  fires? (Currently strict; sibling rescue can't engage because the
+  filter excludes upstream)
+- Should the filter be aware of the search target's variant attributes
+  vs the comp's? (`isAuto: true` search target + auto-bearing comp
+  shouldn't be rejected)
+- Should confidence tier based on variant-match strictness? (Strict
+  match = 95 cap, fuzzy match = 75 cap, sibling-pool = 65 cap)
+
+**Implementation gated on design lock.** Affects 2/24 current holdings
+(Skenes + Bonemer variant flagging); scales with variant inventory growth.
+
+---
+
+### CF-POLLUTED-METADATA-HOLDINGS (NEW, MEDIUM, ~2-3h investigation + fix)
+
+Holdings stored with `cardYear` / `product` null trigger Cardsight's
+wildcard catalog lookup, which returns the WRONG `cardIdentity` (e.g.,
+sparse "Paul Skenes" + `isAuto: true` → "Bowman 2026 BA-24" instead of
+"Bowman Chrome 2024 Auto"). Sibling pool fetched against the wrong card
+is empty → autoprice falls through to `no-recent-comps` even though the
+right card has dozens of comps.
+
+**Root causes to investigate:**
+
+- Add-card path in iOS or backend not capturing year/product correctly
+  (look at PortfolioHolding upsert flow + iOS card-scan path)
+- Backend wildcard catalog lookup should be more conservative (reject
+  ambiguous matches rather than returning wrong card)
+- Polluted-metadata holdings should be flagged for user correction
+  (could be a UI surface: "We can't price this card — add year/set
+  details")
+
+**Affects 19/24 current holdings.** Highest-value fix in terms of user
+impact because almost every holding hits this path.
+
+---
+
+### Dependency note
+
+Neither new CF is auto-pivoted. Both need design phases. Tonight ships
+the autoprice sibling-rescue fix + these two CFs documenting why the
+fix didn't deliver visible improvement for the current data state.
+
+CF-INVENTORY-REFRESH-WIRING (surfaced earlier today in 43b7f30) is
+partially un-gated: the sub-case where Cardsight returns thin direct
+comps + correct cardIdentity + populated sibling pool can now refresh
+meaningfully. The dominant sub-cases (variant-mismatch + polluted-
+metadata) remain gated on the two new CFs above.
 
 ---
 
