@@ -1592,6 +1592,164 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       `[compiq.computeEstimate] thin-data short-circuit: comps=${fetched.comps.length} daysSinceNewest=${daysSinceNewest} query="${cardTitle}"`
     );
 
+    // CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING (2026-05-26):
+    // Before returning "no-recent-comps", try the sibling-pool rescue path.
+    // Approach A pattern from CF-CARDSIGHT-SIBLING-DISCOVERY (e2d5864):
+    // when direct Cardsight returns thin comps for a variant card, the
+    // sibling pool (same player + product + year, different parallels)
+    // often has dozens of sales we can use as a broader proxy for pricing.
+    //
+    // Variant filters (parallel/auto/grade) are deliberately NOT applied to
+    // the sibling pool — siblings are different cards by construction;
+    // narrowing them by exact-variant tokens defeats the rescue purpose.
+    // The verdict text "Estimated from similar cards — variant unverified"
+    // communicates the source clearly to downstream consumers.
+    //
+    // Confidence capped at 65 (vs direct-match's 95) reflects the
+    // lower-precision nature of sibling-derived pricing. Variable confidence
+    // based on sibling-pool quality is a follow-up CF.
+    if (cardIdentity) {
+      let siblingPool: SiblingSalesPool = { siblingCardIds: [], sales: [] };
+      try {
+        siblingPool = await fetchSiblingSales(cardIdentity, cardHedgeGrade);
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] sibling-pool rescue: fetchSiblingSales threw — falling through to "no-recent-comps": ${(err as Error)?.message ?? err}`
+        );
+      }
+
+      if (siblingPool.sales.length > 0) {
+        const directSales: Array<{ price: number; ts: number }> = fetched.comps
+          .map((c) => ({ price: c.price, ts: Date.parse(c.soldDate || "") }))
+          .filter((s) => Number.isFinite(s.ts) && s.price > 0);
+        const combinedSales = [...directSales, ...siblingPool.sales];
+        const combinedNewestTs = combinedSales.reduce((max, s) => Math.max(max, s.ts), 0);
+        const combinedDaysSinceNewest =
+          combinedNewestTs > 0
+            ? Math.floor((Date.now() - combinedNewestTs) / (24 * 3600 * 1000))
+            : null;
+        const combinedCount = combinedSales.length;
+
+        // Same sufficiency thresholds as the direct-pool check (line 1562-1567).
+        const stillInsufficient =
+          combinedCount === 0 ||
+          (combinedCount === 1 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 14)) ||
+          (combinedCount === 2 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 180)) ||
+          (combinedCount >= 3 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 365));
+
+        if (!stillInsufficient) {
+          const sortedPrices = combinedSales.map((s) => s.price).sort((a, b) => a - b);
+          const fairMarketValue =
+            sortedPrices.length % 2 === 1
+              ? sortedPrices[(sortedPrices.length - 1) / 2]
+              : (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2;
+          const round2 = (n: number) => Math.round(n * 100) / 100;
+          const fmv = round2(fairMarketValue);
+          const quickSaleValue = round2(fmv * 0.88);
+          const premiumValue = round2(fmv * 1.15);
+          const suggestedListPrice = round2(fmv * 1.05);
+
+          // Confidence: scale with combined-pool size + recency, then cap at 65.
+          const recencyFactor =
+            combinedDaysSinceNewest == null || combinedDaysSinceNewest > 90
+              ? 0.6
+              : combinedDaysSinceNewest > 30
+              ? 0.8
+              : 1.0;
+          const sizeFactor = Math.min(1.0, combinedCount / 12);
+          const computedConfidence = Math.round(80 * sizeFactor * recencyFactor);
+          const pricingConfidence = Math.min(65, computedConfidence);
+
+          const freshness =
+            combinedDaysSinceNewest != null && combinedDaysSinceNewest <= 60 ? "Live" : "Stale";
+
+          const siblingVerdict = "Estimated from similar cards — variant unverified";
+
+          console.log(
+            `[compiq.computeEstimate] sibling-pool rescue SUCCESS: direct=${directSales.length} ` +
+              `sibling=${siblingPool.sales.length} combined=${combinedCount} ` +
+              `daysSinceNewest=${combinedDaysSinceNewest} fmv=${fmv} confidence=${pricingConfidence} ` +
+              `query="${cardTitle}"`
+          );
+
+          return {
+            cardTitle,
+            verdict: siblingVerdict,
+            action: "Hold",
+            dealScore: 0,
+            quickSaleValue,
+            fairMarketValue: fmv,
+            marketValue: fmv,
+            premiumValue,
+            suggestedListPrice,
+            predictedPrice: mechanism1.predictedPrice,
+            predictedPriceRange: mechanism1.predictedPriceRange,
+            predictedPriceAttribution: mechanism1.predictedPriceAttribution,
+            explanation: [siblingVerdict],
+            marketDNA: {
+              demand: "Mixed",
+              speed: "Normal",
+              risk: "Medium",
+              trend: "Flat",
+              marketCondition: "Sibling-pool estimate",
+            },
+            marketRegime: {
+              regime: "stable",
+              volatilityPct: 0,
+              slopePctPerComp: 0,
+              confidence: pricingConfidence / 100,
+              note: "Estimated from sibling pool — variant unverified.",
+            },
+            normalization: {
+              parallelInput: body.parallel ?? null,
+              parallelCanonical: normalizedParallel ?? null,
+              gradeCompanyInput: body.gradeCompany ?? null,
+              gradeCompanyCanonical: normalizedGradeCompany ?? null,
+            },
+            confidence: {
+              pricingConfidence,
+              liquidityConfidence: pricingConfidence,
+              timingConfidence: pricingConfidence,
+            },
+            exitStrategy: {
+              recommendedMethod: "list",
+              expectedDaysToSell: null,
+              timingRecommendation: "Verify variant before listing — pricing is from similar cards.",
+            },
+            freshness: {
+              status: freshness as "Live" | "Stale",
+              lastUpdated: new Date().toISOString(),
+            },
+            pricingAnalytics: null,
+            estimate: fmv,
+            compsUsed: combinedCount,
+            compsAvailable: combinedCount,
+            cardIdentity,
+            recentComps: fetched.comps
+              .slice()
+              .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
+              .map((c) => ({
+                price: c.price,
+                title: c.title,
+                soldDate: c.soldDate,
+                grade: formatGradeLabel(c.title),
+              })),
+            gradeUsed: cardHedgeGrade,
+            source: "sibling-pool",
+            daysSinceNewestComp: combinedDaysSinceNewest,
+            variantWarning: fetched.variantWarning,
+            crossParallelAnchor: null,
+            effectiveFmv: fmv,
+            dataSufficiency: {
+              sufficient: true,
+              level: "low" as const,
+              message: `Sibling-pool estimate from ${combinedCount} sales across related cards`,
+            },
+          };
+        }
+      }
+    }
+
     return {
       cardTitle,
       verdict,
