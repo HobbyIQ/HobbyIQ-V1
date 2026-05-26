@@ -9,6 +9,7 @@
 (updated 2026-05-26 PM3 — CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING shipped to prod; 0/24 production rescues — two follow-up CFs surfaced explaining why)
 (updated 2026-05-26 PM4 — CF-POLLUTED-METADATA-HOLDINGS investigation findings; root cause is field-name contract mismatch, not data pollution — see [phase0/polluted_metadata_holdings_investigation.md](phase0/polluted_metadata_holdings_investigation.md))
 (updated 2026-05-26 PM5 — CF-VARIANT-FILTER-LOOSENING design phase complete; recommends Option B attribute-tiered fallback — see [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md). Implementation gated on user authorization. Phase 1 is analytical (per approval); empirical sweep deferred to pre-implementation step.)
+(updated 2026-05-26 PM6 — CF-VARIANT-FILTER-LOOSENING **implementation shipped**; tier ladder T0→T3 in computeEstimate + variantStrictness in compQuality + min(tier_cap, computed) confidence composition + per-tier verdict text. 956 tests pass (+22 net new). CF-PARALLEL-CANONICALIZATION surfaced as follow-up for the M3 Tommy White case. Post-deploy sweep + backtest pending.)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -64,40 +65,32 @@ None of the 24 current holdings hit all three.
 
 ---
 
-### CF-VARIANT-FILTER-LOOSENING — DESIGN COMPLETE (2026-05-26 PM5)
+### CF-VARIANT-FILTER-LOOSENING — SHIPPED (2026-05-26 PM6)
 
 **Design doc:** [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md)
 
-**Cohort:** 6 holdings remain in `variant-mismatch` state after CF-AUTOPRICE-FIELD-NAME-SHIM (`2400f94`) + CF-PLAYERNAME-NORMALIZATION (`2f444f5`) deployed. Failure-mode taxonomy reduces to three modes (M1 auto+single-word-parallel cascade, M2 single-word color over-strict, M3 malformed parallel string).
+**Implementation summary:** Option B (attribute-tiered fallback) shipped per the locked design questions (Q1/Q2/Q3/Q4/Q8). Tier ladder runs inside `computeEstimate`'s variant-filter region; when strict T0 yields <3 surviving comps the ladder progressively re-relaxes via T1→T2→T3, breaking at the first tier with ≥VARIANT_TIER_MIN_COMPS (=3) comps. T3-still-thin falls through to the legacy `source: "variant-mismatch"` short-circuit (Mechanism 1 multiplier-anchored predictedPrice preserved on the fallback path).
 
-**Recommended option:** **Option B — attribute-tiered fallback**
+Code surfaces:
 
-When the hard variant-mismatch guard would trip (`everythingFilteredOut`), progressively re-relax the variant criteria in tiers and retry the filter loop. Stop at the first tier yielding ≥3 comps. Cap confidence by tier:
+- `backend/src/services/compiq/compiqEstimate.service.ts` — added `VariantStrictness` type + `VARIANT_TIERS`/`VARIANT_TIER_CAP`/`VARIANT_TIER_VERDICT`/`VARIANT_TIER_MIN_COMPS` constants + `runVariantTierLadder` exported helper. Replaced strict single-pass filter with tier loop. Removed the `variantWarning`-driven short-circuit (Q8 lock: ladder handles both branches). Plumbed `chosenTier` into `compQuality.variantStrictness` + `compQuality.tierLadderTrace` + verdict override + multiplicative `min(tier_cap, calibratedConfidence)` cap on all three confidence legs.
+- `backend/src/services/compiq/cardQueryParser.ts` — added `getCompVariantMismatchReasons` (sibling of `isCompVariantMatch`) that returns the FULL set of rejection reason keys per comp. Required so a tier that relaxes one reason still hard-rejects on another that the tier should enforce (correctness fix: prevents comps with multiple failures from sneaking through at intermediate tiers).
+- `backend/tests/compiqEstimate.variantTierLadder.test.ts` (NEW, 20 tests) — tier transitions T0→T1→T2→T3→fallback, Q1/Q2/Q4 lock assertions, monotonicity invariant, exclusion-reason classification, interop with real `parseCardQuery`.
+- `backend/tests/drakeBaldwinIntegration.test.ts` (REWRITTEN, 2 tests) — Drake Baldwin's prior variant-mismatch case now exercises T1 promotion (marketValue populated, verdict text, capped confidence, variantStrictness=T1, tierLadderTrace.T1≥3); separate test exercises the T3-fail Mechanism 1 fallback path.
 
-| Tier | Filter | Confidence cap |
-|---|---|---:|
-| T0 | full `isCompVariantMatch` (current) | 95 |
-| T1 | drop parallel check | 80 |
-| T2 | drop parallel + auto check | 65 |
-| T3 | accept any comp from resolved card_id | 55 |
-| Fallback | current `variant-mismatch` short-circuit | 0 |
+Verification:
 
-**Rationale:** mirrors the existing `applyParallelFilter`/`applyAutoFilter`/`applyGradeFilter` progressive-fallback pattern (already proven in post-filter stage); handles all three failure modes without per-rule tuning; gives iOS UI a confidence-capped price instead of `null`; strictly safer than re-entering sibling-rescue from the variant-mismatch branch (Option C).
+- `npx tsc --noEmit` clean
+- Full suite: 956 passed, 100 skipped, 0 failed (+22 net new tests vs pre-CF)
+- Baseline tests unchanged behavior — only the Drake Baldwin integration test required updating because its asserted scenario was THE intended-behavior-change case
 
-**Phase 4 open questions (require design lock before implementation):**
+**Open follow-ups:**
 
-1. Confidence-cap mechanics — multiplicative cap vs. additive penalty vs. replacement
-2. iOS surfacing of tier label (verdict text vs. confidence-drop only)
-3. T2/sibling-rescue interaction (re-fetch via `fetchSiblingSales` vs. re-use original comps)
-4. `comp_has_unwanted_auto` direction — should tier ladder also relax base-card pricing from auto comps?
-5. M3 root cause (malformed `parallel` field) — separate input-canonicalization workstream?
-6. Sweep methodology — live cohort vs. fixture set for regression
-7. Backtest gating — re-run pricing-accuracy backtest before merge?
-8. `variantWarning`-driven critical short-circuit (lines 1426-1427 in compiqEstimate) — apply tier ladder here too?
+- Production sweep across 24 holdings post-deploy (target: report tier distribution + confidence distribution + verdict text distribution; specifically address each of the 6 variant-mismatch holdings — which tier they promoted to + final confidence)
+- Backtest impact: re-run pricing-accuracy backtest with T1/T2/T3 prices in the mix (Q7 — gating verification before CF is considered closed). If aggregate MAPE worsens, trim ladder to T0+T1 only
+- CF-PARALLEL-CANONICALIZATION (NEW, captured for future scope): the Tommy White M3 holding has a malformed `parallel` field (`CHR PROS AUTO-MINI DIAMOND`). Option B promotes it to T2/T3 with the tier cap, but the long-term correctness fix is input-side parallel canonicalization at the `addHolding` validation step. Adjacent to Option D from the design doc, narrower scope.
 
-**Authorization gate:** implementation requires user approval (lock answers to ≥1, 2, 3, 4, 8 above before starting). Other questions can be parked for post-impl tuning.
-
-**Phase 1 is analytical** (per user approval): empirical per-holding sweep deferred to a pre-implementation step. Design options don't depend on exact comp counts — they depend on the failure-mode taxonomy, which is derivable from code reading + the polluted-metadata cohort table.
+**Design-phase decisions and locks** (Q1/Q2/Q3/Q4/Q8 in [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md) §5) — locked in this session before implementation began. Q5/Q6/Q7 deferred per user direction (Q5 → CF-PARALLEL-CANONICALIZATION; Q6 → live cohort acceptable; Q7 → post-impl backtest as gating verification).
 
 ---
 

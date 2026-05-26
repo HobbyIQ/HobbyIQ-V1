@@ -5,7 +5,11 @@ import { normalizeGradeCompany, normalizeParallel } from "./normalizationDiction
 import { normalizePlayerName } from "./cardsight.mapper.js";
 import { type CardHedgeCard } from "./cardhedge.client.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
-import { parseCardQuery } from "./cardQueryParser.js";
+import {
+  parseCardQuery,
+  getCompVariantMismatchReasons,
+  type ParsedCardQuery,
+} from "./cardQueryParser.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
@@ -1153,6 +1157,146 @@ function computeConfidenceInterval(params: {
 }
 
 // ---------------------------------------------------------------------------
+// CF-VARIANT-FILTER-LOOSENING — tier ladder constants + helpers
+// ---------------------------------------------------------------------------
+
+export type VariantStrictness = "T0" | "T1" | "T2" | "T3";
+
+export const VARIANT_TIERS: ReadonlyArray<VariantStrictness> = ["T0", "T1", "T2", "T3"];
+
+// Minimum surviving comps a tier must yield before we accept it. Below this
+// we escalate to the next-looser tier. Matches the soft post-filter threshold
+// already used in applyParallelFilter/applyAutoFilter/applyGradeFilter.
+export const VARIANT_TIER_MIN_COMPS = 3;
+
+// Confidence ceiling per tier (Q1 lock: multiplicative cap composition).
+export const VARIANT_TIER_CAP: Readonly<Record<VariantStrictness, number>> = {
+  T0: 95,
+  T1: 80,
+  T2: 65,
+  T3: 55,
+};
+
+// Verdict-text annotation per tier (Q2 lock). T0 keeps the orchestrator's
+// existing verdict text; T1/T2/T3 explicitly flag variant uncertainty so
+// the iOS UI surfaces the approximation without needing new plumbing.
+export const VARIANT_TIER_VERDICT: Readonly<Record<VariantStrictness, string | null>> = {
+  T0: null,
+  T1: "Variant approximation — parallel unverified",
+  T2: "Estimate from broader pool — variant unverified",
+  T3: "Pool estimate — verify variant before listing",
+};
+
+// Per-tier accepted rejection reasons. A rejection reason in the tier's set
+// is TREATED AS "match" — the comp survives the filter at that tier. Anything
+// outside the set remains a hard rejection.
+//
+// Invariants enforced across all tiers:
+//   - comp_has_unwanted_auto: hard reject at every tier (Q4 lock). Base-card
+//     requests must never price from auto-pool comps; the auto premium
+//     discontinuity would poison the FMV.
+//   - player_name_missing_from_comp: hard reject at every tier. Even T3 must
+//     not price from a different player's comps.
+const VARIANT_TIER_ACCEPTS: Readonly<Record<VariantStrictness, ReadonlySet<string>>> = {
+  T0: new Set<string>(),
+  T1: new Set<string>(["parallel_mismatch", "parallel_qualifier_mismatch"]),
+  T2: new Set<string>(["parallel_mismatch", "parallel_qualifier_mismatch", "comp_missing_auto"]),
+  T3: new Set<string>([
+    "parallel_mismatch",
+    "parallel_qualifier_mismatch",
+    "comp_missing_auto",
+    "print_run_mismatch",
+  ]),
+};
+
+export interface TierLadderResult<C extends { title: string }> {
+  chosenTier: VariantStrictness;
+  variantFiltered: C[];
+  variantExclusionReasons: Record<string, number>;
+  variantExcludedCount: number;
+  // Per-tier comp count after filtering. Useful for diagnostics + tests.
+  tierLadderTrace: Record<VariantStrictness, number>;
+  // True when even the loosest tier (T3) yields <VARIANT_TIER_MIN_COMPS comps.
+  // Signals the caller to fall through to the variant-mismatch short-circuit.
+  everythingFilteredOut: boolean;
+}
+
+// Enumerate ALL rejection reasons per comp (not just first-fired) and partition
+// into (matched, rejected) for a given tier. A comp survives only if EVERY
+// reason that applies to it is in the tier's accept set; if any non-accepted
+// reason fires, the comp is rejected and counted under that reason.
+//
+// Using getCompVariantMismatchReasons (not isCompVariantMatch) is the key
+// correctness fix: a comp that fails both comp_missing_auto AND
+// print_run_mismatch must still be rejected at T2 (which accepts the auto
+// drop but NOT print_run) even though comp_missing_auto would be the
+// first-fired reason returned by isCompVariantMatch.
+function classifyCompsForTier<C extends { title: string }>(
+  comps: C[],
+  parsed: ParsedCardQuery,
+  tier: VariantStrictness
+): { matched: C[]; reasons: Record<string, number> } {
+  const accepts = VARIANT_TIER_ACCEPTS[tier];
+  const matched: C[] = [];
+  const reasons: Record<string, number> = {};
+  for (const c of comps) {
+    const allReasons = getCompVariantMismatchReasons(c.title, parsed);
+    const blocking = allReasons.filter((r) => !accepts.has(r));
+    if (blocking.length === 0) {
+      matched.push(c);
+      continue;
+    }
+    // Count under the FIRST blocking reason so the reason counts align with
+    // isCompVariantMatch's first-fired ordering when the user inspects logs.
+    const key = blocking[0];
+    reasons[key] = (reasons[key] ?? 0) + 1;
+  }
+  return { matched, reasons };
+}
+
+// CF-VARIANT-FILTER-LOOSENING: run the tier ladder T0→T3, breaking at the
+// first tier with ≥VARIANT_TIER_MIN_COMPS surviving comps. If T3 still yields
+// <VARIANT_TIER_MIN_COMPS, the caller falls through to the variant-mismatch
+// short-circuit (legacy behavior preserved as final fallback).
+//
+// Tier loosening is monotonic in pool size (each tier's accept set is a
+// superset of the prior tier's), so the loop terminates at the first tier
+// that crosses the threshold without re-scanning prior tiers.
+export function runVariantTierLadder<C extends { title: string }>(
+  comps: C[],
+  parsed: ParsedCardQuery
+): TierLadderResult<C> {
+  const trace: Record<VariantStrictness, number> = { T0: 0, T1: 0, T2: 0, T3: 0 };
+  let chosenTier: VariantStrictness = "T0";
+  let chosenMatched: C[] = [];
+  let chosenReasons: Record<string, number> = {};
+  for (const tier of VARIANT_TIERS) {
+    const { matched, reasons } = classifyCompsForTier(comps, parsed, tier);
+    trace[tier] = matched.length;
+    chosenTier = tier;
+    chosenMatched = matched;
+    chosenReasons = reasons;
+    if (matched.length >= VARIANT_TIER_MIN_COMPS) break;
+  }
+  // If no comps to begin with, T0 wins by default (everythingFilteredOut
+  // would not fire — the no-comps path is handled by the thin-data branch
+  // downstream). Otherwise: T3-and-still-thin means the ladder exhausted.
+  const everythingFilteredOut =
+    comps.length > 0 &&
+    chosenTier === "T3" &&
+    chosenMatched.length < VARIANT_TIER_MIN_COMPS &&
+    (parsed.isAuto || Boolean(parsed.parallel));
+  return {
+    chosenTier,
+    variantFiltered: chosenMatched,
+    variantExclusionReasons: chosenReasons,
+    variantExcludedCount: comps.length - chosenMatched.length,
+    tierLadderTrace: trace,
+    everythingFilteredOut,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Route handler
 // ---------------------------------------------------------------------------
 
@@ -1367,13 +1511,31 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
 
   const recencyFilteredComps = applyRecencyFilter(fetched.comps);
 
-  // ── Variant match filter (Pricing Accuracy — CardQueryParser wiring) ─────
+  // ── Variant match filter — tiered loosening (CF-VARIANT-FILTER-LOOSENING) ─
   // Reject comps that don't match the requested variant BEFORE any quality
   // or anchor math runs. This catches the "Sky Blue base" comps that Card
   // Hedge returns when asked for "Blue Auto" — and prevents them from being
   // averaged into the FMV.
-  const { isCompVariantMatch, parseCardQuery: parseCardQueryFn } = await import("./cardQueryParser.js");
-  const parsedForGuard = parseCardQueryFn(cardTitle);
+  //
+  // Tier ladder (Option B per docs/phase0/variant_filter_loosening_design.md):
+  // when strict T0 yields <3 surviving comps, progressively relax the per-
+  // comp predicate. Each tier accepts a SUPERSET of the prior tier's pool.
+  // First tier with ≥3 comps wins; cap pricing confidence by tier. T3 with
+  // <3 → fall through to variant-mismatch short-circuit (legacy behavior
+  // preserved as final fallback).
+  //
+  // Tier matrix (which rejection reasons are TREATED AS "ACCEPT" per tier):
+  //   T0 (strict, cap 95): none accepted — all rejections stand
+  //   T1 (drop parallel, cap 80): parallel_mismatch + parallel_qualifier_mismatch
+  //   T2 (T1 + drop "missing auto", cap 65): + comp_missing_auto
+  //   T3 (T2 + drop print-run, cap 55): + print_run_mismatch
+  //
+  // INVARIANTS:
+  //   - comp_has_unwanted_auto stays HARD REJECT at all tiers (Q4 lock).
+  //     Base-card requests must never price from auto-pool comps.
+  //   - player_name_missing_from_comp stays HARD REJECT at all tiers — we
+  //     must not price from a different player's comps even at T3.
+  const parsedForGuard = parseCardQuery(cardTitle);
   // Override parsed flags with the explicit body fields when present so the
   // structured /estimate path (which doesn't run the route-level parser) still
   // gets correct variant info.
@@ -1384,48 +1546,37 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   if (normalizedParallel && normalizedParallel !== "base") parsedForGuard.parallel = normalizedParallel;
   if (body.cardYear) parsedForGuard.year = body.cardYear;
 
-  const variantFiltered: typeof recencyFilteredComps = [];
-  const variantExclusionReasons: Record<string, number> = {};
-  for (const c of recencyFilteredComps) {
-    const m = isCompVariantMatch(c.title, parsedForGuard);
-    if (m.match) {
-      variantFiltered.push(c);
-    } else {
-      const key = m.reason.split(":")[0];
-      variantExclusionReasons[key] = (variantExclusionReasons[key] ?? 0) + 1;
-    }
-  }
-  const variantExcludedCount = recencyFilteredComps.length - variantFiltered.length;
-  if (variantExcludedCount > 0) {
+  const tierResult = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
+  const {
+    chosenTier,
+    variantFiltered,
+    variantExclusionReasons,
+    variantExcludedCount,
+    tierLadderTrace,
+    everythingFilteredOut,
+  } = tierResult;
+
+  if (variantExcludedCount > 0 || chosenTier !== "T0") {
     console.log(
-      `[compiq.computeEstimate] variant filter excluded ${variantExcludedCount}/${recencyFilteredComps.length} comps: ${JSON.stringify(variantExclusionReasons)}`
+      `[compiq.computeEstimate] variant tier=${chosenTier} excluded ${variantExcludedCount}/${recencyFilteredComps.length} comps: ${JSON.stringify(variantExclusionReasons)} trace=${JSON.stringify(tierLadderTrace)}`
     );
   }
-  // If the variant filter dropped EVERYTHING and the user asked for a
-  // specific autograph or specific parallel, short-circuit to insufficient
-  // rather than ship the wrong card's FMV.
-  const everythingFilteredOut =
-    recencyFilteredComps.length > 0 && variantFiltered.length === 0 &&
-    (parsedForGuard.isAuto || Boolean(parsedForGuard.parallel));
+
   // Substitute the variant-filtered pool for downstream stages when at least
   // some comps survived. Otherwise keep the original pool — the
   // dataSufficiency / variant-mismatch guard logic below handles the empty
   // case explicitly.
   const compsAfterVariantFilter = variantFiltered.length > 0 ? variantFiltered : recencyFilteredComps;
 
-  // ── Variant-mismatch guard ───────────────────────────────────────────────
-  // When the request asked for an autograph (or a /serial-numbered parallel)
-  // and Card Hedge could not match a card_id that carries that variant token,
-  // `findCompsByQuery` emits a `variantWarning` and falls back to the closest
-  // base card. Rather than ship a confidently-wrong FMV from the wrong card,
-  // short-circuit to insufficient-data so the iOS UI tells the user "we
-  // can't price this variant yet" instead of showing a misleading price.
+  // ── Variant-mismatch short-circuit (final fallback) ──────────────────────
+  // Per Q8 lock: tier ladder applies to BOTH everythingFilteredOut AND
+  // variantWarning paths. The ladder above already tried T0→T3 progressively;
+  // we only short-circuit when T3 also yields <3 comps. variantWarning is
+  // surfaced informationally in the response payload but no longer triggers
+  // an immediate short-circuit by itself (the ladder handles graceful
+  // degradation).
   const variantWarningTokens = (fetched.variantWarning ?? []).map((t) => t.toLowerCase());
-  const variantMismatchCritical =
-    everythingFilteredOut ||
-    (effectiveIsAuto && variantWarningTokens.some((t) => /(auto|autograph|signed|signature)/.test(t))) ||
-    variantWarningTokens.some((t) => /^\/\d/.test(t)); // missing /serial token
-  if (variantMismatchCritical) {
+  if (everythingFilteredOut) {
     const mechanism1 = computeMultiplierAnchoredPredictedPrice({
       subject: {
         playerName: body.playerName ?? fetched.card?.player ?? "",
@@ -1448,7 +1599,13 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       const detail = Object.entries(variantExclusionReasons)
         .map(([k, v]) => `${k}×${v}`)
         .join(", ");
-      guardReasons.push(`all ${recencyFilteredComps.length} fetched comps rejected by variant filter (${detail})`);
+      // CF-VARIANT-FILTER-LOOSENING: tier ladder already tried T0→T3 and the
+      // loosest tier still yielded <VARIANT_TIER_MIN_COMPS comps. Surface the
+      // trace so the iOS verdict + log line show why even the broadest pool
+      // couldn't satisfy the threshold.
+      guardReasons.push(
+        `tier ladder exhausted at T3 (trace=${JSON.stringify(tierLadderTrace)}; rejections: ${detail || "n/a"})`
+      );
     }
     const missing = guardReasons.join("; ") || "variant tokens";
     console.warn(
@@ -1550,6 +1707,13 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       ...qualityFilter.reasons,
       ...(variantExcludedCount > 0 ? { variant_mismatch: variantExcludedCount } : {}),
     },
+    // CF-VARIANT-FILTER-LOOSENING: surface the tier the variant ladder
+    // selected. T0 is the strict default; T1/T2/T3 indicate the pricing
+    // pool was widened to find ≥3 surviving comps, with a capped
+    // confidence per VARIANT_TIER_CAP. Read by iOS (informational) and
+    // by tests asserting tier-transition behavior.
+    variantStrictness: chosenTier,
+    tierLadderTrace,
   };
   const cardIdentity = fetched.card;
 
@@ -2059,13 +2223,20 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   // Map confidence bundle (ConfidenceEngine returns 0–100 integers already)
   // and then clamp each leg through the comp-volume gating ceiling so the
   // user never sees confidence=100 on a thin/illiquid card.
+  //
+  // CF-VARIANT-FILTER-LOOSENING (Q1 lock): apply the tier confidence cap via
+  // multiplicative min — `effective = min(tier_cap, computed)`. Computed
+  // confidence already degrades on thin/dispersed pools (via calibrateConfidence
+  // + the rawPricing clamp); the tier cap layers on top so loose-pool prices
+  // can't surface artificially-inflated confidence.
   const confidenceBundle = result.confidence ?? {};
+  const tierCap = VARIANT_TIER_CAP[chosenTier];
   const rawPricing = Math.min(100, confidenceBundle.pricingConfidence ?? 60);
   const rawLiquidity = Math.min(100, confidenceBundle.liquidityConfidence ?? 60);
   const rawTiming = Math.min(100, confidenceBundle.timingConfidence ?? 60);
-  const pricingConfidence = calibrateConfidence(rawPricing, comps);
-  const liquidityConfidence = calibrateConfidence(rawLiquidity, comps);
-  const timingConfidence = calibrateConfidence(rawTiming, comps);
+  const pricingConfidence = Math.min(tierCap, calibrateConfidence(rawPricing, comps));
+  const liquidityConfidence = Math.min(tierCap, calibrateConfidence(rawLiquidity, comps));
+  const timingConfidence = Math.min(tierCap, calibrateConfidence(rawTiming, comps));
 
   // Map marketDNA
   const dna = result.marketDNA ?? {};
@@ -2258,9 +2429,16 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   });
   console.log(formatTrendIQLogLine(trendIQ));
 
+  // CF-VARIANT-FILTER-LOOSENING (Q2 lock): when the tier ladder selected
+  // T1/T2/T3, override the orchestrator's verdict with the tier-specific
+  // annotation so the iOS UI surfaces variant uncertainty without needing
+  // new response-shape plumbing. T0 keeps the orchestrator's verdict.
+  const tierVerdictOverride = VARIANT_TIER_VERDICT[chosenTier];
+  const verdictText = tierVerdictOverride ?? result.verdict ?? "Hold";
+
   return {
     cardTitle,
-    verdict: result.verdict ?? "Hold",
+    verdict: verdictText,
     action: result.action ?? "Hold",
     dealScore: result.dealScore ?? 50,
     quickSaleValue,

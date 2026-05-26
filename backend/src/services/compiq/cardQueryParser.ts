@@ -369,3 +369,66 @@ export function isCompVariantMatch(
 
   return { match: true, reason: "ok" };
 }
+
+// ---------------------------------------------------------------------------
+// getCompVariantMismatchReasons
+//
+// CF-VARIANT-FILTER-LOOSENING: returns the FULL set of rejection-reason keys
+// that apply to a comp, rather than the first-fired reason. Required by the
+// tier ladder: a comp may fail two checks (e.g. comp_missing_auto AND
+// print_run_mismatch); a tier that relaxes the first must still hard-reject
+// on the second.
+//
+// Reason keys returned here are the bare keys without the `:expected_<x>`
+// suffix that isCompVariantMatch attaches — tier classification matches on
+// the bare key.
+// ---------------------------------------------------------------------------
+export function getCompVariantMismatchReasons(
+  compTitle: string,
+  parsed: ParsedCardQuery
+): string[] {
+  const title = (compTitle ?? "").toLowerCase();
+  const reasons: string[] = [];
+
+  // AUTO check (both directions).
+  const AUTO_PREFIX_RE = /\b(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa)[-,)\s]/i;
+  const hasAuto =
+    /\bauto(graph(s|ed)?|s)?\b/i.test(title) ||
+    /\brpa\b/.test(title) ||
+    AUTO_PREFIX_RE.test(title);
+  if (parsed.isAuto && !hasAuto) reasons.push("comp_missing_auto");
+  if (!parsed.isAuto && hasAuto) reasons.push("comp_has_unwanted_auto");
+
+  // PARALLEL check.
+  if (parsed.parallel) {
+    const parallelLower = parsed.parallel.toLowerCase();
+    const titleHasFull = title.includes(parallelLower);
+    const isSpecific = parallelLower.split(" ").length > 1;
+    if (isSpecific && !titleHasFull) {
+      reasons.push("parallel_mismatch");
+    } else if (!isSpecific) {
+      const qualifierBefore = new RegExp(
+        `\\b(sky|royal|navy|light|dark|ice|electric|neon|baby|midnight|powder|ocean|deep|hot|rose|ruby|emerald|forest|lime|mint|lemon|canary|amber)\\s+${escapeRegex(parallelLower)}\\b`
+      );
+      if (!titleHasFull) {
+        reasons.push("parallel_mismatch");
+      } else if (qualifierBefore.test(title)) {
+        reasons.push("parallel_qualifier_mismatch");
+      }
+    }
+  }
+
+  // PRINT RUN check.
+  if (parsed.printRun) {
+    const printRunPattern = new RegExp(`/\\s*${parsed.printRun}\\b`);
+    if (!printRunPattern.test(title)) reasons.push("print_run_mismatch");
+  }
+
+  // PLAYER check.
+  if (parsed.playerName) {
+    const lastName = parsed.playerName.split(" ").pop()?.toLowerCase() ?? "";
+    if (lastName && !title.includes(lastName)) reasons.push("player_name_missing_from_comp");
+  }
+
+  return reasons;
+}
