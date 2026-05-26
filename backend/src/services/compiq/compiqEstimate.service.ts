@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
+import { normalizePlayerName } from "./cardsight.mapper.js";
 import { type CardHedgeCard } from "./cardhedge.client.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
 import { parseCardQuery } from "./cardQueryParser.js";
@@ -1156,6 +1157,19 @@ function computeConfidenceInterval(params: {
 // ---------------------------------------------------------------------------
 
 export async function computeEstimate(body: CompIQEstimateRequest): Promise<Record<string, unknown>> {
+
+  // CF-PLAYERNAME-NORMALIZATION (2026-05-26): strip contamination tokens
+  // from playerName before any catalog lookup. iOS scan path historically
+  // concatenated set / parallel / status tokens into the player field for
+  // ~9 of the user's ~16 real holdings. Read-path only; original stored
+  // playerName preserved. Shadowing the parameter so downstream sites
+  // automatically use the normalized value.
+  if (body.playerName) {
+    const normalized = normalizePlayerName(body.playerName);
+    if (normalized && normalized !== body.playerName) {
+      body = { ...body, playerName: normalized };
+    }
+  }
 
   // Detect "auto" / "autograph" inside the parallel string (e.g. "Blue
   // Refractor Auto") and treat it as if isAuto were explicitly set. Without

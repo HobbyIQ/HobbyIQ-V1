@@ -90,6 +90,81 @@ export function lookupReleaseName(product: string): string | null {
   return COMPIQ_TO_CARDSIGHT_RELEASES[normalized] ?? null;
 }
 
+// CF-PLAYERNAME-NORMALIZATION (2026-05-26): iOS card-scan path
+// concatenates set / parallel / status tokens into the playerName field
+// for ~9 of the user's ~16 real holdings. Server-side read-path
+// normalization strips known contamination patterns before Cardsight
+// catalog lookup so the right card can be identified. Stored data is
+// preserved unchanged; a separate workstream addresses the iOS source.
+//
+// Multi-stage strategy:
+//   1. Strip known set/status prefix tokens (longest match first)
+//   2. Strip explicit suffix tokens (longest match first)
+//   3. Strip generic CHR PROS / CHR PROSPECT suffix patterns via regex
+//   4. Hygiene: collapse whitespace, trim
+//
+// Conservative defaults — only patterns observed in production data are
+// stripped. Adding new tokens is low-risk additive; loosening to
+// pattern-based heuristics would create false-positive risk on
+// legitimate player names.
+const PLAYERNAME_PREFIX_TOKENS = [
+  // Longer multi-token prefixes must come BEFORE their shorter
+  // overlapping prefixes so longest match wins.
+  "CHROME PROSPECT AUTOGRAPHS",
+  "TRADED TIFFANY",
+  "PROSPECT AUTOGRAPHS",
+  "TRADED",
+  "TIFFANY",
+];
+
+const PLAYERNAME_SUFFIX_TOKENS = [
+  // Longer suffixes first.
+  "WAL-MART BORDER",
+  "TIFFANY",
+];
+
+// Generic suffix: any "CHR PROS ..." or "CHR PROSPECT ..." through end
+// of string. Matches the parallel-code suffixes that vary in spacing /
+// dashes ("CHR PROS - MINI DIA", "CHR PROSPECT AU- SHIM", etc.) without
+// requiring an entry per code.
+const PLAYERNAME_GENERIC_CODE_SUFFIX = /\bCHR\s+PROS(?:PECT)?\b.*$/i;
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function normalizePlayerName(name: string | null | undefined): string {
+  if (!name) return "";
+  let s = String(name).trim();
+  if (!s) return "";
+
+  // Stage 1 — strip known prefix tokens (longest first via list order).
+  for (const prefix of PLAYERNAME_PREFIX_TOKENS) {
+    const re = new RegExp(`^${escapeRegExp(prefix).replace(/\\\s\+/g, "\\s+")}\\s+`, "i");
+    if (re.test(s)) {
+      s = s.replace(re, "").trim();
+      break;
+    }
+  }
+
+  // Stage 2 — strip explicit suffix tokens (longest first).
+  for (const suffix of PLAYERNAME_SUFFIX_TOKENS) {
+    const re = new RegExp(`\\s+${escapeRegExp(suffix).replace(/\\\s\+/g, "\\s+")}\\s*$`, "i");
+    if (re.test(s)) {
+      s = s.replace(re, "").trim();
+      break;
+    }
+  }
+
+  // Stage 3 — strip generic CHR PROS / CHR PROSPECT suffix patterns.
+  s = s.replace(PLAYERNAME_GENERIC_CODE_SUFFIX, "").trim();
+
+  // Stage 4 — hygiene.
+  s = s.replace(/\s+/g, " ").trim();
+
+  return s;
+}
+
 // Phase 2 v2 defect #12 — cardNumber-pattern dispatch (resolves the 2020 Witt
 // "Bowman Chrome Refractor BDC-1" regression from PR #114).
 //
