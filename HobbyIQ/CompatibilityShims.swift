@@ -1516,7 +1516,9 @@ extension InventoryCard {
             confidence: confidence,
             method: method,
             summary: summary,
-            isAuto: isAuto
+            isAuto: isAuto,
+            photos: photos,
+            clientId: clientId
         )
     }
 }
