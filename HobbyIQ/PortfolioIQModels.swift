@@ -115,13 +115,157 @@ struct PortfolioMover: Identifiable, Hashable {
 
 
 
-struct PortfolioLedgerEntry: Identifiable, Hashable {
+// MARK: - Ledger Response Envelope
+
+struct PortfolioLedgerResponse: Codable {
+    let userId: String?
+    let count: Int?
+    let totals: PortfolioLedgerTotals?
+    let entries: [PortfolioLedgerEntry]?
+}
+
+struct PortfolioLedgerTotals: Codable, Hashable {
+    let realizedProfitLoss: Double?
+    let grossProceeds: Double?
+    let netProceeds: Double?
+    let costBasisSold: Double?
+}
+
+// MARK: - Ledger Entry
+
+struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
     let id: String
     let playerName: String
-    let cardName: String
-    let salePrice: Double
-    let profit: Double
-    let dateText: String
+    let cardTitle: String?
+    let quantitySold: Int?
+    let unitSalePrice: Double?
+    let grossProceeds: Double?
+    let fees: Double?
+    let tax: Double?
+    let shipping: Double?
+    let netProceeds: Double?
+    let costBasisSold: Double?
+    let realizedProfitLoss: Double?
+    let realizedProfitLossPct: Double?
+    let soldAt: String?
+    let notes: String?
+
+    let source: String?
+    let ebayOrderId: String?
+    let needsReconciliation: Bool?
+
+    let finalValueFee: Double?
+    let paymentProcessingFee: Double?
+    let promotedListingFee: Double?
+    let adFee: Double?
+    let otherFees: Double?
+    let netPayout: Double?
+    let actualShippingCost: Double?
+    let suppliesCost: Double?
+    let gradingCost: Double?
+
+    private let _dateTextOverride: String?
+
+    var cardName: String { cardTitle ?? "" }
+    var salePrice: Double { unitSalePrice ?? grossProceeds ?? 0 }
+    var profit: Double { realizedProfitLoss ?? 0 }
+    var isEbaySource: Bool { source == "ebay" }
+
+    var dateText: String {
+        if let override = _dateTextOverride { return override }
+        guard let soldAt, !soldAt.isEmpty else { return "" }
+        let fmtFrac = ISO8601DateFormatter()
+        fmtFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let fmtStd = ISO8601DateFormatter()
+        fmtStd.formatOptions = [.withInternetDateTime]
+        guard let date = fmtFrac.date(from: soldAt) ?? fmtStd.date(from: soldAt) else {
+            return soldAt
+        }
+        return date.formatted(.dateTime.month(.abbreviated).day().year())
+    }
+
+    var totalGranularFees: Double? {
+        let known: [Double] = [finalValueFee, paymentProcessingFee, promotedListingFee, adFee, otherFees, actualShippingCost].compactMap { $0 }
+        return known.isEmpty ? nil : known.reduce(0, +)
+    }
+
+    var hasAnyNullFee: Bool {
+        guard isEbaySource else { return false }
+        return finalValueFee == nil || paymentProcessingFee == nil
+    }
+
+    init(fromSale sale: Sale, index: Int) {
+        self.id = "ledger-\(index)-\(sale.id.uuidString)"
+        self.playerName = sale.playerName
+        self.cardTitle = sale.cardName
+        self.unitSalePrice = sale.salePrice
+        self.grossProceeds = sale.salePrice
+        self.fees = sale.fees
+        self.realizedProfitLoss = sale.profit
+        self._dateTextOverride = sale.saleDateFormatted
+        self.quantitySold = nil
+        self.tax = nil
+        self.shipping = nil
+        self.netProceeds = nil
+        self.costBasisSold = nil
+        self.realizedProfitLossPct = nil
+        self.soldAt = nil
+        self.notes = nil
+        self.source = nil
+        self.ebayOrderId = nil
+        self.needsReconciliation = nil
+        self.finalValueFee = nil
+        self.paymentProcessingFee = nil
+        self.promotedListingFee = nil
+        self.adFee = nil
+        self.otherFees = nil
+        self.netPayout = nil
+        self.actualShippingCost = nil
+        self.suppliesCost = nil
+        self.gradingCost = nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, playerName, cardTitle, quantitySold, unitSalePrice
+        case grossProceeds, fees, tax, shipping, netProceeds
+        case costBasisSold, realizedProfitLoss, realizedProfitLossPct
+        case soldAt, notes, source, ebayOrderId, needsReconciliation
+        case finalValueFee, paymentProcessingFee, promotedListingFee
+        case adFee, otherFees, netPayout, actualShippingCost
+        case suppliesCost, gradingCost
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        playerName = (try? c.decodeIfPresent(String.self, forKey: .playerName)) ?? ""
+        cardTitle = try? c.decodeIfPresent(String.self, forKey: .cardTitle)
+        quantitySold = try? c.decodeIfPresent(Int.self, forKey: .quantitySold)
+        unitSalePrice = try? c.decodeIfPresent(Double.self, forKey: .unitSalePrice)
+        grossProceeds = try? c.decodeIfPresent(Double.self, forKey: .grossProceeds)
+        fees = try? c.decodeIfPresent(Double.self, forKey: .fees)
+        tax = try? c.decodeIfPresent(Double.self, forKey: .tax)
+        shipping = try? c.decodeIfPresent(Double.self, forKey: .shipping)
+        netProceeds = try? c.decodeIfPresent(Double.self, forKey: .netProceeds)
+        costBasisSold = try? c.decodeIfPresent(Double.self, forKey: .costBasisSold)
+        realizedProfitLoss = try? c.decodeIfPresent(Double.self, forKey: .realizedProfitLoss)
+        realizedProfitLossPct = try? c.decodeIfPresent(Double.self, forKey: .realizedProfitLossPct)
+        soldAt = try? c.decodeIfPresent(String.self, forKey: .soldAt)
+        notes = try? c.decodeIfPresent(String.self, forKey: .notes)
+        source = try? c.decodeIfPresent(String.self, forKey: .source)
+        ebayOrderId = try? c.decodeIfPresent(String.self, forKey: .ebayOrderId)
+        needsReconciliation = try? c.decodeIfPresent(Bool.self, forKey: .needsReconciliation)
+        finalValueFee = try? c.decodeIfPresent(Double.self, forKey: .finalValueFee)
+        paymentProcessingFee = try? c.decodeIfPresent(Double.self, forKey: .paymentProcessingFee)
+        promotedListingFee = try? c.decodeIfPresent(Double.self, forKey: .promotedListingFee)
+        adFee = try? c.decodeIfPresent(Double.self, forKey: .adFee)
+        otherFees = try? c.decodeIfPresent(Double.self, forKey: .otherFees)
+        netPayout = try? c.decodeIfPresent(Double.self, forKey: .netPayout)
+        actualShippingCost = try? c.decodeIfPresent(Double.self, forKey: .actualShippingCost)
+        suppliesCost = try? c.decodeIfPresent(Double.self, forKey: .suppliesCost)
+        gradingCost = try? c.decodeIfPresent(Double.self, forKey: .gradingCost)
+        _dateTextOverride = nil
+    }
 }
 
 extension InventoryCard {

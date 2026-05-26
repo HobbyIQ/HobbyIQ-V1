@@ -15,6 +15,8 @@ final class PortfolioIQViewModel: ObservableObject {
         didSet { recomputeCachedProperties() }
     }
     @Published private(set) var salesHistory: [Sale] = []
+    @Published private(set) var apiLedgerEntries: [PortfolioLedgerEntry]?
+    @Published private(set) var ledgerTotals: PortfolioLedgerTotals?
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
     @Published var pendingInventoryFilter: PortfolioInventoryFilter?
@@ -169,23 +171,107 @@ final class PortfolioIQViewModel: ObservableObject {
 
 
     var ledgerEntries: [PortfolioLedgerEntry] {
-        salesHistory
+        if let api = apiLedgerEntries { return api }
+        return salesHistory
             .sorted { $0.date > $1.date }
             .prefix(10)
             .enumerated()
-            .map { index, sale in
-                PortfolioLedgerEntry(
-                    id: "ledger-\(index)-\(sale.id.uuidString)",
-                    playerName: sale.playerName,
-                    cardName: sale.cardName,
-                    salePrice: sale.salePrice,
-                    profit: sale.profit,
-                    dateText: sale.saleDateFormatted
-                )
-            }
+            .map { index, sale in PortfolioLedgerEntry(fromSale: sale, index: index) }
+    }
+
+    func fetchLedger() async {
+        do {
+            let response = try await service.fetchPortfolioLedger()
+            apiLedgerEntries = response.entries ?? []
+            ledgerTotals = response.totals
+        } catch {
+            logger.error("Ledger fetch failed, falling back to local sales: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func exportLedgerCSV(includeUnreconciled: Bool) -> URL? {
+        let entries = ledgerEntries
+        let filtered = includeUnreconciled ? entries : entries.filter { $0.needsReconciliation != true }
+
+        var lines: [String] = []
+        let header = [
+            "Date", "Player", "Card", "Source", "Sale Price", "Gross Proceeds",
+            "Final Value Fee", "Payment Processing Fee", "Promoted Listing Fee",
+            "Ad Fee", "Shipping Cost", "Other Fees", "Total Fees",
+            "Net Proceeds", "Cost Basis", "Grading Cost", "Supplies Cost",
+            "Realized P&L", "ROI %", "Needs Reconciliation"
+        ].map { csvEscape($0) }.joined(separator: ",")
+        lines.append(header)
+
+        let isoFmt = ISO8601DateFormatter()
+        isoFmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoStd = ISO8601DateFormatter()
+        isoStd.formatOptions = [.withInternetDateTime]
+        let dateFmt = DateFormatter()
+        dateFmt.dateFormat = "yyyy-MM-dd"
+
+        for entry in filtered {
+            let dateStr: String = {
+                guard let soldAt = entry.soldAt, !soldAt.isEmpty,
+                      let date = isoFmt.date(from: soldAt) ?? isoStd.date(from: soldAt) else {
+                    return entry.dateText
+                }
+                return dateFmt.string(from: date)
+            }()
+
+            let unreconciledFlag = (includeUnreconciled && entry.needsReconciliation == true) ? "YES" : ""
+
+            let row = [
+                csvEscape(dateStr),
+                csvEscape(entry.playerName),
+                csvEscape(entry.cardName),
+                csvEscape(entry.source ?? "manual"),
+                csvNum(entry.unitSalePrice),
+                csvNum(entry.grossProceeds),
+                csvNum(entry.finalValueFee),
+                csvNum(entry.paymentProcessingFee),
+                csvNum(entry.promotedListingFee),
+                csvNum(entry.adFee),
+                csvNum(entry.actualShippingCost),
+                csvNum(entry.otherFees),
+                csvNum(entry.totalGranularFees),
+                csvNum(entry.netProceeds),
+                csvNum(entry.costBasisSold),
+                csvNum(entry.gradingCost),
+                csvNum(entry.suppliesCost),
+                csvNum(entry.realizedProfitLoss),
+                entry.realizedProfitLossPct.map { String(format: "%.2f", $0) } ?? "",
+                unreconciledFlag
+            ].joined(separator: ",")
+            lines.append(row)
+        }
+
+        let csv = lines.joined(separator: "\n")
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hobbyiq_tax_export_\(dateFmt.string(from: Date())).csv")
+        do {
+            try csv.write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            logger.error("CSV export failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    private func csvEscape(_ value: String) -> String {
+        if value.contains(",") || value.contains("\"") || value.contains("\n") {
+            return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return value
+    }
+
+    private func csvNum(_ value: Double?) -> String {
+        guard let value else { return "" }
+        return String(format: "%.2f", value)
     }
 
     func load() async {
+        async let _ = fetchLedger()
         await fetch(preserveExistingSummaryOnError: false)
     }
 

@@ -281,6 +281,14 @@ struct APIService {
         return envelope.holdings
     }
 
+    func fetchPortfolioLedger(userId: String = "") async throws -> PortfolioLedgerResponse {
+        try await get(
+            path: "/api/portfolio/ledger",
+            queryItems: portfolioUserQueryItems(userId: userId),
+            responseType: PortfolioLedgerResponse.self
+        )
+    }
+
     func ebayConnectionStatus(sessionId: String? = nil) async throws -> EBayConnectionStatusResponse {
         let resolvedSessionId = try requireSessionId(sessionId)
         return try await get(

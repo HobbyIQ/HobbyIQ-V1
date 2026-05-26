@@ -50,7 +50,7 @@ struct PortfolioIQView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingLedger) {
-                PortfolioLedgerSheet(entries: vm.ledgerEntries)
+                PortfolioLedgerSheet(entries: vm.ledgerEntries, totals: vm.ledgerTotals, viewModel: vm)
             }
             .sheet(item: $selectedCard) { card in
                 PortfolioHoldingDetailSheet(
@@ -537,55 +537,586 @@ private enum PerformancePeriod: String, CaseIterable, Identifiable {
 
 // MARK: - Supporting Views
 
+private enum LedgerTab: String, CaseIterable {
+    case entries = "Entries"
+    case pnl = "P&L"
+}
+
+private enum LedgerPnLGrouping: String, CaseIterable {
+    case month = "Month"
+    case player = "Player"
+    case source = "Source"
+}
+
 private struct PortfolioLedgerSheet: View {
     let entries: [PortfolioLedgerEntry]
+    let totals: PortfolioLedgerTotals?
+    let viewModel: PortfolioIQViewModel
+    @State private var selectedEntry: PortfolioLedgerEntry?
+    @State private var showExportOptions = false
+    @State private var includeUnreconciled = false
+    @State private var exportFileURL: URL?
+    @State private var showShareSheet = false
+    @State private var selectedTab: LedgerTab = .entries
+    @State private var pnlGrouping: LedgerPnLGrouping = .month
+    @State private var pnlIncludeUnreconciled = false
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if entries.isEmpty {
-                        PortfolioLedgerEmptyState()
-                    } else {
-                        ForEach(entries) { entry in
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(entry.playerName)
-                                            .font(.subheadline.bold())
-                                            .foregroundStyle(.white)
-                                        Text(entry.cardName)
-                                            .font(.caption)
-                                            .foregroundStyle(Color(hex: 0x9CA3AF))
-                                    }
-
-                                    Spacer(minLength: 0)
-
-                                    VStack(alignment: .trailing, spacing: 4) {
-                                        Text(entry.salePrice.portfolioCurrencyText)
-                                            .font(.subheadline.bold())
-                                            .foregroundStyle(.white)
-                                        Text(entry.profit.portfolioSignedCurrencyText)
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(entry.profit >= 0 ? .green : .red)
-                                    }
-                                }
-
-                                Text(entry.dateText)
-                                    .font(.caption2)
-                                    .foregroundStyle(Color(hex: 0x9CA3AF))
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
-                            .portfolioCardSurface(cornerRadius: 18)
+            VStack(spacing: 0) {
+                if !entries.isEmpty {
+                    Picker("View", selection: $selectedTab) {
+                        ForEach(LedgerTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
                         }
                     }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
                 }
-                .padding(16)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if entries.isEmpty {
+                            PortfolioLedgerEmptyState()
+                        } else if selectedTab == .entries {
+                            if let totals {
+                                ledgerTotalsCard(totals)
+                            }
+
+                            let reconciliation = entries.filter { $0.needsReconciliation == true }
+                            if !reconciliation.isEmpty {
+                                ledgerAttentionSection(reconciliation)
+                            }
+
+                            ForEach(entries) { entry in
+                                Button { selectedEntry = entry } label: {
+                                    ledgerRow(entry)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        } else {
+                            pnlView
+                        }
+                    }
+                    .padding(16)
+                }
             }
             .background { HobbyIQBackground() }
             .navigationTitle("Ledger")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if !entries.isEmpty {
+                        Button { showExportOptions = true } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        }
+                    }
+                }
+            }
+            .sheet(item: $selectedEntry) { entry in
+                LedgerEntryDetailSheet(entry: entry)
+            }
+            .confirmationDialog("Export Tax CSV", isPresented: $showExportOptions) {
+                Button("Export (exclude unreconciled)") {
+                    exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: false)
+                    if exportFileURL != nil { showShareSheet = true }
+                }
+                Button("Export (include unreconciled, flagged)") {
+                    exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: true)
+                    if exportFileURL != nil { showShareSheet = true }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = exportFileURL {
+                    LedgerShareSheet(url: url)
+                }
+            }
+        }
+    }
+
+    // MARK: - P&L View
+
+    private var pnlFilteredEntries: [PortfolioLedgerEntry] {
+        pnlIncludeUnreconciled ? entries : entries.filter { $0.needsReconciliation != true }
+    }
+
+    @ViewBuilder
+    private var pnlView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Picker("Group by", selection: $pnlGrouping) {
+                    ForEach(LedgerPnLGrouping.allCases, id: \.self) { g in
+                        Text(g.rawValue).tag(g)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Toggle(isOn: $pnlIncludeUnreconciled) {
+                HStack(spacing: 4) {
+                    Text("Include unreconciled")
+                        .font(.caption)
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                    if pnlIncludeUnreconciled {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+            .tint(HobbyIQTheme.Colors.electricBlue)
+
+            let grouped = groupedPnL(pnlFilteredEntries, by: pnlGrouping)
+            ForEach(grouped, id: \.key) { group in
+                pnlGroupCard(group)
+            }
+
+            if pnlFilteredEntries.isEmpty {
+                Text("No entries match the current filter.")
+                    .font(.caption)
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20)
+            }
+        }
+    }
+
+    private struct PnLGroup {
+        let key: String
+        let count: Int
+        let grossProceeds: Double
+        let totalFees: Double
+        let netProceeds: Double
+        let costBasis: Double
+        let realizedPnL: Double
+        let hasUnreconciled: Bool
+    }
+
+    private func groupedPnL(_ entries: [PortfolioLedgerEntry], by grouping: LedgerPnLGrouping) -> [PnLGroup] {
+        let dict = Dictionary(grouping: entries) { entry -> String in
+            switch grouping {
+            case .month:
+                return monthKey(from: entry)
+            case .player:
+                return entry.playerName.isEmpty ? "Unknown" : entry.playerName
+            case .source:
+                return (entry.source ?? "manual").capitalized
+            }
+        }
+
+        return dict.map { key, items in
+            PnLGroup(
+                key: key,
+                count: items.count,
+                grossProceeds: items.compactMap(\.grossProceeds).reduce(0, +),
+                totalFees: items.compactMap(\.totalGranularFees).reduce(0, +),
+                netProceeds: items.compactMap(\.netProceeds).reduce(0, +),
+                costBasis: items.compactMap(\.costBasisSold).reduce(0, +),
+                realizedPnL: items.compactMap(\.realizedProfitLoss).reduce(0, +),
+                hasUnreconciled: items.contains { $0.needsReconciliation == true }
+            )
+        }
+        .sorted { $0.key > $1.key }
+    }
+
+    private func monthKey(from entry: PortfolioLedgerEntry) -> String {
+        guard let soldAt = entry.soldAt, !soldAt.isEmpty else { return entry.dateText }
+        let fmtFrac = ISO8601DateFormatter()
+        fmtFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let fmtStd = ISO8601DateFormatter()
+        fmtStd.formatOptions = [.withInternetDateTime]
+        guard let date = fmtFrac.date(from: soldAt) ?? fmtStd.date(from: soldAt) else { return entry.dateText }
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM"
+        return df.string(from: date)
+    }
+
+    private func pnlGroupCard(_ group: PnLGroup) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                HStack(spacing: 6) {
+                    Text(group.key)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    if group.hasUnreconciled && pnlIncludeUnreconciled {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                    }
+                }
+                Spacer()
+                Text("\(group.count) sale\(group.count == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+            }
+
+            HStack(spacing: 0) {
+                pnlMetric(label: "Revenue", value: group.grossProceeds)
+                Spacer(minLength: 0)
+                pnlMetric(label: "Fees", value: group.totalFees)
+                Spacer(minLength: 0)
+                pnlMetric(label: "Cost", value: group.costBasis)
+                Spacer(minLength: 0)
+                VStack(spacing: 2) {
+                    Text("P&L")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                    Text(group.realizedPnL.portfolioSignedCurrencyText)
+                        .font(.caption.bold())
+                        .foregroundStyle(group.realizedPnL >= 0 ? .green : .red)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private func pnlMetric(label: String, value: Double) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            Text(value.portfolioCurrencyText)
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func ledgerTotalsCard(_ totals: PortfolioLedgerTotals) -> some View {
+        HStack(spacing: 0) {
+            ledgerTotalItem(label: "Gross", value: totals.grossProceeds)
+            Spacer(minLength: 0)
+            ledgerTotalItem(label: "Net", value: totals.netProceeds)
+            Spacer(minLength: 0)
+            ledgerTotalItem(label: "P&L", value: totals.realizedProfitLoss, signed: true)
+        }
+        .frame(maxWidth: .infinity)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private func ledgerTotalItem(label: String, value: Double?, signed: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            if let value {
+                Text(signed ? value.portfolioSignedCurrencyText : value.portfolioCurrencyText)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(signed ? (value >= 0 ? Color.green : Color.red) : .white)
+            } else {
+                Text("—")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+            }
+        }
+    }
+
+    // dismiss action deferred pending PATCH endpoint.
+    private func ledgerAttentionSection(_ entries: [PortfolioLedgerEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                Text("Needs your attention")
+                    .font(.caption.bold())
+                    .foregroundStyle(.orange)
+                Text("(\(entries.count))")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.orange.opacity(0.7))
+            }
+
+            ForEach(entries) { entry in
+                Button { selectedEntry = entry } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "cart.badge.questionmark")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Text(entry.playerName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Spacer(minLength: 0)
+                        Text("Incomplete fees")
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.8))
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(Color(hex: 0x9CA3AF))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private func ledgerRow(_ entry: PortfolioLedgerEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(entry.playerName)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                        if entry.isEbaySource {
+                            Text("eBay")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color(hex: 0x3665F3).opacity(0.8))
+                                .clipShape(Capsule())
+                        }
+                        if entry.needsReconciliation == true {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    Text(entry.cardName)
+                        .font(.caption)
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                }
+
+                Spacer(minLength: 0)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(entry.salePrice.portfolioCurrencyText)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text(entry.profit.portfolioSignedCurrencyText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(entry.profit >= 0 ? .green : .red)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Text(entry.dateText)
+                    .font(.caption2)
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                if entry.isEbaySource, let total = entry.totalGranularFees {
+                    Text("Fees: \(total.portfolioCurrencyText)")
+                        .font(.caption2)
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+}
+
+// MARK: - Ledger Entry Detail
+
+private struct LedgerEntryDetailSheet: View {
+    let entry: PortfolioLedgerEntry
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    headerSection
+                    transactionSection
+                    if entry.isEbaySource {
+                        ebayFeeBreakdownSection
+                    }
+                    if entry.costBasisSold != nil || entry.suppliesCost != nil || entry.gradingCost != nil {
+                        costBasisSection
+                    }
+                    profitSection
+                    // gradingCost + suppliesCost entry forms deferred pending backend endpoint.
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 20)
+            }
+            .background { HobbyIQBackground() }
+            .navigationTitle("Sale Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+            }
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(entry.playerName)
+                    .font(.title3.bold())
+                    .foregroundStyle(.white)
+                if entry.isEbaySource {
+                    Text("eBay")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: 0x3665F3).opacity(0.8))
+                        .clipShape(Capsule())
+                }
+            }
+            if !entry.cardName.isEmpty {
+                Text(entry.cardName)
+                    .font(.subheadline)
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+            }
+            if entry.needsReconciliation == true {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                    Text("Needs reconciliation — some fees are pending")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.orange)
+                .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private var transactionSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            detailSectionHeader("Transaction")
+            detailRow("Sale Price", value: entry.salePrice.portfolioCurrencyText)
+            if let gross = entry.grossProceeds {
+                detailRow("Gross Proceeds", value: gross.portfolioCurrencyText)
+            }
+            if let net = entry.netProceeds {
+                detailRow("Net Proceeds", value: net.portfolioCurrencyText)
+            }
+            if let netPayout = entry.netPayout {
+                detailRow("eBay Net Payout", value: netPayout.portfolioCurrencyText)
+            }
+            detailRow("Date", value: entry.dateText)
+            if let orderId = entry.ebayOrderId {
+                detailRow("eBay Order", value: orderId)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private var ebayFeeBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            detailSectionHeader("eBay Fee Breakdown")
+            feeRow("Final Value Fee", fee: entry.finalValueFee)
+            feeRow("Payment Processing", fee: entry.paymentProcessingFee)
+            feeRow("Promoted Listing", fee: entry.promotedListingFee)
+            feeRow("Ad Fee", fee: entry.adFee)
+            feeRow("Shipping Cost", fee: entry.actualShippingCost)
+            feeRow("Other Fees", fee: entry.otherFees)
+
+            if let total = entry.totalGranularFees {
+                Divider().overlay(Color(hex: 0x9CA3AF).opacity(0.3))
+                detailRow("Total Known Fees", value: total.portfolioCurrencyText, bold: true)
+            }
+
+            if entry.hasAnyNullFee {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 10))
+                    Text("Some fees are pending — eBay has not reported them yet")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.orange.opacity(0.8))
+                .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private var costBasisSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            detailSectionHeader("Cost Basis")
+            if let cost = entry.costBasisSold {
+                detailRow("Purchase Cost", value: cost.portfolioCurrencyText)
+            }
+            feeRow("Grading Cost", fee: entry.gradingCost)
+            feeRow("Supplies Cost", fee: entry.suppliesCost)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private var profitSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            detailSectionHeader("Profit / Loss")
+            HStack {
+                Text("Realized P&L")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                Spacer()
+                Text(entry.profit.portfolioSignedCurrencyText)
+                    .font(.headline.bold())
+                    .foregroundStyle(entry.profit >= 0 ? .green : .red)
+            }
+            if let pct = entry.realizedProfitLossPct {
+                HStack {
+                    Text("ROI")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                    Spacer()
+                    Text(String(format: "%+.1f%%", pct))
+                        .font(.subheadline.bold())
+                        .foregroundStyle(pct >= 0 ? .green : .red)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private func detailSectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .textCase(.uppercase)
+    }
+
+    private func detailRow(_ label: String, value: String, bold: Bool = false) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(bold ? .bold : .medium))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func feeRow(_ label: String, fee: Double?) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            Spacer()
+            if let fee {
+                Text(fee.portfolioCurrencyText)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+            } else {
+                Text("Pending")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.orange.opacity(0.15))
+                    .clipShape(Capsule())
+            }
         }
     }
 }
@@ -613,6 +1144,16 @@ private struct PortfolioLedgerEmptyState: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
+}
+
+// MARK: - Share Sheet
+
+private struct LedgerShareSheet: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Preview Data
