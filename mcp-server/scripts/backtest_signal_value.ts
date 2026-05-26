@@ -525,17 +525,149 @@ interface PredictionArmResult {
   error?: string;
 }
 
-async function runSignalOnArm(card: Card): Promise<PredictionArmResult> {
+async function runSignalOnArm(
+  card: Card,
+  ablateSignal: string | null = null,
+): Promise<PredictionArmResult> {
   // Fetch signals ONCE up front, pass the captured payload as override so
   // signal-on and signal-off arms agree on which payload counts as "on."
+  //
+  // CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS (2026-05-25): when ablateSignal is set,
+  // we mutate the fetched payload to neutralize one signal source — set its
+  // component to 1.0, strip its flags, and recompute final_multiplier under
+  // the aggregator's WEIGHTS contract. Lets us measure per-signal lift via
+  // pairwise backtest deltas.
+  //
+  // Snapshot mode (env var SIGNALS_FIXTURE_DIR): when set, read each
+  // player's aggregated-signal payload from a local JSON fixture instead of
+  // calling fetchSignals (which hits the live aggregator). Eliminates per-run
+  // signal drift across an ablation series — required for clean per-signal
+  // attribution methodology. Fixture filename matches the aggregator's
+  // player_slug() output: lowercase, whitespace-to-hyphen.
   const { pricing: p } = await loadDeps();
   try {
-    const signals = await p.fetchSignals(card.playerName);
-    const result = await p.getPredictedPrice(card, { signalsOverride: signals });
-    return { ok: true, result, signalPayload: signals };
+    let signals: SignalPayload;
+    const fixtureDir = process.env.SIGNALS_FIXTURE_DIR;
+    if (fixtureDir) {
+      const slug = card.playerName.toLowerCase().trim().replace(/\s+/g, "-");
+      const fixturePath = path.join(fixtureDir, `${slug}.json`);
+      const raw = await fs.readFile(fixturePath, "utf8");
+      signals = JSON.parse(raw) as SignalPayload;
+    } else {
+      signals = await p.fetchSignals(card.playerName);
+    }
+    const effective = ablateSignal ? ablateSignalPayload(signals, ablateSignal) : signals;
+    const result = await p.getPredictedPrice(card, { signalsOverride: effective });
+    return { ok: true, result, signalPayload: effective };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
+}
+
+// CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS — per-signal ablation helper.
+//
+// Mirrors the aggregator's WEIGHTS contract from
+// compiq-functions/fn-signal-aggregator/function.py exactly. If the
+// aggregator's WEIGHTS or social-blend logic ever change, this must update
+// in lockstep — covered by the harness's --self-test pass.
+//
+// Note: `youtube` is not in the aggregator's WEIGHTS dict directly — it's
+// blended into the social_avg with reddit + trends (effective weight 0.10
+// via social-slot share). It IS an ablatable signal source though, so it
+// appears here with its effective weight. The ablateSignalPayload function
+// handles the social-blend interaction correctly.
+const ABLATION_WEIGHTS: Record<string, number> = {
+  compsMomentum: 0.20,
+  ebay: 0.20,
+  reddit: 0.15,
+  trends: 0.15,
+  odds: 0.15,
+  stats: 0.10,
+  news: 0.05,
+  youtube: 0.10,
+};
+
+// Flag-string → source-signal mapping. Built from aggregator's flag-emit
+// block (lines 60-83 of function.py at HEAD). When ablating signal X, strip
+// flags that came from X so the LLM prompt's "Active Flags" list reflects
+// the ablated state, not the original.
+function isFlagFromSource(flag: string, source: string): boolean {
+  switch (source) {
+    case "compsMomentum":
+      return flag === "compsMomentum_rising" ||
+             flag === "compsMomentum_falling" ||
+             flag === "compsMomentum_no_data";
+    case "stats":
+      return flag === "player_slump" || flag.startsWith("milestone:");
+    case "news":
+      return flag === "negative_news" || flag === "injury_risk";
+    case "trends":
+      return flag === "search_spike";
+    case "reddit":
+      return flag === "reddit_buzz";
+    case "ebay":
+      return flag === "ebay_demand_high" ||
+             flag.startsWith("bin_dropping:") ||
+             flag.startsWith("low_sell_through:");
+    case "odds":
+      return flag === "award_contender";
+    case "youtube":
+      return flag.startsWith("youtube_");
+    default:
+      return false;
+  }
+}
+
+function ablateSignalPayload(payload: SignalPayload, source: string): SignalPayload {
+  const components = { ...(payload.components ?? {}) } as Record<string, number | undefined>;
+  components[source] = 1.0;
+
+  // Recompute final_multiplier under aggregator's WEIGHTS contract.
+  const yt = source === "youtube" ? 1.0 : (components.youtube ?? 1.0);
+  const reddit = source === "reddit" ? 1.0 : (components.reddit ?? 1.0);
+  const trends = source === "trends" ? 1.0 : (components.trends ?? 1.0);
+  const socialAvg = (reddit + trends + yt) / 3.0;
+
+  let combined = 0;
+  for (const [k, w] of Object.entries(ABLATION_WEIGHTS)) {
+    if (k === "reddit" || k === "trends") {
+      combined += socialAvg * w;
+    } else {
+      const v = source === k ? 1.0 : (components[k] ?? 1.0);
+      combined += v * w;
+    }
+  }
+
+  // Apply show/pack/playoff/arc overlays from payload (these are not
+  // per-signal-source so ablation doesn't touch them).
+  combined *= payload.show_multiplier ?? 1.0;
+  combined *= payload.release_multiplier ?? 1.0;
+  combined *= payload.playoff_multiplier ?? 1.0;
+  combined *= payload.career_arc_multiplier ?? 1.0;
+
+  // Clamp to [0.70, 1.50] matching aggregator.
+  combined = Math.max(0.70, Math.min(1.50, Math.round(combined * 1000) / 1000));
+
+  // Strip flags from ablated source.
+  const newFlags = (payload.signal_flags ?? []).filter((f) => !isFlagFromSource(f, source));
+
+  // For ebay-specific top-level passthroughs, neutralize so the MCP prompt
+  // doesn't surface stale market-structure context.
+  const ebayPassThrough = source === "ebay"
+    ? { bin_signal: null, bin_drop_pct: null, sell_through_rate: null, str_signal: null }
+    : {};
+
+  const direction: "rising" | "falling" | "stable" =
+    combined > 1.08 ? "rising" : combined < 0.93 ? "falling" : "stable";
+
+  return {
+    ...payload,
+    ...ebayPassThrough,
+    final_multiplier: combined,
+    predicted_direction: direction,
+    signal_flags: newFlags,
+    components: components as SignalPayload["components"],
+  };
 }
 
 async function runSignalOffArm(card: Card): Promise<PredictionArmResult> {
@@ -1149,6 +1281,7 @@ interface CliOpts {
   outputMd: string | null;
   limit: number | null;
   repeats: number;
+  ablateSignal: string | null;
 }
 
 function parseArgs(argv: string[]): CliOpts {
@@ -1160,6 +1293,7 @@ function parseArgs(argv: string[]): CliOpts {
     outputMd: null,
     limit: null,
     repeats: 1,
+    ablateSignal: null,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -1170,6 +1304,7 @@ function parseArgs(argv: string[]): CliOpts {
     else if (a === "--output-md") opts.outputMd = argv[++i];
     else if (a === "--limit") opts.limit = Number(argv[++i]);
     else if (a === "--repeats") opts.repeats = Math.max(1, Number(argv[++i]));
+    else if (a === "--ablate-signal") opts.ablateSignal = argv[++i];
     else throw new Error(`Unknown flag: ${a}`);
   }
   return opts;
@@ -1211,6 +1346,14 @@ async function main(): Promise<void> {
   }
   const cards = opts.limit ? cohort.cards.slice(0, opts.limit) : cohort.cards;
   console.log(`[backtest] cohort=${cohort.cohort_id} cards=${cards.length}${opts.limit ? ` (limit ${opts.limit})` : ""}`);
+  if (opts.ablateSignal) {
+    if (!Object.prototype.hasOwnProperty.call(ABLATION_WEIGHTS, opts.ablateSignal)) {
+      throw new Error(
+        `--ablate-signal: unknown signal '${opts.ablateSignal}'. Valid: ${Object.keys(ABLATION_WEIGHTS).join(", ")}`,
+      );
+    }
+    console.log(`[backtest] ABLATION MODE: signal-on arm has '${opts.ablateSignal}' neutralized to 1.0; flags from that source stripped; final_multiplier recomputed.`);
+  }
 
   const asOf = new Date();
   const asOfStr = asOf.toISOString();
@@ -1300,7 +1443,7 @@ async function main(): Promise<void> {
       }
 
       console.log(`[backtest] ${card.id}`);
-      const onArm = await runSignalOnArm(card);
+      const onArm = await runSignalOnArm(card, opts.ablateSignal);
       console.log(`  signal-on:  ${onArm.ok ? `72h=${onArm.result!.predicted_price_72h} 7d=${onArm.result!.predicted_price_7d} conf=${onArm.result!.confidence}` : `ERROR: ${onArm.error}`}`);
       const offArm = await runSignalOffArm(card);
       console.log(`  signal-off: ${offArm.ok ? `72h=${offArm.result!.predicted_price_72h} 7d=${offArm.result!.predicted_price_7d} conf=${offArm.result!.confidence}` : `ERROR: ${offArm.error}`}`);

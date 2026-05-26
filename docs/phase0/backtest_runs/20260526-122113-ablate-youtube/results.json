@@ -1,0 +1,230 @@
+{
+  "run_id": "2026-05-26T12-21-15-603Z",
+  "cohort_id": "v1-seed",
+  "repeats": 5,
+  "cohort_size": 15,
+  "prediction_input_window_days": {
+    "from_days_ago": 60,
+    "to_days_ago": 14
+  },
+  "ground_truth_window_days": {
+    "from_days_ago": 14,
+    "to_days_ago": 0
+  },
+  "per_run": [
+    {
+      "run_index": 1,
+      "run_id": "2026-05-26T12-21-15-603Z-r1",
+      "scored_pairs": 14,
+      "mape_delta_72h": -10.62,
+      "mape_delta_7d": -19.08,
+      "direction_acc_delta": 7.14,
+      "wilcoxon_pvalue_7d": 0.015906,
+      "verdict_branch": "insufficient_data"
+    },
+    {
+      "run_index": 2,
+      "run_id": "2026-05-26T12-21-15-603Z-r2",
+      "scored_pairs": 14,
+      "mape_delta_72h": -13.79,
+      "mape_delta_7d": -20.62,
+      "direction_acc_delta": 14.29,
+      "wilcoxon_pvalue_7d": 0.012792,
+      "verdict_branch": "insufficient_data"
+    },
+    {
+      "run_index": 3,
+      "run_id": "2026-05-26T12-21-15-603Z-r3",
+      "scored_pairs": 14,
+      "mape_delta_72h": -9.99,
+      "mape_delta_7d": -19.06,
+      "direction_acc_delta": 0,
+      "wilcoxon_pvalue_7d": 0.020795,
+      "verdict_branch": "insufficient_data"
+    },
+    {
+      "run_index": 4,
+      "run_id": "2026-05-26T12-21-15-603Z-r4",
+      "scored_pairs": 14,
+      "mape_delta_72h": -17.08,
+      "mape_delta_7d": -21.77,
+      "direction_acc_delta": 7.14,
+      "wilcoxon_pvalue_7d": 0.026231,
+      "verdict_branch": "insufficient_data"
+    },
+    {
+      "run_index": 5,
+      "run_id": "2026-05-26T12-21-15-603Z-r5",
+      "scored_pairs": 14,
+      "mape_delta_72h": -17.08,
+      "mape_delta_7d": -26.29,
+      "direction_acc_delta": 14.29,
+      "wilcoxon_pvalue_7d": 0.015022,
+      "verdict_branch": "insufficient_data"
+    }
+  ],
+  "cross_run_stats": {
+    "mape_delta_72h_mean": -13.71,
+    "mape_delta_72h_stdev": 3.4,
+    "mape_delta_72h_sign_stability": 1,
+    "mape_delta_7d_mean": -21.36,
+    "mape_delta_7d_stdev": 2.98,
+    "mape_delta_7d_sign_stability": 1,
+    "direction_acc_delta_mean": 8.57,
+    "direction_acc_delta_stdev": 5.98
+  },
+  "per_card_consistency": [
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0.2,
+      "direction_correct_on_rate": 0.2,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 12.18,
+      "mean_pct_error_off_7d": 15.01,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|PSA 10|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 28.95,
+      "mean_pct_error_off_7d": 28.95,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 1,
+      "direction_correct_off_rate": 0.2,
+      "mean_pct_error_on_7d": 11.03,
+      "mean_pct_error_off_7d": 1.03,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|PSA 10|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 1,
+      "direction_correct_on_rate": 1,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 3.85,
+      "mean_pct_error_off_7d": 19.58,
+      "stable_arm_winner_7d": "on"
+    },
+    {
+      "cardId": "Cody Bellinger|2017|Topps Update|US159|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 72.57,
+      "mean_pct_error_off_7d": 36.46,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Shohei Ohtani|2018|Topps Update|US1|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 1,
+      "direction_correct_off_rate": 0.4,
+      "mean_pct_error_on_7d": 11.34,
+      "mean_pct_error_off_7d": 10.67,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Shohei Ohtani|2018|Topps Update|US1|PSA 10|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 1,
+      "mean_pct_error_on_7d": 16.77,
+      "mean_pct_error_off_7d": 6.16,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Ronald Acuna Jr|2018|Topps Update|US250|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 1,
+      "direction_correct_off_rate": 1,
+      "mean_pct_error_on_7d": 97.77,
+      "mean_pct_error_off_7d": 15.08,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Ronald Acuna Jr|2018|Topps Update|US250|PSA 10|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 145.5,
+      "mean_pct_error_off_7d": 92.13,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Juan Soto|2018|Topps Update|US300|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0.2,
+      "mean_pct_error_on_7d": 40.01,
+      "mean_pct_error_off_7d": 18.12,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Gleyber Torres|2018|Topps Update|US186|raw|base",
+      "runs_scored": 0,
+      "signal_on_wins_7d_rate": null,
+      "direction_correct_on_rate": null,
+      "direction_correct_off_rate": null,
+      "mean_pct_error_on_7d": null,
+      "mean_pct_error_off_7d": null,
+      "stable_arm_winner_7d": "no_actuals"
+    },
+    {
+      "cardId": "Bobby Witt Jr|2022|Topps Chrome Update|USC10|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0.6,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0.2,
+      "mean_pct_error_on_7d": 45.36,
+      "mean_pct_error_off_7d": 41.19,
+      "stable_arm_winner_7d": "mixed"
+    },
+    {
+      "cardId": "Paul Skenes|2024|Topps Chrome Update|USC53|raw|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 148.91,
+      "mean_pct_error_off_7d": 87.62,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Paul Skenes|2024|Topps Chrome Update|USC53|PSA 10|base",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 0,
+      "direction_correct_off_rate": 0,
+      "mean_pct_error_on_7d": 29.73,
+      "mean_pct_error_off_7d": 8.11,
+      "stable_arm_winner_7d": "off"
+    },
+    {
+      "cardId": "Caleb Bonemer|2024|Bowman Draft Chrome|CPA-CBO|raw|Chrome Prospect Autograph",
+      "runs_scored": 5,
+      "signal_on_wins_7d_rate": 0,
+      "direction_correct_on_rate": 1,
+      "direction_correct_off_rate": 1,
+      "mean_pct_error_on_7d": 18.5,
+      "mean_pct_error_off_7d": 3.29,
+      "stable_arm_winner_7d": "off"
+    }
+  ],
+  "multi_run_verdict": "stable_signals_hurt",
+  "next_workstream_recommendation": "Stable result: signals consistently HURT accuracy across runs. Recommended next: CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS — investigate which signals contribute negatively."
+}

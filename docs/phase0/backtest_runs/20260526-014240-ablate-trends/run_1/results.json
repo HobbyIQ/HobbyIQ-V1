@@ -1,0 +1,1864 @@
+{
+  "aggregate": {
+    "run_id": "2026-05-26T01-42-42-431Z-r1",
+    "cohort_id": "v1-seed",
+    "asOfDate": "2026-05-26T01:42:42.431Z",
+    "prediction_input_window_days": {
+      "from_days_ago": 60,
+      "to_days_ago": 14
+    },
+    "ground_truth_window_days": {
+      "from_days_ago": 14,
+      "to_days_ago": 0
+    },
+    "cohort_size": 15,
+    "scored_pairs": 14,
+    "skipped": {
+      "no_actuals": 1,
+      "prediction_failed": 0
+    },
+    "aggregate": {
+      "mape_on_72h": 37.69,
+      "mape_off_72h": 27.03,
+      "mape_delta_72h": -10.66,
+      "mape_on_7d": 37.06,
+      "mape_off_7d": 33.73,
+      "mape_delta_7d": -3.33,
+      "wilcoxon_pvalue_72h": 0.15486,
+      "wilcoxon_pvalue_7d": 0.328065,
+      "direction_acc_on": 35.71,
+      "direction_acc_off": 42.86,
+      "direction_acc_delta": -7.14
+    },
+    "by_confidence_band": {
+      "conf_80_plus": {
+        "n": 0,
+        "mape_on": null,
+        "mape_off": null,
+        "delta": null
+      },
+      "conf_60_79": {
+        "n": 1,
+        "mape_on": 6.546423064342783,
+        "mape_off": 20.564459604691365,
+        "delta": 14.018036540348582
+      },
+      "conf_40_59": {
+        "n": 13,
+        "mape_on": 39.40904560626552,
+        "mape_off": 34.741891521038085,
+        "delta": -4.667154085227438
+      },
+      "conf_under_40": {
+        "n": 0,
+        "mape_on": null,
+        "mape_off": null,
+        "delta": null
+      }
+    },
+    "verdict_branch": "insufficient_data"
+  },
+  "per_card": [
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|raw|base",
+      "cohortIndex": 0,
+      "playerName": "Mike Trout",
+      "year": 2011,
+      "set": "Topps Update",
+      "cardNumber": "US175",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-30T01:00:01Z",
+        "to": "2026-05-09T16:05:55Z",
+        "n": 46
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:28:14.599970Z",
+        "to": "2026-05-25T02:24:00Z",
+        "n": 14
+      },
+      "actualMedian": 353,
+      "actualMedian_source": "median of 14 comps in [now-14d, now]",
+      "inputMedian": 350,
+      "signals_on": {
+        "predicted_price_72h": 350,
+        "predicted_price_7d": 300,
+        "predicted_direction": "falling",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales volatility with a downward trend",
+          "No sales in the last 72 hours indicating low demand",
+          "Upcoming card show may not positively impact short-term prices"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 376.6% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 0.978,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_falling",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 0.853,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 0.956,
+            "news": 0.85,
+            "youtube": 1
+          },
+          "player": "Mike Trout",
+          "component_signals": {
+            "compsMomentum": "falling",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "stable"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.207187"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 300,
+        "predicted_price_7d": 350,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming National Sports Collectors Convention may boost interest and sales.",
+          "Recent sales indicate a potential rebound from lower prices.",
+          "Mike Trout's status as a rookie card maintains a strong collector interest."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 376.6% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 3,
+        "abs_error_off_72h": 53,
+        "abs_error_on_7d": 53,
+        "abs_error_off_7d": 3,
+        "pct_error_on_72h": 0.85,
+        "pct_error_off_72h": 15.01,
+        "pct_error_on_7d": 15.01,
+        "pct_error_off_7d": 0.85,
+        "direction_correct_on": false,
+        "direction_correct_off": true,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": true,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Mike Trout|2011|Topps Update|US175|PSA 10|base",
+      "cohortIndex": 1,
+      "playerName": "Mike Trout",
+      "year": 2011,
+      "set": "Topps Update",
+      "cardNumber": "US175",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-29T01:00:01Z",
+        "to": "2026-05-11T16:33:22.156409Z",
+        "n": 59
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T12:18:52Z",
+        "to": "2026-05-25T01:55:01Z",
+        "n": 21
+      },
+      "actualMedian": 1199,
+      "actualMedian_source": "median of 21 comps in [now-14d, now]",
+      "inputMedian": 1249.99,
+      "signals_on": {
+        "predicted_price_72h": 1225,
+        "predicted_price_7d": 1150,
+        "predicted_direction": "falling",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent price drop from $1500 to $1249.99 indicates declining demand.",
+          "Injury risk flag may deter potential buyers.",
+          "Upcoming Chicagoland Sports Card Expo could lead to increased supply and lower prices."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 238.3% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 0.978,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_falling",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 0.853,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 0.956,
+            "news": 0.85,
+            "youtube": 1
+          },
+          "player": "Mike Trout",
+          "component_signals": {
+            "compsMomentum": "falling",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "stable"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.207187"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 1200,
+        "predicted_price_7d": 1150,
+        "predicted_direction": "falling",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales trend shows a decline in price",
+          "No sales in the last 7 days indicating low demand",
+          "High variance in recent sales prices suggests instability"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 238.3% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 26,
+        "abs_error_off_72h": 1,
+        "abs_error_on_7d": 49,
+        "abs_error_off_7d": 49,
+        "pct_error_on_72h": 2.17,
+        "pct_error_off_72h": 0.08,
+        "pct_error_on_7d": 4.09,
+        "pct_error_off_7d": 4.09,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|raw|base",
+      "cohortIndex": 2,
+      "playerName": "Aaron Judge",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US87",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T02:12:00Z",
+        "to": "2026-05-12T01:12:00Z",
+        "n": 235
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:23:07.703932Z",
+        "to": "2026-05-25T16:14:19.771229Z",
+        "n": 76
+      },
+      "actualMedian": 39.99,
+      "actualMedian_source": "median of 76 comps in [now-14d, now]",
+      "inputMedian": 37,
+      "signals_on": {
+        "predicted_price_72h": 38,
+        "predicted_price_7d": 40,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales indicate a stable price range around $37-$40.",
+          "Upcoming Chicagoland Sports Card Expo may increase demand.",
+          "Injury risk could lead to price fluctuations, but current market sentiment remains stable."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 732.8% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.018,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_no_data",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_rising"
+          ],
+          "components": {
+            "compsMomentum": 1,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 0.952,
+            "news": 0.85,
+            "youtube": 1.1
+          },
+          "player": "Aaron Judge",
+          "component_signals": {
+            "compsMomentum": "no_data",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "rising",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "rising"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.741173"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 39,
+        "predicted_price_7d": 42,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales volatility indicates potential for price recovery.",
+          "Upcoming National Sports Collectors Convention could increase demand.",
+          "Current market signals are stable despite recent fluctuations."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 732.8% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 1.990000000000002,
+        "abs_error_off_72h": 0.990000000000002,
+        "abs_error_on_7d": 0.00999999999999801,
+        "abs_error_off_7d": 2.009999999999998,
+        "pct_error_on_72h": 4.98,
+        "pct_error_off_72h": 2.48,
+        "pct_error_on_7d": 0.03,
+        "pct_error_off_7d": 5.03,
+        "direction_correct_on": false,
+        "direction_correct_off": true,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": true
+    },
+    {
+      "cardId": "Aaron Judge|2017|Topps Update|US87|PSA 10|base",
+      "cohortIndex": 3,
+      "playerName": "Aaron Judge",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US87",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-28T00:00:45Z",
+        "to": "2026-05-11T01:00:00Z",
+        "n": 15
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:22:00.321123Z",
+        "to": "2026-05-25T02:48:29Z",
+        "n": 7
+      },
+      "actualMedian": 286,
+      "actualMedian_source": "median of 7 comps in [now-14d, now]",
+      "inputMedian": 225,
+      "signals_on": {
+        "predicted_price_72h": 240,
+        "predicted_price_7d": 260,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Recent high sale of $284.00 indicating potential upward momentum",
+          "Stable market signals despite thin comp volume"
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days",
+          "high_price_variance: 96% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.018,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_no_data",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_rising"
+          ],
+          "components": {
+            "compsMomentum": 1,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 0.952,
+            "news": 0.85,
+            "youtube": 1.1
+          },
+          "player": "Aaron Judge",
+          "component_signals": {
+            "compsMomentum": "no_data",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "rising",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "rising"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.741173"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 250,
+        "predicted_price_7d": 230,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent high sale of $284 indicates potential for upward movement.",
+          "Upcoming National Sports Collectors Convention could increase demand.",
+          "Current market volatility suggests potential for price fluctuations."
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days",
+          "high_price_variance: 96% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 46,
+        "abs_error_off_72h": 36,
+        "abs_error_on_7d": 26,
+        "abs_error_off_7d": 56,
+        "pct_error_on_72h": 16.08,
+        "pct_error_off_72h": 12.59,
+        "pct_error_on_7d": 9.09,
+        "pct_error_off_7d": 19.58,
+        "direction_correct_on": true,
+        "direction_correct_off": false,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": true
+    },
+    {
+      "cardId": "Cody Bellinger|2017|Topps Update|US159|raw|base",
+      "cohortIndex": 4,
+      "playerName": "Cody Bellinger",
+      "year": 2017,
+      "set": "Topps Update",
+      "cardNumber": "US159",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T16:17:55.022443Z",
+        "to": "2026-05-11T16:28:14.781040Z",
+        "n": 85
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:22:01.052946Z",
+        "to": "2026-05-25T16:14:19.771229Z",
+        "n": 21
+      },
+      "actualMedian": 2.99,
+      "actualMedian_source": "median of 21 comps in [now-14d, now]",
+      "inputMedian": 3.6,
+      "signals_on": {
+        "predicted_price_72h": 3.77,
+        "predicted_price_7d": 4.05,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Increased YouTube hype around Cody Bellinger",
+          "Recent sales indicate a potential upward trend despite volatility"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 588.9% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.045,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_rising"
+          ],
+          "components": {
+            "compsMomentum": 1.031,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.012,
+            "news": 1.15,
+            "youtube": 1.1
+          },
+          "player": "Cody Bellinger",
+          "component_signals": {
+            "compsMomentum": "stable",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "spiking",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "rising"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:01.745651"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 3.6,
+        "predicted_price_7d": 4.2,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming National Sports Collectors Convention (catalyst for increased demand)",
+          "Recent volatility in sales prices indicating potential for upward movement",
+          "Rookie card status which typically commands higher prices"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 588.9% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 0.7799999999999998,
+        "abs_error_off_72h": 0.6099999999999999,
+        "abs_error_on_7d": 1.0599999999999996,
+        "abs_error_off_7d": 1.21,
+        "pct_error_on_72h": 26.09,
+        "pct_error_off_72h": 20.4,
+        "pct_error_on_7d": 35.45,
+        "pct_error_off_7d": 40.47,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "falling"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": true
+    },
+    {
+      "cardId": "Shohei Ohtani|2018|Topps Update|US1|raw|base",
+      "cohortIndex": 5,
+      "playerName": "Shohei Ohtani",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US1",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T16:16:30.678670Z",
+        "to": "2026-05-11T16:25:47.999464Z",
+        "n": 128
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T04:17:57Z",
+        "to": "2026-05-25T18:02:39Z",
+        "n": 30
+      },
+      "actualMedian": 147.745,
+      "actualMedian_source": "median of 30 comps in [now-14d, now]",
+      "inputMedian": 141.8,
+      "signals_on": {
+        "predicted_price_72h": 186,
+        "predicted_price_7d": 175,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo may increase demand.",
+          "Recent comps show a rising momentum despite recent volatility.",
+          "Injury risk may affect player performance and demand."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 261.8% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.069,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 1.2,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.051,
+            "news": 1.15,
+            "youtube": 0.95
+          },
+          "player": "Shohei Ohtani",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "softening"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.482995"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 180,
+        "predicted_price_7d": 165,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales indicate a stabilization around $180 despite volatility.",
+          "The National Sports Collectors Convention is expected to increase demand.",
+          "The card's rookie status and Ohtani's popularity maintain a strong collector interest."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 261.8% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 38.254999999999995,
+        "abs_error_off_72h": 32.254999999999995,
+        "abs_error_on_7d": 27.254999999999995,
+        "abs_error_off_7d": 17.254999999999995,
+        "pct_error_on_72h": 25.89,
+        "pct_error_off_72h": 21.83,
+        "pct_error_on_7d": 18.45,
+        "pct_error_off_7d": 11.68,
+        "direction_correct_on": true,
+        "direction_correct_off": true,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Shohei Ohtani|2018|Topps Update|US1|PSA 10|base",
+      "cohortIndex": 6,
+      "playerName": "Shohei Ohtani",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US1",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-29T16:14:43.094795Z",
+        "to": "2026-05-11T18:57:41Z",
+        "n": 73
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:21:13.421180Z",
+        "to": "2026-05-25T03:00:01Z",
+        "n": 13
+      },
+      "actualMedian": 471,
+      "actualMedian_source": "median of 13 comps in [now-14d, now]",
+      "inputMedian": 463,
+      "signals_on": {
+        "predicted_price_72h": 550,
+        "predicted_price_7d": 600,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales show a significant price range, indicating volatility but also potential for upward movement.",
+          "Upcoming Chicagoland Sports Card Expo may increase demand and visibility for the card.",
+          "Positive news sentiment and stats momentum are contributing to a favorable market outlook."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 89.9% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.069,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 1.2,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.051,
+            "news": 1.15,
+            "youtube": 0.95
+          },
+          "player": "Shohei Ohtani",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "softening"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:00.482995"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 550,
+        "predicted_price_7d": 500,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales show a wide variance, indicating volatility but also potential for price recovery.",
+          "Upcoming National Sports Collectors Convention may increase demand.",
+          "The card's rookie status and PSA 10 grade maintain its value."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 89.9% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 79,
+        "abs_error_off_72h": 79,
+        "abs_error_on_7d": 129,
+        "abs_error_off_7d": 29,
+        "pct_error_on_72h": 16.77,
+        "pct_error_off_72h": 16.77,
+        "pct_error_on_7d": 27.39,
+        "pct_error_off_7d": 6.16,
+        "direction_correct_on": false,
+        "direction_correct_off": true,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Ronald Acuna Jr|2018|Topps Update|US250|raw|base",
+      "cohortIndex": 7,
+      "playerName": "Ronald Acuna Jr",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US250",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-28T16:14:55.658762Z",
+        "to": "2026-05-12T00:38:01Z",
+        "n": 101
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T16:21:14.257984Z",
+        "to": "2026-05-24T16:11:50.796383Z",
+        "n": 21
+      },
+      "actualMedian": 8.95,
+      "actualMedian_source": "median of 21 comps in [now-14d, now]",
+      "inputMedian": 6.5,
+      "signals_on": {
+        "predicted_price_72h": 7,
+        "predicted_price_7d": 8.5,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Recent sales show rising momentum despite injury risk",
+          "High variance in recent sales indicates potential for price recovery"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 827.8% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.053,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 1.194,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.058,
+            "news": 0.85,
+            "youtube": 0.95
+          },
+          "player": "Ronald Acuna Jr",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "softening"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:01.123978"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 5,
+        "predicted_price_7d": 7.5,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming National Sports Collectors Convention may increase demand.",
+          "Recent sales show a volatile trend but with potential upward momentum.",
+          "The card's rookie status adds intrinsic value."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 827.8% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 1.9499999999999993,
+        "abs_error_off_72h": 3.9499999999999993,
+        "abs_error_on_7d": 0.4499999999999993,
+        "abs_error_off_7d": 1.4499999999999993,
+        "pct_error_on_72h": 21.79,
+        "pct_error_off_72h": 44.13,
+        "pct_error_on_7d": 5.03,
+        "pct_error_off_7d": 16.2,
+        "direction_correct_on": true,
+        "direction_correct_off": true,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": true,
+      "signal_on_wins_7d": true
+    },
+    {
+      "cardId": "Ronald Acuna Jr|2018|Topps Update|US250|PSA 10|base",
+      "cohortIndex": 8,
+      "playerName": "Ronald Acuna Jr",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US250",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-30T00:21:01Z",
+        "to": "2026-05-12T00:40:35Z",
+        "n": 43
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T02:53:00Z",
+        "to": "2026-05-24T11:48:09Z",
+        "n": 17
+      },
+      "actualMedian": 39.95,
+      "actualMedian_source": "median of 17 comps in [now-14d, now]",
+      "inputMedian": 46,
+      "signals_on": {
+        "predicted_price_72h": 55,
+        "predicted_price_7d": 60,
+        "predicted_direction": "rising",
+        "confidence": 50,
+        "key_drivers": [
+          "Recent sales show a strong upward trend with prices reaching as high as $100.00 recently.",
+          "Upcoming Chicagoland Sports Card Expo may increase demand and visibility for the card.",
+          "The player, Ronald Acuna Jr., is a popular rookie, which typically drives higher prices."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 626.1% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.053,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 1.194,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.058,
+            "news": 0.85,
+            "youtube": 0.95
+          },
+          "player": "Ronald Acuna Jr",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "softening"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:01.123978"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 50,
+        "predicted_price_7d": 55,
+        "predicted_direction": "rising",
+        "confidence": 45,
+        "key_drivers": [
+          "Upcoming National Sports Collectors Convention (catalyst for increased demand)",
+          "Recent sales indicate a potential upward trend despite volatility",
+          "Rookie card status and PSA 10 grade provide strong market appeal"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 626.1% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 15.049999999999997,
+        "abs_error_off_72h": 10.049999999999997,
+        "abs_error_on_7d": 20.049999999999997,
+        "abs_error_off_7d": 15.049999999999997,
+        "pct_error_on_72h": 37.67,
+        "pct_error_off_72h": 25.16,
+        "pct_error_on_7d": 50.19,
+        "pct_error_off_7d": 37.67,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "falling"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Juan Soto|2018|Topps Update|US300|raw|base",
+      "cohortIndex": 9,
+      "playerName": "Juan Soto",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US300",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T21:49:45Z",
+        "to": "2026-05-11T16:25:47.999464Z",
+        "n": 158
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T02:16:33Z",
+        "to": "2026-05-25T16:13:05.606278Z",
+        "n": 49
+      },
+      "actualMedian": 6.58,
+      "actualMedian_source": "median of 49 comps in [now-14d, now]",
+      "inputMedian": 7.38,
+      "signals_on": {
+        "predicted_price_72h": 18.57,
+        "predicted_price_7d": 20,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Recent price volatility indicating potential upward movement",
+          "Increased interest in Juan Soto due to performance and market trends"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 1206.6% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.024,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "pre_show: Chicagoland Sports Card Expo in 11 days"
+          ],
+          "components": {
+            "compsMomentum": 0.973,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.017,
+            "news": 1.15,
+            "youtube": 1
+          },
+          "player": "Juan Soto",
+          "component_signals": {
+            "compsMomentum": "stable",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "stable"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:01.422441"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 15,
+        "predicted_price_7d": 20,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent volatility in sales prices indicates potential for upward movement.",
+          "The National Sports Collectors Convention is approaching, which could increase demand.",
+          "The card's rookie status and recent buzz around Juan Soto may attract collectors."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 1206.6% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 11.99,
+        "abs_error_off_72h": 8.42,
+        "abs_error_on_7d": 13.42,
+        "abs_error_off_7d": 13.42,
+        "pct_error_on_72h": 182.22,
+        "pct_error_off_72h": 127.96,
+        "pct_error_on_7d": 203.95,
+        "pct_error_off_7d": 203.95,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "falling"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Gleyber Torres|2018|Topps Update|US186|raw|base",
+      "cohortIndex": 10,
+      "playerName": "Gleyber Torres",
+      "year": 2018,
+      "set": "Topps Update",
+      "cardNumber": "US186",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-31T16:19:49.267565Z",
+        "to": "2026-05-03T16:18:19.238268Z",
+        "n": 6
+      },
+      "ground_truth_window": {
+        "from": "",
+        "to": "",
+        "n": 0
+      },
+      "actualMedian": null,
+      "actualMedian_source": "median of 0 comps in [now-14d, now]",
+      "inputMedian": 3.1149999999999998,
+      "signals_on": {
+        "predicted_price_72h": 13.5,
+        "predicted_price_7d": 15,
+        "predicted_direction": "rising",
+        "confidence": 40,
+        "key_drivers": [
+          "Recent price spike to $18.86 indicates renewed interest",
+          "Upcoming Chicagoland Sports Card Expo could increase demand",
+          "YouTube hype is currently strong, suggesting increased visibility"
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 2 comps in 30 days",
+          "high_price_variance: 100% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.079,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_spiking"
+          ],
+          "components": {
+            "compsMomentum": 1.2,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.056,
+            "news": 0.85,
+            "youtube": 1.2
+          },
+          "player": "Gleyber Torres",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "rising",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "spiking"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:02.103175"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 12,
+        "predicted_price_7d": 10,
+        "predicted_direction": "falling",
+        "confidence": 30,
+        "key_drivers": [
+          "Recent sales volatility with a significant drop from $18.86 to $5.14",
+          "Thin market with only 2 comps in the last 30 days",
+          "No sales in the last 7 days indicating a lack of demand"
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 2 comps in 30 days",
+          "high_price_variance: 100% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": null,
+        "abs_error_off_72h": null,
+        "abs_error_on_7d": null,
+        "abs_error_off_7d": null,
+        "pct_error_on_72h": null,
+        "pct_error_off_72h": null,
+        "pct_error_on_7d": null,
+        "pct_error_off_7d": null,
+        "direction_correct_on": null,
+        "direction_correct_off": null,
+        "actual_direction": "unknown"
+      },
+      "signal_on_wins_72h": null,
+      "signal_on_wins_7d": null
+    },
+    {
+      "cardId": "Bobby Witt Jr|2022|Topps Chrome Update|USC10|raw|base",
+      "cohortIndex": 11,
+      "playerName": "Bobby Witt Jr",
+      "year": 2022,
+      "set": "Topps Chrome Update",
+      "cardNumber": "USC10",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T02:00:01Z",
+        "to": "2026-05-11T23:48:00Z",
+        "n": 385
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T02:35:01Z",
+        "to": "2026-05-25T16:53:06.686947Z",
+        "n": 117
+      },
+      "actualMedian": 11.99,
+      "actualMedian_source": "median of 117 comps in [now-14d, now]",
+      "inputMedian": 12,
+      "signals_on": {
+        "predicted_price_72h": 14,
+        "predicted_price_7d": 12.5,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent comps show a wide variance, indicating volatility in pricing.",
+          "Upcoming Chicagoland Sports Card Expo may increase interest and demand.",
+          "Current market signals suggest stable demand despite recent fluctuations."
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 757.3% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.019,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_falling",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_spiking"
+          ],
+          "components": {
+            "compsMomentum": 0.85,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.014,
+            "news": 1.15,
+            "youtube": 1.2
+          },
+          "player": "Bobby Witt Jr",
+          "component_signals": {
+            "compsMomentum": "falling",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "spiking",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "spiking"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:02.356467"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 14,
+        "predicted_price_7d": 12.5,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Rookie card status driving interest",
+          "Upcoming National Sports Collectors Convention as a catalyst",
+          "Recent price volatility indicating potential for stabilization"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 757.3% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 2.01,
+        "abs_error_off_72h": 2.01,
+        "abs_error_on_7d": 0.5099999999999998,
+        "abs_error_off_7d": 0.5099999999999998,
+        "pct_error_on_72h": 16.76,
+        "pct_error_off_72h": 16.76,
+        "pct_error_on_7d": 4.25,
+        "pct_error_off_7d": 4.25,
+        "direction_correct_on": true,
+        "direction_correct_off": true,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Paul Skenes|2024|Topps Chrome Update|USC53|raw|base",
+      "cohortIndex": 12,
+      "playerName": "Paul Skenes",
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "cardNumber": "USC53",
+      "grade": "raw",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T01:46:55Z",
+        "to": "2026-05-12T01:15:01Z",
+        "n": 335
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T04:56:34Z",
+        "to": "2026-05-25T16:49:28.191800Z",
+        "n": 114
+      },
+      "actualMedian": 15.495000000000001,
+      "actualMedian_source": "median of 114 comps in [now-14d, now]",
+      "inputMedian": 22.72,
+      "signals_on": {
+        "predicted_price_72h": 40,
+        "predicted_price_7d": 35,
+        "predicted_direction": "stable",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Recent comps show a mix of high and low sales, indicating volatility but also interest",
+          "Stable demand signals from eBay and social media platforms"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 2324.1% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.074,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_fading"
+          ],
+          "components": {
+            "compsMomentum": 1.2,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.3,
+            "news": 0.85,
+            "youtube": 0.9
+          },
+          "player": "Paul Skenes",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "fading"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:02.600589"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 25,
+        "predicted_price_7d": 30,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Rookie card status driving demand",
+          "Upcoming National Sports Collectors Convention as a catalyst",
+          "Recent sales volatility indicating potential for price recovery"
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 2324.1% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 24.505,
+        "abs_error_off_72h": 9.504999999999999,
+        "abs_error_on_7d": 19.505,
+        "abs_error_off_7d": 14.504999999999999,
+        "pct_error_on_72h": 158.15,
+        "pct_error_off_72h": 61.34,
+        "pct_error_on_7d": 125.88,
+        "pct_error_off_7d": 93.61,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "falling"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Paul Skenes|2024|Topps Chrome Update|USC53|PSA 10|base",
+      "cohortIndex": 13,
+      "playerName": "Paul Skenes",
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "cardNumber": "USC53",
+      "grade": "PSA 10",
+      "variant": "base",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T01:44:00Z",
+        "to": "2026-05-11T01:36:00Z",
+        "n": 97
+      },
+      "ground_truth_window": {
+        "from": "2026-05-13T01:11:15Z",
+        "to": "2026-05-25T16:49:28.191800Z",
+        "n": 46
+      },
+      "actualMedian": 185,
+      "actualMedian_source": "median of 46 comps in [now-14d, now]",
+      "inputMedian": 185,
+      "signals_on": {
+        "predicted_price_72h": 198,
+        "predicted_price_7d": 210,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo in 11 days",
+          "Recent comps show a rising trend despite recent volatility",
+          "Injury risk flag may create urgency among buyers"
+        ],
+        "risk_flags": [
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 184.2% spread"
+        ],
+        "signal_payload": {
+          "final_multiplier": 1.074,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_rising",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_fading"
+          ],
+          "components": {
+            "compsMomentum": 1.2,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1.3,
+            "news": 0.85,
+            "youtube": 0.9
+          },
+          "player": "Paul Skenes",
+          "component_signals": {
+            "compsMomentum": "rising",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "unknown",
+            "news": "neutral",
+            "youtube": "fading"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:02.600589"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 190,
+        "predicted_price_7d": 200,
+        "predicted_direction": "rising",
+        "confidence": 55,
+        "key_drivers": [
+          "Recent sales indicate a recovery from lower prices, with a recent high of $237.50.",
+          "The upcoming National Sports Collectors Convention could increase interest and demand for rookie cards.",
+          "The card's strong grade (PSA 10) and rookie status contribute to its value."
+        ],
+        "risk_flags": [
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "high_price_variance: 184.2% spread"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 13,
+        "abs_error_off_72h": 5,
+        "abs_error_on_7d": 25,
+        "abs_error_off_7d": 15,
+        "pct_error_on_72h": 7.03,
+        "pct_error_off_72h": 2.7,
+        "pct_error_on_7d": 13.51,
+        "pct_error_off_7d": 8.11,
+        "direction_correct_on": false,
+        "direction_correct_off": false,
+        "actual_direction": "stable"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": false
+    },
+    {
+      "cardId": "Caleb Bonemer|2024|Bowman Draft Chrome|CPA-CBO|raw|Chrome Prospect Autograph",
+      "cohortIndex": 14,
+      "playerName": "Caleb Bonemer",
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "cardNumber": "CPA-CBO",
+      "grade": "raw",
+      "variant": "Chrome Prospect Autograph",
+      "asOfDate": "2026-05-26T01:42:42.431Z",
+      "prediction_input_window": {
+        "from": "2026-03-27T23:10:01Z",
+        "to": "2026-05-09T16:05:57.289623Z",
+        "n": 19
+      },
+      "ground_truth_window": {
+        "from": "2026-05-12T02:45:00Z",
+        "to": "2026-05-17T00:33:09Z",
+        "n": 4
+      },
+      "actualMedian": 107.005,
+      "actualMedian_source": "median of 4 comps in [now-14d, now]",
+      "inputMedian": 65,
+      "signals_on": {
+        "predicted_price_72h": 95,
+        "predicted_price_7d": 100,
+        "predicted_direction": "rising",
+        "confidence": 60,
+        "key_drivers": [
+          "Upcoming Chicagoland Sports Card Expo may increase demand.",
+          "Recent sales have shown a recovery from lower prices.",
+          "Stable market signals despite injury risk."
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "injury_risk",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days"
+        ],
+        "signal_payload": {
+          "final_multiplier": 0.987,
+          "predicted_direction": "stable",
+          "signal_flags": [
+            "injury_risk",
+            "compsMomentum_falling",
+            "pre_show: Chicagoland Sports Card Expo in 11 days",
+            "youtube_fading"
+          ],
+          "components": {
+            "compsMomentum": 0.85,
+            "ebay": 1,
+            "reddit": 1,
+            "trends": 1,
+            "odds": 1,
+            "stats": 1,
+            "news": 1.15,
+            "youtube": 0.9
+          },
+          "player": "Caleb Bonemer",
+          "component_signals": {
+            "compsMomentum": "falling",
+            "ebay": "auth_failed",
+            "reddit": "auth_failed",
+            "trends": "stable",
+            "odds": "no_api_key",
+            "stats": "no_game_log",
+            "news": "neutral",
+            "youtube": "fading"
+          },
+          "bin_signal": null,
+          "bin_drop_pct": null,
+          "sell_through_rate": null,
+          "str_signal": null,
+          "show_phase": "pre_show",
+          "show_name": "Chicagoland Sports Card Expo",
+          "days_to_show": 11,
+          "show_multiplier": 1.02,
+          "release_phase": "neutral",
+          "release_name": null,
+          "days_to_release": null,
+          "release_multiplier": 1,
+          "playoff_signal": "no_team_registry",
+          "playoff_window": null,
+          "playoff_multiplier": 1,
+          "career_arc_signal": [],
+          "career_arc_multiplier": 1,
+          "updated_at": "2026-05-26T00:50:02.854466"
+        }
+      },
+      "signals_off": {
+        "predicted_price_72h": 95,
+        "predicted_price_7d": 85,
+        "predicted_direction": "stable",
+        "confidence": 60,
+        "key_drivers": [
+          "Recent sales have shown a slight upward trend, with the last sale at $124.99.",
+          "The upcoming National Sports Collectors Convention could increase demand.",
+          "Market signals are stable, indicating no immediate downward pressure."
+        ],
+        "risk_flags": [
+          "thin_market_lt_5_comps_30d",
+          "stale_signals",
+          "no_sales_last_7d_data_stale",
+          "thin_market: only 4 comps in 30 days"
+        ]
+      },
+      "deltas": {
+        "abs_error_on_72h": 12.004999999999995,
+        "abs_error_off_72h": 12.004999999999995,
+        "abs_error_on_7d": 7.0049999999999955,
+        "abs_error_off_7d": 22.004999999999995,
+        "pct_error_on_72h": 11.22,
+        "pct_error_off_72h": 11.22,
+        "pct_error_on_7d": 6.55,
+        "pct_error_off_7d": 20.56,
+        "direction_correct_on": true,
+        "direction_correct_off": false,
+        "actual_direction": "rising"
+      },
+      "signal_on_wins_72h": false,
+      "signal_on_wins_7d": true
+    }
+  ]
+}
