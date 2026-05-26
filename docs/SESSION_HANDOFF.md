@@ -5,6 +5,7 @@
 (updated 2026-05-25 PM — YouTube signal credentials restored on fn-compiq; CF-RESTORE-SIGNAL-CREDS partial close)
 (updated 2026-05-26 — PR E partial shipped with quality gaps (6a37c76); TrendIQ Phase 2 plumbing shipped (9f73eb6); photo field fix shipped (67a1095); 4 new CFs surfaced for Day 2)
 (updated 2026-05-26 PM — third photo/clientId erasure site fixed (6b324fb); CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR surfaced)
+(updated 2026-05-26 PM2 — InventoryCard backend field name mismatch fixed (13fe547); CF-INVENTORY-REFRESH-WIRING surfaced)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -4218,6 +4219,7 @@ Backend work needed to unblock deferred Phase 2 + Phase 3:
 | `6b324fb` | Third photo/clientId erasure site fixed — `updatingCompEstimate()` in CompatibilityShims.swift |
 | `9f73eb6` | TrendIQ Phase 2 plumbing — types, decoding, result view UI, layer breakdown sheet |
 | `67a1095` | Photo field erasure fix — forward `photos` + `clientId` in InventoryCard reconstruction (2 of 3 sites) |
+| `13fe547` | InventoryCard backend field name mismatch fix — decode `quickSaleValue`→`lowValue`, `premiumValue`→`highValue`, `verdict`→`method`, `freshnessStatus`→`summary` |
 
 ### CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR (NEW, MEDIUM, ~2-3h)
 
@@ -4232,3 +4234,21 @@ Three reconstruction sites have now had the same field-erasure bug (67a1095 fixe
 - Confirm photos persist after refresh
 - Confirm clientId persists
 - If photos still disappear: HALT — there may be a fourth reconstruction site or a different bug class
+
+### CF-INVENTORY-DECODE-FIELD-MISMATCH (SHIPPED, 13fe547)
+
+Backend `autoPriceHolding()` stores pricing as `quickSaleValue`, `premiumValue`, `fairMarketValue`, `verdict`, `freshnessStatus`. iOS `InventoryCard` CodingKeys expected `lowValue`, `highValue`, `method`, `summary`. Field name mismatches caused silent decode failures — ranges and freshness metadata decoded as nil even when backend had populated them. Cards showed correct headline `currentValue` (name matches) but range values and freshness indicator defaulted to stale/empty.
+
+**Fix:** Added `BackendKeys` CodingKey enum with fallback decoding. Priority chain: camelCase → snake_case → backend keys. 4 unit tests added.
+
+### CF-INVENTORY-REFRESH-WIRING (NEW, HIGH, ~1-2h Day 2 Mac)
+
+Backend endpoint exists: `POST /api/portfolio/holdings/:id/refresh` (calls `autoPriceHolding()`). iOS has NO `APIService` method calling it. The main inventory ViewModel (`PortfolioIQViewModel`) has no comp refresh capability — `fetch()` only calls `GET /api/portfolio` which returns stored values.
+
+**Required work:**
+- Add `APIService.refreshHolding(id:)` calling `POST /api/portfolio/holdings/:id/refresh`
+- Wire to UI: pull-to-refresh in InventoryIQView and/or per-card refresh button in detail view
+- After refresh response, update the card in the ViewModel inventory list (not just local view state)
+- Runtime verification required: refresh a card with stale comps, confirm fresh values appear
+
+**Context:** Even with the field name mismatch fix (13fe547), values only update when `autoPriceHolding()` runs server-side (on add/update). Users have no way to trigger a comp refresh from the inventory screen after initial add.
