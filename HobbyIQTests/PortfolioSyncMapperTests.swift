@@ -212,4 +212,110 @@ final class PortfolioSyncMapperTests: XCTestCase {
 
         XCTAssertEqual(card.currentValue, 999.0)
     }
+
+    // MARK: - InventoryCard Decode — Backend Field Name Fallbacks
+
+    func testDecodeBackendPricingFieldNames() throws {
+        let json = """
+        {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "playerName": "Shohei Ohtani",
+            "cardName": "2024 Topps Chrome",
+            "cost": 50.0,
+            "currentValue": 120.0,
+            "status": "owned",
+            "quickSaleValue": 95.0,
+            "premiumValue": 150.0,
+            "fairMarketValue": 120.0,
+            "confidence": 0.87,
+            "verdict": "Hold",
+            "freshnessStatus": "Live",
+            "isAuto": false
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertEqual(card.lowValue, 95.0, "quickSaleValue should decode as lowValue")
+        XCTAssertEqual(card.highValue, 150.0, "premiumValue should decode as highValue")
+        XCTAssertEqual(card.confidence, 0.87)
+        XCTAssertEqual(card.method, "Hold", "verdict should decode as method")
+        XCTAssertEqual(card.summary, "Live", "freshnessStatus should decode as summary")
+        XCTAssertEqual(card.currentValue, 120.0)
+    }
+
+    func testDecodeCamelCaseFieldNamesStillWork() throws {
+        let json = """
+        {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "playerName": "Mike Trout",
+            "cardName": "2023 Topps",
+            "cost": 10.0,
+            "currentValue": 25.0,
+            "status": "owned",
+            "lowValue": 20.0,
+            "highValue": 30.0,
+            "confidence": 0.9,
+            "method": "CompIQ",
+            "summary": "3 comps used",
+            "isAuto": false
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertEqual(card.lowValue, 20.0)
+        XCTAssertEqual(card.highValue, 30.0)
+        XCTAssertEqual(card.method, "CompIQ")
+        XCTAssertEqual(card.summary, "3 comps used")
+    }
+
+    func testDecodeCamelCaseTakesPriorityOverBackendKeys() throws {
+        let json = """
+        {
+            "playerName": "Test",
+            "cardName": "Test",
+            "cost": 0,
+            "currentValue": 100,
+            "status": "owned",
+            "lowValue": 80.0,
+            "quickSaleValue": 70.0,
+            "highValue": 120.0,
+            "premiumValue": 130.0,
+            "method": "CompIQ",
+            "verdict": "Sell",
+            "summary": "Fresh",
+            "freshnessStatus": "Live",
+            "isAuto": false
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertEqual(card.lowValue, 80.0, "camelCase lowValue should win over quickSaleValue")
+        XCTAssertEqual(card.highValue, 120.0, "camelCase highValue should win over premiumValue")
+        XCTAssertEqual(card.method, "CompIQ", "camelCase method should win over verdict")
+        XCTAssertEqual(card.summary, "Fresh", "camelCase summary should win over freshnessStatus")
+    }
+
+    func testDecodeBackendFieldsNilWhenAbsent() throws {
+        let json = """
+        {
+            "playerName": "Sparse",
+            "cardName": "Card",
+            "cost": 5.0,
+            "currentValue": 10.0,
+            "status": "owned",
+            "isAuto": false
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertNil(card.lowValue)
+        XCTAssertNil(card.highValue)
+        XCTAssertNil(card.confidence)
+        XCTAssertNil(card.method)
+        XCTAssertNil(card.summary)
+    }
 }

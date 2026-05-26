@@ -1558,9 +1558,16 @@ extension InventoryCard {
         case clientId = "client_id"
     }
 
+    // Backend autoPriceHolding() uses different field names for pricing/freshness
+    private enum BackendKeys: String, CodingKey {
+        case quickSaleValue, premiumValue, fairMarketValue
+        case verdict, freshnessStatus, compsUsed
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let s = try decoder.container(keyedBy: SnakeKeys.self)
+        let b = try decoder.container(keyedBy: BackendKeys.self)
 
         self.id = (try? c.decode(UUID.self, forKey: .id))
             ?? (try? s.decode(UUID.self, forKey: .id)) ?? UUID()
@@ -1571,7 +1578,8 @@ extension InventoryCard {
         self.cost = (try? c.decode(Double.self, forKey: .cost))
             ?? (try? s.decode(Double.self, forKey: .cost)) ?? 0
         self.currentValue = (try? c.decode(Double.self, forKey: .currentValue))
-            ?? (try? s.decode(Double.self, forKey: .currentValue)) ?? 0
+            ?? (try? s.decode(Double.self, forKey: .currentValue))
+            ?? (try? b.decode(Double.self, forKey: .fairMarketValue)) ?? 0
         self.status = (try? c.decode(String.self, forKey: .status))
             ?? (try? s.decode(String.self, forKey: .status)) ?? "active"
         self.year = (try? c.decode(String.self, forKey: .year))
@@ -1596,14 +1604,18 @@ extension InventoryCard {
             ?? (try? s.decode(String.self, forKey: .imageBackUrl))
         self.lowValue = (try? c.decode(Double.self, forKey: .lowValue))
             ?? (try? s.decode(Double.self, forKey: .lowValue))
+            ?? (try? b.decode(Double.self, forKey: .quickSaleValue))
         self.highValue = (try? c.decode(Double.self, forKey: .highValue))
             ?? (try? s.decode(Double.self, forKey: .highValue))
+            ?? (try? b.decode(Double.self, forKey: .premiumValue))
         self.confidence = (try? c.decode(Double.self, forKey: .confidence))
             ?? (try? s.decode(Double.self, forKey: .confidence))
         self.method = (try? c.decode(String.self, forKey: .method))
             ?? (try? s.decode(String.self, forKey: .method))
+            ?? (try? b.decode(String.self, forKey: .verdict))
         self.summary = (try? c.decode(String.self, forKey: .summary))
             ?? (try? s.decode(String.self, forKey: .summary))
+            ?? (try? b.decode(String.self, forKey: .freshnessStatus))
         self.isAuto = (try? c.decode(Bool.self, forKey: .isAuto))
             ?? (try? s.decode(Bool.self, forKey: .isAuto)) ?? false
         self.photos = (try? c.decode([String].self, forKey: .photos))
