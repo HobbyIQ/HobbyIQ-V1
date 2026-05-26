@@ -7,6 +7,7 @@
 (updated 2026-05-26 PM — third photo/clientId erasure site fixed (6b324fb); CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR surfaced)
 (updated 2026-05-26 PM2 — InventoryCard backend field name mismatch fixed (13fe547); CF-INVENTORY-REFRESH-WIRING surfaced)
 (updated 2026-05-26 PM3 — CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING shipped to prod; 0/24 production rescues — two follow-up CFs surfaced explaining why)
+(updated 2026-05-26 PM4 — CF-POLLUTED-METADATA-HOLDINGS investigation findings; root cause is field-name contract mismatch, not data pollution — see [phase0/polluted_metadata_holdings_investigation.md](phase0/polluted_metadata_holdings_investigation.md))
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -89,7 +90,54 @@ added.
 
 ---
 
-### CF-POLLUTED-METADATA-HOLDINGS (NEW, MEDIUM, ~2-3h investigation + fix)
+### CF-POLLUTED-METADATA-HOLDINGS — INVESTIGATION COMPLETE (2026-05-26 PM4)
+
+**Findings doc:** [phase0/polluted_metadata_holdings_investigation.md](phase0/polluted_metadata_holdings_investigation.md)
+
+**Major reframing — NOT polluted metadata, field-name contract mismatch:**
+
+The data IS present on the 13 iOS-real holdings. It's stored under
+phantom field names (`year`, `setName`, `cardName`) that the pricing
+code never reads (it reads canonical `cardYear`, `product`, `cardTitle`
+from the TS type). The `addHolding` backend endpoint is schemaless
+(spreads `req.body` directly) so whatever iOS sends gets stored as-is.
+
+| iOS writes | Pricing code reads | Result |
+|---|---|---|
+| `year: 2024` | `holding.cardYear` (undefined) | wildcard lookup |
+| `setName: "Bowman Chrome"` | `holding.product` (undefined) | wildcard lookup |
+| `cardName: "..."` | `holding.cardTitle` (undefined) | unused |
+
+**The investigation surfaces FOUR new CFs and supersedes the original
+CF-POLLUTED-METADATA-HOLDINGS framing:**
+
+1. **CF-AUTOPRICE-FIELD-NAME-SHIM** (NEW, MEDIUM, ~30 min — RECOMMENDED
+   IMMEDIATE FIX): backend read-path fallback `cardYear ?? year`,
+   `product ?? setName`. 4-line change, no schema/data mutation,
+   immediately unlocks 13/24 iOS-real holdings for proper pricing.
+2. **CF-PLAYERNAME-NORMALIZATION** (NEW, MEDIUM, ~2-3h): 9 of the 13
+   iOS-real holdings have variant text bleeding into `playerName`
+   ("MIKE TROUT WAL-MART BORDER", etc.) — iOS scan-path concatenation
+   issue.
+3. **CF-IOS-FIELD-CONTRACT-FIX** (NEW, MEDIUM, ~2-3h): update iOS to
+   send canonical field names so future writes are contract-compliant.
+   Backend shim stays for backward compat.
+4. **CF-PORTFOLIO-METADATA-BACKFILL** (NEW, LOW, ~1-2h, cosmetic):
+   one-time Cosmos migration to canonicalize on-disk field names.
+   Optional after iOS contract fix.
+
+**Original Options A/B/C/D from the CF prompt are SUPERSEDED** by the
+field-name shim — it's lower-risk and higher-leverage than any of them.
+
+**Authorization gate:** approve the shim scope or specify a different
+sequence before any implementation.
+
+---
+
+### CF-POLLUTED-METADATA-HOLDINGS (original framing — superseded above)
+
+**ORIGINAL FRAMING (kept for context — now superseded by the
+investigation findings above):**
 
 Holdings stored with `cardYear` / `product` null trigger Cardsight's
 wildcard catalog lookup, which returns the WRONG `cardIdentity` (e.g.,
@@ -97,16 +145,6 @@ sparse "Paul Skenes" + `isAuto: true` → "Bowman 2026 BA-24" instead of
 "Bowman Chrome 2024 Auto"). Sibling pool fetched against the wrong card
 is empty → autoprice falls through to `no-recent-comps` even though the
 right card has dozens of comps.
-
-**Root causes to investigate:**
-
-- Add-card path in iOS or backend not capturing year/product correctly
-  (look at PortfolioHolding upsert flow + iOS card-scan path)
-- Backend wildcard catalog lookup should be more conservative (reject
-  ambiguous matches rather than returning wrong card)
-- Polluted-metadata holdings should be flagged for user correction
-  (could be a UI surface: "We can't price this card — add year/set
-  details")
 
 **Affects 19/24 current holdings.** Highest-value fix in terms of user
 impact because almost every holding hits this path.
