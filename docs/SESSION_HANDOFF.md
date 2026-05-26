@@ -8,6 +8,7 @@
 (updated 2026-05-26 PM2 — InventoryCard backend field name mismatch fixed (13fe547); CF-INVENTORY-REFRESH-WIRING surfaced)
 (updated 2026-05-26 PM3 — CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING shipped to prod; 0/24 production rescues — two follow-up CFs surfaced explaining why)
 (updated 2026-05-26 PM4 — CF-POLLUTED-METADATA-HOLDINGS investigation findings; root cause is field-name contract mismatch, not data pollution — see [phase0/polluted_metadata_holdings_investigation.md](phase0/polluted_metadata_holdings_investigation.md))
+(updated 2026-05-26 PM5 — CF-VARIANT-FILTER-LOOSENING design phase complete; recommends Option B attribute-tiered fallback — see [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md). Implementation gated on user authorization. Phase 1 is analytical (per approval); empirical sweep deferred to pre-implementation step.)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -63,30 +64,40 @@ None of the 24 current holdings hit all three.
 
 ---
 
-### CF-VARIANT-FILTER-LOOSENING (NEW, HIGH, ~2-4h design + impl)
+### CF-VARIANT-FILTER-LOOSENING — DESIGN COMPLETE (2026-05-26 PM5)
 
-Variant filter inside `computeEstimate` rejects legitimately-matching
-comps for the variant cohort. Skenes example: 66 comps fetched, all
-rejected for `comp_missing_auto` despite the search target being
-explicitly `isAuto: true`. This is the dominant blocker for the 2/24
-variant-mismatch cohort and likely scales as more variant cards are
-added.
+**Design doc:** [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md)
 
-**Design questions to lock before implementation:**
+**Cohort:** 6 holdings remain in `variant-mismatch` state after CF-AUTOPRICE-FIELD-NAME-SHIM (`2400f94`) + CF-PLAYERNAME-NORMALIZATION (`2f444f5`) deployed. Failure-mode taxonomy reduces to three modes (M1 auto+single-word-parallel cascade, M2 single-word color over-strict, M3 malformed parallel string).
 
-- When is a comp valid for a variant cohort? (Title regex isn't catching
-  legitimate auto-bearing comp titles)
-- Should the variant filter relax when a sibling-pool-style fallback
-  fires? (Currently strict; sibling rescue can't engage because the
-  filter excludes upstream)
-- Should the filter be aware of the search target's variant attributes
-  vs the comp's? (`isAuto: true` search target + auto-bearing comp
-  shouldn't be rejected)
-- Should confidence tier based on variant-match strictness? (Strict
-  match = 95 cap, fuzzy match = 75 cap, sibling-pool = 65 cap)
+**Recommended option:** **Option B — attribute-tiered fallback**
 
-**Implementation gated on design lock.** Affects 2/24 current holdings
-(Skenes + Bonemer variant flagging); scales with variant inventory growth.
+When the hard variant-mismatch guard would trip (`everythingFilteredOut`), progressively re-relax the variant criteria in tiers and retry the filter loop. Stop at the first tier yielding ≥3 comps. Cap confidence by tier:
+
+| Tier | Filter | Confidence cap |
+|---|---|---:|
+| T0 | full `isCompVariantMatch` (current) | 95 |
+| T1 | drop parallel check | 80 |
+| T2 | drop parallel + auto check | 65 |
+| T3 | accept any comp from resolved card_id | 55 |
+| Fallback | current `variant-mismatch` short-circuit | 0 |
+
+**Rationale:** mirrors the existing `applyParallelFilter`/`applyAutoFilter`/`applyGradeFilter` progressive-fallback pattern (already proven in post-filter stage); handles all three failure modes without per-rule tuning; gives iOS UI a confidence-capped price instead of `null`; strictly safer than re-entering sibling-rescue from the variant-mismatch branch (Option C).
+
+**Phase 4 open questions (require design lock before implementation):**
+
+1. Confidence-cap mechanics — multiplicative cap vs. additive penalty vs. replacement
+2. iOS surfacing of tier label (verdict text vs. confidence-drop only)
+3. T2/sibling-rescue interaction (re-fetch via `fetchSiblingSales` vs. re-use original comps)
+4. `comp_has_unwanted_auto` direction — should tier ladder also relax base-card pricing from auto comps?
+5. M3 root cause (malformed `parallel` field) — separate input-canonicalization workstream?
+6. Sweep methodology — live cohort vs. fixture set for regression
+7. Backtest gating — re-run pricing-accuracy backtest before merge?
+8. `variantWarning`-driven critical short-circuit (lines 1426-1427 in compiqEstimate) — apply tier ladder here too?
+
+**Authorization gate:** implementation requires user approval (lock answers to ≥1, 2, 3, 4, 8 above before starting). Other questions can be parked for post-impl tuning.
+
+**Phase 1 is analytical** (per user approval): empirical per-holding sweep deferred to a pre-implementation step. Design options don't depend on exact comp counts — they depend on the failure-mode taxonomy, which is derivable from code reading + the polluted-metadata cohort table.
 
 ---
 
