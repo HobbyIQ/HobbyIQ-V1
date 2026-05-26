@@ -4,6 +4,7 @@
 (updated 2026-05-25 — fn-compiq backend investigation findings appended; see [phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md))
 (updated 2026-05-25 PM — YouTube signal credentials restored on fn-compiq; CF-RESTORE-SIGNAL-CREDS partial close)
 (updated 2026-05-26 — PR E partial shipped with quality gaps (6a37c76); TrendIQ Phase 2 plumbing shipped (9f73eb6); photo field fix shipped (67a1095); 4 new CFs surfaced for Day 2)
+(updated 2026-05-26 PM — third photo/clientId erasure site fixed (6b324fb); CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR surfaced)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -4214,5 +4215,20 @@ Backend work needed to unblock deferred Phase 2 + Phase 3:
 
 | Commit | Description |
 |--------|-------------|
+| `6b324fb` | Third photo/clientId erasure site fixed — `updatingCompEstimate()` in CompatibilityShims.swift |
 | `9f73eb6` | TrendIQ Phase 2 plumbing — types, decoding, result view UI, layer breakdown sheet |
-| `67a1095` | Photo field erasure fix — forward `photos` + `clientId` in InventoryCard reconstruction |
+| `67a1095` | Photo field erasure fix — forward `photos` + `clientId` in InventoryCard reconstruction (2 of 3 sites) |
+
+### CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR (NEW, MEDIUM, ~2-3h)
+
+Three reconstruction sites have now had the same field-erasure bug (67a1095 fixed 2, 6b324fb fixed 1). The pattern is fragile — manual field-forwarding in InventoryCard init calls is error-prone and will break again when new fields are added.
+
+**Recommendation:** Design a `withUpdates(...)` helper or computed-update approach that preserves all stored properties by default, only overwriting explicitly named fields. Apply to all InventoryCard reconstruction sites and audit similar patterns in other models (PortfolioLedgerEntry, etc.).
+
+**Not urgent** — current fixes close all known erasure sites. But the codebase will grow more such sites, and this bug class is silent (no crash, no error, just data loss).
+
+**Runtime verification (Drew, manual):**
+- Refresh portfolio values on a card that has photos
+- Confirm photos persist after refresh
+- Confirm clientId persists
+- If photos still disappear: HALT — there may be a fourth reconstruction site or a different bug class
