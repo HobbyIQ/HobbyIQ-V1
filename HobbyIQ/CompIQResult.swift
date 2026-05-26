@@ -117,6 +117,7 @@ struct CompIQSearchResponse: Codable {
     let dataSufficiency: String?
     let freshness: SearchFreshness?
     let broaderTrend: SearchBroaderTrend?
+    let trendIQ: TrendIQResponse?
 
     struct SearchFreshness: Codable {
         let status: String?
@@ -140,6 +141,7 @@ struct CompIQSearchResponse: Codable {
         case verdict, action, quickSaleValue, premiumValue
         case graderPremium, dealScore, variantWarning
         case compQuality, dataSufficiency, freshness, broaderTrend
+        case trendIQ
     }
 
     init(from decoder: Decoder) throws {
@@ -178,6 +180,7 @@ struct CompIQSearchResponse: Codable {
         dataSufficiency = try? container.decodeIfPresent(String.self, forKey: .dataSufficiency)
         freshness = try? container.decodeIfPresent(SearchFreshness.self, forKey: .freshness)
         broaderTrend = try? container.decodeIfPresent(SearchBroaderTrend.self, forKey: .broaderTrend)
+        trendIQ = try? container.decodeIfPresent(TrendIQResponse.self, forKey: .trendIQ)
     }
 
     func asEstimateResult() -> CompIQEstimateResult {

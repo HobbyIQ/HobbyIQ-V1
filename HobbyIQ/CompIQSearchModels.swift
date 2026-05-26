@@ -196,6 +196,56 @@ struct CompIQPriceExitStrategy: Codable, Hashable {
     let timingRecommendation: String?
 }
 
+// MARK: - TrendIQ
+
+struct TrendIQResponse: Codable {
+    let composite: Double?
+    let direction: String?
+    let impliedPct: Double?
+    let lastUpdated: String?
+    let coverage: String?
+    let components: TrendIQComponents?
+    let weights: TrendIQWeights?
+}
+
+struct TrendIQComponents: Codable {
+    let playerMomentum: TrendIQPlayerMomentum?
+    let cardTrajectory: TrendIQCardTrajectory?
+    let segmentTrajectory: TrendIQSegmentTrajectory?
+}
+
+struct TrendIQPlayerMomentum: Codable {
+    let multiplier: Double?
+    let flags: [String]?
+    let componentSignals: [String: Double]?
+    let lastUpdated: String?
+    let sourceUrl: String?
+}
+
+struct TrendIQCardTrajectory: Codable {
+    let multiplier: Double?
+    let pctChange: Double?
+    let recentMedian: Double?
+    let olderMedian: Double?
+    let recentCount: Int?
+    let olderCount: Int?
+    let windowRecentDays: Int?
+    let windowOlderDays: Int?
+}
+
+struct TrendIQSegmentTrajectory: Codable {
+    let multiplier: Double?
+    let pctChange: Double?
+    let siblingPoolSize: Int?
+    let outcome: String?
+}
+
+struct TrendIQWeights: Codable {
+    let playerMomentum: Double?
+    let cardTrajectory: Double?
+    let segmentTrajectory: Double?
+}
+
 struct CompIQPriceByIdResponse: Codable {
     let success: Bool?
     let cardHedgeCardId: String?
@@ -234,6 +284,7 @@ struct CompIQPriceByIdResponse: Codable {
     let variantWarning: String?
     let compQuality: String?
     let dataSufficiency: String?
+    let trendIQ: TrendIQResponse?
 
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
@@ -319,6 +370,7 @@ struct CompIQPriceByIdResponse: Codable {
         variantWarning = try? container.decodeIfPresent(String.self, forKey: .variantWarning)
         compQuality = try? container.decodeIfPresent(String.self, forKey: .compQuality)
         dataSufficiency = try? container.decodeIfPresent(String.self, forKey: .dataSufficiency)
+        trendIQ = try? container.decodeIfPresent(TrendIQResponse.self, forKey: .trendIQ)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -330,6 +382,6 @@ struct CompIQPriceByIdResponse: Codable {
         case verdict, action, quickSaleValue, premiumValue, explanation
         case graderPremium, buyWindow, freshness, broaderTrend
         case exitStrategy, dealScore, variantWarning
-        case compQuality, dataSufficiency
+        case compQuality, dataSufficiency, trendIQ
     }
 }

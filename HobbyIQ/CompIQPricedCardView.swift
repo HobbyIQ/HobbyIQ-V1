@@ -13,6 +13,7 @@ struct CompIQPricedCardView: View {
     @State private var error: String?
     @State private var selectedGrade: GradeOption = .raw
     @State private var fetchTask: Task<Void, Never>?
+    @State private var showLayerBreakdown = false
     @Environment(\.dismiss) private var dismiss
     private var skipFetch: Bool = false
 
@@ -88,12 +89,16 @@ struct CompIQPricedCardView: View {
         }
         .onChange(of: selectedGrade) { _, _ in
             guard !skipFetch else { return }
-            // Cancel any in-flight request and debounce the new one
             fetchTask?.cancel()
             fetchTask = Task {
                 try? await Task.sleep(for: .milliseconds(350))
                 guard !Task.isCancelled else { return }
                 await fetchPrice()
+            }
+        }
+        .sheet(isPresented: $showLayerBreakdown) {
+            if let trendIQ = priceResponse?.trendIQ {
+                TrendIQLayerBreakdownView(trendIQ: trendIQ)
             }
         }
     }
@@ -181,6 +186,9 @@ struct CompIQPricedCardView: View {
                 // Warning
                 variantWarningBanner(response)
 
+                // TrendIQ (leads when available)
+                trendIQSection(response)
+
                 // Market Analysis group
                 cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
                     zonesCard(response)
@@ -200,8 +208,8 @@ struct CompIQPricedCardView: View {
                     freshnessContent(response)
                 }
 
-                // Research group
-                cardGroup(title: "Research", icon: "doc.text.magnifyingglass") {
+                // Reference Data group
+                cardGroup(title: "Reference Data", icon: "doc.text.magnifyingglass") {
                     explanationContent(response)
                     compsContent(response)
                 }
@@ -550,6 +558,139 @@ struct CompIQPricedCardView: View {
                 }
             }
         }
+    }
+
+    // MARK: - TrendIQ
+
+    @ViewBuilder
+    private func trendIQSection(_ response: CompIQPriceByIdResponse) -> some View {
+        if let trendIQ = response.trendIQ {
+            cardGroup(title: "TrendIQ", icon: "waveform.path.ecg") {
+                trendIQHeadline(trendIQ)
+                trendIQCoverageRow(trendIQ)
+            }
+        }
+    }
+
+    private func trendIQHeadline(_ trendIQ: TrendIQResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "Signal")
+
+            HStack(spacing: 12) {
+                Image(systemName: trendIQDirectionIcon(trendIQ.direction))
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    if let composite = trendIQ.composite {
+                        // TODO: post-diagnosis decision — raw percentage for now
+                        Text(String(format: "%.1f%%", composite * 100))
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
+                    }
+
+                    if let direction = trendIQ.direction {
+                        Text(direction.capitalized)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                }
+
+                Spacer()
+
+                if let impliedPct = trendIQ.impliedPct {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(String(format: "%+.1f%%", impliedPct))
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
+                        Text("implied")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+
+            Button {
+                showLayerBreakdown = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.doc.horizontal")
+                        .font(.caption.weight(.semibold))
+                    Text("Layer Breakdown")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func trendIQCoverageRow(_ trendIQ: TrendIQResponse) -> some View {
+        if let coverage = trendIQ.coverage {
+            HStack(spacing: 8) {
+                let display = trendIQCoverageDisplay(coverage)
+                Image(systemName: display.icon)
+                    .font(.caption)
+                    .foregroundStyle(display.color)
+                Text(display.label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(display.color)
+                Spacer()
+                if let weights = trendIQ.weights {
+                    Text(trendIQWeightsSummary(weights))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+        }
+    }
+
+    private func trendIQDirectionIcon(_ direction: String?) -> String {
+        switch direction?.lowercased() {
+        case "rising": return "arrow.up.right"
+        case "falling": return "arrow.down.right"
+        case "flat": return "arrow.right"
+        case "stable": return "arrow.right"
+        default: return "arrow.right"
+        }
+    }
+
+    private func trendIQDirectionColor(_ direction: String?) -> Color {
+        switch direction?.lowercased() {
+        case "rising": return HobbyIQTheme.Colors.successGreen
+        case "falling": return HobbyIQTheme.Colors.danger
+        default: return HobbyIQTheme.Colors.warning
+        }
+    }
+
+    private func trendIQCoverageDisplay(_ coverage: String) -> (label: String, icon: String, color: Color) {
+        switch coverage.lowercased() {
+        case "full":
+            return ("Full coverage — all 3 layers active", "checkmark.seal.fill", HobbyIQTheme.Colors.successGreen)
+        case "card_only":
+            return ("Player + card layers active", "circle.lefthalf.filled", HobbyIQTheme.Colors.warning)
+        case "no_segment":
+            return ("Player + card layers active", "circle.lefthalf.filled", HobbyIQTheme.Colors.warning)
+        case "player_only":
+            return ("Player layer only", "person.fill", HobbyIQTheme.Colors.mutedText)
+        case "no_card":
+            return ("Player layer only — no card data", "person.fill", HobbyIQTheme.Colors.mutedText)
+        default:
+            return ("Coverage: \(coverage)", "questionmark.circle", HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
+    private func trendIQWeightsSummary(_ weights: TrendIQWeights) -> String {
+        var parts: [String] = []
+        if let p = weights.playerMomentum, p > 0 { parts.append("P:\(Int(p * 100))%") }
+        if let c = weights.cardTrajectory, c > 0 { parts.append("C:\(Int(c * 100))%") }
+        if let s = weights.segmentTrajectory, s > 0 { parts.append("S:\(Int(s * 100))%") }
+        return parts.joined(separator: " ")
     }
 
     // MARK: - Exit Strategy (inner content)
@@ -1083,9 +1224,379 @@ private extension CompIQPriceByIdResponse {
             "exitStrategy": { "recommendedMethod": "eBay Auction", "expectedDaysToSell": 5, "timingRecommendation": "List within 2 weeks while trend is rising" },
             "dealScore": 75,
             "compQuality": "High",
-            "dataSufficiency": "Sufficient"
+            "dataSufficiency": "Sufficient",
+            "trendIQ": {
+                "composite": 1.04,
+                "direction": "rising",
+                "impliedPct": 4.0,
+                "lastUpdated": "2026-05-26T10:50:00.000Z",
+                "coverage": "no_segment",
+                "components": {
+                    "playerMomentum": {
+                        "multiplier": 1.05,
+                        "flags": ["compsMomentum_rising"],
+                        "componentSignals": {
+                            "compsMomentum": 1.12,
+                            "ebay": 1.0,
+                            "reddit": 1.0,
+                            "trends": 1.03,
+                            "odds": 1.0,
+                            "stats": 1.0,
+                            "news": 1.0,
+                            "youtube": 1.0
+                        },
+                        "lastUpdated": "2026-05-26T10:50:00.000Z",
+                        "sourceUrl": "https://fn-compiq.azurewebsites.net/api/signals"
+                    },
+                    "cardTrajectory": {
+                        "multiplier": 1.03,
+                        "pctChange": 3.2,
+                        "recentMedian": 44.0,
+                        "olderMedian": 42.5,
+                        "recentCount": 5,
+                        "olderCount": 8,
+                        "windowRecentDays": 14,
+                        "windowOlderDays": 30
+                    },
+                    "segmentTrajectory": null
+                },
+                "weights": {
+                    "playerMomentum": 0.3,
+                    "cardTrajectory": 0.7,
+                    "segmentTrajectory": 0.0
+                }
+            }
         }
         """#
         return try! JSONDecoder().decode(CompIQPriceByIdResponse.self, from: json.data(using: .utf8)!)
+    }
+}
+
+// MARK: - TrendIQ Layer Breakdown
+
+struct TrendIQLayerBreakdownView: View {
+    let trendIQ: TrendIQResponse
+    @Environment(\.dismiss) private var dismiss
+
+    private var showsCardTrajectory: Bool {
+        let c = trendIQ.coverage?.lowercased() ?? ""
+        return c == "full" || c == "card_only" || c == "no_segment"
+    }
+
+    private var showsSegmentTrajectory: Bool {
+        trendIQ.coverage?.lowercased() == "full"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
+                    compositeHeader
+
+                    layer1Section
+
+                    if showsCardTrajectory {
+                        layer2Section
+                    } else {
+                        unavailableLayer(
+                            title: "Card Trajectory",
+                            reason: "Card-level trajectory data unavailable for this coverage level."
+                        )
+                    }
+
+                    if showsSegmentTrajectory {
+                        layer3Section
+                    } else if showsCardTrajectory {
+                        unavailableLayer(
+                            title: "Segment Trajectory",
+                            reason: "Segment trajectory unavailable for this card."
+                        )
+                    }
+                }
+                .padding(HobbyIQTheme.Spacing.screenPadding)
+                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
+            }
+            .background(HobbyIQBackground())
+            .navigationTitle("TrendIQ Layers")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+            }
+            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+        }
+    }
+
+    // MARK: - Composite Header
+
+    private var compositeHeader: some View {
+        VStack(spacing: 8) {
+            if let composite = trendIQ.composite {
+                // TODO: post-diagnosis decision — raw percentage for now
+                Text(String(format: "%.1f%%", composite * 100))
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(compositeColor)
+            }
+
+            if let direction = trendIQ.direction {
+                Text(direction.capitalized)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+
+            if let coverage = trendIQ.coverage {
+                Text("Coverage: \(coverage.replacingOccurrences(of: "_", with: " "))")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(
+            ZStack {
+                HobbyIQTheme.Colors.cardNavy
+                RadialGradient(
+                    colors: [compositeColor.opacity(0.12), .clear],
+                    center: .center,
+                    startRadius: 20,
+                    endRadius: 160
+                )
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(compositeColor.opacity(0.3), lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private var compositeColor: Color {
+        switch trendIQ.direction?.lowercased() {
+        case "rising": return HobbyIQTheme.Colors.successGreen
+        case "falling": return HobbyIQTheme.Colors.danger
+        default: return HobbyIQTheme.Colors.warning
+        }
+    }
+
+    // MARK: - Layer 1: Player Momentum
+
+    private var layer1Section: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            layerHeader(title: "Layer 1 — Player Momentum", weight: trendIQ.weights?.playerMomentum)
+
+            if let pm = trendIQ.components?.playerMomentum {
+                if let multiplier = pm.multiplier {
+                    dataRow(label: "Multiplier", value: String(format: "%.3f", multiplier))
+                }
+
+                if let signals = pm.componentSignals, !signals.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("COMPONENT SIGNALS")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.8)
+
+                        ForEach(signals.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
+                            HStack {
+                                Text(key)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                Spacer()
+                                Text(String(format: "%.3f", value))
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(signalColor(value))
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                }
+
+                if let flags = pm.flags, !flags.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("FLAGS")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.8)
+
+                        ForEach(flags, id: \.self) { flag in
+                            HStack(alignment: .top, spacing: 6) {
+                                Circle()
+                                    .fill(HobbyIQTheme.Colors.warning)
+                                    .frame(width: 5, height: 5)
+                                    .padding(.top, 6)
+                                Text(flag)
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("Player momentum data unavailable.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .layerCard()
+    }
+
+    // MARK: - Layer 2: Card Trajectory
+
+    private var layer2Section: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            layerHeader(title: "Layer 2 — Card Trajectory", weight: trendIQ.weights?.cardTrajectory)
+
+            if let ct = trendIQ.components?.cardTrajectory {
+                if let multiplier = ct.multiplier {
+                    dataRow(label: "Multiplier", value: String(format: "%.3f", multiplier))
+                }
+                if let pctChange = ct.pctChange {
+                    dataRow(label: "Change", value: String(format: "%+.1f%%", pctChange))
+                }
+
+                HStack(spacing: 12) {
+                    windowTile(
+                        title: "Recent",
+                        median: ct.recentMedian,
+                        count: ct.recentCount,
+                        days: ct.windowRecentDays
+                    )
+                    windowTile(
+                        title: "Older",
+                        median: ct.olderMedian,
+                        count: ct.olderCount,
+                        days: ct.windowOlderDays
+                    )
+                }
+            } else {
+                Text("Card trajectory data unavailable.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .layerCard()
+    }
+
+    // MARK: - Layer 3: Segment Trajectory
+
+    private var layer3Section: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            layerHeader(title: "Layer 3 — Segment Trajectory", weight: trendIQ.weights?.segmentTrajectory)
+
+            if let st = trendIQ.components?.segmentTrajectory {
+                if let multiplier = st.multiplier {
+                    dataRow(label: "Multiplier", value: String(format: "%.3f", multiplier))
+                }
+                if let pctChange = st.pctChange {
+                    dataRow(label: "Change", value: String(format: "%+.1f%%", pctChange))
+                }
+                if let poolSize = st.siblingPoolSize {
+                    dataRow(label: "Sibling Pool", value: "\(poolSize) cards")
+                }
+                if let outcome = st.outcome {
+                    dataRow(label: "Outcome", value: outcome.replacingOccurrences(of: "_", with: " "))
+                }
+            } else {
+                Text("Segment trajectory data unavailable.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .layerCard()
+    }
+
+    // MARK: - Helpers
+
+    private func layerHeader(title: String, weight: Double?) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer()
+            if let weight, weight > 0 {
+                Text("Weight: \(Int(weight * 100))%")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    private func dataRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+    }
+
+    private func windowTile(title: String, median: Double?, count: Int?, days: Int?) -> some View {
+        VStack(spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.6)
+
+            if let median {
+                Text(median.formatted(.currency(code: "USD")))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+
+            if let count, let days {
+                Text("\(count) comps / \(days)d")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 8)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.2), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func unavailableLayer(title: String, reason: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(reason)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+        }
+        .layerCard()
+    }
+
+    private func signalColor(_ value: Double) -> Color {
+        if value > 1.02 { return HobbyIQTheme.Colors.successGreen }
+        if value < 0.98 { return HobbyIQTheme.Colors.danger }
+        return HobbyIQTheme.Colors.mutedText
+    }
+}
+
+private extension View {
+    func layerCard() -> some View {
+        self
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
     }
 }
