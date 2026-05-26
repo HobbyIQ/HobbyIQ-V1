@@ -266,6 +266,38 @@ function toIso(value: unknown, fallback = new Date()): string {
   return fallback.toISOString();
 }
 
+// CF-AUTOPRICE-FIELD-NAME-SHIM (2026-05-26): iOS write path historically
+// sends phantom field names (year, setName, cardName) rather than the
+// canonical TS-typed names (cardYear, product, cardTitle). addHolding
+// accepts via schemaless ...rest spread, so the data lands under wrong
+// names and the pricing read path sees undefined for ~13/24 production
+// holdings. These three helpers normalize the read so callers always get
+// the canonical name regardless of which name iOS wrote.
+//
+// EXPLICITLY TEMPORARY — delete these helpers + inline the canonical
+// reads once CF-IOS-FIELD-CONTRACT-FIX ships (iOS writes canonical names)
+// AND CF-PORTFOLIO-METADATA-BACKFILL ships (existing docs renamed).
+export function shimmedCardYear(holding: PortfolioHolding): number | undefined {
+  return toNumber(holding.cardYear ?? (holding as any).year, 0) || undefined;
+}
+export function shimmedProduct(holding: PortfolioHolding): string | undefined {
+  // Empty-string product falls through to setName (consistent with the
+  // existing String(x ?? "").trim() || undefined pattern elsewhere in
+  // this file that normalizes empty-as-missing).
+  return (
+    String(holding.product ?? "").trim() ||
+    String(holding.setName ?? "").trim() ||
+    undefined
+  );
+}
+export function shimmedCardTitle(holding: PortfolioHolding): string {
+  return (
+    String(holding.cardTitle ?? "") ||
+    String((holding as any).cardName ?? "") ||
+    ""
+  );
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -274,8 +306,8 @@ async function autoPriceHolding(
 ): Promise<PortfolioHolding> {
   const estimate = await computeEstimate({
     playerName: String(holding.playerName ?? "").trim(),
-    cardYear: toNumber(holding.cardYear, 0) || undefined,
-    product: String(holding.product ?? "").trim() || undefined,
+    cardYear: shimmedCardYear(holding),
+    product: shimmedProduct(holding),
     parallel: String(holding.parallel ?? "").trim() || undefined,
     isAuto: Boolean(holding.isAuto),
     gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
@@ -1119,7 +1151,7 @@ export async function sellHolding(req: Request, res: Response) {
     userId: auth.userId,
     holdingId: id,
     playerName: String(holding.playerName ?? ""),
-    cardTitle: String(holding.cardTitle ?? ""),
+    cardTitle: shimmedCardTitle(holding),
     quantitySold,
     unitSalePrice,
     grossProceeds,
@@ -1306,7 +1338,7 @@ export async function markHoldingSoldFromEbay(
     userId,
     holdingId,
     playerName: String(holding.playerName ?? ""),
-    cardTitle: String(holding.cardTitle ?? ""),
+    cardTitle: shimmedCardTitle(holding),
     quantitySold,
     unitSalePrice,
     grossProceeds,
@@ -1487,8 +1519,8 @@ export async function repriceHoldingsForUser(
     try {
       const estimate = await computeEstimate({
         playerName: String(holding.playerName ?? "").trim(),
-        cardYear: toNumber(holding.cardYear, 0) || undefined,
-        product: String(holding.product ?? "").trim() || undefined,
+        cardYear: shimmedCardYear(holding),
+        product: shimmedProduct(holding),
         parallel: String(holding.parallel ?? "").trim() || undefined,
         isAuto: Boolean(holding.isAuto),
         gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
