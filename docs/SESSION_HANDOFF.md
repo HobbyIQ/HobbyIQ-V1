@@ -3,7 +3,7 @@
 (updated 2026-05-24 — iOS state assessment appended; PR D batch from Windows session preserved)
 (updated 2026-05-25 — fn-compiq backend investigation findings appended; see [phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md))
 (updated 2026-05-25 PM — YouTube signal credentials restored on fn-compiq; CF-RESTORE-SIGNAL-CREDS partial close)
-(updated 2026-05-26 — PR E partial shipped (6a37c76); TrendIQ Phase 2 plumbing shipped (9f73eb6); photo field fix shipped (67a1095))
+(updated 2026-05-26 — PR E partial shipped with quality gaps (6a37c76); TrendIQ Phase 2 plumbing shipped (9f73eb6); photo field fix shipped (67a1095); 4 new CFs surfaced for Day 2)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -4121,19 +4121,20 @@ auto-generated `name` field (`"METHOD PATH"` format, e.g.
 
 ---
 
-## PR E — Reconciliation UX (PARTIAL SHIPPED, 2026-05-26)
+## PR E — Reconciliation UX (PARTIAL SHIPPED WITH QUALITY GAPS, 2026-05-26)
 
 **Commit:** `6a37c76` on `origin/main`
-**Status:** PARTIAL SHIPPED — 2 of 4 carry-forward items closed, 1 partially closed, 1 deferred.
+**Status:** PARTIAL SHIPPED — code compiles and builds cleanly but has NOT been runtime-verified or test-covered.
 
 ### What shipped
 
-**Phase 1 — Granular eBay fee display (CLOSED)**
+**Phase 1 — Granular eBay fee display (CLOSED, pending runtime verification)**
 - `PortfolioLedgerEntry` expanded from 6 fields to full backend parity (30+ fields)
 - All granular eBay fees displayed when `source === "ebay"` and populated
 - NULL fees render as orange "Pending" capsule, visually distinct from "$0.00" actual
 - API fetch from `GET /api/portfolio/ledger` with local-sale graceful fallback
 - Ledger totals card (gross/net/P&L) from backend `totals` response
+- **Gap:** CSV nil fee cells render as blank, not "PENDING" text
 
 **Phase 2 — needsReconciliation visibility (PARTIALLY CLOSED — visibility only)**
 - Orange `exclamationmark.circle.fill` badge on ledger rows
@@ -4141,16 +4142,16 @@ auto-generated `name` field (`"METHOD PATH"` format, e.g.
 - Detail view shows which fees are pending with per-field "Pending" indicators
 - **Dismiss action deferred** — no disabled button, no future-endpoint call. Code comment: `dismiss action deferred pending PATCH endpoint.`
 
-**Phase 4 — Tax export CSV (CLOSED)**
+**Phase 4 — Tax export CSV (CLOSED, pending output file verification)**
 - Toolbar export button on ledger sheet
 - Confirmation dialog: "exclude unreconciled" (default) or "include flagged"
 - CPA-friendly: YYYY-MM-DD dates, `%.2f` dollar amounts, proper CSV quoting
 - Full granular fee columns: finalValueFee through gradingCost
 - Share sheet for AirDrop / Files / email
 
-**Phase 5 — Filter views + P&L (CLOSED)**
+**Phase 5 — Filter views + P&L (CLOSED, 3 of 5 groupings)**
 - Tabbed ledger: "Entries" and "P&L" tabs via segmented picker
-- P&L grouping by month, player, or source
+- P&L grouping by month, player, or source (3 of 5 — **set and grade not implemented**, backend ledger entry lacks discrete set/grade fields)
 - needsReconciliation entries excluded from P&L totals by default
 - User toggle to include with orange warning indicator
 - Per-group card: revenue, fees, cost, P&L with color-coded sign
@@ -4161,12 +4162,44 @@ auto-generated `name` field (`"METHOD PATH"` format, e.g.
 
 **Phase 3 — gradingCost + suppliesCost entry forms** — requires backend schema additions (gradingCost/suppliesCost writable on ledger entries) and at least one new endpoint. Code comment in `PortfolioIQView.swift`: `gradingCost + suppliesCost entry forms deferred pending backend endpoint.`
 
+### Quality gaps — Day 2 morning scope
+
+**CF-PR-E-RUNTIME-VERIFICATION (NEW, HIGH, ~1h Mac)**
+Simulator run with real backend data flow. Visual verification of: ledger row rendering, fee breakdown detail sheet, "Pending" vs "$0.00" distinction, attention section, P&L tab, CSV share sheet. No runtime testing was done during Day 1 implementation.
+
+**CF-PR-E-TEST-COVERAGE (NEW, HIGH, ~2-3h Mac)**
+Zero tests written for PR E. Needed:
+- Decode tests for expanded `PortfolioLedgerEntry` with real backend JSON (eBay source with mix of null/populated fees, manual source, needsReconciliation cases)
+- CSV output assertions (header correctness, YYYY-MM-DD dates, numeric dollar amounts, proper quoting, reconciliation exclusion/inclusion)
+- P&L computation unit tests (grouping correctness, needsReconciliation exclusion, empty-group edge case)
+
+**CF-PR-E-CSV-PENDING-MARKER (NEW, LOW, ~15 min Mac)**
+Blank fee cells in CSV → "PENDING" text for nil fee values. Minor but helps CPA distinguish unknown from zero.
+
+**CF-PR-E-P&L-COMPLETE-GROUPINGS (NEW, MEDIUM, ~1-2h backend + ~30 min iOS)**
+Set and grade P&L groupings. Requires either: (a) backend adds discrete `set` and `grade` fields to ledger entries, or (b) iOS parses them from `cardTitle` string (fragile).
+
+### Process finding for future iOS work
+
+Day 1 agent execution shipped 830 lines of code that compiles cleanly but was not runtime-verified or test-covered. Future iOS workstreams must explicitly require:
+- Simulator run with backend data flow before declaring "shipped"
+- Visual verification of UI states (screenshots or descriptions of what was observed)
+- Test coverage for critical paths (decoders, computation logic, edge cases)
+- Sample output files verified to parse in target tools (CSV → Excel/Numbers)
+
 ### CF-PR-E-BACKEND-ENDPOINTS (NEW, HIGH, ~2-3h Windows-side)
 
 Backend work needed to unblock deferred Phase 2 + Phase 3:
 
 1. **PATCH /api/portfolio/ledger/:id** — update mutable fields on a ledger entry. At minimum: `needsReconciliation` (to dismiss), `gradingCost`, `suppliesCost`. Could be two narrow endpoints instead (dismiss + cost-entry).
 2. **Schema validation** — ensure `gradingCost` and `suppliesCost` are writable on `PortfolioLedgerEntry` in Cosmos (they exist in the interface but may not be populated on the write path for manual sales).
+
+### Day 2 morning sequence
+
+1. Close PR E quality gaps (~3-4h Mac with new process requirements)
+2. CF-PR-E-BACKEND-ENDPOINTS Windows session (~2-3h) for PATCH endpoints + schema additions
+3. Complete PR E full (Phase 2 dismiss + Phase 3 entry forms, ~1-2h Mac after backend ships)
+4. Begin Phase 5 portfolio integration (~remainder of Day 2)
 
 ### Files changed
 
