@@ -13,6 +13,7 @@
 (updated 2026-05-26 PM7 — CF-VARIANT-FILTER-LOOSENING **CLOSED** after iterative refinement arc: e233fff (initial) → 095deb2 Q8' (over-narrowed) → cbfd963 Q8'' (auto-prefix XOR discriminator). Final sweep validates 9 live / 5 variant-mismatch / 9 no-recent-comps. Q7 backtest gating deferred to CF-VARIANT-FILTER-BACKTEST (existing harness structurally can't isolate tier-ladder MAPE contribution; sweep evidence is the stronger signal we have).)
 (updated 2026-05-26 PM8 — CF-PR-E-BACKEND-ENDPOINTS **shipped** (150d14b live on HobbyIQ3). PATCH /api/portfolio/ledger/:id + dismissedAt/dismissedReason schema fields. Production smoke verified end-to-end (set + persist + reject non-whitelist + restore). Unblocks Mac-side PR E Phase 2 dismiss UI + Phase 3 entry forms (~30-60 min Mac session estimated).)
 (updated 2026-05-26 PM9 — CF-DEPLOY-SCRIPT-RESTART-FIX **shipped** (363863f live on HobbyIQ3). Code-baked SHA verification path closes the 3-for-3 silent old-dist failure mode that needed manual `az webapp restart` after every deploy this session. /api/health now exposes shaFromCode (from dist/build-info.json baked at npm run build) distinct from shaShort (from GIT_SHA env var). Deploy script [5/5] verifies shaFromCode with auto-retry restart. **Self-verification: this deploy's [5/5] reported `attempt 1: build.shaFromCodeShort=363863f` — the new dist loaded on the first restart, no auto-retry needed. Fix works end-to-end.**)
+(updated 2026-05-26 PM10 — CF-VARIANT-FILTER-BACKTEST **shipped** (5cf1430 live on HobbyIQ3). Three-metric paired backtest infrastructure: env flag bypass, restricted header override, new harness measuring rescue rate / rescue MAPE per tier / T0-stability MAPE delta. **Q7 decision: keep full ladder.** Backtest on 23-card production cohort: 3 T1 rescues (13% rate), T0-stability 0.00% (ladder is purely additive), T1 MAPE 24.4% mean (Trout WMB ×2 at 10.5%, John Gil at 52.4%). T2/T3 not exercised by this cohort — Q8'' catches wrong-card cases before they reach those tiers. Documented cohort + metric limitations; revisit when production accumulates ≥10 T1 or any T2/T3 cases. **Variant filter arc fully closed.**)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -65,6 +66,65 @@ None of the 24 current holdings hit all three.
 - /api/health returns SHA `4b88fb5` (deployed code)
 - Production response sources categorized via read-only smoke script
   (not committed)
+
+---
+
+### CF-VARIANT-FILTER-BACKTEST — SHIPPED + Q7 BOUND (2026-05-26 PM10)
+
+**Commit:** `5cf1430` (infra + harness) — live on HobbyIQ3. Three-metric paired backtest results captured in [docs/phase0/backtest_runs/2026-05-27T02-57-10-tier-ladder/results.json](phase0/backtest_runs/2026-05-27T02-57-10-tier-ladder/results.json).
+
+**Q7 DECISION: KEEP FULL LADDER (T0→T3).**
+
+This CF was opened as the follow-up to CF-VARIANT-FILTER-LOOSENING's Q7 deferral. The existing signal-value backtest harness measures a different axis (signal-on vs signal-off through OpenAI inference); it can't bind the tier-ladder trim question. This CF built the missing infrastructure + ran the paired measurement that does.
+
+**Infrastructure shipped:**
+
+- `VARIANT_TIER_LADDER_ENABLED` env flag (default `true`) in `computeEstimate`. When `false`, runs T0-only and falls through to variant-mismatch when T0 yields <3 surviving comps + user had variant attributes.
+- Restricted per-request header bypass: `x-variant-tier-ladder: disabled` honored ONLY when (`NODE_ENV !== "production"`) OR session resolves to `admin-testing-hobbyiq`. Silently ignored otherwise (production traffic safety).
+- New paired harness: [backend/scripts/backtest_tier_ladder.ts](../backend/scripts/backtest_tier_ladder.ts). Pulls admin-testing-hobbyiq cohort from Cosmos, runs each card through `/api/compiq/estimate` twice (with/without header), computes three metrics. HALTs if production doesn't expose `shaFromCodeShort` (gates on CF-DEPLOY-SCRIPT-RESTART-FIX shipping first).
+
+**Three-metric report (23-card admin-testing-hobbyiq cohort, run 2026-05-27T02:57Z):**
+
+| Metric | Value | Interpretation |
+|---|---|---|
+| Rescue rate | 3/23 (13.0%) — all T1 | Coverage win: 3 cards (Trout WMB Blue ×2, John Gil Gold) gained prices that would have been null without ladder |
+| T1 rescue MAPE | 24.4% mean / 52.4% max | Engine FMV vs reference comp median — Trout WMB ×2 at 10.5% each, John Gil at 52.4%. Within reasonable range for thin-data variants where confidence is capped at 80 |
+| T2 / T3 rescue MAPE | n/a (no firings) | Cohort doesn't exercise T2/T3 — Q8'' wrong-card detection catches Gage Wood, Bonemer Blue, Bonemer SHIM, Tommy White before the ladder, leaving zero T2/T3 fires |
+| T0-stability MAPE delta | **0.00%** mean / 0.00% max (n=6) | **Perfect** — ladder is purely additive; zero side effect on strict-match path |
+
+**Decision evidence:**
+
+- ✓ Rescue rate meaningfully positive (3 cards rescued from null)
+- ✓ T0-stability perfect (ladder bypass produces identical FMVs on T0 path — Mike Trout, Maddux ×2, Griffey ×2, Witt all priced 0% different in both arms)
+- ✓ Rescue MAPE within acceptable range. Mitigations from CF-VARIANT-FILTER-LOOSENING design (confidence caps T1=80, verdict text "Variant approximation — parallel unverified", `comp_has_unwanted_auto` hard-reject) all functioning as designed; rescued prices ship with appropriate uncertainty signaling
+
+**Documented limitations (explicit per close-out lock):**
+
+1. **Cohort limitation.** The 23-card admin-testing-hobbyiq cohort exercises T0 and T1 but not T2 or T3. T2/T3 calibration characterized via Q8'' empirical validation (5/5 wrong-card detection in the post-CF-VARIANT-FILTER-LOOSENING production sweep) rather than backtest. Revisit when production accumulates T2/T3 cases.
+
+2. **Metric semantics.** "Rescue MAPE" is calibrated against median of recent comps from the same pool the engine used, NOT against ground-truth-sold-price. A 24% MAPE measures the gap between the engine's weighted FMV and a naive median calculation — it does NOT measure 24% error vs truth. The engine's weighting (anchor-based, recency, grader-premium normalization) can legitimately diverge from naive median for thin or heterogeneous pools.
+
+3. **John Gil outlier.** 52.4% MAPE is a single data point on N=3. Could reflect legitimate engine weighting for prospect autos (up-weights recent/Gold-tier comps over base BCP-172 pool median) OR engine noise on thin heterogeneous pools. Insufficient sample to discriminate at backtest layer. Surfaced for future revisit.
+
+**Revisit triggers:**
+
+- Production accumulates ≥10 T1 cases → re-run backtest for higher-confidence T1 MAPE estimate
+- Production accumulates any T2/T3 cases → first real empirical measurement of those tiers
+- User reports specific misprice attributable to ladder → case-by-case investigation
+
+**Variant filter arc — full close-out:**
+
+| SHA | What |
+|---|---|
+| `94ddfb9` | Design doc (Q1-Q8 locked, Q7 deferred to this CF) |
+| `e233fff` | Tier ladder T0→T3 implementation |
+| `095deb2` | Q8' over-narrowing (parallelNotFound uniform short-circuit) |
+| `cbfd963` | Q8'' refinement (parallelNotFound AND autoPrefixMismatch XOR) |
+| `99e32e6` | CF-VARIANT-FILTER-LOOSENING closeout with Q7 deferral |
+| `5cf1430` | CF-VARIANT-FILTER-BACKTEST infrastructure + paired harness |
+| `(this commit)` | Q7 decision: keep full ladder, documented limitations, full arc closed |
+
+**Operational note:** `VARIANT_TIER_LADDER_ENABLED` env flag stays in place as diagnostic infrastructure for any future ladder calibration questions. Header bypass restriction stays (admin-testing-hobbyiq or non-prod only) — keeps the bypass a harness/diagnostic surface, not exploitable in normal production traffic.
 
 ---
 

@@ -1,0 +1,928 @@
+{
+  "runId": "2026-05-27T02-57-10",
+  "startedAt": "2026-05-27T02:57:10.098Z",
+  "prodUrl": "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net",
+  "deployedSha": "5cf1430",
+  "cohortUserId": "admin-testing-hobbyiq",
+  "cohortSize": 23,
+  "rescues": {
+    "count": 3,
+    "ratePct": 13.043478260869565
+  },
+  "rescueMapeByTier": {
+    "T1": {
+      "n": 3,
+      "mean": 24.43694238210993,
+      "max": 52.38095238095239,
+      "all": [
+        10.464937382688696,
+        52.38095238095239,
+        10.464937382688696
+      ]
+    }
+  },
+  "t0Stability": {
+    "n": 6,
+    "mean": 0,
+    "max": 0,
+    "nonZeroCount": 0
+  },
+  "rows": [
+    {
+      "id": "8053921B-E6B6-491D-8F7E-39553C5E7507",
+      "idShort": "8053921B",
+      "playerName": "Caleb Bonemer",
+      "shimmed": {
+        "cardYear": 2024,
+        "product": "Bowman Chrome",
+        "parallel": "Blue",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": 66.6
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "9A76C334-F620-4E2C-8071-C41C1BAF3A61",
+      "idShort": "9A76C334",
+      "playerName": "BOBBY COX",
+      "shimmed": {
+        "cardYear": 1969,
+        "product": "Topps",
+        "parallel": "",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "EED0F004-0BD2-437F-8431-C88847C9D40E",
+      "idShort": "EED0F004",
+      "playerName": "MIKE TROUT WAL-MART BORDER",
+      "shimmed": {
+        "cardYear": 2011,
+        "product": "Topps Update",
+        "parallel": "Blue",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T1",
+        "tierLadderTrace": {
+          "T0": 1,
+          "T1": 21,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 359,
+        "marketValue": 359,
+        "pricingConfidence": 80,
+        "compsUsed": 19,
+        "referenceCompMedian": 324.99
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 1,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": true,
+      "isT0BothArms": false,
+      "rescueErrorPct": 10.464937382688696,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "test-holding-1",
+      "idShort": "test-hol",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "F47AC10B-58CC-4372-A567-0E02B2C3D479",
+      "idShort": "F47AC10B",
+      "playerName": "Mike Trout",
+      "shimmed": {
+        "cardYear": 2021,
+        "product": "Topps Chrome",
+        "parallel": "",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 24,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 4,
+        "marketValue": 4,
+        "pricingConfidence": 55,
+        "compsUsed": 21,
+        "referenceCompMedian": 2.17
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 24,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 4,
+        "marketValue": 4,
+        "pricingConfidence": 55,
+        "compsUsed": 21
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "6D217E3D-8669-4139-ADD4-E1B0FA0A99F5",
+      "idShort": "6D217E3D",
+      "playerName": "Caleb Bonemer",
+      "shimmed": {
+        "cardYear": 2024,
+        "product": "Bowman Chrome",
+        "parallel": "Blue",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": 66.6
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "391ED290-3002-4F48-A89E-A2B9AB6B2070",
+      "idShort": "391ED290",
+      "playerName": "PROSPECT AUTOGRAPHS JOHN GIL CHR PROS - MINI DIA",
+      "shimmed": {
+        "cardYear": 2025,
+        "product": "Bowman Chrome",
+        "parallel": "Gold",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T1",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 9,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 16,
+        "marketValue": 16,
+        "pricingConfidence": 55,
+        "compsUsed": 9,
+        "referenceCompMedian": 10.5
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": true,
+      "isT0BothArms": false,
+      "rescueErrorPct": 52.38095238095239,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "C5C44FCC-9F53-40D0-BF65-593E69500070",
+      "idShort": "C5C44FCC",
+      "playerName": "MIKE TROUT WAL-MART BORDER",
+      "shimmed": {
+        "cardYear": 2011,
+        "product": "Topps Update",
+        "parallel": "Blue",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T1",
+        "tierLadderTrace": {
+          "T0": 1,
+          "T1": 21,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 359,
+        "marketValue": 359,
+        "pricingConfidence": 80,
+        "compsUsed": 19,
+        "referenceCompMedian": 324.99
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 1,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": true,
+      "isT0BothArms": false,
+      "rescueErrorPct": 10.464937382688696,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "05CD40AC-5F3A-4854-A290-D353997FA151",
+      "idShort": "05CD40AC",
+      "playerName": "TRADED TIFFANY GREG MADDUX TIFFANY",
+      "shimmed": {
+        "cardYear": 1987,
+        "product": "Topps",
+        "parallel": "TIFFANY",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 3,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 96,
+        "marketValue": 96,
+        "pricingConfidence": 65,
+        "compsUsed": 3,
+        "referenceCompMedian": 76
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 3,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 96,
+        "marketValue": 96,
+        "pricingConfidence": 65,
+        "compsUsed": 3
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "4C327096-871E-4DD2-BEB6-BB267A1128A8",
+      "idShort": "4C327096",
+      "playerName": "TRADED TIFFANY GREG MADDUX TIFFANY",
+      "shimmed": {
+        "cardYear": 1987,
+        "product": "Topps",
+        "parallel": "TIFFANY",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 3,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 96,
+        "marketValue": 96,
+        "pricingConfidence": 65,
+        "compsUsed": 3,
+        "referenceCompMedian": 76
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 3,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 96,
+        "marketValue": 96,
+        "pricingConfidence": 65,
+        "compsUsed": 3
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "0E7AAE4D-5581-4A71-97B7-9CF1AC631B69",
+      "idShort": "0E7AAE4D",
+      "playerName": "CHROME PROSPECT AUTOGRAPHS GAGE WOOD CHR PROSPECT - REF",
+      "shimmed": {
+        "cardYear": 2025,
+        "product": "Bowman Draft",
+        "parallel": "Gold",
+        "isAuto": true
+      },
+      "armA": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": 3
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "3FBBD31C-661B-44B9-BFF1-B34636943F42",
+      "idShort": "3FBBD31C",
+      "playerName": "TRADED KEN GRIFFEY JR.",
+      "shimmed": {
+        "cardYear": 1989,
+        "product": "Topps",
+        "parallel": "",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 331,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 114,
+        "marketValue": 114,
+        "pricingConfidence": 95,
+        "compsUsed": 296,
+        "referenceCompMedian": 89.495
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 331,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 114,
+        "marketValue": 114,
+        "pricingConfidence": 95,
+        "compsUsed": 296
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "60BD6FEC-DAC1-4A87-9004-531284A2573B",
+      "idShort": "60BD6FEC",
+      "playerName": "TRADED KEN GRIFFEY JR.",
+      "shimmed": {
+        "cardYear": 1989,
+        "product": "Topps",
+        "parallel": "",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 331,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 114,
+        "marketValue": 114,
+        "pricingConfidence": 95,
+        "compsUsed": 296,
+        "referenceCompMedian": 89.495
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 331,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 114,
+        "marketValue": 114,
+        "pricingConfidence": 95,
+        "compsUsed": 296
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "ebay-link-test-holding-1",
+      "idShort": "ebay-lin",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "ebay-sale-partial",
+      "idShort": "ebay-sal",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "ebay-sale-partial-recon",
+      "idShort": "ebay-sal",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "ebay-dup-offer-A",
+      "idShort": "ebay-dup",
+      "playerName": "Bobby Witt Jr",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 4,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 13,
+        "marketValue": 13,
+        "pricingConfidence": 65,
+        "compsUsed": 3,
+        "referenceCompMedian": 9.99
+      },
+      "armB": {
+        "source": "live",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 4,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": 13,
+        "marketValue": 13,
+        "pricingConfidence": 65,
+        "compsUsed": 3
+      },
+      "isRescue": false,
+      "isT0BothArms": true,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": 0
+    },
+    {
+      "id": "ebay-sale-multi-order",
+      "idShort": "ebay-sal",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "ebay-sale-invalid",
+      "idShort": "ebay-sal",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "ebay-sale-1",
+      "idShort": "ebay-sal",
+      "playerName": "Paul Skenes",
+      "shimmed": {
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "test-holding-playerid-2",
+      "idShort": "test-hol",
+      "playerName": "Zzz Definitely Not Real",
+      "shimmed": {
+        "cardYear": 2099,
+        "isAuto": false
+      },
+      "armA": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": null
+      },
+      "armB": {
+        "source": "no-recent-comps",
+        "tier": null,
+        "tierLadderTrace": null,
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "EE9C49BD-1164-4A45-BA0E-BA53F9FFEB8B",
+      "idShort": "EE9C49BD",
+      "playerName": "CHROME PROSPECT AUTOGRAPHS CALEB BONEMER CHR PROSPECT AU- SHIM",
+      "shimmed": {
+        "cardYear": 2024,
+        "product": "Bowman Draft",
+        "parallel": "Gold",
+        "isAuto": false
+      },
+      "armA": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": 66.6
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    },
+    {
+      "id": "30E4E5F2-5E51-4555-B05D-C6048929403A",
+      "idShort": "30E4E5F2",
+      "playerName": "PROSPECT AUTOGRAPHS TOMMY WHITE CHR PROS -MINI DIAMOND",
+      "shimmed": {
+        "cardYear": 2025,
+        "product": "Bowman Chrome",
+        "parallel": "CHR PROS AUTO-MINI DIAMOND",
+        "isAuto": true
+      },
+      "armA": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0,
+        "referenceCompMedian": 4.26
+      },
+      "armB": {
+        "source": "variant-mismatch",
+        "tier": "T0",
+        "tierLadderTrace": {
+          "T0": 0,
+          "T1": 0,
+          "T2": 0,
+          "T3": 0
+        },
+        "fairMarketValue": null,
+        "marketValue": null,
+        "pricingConfidence": 0,
+        "compsUsed": 0
+      },
+      "isRescue": false,
+      "isT0BothArms": false,
+      "rescueErrorPct": null,
+      "t0StabilityErrorPct": null
+    }
+  ]
+}
