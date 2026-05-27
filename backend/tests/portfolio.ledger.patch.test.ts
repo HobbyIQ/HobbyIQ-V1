@@ -254,7 +254,12 @@ describe("CF-PR-E-BACKEND-ENDPOINTS — PATCH /api/portfolio/ledger/:id", () => 
       .get("/api/portfolio/ledger")
       .set("x-session-id", sessionB);
     const entryB = ledgerB.body.entries.find((e: any) => e.id === entryIdB);
-    expect(entryB?.gradingCost).toBeUndefined();
+    // Pre-CF-PR-E-P&L-COST-RECOMPUTE, gradingCost was undefined on entries
+    // never PATCHed. Post-fix, sellHolding writes gradingCost=null at create
+    // time so the field exists explicitly. The test intent is "the cross-user
+    // PATCH didn't write 999"; assert the cost stays null (the create-time
+    // default), not undefined.
+    expect(entryB?.gradingCost ?? null).toBeNull();
   });
 
   it("returns 401 without x-session-id header", async () => {
@@ -292,10 +297,13 @@ describe("CF-PR-E-BACKEND-ENDPOINTS — PATCH /api/portfolio/ledger/:id", () => 
     expect(res.body.error.code).toBe("FIELD_NOT_ALLOWED");
 
     // Confirm gradingCost wasn't partially applied — whole patch rejected.
+    // Post-CF-PR-E-P&L-COST-RECOMPUTE: sellHolding writes gradingCost=null
+    // at create time, so the field exists. Assert it stays null (the
+    // create-time default), not the rejected value of 5.
     const ledger = await request(app)
       .get("/api/portfolio/ledger")
       .set("x-session-id", session);
     const entry = ledger.body.entries.find((e: any) => e.id === entryId);
-    expect(entry?.gradingCost).toBeUndefined();
+    expect(entry?.gradingCost ?? null).toBeNull();
   });
 });

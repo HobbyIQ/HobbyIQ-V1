@@ -106,11 +106,15 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     expect(e.tax).toBe(0);
     expect(e.shipping).toBe(0);
     expect(e.needsReconciliation).toBe(false);
-    // netProceeds is the eBay-authoritative netPayout
-    expect(e.netProceeds).toBe(200);
+    // netProceeds: starts from eBay-authoritative netPayout=200, then
+    // subtracts user-side costs (gradingCost=25 + suppliesCost=1.5).
+    // Pre-CF-PR-E-P&L-COST-RECOMPUTE this was 200 flat (bug: user costs
+    // were stored but never deducted). Post-fix: 200 - 25 - 1.5 = 173.5.
+    expect(e.netProceeds).toBe(173.5);
     expect(e.grossProceeds).toBe(250);
     expect(e.costBasisSold).toBe(100);
-    expect(e.realizedProfitLoss).toBe(100);
+    // realizedProfitLoss = netProceeds (173.5) - costBasisSold (100) = 73.5
+    expect(e.realizedProfitLoss).toBe(73.5);
 
     // Holding deleted from inventory
     const inv = await request(app).get("/api/portfolio/holdings").set("x-session-id", sessionId);
@@ -139,7 +143,9 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     expect(result.remainingQuantity).toBe(3);
     expect(result.entry.quantitySold).toBe(1);
     expect(result.entry.costBasisSold).toBe(25);
-    expect(result.entry.netProceeds).toBe(100);
+    // netPayout=100 then -25 gradingCost -1.5 suppliesCost = 73.5
+    // (CF-PR-E-P&L-COST-RECOMPUTE deducts user-side costs from netProceeds)
+    expect(result.entry.netProceeds).toBe(73.5);
 
     // Inventory still has 3 with prorated cost basis
     const inv = await request(app).get("/api/portfolio/holdings").set("x-session-id", sessionId);
@@ -201,7 +207,9 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     );
     expect(result.status).toBe("marked-sold");
     if (result.status !== "marked-sold") return;
-    expect(result.entry.netProceeds).toBe(42);
+    // netPayout=42 then -25 gradingCost -1.5 suppliesCost = 15.5
+    // (CF-PR-E-P&L-COST-RECOMPUTE deducts user-side costs from netProceeds)
+    expect(result.entry.netProceeds).toBe(15.5);
     expect(result.entry.needsReconciliation).toBe(false);
   });
 

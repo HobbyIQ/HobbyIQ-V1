@@ -254,6 +254,84 @@ interface PortfolioLedgerEntry {
   dismissedReason?: string | null;
 }
 
+// ── CF-PR-E-P&L-COST-RECOMPUTE: shared ledger financials helper ──────────────
+//
+// Single source of truth for netProceeds + realizedProfitLoss computation.
+// Used by sellHolding (manual sale), markHoldingSoldFromEbay (eBay webhook),
+// and updateLedgerEntry (PATCH /api/portfolio/ledger/:id).
+//
+// Formula:
+//   netProceeds        = grossProceeds - feesTotal - tax - shipping
+//                        - (gradingCost ?? 0) - (suppliesCost ?? 0)
+//   realizedProfitLoss = netProceeds - costBasisSold
+//   realizedProfitLossPct = (realizedProfitLoss / costBasisSold) * 100
+//                           (0 when costBasisSold = 0)
+//
+// Why include gradingCost + suppliesCost in netProceeds (not just P&L):
+//   eBay path already subtracts actualShippingCost (cost of shipping THIS
+//   sale) from netProceeds. gradingCost (cost to grade the card before
+//   selling) and suppliesCost (cost of packaging supplies for THIS sale)
+//   are the same shape — cash out, must reduce cash returned. Treating
+//   them as additional sale-cost deductions matches the existing semantic
+//   without inventing a new category.
+//
+// eBay path override:
+//   When the eBay path has an authoritative netPayout (eBay told us the
+//   exact cash deposited), pass it as `netPayoutOverride` and the helper
+//   uses it as the post-fee/post-shipping baseline. gradingCost +
+//   suppliesCost still subtract on top, because eBay's netPayout doesn't
+//   know about pre-sale grading or buyer's-side supplies.
+//
+// Null-safety: missing inputs default to 0. Existing entries with
+// null gradingCost/suppliesCost compute identically to pre-fix behavior
+// (no regression on entries that haven't recorded these costs).
+interface LedgerFinancialsInput {
+  grossProceeds: number;
+  feesTotal: number; // for manual: fees field; for eBay: sum of granular fees
+  tax?: number; // manual path only; eBay path passes 0
+  shipping?: number; // manual path only; eBay's actualShippingCost is in feesTotal
+  gradingCost?: number | null;
+  suppliesCost?: number | null;
+  costBasisSold: number;
+  netPayoutOverride?: number | null; // eBay-authoritative net, pre-cost-deduction
+}
+
+interface LedgerFinancialsOutput {
+  netProceeds: number;
+  realizedProfitLoss: number;
+  realizedProfitLossPct: number;
+}
+
+export function computeLedgerFinancials(
+  input: LedgerFinancialsInput,
+): LedgerFinancialsOutput {
+  const grading = input.gradingCost ?? 0;
+  const supplies = input.suppliesCost ?? 0;
+  const tax = input.tax ?? 0;
+  const shipping = input.shipping ?? 0;
+
+  let netProceeds: number;
+  if (input.netPayoutOverride != null) {
+    // eBay-authoritative path: start from netPayout (already excludes
+    // platform fees + actualShippingCost), then subtract user-side costs.
+    netProceeds = input.netPayoutOverride - grading - supplies;
+  } else {
+    netProceeds =
+      input.grossProceeds -
+      input.feesTotal -
+      tax -
+      shipping -
+      grading -
+      supplies;
+  }
+
+  const realizedProfitLoss = netProceeds - input.costBasisSold;
+  const realizedProfitLossPct =
+    input.costBasisSold > 0 ? (realizedProfitLoss / input.costBasisSold) * 100 : 0;
+
+  return { netProceeds, realizedProfitLoss, realizedProfitLossPct };
+}
+
 function normalizeId(value: unknown): string {
   const id = String(value ?? "").trim();
   return id.length > 0 ? id : randomUUID();
@@ -965,7 +1043,57 @@ export async function updateLedgerEntry(req: Request, res: Response) {
     return res.status(403).json({ error: { message: "Entry not owned by user", code: "FORBIDDEN" } });
   }
 
-  const updated: PortfolioLedgerEntry = { ...existing, ...validation.patch };
+  const merged: PortfolioLedgerEntry = { ...existing, ...validation.patch };
+
+  // CF-PR-E-P&L-COST-RECOMPUTE: when gradingCost or suppliesCost change,
+  // re-run computeLedgerFinancials so netProceeds + realizedProfitLoss
+  // reflect the new costs. Other whitelisted fields (dismissedAt,
+  // dismissedReason) don't affect financials — leave the existing
+  // derived values unchanged in that case.
+  const financialsAffected =
+    "gradingCost" in validation.patch || "suppliesCost" in validation.patch;
+  let updated: PortfolioLedgerEntry = merged;
+  if (financialsAffected) {
+    // Reconstruct the helper inputs from the existing entry. eBay path:
+    // feesTotal = sum of granular fee fields; netPayoutOverride = netPayout.
+    // Manual path: feesTotal = fees aggregate; netPayoutOverride = null.
+    const isEbay = existing.source === "ebay";
+    let feesTotal: number;
+    let netPayoutOverride: number | null;
+    if (isEbay) {
+      const granularSum =
+        (merged.finalValueFee ?? 0) +
+        (merged.paymentProcessingFee ?? 0) +
+        (merged.promotedListingFee ?? 0) +
+        (merged.adFee ?? 0) +
+        (merged.otherFees ?? 0) +
+        (merged.actualShippingCost ?? 0);
+      feesTotal = granularSum;
+      netPayoutOverride = merged.netPayout ?? null;
+    } else {
+      feesTotal = merged.fees;
+      netPayoutOverride = null;
+    }
+
+    const financials = computeLedgerFinancials({
+      grossProceeds: merged.grossProceeds,
+      feesTotal,
+      tax: isEbay ? 0 : merged.tax,
+      shipping: isEbay ? 0 : merged.shipping,
+      gradingCost: merged.gradingCost ?? null,
+      suppliesCost: merged.suppliesCost ?? null,
+      costBasisSold: merged.costBasisSold,
+      netPayoutOverride,
+    });
+
+    updated = {
+      ...merged,
+      netProceeds: financials.netProceeds,
+      realizedProfitLoss: financials.realizedProfitLoss,
+      realizedProfitLossPct: financials.realizedProfitLossPct,
+    };
+  }
+
   doc.ledger[index] = updated;
   await writeUserDoc(auth.userId, doc);
 
@@ -1319,9 +1447,24 @@ export async function sellHolding(req: Request, res: Response) {
   const avgUnitCost = quantityOwned > 0 ? currentCostBasis / quantityOwned : 0;
   const costBasisSold = avgUnitCost * quantitySold;
   const grossProceeds = unitSalePrice * quantitySold;
-  const netProceeds = grossProceeds - fees - tax - shipping;
-  const realizedProfitLoss = netProceeds - costBasisSold;
-  const realizedProfitLossPct = costBasisSold > 0 ? (realizedProfitLoss / costBasisSold) * 100 : 0;
+
+  // Manual sale: gradingCost + suppliesCost can be supplied at sale time
+  // (iOS PR E Phase 3 entry form sends them via /sell body) or PATCHed later.
+  // computeLedgerFinancials treats null/undefined as 0 — entries that don't
+  // include these fields compute identically to pre-CF-PR-E-P&L-COST-RECOMPUTE
+  // behavior.
+  const gradingCost = req.body?.gradingCost != null ? toNumber(req.body.gradingCost, 0) : null;
+  const suppliesCost = req.body?.suppliesCost != null ? toNumber(req.body.suppliesCost, 0) : null;
+
+  const financials = computeLedgerFinancials({
+    grossProceeds,
+    feesTotal: fees,
+    tax,
+    shipping,
+    gradingCost,
+    suppliesCost,
+    costBasisSold,
+  });
 
   const ledgerEntry: PortfolioLedgerEntry = {
     id: randomUUID(),
@@ -1335,12 +1478,14 @@ export async function sellHolding(req: Request, res: Response) {
     fees,
     tax,
     shipping,
-    netProceeds,
+    netProceeds: financials.netProceeds,
     costBasisSold,
-    realizedProfitLoss,
-    realizedProfitLossPct,
+    realizedProfitLoss: financials.realizedProfitLoss,
+    realizedProfitLossPct: financials.realizedProfitLossPct,
     soldAt,
     notes: notes && notes.length ? notes : undefined,
+    gradingCost,
+    suppliesCost,
   };
 
   const remainingQty = quantityOwned - quantitySold;
@@ -1487,26 +1632,30 @@ export async function markHoldingSoldFromEbay(
   const netPayout = data.netPayout ?? null;
   const allGranularKnown = Object.values(granularFees).every((v) => v !== null);
 
-  let netProceeds: number;
-  if (netPayout !== null) {
-    // eBay-authoritative net.
-    netProceeds = netPayout;
-  } else {
-    // Compute from known fees only. Unknown (null) fees contribute 0 here,
-    // but `needsReconciliation` will be true so downstream readers know
-    // the number is incomplete.
-    const knownFeeSum = Object.values(granularFees).reduce<number>(
-      (acc, v) => acc + (v ?? 0),
-      0,
-    );
-    netProceeds = grossProceeds - knownFeeSum;
-  }
+  // Unknown (null) fees contribute 0 to the sum here, but `needsReconciliation`
+  // is set true so downstream readers know the number is incomplete.
+  const knownFeeSum = Object.values(granularFees).reduce<number>(
+    (acc, v) => acc + (v ?? 0),
+    0,
+  );
 
   const needsReconciliation = netPayout === null && !allGranularKnown;
 
-  const realizedProfitLoss = netProceeds - costBasisSold;
-  const realizedProfitLossPct =
-    costBasisSold > 0 ? (realizedProfitLoss / costBasisSold) * 100 : 0;
+  // CF-PR-E-P&L-COST-RECOMPUTE: gradingCost + suppliesCost subtract from
+  // netProceeds (same shape as actualShippingCost in granularFees — they're
+  // cash-out costs that reduce returned proceeds). eBay-authoritative
+  // netPayout is the post-platform-fee baseline; user-side costs (grading,
+  // supplies) still subtract on top because eBay doesn't see them.
+  const financials = computeLedgerFinancials({
+    grossProceeds,
+    feesTotal: knownFeeSum,
+    tax: 0,
+    shipping: 0,
+    gradingCost: data.gradingCost ?? null,
+    suppliesCost: data.suppliesCost ?? null,
+    costBasisSold,
+    netPayoutOverride: netPayout,
+  });
 
   // 5. Build ledger entry. Legacy aggregate fees/tax/shipping are 0 for
   //    eBay entries; the granular fields are the source of truth.
@@ -1522,10 +1671,10 @@ export async function markHoldingSoldFromEbay(
     fees: 0,
     tax: 0,
     shipping: 0,
-    netProceeds,
+    netProceeds: financials.netProceeds,
     costBasisSold,
-    realizedProfitLoss,
-    realizedProfitLossPct,
+    realizedProfitLoss: financials.realizedProfitLoss,
+    realizedProfitLossPct: financials.realizedProfitLossPct,
     soldAt: data.saleConfirmedAt,
     source: "ebay",
     ebayOrderId: trimmedOrderId,
