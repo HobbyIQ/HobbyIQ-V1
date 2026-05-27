@@ -411,6 +411,25 @@ async function autoPriceHolding(
   }
 
   const now = new Date().toISOString();
+
+  // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — pull predictedPrice
+  // off the estimate. Number-coerce range bounds; pass-through nulls when
+  // the estimate didn't populate them (variant-mismatch / no-recent-comps
+  // legacy Mechanism 1 paths set predictedPrice but not range bounds; the
+  // new trendiq-projection path on the success path sets all three).
+  const rawPredicted = (estimate as any)?.predictedPrice;
+  const predictedPrice = typeof rawPredicted === "number" && Number.isFinite(rawPredicted) ? rawPredicted : null;
+  const rawPredictedLow = (estimate as any)?.predictedPriceRange?.low;
+  const rawPredictedHigh = (estimate as any)?.predictedPriceRange?.high;
+  const predictedPriceLow =
+    typeof rawPredictedLow === "number" && Number.isFinite(rawPredictedLow) ? rawPredictedLow : null;
+  const predictedPriceHigh =
+    typeof rawPredictedHigh === "number" && Number.isFinite(rawPredictedHigh) ? rawPredictedHigh : null;
+  const predictedPriceMechanism =
+    (estimate as any)?.predictedPriceAttribution?.mechanism ?? null;
+  const predictedPriceUpdatedAt =
+    (estimate as any)?.signalsLastUpdated ?? null;
+
   const updated: PortfolioHolding = {
     ...holding,
     currentValue: fairValue,
@@ -418,6 +437,11 @@ async function autoPriceHolding(
     quickSaleValue: toNumber((estimate as any)?.quickSaleValue, fairValue * 0.88),
     premiumValue: toNumber((estimate as any)?.premiumValue, fairValue * 1.15),
     suggestedListPrice: toNumber((estimate as any)?.suggestedListPrice, fairValue * 1.05),
+    predictedPrice,
+    predictedPriceLow,
+    predictedPriceHigh,
+    predictedPriceMechanism,
+    predictedPriceUpdatedAt,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     confidence,

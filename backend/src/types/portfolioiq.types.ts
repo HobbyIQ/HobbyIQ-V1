@@ -32,6 +32,15 @@ export interface PortfolioHolding {
   fairMarketValue?: number;
   suggestedListPrice?: number;
   premiumValue?: number;
+  // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
+  // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
+  // attribution distinguishes trendiq-projection (success path) from
+  // multiplier-anchored (Bowman-family fallback) from unavailable.
+  predictedPrice?: number | null;
+  predictedPriceLow?: number | null;
+  predictedPriceHigh?: number | null;
+  predictedPriceMechanism?: string | null;
+  predictedPriceUpdatedAt?: string | null;
   netEstimatedValue?: number;
   totalProfitLoss?: number;
   totalProfitLossPct?: number;

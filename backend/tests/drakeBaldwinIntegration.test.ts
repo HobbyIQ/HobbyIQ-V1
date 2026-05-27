@@ -93,9 +93,19 @@ describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 prom
     expect(result.compQuality?.tierLadderTrace?.T0).toBe(0);
     expect(result.compQuality?.tierLadderTrace?.T1).toBeGreaterThanOrEqual(3);
 
-    // predictedPrice path (Mechanism 1) is null on the success path —
-    // Mechanism 1 only fires in the T3-fail variant-mismatch fallback.
-    expect(result.predictedPrice).toBeNull();
+    // Post CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B): the
+    // success path now produces a trendiq-projection predictedPrice on top
+    // of fairMarketValue. Mechanism 1 multiplier-anchored is preserved in
+    // the variant-mismatch and no-recent-comps fallback paths (covered in
+    // the second describe block below + multiplierAnchoredPredictedPrice
+    // unit tests).
+    expect(typeof result.predictedPrice).toBe("number");
+    expect(result.predictedPriceAttribution?.mechanism).toBe("trendiq-projection");
+    // Bounded by design: predictedPrice within ±18% of fairMarketValue
+    // (worst-case clamp at factor 1.30 / 0.80).
+    const fmv = result.fairMarketValue as number;
+    expect(result.predictedPrice).toBeGreaterThanOrEqual(fmv * 0.8 - 0.01);
+    expect(result.predictedPrice).toBeLessThanOrEqual(fmv * 1.3 + 0.01);
   });
 });
 

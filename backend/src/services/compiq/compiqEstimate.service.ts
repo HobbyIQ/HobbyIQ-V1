@@ -49,6 +49,9 @@ import {
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "./trendIQ.compute.js";
+// CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B locked) —
+// TrendIQ-driven forward projection layer on top of fairMarketValue.
+import { computePredictedPrice } from "./forwardProjection.js";
 
 // Issue #25 Phase 3 — trim peer-pool diagnostics for the wire response.
 // We keep counts only; sample comp data is not surfaced to the client.
@@ -2584,6 +2587,54 @@ export async function computeEstimate(
   });
   console.log(formatTrendIQLogLine(trendIQ));
 
+  // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — operationalize
+  // TrendIQ as a bounded forward projection on fairMarketValue. Coverage
+  // "insufficient" → factor 1.0 → predictedPrice equals fairMarketValue
+  // (graceful degradation). Mechanism 1 (multiplier-anchored) preserved
+  // in the variant-mismatch and no-recent-comps fallback paths above.
+  const __predicted = computePredictedPrice(
+    typeof fairMarketValue === "number" ? fairMarketValue : null,
+    trendIQ,
+  );
+
+  // Structured event log for future ML training corpus (Q5 deferred to
+  // CF-PREDICTION-CORPUS for formal storage; for now emit to stdout so
+  // App Service log stream captures tuples from day 1).
+  try {
+    console.log(
+      "[compiq.prediction_emitted] " +
+        JSON.stringify({
+          eventType: "prediction_emitted",
+          timestamp: new Date().toISOString(),
+          playerName: body.playerName ?? null,
+          cardYear: body.cardYear ?? null,
+          product: body.product ?? null,
+          parallel: body.parallel ?? null,
+          gradeCompany: body.gradeCompany ?? null,
+          gradeValue: body.gradeValue ?? null,
+          fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+          predictedPrice: __predicted.predictedPrice,
+          predictedPriceRange: __predicted.predictedPriceRange,
+          predictedPriceMechanism: __predicted.predictedPriceAttribution.mechanism,
+          forwardProjectionFactor: __predicted.forwardProjectionFactor,
+          trendIQ: {
+            composite: trendIQ.composite,
+            direction: trendIQ.direction,
+            coverage: trendIQ.coverage,
+            components: {
+              playerMomentum: trendIQ.components.playerMomentum?.multiplier ?? null,
+              cardTrajectory: trendIQ.components.cardTrajectory?.multiplier ?? null,
+              segmentTrajectory: trendIQ.components.segmentTrajectory?.multiplier ?? null,
+            },
+            lastUpdated: trendIQ.lastUpdated,
+          },
+          compsUsed: comps.length,
+        }),
+    );
+  } catch {
+    // Logging must never block a pricing response.
+  }
+
   // CF-VARIANT-FILTER-LOOSENING (Q2 lock): when the tier ladder selected
   // T1/T2/T3, override the orchestrator's verdict with the tier-specific
   // annotation so the iOS UI surfaces variant uncertainty without needing
@@ -2599,9 +2650,10 @@ export async function computeEstimate(
     quickSaleValue,
     fairMarketValue,
     marketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
-    predictedPrice: null,
-    predictedPriceRange: null,
-    predictedPriceAttribution: null,
+    predictedPrice: __predicted.predictedPrice,
+    predictedPriceRange: __predicted.predictedPriceRange,
+    predictedPriceAttribution: __predicted.predictedPriceAttribution,
+    signalsLastUpdated: trendIQ.lastUpdated,
     premiumValue,
     trendIQ,
     explanation: result.explanationBullets?.length
