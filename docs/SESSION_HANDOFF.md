@@ -10,6 +10,7 @@
 (updated 2026-05-26 PM4 — CF-POLLUTED-METADATA-HOLDINGS investigation findings; root cause is field-name contract mismatch, not data pollution — see [phase0/polluted_metadata_holdings_investigation.md](phase0/polluted_metadata_holdings_investigation.md))
 (updated 2026-05-26 PM5 — CF-VARIANT-FILTER-LOOSENING design phase complete; recommends Option B attribute-tiered fallback — see [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md). Implementation gated on user authorization. Phase 1 is analytical (per approval); empirical sweep deferred to pre-implementation step.)
 (updated 2026-05-26 PM6 — CF-VARIANT-FILTER-LOOSENING **implementation shipped**; tier ladder T0→T3 in computeEstimate + variantStrictness in compQuality + min(tier_cap, computed) confidence composition + per-tier verdict text. 956 tests pass (+22 net new). CF-PARALLEL-CANONICALIZATION surfaced as follow-up for the M3 Tommy White case. Post-deploy sweep + backtest pending.)
+(updated 2026-05-26 PM7 — CF-VARIANT-FILTER-LOOSENING **CLOSED** after iterative refinement arc: e233fff (initial) → 095deb2 Q8' (over-narrowed) → cbfd963 Q8'' (auto-prefix XOR discriminator). Final sweep validates 9 live / 5 variant-mismatch / 9 no-recent-comps. Q7 backtest gating deferred to CF-VARIANT-FILTER-BACKTEST (existing harness structurally can't isolate tier-ladder MAPE contribution; sweep evidence is the stronger signal we have).)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -65,32 +66,80 @@ None of the 24 current holdings hit all three.
 
 ---
 
-### CF-VARIANT-FILTER-LOOSENING — SHIPPED (2026-05-26 PM6)
+### CF-VARIANT-FILTER-LOOSENING — CLOSED (2026-05-26 PM7)
 
 **Design doc:** [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md)
 
-**Implementation summary:** Option B (attribute-tiered fallback) shipped per the locked design questions (Q1/Q2/Q3/Q4/Q8). Tier ladder runs inside `computeEstimate`'s variant-filter region; when strict T0 yields <3 surviving comps the ladder progressively re-relaxes via T1→T2→T3, breaking at the first tier with ≥VARIANT_TIER_MIN_COMPS (=3) comps. T3-still-thin falls through to the legacy `source: "variant-mismatch"` short-circuit (Mechanism 1 multiplier-anchored predictedPrice preserved on the fallback path).
+**Status:** Closed on empirical sweep evidence. Q7 (backtest gating verification) explicitly deferred to CF-VARIANT-FILTER-BACKTEST follow-up — existing signal-value harness measures the wrong axis and the v1-seed cohort doesn't exercise the tier ladder.
 
-Code surfaces:
+**Iterative refinement arc:**
 
-- `backend/src/services/compiq/compiqEstimate.service.ts` — added `VariantStrictness` type + `VARIANT_TIERS`/`VARIANT_TIER_CAP`/`VARIANT_TIER_VERDICT`/`VARIANT_TIER_MIN_COMPS` constants + `runVariantTierLadder` exported helper. Replaced strict single-pass filter with tier loop. Removed the `variantWarning`-driven short-circuit (Q8 lock: ladder handles both branches). Plumbed `chosenTier` into `compQuality.variantStrictness` + `compQuality.tierLadderTrace` + verdict override + multiplicative `min(tier_cap, calibratedConfidence)` cap on all three confidence legs.
-- `backend/src/services/compiq/cardQueryParser.ts` — added `getCompVariantMismatchReasons` (sibling of `isCompVariantMatch`) that returns the FULL set of rejection reason keys per comp. Required so a tier that relaxes one reason still hard-rejects on another that the tier should enforce (correctness fix: prevents comps with multiple failures from sneaking through at intermediate tiers).
-- `backend/tests/compiqEstimate.variantTierLadder.test.ts` (NEW, 20 tests) — tier transitions T0→T1→T2→T3→fallback, Q1/Q2/Q4 lock assertions, monotonicity invariant, exclusion-reason classification, interop with real `parseCardQuery`.
-- `backend/tests/drakeBaldwinIntegration.test.ts` (REWRITTEN, 2 tests) — Drake Baldwin's prior variant-mismatch case now exercises T1 promotion (marketValue populated, verdict text, capped confidence, variantStrictness=T1, tierLadderTrace.T1≥3); separate test exercises the T3-fail Mechanism 1 fallback path.
+| SHA | Commit | State |
+|---|---|---|
+| `e233fff` | initial implementation | Tier ladder T0→T3 shipped per locked Q1/Q2/Q3/Q4/Q8. Sweep surfaced Gage Wood Gold Auto pricing at $2 via T2 (Cardsight resolved wrong card_id — BDC-4 base prospect — and T2 dropped both parallel + auto filters, surfacing base prospect comps as if comparable) |
+| `095deb2` | Q8' refinement | Detect `"returning cardId only"` variantWarning → short-circuit tier ladder. Re-sweep showed 6 holdings regressed live→variant-mismatch: Mike Trout Wal-Mart Border Blue ×2, Greg Maddux TIFFANY ×2, John Gil Gold. Empirical evidence that Q8' over-narrowed |
+| `cbfd963` | Q8'' refinement | Discriminate via auto-prefix XOR: short-circuit only when parallelNotFound AND (resolved cardIdentity.number auto-prefix XOR user's effectiveIsAuto). Validated 5/5 affected holdings classify correctly |
 
-Verification:
+**Final sweep state (23-holding admin-testing-hobbyiq cohort):**
 
-- `npx tsc --noEmit` clean
-- Full suite: 956 passed, 100 skipped, 0 failed (+22 net new tests vs pre-CF)
-- Baseline tests unchanged behavior — only the Drake Baldwin integration test required updating because its asserted scenario was THE intended-behavior-change case
+| Source | Count | Notes |
+|---|---:|---|
+| `live` | **9** | Recovered: Trout WMB ×2 (T1 $359), Maddux TIFFANY ×2 (T0 $96), John Gil Gold (T1 $16). Preserved: Mike Trout 2021 Topps Chrome (T0 $4), Ken Griffey ×2 (T0 $114), Bobby Witt Jr (T0 $13) |
+| `variant-mismatch` | **5** | Bonemer Blue base ×2 (Q8'' XOR direction: user base, resolved CPA-CBO auto); Gage Wood Gold Auto (Q8'' caught: $2 misprice prevented); Bonemer SHIM Gold; Tommy White malformed parallel |
+| `no-recent-comps` | 9 | Unchanged from pre-arc state (test fixtures + sparse-metadata holdings) |
 
-**Open follow-ups:**
+Net delta vs pre-CF: **+1 live holding rescued (John Gil)** with zero new mispricings. Pre-existing wins preserved.
 
-- Production sweep across 24 holdings post-deploy (target: report tier distribution + confidence distribution + verdict text distribution; specifically address each of the 6 variant-mismatch holdings — which tier they promoted to + final confidence)
-- Backtest impact: re-run pricing-accuracy backtest with T1/T2/T3 prices in the mix (Q7 — gating verification before CF is considered closed). If aggregate MAPE worsens, trim ladder to T0+T1 only
-- CF-PARALLEL-CANONICALIZATION (NEW, captured for future scope): the Tommy White M3 holding has a malformed `parallel` field (`CHR PROS AUTO-MINI DIAMOND`). Option B promotes it to T2/T3 with the tier cap, but the long-term correctness fix is input-side parallel canonicalization at the `addHolding` validation step. Adjacent to Option D from the design doc, narrower scope.
+**Q8'' empirical validation (5/5 cases correctly classified by auto-prefix XOR discriminator):**
 
-**Design-phase decisions and locks** (Q1/Q2/Q3/Q4/Q8 in [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md) §5) — locked in this session before implementation began. Q5/Q6/Q7 deferred per user direction (Q5 → CF-PARALLEL-CANONICALIZATION; Q6 → live cohort acceptable; Q7 → post-impl backtest as gating verification).
+| Case | user.isAuto | cardId.number | Auto-prefix? | XOR? | Classification | Heuristic outcome |
+|---|---|---|---|---|---|---|
+| Gage Wood Gold Auto | true | BDC-4 | no | **YES** | wrong-card | ✓ short-circuit |
+| Trout WMB Blue | false | US175 | no | no | right-card | ✓ tier ladder |
+| Maddux TIFFANY | false | 70T | no | no | right-card | ✓ tier ladder |
+| John Gil Gold | false | BCP-172 | no | no | right-card | ✓ tier ladder |
+| Bonemer Blue base | false | CPA-CBO | YES | **YES** | wrong-card | ✓ short-circuit |
+
+Co-occurrence rule (parallelNotFound AND release-mismatch) was tested empirically and FAILED in 2/5 cases — auto-prefix XOR is the only structurally reliable discriminator at this layer.
+
+**Code surfaces (final state at cbfd963):**
+
+- `backend/src/services/compiq/compiqEstimate.service.ts` — tier ladder T0→T3 + `runVariantTierLadder` exported helper + `CARD_NUMBER_AUTO_PREFIX_RE` + Q8'' detection (parallelNotFound AND autoPrefixMismatch)
+- `backend/src/services/compiq/cardQueryParser.ts` — added `getCompVariantMismatchReasons` (full-reasons sibling of `isCompVariantMatch`)
+- `backend/tests/compiqEstimate.variantTierLadder.test.ts` (20 tests) — tier transitions + Q1/Q2/Q4 lock assertions
+- `backend/tests/compiqEstimate.q8refinement.test.ts` (6 tests) — Q8'' discrimination per case
+- `backend/tests/drakeBaldwinIntegration.test.ts` (2 tests) — T1 promotion + T3-fail Mechanism 1 fallback
+
+**Verification:** `npx tsc --noEmit` clean. Full suite 962 passed, 100 skipped, 0 failed (+28 net tests vs pre-CF baseline).
+
+**Design locks vs deferred:**
+
+- Locked at design phase: Q1 (multiplicative cap), Q2 (verdict text per tier), Q3 (no fetchSiblingSales re-fetch), Q4 (comp_has_unwanted_auto hard reject), Q8 (apply ladder to both branches — refined to Q8'/Q8'' post-implementation)
+- Deferred: Q5 → CF-PARALLEL-CANONICALIZATION; Q6 → live cohort accepted; Q7 → CF-VARIANT-FILTER-BACKTEST
+
+---
+
+### CF-VARIANT-FILTER-BACKTEST (NEW, MEDIUM, ~2-4h)
+
+Build the harness that can structurally answer Q7 (backtest gating verification) for variant-filter loosening:
+
+- Add `VARIANT_TIER_LADDER_ENABLED` env flag bypass in `computeEstimate` so the ladder can be disabled in a deployment for paired measurement
+- Extend `backtest_signal_value.ts` (or fork it) for paired ladder-on vs ladder-off measurement at a single SHA. Existing harness is signal-on vs signal-off — wrong axis for Q7
+- Build a tier-exercising cohort beyond v1-seed (which is N=15 of major rookies that almost all hit strict T0). Candidates: user's variant-heavy holdings (Bonemer, Bowman prospects), or a synthetic variant cohort spanning the M1/M2/M3 failure modes
+- Run paired measurement. Isolate the tier ladder's specific aggregate-MAPE contribution
+- Decision criteria: if measured worsening > 5%, trim T2 or T3 from the ladder; otherwise close Q7 affirmatively
+
+Blocked-on: nothing. Standalone follow-up work.
+
+### CF-VARIANT-FILTER-WRONG-CARD-DETECTION (NEW, LOW, future scope)
+
+Cardsight catalog coverage gap: high-end variants like Gage Wood 2025 Bowman Draft Gold Auto numbered don't have separate catalog entries, so resolveCardId falls back to the base BDC-4 card_id. Q8'' currently catches this via auto-prefix XOR when the user's isAuto disagrees with the resolved card's auto status, but cases where both are auto (or both base) but the parallel still mismatches structurally are not caught.
+
+Long-term fix is Cardsight catalog data quality work — adjacent to CF-PICKER-MIGRATE-TO-CARDSIGHT. Not blocking the variant filter arc; informational surface.
+
+### Discipline pattern (captured 2026-05-26 PM7)
+
+Tonight's variant filter arc surfaced a recurring discipline pattern: **locked gating verifications should be checked for structural fit against existing harness infrastructure before final design lock, not discovered at implementation phase.** When harness can't structurally bind the gating decision, explicit deferral with follow-up CF scope is the honest path. Q7 (backtest as gating verification) was reasonable at design phase but the existing harness measures signal-on/off MAPE at a single SHA, not tier-ladder-on/off MAPE — surfaced at Phase 3 implementation rather than caught at design. Adjacent observation: Q8 was lockable at design but the implementation phase surfaced two sub-cases (Q8' over-narrowed, Q8'' refined via empirical signal) — empirical iteration was necessary because the variantWarning token semantics weren't fully understood at design time.
 
 ---
 
