@@ -1546,37 +1546,56 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   if (normalizedParallel && normalizedParallel !== "base") parsedForGuard.parallel = normalizedParallel;
   if (body.cardYear) parsedForGuard.year = body.cardYear;
 
-  // ── Q8' refinement: Cardsight wrong-card-resolution detection ────────────
-  // variantWarning has two semantic subcases:
-  //   (a) auto/serial-token mismatch — Cardsight has the RIGHT card but is
-  //       uncertain about a variant attribute. Tier ladder appropriate
-  //       (uncertainty handling within the right card pool).
-  //   (b) "Parallel X not found ... returning cardId only" — Cardsight
-  //       explicitly tells us it returned a DIFFERENT card. Tier ladder
-  //       INAPPROPRIATE (wrong card; loosening would surface wrong-card
-  //       comps as if they were comparable).
+  // ── Q8'' refinement: Cardsight wrong-card-resolution detection ───────────
+  // variantWarning has multiple subcases the original Q8 lock conflated.
+  // First refinement (Q8'): short-circuit when "Parallel X not found ...
+  // returning cardId only" fires. Empirical sweep (2026-05-26) showed Q8'
+  // over-narrowed — it conflated TWO distinct subcases:
   //
-  // Detection: the canonical "parallel not found" warning shape emitted by
-  // resolveCardId in cardsight.mapper.ts:457 contains "returning cardId only".
-  // When that token fires, short-circuit straight to the variant-mismatch
-  // fallback (legacy pre-CF behavior for this subcase) instead of running
-  // the tier ladder.
+  //   (a) WRONG-CARD resolution (Gage Wood Gold Auto): Cardsight maps the
+  //       request to a fundamentally different card (Gold Auto numbered
+  //       request → base BDC-4 prospect). Comps for the resolved card
+  //       are wrong-card; tier ladder inappropriate.
+  //   (b) RIGHT-CARD-DIFFERENT-PARALLEL (Trout Wal-Mart Border, Maddux
+  //       TIFFANY, John Gil Gold): Cardsight resolves the CORRECT card_id
+  //       but the user's requested parallel isn't separately catalogued.
+  //       Comps are for the right card's broader pool. Tier ladder T1
+  //       rescue is legitimate here.
   //
-  // Empirical motivation: post-CF sweep (2026-05-26) surfaced Gage Wood
-  // Gold Auto returning $2 FMV via T2 because Cardsight resolved to the
-  // base BDC-4 prospect (not the Gold Auto numbered) and T2 dropped both
-  // parallel + auto filters, surfacing base prospect comps as if they
-  // were comparable. The 16 surviving T2 comps were all base/refractor/
-  // chrome — zero auto, zero Gold — confirming the wrong-card resolution.
+  // The parallelNotFound warning string is IDENTICAL between (a) and (b),
+  // so we need a second signal to discriminate. Q8'' uses the auto-prefix
+  // mismatch: when the resolved cardIdentity.number's auto-prefix XORs
+  // against the user's effectiveIsAuto, the comp pool is for the wrong
+  // SIDE of the auto/base discontinuity (the largest single price
+  // discontinuity in card pricing, 5-100×).
   //
-  // Refinement of Q8 (NOT a wholesale walkback): tier ladder still applies
-  // to the auto/serial subcase + the no-variantWarning everythingFilteredOut
-  // path. Only the "parallel not found — returning cardId only" subcase
-  // shortcuts the ladder.
+  // Q8'' fires only when BOTH signals are present:
+  //   - parallelNotFound: Cardsight self-reports "returning cardId only"
+  //   - autoPrefixMismatch: resolved cardIdentity.number auto-prefix XOR
+  //                         user's effectiveIsAuto
+  //
+  // Empirically validated 5/5 affected holdings:
+  //   Gage Wood (wrong-card):       parallelNotFound=true, prefixMismatch=true (BDC-4 base; user wanted auto)  → Q8'' fires
+  //   Trout WMB (right-card):       parallelNotFound=true, prefixMismatch=false (US175 base; user wanted base) → ladder applies
+  //   Maddux TIFFANY (right-card):  parallelNotFound=true, prefixMismatch=false (70T base;   user wanted base) → ladder applies
+  //   John Gil Gold (right-card):   parallelNotFound=true, prefixMismatch=false (BCP-172 base; user wanted base) → ladder applies
+  //   Bonemer Blue (wrong-card):    parallelNotFound=true, prefixMismatch=true (CPA-CBO auto; user wanted base) → Q8'' fires
+  //
+  // canonical "parallel not found" warning emitted by resolveCardId in
+  // cardsight.mapper.ts:457. AUTO_PREFIX_RE token list mirrors the
+  // canonical SKU prefixes from cardQueryParser.ts:319 (CPA / BCPA / BPA /
+  // BCRRA / BCRA / CRA / BSA / BCA / TCA / USA / BBPA / BSPA / AU / FA /
+  // ROA) anchored at start of the card-number string.
   const variantWarningTokens = (fetched.variantWarning ?? []).map((t) => t.toLowerCase());
-  const cardsightWrongCardResolution = variantWarningTokens.some((t) =>
+  const parallelNotFound = variantWarningTokens.some((t) =>
     /returning\s+card[Ii]d\s+only/i.test(t)
   );
+  const CARD_NUMBER_AUTO_PREFIX_RE =
+    /^(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa)([-_\s]|$)/i;
+  const resolvedCardNumber = (fetched.card?.number ?? "").trim();
+  const resolvedIsAuto = CARD_NUMBER_AUTO_PREFIX_RE.test(resolvedCardNumber);
+  const autoPrefixMismatch = effectiveIsAuto !== resolvedIsAuto;
+  const cardsightWrongCardResolution = parallelNotFound && autoPrefixMismatch;
 
   let tierResult;
   if (cardsightWrongCardResolution) {
@@ -1584,7 +1603,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     // (so confidence cap stays at 95 for the surfaced path), variantFiltered
     // empty, everythingFilteredOut=true so the short-circuit below fires.
     console.warn(
-      `[compiq.computeEstimate] Q8' parallel-not-found short-circuit: variantWarning=${JSON.stringify(fetched.variantWarning)} — skipping tier ladder`
+      `[compiq.computeEstimate] Q8'' wrong-card short-circuit: parallelNotFound=true autoPrefixMismatch=true (effectiveIsAuto=${effectiveIsAuto} resolvedCardNumber="${resolvedCardNumber}" resolvedIsAuto=${resolvedIsAuto}) — skipping tier ladder`
     );
     tierResult = {
       chosenTier: "T0" as VariantStrictness,
@@ -1648,11 +1667,11 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         .map(([k, v]) => `${k}×${v}`)
         .join(", ");
       if (cardsightWrongCardResolution) {
-        // Q8' refinement: Cardsight self-reported wrong-card resolution;
-        // tier ladder was deliberately skipped, not exhausted. Different
-        // failure mode, different log phrasing.
+        // Q8'' refinement: Cardsight resolved wrong card (parallelNotFound
+        // + autoPrefixMismatch). Tier ladder deliberately skipped, not
+        // exhausted. Different failure mode, different log phrasing.
         guardReasons.push(
-          `Cardsight wrong-card resolution detected (variantWarning indicates 'returning cardId only'); tier ladder bypassed (rejections: ${detail})`
+          `Cardsight wrong-card resolution detected (parallelNotFound + autoPrefixMismatch: effectiveIsAuto=${effectiveIsAuto} resolvedCardNumber="${resolvedCardNumber}"); tier ladder bypassed`
         );
       } else {
         // CF-VARIANT-FILTER-LOOSENING: tier ladder tried T0→T3 and the
