@@ -17,6 +17,7 @@
 (updated 2026-05-27 — **end-of-session handoff (Windows side)**. Session totals: 7 CFs closed, pricing pipeline coverage expanded from 5/24 → 9-10/23 holdings priced, variant filter arc fully closed across 7 commits with empirical validation + paired backtest infrastructure, deploy script reliability restored, PR E backend endpoints ready for Mac consumption. Day-2 queue + discipline patterns captured below. Windows side full stop; Mac work resumes tomorrow AM.)
 (updated 2026-05-27 AM — **PR E COMPLETE** (01d2cd4). Phase 2 dismiss UI + Phase 3 gradingCost/suppliesCost entry forms shipped. P&L cost recompute surfaced as CF-PR-E-P&L-COST-RECOMPUTE. Manual device verification pending (Drew).)
 (updated 2026-05-27 AM2 — CF-PR-E-P&L-COST-RECOMPUTE **shipped** (0fe88ef live on HobbyIQ3). Phase 1 surfaced a deeper bug than the CF prompt assumed: gradingCost + suppliesCost were stored as schema fields but never deducted from netProceeds/P&L in EITHER create path. Option B authorized (fix formula at both create paths + PATCH handler). Shared `computeLedgerFinancials` helper deducts both costs from netProceeds; called from sellHolding, markHoldingSoldFromEbay, and updateLedgerEntry (when cost fields change). Production smoke validated: existing entry's stale buggy P&L retroactively corrected on next PATCH (netProceeds 100→73.5, P&L 75→48.5 for ebay-sale-partial test entry). Backend suite: 1004 passed (+16 net new). PR E truly complete end-to-end. CF-PORTFOLIO-PL-BACKFILL surfaced as LOW-priority follow-up for untouched entries.)
+(updated 2026-05-27 AM3 — CF-CARDSIGHT-RESOLVER-TIFFANY **REVERTED** (f67f9d2 live on HobbyIQ3). Three sequential HALTs during investigation (greedy pricing-probe → data-fit issue → release-filter field-mismatch bug) revealed the resolver has structural problems bigger than Maddux Tiffany. Today's dictionary commit (486775b) was empirically inert without a release-filter fix that affects EVERY estimate call. Better to roll back than ship latent infrastructure. Findings consolidated into **CF-CARDSIGHT-RESOLVER-COMPREHENSIVE** (MEDIUM, ~3-5h, gated after Phase 5). Maddux Tiffany returns to pre-CF state ($96 / T0 / 3 comps via sub-token filter — production state for 2+ weeks). Data correction (Maddux ×2 product="Topps"→"Topps Traded") stays in place — it's correct data regardless of resolver work. Discipline pattern captured: when a "small fix" investigation surfaces 2+ progressive deeper issues, treat as bigger workstream and roll back rather than expand scope indefinitely.)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -144,6 +145,59 @@ None of the 24 current holdings hit all three.
 - /api/health returns SHA `4b88fb5` (deployed code)
 - Production response sources categorized via read-only smoke script
   (not committed)
+
+---
+
+### CF-CARDSIGHT-RESOLVER-TIFFANY — REVERTED (2026-05-27 AM3)
+
+**Revert commit:** `f67f9d2` on `origin/main`. Reverts `486775b`.
+
+**Outcome:** Maddux Tiffany resolution unchanged from pre-CF state ($96 / T0 / 3 sub-token-filtered Tiffany comps). Findings consolidated into **CF-CARDSIGHT-RESOLVER-COMPREHENSIVE** for proper future workstream.
+
+**Three sequential HALTs during investigation:**
+
+| HALT | Finding | Resolution |
+|---|---|---|
+| 1 (Phase 1+2) | Resolver greedy-picks BASE cardId over Tiffany via pricing-probe records-based selection — base has 330 records vs Tiffany's ~5-30 | Identified, dictionary entry approach proposed (Option B) |
+| 2 (Phase 3) | Maddux holdings have stored `product="Topps"` (canonical field empty; iOS phantom `setName="Topps"`) — should be `"Topps Traded"`. Dictionary fix without data correction would resolve to "1987 Topps Tiffany Baseball" (a set Maddux isn't in) → variant-mismatch null → regression vs current $96 | Modified Option A authorized: ship dictionary + data correction atomically. Data correction shipped (both Maddux holdings PATCHed to `product="Topps Traded"`) |
+| 3 (Phase 4c post-deploy smoke) | **Release-filter exact-match checks `r.releaseName` but Cardsight's `/catalog/search` populates `r.setName`** — filter has been silently falling through on every estimate call as a no-op safety net. Tiffany dictionary fired correctly (variantWarning changed) but downstream filter failed → pricing-probe greedy step still picked base. Dictionary commit was empirically INERT | Option C authorized: roll back, surface comprehensive resolver work as dedicated CF |
+
+**Why each fix exposed deeper issues:** the resolver has multiple structural problems. The greedy probe is the symptom; the field-match bug is the load-bearing piece that makes the dictionary work; the data correction is operational. Continuing to bolt fixes onto the original CF scope expanded it without bounds.
+
+**What stays in place (not reverted):**
+
+- Maddux ×2 holdings now have `product="Topps Traded"` stored (operational data correction, applied via PATCH endpoint, not by git commit). Under reverted code: `lookupReleaseName("Topps Traded")` returns null same as `lookupReleaseName("Topps")` did — no behavior change post-revert. The correction is the right data and stays in Cosmos.
+
+**Discipline pattern captured:**
+
+When a "small fix" investigation surfaces 2+ progressive deeper issues, default to **roll back + capture findings as dedicated CF** rather than continuing to expand the original scope. Today's Tiffany investigation peeled 3 layers (greedy probe → data fit → filter field match), each valid finding but each pushing scope further from the original CF prompt. The honest path was to acknowledge "this is a bigger workstream than scoped" and treat it as such. Adjacent to yesterday's Q7-deferral discipline pattern: locked gating decisions should be checked for structural fit early, not at implementation phase.
+
+---
+
+### CF-CARDSIGHT-RESOLVER-COMPREHENSIVE — SURFACED (2026-05-27 AM3, MEDIUM, ~3-5h)
+
+**Consolidates today's CF-CARDSIGHT-RESOLVER-TIFFANY investigation findings into a properly-scoped future resolver workstream.**
+
+**Scope:**
+
+1. **Release-filter field-match bug.** The filter at [`cardsight.mapper.ts:296-298`](backend/src/services/compiq/cardsight.mapper.ts#L296-L298) checks `r.releaseName?.toLowerCase() === expectedRelease`. Cardsight's `/catalog/search` endpoint appears to populate `setName` with the full set string but `releaseName` is either undefined or a shorter "release family" form. The filter has been a silently-falling-through no-op safety net on every estimate call. Existing cases work via downstream pricing-probe greedy-records pick (which happens to be correct for base-set cases). Tiffany breaks this because the greedy pick goes the wrong direction. Fix: extend filter to check both `releaseName` AND `setName`, with audit of behavior change across existing call sites. Read-only validation via direct Cardsight API probe to confirm which field carries the canonical set string.
+
+2. **Greedy pricing-probe variant-blindness.** When release-filter falls through (which it always does today), pricing-probe at [`cardsight.mapper.ts:384-421`](backend/src/services/compiq/cardsight.mapper.ts#L384-L421) picks the max-records cardId. For set-level parallel distinctions (Tiffany vs base), this is structurally wrong direction. Needs variant-aware priority: when user requests a parallel and some candidates have that parallel value in their setName/releaseName, prefer those candidates regardless of records count. Folds the previously-deferred CF-CARDSIGHT-RESOLVER-VARIANT-PRIORITY into this CF.
+
+3. **Tiffany dictionary infrastructure.** 14 enumerated entries (1984-1991 Topps + 1986/87/89/91 Topps Traded + 1996/97 Fleer) ready to re-ship once filter + probe work is in place. Implementation already validated by tests; reverted from `486775b` for proper sequencing.
+
+4. **Data correction for affected holdings.** Maddux ×2 already corrected (`product="Topps Traded"`). Pre-flight scan + identity-safety pattern documented for future similar corrections.
+
+**Investigation artifacts to carry forward:**
+
+- Trout WMB classification: Cardsight catalog gap (not code bug). Surfaced separately as `CF-CARDSIGHT-PARALLEL-COVERAGE` (LOW, vendor escalation — Wal-Mart Border / Target Red / similar retail parallels). Tier ladder T1 fallback is correct behavior for that class.
+- iOS field contract pollution: stored `product` field can be empty (canonical) with set info in phantom `setName` field. Concrete instance for `CF-IOS-FIELD-CONTRACT-FIX` scope.
+
+**Gating:**
+
+- Blocks the Maddux Tiffany correctness fix
+- Pre-launch single-user impact is bounded (approximately correct pricing currently — $96 vs likely-truth-around-$96)
+- **Sequence after Phase 5 portfolio integration ships** — Phase 5 doesn't depend on resolver correctness; resolver work is its own focused investigation
 
 ---
 
