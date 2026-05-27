@@ -1546,7 +1546,58 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   if (normalizedParallel && normalizedParallel !== "base") parsedForGuard.parallel = normalizedParallel;
   if (body.cardYear) parsedForGuard.year = body.cardYear;
 
-  const tierResult = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
+  // ── Q8' refinement: Cardsight wrong-card-resolution detection ────────────
+  // variantWarning has two semantic subcases:
+  //   (a) auto/serial-token mismatch — Cardsight has the RIGHT card but is
+  //       uncertain about a variant attribute. Tier ladder appropriate
+  //       (uncertainty handling within the right card pool).
+  //   (b) "Parallel X not found ... returning cardId only" — Cardsight
+  //       explicitly tells us it returned a DIFFERENT card. Tier ladder
+  //       INAPPROPRIATE (wrong card; loosening would surface wrong-card
+  //       comps as if they were comparable).
+  //
+  // Detection: the canonical "parallel not found" warning shape emitted by
+  // resolveCardId in cardsight.mapper.ts:457 contains "returning cardId only".
+  // When that token fires, short-circuit straight to the variant-mismatch
+  // fallback (legacy pre-CF behavior for this subcase) instead of running
+  // the tier ladder.
+  //
+  // Empirical motivation: post-CF sweep (2026-05-26) surfaced Gage Wood
+  // Gold Auto returning $2 FMV via T2 because Cardsight resolved to the
+  // base BDC-4 prospect (not the Gold Auto numbered) and T2 dropped both
+  // parallel + auto filters, surfacing base prospect comps as if they
+  // were comparable. The 16 surviving T2 comps were all base/refractor/
+  // chrome — zero auto, zero Gold — confirming the wrong-card resolution.
+  //
+  // Refinement of Q8 (NOT a wholesale walkback): tier ladder still applies
+  // to the auto/serial subcase + the no-variantWarning everythingFilteredOut
+  // path. Only the "parallel not found — returning cardId only" subcase
+  // shortcuts the ladder.
+  const variantWarningTokens = (fetched.variantWarning ?? []).map((t) => t.toLowerCase());
+  const cardsightWrongCardResolution = variantWarningTokens.some((t) =>
+    /returning\s+card[Ii]d\s+only/i.test(t)
+  );
+
+  let tierResult;
+  if (cardsightWrongCardResolution) {
+    // Skip tier ladder entirely. Use synthetic result: chosenTier=T0
+    // (so confidence cap stays at 95 for the surfaced path), variantFiltered
+    // empty, everythingFilteredOut=true so the short-circuit below fires.
+    console.warn(
+      `[compiq.computeEstimate] Q8' parallel-not-found short-circuit: variantWarning=${JSON.stringify(fetched.variantWarning)} — skipping tier ladder`
+    );
+    tierResult = {
+      chosenTier: "T0" as VariantStrictness,
+      variantFiltered: [] as typeof recencyFilteredComps,
+      variantExclusionReasons: { cardsight_wrong_card: recencyFilteredComps.length },
+      variantExcludedCount: recencyFilteredComps.length,
+      tierLadderTrace: { T0: 0, T1: 0, T2: 0, T3: 0 } as Record<VariantStrictness, number>,
+      everythingFilteredOut: true,
+    };
+  } else {
+    tierResult = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
+  }
+
   const {
     chosenTier,
     variantFiltered,
@@ -1569,13 +1620,10 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   const compsAfterVariantFilter = variantFiltered.length > 0 ? variantFiltered : recencyFilteredComps;
 
   // ── Variant-mismatch short-circuit (final fallback) ──────────────────────
-  // Per Q8 lock: tier ladder applies to BOTH everythingFilteredOut AND
-  // variantWarning paths. The ladder above already tried T0→T3 progressively;
-  // we only short-circuit when T3 also yields <3 comps. variantWarning is
-  // surfaced informationally in the response payload but no longer triggers
-  // an immediate short-circuit by itself (the ladder handles graceful
-  // degradation).
-  const variantWarningTokens = (fetched.variantWarning ?? []).map((t) => t.toLowerCase());
+  // Per Q8 lock (refined as Q8'): tier ladder applies to BOTH
+  // everythingFilteredOut AND auto/serial variantWarning paths. The ladder
+  // tries T0→T3 progressively; we only short-circuit when T3 also yields <3
+  // comps OR Cardsight self-reported wrong-card resolution (Q8' above).
   if (everythingFilteredOut) {
     const mechanism1 = computeMultiplierAnchoredPredictedPrice({
       subject: {
@@ -1599,13 +1647,22 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       const detail = Object.entries(variantExclusionReasons)
         .map(([k, v]) => `${k}×${v}`)
         .join(", ");
-      // CF-VARIANT-FILTER-LOOSENING: tier ladder already tried T0→T3 and the
-      // loosest tier still yielded <VARIANT_TIER_MIN_COMPS comps. Surface the
-      // trace so the iOS verdict + log line show why even the broadest pool
-      // couldn't satisfy the threshold.
-      guardReasons.push(
-        `tier ladder exhausted at T3 (trace=${JSON.stringify(tierLadderTrace)}; rejections: ${detail || "n/a"})`
-      );
+      if (cardsightWrongCardResolution) {
+        // Q8' refinement: Cardsight self-reported wrong-card resolution;
+        // tier ladder was deliberately skipped, not exhausted. Different
+        // failure mode, different log phrasing.
+        guardReasons.push(
+          `Cardsight wrong-card resolution detected (variantWarning indicates 'returning cardId only'); tier ladder bypassed (rejections: ${detail})`
+        );
+      } else {
+        // CF-VARIANT-FILTER-LOOSENING: tier ladder tried T0→T3 and the
+        // loosest tier still yielded <VARIANT_TIER_MIN_COMPS comps. Surface
+        // the trace so the iOS verdict + log line show why even the
+        // broadest pool couldn't satisfy the threshold.
+        guardReasons.push(
+          `tier ladder exhausted at T3 (trace=${JSON.stringify(tierLadderTrace)}; rejections: ${detail || "n/a"})`
+        );
+      }
     }
     const missing = guardReasons.join("; ") || "variant tokens";
     console.warn(
@@ -1678,7 +1735,18 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       source: "variant-mismatch",
       daysSinceNewestComp: null,
       variantWarning: fetched.variantWarning,
-      compQuality: { totalComps: 0, usedComps: 0, excluded: 0, reasons: {} },
+      compQuality: {
+        totalComps: 0,
+        usedComps: 0,
+        excluded: recencyFilteredComps.length,
+        reasons: variantExclusionReasons,
+        // CF-VARIANT-FILTER-LOOSENING: surface tier metadata on the
+        // variant-mismatch fallback path too so iOS / sweeps / backtests
+        // can distinguish "tier ladder exhausted" from "Cardsight
+        // wrong-card resolution short-circuit" (Q8').
+        variantStrictness: chosenTier,
+        tierLadderTrace,
+      },
       crossParallelAnchor: null,
       effectiveFmv: null,
       dataSufficiency: {
