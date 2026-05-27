@@ -47,6 +47,7 @@ const prodUrl =
 interface SignInResult {
   success: boolean;
   sessionId?: string;
+  user?: { userId?: string };
   userId?: string;
   error?: string;
 }
@@ -73,10 +74,11 @@ async function signIn(): Promise<{ sessionId: string; userId: string }> {
     throw new Error(`signin HTTP ${res.status}: ${text.slice(0, 200)}`);
   }
   const data = (await res.json()) as SignInResult;
-  if (!data.success || !data.sessionId || !data.userId) {
+  const resolvedUserId = data.user?.userId ?? data.userId;
+  if (!data.success || !data.sessionId || !resolvedUserId) {
     throw new Error(`signin failed: ${data.error ?? JSON.stringify(data)}`);
   }
-  return { sessionId: data.sessionId, userId: data.userId };
+  return { sessionId: data.sessionId, userId: resolvedUserId };
 }
 
 async function repriceBatch(sessionId: string): Promise<BatchRepriceResult> {

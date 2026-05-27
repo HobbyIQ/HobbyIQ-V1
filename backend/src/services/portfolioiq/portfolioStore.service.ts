@@ -1922,6 +1922,27 @@ export async function repriceHoldingsForUser(
 
       const previous = doc.holdings[holding.id];
       const now = new Date().toISOString();
+
+      // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — repriceHoldingsForUser
+      // is a separate persistence site from autoPriceHolding (lines 389+);
+      // both must extract the same prediction-layer fields from the estimate
+      // response. iOS pull-to-refresh and the scheduled reprice job route
+      // through THIS function, so without these reads the dashboard's
+      // predictedPrice column stays null indefinitely.
+      const rawPredicted = (estimate as any)?.predictedPrice;
+      const repricePredictedPrice =
+        typeof rawPredicted === "number" && Number.isFinite(rawPredicted) ? rawPredicted : null;
+      const rawPredictedLow = (estimate as any)?.predictedPriceRange?.low;
+      const rawPredictedHigh = (estimate as any)?.predictedPriceRange?.high;
+      const repricePredictedPriceLow =
+        typeof rawPredictedLow === "number" && Number.isFinite(rawPredictedLow) ? rawPredictedLow : null;
+      const repricePredictedPriceHigh =
+        typeof rawPredictedHigh === "number" && Number.isFinite(rawPredictedHigh) ? rawPredictedHigh : null;
+      const repricePredictedPriceMechanism =
+        (estimate as any)?.predictedPriceAttribution?.mechanism ?? null;
+      const repricePredictedPriceUpdatedAt =
+        (estimate as any)?.signalsLastUpdated ?? null;
+
       const updated: PortfolioHolding = {
         ...holding,
         currentValue: fairValue,
@@ -1929,6 +1950,11 @@ export async function repriceHoldingsForUser(
         quickSaleValue: toNumber((estimate as any)?.quickSaleValue, fairValue * 0.88),
         premiumValue: toNumber((estimate as any)?.premiumValue, fairValue * 1.15),
         suggestedListPrice: toNumber((estimate as any)?.suggestedListPrice, fairValue * 1.05),
+        predictedPrice: repricePredictedPrice,
+        predictedPriceLow: repricePredictedPriceLow,
+        predictedPriceHigh: repricePredictedPriceHigh,
+        predictedPriceMechanism: repricePredictedPriceMechanism,
+        predictedPriceUpdatedAt: repricePredictedPriceUpdatedAt,
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         confidence,
