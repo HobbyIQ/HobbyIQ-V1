@@ -1802,11 +1802,15 @@ struct DeviceTokenResponse: Decodable {
 struct NotificationPreferencesResponse: Decodable {
     let dailyIQAlerts: Bool?
     let priceAlerts: Bool?
+    let portfolioMovementAlerts: Bool?
+    let portfolioMovementMinValue: Double?
 }
 
 struct NotificationPreferencesRequest: Encodable {
     var dailyIQAlerts: Bool?
     var priceAlerts: Bool?
+    var portfolioMovementAlerts: Bool?
+    var portfolioMovementMinValue: Double?
 }
 
 private extension Data {

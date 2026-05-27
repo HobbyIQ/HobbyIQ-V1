@@ -54,6 +54,40 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         case variant, title, displayLabel
         case imageUrl = "image_url"
     }
+
+    init(
+        cardHedgeCardId: String,
+        player: String? = nil,
+        set: String? = nil,
+        year: Int? = nil,
+        number: String? = nil,
+        variant: String? = nil,
+        title: String? = nil,
+        displayLabel: String? = nil,
+        imageUrl: String? = nil
+    ) {
+        self.cardHedgeCardId = cardHedgeCardId
+        self.player = player
+        self.set = set
+        self.year = year
+        self.number = number
+        self.variant = variant
+        self.title = title
+        self.displayLabel = displayLabel
+        self.imageUrl = imageUrl
+    }
+
+    init(from holding: InventoryCard) {
+        self.cardHedgeCardId = holding.id.uuidString
+        self.player = holding.playerName
+        self.set = holding.setName.isEmpty ? nil : holding.setName
+        self.year = Int(holding.year)
+        self.number = nil
+        self.variant = holding.parallel.isEmpty ? nil : holding.parallel
+        self.title = holding.cardName
+        self.displayLabel = holding.cardName
+        self.imageUrl = holding.imageFrontUrl
+    }
 }
 
 struct CompIQVariantListResponse: Codable {

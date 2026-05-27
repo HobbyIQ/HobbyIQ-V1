@@ -210,6 +210,22 @@ struct AccountView: View {
                 .tint(HobbyIQTheme.Colors.electricBlue)
                 .padding(.vertical, 8)
                 accountDivider
+                Toggle(isOn: Binding(
+                    get: { viewModel.portfolioMovementAlerts },
+                    set: { newValue in Task { await viewModel.updatePortfolioMovementAlerts(newValue) } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Portfolio Movement Digest")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        Text("Daily summary of card movement signals")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                .tint(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                accountDivider
                 accountToggle("Haptics", isOn: $viewModel.settings.hapticsEnabled)
                 accountDivider
                 VStack(alignment: .leading, spacing: 8) {

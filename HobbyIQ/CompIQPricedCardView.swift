@@ -1117,6 +1117,80 @@ struct CompIQPricedCardView: View {
     }
 }
 
+// MARK: - Portfolio Holding → CompIQ Bridge
+
+struct PortfolioCompIQBridgeView: View {
+    let holding: InventoryCard
+    @State private var resolvedHit: CompIQVariantHit?
+    @State private var isSearching = true
+    @State private var searchError: String?
+    @Environment(\.dismiss) private var dismiss
+
+    private var searchQuery: String {
+        [holding.playerName, holding.year, holding.setName, holding.parallel]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    var body: some View {
+        Group {
+            if let hit = resolvedHit {
+                CompIQPricedCardView(hit: hit)
+            } else if isSearching {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .tint(.white)
+                    Text("Finding card...")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(HobbyIQBackground())
+            } else {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("Could not find this card in CompIQ")
+                        .font(.headline.bold())
+                        .foregroundStyle(.white)
+                    if let searchError {
+                        Text(searchError)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    Text("Search: \(searchQuery)")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Button("Done") { dismiss() }
+                        .buttonStyle(.bordered)
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(HobbyIQBackground())
+            }
+        }
+        .task {
+            await search()
+        }
+    }
+
+    private func search() async {
+        do {
+            let hits = try await CompIQSearchService.shared.searchVariants(query: searchQuery)
+            if let first = hits.first {
+                resolvedHit = first
+            } else {
+                resolvedHit = CompIQVariantHit(from: holding)
+            }
+        } catch {
+            searchError = APIService.errorMessage(from: error)
+            resolvedHit = CompIQVariantHit(from: holding)
+        }
+        isSearching = false
+    }
+}
+
 // MARK: - Card Modifiers
 
 private extension View {

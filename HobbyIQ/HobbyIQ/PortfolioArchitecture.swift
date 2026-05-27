@@ -70,6 +70,23 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let photos: [String]?
     let clientId: String?
 
+    // Prediction fields (CF-NEXT-SALE-PREDICTION-LAYER)
+    let predictedPrice: Double?
+    let predictedPriceLow: Double?
+    let predictedPriceHigh: Double?
+    let predictedPriceMechanism: String?
+    let predictedPriceUpdatedAt: String?
+
+    // Anchor field (already persisted backend-side)
+    let fairMarketValue: Double?
+
+    // Movement fields (CF-AUTOPRICE-PERSIST-TRENDIQ)
+    let movementDirection: String?
+    let movementComposite: Double?
+    let movementImpliedPct: Double?
+    let movementCoverage: String?
+    let movementUpdatedAt: String?
+
     init(
         id: UUID = UUID(),
         playerName: String,
@@ -94,7 +111,18 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         summary: String? = nil,
         isAuto: Bool = false,
         photos: [String]? = nil,
-        clientId: String? = nil
+        clientId: String? = nil,
+        predictedPrice: Double? = nil,
+        predictedPriceLow: Double? = nil,
+        predictedPriceHigh: Double? = nil,
+        predictedPriceMechanism: String? = nil,
+        predictedPriceUpdatedAt: String? = nil,
+        fairMarketValue: Double? = nil,
+        movementDirection: String? = nil,
+        movementComposite: Double? = nil,
+        movementImpliedPct: Double? = nil,
+        movementCoverage: String? = nil,
+        movementUpdatedAt: String? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -120,6 +148,17 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.isAuto = isAuto
         self.photos = photos
         self.clientId = clientId
+        self.predictedPrice = predictedPrice
+        self.predictedPriceLow = predictedPriceLow
+        self.predictedPriceHigh = predictedPriceHigh
+        self.predictedPriceMechanism = predictedPriceMechanism
+        self.predictedPriceUpdatedAt = predictedPriceUpdatedAt
+        self.fairMarketValue = fairMarketValue
+        self.movementDirection = movementDirection
+        self.movementComposite = movementComposite
+        self.movementImpliedPct = movementImpliedPct
+        self.movementCoverage = movementCoverage
+        self.movementUpdatedAt = movementUpdatedAt
     }
 
     var profitLoss: Double {

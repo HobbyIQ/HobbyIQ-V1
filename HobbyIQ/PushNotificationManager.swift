@@ -147,6 +147,10 @@ enum NotificationRouter {
             if let cardId = userInfo["cardId"] as? String {
                 appState.route(to: .card(cardId))
             }
+        case "portfolio.movement":
+            if let cardId = userInfo["cardId"] as? String {
+                appState.route(to: .card(cardId))
+            }
         default:
             // Fall back to legacy "target" key routing
             guard let target = userInfo["target"] as? String else { return }

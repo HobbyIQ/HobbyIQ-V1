@@ -111,6 +111,39 @@ struct PortfolioMover: Identifiable, Hashable {
     let profitLoss: Double
     let trendLabel: String
     let trendDetail: String
+    let movementDirection: String?
+    let movementImpliedPct: Double?
+    let movementComposite: Double?
+    let dollarImpact: Double
+    let movementCoverage: String?
+
+    init(
+        id: String,
+        playerName: String,
+        cardName: String,
+        currentValue: Double,
+        profitLoss: Double,
+        trendLabel: String,
+        trendDetail: String,
+        movementDirection: String? = nil,
+        movementImpliedPct: Double? = nil,
+        movementComposite: Double? = nil,
+        dollarImpact: Double = 0,
+        movementCoverage: String? = nil
+    ) {
+        self.id = id
+        self.playerName = playerName
+        self.cardName = cardName
+        self.currentValue = currentValue
+        self.profitLoss = profitLoss
+        self.trendLabel = trendLabel
+        self.trendDetail = trendDetail
+        self.movementDirection = movementDirection
+        self.movementImpliedPct = movementImpliedPct
+        self.movementComposite = movementComposite
+        self.dollarImpact = dollarImpact
+        self.movementCoverage = movementCoverage
+    }
 }
 
 
@@ -385,6 +418,56 @@ extension InventoryCard {
         }
     }
 
+    var movementIsStale: Bool {
+        guard let ts = movementUpdatedAt else { return false }
+        guard let date = portfolioParseISO(ts) else { return false }
+        return Date().timeIntervalSince(date) > 48 * 3600
+    }
+
+    var movementIsExpired: Bool {
+        guard let ts = movementUpdatedAt else { return false }
+        guard let date = portfolioParseISO(ts) else { return false }
+        return Date().timeIntervalSince(date) > 7 * 24 * 3600
+    }
+
+    var shouldShowMovementChip: Bool {
+        guard let dir = movementDirection, dir == "up" || dir == "down" else { return false }
+        return !movementIsExpired
+    }
+
+    var movementChipText: String? {
+        guard shouldShowMovementChip, let pct = movementImpliedPct else { return nil }
+        let arrow = movementDirection == "up" ? "\u{25B2}" : "\u{25BC}"
+        return "\(arrow) \(String(format: "%+.1f%%", pct))"
+    }
+
+    var movementChipColor: Color {
+        movementDirection == "up" ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+    }
+
+    var dollarImpact: Double {
+        guard let pct = movementImpliedPct else { return 0 }
+        return currentValue * (pct / 100)
+    }
+
+    var predictedPriceFormatted: String? {
+        predictedPrice.map { portfolioCurrencyString($0) }
+    }
+
+    var fairMarketValueFormatted: String? {
+        fairMarketValue.map { portfolioCurrencyString($0) }
+    }
+
+    var movementCoverageLabel: String {
+        switch movementCoverage {
+        case "full": return "Full coverage"
+        case "card_only": return "Card history only"
+        case "no_segment": return "No segment data"
+        case "player_only": return "Player-level only"
+        default: return "Unknown"
+        }
+    }
+
     var costBasisImpactFormatted: String {
         portfolioCurrencyString(cost)
     }
@@ -522,6 +605,10 @@ private func portfolioDisplayDate(from rawValue: String) -> String {
     }
 
     return date.formatted(.dateTime.month(.abbreviated).day())
+}
+
+private func portfolioParseISO(_ rawValue: String) -> Date? {
+    portfolioParseDate(rawValue)
 }
 
 private func portfolioParseDate(_ rawValue: String) -> Date? {
@@ -675,6 +762,7 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var showingSoldSheet = false
     @State private var showingEbayListingSheet = false
     @State private var showingRemoveModal = false
+    @State private var showingCompIQAnalysis = false
     @State private var lastEbayListingResponse: PortfolioEbayListingResponse?
     @State private var localError: String?
 
@@ -696,10 +784,52 @@ struct PortfolioHoldingDetailSheet: View {
                         PortfolioDetailPhotosCard(viewModel: viewModel, card: card, onUpdated: onUpdated)
 
                         PortfolioContextCard(title: "Pricing Context") {
-                            detailRow(title: "Fair Market", value: card.currentValueFormatted)
+                            if let predicted = card.predictedPriceFormatted {
+                                detailRow(title: "Predicted Price", value: predicted, valueColor: HobbyIQTheme.Colors.electricBlue)
+                            }
+                            detailRow(title: "Fair Market", value: card.fairMarketValueFormatted ?? card.currentValueFormatted)
                             detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
                             detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
+                            if let low = card.predictedPriceLow, let high = card.predictedPriceHigh {
+                                detailRow(title: "Predicted Range", value: "\(portfolioCurrencyString(low)) – \(portfolioCurrencyString(high))")
+                            }
                             detailRow(title: "Verdict", value: card.statusChipText)
+                        }
+
+                        if card.movementDirection != nil {
+                            PortfolioContextCard(title: "Movement Signal") {
+                                if let dir = card.movementDirection {
+                                    let dirColor: Color = dir == "up" ? HobbyIQTheme.Colors.successGreen : dir == "down" ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.mutedText
+                                    detailRow(title: "Direction", value: dir.capitalized, valueColor: dirColor)
+                                }
+                                if let pct = card.movementImpliedPct {
+                                    detailRow(title: "Implied Change", value: String(format: "%+.1f%%", pct), valueColor: pct >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                                }
+                                if let composite = card.movementComposite {
+                                    detailRow(title: "Composite", value: String(format: "%.3f", composite))
+                                }
+                                detailRow(title: "Coverage", value: card.movementCoverageLabel)
+                                if card.movementIsStale {
+                                    detailRow(title: "Freshness", value: "Stale (>48h)", valueColor: .orange)
+                                }
+
+                                Button {
+                                    showingCompIQAnalysis = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .font(.caption.weight(.semibold))
+                                        Text("View full analysis")
+                                            .font(.caption.weight(.semibold))
+                                    }
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                                    .clipShape(Capsule(style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
 
                         PortfolioContextCard(title: "Actionability") {
@@ -830,6 +960,11 @@ struct PortfolioHoldingDetailSheet: View {
                     EbayListingDraftView(viewModel: viewModel, card: card) {
                         lastEbayListingResponse = $0
                         onUpdated()
+                    }
+                }
+                .sheet(isPresented: $showingCompIQAnalysis) {
+                    NavigationStack {
+                        PortfolioCompIQBridgeView(holding: card)
                     }
                 }
 
@@ -1373,7 +1508,14 @@ struct PortfolioCompactChips: View {
     var body: some View {
         HStack(spacing: 6) {
             PortfolioChip(label: card.gradeChipText, tint: .gray)
-            PortfolioChip(label: card.trendChipText, tint: card.profitLoss >= 0 ? .green : .red)
+            if let chipText = card.movementChipText {
+                PortfolioChip(
+                    label: chipText,
+                    tint: card.movementChipColor.opacity(card.movementIsStale ? 0.5 : 1.0)
+                )
+            } else {
+                PortfolioChip(label: card.trendChipText, tint: card.profitLoss >= 0 ? .green : .red)
+            }
         }
     }
 }

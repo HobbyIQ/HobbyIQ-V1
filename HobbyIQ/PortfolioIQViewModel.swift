@@ -85,6 +85,37 @@ final class PortfolioIQViewModel: ObservableObject {
 
     var topMovers: [PortfolioMover] { cachedTopMovers }
 
+    var hasMovementSignals: Bool {
+        inventoryCards.contains { $0.movementDirection != nil }
+    }
+
+    var movementPulseSummary: (rising: Int, falling: Int, stable: Int) {
+        let active = inventoryCards.filter { $0.status.lowercased() != "sold" }
+        var rising = 0, falling = 0, stable = 0
+        for card in active {
+            switch card.movementDirection {
+            case "up": rising += 1
+            case "down": falling += 1
+            default: stable += 1
+            }
+        }
+        return (rising, falling, stable)
+    }
+
+    var portfolioComposite: Double {
+        let pairs = inventoryCards.compactMap { card -> (Double, Double)? in
+            guard let composite = card.movementComposite else { return nil }
+            return (composite, card.currentValue)
+        }
+        let totalValue = pairs.reduce(0) { $0 + $1.1 }
+        guard totalValue > 0 else { return 1.0 }
+        return pairs.reduce(0) { $0 + $1.0 * $1.1 } / totalValue
+    }
+
+    var portfolioImpliedPct: Double {
+        (portfolioComposite - 1.0) * 100
+    }
+
     private func recomputeCachedProperties() {
         // Priority actions
         let sellWatch = bestCardsToSellNow.prefix(3).map { $0.playerName }
@@ -134,38 +165,92 @@ final class PortfolioIQViewModel: ObservableObject {
 
         cachedPriorityActions = actions
 
-        // Top movers
-        let gainers = inventoryCards
-            .sorted { $0.profitLoss > $1.profitLoss }
-            .prefix(3)
-            .map { card in
-                PortfolioMover(
-                    id: "gain-\(card.id.uuidString)",
-                    playerName: card.playerName,
-                    cardName: card.cardName,
-                    currentValue: card.currentValue,
-                    profitLoss: card.profitLoss,
-                    trendLabel: "Gainer",
-                    trendDetail: card.trendChipText
-                )
-            }
+        // Top movers — TrendIQ-driven dollar-weighted ranking
+        let qualityCoverages: Set<String> = ["full", "card_only", "no_segment"]
+        let activeCards = inventoryCards.filter { $0.status.lowercased() != "sold" }
 
-        let losers = inventoryCards
-            .sorted { $0.profitLoss < $1.profitLoss }
-            .prefix(3)
-            .map { card in
-                PortfolioMover(
-                    id: "loss-\(card.id.uuidString)",
-                    playerName: card.playerName,
-                    cardName: card.cardName,
-                    currentValue: card.currentValue,
-                    profitLoss: card.profitLoss,
-                    trendLabel: "Loser",
-                    trendDetail: card.trendChipText
-                )
-            }
+        let hasMovementSignals = activeCards.contains { $0.movementDirection != nil && $0.movementDirection != "flat" }
 
-        cachedTopMovers = Array(gainers) + Array(losers)
+        if hasMovementSignals {
+            let rising = activeCards
+                .filter { $0.movementDirection == "up" && !$0.movementIsExpired }
+                .filter { qualityCoverages.contains($0.movementCoverage ?? "") }
+                .sorted { $0.dollarImpact > $1.dollarImpact }
+                .prefix(3)
+                .map { card in
+                    PortfolioMover(
+                        id: "rise-\(card.id.uuidString)",
+                        playerName: card.playerName,
+                        cardName: card.cardName,
+                        currentValue: card.currentValue,
+                        profitLoss: card.profitLoss,
+                        trendLabel: "Trending Up",
+                        trendDetail: card.movementChipText ?? "",
+                        movementDirection: card.movementDirection,
+                        movementImpliedPct: card.movementImpliedPct,
+                        movementComposite: card.movementComposite,
+                        dollarImpact: card.dollarImpact,
+                        movementCoverage: card.movementCoverage
+                    )
+                }
+
+            let falling = activeCards
+                .filter { $0.movementDirection == "down" && !$0.movementIsExpired }
+                .filter { qualityCoverages.contains($0.movementCoverage ?? "") }
+                .sorted { $0.dollarImpact < $1.dollarImpact }
+                .prefix(3)
+                .map { card in
+                    PortfolioMover(
+                        id: "fall-\(card.id.uuidString)",
+                        playerName: card.playerName,
+                        cardName: card.cardName,
+                        currentValue: card.currentValue,
+                        profitLoss: card.profitLoss,
+                        trendLabel: "Trending Down",
+                        trendDetail: card.movementChipText ?? "",
+                        movementDirection: card.movementDirection,
+                        movementImpliedPct: card.movementImpliedPct,
+                        movementComposite: card.movementComposite,
+                        dollarImpact: card.dollarImpact,
+                        movementCoverage: card.movementCoverage
+                    )
+                }
+
+            cachedTopMovers = Array(rising) + Array(falling)
+        } else {
+            // Fallback: static P&L ranking when no movement signals exist
+            let gainers = activeCards
+                .sorted { $0.profitLoss > $1.profitLoss }
+                .prefix(3)
+                .map { card in
+                    PortfolioMover(
+                        id: "gain-\(card.id.uuidString)",
+                        playerName: card.playerName,
+                        cardName: card.cardName,
+                        currentValue: card.currentValue,
+                        profitLoss: card.profitLoss,
+                        trendLabel: "Gainer",
+                        trendDetail: card.trendChipText
+                    )
+                }
+
+            let losers = activeCards
+                .sorted { $0.profitLoss < $1.profitLoss }
+                .prefix(3)
+                .map { card in
+                    PortfolioMover(
+                        id: "loss-\(card.id.uuidString)",
+                        playerName: card.playerName,
+                        cardName: card.cardName,
+                        currentValue: card.currentValue,
+                        profitLoss: card.profitLoss,
+                        trendLabel: "Loser",
+                        trendDetail: card.trendChipText
+                    )
+                }
+
+            cachedTopMovers = Array(gainers) + Array(losers)
+        }
     }
 
 
@@ -444,7 +529,18 @@ final class PortfolioIQViewModel: ObservableObject {
                 summary: card.summary,
                 isAuto: card.isAuto,
                 photos: card.photos,
-                clientId: card.clientId
+                clientId: card.clientId,
+                predictedPrice: card.predictedPrice,
+                predictedPriceLow: card.predictedPriceLow,
+                predictedPriceHigh: card.predictedPriceHigh,
+                predictedPriceMechanism: card.predictedPriceMechanism,
+                predictedPriceUpdatedAt: card.predictedPriceUpdatedAt,
+                fairMarketValue: card.fairMarketValue,
+                movementDirection: card.movementDirection,
+                movementComposite: card.movementComposite,
+                movementImpliedPct: card.movementImpliedPct,
+                movementCoverage: card.movementCoverage,
+                movementUpdatedAt: card.movementUpdatedAt
             )
 
             let currentInventory = inventoryCards.isEmpty ? await LocalPortfolioProvider.shared.getInventory() : inventoryCards

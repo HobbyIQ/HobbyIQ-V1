@@ -12,6 +12,7 @@ struct PortfolioIQView: View {
 
     @State private var selectedCard: InventoryCard?
     @State private var showingLedger = false
+    @State private var showingMovementDetail = false
     @State private var selectedPeriod: PerformancePeriod = .month
 
     var body: some View {
@@ -32,9 +33,13 @@ struct PortfolioIQView: View {
                                 warningBanner(message: errorMessage)
                             }
 
-                            performanceSection
-                            priorityActionsSection
+                            if vm.hasMovementSignals {
+                                movementPulseCard
+                            }
+
                             topMoversSection
+                            priorityActionsSection
+                            performanceSection
                         }
                         .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
                         .padding(.top, 8)
@@ -51,6 +56,12 @@ struct PortfolioIQView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
+            }
+            .sheet(isPresented: $showingMovementDetail) {
+                PortfolioMovementDetailView(viewModel: vm) { card in
+                    showingMovementDetail = false
+                    selectedCard = card
+                }
             }
             .sheet(item: $selectedCard) { card in
                 PortfolioHoldingDetailSheet(
@@ -178,6 +189,79 @@ struct PortfolioIQView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
+    }
+
+    // MARK: - Movement Pulse
+
+    private var movementPulseCard: some View {
+        let pulse = vm.movementPulseSummary
+        let composite = vm.portfolioComposite
+        let impliedPct = vm.portfolioImpliedPct
+        let directionColor: Color = impliedPct >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        let arrowIcon = impliedPct >= 0 ? "arrow.up.right" : "arrow.down.right"
+
+        return Button {
+            showingMovementDetail = true
+        } label: {
+            VStack(spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("MOVEMENT PULSE")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(1.2)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: arrowIcon)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(directionColor)
+                    Text(String(format: "%+.1f%%", impliedPct))
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(directionColor)
+                }
+
+                HStack(spacing: 12) {
+                    if pulse.rising > 0 {
+                        pulseChip(count: pulse.rising, label: "rising", color: HobbyIQTheme.Colors.successGreen)
+                    }
+                    if pulse.falling > 0 {
+                        pulseChip(count: pulse.falling, label: "falling", color: HobbyIQTheme.Colors.danger)
+                    }
+                    if pulse.stable > 0 {
+                        pulseChip(count: pulse.stable, label: "stable", color: HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+
+                Text(String(format: "Portfolio composite: %.3f", composite))
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .frame(maxWidth: .infinity)
+            .portfolioSectionShell()
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func pulseChip(count: Int, label: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Text("\(count)")
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(color.opacity(0.8))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.12))
+        .clipShape(Capsule(style: .continuous))
     }
 
     // MARK: - Performance Section
@@ -337,29 +421,35 @@ struct PortfolioIQView: View {
     // MARK: - Top Movers
 
     private var topMoversSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let hasSignals = vm.hasMovementSignals
+        let upLabel = hasSignals ? "TRENDING UP" : Labels.gainers
+        let downLabel = hasSignals ? "TRENDING DOWN" : Labels.losers
+        let upColor: Color = hasSignals ? HobbyIQTheme.Colors.successGreen : .green
+        let downColor: Color = hasSignals ? HobbyIQTheme.Colors.danger : .red
+
+        return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(Labels.topMovers)
 
             if vm.topMovers.isEmpty {
                 portfolioEmptyState
                     .padding(.vertical, 4)
             } else {
-                let gainers = Array(vm.topMovers.filter { $0.profitLoss >= 0 }.prefix(3))
-                let losers = Array(vm.topMovers.filter { $0.profitLoss < 0 }.prefix(3))
+                let rising = Array(vm.topMovers.filter { ($0.movementDirection == "up") || (!hasSignals && $0.profitLoss >= 0) }.prefix(3))
+                let falling = Array(vm.topMovers.filter { ($0.movementDirection == "down") || (!hasSignals && $0.profitLoss < 0) }.prefix(3))
 
                 VStack(spacing: 0) {
-                    if !gainers.isEmpty {
-                        moverSubheader(title: Labels.gainers, icon: "arrow.up.right", color: .green)
+                    if !rising.isEmpty {
+                        moverSubheader(title: upLabel, icon: "arrow.up.right", color: upColor)
 
-                        ForEach(Array(gainers.enumerated()), id: \.element.id) { index, mover in
+                        ForEach(Array(rising.enumerated()), id: \.element.id) { index, mover in
                             Button {
                                 selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
                             } label: {
-                                moverRow(mover: mover)
+                                moverRow(mover: mover, hasSignals: hasSignals)
                             }
                             .buttonStyle(.plain)
 
-                            if index < gainers.count - 1 || !losers.isEmpty {
+                            if index < rising.count - 1 || !falling.isEmpty {
                                 Divider()
                                     .overlay(Color.white.opacity(0.06))
                                     .padding(.leading, 12)
@@ -367,18 +457,18 @@ struct PortfolioIQView: View {
                         }
                     }
 
-                    if !losers.isEmpty {
-                        moverSubheader(title: Labels.losers, icon: "arrow.down.right", color: .red)
+                    if !falling.isEmpty {
+                        moverSubheader(title: downLabel, icon: "arrow.down.right", color: downColor)
 
-                        ForEach(Array(losers.enumerated()), id: \.element.id) { index, mover in
+                        ForEach(Array(falling.enumerated()), id: \.element.id) { index, mover in
                             Button {
                                 selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
                             } label: {
-                                moverRow(mover: mover)
+                                moverRow(mover: mover, hasSignals: hasSignals)
                             }
                             .buttonStyle(.plain)
 
-                            if index < losers.count - 1 {
+                            if index < falling.count - 1 {
                                 Divider()
                                     .overlay(Color.white.opacity(0.06))
                                     .padding(.leading, 12)
@@ -412,7 +502,7 @@ struct PortfolioIQView: View {
         .padding(.bottom, 4)
     }
 
-    private func moverRow(mover: PortfolioMover) -> some View {
+    private func moverRow(mover: PortfolioMover, hasSignals: Bool = false) -> some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(mover.playerName)
@@ -426,9 +516,20 @@ struct PortfolioIQView: View {
 
             Spacer(minLength: 12)
 
-            Text(mover.profitLoss.portfolioSignedCurrencyText)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(mover.profitLoss >= 0 ? .green : .red)
+            if hasSignals, let pct = mover.movementImpliedPct {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(String(format: "%+.1f%%", pct))
+                        .font(.subheadline.weight(.bold).monospacedDigit())
+                        .foregroundStyle(mover.movementDirection == "up" ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                    Text(mover.dollarImpact.portfolioSignedCurrencyText)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            } else {
+                Text(mover.profitLoss.portfolioSignedCurrencyText)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(mover.profitLoss >= 0 ? .green : .red)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -1429,6 +1530,183 @@ private extension PortfolioSummaryResponse {
                 margin: 17.8
             )
         )
+    }
+}
+
+// MARK: - Movement Detail View
+
+struct PortfolioMovementDetailView: View {
+    @ObservedObject var viewModel: PortfolioIQViewModel
+    let onSelectCard: (InventoryCard) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var sortMode: MovementSortMode = .magnitude
+    @State private var filterMode: MovementFilterMode = .all
+
+    private enum MovementSortMode: String, CaseIterable {
+        case magnitude = "Magnitude"
+        case dollarImpact = "$ Impact"
+        case value = "Value"
+        case name = "Name"
+    }
+
+    private enum MovementFilterMode: String, CaseIterable {
+        case all = "All"
+        case rising = "Rising"
+        case falling = "Falling"
+    }
+
+    private var filteredCards: [InventoryCard] {
+        let active = viewModel.inventoryCards.filter { $0.status.lowercased() != "sold" }
+        let withSignals = active.filter { $0.movementDirection != nil }
+
+        let filtered: [InventoryCard]
+        switch filterMode {
+        case .all: filtered = withSignals
+        case .rising: filtered = withSignals.filter { $0.movementDirection == "up" }
+        case .falling: filtered = withSignals.filter { $0.movementDirection == "down" }
+        }
+
+        switch sortMode {
+        case .magnitude:
+            return filtered.sorted { abs($0.movementImpliedPct ?? 0) > abs($1.movementImpliedPct ?? 0) }
+        case .dollarImpact:
+            return filtered.sorted { abs($0.dollarImpact) > abs($1.dollarImpact) }
+        case .value:
+            return filtered.sorted { $0.currentValue > $1.currentValue }
+        case .name:
+            return filtered.sorted { $0.playerName.localizedCompare($1.playerName) == .orderedAscending }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Picker("Filter", selection: $filterMode) {
+                        ForEach(MovementFilterMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Menu {
+                        ForEach(MovementSortMode.allCases, id: \.self) { mode in
+                            Button {
+                                sortMode = mode
+                            } label: {
+                                if sortMode == mode {
+                                    Label(mode.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(mode.rawValue)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .frame(width: 34, height: 34)
+                            .background(HobbyIQTheme.Colors.cardNavy)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        if filteredCards.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "waveform.path.ecg")
+                                    .font(.system(size: 30, weight: .semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                Text("No movement signals")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(.white)
+                                Text("Cards will show movement data after their next reprice.")
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(40)
+                        } else {
+                            ForEach(filteredCards) { card in
+                                Button {
+                                    onSelectCard(card)
+                                } label: {
+                                    movementDetailRow(card: card)
+                                }
+                                .buttonStyle(.plain)
+
+                                Divider()
+                                    .overlay(Color.white.opacity(0.06))
+                                    .padding(.leading, 12)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+            .background { HobbyIQBackground() }
+            .navigationTitle("Movement Signals")
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
+        }
+    }
+
+    private func movementDetailRow(card: InventoryCard) -> some View {
+        HStack(spacing: 10) {
+            cardThumbnail(urlString: card.imageFrontUrl)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(card.playerName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(card.cardName)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(card.currentValueFormatted)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    if let fmv = card.fairMarketValueFormatted, fmv != card.currentValueFormatted {
+                        Text("FMV \(fmv)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                    }
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                if let chipText = card.movementChipText {
+                    Text(chipText)
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(card.movementChipColor)
+                }
+                Text(card.dollarImpact.portfolioSignedCurrencyText)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                if card.movementIsStale {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .padding(.vertical, 10)
     }
 }
 

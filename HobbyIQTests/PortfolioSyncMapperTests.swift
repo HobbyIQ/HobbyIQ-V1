@@ -415,4 +415,101 @@ final class PortfolioSyncMapperTests: XCTestCase {
         XCTAssertNil(response.entry.suppliesCost)
         XCTAssertNil(response.entry.dismissedAt)
     }
+
+    // MARK: - InventoryCard Decode — Prediction + Movement Fields
+
+    func testDecodePredictionAndMovementFields() throws {
+        let json = """
+        {
+            "id": "33333333-3333-3333-3333-333333333333",
+            "playerName": "Shohei Ohtani",
+            "cardName": "2024 Topps Chrome",
+            "cost": 50.0,
+            "currentValue": 120.0,
+            "status": "owned",
+            "isAuto": false,
+            "predictedPrice": 135.0,
+            "predictedPriceLow": 110.0,
+            "predictedPriceHigh": 160.0,
+            "predictedPriceMechanism": "CompIQ Regression",
+            "predictedPriceUpdatedAt": "2026-05-27T10:00:00Z",
+            "fairMarketValue": 120.0,
+            "movementDirection": "up",
+            "movementComposite": 1.04,
+            "movementImpliedPct": 4.0,
+            "movementCoverage": "full",
+            "movementUpdatedAt": "2026-05-27T09:00:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertEqual(card.predictedPrice, 135.0)
+        XCTAssertEqual(card.predictedPriceLow, 110.0)
+        XCTAssertEqual(card.predictedPriceHigh, 160.0)
+        XCTAssertEqual(card.predictedPriceMechanism, "CompIQ Regression")
+        XCTAssertEqual(card.predictedPriceUpdatedAt, "2026-05-27T10:00:00Z")
+        XCTAssertEqual(card.fairMarketValue, 120.0)
+        XCTAssertEqual(card.movementDirection, "up")
+        XCTAssertEqual(card.movementComposite, 1.04)
+        XCTAssertEqual(card.movementImpliedPct, 4.0)
+        XCTAssertEqual(card.movementCoverage, "full")
+        XCTAssertEqual(card.movementUpdatedAt, "2026-05-27T09:00:00Z")
+    }
+
+    func testDecodePredictionFieldsNilWhenAbsent() throws {
+        let json = """
+        {
+            "playerName": "Sparse",
+            "cardName": "Card",
+            "cost": 5.0,
+            "currentValue": 10.0,
+            "status": "owned",
+            "isAuto": false
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertNil(card.predictedPrice)
+        XCTAssertNil(card.predictedPriceLow)
+        XCTAssertNil(card.predictedPriceHigh)
+        XCTAssertNil(card.predictedPriceMechanism)
+        XCTAssertNil(card.predictedPriceUpdatedAt)
+        XCTAssertNil(card.fairMarketValue)
+        XCTAssertNil(card.movementDirection)
+        XCTAssertNil(card.movementComposite)
+        XCTAssertNil(card.movementImpliedPct)
+        XCTAssertNil(card.movementCoverage)
+        XCTAssertNil(card.movementUpdatedAt)
+    }
+
+    func testDecodeMovementFieldsBackwardsCompat() throws {
+        let json = """
+        {
+            "id": "44444444-4444-4444-4444-444444444444",
+            "playerName": "Mike Trout",
+            "cardName": "2021 Topps Chrome",
+            "cost": 200.0,
+            "currentValue": 175.0,
+            "status": "owned",
+            "isAuto": false,
+            "movementDirection": "down",
+            "movementComposite": 0.877,
+            "movementImpliedPct": -12.3,
+            "movementCoverage": "card_only",
+            "movementUpdatedAt": "2026-05-27T08:00:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let card = try JSONDecoder().decode(InventoryCard.self, from: json)
+
+        XCTAssertEqual(card.movementDirection, "down")
+        XCTAssertEqual(card.movementComposite, 0.877)
+        XCTAssertEqual(card.movementImpliedPct, -12.3)
+        XCTAssertEqual(card.movementCoverage, "card_only")
+        XCTAssertNil(card.predictedPrice, "prediction fields should be nil when absent")
+        XCTAssertEqual(card.playerName, "Mike Trout")
+        XCTAssertEqual(card.currentValue, 175.0)
+    }
 }

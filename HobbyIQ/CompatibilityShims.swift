@@ -220,6 +220,8 @@ final class AccountViewModel: ObservableObject {
     @Published var statusMessage: String?
     @Published var dailyIQAlerts = true
     @Published var priceAlerts = true
+    @Published var portfolioMovementAlerts = true
+    @Published var portfolioMovementMinValue: Double = 50.0
     private var isLoadingPrefs = false
 
     var appVersionText: String {
@@ -249,6 +251,8 @@ final class AccountViewModel: ObservableObject {
             let prefs = try await APIService.shared.fetchNotificationPreferences()
             dailyIQAlerts = prefs.dailyIQAlerts ?? true
             priceAlerts = prefs.priceAlerts ?? true
+            portfolioMovementAlerts = prefs.portfolioMovementAlerts ?? true
+            portfolioMovementMinValue = prefs.portfolioMovementMinValue ?? 50.0
         } catch {
             // Keep defaults on failure
         }
@@ -274,6 +278,28 @@ final class AccountViewModel: ObservableObject {
             priceAlerts = prefs.priceAlerts ?? enabled
         } catch {
             priceAlerts = !enabled // revert on failure
+        }
+    }
+
+    func updatePortfolioMovementAlerts(_ enabled: Bool) async {
+        portfolioMovementAlerts = enabled
+        let request = NotificationPreferencesRequest(portfolioMovementAlerts: enabled)
+        do {
+            let prefs = try await APIService.shared.updateNotificationPreferences(request)
+            portfolioMovementAlerts = prefs.portfolioMovementAlerts ?? enabled
+        } catch {
+            portfolioMovementAlerts = !enabled
+        }
+    }
+
+    func updatePortfolioMovementMinValue(_ value: Double) async {
+        portfolioMovementMinValue = value
+        let request = NotificationPreferencesRequest(portfolioMovementMinValue: value)
+        do {
+            let prefs = try await APIService.shared.updateNotificationPreferences(request)
+            portfolioMovementMinValue = prefs.portfolioMovementMinValue ?? value
+        } catch {
+            // Keep optimistic value on failure
         }
     }
 
@@ -1518,7 +1544,18 @@ extension InventoryCard {
             summary: summary,
             isAuto: isAuto,
             photos: photos,
-            clientId: clientId
+            clientId: clientId,
+            predictedPrice: predictedPrice,
+            predictedPriceLow: predictedPriceLow,
+            predictedPriceHigh: predictedPriceHigh,
+            predictedPriceMechanism: predictedPriceMechanism,
+            predictedPriceUpdatedAt: predictedPriceUpdatedAt,
+            fairMarketValue: fairMarketValue,
+            movementDirection: movementDirection,
+            movementComposite: movementComposite,
+            movementImpliedPct: movementImpliedPct,
+            movementCoverage: movementCoverage,
+            movementUpdatedAt: movementUpdatedAt
         )
     }
 }
@@ -1532,6 +1569,11 @@ extension InventoryCard {
         case imageFrontUrl, imageBackUrl
         case lowValue, highValue, confidence, method, summary, isAuto
         case photos, clientId
+        case predictedPrice, predictedPriceLow, predictedPriceHigh
+        case predictedPriceMechanism, predictedPriceUpdatedAt
+        case fairMarketValue
+        case movementDirection, movementComposite, movementImpliedPct
+        case movementCoverage, movementUpdatedAt
     }
 
     // snake_case alternatives the backend may return
@@ -1556,12 +1598,27 @@ extension InventoryCard {
         case isAuto = "is_auto"
         case photos
         case clientId = "client_id"
+        case predictedPrice = "predicted_price"
+        case predictedPriceLow = "predicted_price_low"
+        case predictedPriceHigh = "predicted_price_high"
+        case predictedPriceMechanism = "predicted_price_mechanism"
+        case predictedPriceUpdatedAt = "predicted_price_updated_at"
+        case fairMarketValue = "fair_market_value"
+        case movementDirection = "movement_direction"
+        case movementComposite = "movement_composite"
+        case movementImpliedPct = "movement_implied_pct"
+        case movementCoverage = "movement_coverage"
+        case movementUpdatedAt = "movement_updated_at"
     }
 
     // Backend autoPriceHolding() uses different field names for pricing/freshness
     private enum BackendKeys: String, CodingKey {
         case quickSaleValue, premiumValue, fairMarketValue
         case verdict, freshnessStatus, compsUsed
+        case predictedPrice, predictedPriceLow, predictedPriceHigh
+        case predictedPriceMechanism, predictedPriceUpdatedAt
+        case movementDirection, movementComposite, movementImpliedPct
+        case movementCoverage, movementUpdatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -1622,6 +1679,39 @@ extension InventoryCard {
             ?? (try? s.decode([String].self, forKey: .photos))
         self.clientId = (try? c.decode(String.self, forKey: .clientId))
             ?? (try? s.decode(String.self, forKey: .clientId))
+        self.predictedPrice = (try? c.decode(Double.self, forKey: .predictedPrice))
+            ?? (try? s.decode(Double.self, forKey: .predictedPrice))
+            ?? (try? b.decode(Double.self, forKey: .predictedPrice))
+        self.predictedPriceLow = (try? c.decode(Double.self, forKey: .predictedPriceLow))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceLow))
+            ?? (try? b.decode(Double.self, forKey: .predictedPriceLow))
+        self.predictedPriceHigh = (try? c.decode(Double.self, forKey: .predictedPriceHigh))
+            ?? (try? s.decode(Double.self, forKey: .predictedPriceHigh))
+            ?? (try? b.decode(Double.self, forKey: .predictedPriceHigh))
+        self.predictedPriceMechanism = (try? c.decode(String.self, forKey: .predictedPriceMechanism))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceMechanism))
+            ?? (try? b.decode(String.self, forKey: .predictedPriceMechanism))
+        self.predictedPriceUpdatedAt = (try? c.decode(String.self, forKey: .predictedPriceUpdatedAt))
+            ?? (try? s.decode(String.self, forKey: .predictedPriceUpdatedAt))
+            ?? (try? b.decode(String.self, forKey: .predictedPriceUpdatedAt))
+        self.fairMarketValue = (try? c.decode(Double.self, forKey: .fairMarketValue))
+            ?? (try? s.decode(Double.self, forKey: .fairMarketValue))
+            ?? (try? b.decode(Double.self, forKey: .fairMarketValue))
+        self.movementDirection = (try? c.decode(String.self, forKey: .movementDirection))
+            ?? (try? s.decode(String.self, forKey: .movementDirection))
+            ?? (try? b.decode(String.self, forKey: .movementDirection))
+        self.movementComposite = (try? c.decode(Double.self, forKey: .movementComposite))
+            ?? (try? s.decode(Double.self, forKey: .movementComposite))
+            ?? (try? b.decode(Double.self, forKey: .movementComposite))
+        self.movementImpliedPct = (try? c.decode(Double.self, forKey: .movementImpliedPct))
+            ?? (try? s.decode(Double.self, forKey: .movementImpliedPct))
+            ?? (try? b.decode(Double.self, forKey: .movementImpliedPct))
+        self.movementCoverage = (try? c.decode(String.self, forKey: .movementCoverage))
+            ?? (try? s.decode(String.self, forKey: .movementCoverage))
+            ?? (try? b.decode(String.self, forKey: .movementCoverage))
+        self.movementUpdatedAt = (try? c.decode(String.self, forKey: .movementUpdatedAt))
+            ?? (try? s.decode(String.self, forKey: .movementUpdatedAt))
+            ?? (try? b.decode(String.self, forKey: .movementUpdatedAt))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1650,6 +1740,17 @@ extension InventoryCard {
         try container.encode(isAuto, forKey: .isAuto)
         try container.encodeIfPresent(photos, forKey: .photos)
         try container.encodeIfPresent(clientId, forKey: .clientId)
+        try container.encodeIfPresent(predictedPrice, forKey: .predictedPrice)
+        try container.encodeIfPresent(predictedPriceLow, forKey: .predictedPriceLow)
+        try container.encodeIfPresent(predictedPriceHigh, forKey: .predictedPriceHigh)
+        try container.encodeIfPresent(predictedPriceMechanism, forKey: .predictedPriceMechanism)
+        try container.encodeIfPresent(predictedPriceUpdatedAt, forKey: .predictedPriceUpdatedAt)
+        try container.encodeIfPresent(fairMarketValue, forKey: .fairMarketValue)
+        try container.encodeIfPresent(movementDirection, forKey: .movementDirection)
+        try container.encodeIfPresent(movementComposite, forKey: .movementComposite)
+        try container.encodeIfPresent(movementImpliedPct, forKey: .movementImpliedPct)
+        try container.encodeIfPresent(movementCoverage, forKey: .movementCoverage)
+        try container.encodeIfPresent(movementUpdatedAt, forKey: .movementUpdatedAt)
     }
 }
 
