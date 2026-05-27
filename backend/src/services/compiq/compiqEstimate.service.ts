@@ -13,6 +13,7 @@ import {
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
 import { buildEngineMeta } from "./engineMeta.js";
+import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
 import { computePredictedRange, type PredictedRangeResult } from "./predictedRange.js";
 // Issue #25 Phase 3 — tier-anchored predicted-range fallback (default OFF).
@@ -1300,7 +1301,20 @@ export function runVariantTierLadder<C extends { title: string }>(
 // Route handler
 // ---------------------------------------------------------------------------
 
-export async function computeEstimate(body: CompIQEstimateRequest): Promise<Record<string, unknown>> {
+// CF-VARIANT-FILTER-BACKTEST options surface. Default behavior preserves
+// production: tier ladder enabled, governed only by VARIANT_TIER_LADDER_ENABLED
+// env (default true). When `tierLadderDisabledByHeader` is true, the caller
+// (compiqEstimate route handler) has validated the per-request override is
+// authorized; computeEstimate trusts it and bypasses the ladder for this
+// request only. See `compiqEstimate` route handler for the auth gate.
+export interface ComputeEstimateOptions {
+  tierLadderDisabledByHeader?: boolean;
+}
+
+export async function computeEstimate(
+  body: CompIQEstimateRequest,
+  options: ComputeEstimateOptions = {},
+): Promise<Record<string, unknown>> {
 
   // CF-PLAYERNAME-NORMALIZATION (2026-05-26): strip contamination tokens
   // from playerName before any catalog lookup. iOS scan path historically
@@ -1597,6 +1611,21 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
   const autoPrefixMismatch = effectiveIsAuto !== resolvedIsAuto;
   const cardsightWrongCardResolution = parallelNotFound && autoPrefixMismatch;
 
+  // CF-VARIANT-FILTER-BACKTEST — tier ladder kill switch.
+  // env VARIANT_TIER_LADDER_ENABLED=false → bypass ladder globally.
+  // Per-request header override (options.tierLadderDisabledByHeader) is
+  // authorized by the route handler (admin-testing-hobbyiq user OR
+  // NODE_ENV !== production); this layer just trusts the flag.
+  const tierLadderEnabledFromEnv =
+    String(process.env.VARIANT_TIER_LADDER_ENABLED ?? "").trim().toLowerCase() !== "false";
+  const tierLadderEffectivelyEnabled =
+    tierLadderEnabledFromEnv && !options.tierLadderDisabledByHeader;
+  const tierLadderBypassReason = !tierLadderEnabledFromEnv
+    ? "env_disabled"
+    : options.tierLadderDisabledByHeader
+    ? "header_override"
+    : null;
+
   let tierResult;
   if (cardsightWrongCardResolution) {
     // Skip tier ladder entirely. Use synthetic result: chosenTier=T0
@@ -1612,6 +1641,45 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
       variantExcludedCount: recencyFilteredComps.length,
       tierLadderTrace: { T0: 0, T1: 0, T2: 0, T3: 0 } as Record<VariantStrictness, number>,
       everythingFilteredOut: true,
+    };
+  } else if (!tierLadderEffectivelyEnabled) {
+    // CF-VARIANT-FILTER-BACKTEST: ladder bypass. Run only strict T0; if
+    // T0 yields <VARIANT_TIER_MIN_COMPS and the request had variant
+    // attributes, surface as variant-mismatch (legacy pre-tier-ladder
+    // behavior). This is the "ladder disabled" arm of the paired backtest.
+    console.warn(
+      `[compiq.computeEstimate] tier ladder BYPASSED (${tierLadderBypassReason}). Running T0-only.`
+    );
+    const t0 = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
+    // Synthesize T0-only result: keep T0 trace count; zero out higher tiers;
+    // flag everythingFilteredOut when T0 yielded <3 AND user requested
+    // a variant attribute (matches the pre-ladder short-circuit semantics).
+    const t0Count = t0.tierLadderTrace.T0;
+    const hadVariantRequest =
+      parsedForGuard.isAuto || Boolean(parsedForGuard.parallel);
+    const t0Filtered: typeof recencyFilteredComps = [];
+    const t0Reasons: Record<string, number> = {};
+    // Re-classify with T0 strictly so variantFiltered reflects T0-only.
+    for (const c of recencyFilteredComps) {
+      const allReasons = getCompVariantMismatchReasons(c.title, parsedForGuard);
+      if (allReasons.length === 0) {
+        t0Filtered.push(c);
+      } else {
+        const key = allReasons[0];
+        t0Reasons[key] = (t0Reasons[key] ?? 0) + 1;
+      }
+    }
+    const t0EverythingFilteredOut =
+      recencyFilteredComps.length > 0 &&
+      t0Filtered.length < VARIANT_TIER_MIN_COMPS &&
+      hadVariantRequest;
+    tierResult = {
+      chosenTier: "T0" as VariantStrictness,
+      variantFiltered: t0Filtered,
+      variantExclusionReasons: t0Reasons,
+      variantExcludedCount: recencyFilteredComps.length - t0Filtered.length,
+      tierLadderTrace: { T0: t0Count, T1: 0, T2: 0, T3: 0 } as Record<VariantStrictness, number>,
+      everythingFilteredOut: t0EverythingFilteredOut,
     };
   } else {
     tierResult = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
@@ -2707,8 +2775,38 @@ export async function simulateWhatIf(body: {
   };
 }
 
+// CF-VARIANT-FILTER-BACKTEST — restricted header override.
+//
+// Honors `x-variant-tier-ladder: disabled` ONLY when the request is from
+// the admin-testing-hobbyiq user OR NODE_ENV is not "production". In all
+// other production requests the header is silently ignored and the env
+// flag governs. This keeps the header strictly a harness/diagnostic
+// surface — it cannot be exploited to alter pricing in normal production
+// traffic.
+async function isTierLadderHeaderAuthorized(req: Request): Promise<boolean> {
+  const headerVal = String(req.headers["x-variant-tier-ladder"] ?? "")
+    .trim()
+    .toLowerCase();
+  if (headerVal !== "disabled") return false;
+
+  const isProd =
+    String(process.env.NODE_ENV ?? "").trim().toLowerCase() === "production";
+  if (!isProd) return true;
+
+  // Production path: require admin-testing-hobbyiq session.
+  const sessionId = String(req.headers["x-session-id"] ?? "").trim();
+  if (!sessionId) return false;
+  try {
+    const user = await getUserBySession(sessionId);
+    return user?.userId === "admin-testing-hobbyiq";
+  } catch {
+    return false;
+  }
+}
+
 export async function compiqEstimate(req: Request, res: Response) {
-  const data = await computeEstimate(req.body || {});
+  const tierLadderDisabledByHeader = await isTierLadderHeaderAuthorized(req);
+  const data = await computeEstimate(req.body || {}, { tierLadderDisabledByHeader });
   // Stamp engine identity marker (pricingEngine / engineVersion / computedAt).
   // Non-breaking: existing clients ignore unknown JSON fields.
   //
