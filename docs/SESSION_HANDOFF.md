@@ -15,6 +15,7 @@
 (updated 2026-05-26 PM9 — CF-DEPLOY-SCRIPT-RESTART-FIX **shipped** (363863f live on HobbyIQ3). Code-baked SHA verification path closes the 3-for-3 silent old-dist failure mode that needed manual `az webapp restart` after every deploy this session. /api/health now exposes shaFromCode (from dist/build-info.json baked at npm run build) distinct from shaShort (from GIT_SHA env var). Deploy script [5/5] verifies shaFromCode with auto-retry restart. **Self-verification: this deploy's [5/5] reported `attempt 1: build.shaFromCodeShort=363863f` — the new dist loaded on the first restart, no auto-retry needed. Fix works end-to-end.**)
 (updated 2026-05-26 PM10 — CF-VARIANT-FILTER-BACKTEST **shipped** (5cf1430 live on HobbyIQ3). Three-metric paired backtest infrastructure: env flag bypass, restricted header override, new harness measuring rescue rate / rescue MAPE per tier / T0-stability MAPE delta. **Q7 decision: keep full ladder.** Backtest on 23-card production cohort: 3 T1 rescues (13% rate), T0-stability 0.00% (ladder is purely additive), T1 MAPE 24.4% mean (Trout WMB ×2 at 10.5%, John Gil at 52.4%). T2/T3 not exercised by this cohort — Q8'' catches wrong-card cases before they reach those tiers. Documented cohort + metric limitations; revisit when production accumulates ≥10 T1 or any T2/T3 cases. **Variant filter arc fully closed.**)
 (updated 2026-05-27 — **end-of-session handoff (Windows side)**. Session totals: 7 CFs closed, pricing pipeline coverage expanded from 5/24 → 9-10/23 holdings priced, variant filter arc fully closed across 7 commits with empirical validation + paired backtest infrastructure, deploy script reliability restored, PR E backend endpoints ready for Mac consumption. Day-2 queue + discipline patterns captured below. Windows side full stop; Mac work resumes tomorrow AM.)
+(updated 2026-05-27 AM — **PR E COMPLETE** (01d2cd4). Phase 2 dismiss UI + Phase 3 gradingCost/suppliesCost entry forms shipped. P&L cost recompute surfaced as CF-PR-E-P&L-COST-RECOMPUTE. Manual device verification pending (Drew).)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -48,7 +49,7 @@ Pricing pipeline progress (admin-testing-hobbyiq 23-holding cohort):
 
 **HIGH:**
 
-- **PR E Mac-side completion** — Phase 2 dismiss UI + Phase 3 entry forms (gradingCost/suppliesCost). ~30-60 min Mac session. Unblocked by today's `CF-PR-E-BACKEND-ENDPOINTS` (`150d14b`). Endpoint contract documented in handoff section above
+- ~~**PR E Mac-side completion**~~ — **SHIPPED** (`01d2cd4`). Phase 2 dismiss UI + Phase 3 entry forms. New finding: CF-PR-E-P&L-COST-RECOMPUTE (backend PATCH doesn't recompute P&L when costs change)
 - **Phase 5 portfolio integration** — ~2-3h Mac session. Design at `/Users/drew/hobbyiq-prep/phase5_portfolio_integration_design.md`. Builds on today's pricing improvements (the 9-10/23 holdings now priced unlock real portfolio-level computations)
 
 **MEDIUM:**
@@ -56,7 +57,10 @@ Pricing pipeline progress (admin-testing-hobbyiq 23-holding cohort):
 - **CF-IOS-FIELD-CONTRACT-FIX** (~30-60 min Mac) — closes shim debt; makes `CF-AUTOPRICE-FIELD-NAME-SHIM` removable when paired with backfill
 - **CF-PORTFOLIO-METADATA-BACKFILL** (~1-2h Windows) — gated on iOS contract fix first; one-time Cosmos rename of phantom field names to canonical
 - **CF-INVENTORY-REFRESH-WIRING** — Bug B from earlier in arc; backend endpoint exists, iOS APIService method needed. ~1-2h Mac
-- **CF-PR-E-RUNTIME-VERIFICATION + CF-PR-E-TEST-COVERAGE + CF-PR-E-CSV-PENDING-MARKER + CF-PR-E-P&L-COMPLETE-GROUPINGS** — various small Mac tasks; total ~4-5h
+- ~~**CF-PR-E-RUNTIME-VERIFICATION**~~ — subsumed into `01d2cd4` build verification; manual device verification pending (Drew)
+- **CF-PR-E-TEST-COVERAGE** — partially addressed (7 new tests in `01d2cd4`); test target signing config blocks execution (CF-TEST-SIGNING-CONFIG)
+- **CF-PR-E-CSV-PENDING-MARKER + CF-PR-E-P&L-COMPLETE-GROUPINGS** — still open, ~2h total
+- **CF-PR-E-P&L-COST-RECOMPUTE** (NEW) — backend PATCH spread-merges costs but doesn't recompute realizedProfitLoss. ~30min backend fix
 - **CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR** (~2-3h Mac) — structural fix for the photo-erasure bug class
 
 **LOW:**
@@ -4692,6 +4696,7 @@ Backend work needed to unblock deferred Phase 2 + Phase 3:
 | `9f73eb6` | TrendIQ Phase 2 plumbing — types, decoding, result view UI, layer breakdown sheet |
 | `67a1095` | Photo field erasure fix — forward `photos` + `clientId` in InventoryCard reconstruction (2 of 3 sites) |
 | `13fe547` | InventoryCard backend field name mismatch fix — decode `quickSaleValue`→`lowValue`, `premiumValue`→`highValue`, `verdict`→`method`, `freshnessStatus`→`summary` |
+| `01d2cd4` | **PR E COMPLETE** — Phase 2 dismiss UI (attention section dismiss button + alert + undo-dismiss) + Phase 3 entry forms (gradingCost/suppliesCost inline editing in detail sheet) + 7 tests |
 
 ### CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR (NEW, MEDIUM, ~2-3h)
 
