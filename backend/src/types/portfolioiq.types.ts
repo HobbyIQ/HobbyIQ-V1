@@ -41,6 +41,18 @@ export interface PortfolioHolding {
   predictedPriceHigh?: number | null;
   predictedPriceMechanism?: string | null;
   predictedPriceUpdatedAt?: string | null;
+  // CF-AUTOPRICE-PERSIST-TRENDIQ — persisted TrendIQ movement fields so
+  // the iOS dashboard can render direction (▲/▼/—) + magnitude without
+  // re-querying /estimate per holding. Populated only when computeEstimate
+  // returns a trendIQ object (success path); fallback paths leave these
+  // null. Movement fields are FORWARD-looking (TrendIQ composite); the
+  // BACKWARD-looking trend field elsewhere on this type reflects historical
+  // momentum from comp history alone.
+  movementDirection?: string | null;
+  movementComposite?: number | null;
+  movementImpliedPct?: number | null;
+  movementCoverage?: string | null;
+  movementUpdatedAt?: string | null;
   netEstimatedValue?: number;
   totalProfitLoss?: number;
   totalProfitLossPct?: number;

@@ -430,6 +430,27 @@ async function autoPriceHolding(
   const predictedPriceUpdatedAt =
     (estimate as any)?.signalsLastUpdated ?? null;
 
+  // CF-AUTOPRICE-PERSIST-TRENDIQ — persist forward-looking TrendIQ
+  // movement fields. trendIQ is computed on every estimate call but only
+  // present in the success-path response; fallback paths leave the field
+  // absent, in which case movement fields land as null. movementUpdatedAt
+  // falls back to current time when trendIQ.lastUpdated is null so the
+  // dashboard can still surface freshness from this write.
+  const __trendIQ = (estimate as any)?.trendIQ ?? null;
+  const rawComposite = __trendIQ?.composite;
+  const rawImpliedPct = __trendIQ?.impliedPct;
+  const movementDirection =
+    typeof __trendIQ?.direction === "string" ? __trendIQ.direction : null;
+  const movementComposite =
+    typeof rawComposite === "number" && Number.isFinite(rawComposite) ? rawComposite : null;
+  const movementImpliedPct =
+    typeof rawImpliedPct === "number" && Number.isFinite(rawImpliedPct) ? rawImpliedPct : null;
+  const movementCoverage =
+    typeof __trendIQ?.coverage === "string" ? __trendIQ.coverage : null;
+  const movementUpdatedAt = __trendIQ
+    ? (__trendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
+    : null;
+
   const updated: PortfolioHolding = {
     ...holding,
     currentValue: fairValue,
@@ -442,6 +463,11 @@ async function autoPriceHolding(
     predictedPriceHigh,
     predictedPriceMechanism,
     predictedPriceUpdatedAt,
+    movementDirection,
+    movementComposite,
+    movementImpliedPct,
+    movementCoverage,
+    movementUpdatedAt,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     confidence,
@@ -1943,6 +1969,30 @@ export async function repriceHoldingsForUser(
       const repricePredictedPriceUpdatedAt =
         (estimate as any)?.signalsLastUpdated ?? null;
 
+      // CF-AUTOPRICE-PERSIST-TRENDIQ — mirror the autoPriceHolding (site 1)
+      // movement-field extraction. Both persistence sites must agree on the
+      // shape iOS reads from GET /api/portfolio. Pull-to-refresh + scheduled
+      // reprice route through HERE; addHolding-style flows route through
+      // autoPriceHolding.
+      const repriceTrendIQ = (estimate as any)?.trendIQ ?? null;
+      const repriceRawComposite = repriceTrendIQ?.composite;
+      const repriceRawImpliedPct = repriceTrendIQ?.impliedPct;
+      const repriceMovementDirection =
+        typeof repriceTrendIQ?.direction === "string" ? repriceTrendIQ.direction : null;
+      const repriceMovementComposite =
+        typeof repriceRawComposite === "number" && Number.isFinite(repriceRawComposite)
+          ? repriceRawComposite
+          : null;
+      const repriceMovementImpliedPct =
+        typeof repriceRawImpliedPct === "number" && Number.isFinite(repriceRawImpliedPct)
+          ? repriceRawImpliedPct
+          : null;
+      const repriceMovementCoverage =
+        typeof repriceTrendIQ?.coverage === "string" ? repriceTrendIQ.coverage : null;
+      const repriceMovementUpdatedAt = repriceTrendIQ
+        ? (repriceTrendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
+        : null;
+
       const updated: PortfolioHolding = {
         ...holding,
         currentValue: fairValue,
@@ -1955,6 +2005,11 @@ export async function repriceHoldingsForUser(
         predictedPriceHigh: repricePredictedPriceHigh,
         predictedPriceMechanism: repricePredictedPriceMechanism,
         predictedPriceUpdatedAt: repricePredictedPriceUpdatedAt,
+        movementDirection: repriceMovementDirection,
+        movementComposite: repriceMovementComposite,
+        movementImpliedPct: repriceMovementImpliedPct,
+        movementCoverage: repriceMovementCoverage,
+        movementUpdatedAt: repriceMovementUpdatedAt,
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         confidence,
