@@ -50,7 +50,7 @@ struct PortfolioIQView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingLedger) {
-                PortfolioLedgerSheet(entries: vm.ledgerEntries, totals: vm.ledgerTotals, viewModel: vm)
+                PortfolioLedgerSheet(viewModel: vm)
             }
             .sheet(item: $selectedCard) { card in
                 PortfolioHoldingDetailSheet(
@@ -549,9 +549,7 @@ private enum LedgerPnLGrouping: String, CaseIterable {
 }
 
 private struct PortfolioLedgerSheet: View {
-    let entries: [PortfolioLedgerEntry]
-    let totals: PortfolioLedgerTotals?
-    let viewModel: PortfolioIQViewModel
+    @ObservedObject var viewModel: PortfolioIQViewModel
     @State private var selectedEntry: PortfolioLedgerEntry?
     @State private var showExportOptions = false
     @State private var includeUnreconciled = false
@@ -560,6 +558,12 @@ private struct PortfolioLedgerSheet: View {
     @State private var selectedTab: LedgerTab = .entries
     @State private var pnlGrouping: LedgerPnLGrouping = .month
     @State private var pnlIncludeUnreconciled = false
+    @State private var entryToDismiss: PortfolioLedgerEntry?
+    @State private var dismissReason = ""
+    @State private var dismissError: String?
+
+    private var entries: [PortfolioLedgerEntry] { viewModel.ledgerEntries }
+    private var totals: PortfolioLedgerTotals? { viewModel.ledgerTotals }
 
     var body: some View {
         NavigationStack {
@@ -585,7 +589,7 @@ private struct PortfolioLedgerSheet: View {
                                 ledgerTotalsCard(totals)
                             }
 
-                            let reconciliation = entries.filter { $0.needsReconciliation == true }
+                            let reconciliation = entries.filter { $0.needsReconciliation == true && $0.dismissedAt == nil }
                             if !reconciliation.isEmpty {
                                 ledgerAttentionSection(reconciliation)
                             }
@@ -619,7 +623,7 @@ private struct PortfolioLedgerSheet: View {
                 }
             }
             .sheet(item: $selectedEntry) { entry in
-                LedgerEntryDetailSheet(entry: entry)
+                LedgerEntryDetailSheet(entry: entry, viewModel: viewModel)
             }
             .confirmationDialog("Export Tax CSV", isPresented: $showExportOptions) {
                 Button("Export (exclude unreconciled)") {
@@ -817,7 +821,6 @@ private struct PortfolioLedgerSheet: View {
         }
     }
 
-    // dismiss action deferred pending PATCH endpoint.
     private func ledgerAttentionSection(_ entries: [PortfolioLedgerEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -833,28 +836,68 @@ private struct PortfolioLedgerSheet: View {
             }
 
             ForEach(entries) { entry in
-                Button { selectedEntry = entry } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "cart.badge.questionmark")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                        Text(entry.playerName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Spacer(minLength: 0)
-                        Text("Incomplete fees")
-                            .font(.caption2)
-                            .foregroundStyle(.orange.opacity(0.8))
-                        Image(systemName: "chevron.right")
-                            .font(.caption2)
-                            .foregroundStyle(Color(hex: 0x9CA3AF))
+                HStack(spacing: 8) {
+                    Button { selectedEntry = entry } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "cart.badge.questionmark")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                            Text(entry.playerName)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Spacer(minLength: 0)
+                            Text("Incomplete fees")
+                                .font(.caption2)
+                                .foregroundStyle(.orange.opacity(0.8))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                        }
                     }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        dismissReason = ""
+                        entryToDismiss = entry
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color(hex: 0x9CA3AF).opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .portfolioCardSurface(cornerRadius: 18)
+        .alert("Dismiss Entry", isPresented: Binding(
+            get: { entryToDismiss != nil },
+            set: { if !$0 { entryToDismiss = nil } }
+        )) {
+            TextField("Reason (optional)", text: $dismissReason)
+            Button("Dismiss") {
+                guard let entry = entryToDismiss else { return }
+                Task {
+                    do {
+                        try await viewModel.dismissLedgerEntry(id: entry.id, reason: dismissReason)
+                    } catch {
+                        dismissError = error.localizedDescription
+                    }
+                    entryToDismiss = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { entryToDismiss = nil }
+        } message: {
+            Text("Acknowledge this entry's incomplete fees. You can undo this from the sale details.")
+        }
+        .alert("Dismiss Failed", isPresented: Binding(
+            get: { dismissError != nil },
+            set: { if !$0 { dismissError = nil } }
+        )) {
+            Button("OK") { dismissError = nil }
+        } message: {
+            Text(dismissError ?? "")
+        }
     }
 
     private func ledgerRow(_ entry: PortfolioLedgerEntry) -> some View {
@@ -917,7 +960,14 @@ private struct PortfolioLedgerSheet: View {
 
 private struct LedgerEntryDetailSheet: View {
     let entry: PortfolioLedgerEntry
+    let viewModel: PortfolioIQViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var gradingCostText = ""
+    @State private var suppliesCostText = ""
+    @State private var isSavingCosts = false
+    @State private var costSaveError: String?
+    @State private var isUndismissing = false
+    @State private var undismissError: String?
 
     var body: some View {
         NavigationStack {
@@ -928,11 +978,11 @@ private struct LedgerEntryDetailSheet: View {
                     if entry.isEbaySource {
                         ebayFeeBreakdownSection
                     }
-                    if entry.costBasisSold != nil || entry.suppliesCost != nil || entry.gradingCost != nil {
-                        costBasisSection
-                    }
+                    costBasisEditSection
                     profitSection
-                    // gradingCost + suppliesCost entry forms deferred pending backend endpoint.
+                    if entry.dismissedAt != nil {
+                        undismissSection
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)
@@ -947,6 +997,10 @@ private struct LedgerEntryDetailSheet: View {
                         .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                 }
             }
+        }
+        .onAppear {
+            gradingCostText = entry.gradingCost.map { String(format: "%.2f", $0) } ?? ""
+            suppliesCostText = entry.suppliesCost.map { String(format: "%.2f", $0) } ?? ""
         }
     }
 
@@ -971,7 +1025,7 @@ private struct LedgerEntryDetailSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(Color(hex: 0x9CA3AF))
             }
-            if entry.needsReconciliation == true {
+            if entry.needsReconciliation == true && entry.dismissedAt == nil {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
@@ -979,6 +1033,20 @@ private struct LedgerEntryDetailSheet: View {
                         .font(.caption2)
                 }
                 .foregroundStyle(.orange)
+                .padding(.top, 2)
+            }
+            if entry.dismissedAt != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                    Text("Dismissed")
+                        .font(.caption2.weight(.semibold))
+                    if let reason = entry.dismissedReason, !reason.isEmpty {
+                        Text("— \(reason)")
+                            .font(.caption2)
+                    }
+                }
+                .foregroundStyle(Color(hex: 0x9CA3AF))
                 .padding(.top, 2)
             }
         }
@@ -1038,16 +1106,127 @@ private struct LedgerEntryDetailSheet: View {
         .portfolioCardSurface(cornerRadius: 18)
     }
 
-    private var costBasisSection: some View {
+    private var costBasisEditSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             detailSectionHeader("Cost Basis")
             if let cost = entry.costBasisSold {
                 detailRow("Purchase Cost", value: cost.portfolioCurrencyText)
             }
-            feeRow("Grading Cost", fee: entry.gradingCost)
-            feeRow("Supplies Cost", fee: entry.suppliesCost)
+            costEditRow("Grading Cost", text: $gradingCostText) {
+                await saveCost(field: "gradingCost", text: gradingCostText, original: entry.gradingCost)
+            }
+            costEditRow("Supplies Cost", text: $suppliesCostText) {
+                await saveCost(field: "suppliesCost", text: suppliesCostText, original: entry.suppliesCost)
+            }
+            if isSavingCosts {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.mini)
+                    Text("Saving...")
+                        .font(.caption2)
+                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                }
+            }
+            if let err = costSaveError {
+                Text(err)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .portfolioCardSurface(cornerRadius: 18)
+    }
+
+    private func costEditRow(_ label: String, text: Binding<String>, onCommit: @escaping () async -> Void) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color(hex: 0x9CA3AF))
+            Spacer()
+            HStack(spacing: 2) {
+                Text("$")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                TextField("—", text: text)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
+                    .onSubmit { Task { await onCommit() } }
+            }
+        }
+    }
+
+    private func saveCost(field: String, text: String, original: Double?) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue: Double?? = trimmed.isEmpty ? .some(nil) : {
+            guard let v = Double(trimmed), v >= 0 else { return nil }
+            return .some(v)
+        }()
+
+        guard let patchValue = newValue else {
+            costSaveError = "Enter a valid amount (0 or greater)"
+            return
+        }
+
+        let originalFormatted = original.map { String(format: "%.2f", $0) } ?? ""
+        if trimmed == originalFormatted { return }
+
+        isSavingCosts = true
+        costSaveError = nil
+        do {
+            if field == "gradingCost" {
+                try await viewModel.updateLedgerEntryCosts(id: entry.id, gradingCost: patchValue, suppliesCost: nil)
+            } else {
+                try await viewModel.updateLedgerEntryCosts(id: entry.id, gradingCost: nil, suppliesCost: patchValue)
+            }
+        } catch {
+            costSaveError = error.localizedDescription
+            if field == "gradingCost" {
+                gradingCostText = originalFormatted
+            } else {
+                suppliesCostText = originalFormatted
+            }
+        }
+        isSavingCosts = false
+    }
+
+    private var undismissSection: some View {
+        VStack(spacing: 8) {
+            Button {
+                Task {
+                    isUndismissing = true
+                    undismissError = nil
+                    do {
+                        try await viewModel.undismissLedgerEntry(id: entry.id)
+                        dismiss()
+                    } catch {
+                        undismissError = error.localizedDescription
+                    }
+                    isUndismissing = false
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    if isUndismissing {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "arrow.uturn.backward.circle")
+                            .font(.caption)
+                    }
+                    Text("Undo Dismiss")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+            }
+            .disabled(isUndismissing)
+            if let err = undismissError {
+                Text(err)
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+            }
+        }
         .portfolioCardSurface(cornerRadius: 18)
     }
 

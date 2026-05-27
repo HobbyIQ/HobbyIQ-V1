@@ -163,6 +163,8 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
     let actualShippingCost: Double?
     let suppliesCost: Double?
     let gradingCost: Double?
+    let dismissedAt: String?
+    let dismissedReason: String?
 
     private let _dateTextOverride: String?
 
@@ -223,6 +225,8 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         self.actualShippingCost = nil
         self.suppliesCost = nil
         self.gradingCost = nil
+        self.dismissedAt = nil
+        self.dismissedReason = nil
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -233,6 +237,7 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         case finalValueFee, paymentProcessingFee, promotedListingFee
         case adFee, otherFees, netPayout, actualShippingCost
         case suppliesCost, gradingCost
+        case dismissedAt, dismissedReason
     }
 
     init(from decoder: Decoder) throws {
@@ -264,8 +269,36 @@ struct PortfolioLedgerEntry: Identifiable, Hashable, Codable {
         actualShippingCost = try? c.decodeIfPresent(Double.self, forKey: .actualShippingCost)
         suppliesCost = try? c.decodeIfPresent(Double.self, forKey: .suppliesCost)
         gradingCost = try? c.decodeIfPresent(Double.self, forKey: .gradingCost)
+        dismissedAt = try? c.decodeIfPresent(String.self, forKey: .dismissedAt)
+        dismissedReason = try? c.decodeIfPresent(String.self, forKey: .dismissedReason)
         _dateTextOverride = nil
     }
+}
+
+// MARK: - Ledger PATCH
+
+struct LedgerPatchBody: Encodable {
+    var gradingCost: Double??
+    var suppliesCost: Double??
+    var dismissedAt: String??
+    var dismissedReason: String??
+
+    private enum CodingKeys: String, CodingKey {
+        case gradingCost, suppliesCost, dismissedAt, dismissedReason
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let v = gradingCost { try container.encode(v, forKey: .gradingCost) }
+        if let v = suppliesCost { try container.encode(v, forKey: .suppliesCost) }
+        if let v = dismissedAt { try container.encode(v, forKey: .dismissedAt) }
+        if let v = dismissedReason { try container.encode(v, forKey: .dismissedReason) }
+    }
+}
+
+struct LedgerPatchResponse: Decodable {
+    let message: String
+    let entry: PortfolioLedgerEntry
 }
 
 extension InventoryCard {

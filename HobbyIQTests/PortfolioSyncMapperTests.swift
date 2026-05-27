@@ -318,4 +318,101 @@ final class PortfolioSyncMapperTests: XCTestCase {
         XCTAssertNil(card.method)
         XCTAssertNil(card.summary)
     }
+
+    // MARK: - PortfolioLedgerEntry Decode — dismissedAt/dismissedReason
+
+    func testLedgerEntryDecodesDismissFields() throws {
+        let json = """
+        {
+            "id": "ledger-001",
+            "playerName": "Test Player",
+            "needsReconciliation": true,
+            "dismissedAt": "2026-05-27T10:00:00Z",
+            "dismissedReason": "Fees confirmed manually"
+        }
+        """.data(using: .utf8)!
+
+        let entry = try JSONDecoder().decode(PortfolioLedgerEntry.self, from: json)
+
+        XCTAssertEqual(entry.dismissedAt, "2026-05-27T10:00:00Z")
+        XCTAssertEqual(entry.dismissedReason, "Fees confirmed manually")
+        XCTAssertEqual(entry.needsReconciliation, true)
+    }
+
+    func testLedgerEntryDismissFieldsNilWhenAbsent() throws {
+        let json = """
+        {
+            "id": "ledger-002",
+            "playerName": "No Dismiss"
+        }
+        """.data(using: .utf8)!
+
+        let entry = try JSONDecoder().decode(PortfolioLedgerEntry.self, from: json)
+
+        XCTAssertNil(entry.dismissedAt)
+        XCTAssertNil(entry.dismissedReason)
+    }
+
+    // MARK: - LedgerPatchBody Encoding
+
+    func testLedgerPatchBodyEncodesOnlySetFields() throws {
+        let body = LedgerPatchBody(
+            dismissedAt: .some("2026-05-27T10:00:00Z"),
+            dismissedReason: .some("Done")
+        )
+        let data = try JSONEncoder().encode(body)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["dismissedAt"] as? String, "2026-05-27T10:00:00Z")
+        XCTAssertEqual(dict["dismissedReason"] as? String, "Done")
+        XCTAssertNil(dict["gradingCost"])
+        XCTAssertNil(dict["suppliesCost"])
+    }
+
+    func testLedgerPatchBodyEncodesNullForClear() throws {
+        let body = LedgerPatchBody(
+            dismissedAt: .some(nil),
+            dismissedReason: .some(nil)
+        )
+        let data = try JSONEncoder().encode(body)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertTrue(dict.keys.contains("dismissedAt"))
+        XCTAssertTrue(dict["dismissedAt"] is NSNull)
+        XCTAssertTrue(dict.keys.contains("dismissedReason"))
+        XCTAssertTrue(dict["dismissedReason"] is NSNull)
+    }
+
+    func testLedgerPatchBodyOmitsUnsetFields() throws {
+        let body = LedgerPatchBody(gradingCost: .some(25.0))
+        let data = try JSONEncoder().encode(body)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["gradingCost"] as? Double, 25.0)
+        XCTAssertEqual(dict.count, 1, "Only gradingCost should be present")
+    }
+
+    func testLedgerPatchResponseDecodes() throws {
+        let json = """
+        {
+            "message": "Entry updated",
+            "entry": {
+                "id": "ledger-003",
+                "playerName": "Test",
+                "gradingCost": 25.0,
+                "suppliesCost": null,
+                "dismissedAt": null,
+                "dismissedReason": null
+            }
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(LedgerPatchResponse.self, from: json)
+
+        XCTAssertEqual(response.message, "Entry updated")
+        XCTAssertEqual(response.entry.id, "ledger-003")
+        XCTAssertEqual(response.entry.gradingCost, 25.0)
+        XCTAssertNil(response.entry.suppliesCost)
+        XCTAssertNil(response.entry.dismissedAt)
+    }
 }

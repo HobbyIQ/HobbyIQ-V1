@@ -189,6 +189,38 @@ final class PortfolioIQViewModel: ObservableObject {
         }
     }
 
+    func dismissLedgerEntry(id: String, reason: String?) async throws {
+        let trimmed = reason?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = LedgerPatchBody(
+            dismissedAt: .some(ISO8601DateFormatter().string(from: Date())),
+            dismissedReason: .some(trimmed?.isEmpty == false ? trimmed : nil)
+        )
+        let updated = try await service.updateLedgerEntry(id: id, body: body)
+        replaceEntry(updated)
+    }
+
+    func undismissLedgerEntry(id: String) async throws {
+        let body = LedgerPatchBody(
+            dismissedAt: .some(nil),
+            dismissedReason: .some(nil)
+        )
+        let updated = try await service.updateLedgerEntry(id: id, body: body)
+        replaceEntry(updated)
+    }
+
+    func updateLedgerEntryCosts(id: String, gradingCost: Double??, suppliesCost: Double??) async throws {
+        let body = LedgerPatchBody(gradingCost: gradingCost, suppliesCost: suppliesCost)
+        let updated = try await service.updateLedgerEntry(id: id, body: body)
+        replaceEntry(updated)
+    }
+
+    private func replaceEntry(_ updated: PortfolioLedgerEntry) {
+        guard var entries = apiLedgerEntries,
+              let idx = entries.firstIndex(where: { $0.id == updated.id }) else { return }
+        entries[idx] = updated
+        apiLedgerEntries = entries
+    }
+
     func exportLedgerCSV(includeUnreconciled: Bool) -> URL? {
         let entries = ledgerEntries
         let filtered = includeUnreconciled ? entries : entries.filter { $0.needsReconciliation != true }

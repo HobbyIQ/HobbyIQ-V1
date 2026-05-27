@@ -289,6 +289,15 @@ struct APIService {
         )
     }
 
+    func updateLedgerEntry(id: String, body: LedgerPatchBody) async throws -> PortfolioLedgerEntry {
+        let response: LedgerPatchResponse = try await patch(
+            path: "/api/portfolio/ledger/\(id)",
+            body: body,
+            responseType: LedgerPatchResponse.self
+        )
+        return response.entry
+    }
+
     func ebayConnectionStatus(sessionId: String? = nil) async throws -> EBayConnectionStatusResponse {
         let resolvedSessionId = try requireSessionId(sessionId)
         return try await get(
