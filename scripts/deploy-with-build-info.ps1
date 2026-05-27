@@ -315,10 +315,10 @@ for ($i = 0; $i -lt 10; $i++) {
         break
     }
     # After 4 attempts (~60s after first restart + 60s warmup = ~2 min total),
-    # if still no flip, issue a second restart — the manual-workaround pattern
+    # if still no flip, issue a second restart -- the manual-workaround pattern
     # that consistently fixed the silent old-dist deploys this session.
     if (-not $retryDone -and $i -ge 3) {
-        Write-Host "    shaFromCode still stale after ~2 min — issuing retry restart (this is the manual-workaround pattern automated)..."
+        Write-Host "    shaFromCode still stale after ~2 min -- issuing retry restart (this is the manual-workaround pattern automated)..."
         Restart-AppService
         Write-Host "    Retry restart issued. Waiting 60s..."
         Start-Sleep -Seconds 60

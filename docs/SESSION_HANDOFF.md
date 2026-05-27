@@ -12,6 +12,7 @@
 (updated 2026-05-26 PM6 — CF-VARIANT-FILTER-LOOSENING **implementation shipped**; tier ladder T0→T3 in computeEstimate + variantStrictness in compQuality + min(tier_cap, computed) confidence composition + per-tier verdict text. 956 tests pass (+22 net new). CF-PARALLEL-CANONICALIZATION surfaced as follow-up for the M3 Tommy White case. Post-deploy sweep + backtest pending.)
 (updated 2026-05-26 PM7 — CF-VARIANT-FILTER-LOOSENING **CLOSED** after iterative refinement arc: e233fff (initial) → 095deb2 Q8' (over-narrowed) → cbfd963 Q8'' (auto-prefix XOR discriminator). Final sweep validates 9 live / 5 variant-mismatch / 9 no-recent-comps. Q7 backtest gating deferred to CF-VARIANT-FILTER-BACKTEST (existing harness structurally can't isolate tier-ladder MAPE contribution; sweep evidence is the stronger signal we have).)
 (updated 2026-05-26 PM8 — CF-PR-E-BACKEND-ENDPOINTS **shipped** (150d14b live on HobbyIQ3). PATCH /api/portfolio/ledger/:id + dismissedAt/dismissedReason schema fields. Production smoke verified end-to-end (set + persist + reject non-whitelist + restore). Unblocks Mac-side PR E Phase 2 dismiss UI + Phase 3 entry forms (~30-60 min Mac session estimated).)
+(updated 2026-05-26 PM9 — CF-DEPLOY-SCRIPT-RESTART-FIX **shipped** (363863f live on HobbyIQ3). Code-baked SHA verification path closes the 3-for-3 silent old-dist failure mode that needed manual `az webapp restart` after every deploy this session. /api/health now exposes shaFromCode (from dist/build-info.json baked at npm run build) distinct from shaShort (from GIT_SHA env var). Deploy script [5/5] verifies shaFromCode with auto-retry restart. **Self-verification: this deploy's [5/5] reported `attempt 1: build.shaFromCodeShort=363863f` — the new dist loaded on the first restart, no auto-retry needed. Fix works end-to-end.**)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -64,6 +65,77 @@ None of the 24 current holdings hit all three.
 - /api/health returns SHA `4b88fb5` (deployed code)
 - Production response sources categorized via read-only smoke script
   (not committed)
+
+---
+
+### CF-DEPLOY-SCRIPT-RESTART-FIX — SHIPPED (2026-05-26 PM9)
+
+**Commit:** `363863f` on `origin/main` — live on HobbyIQ3, self-verified by the deploy itself.
+
+**Problem (3-for-3 silent failure pattern this session):** Deploys `095deb2`, `cbfd963`, `150d14b` all reported success but left production on the OLD dist. Each required manual `az webapp restart` 1-2 min after the script claimed completion. Production was therefore at risk by default — any deploy without the manual workaround would ship stale code.
+
+**Root cause:** The hardened deploy script's `[5/5]` verification was structurally unable to detect the failure. Both verification probes pass on the old dist:
+
+1. `/api/health.build.shaShort` reads from `GIT_SHA` env var set by `[1/5]` BEFORE the deploy. The implicit App Settings restart in `[1/5]` flips this env var on the still-running old container, so `shaShort` reports the new SHA forever — regardless of whether the new dist loads
+2. Feature probe `/api/compiq/normalization-dictionary` is a stable endpoint that exists in BOTH old and new dist — passes whichever is running
+
+The actual sequence of events:
+
+- `[1/5]` sets `GIT_SHA` → implicit restart → old container restarts with new env var
+- `[2/5]` OneDeploy enqueues rsync → new container instance fails to start within OneDeploy's 10-min health check window
+- `[4/5]` Kudu reports `status=4 SUCCESS at 15s` because Kudu records "rsync complete", not "container live"
+- `[5/5]` issues `az webapp restart` during OneDeploy's "in progress" window — Azure silently absorbs it
+- Probes pass on old dist → script exits 0 → production stuck on old code
+
+Manual `az webapp restart` 1-2 min later succeeds because the OneDeploy "in progress" window has cleared.
+
+**Fix: code-baked SHA verification.**
+
+| Field | Source | Failure-mode behavior |
+|---|---|---|
+| `build.shaShort` | `GIT_SHA` env var (set `[1/5]`) | Reports new SHA on old dist — silent failure |
+| **`build.shaFromCode`** (new) | `dist/build-info.json` baked at `npm run build` | Cannot report new SHA unless new dist actually loaded |
+
+Backend changes:
+
+- `backend/scripts/write-build-info.cjs` (NEW) — postbuild step writes `dist/build-info.json` with `{ sha, shaShort, branch, builtAt }`
+- `backend/package.json` — `build` script chains `tsc && node scripts/write-build-info.cjs`
+- `backend/src/routes/health.routes.ts` — reads `dist/build-info.json` at module load (graceful null if missing). Exposes `shaFromCode` / `shaFromCodeShort` / `branchFromCode` / `builtAt` on `/api/health.build` alongside existing env-var fields
+- `backend/tests/health.test.ts` — added 3 tests for the new fields (presence, graceful-null on missing file, env-var-independence)
+
+Deploy script change:
+
+- `scripts/deploy-with-build-info.ps1` `[5/5]` — verifies `build.shaFromCodeShort` matches expected SHA, with auto-retry restart if it doesn't flip after ~2 min (the manual-workaround pattern automated). Existing `shaShort` check kept as belt-and-suspenders for env-var drift
+
+**Self-verification result on this deploy:**
+
+```
+[5/5] Restarting App Service + verifying code-baked SHA flip...
+    Restart issued. Waiting 60s for container warmup...
+
+Verifying /api/health build.shaFromCodeShort=363863f (true dist-swap signal)...
+    attempt 1: build.shaFromCodeShort=363863f    ← MATCHED ON FIRST POLL
+```
+
+`/api/health.build` post-deploy:
+
+```json
+{
+  "shaShort": "363863f",
+  "shaFromCodeShort": "363863f",
+  "branchFromCode": "main",
+  "builtAt": "2026-05-27T02:09:07.253Z"
+}
+```
+
+Interesting datapoint: the new dist actually loaded on the FIRST restart this time, so the auto-retry logic was not exercised. The previous 3 silent-failure deploys all needed the manual restart. Either Azure's behavior is non-deterministic (timing-sensitive contention) or the slightly longer 60s warmup (vs prior 45s) made the difference. The auto-retry is the safety net regardless.
+
+**Verification:** backend test suite 979 passed, 100 skipped, 0 failed (+3 net new tests).
+
+**Operational notes:**
+
+- Pre-existing markdown em-dash issue in PowerShell scripts: PS 5.1 reads UTF-8-without-BOM files as cp1252, mangling multi-byte characters. The initial commit `363863f` had em-dashes (`—`) in script comments which caused a parser error on first deploy attempt. Caught BEFORE production was touched (parse error blocks the script). Fixed in-place with ASCII `--` substitution. Lesson: keep PowerShell scripts ASCII-only or save with BOM
+- The `[5/5]` auto-retry-restart now eliminates the need for human intervention on silent old-dist failures. If a future deploy hits the contention window again, the script will detect via `shaFromCode` mismatch and re-trigger the restart automatically
 
 ---
 
