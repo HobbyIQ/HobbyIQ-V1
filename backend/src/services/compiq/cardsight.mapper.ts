@@ -65,6 +65,44 @@ const COMPIQ_TO_CARDSIGHT_RELEASES: Record<string, string> = {
   "donruss": "Donruss",
 };
 
+// CF-CARDSIGHT-RESOLVER-TIFFANY (2026-05-27): set-level parallels that have
+// their own cardId in Cardsight catalog (distinct setName from the base).
+//
+// When user requests parallel="Tiffany" on a product like "Topps" or "Topps
+// Traded" with a specific year, the resolver should target the dedicated
+// Tiffany set's cardId rather than falling back to the base set's cardId
+// via pricing-probe records-based selection (the base has 10-100× more
+// records, so greedy selection always wins — exactly opposite of what we
+// want when the user asked for Tiffany).
+//
+// Enumeration: Cardsight catalog queries 2026-05-27 revealed 14 distinct
+// Tiffany set entries. Bounded scope; no expansion planned absent another
+// set-level parallel surface (Glossy, Holiday, etc — those would be a
+// separate CF: CF-CARDSIGHT-RESOLVER-VARIANT-PRIORITY).
+//
+// Keyed by `${product.toLowerCase()}|${year}` for unambiguous lookup. Both
+// "topps" and "topps traded" carry their own year keys to disambiguate the
+// flagship vs supplemental sets.
+const TIFFANY_RELEASE_OVERRIDES: Record<string, string> = {
+  // 1984-1991 Topps flagship Tiffany (continuous)
+  "topps|1984": "1984 Topps Tiffany Baseball",
+  "topps|1985": "1985 Topps Tiffany Baseball",
+  "topps|1986": "1986 Topps Tiffany Baseball",
+  "topps|1987": "1987 Topps Tiffany Baseball",
+  "topps|1988": "1988 Topps Tiffany Baseball",
+  "topps|1989": "1989 Topps Tiffany Baseball",
+  "topps|1990": "1990 Topps Tiffany Baseball",
+  "topps|1991": "1991 Topps Tiffany Baseball",
+  // Topps Traded Tiffany — gaps at 1984/85/88/90 per Cardsight catalog
+  "topps traded|1986": "1986 Topps Traded Tiffany Baseball",
+  "topps traded|1987": "1987 Topps Traded Tiffany Baseball",
+  "topps traded|1989": "1989 Topps Traded Tiffany Baseball",
+  "topps traded|1991": "1991 Topps Traded Tiffany Baseball",
+  // Fleer Tiffany — 1996-1997 only
+  "fleer|1996": "1996 Fleer Tiffany Baseball",
+  "fleer|1997": "1997 Fleer Tiffany Baseball",
+};
+
 const CARDSIGHT_SET_PATTERNS: Record<string, RegExp> = {
   "Topps Chrome Base":             /^Base Set$/i,
   "Topps Chrome Refractor":        /^Refractor$/i,
@@ -84,10 +122,40 @@ const MAX_DETAIL_PROBES = 5;
 // of throttling per-target probe count. See warmResolveCardIdCache below.
 const MAX_PRICING_PROBES = 8;
 
-export function lookupReleaseName(product: string): string | null {
+// CF-CARDSIGHT-RESOLVER-TIFFANY: lookup releaseName for the Cardsight
+// catalog search. The base dictionary returns the canonical product
+// releaseName ("Topps Update", "Bowman Chrome", etc.). The optional
+// parallel + year arguments enable set-level parallel overrides — when
+// parallel="Tiffany" and the product/year matches an enumerated Tiffany
+// set, returns the dedicated Tiffany setName instead of the base
+// releaseName. This lets the resolver target the Tiffany cardId
+// directly rather than greedy-picking the base via pricing-probe.
+//
+// Backward-compatible: calls with only `product` behave exactly as
+// before. Tiffany override only fires when parallel + year + matching
+// dictionary key all line up.
+export function lookupReleaseName(
+  product: string,
+  parallel?: string | null,
+  year?: number | null,
+): string | null {
   if (!product) return null;
-  const normalized = product.toLowerCase().trim();
-  return COMPIQ_TO_CARDSIGHT_RELEASES[normalized] ?? null;
+  const productNorm = product.toLowerCase().trim();
+
+  // Tiffany set-level parallel override (CF-CARDSIGHT-RESOLVER-TIFFANY).
+  // Only fires when caller supplies both parallel + year AND the
+  // product/year pair matches an enumerated Tiffany set.
+  if (parallel && year != null && Number.isFinite(year)) {
+    const parallelNorm = parallel.toLowerCase().trim();
+    if (parallelNorm === "tiffany") {
+      const key = `${productNorm}|${year}`;
+      const tiffanySet = TIFFANY_RELEASE_OVERRIDES[key];
+      if (tiffanySet) return tiffanySet;
+    }
+  }
+
+  // Base dictionary lookup (unchanged behavior).
+  return COMPIQ_TO_CARDSIGHT_RELEASES[productNorm] ?? null;
 }
 
 // CF-PLAYERNAME-NORMALIZATION (2026-05-26): iOS card-scan path
@@ -256,7 +324,15 @@ async function _resolveCardId(
   // what they actually typed); effectiveProduct drives catalog routing.
   const effectiveProduct = applyCardNumberDisambiguation(input.product, input.cardNumber);
 
-  let releaseName: string | null = effectiveProduct ? lookupReleaseName(effectiveProduct) : null;
+  const cardYearAsNumber =
+    typeof input.cardYear === "number"
+      ? input.cardYear
+      : typeof input.cardYear === "string" && /^\d{4}$/.test(input.cardYear)
+        ? Number(input.cardYear)
+        : null;
+  let releaseName: string | null = effectiveProduct
+    ? lookupReleaseName(effectiveProduct, input.parallel, cardYearAsNumber)
+    : null;
   if (effectiveProduct && !releaseName) {
     warnings.push(
       `Product "${input.product}" not in Cardsight release dictionary — searching by player name only.`,
