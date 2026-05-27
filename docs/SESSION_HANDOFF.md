@@ -14,8 +14,81 @@
 (updated 2026-05-26 PM8 — CF-PR-E-BACKEND-ENDPOINTS **shipped** (150d14b live on HobbyIQ3). PATCH /api/portfolio/ledger/:id + dismissedAt/dismissedReason schema fields. Production smoke verified end-to-end (set + persist + reject non-whitelist + restore). Unblocks Mac-side PR E Phase 2 dismiss UI + Phase 3 entry forms (~30-60 min Mac session estimated).)
 (updated 2026-05-26 PM9 — CF-DEPLOY-SCRIPT-RESTART-FIX **shipped** (363863f live on HobbyIQ3). Code-baked SHA verification path closes the 3-for-3 silent old-dist failure mode that needed manual `az webapp restart` after every deploy this session. /api/health now exposes shaFromCode (from dist/build-info.json baked at npm run build) distinct from shaShort (from GIT_SHA env var). Deploy script [5/5] verifies shaFromCode with auto-retry restart. **Self-verification: this deploy's [5/5] reported `attempt 1: build.shaFromCodeShort=363863f` — the new dist loaded on the first restart, no auto-retry needed. Fix works end-to-end.**)
 (updated 2026-05-26 PM10 — CF-VARIANT-FILTER-BACKTEST **shipped** (5cf1430 live on HobbyIQ3). Three-metric paired backtest infrastructure: env flag bypass, restricted header override, new harness measuring rescue rate / rescue MAPE per tier / T0-stability MAPE delta. **Q7 decision: keep full ladder.** Backtest on 23-card production cohort: 3 T1 rescues (13% rate), T0-stability 0.00% (ladder is purely additive), T1 MAPE 24.4% mean (Trout WMB ×2 at 10.5%, John Gil at 52.4%). T2/T3 not exercised by this cohort — Q8'' catches wrong-card cases before they reach those tiers. Documented cohort + metric limitations; revisit when production accumulates ≥10 T1 or any T2/T3 cases. **Variant filter arc fully closed.**)
+(updated 2026-05-27 — **end-of-session handoff (Windows side)**. Session totals: 7 CFs closed, pricing pipeline coverage expanded from 5/24 → 9-10/23 holdings priced, variant filter arc fully closed across 7 commits with empirical validation + paired backtest infrastructure, deploy script reliability restored, PR E backend endpoints ready for Mac consumption. Day-2 queue + discipline patterns captured below. Windows side full stop; Mac work resumes tomorrow AM.)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
+
+---
+
+## Session — May 27, 2026 (Windows side, end-of-day handoff)
+
+### 7 CFs shipped to origin/main
+
+| CF | SHA(s) | Effect |
+|---|---|---|
+| CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING | `cb9fe64` | Sibling-rescue branch in computeEstimate. Correct fix; didn't fire for current cohort but functional for future cases |
+| CF-AUTOPRICE-FIELD-NAME-SHIM | `252233b` | Read-path fallback for iOS phantom field names (year/setName/cardName → cardYear/product/cardTitle). 13 holdings unlocked |
+| CF-PLAYERNAME-NORMALIZATION | `2f444f5` | Server-side regex strip of variant-text contamination from playerName. 6 holdings rescued from contaminated cohort |
+| CF-VARIANT-FILTER-LOOSENING | `94ddfb9` → `e233fff` → `095deb2` → `cbfd963` → `99e32e6` | Tier ladder T0→T3 with Q8'' auto-prefix XOR discriminator. 6 holdings advanced/rescued. Q7 deferred to next CF |
+| CF-PR-E-BACKEND-ENDPOINTS | `150d14b` + `108a41f` | PATCH `/api/portfolio/ledger/:id` + dismissedAt/dismissedReason schema. Unblocks Mac-side PR E Phase 2/3 |
+| CF-DEPLOY-SCRIPT-RESTART-FIX | `363863f` + `880cc50` | Code-baked SHA verification + auto-retry restart in `[5/5]`. Eliminates 3-for-3 silent old-dist deploy pattern observed earlier this session |
+| CF-VARIANT-FILTER-BACKTEST | `5cf1430` + `25b520d` | Paired ladder-on vs ladder-off harness + Q7 binding evidence. Decision: keep full ladder |
+
+### Production state change
+
+Pricing pipeline progress (admin-testing-hobbyiq 23-holding cohort):
+
+- **Start of session:** 5/24 holdings with real comp-backed pricing
+- **End of session:** 9-10/23 holdings with real pricing (depending on T1 rescues)
+- Plus: confidence-capped variant approximations (T1=80, T2=65, T3=55) shipped where Cardsight returns the right card but a sibling parallel of the user's variant
+- Plus: honest variant-mismatch on wrong-card cases (Gage Wood Gold Auto correctly excluded via Q8'' — would have been $2 misprice without the XOR discriminator)
+- Cleanly diagnosed remaining cohort: test fixtures (Paul Skenes, Zzz placeholder), sparse data (BOBBY COX 1969 with no comps), variant-filter-blocked-by-design (Bonemer Blue base, Bonemer SHIM, Tommy White malformed parallel)
+
+### Day 2 queue (prioritized)
+
+**HIGH:**
+
+- **PR E Mac-side completion** — Phase 2 dismiss UI + Phase 3 entry forms (gradingCost/suppliesCost). ~30-60 min Mac session. Unblocked by today's `CF-PR-E-BACKEND-ENDPOINTS` (`150d14b`). Endpoint contract documented in handoff section above
+- **Phase 5 portfolio integration** — ~2-3h Mac session. Design at `/Users/drew/hobbyiq-prep/phase5_portfolio_integration_design.md`. Builds on today's pricing improvements (the 9-10/23 holdings now priced unlock real portfolio-level computations)
+
+**MEDIUM:**
+
+- **CF-IOS-FIELD-CONTRACT-FIX** (~30-60 min Mac) — closes shim debt; makes `CF-AUTOPRICE-FIELD-NAME-SHIM` removable when paired with backfill
+- **CF-PORTFOLIO-METADATA-BACKFILL** (~1-2h Windows) — gated on iOS contract fix first; one-time Cosmos rename of phantom field names to canonical
+- **CF-INVENTORY-REFRESH-WIRING** — Bug B from earlier in arc; backend endpoint exists, iOS APIService method needed. ~1-2h Mac
+- **CF-PR-E-RUNTIME-VERIFICATION + CF-PR-E-TEST-COVERAGE + CF-PR-E-CSV-PENDING-MARKER + CF-PR-E-P&L-COMPLETE-GROUPINGS** — various small Mac tasks; total ~4-5h
+- **CF-INVENTORYCARD-RECONSTRUCTION-REFACTOR** (~2-3h Mac) — structural fix for the photo-erasure bug class
+
+**LOW:**
+
+- **CF-VARIANT-FILTER-WRONG-CARD-DETECTION** (future) — Cardsight catalog coverage; adjacent to CF-PICKER-MIGRATE-TO-CARDSIGHT
+- **CF-PARALLEL-CANONICALIZATION** — Tommy White M3 case; low impact (1 holding)
+- **CF-TEST-SIGNING-CONFIG** — Mac iOS test runner config issue
+- **CF-PHASE4B-CHANNEL3-ATTRIBUTION** — diagnostic investigation
+- **CF-PHASE4B-LEADING-INDICATOR-VALIDATION** (~2-3h) — diagnostic
+- **CF-IOS-ANALYTICS-FRAMEWORK**
+- **CF-EBAY-LISTING-SIGNAL-REWORK**
+- **CF-CARDHEDGE-SIGNAL-RENAME** (implementation)
+- **CF-PICKER-MIGRATE-TO-CARDSIGHT** (~6-9h)
+- **CF-CARDIDENTITY-RESOLUTION-WEIGHTING** — Ken Griffey concern from earlier in arc; "TRADED" prefix stripping causes wrong-card matches (1989 UD #1 instead of Topps Traded)
+
+### Outstanding Windows autonomous work
+
+**CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS** re-run was executing autonomously starting 13:09 UTC yesterday. Should be long-complete. **Action item before tomorrow's session begins:** check `git log` on `origin/main` for Phase 1-4 commits. Findings affect TrendIQ display polish (Day 3 multi-day plan scope) and Phase 5 portfolio integration framing.
+
+### Discipline patterns captured today
+
+1. **iOS agent execution defaults to compile-clean without runtime verification or test coverage.** Future Mac sessions need explicit "run simulator + visual verification + test coverage" prompts. Surfaced via PR E quality gaps (zero tests, no simulator run).
+
+2. **Locked gating verifications should be checked for structural fit against existing harness infrastructure BEFORE final design lock**, not at implementation phase. Q7 lesson — the existing signal-value harness couldn't bind Q7 (different code path, different metric axis) but this wasn't surfaced until Phase 3 implementation.
+
+3. **Tier loosening should respect wrong-card resolution signals (auto-prefix XOR) vs same-card-different-parallel uncertainty.** These look identical via `parallelNotFound` warning but are semantically distinct. Q8' over-narrowed by treating them uniformly; Q8'' uses cardIdentity.number auto-prefix as the structural discriminator.
+
+4. **Deploy verification probes must distinguish "container running" from "container running new dist".** Env-var SHA + feature probe (`/api/compiq/normalization-dictionary`) both pass on stale container with restarted env — this is Finding 11 reincarnation. `shaFromCode` from dist/build-info.json is the structurally-correct verification path.
+
+5. **Per-case behavior on production cohort is often stronger evidence than aggregate MAPE on synthetic cohort** for pricing pipeline decisions, especially at small-N. The 23-holding production cohort surfaced more signal about Q7 than the N=15 v1-seed synthetic backtest would have.
+
+---
 
 ---
 
