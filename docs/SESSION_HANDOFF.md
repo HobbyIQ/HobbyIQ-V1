@@ -11,6 +11,7 @@
 (updated 2026-05-26 PM5 — CF-VARIANT-FILTER-LOOSENING design phase complete; recommends Option B attribute-tiered fallback — see [phase0/variant_filter_loosening_design.md](phase0/variant_filter_loosening_design.md). Implementation gated on user authorization. Phase 1 is analytical (per approval); empirical sweep deferred to pre-implementation step.)
 (updated 2026-05-26 PM6 — CF-VARIANT-FILTER-LOOSENING **implementation shipped**; tier ladder T0→T3 in computeEstimate + variantStrictness in compQuality + min(tier_cap, computed) confidence composition + per-tier verdict text. 956 tests pass (+22 net new). CF-PARALLEL-CANONICALIZATION surfaced as follow-up for the M3 Tommy White case. Post-deploy sweep + backtest pending.)
 (updated 2026-05-26 PM7 — CF-VARIANT-FILTER-LOOSENING **CLOSED** after iterative refinement arc: e233fff (initial) → 095deb2 Q8' (over-narrowed) → cbfd963 Q8'' (auto-prefix XOR discriminator). Final sweep validates 9 live / 5 variant-mismatch / 9 no-recent-comps. Q7 backtest gating deferred to CF-VARIANT-FILTER-BACKTEST (existing harness structurally can't isolate tier-ladder MAPE contribution; sweep evidence is the stronger signal we have).)
+(updated 2026-05-26 PM8 — CF-PR-E-BACKEND-ENDPOINTS **shipped** (150d14b live on HobbyIQ3). PATCH /api/portfolio/ledger/:id + dismissedAt/dismissedReason schema fields. Production smoke verified end-to-end (set + persist + reject non-whitelist + restore). Unblocks Mac-side PR E Phase 2 dismiss UI + Phase 3 entry forms (~30-60 min Mac session estimated).)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -63,6 +64,54 @@ None of the 24 current holdings hit all three.
 - /api/health returns SHA `4b88fb5` (deployed code)
 - Production response sources categorized via read-only smoke script
   (not committed)
+
+---
+
+### CF-PR-E-BACKEND-ENDPOINTS — SHIPPED (2026-05-26 PM8)
+
+**Commit:** `150d14b` on `origin/main` — live on HobbyIQ3 post-deploy + force-restart. Production smoke verified end-to-end.
+
+**Unblocks:** PR E Phase 2 (dismiss UI) + Phase 3 (gradingCost/suppliesCost entry forms) on the Mac side. Both phases were deferred from `6a37c76` (PR E partial ship) pending backend endpoints. Estimated Mac-side completion: ~30-60 min.
+
+**Endpoint contract — `PATCH /api/portfolio/ledger/:id`**
+
+Auth: `x-session-id` header (existing pattern). Returns 401 if missing/invalid.
+
+Field whitelist (only these 4 fields editable; anything else → 400 `FIELD_NOT_ALLOWED`):
+
+| Field | Type | Validation |
+|---|---|---|
+| `gradingCost` | number ≥ 0 \| null | non-negative finite or null to clear |
+| `suppliesCost` | number ≥ 0 \| null | non-negative finite or null to clear |
+| `dismissedAt` | ISO timestamp \| null | valid date parse or null to un-dismiss |
+| `dismissedReason` | string ≤ 500 chars \| null | trimmed; empty string → null |
+
+Response shapes:
+- 200 `{ message, entry }` — full updated entry returned
+- 400 `{ error: { message, code: "FIELD_NOT_ALLOWED" \| "INVALID_VALUE" \| "MISSING_ID" } }`
+- 401 — missing/invalid session
+- 404 `{ error: { code: "NOT_FOUND" } }` — entry doesn't exist OR belongs to different user (no info leak)
+
+**Key design choices:**
+
+- **Whitelist over schemaless spread** (matches CF-POLLUTED-METADATA-HOLDINGS discipline). The existing `updateHolding` endpoint uses `{ ...existing, ...req.body }` which the polluted-metadata investigation flagged as the root cause of phantom-field storage. PATCH on ledger entries — which touches financial data — uses an explicit whitelist instead.
+- **needsReconciliation stays computed**, not editable. It's derived from granular-fee null state at ingest time. `dismissedAt` is the separate user "acknowledge" signal that UI layers on top: needsReconciliation=true AND dismissedAt=null → show in "needs your attention".
+- **Null-clear semantics**: PATCH `{ "field": null }` clears the field. PATCH `{ "field": <value> }` sets it. Unmentioned fields are no-op (not reset).
+- **Cross-user 404 (not 403)**: don't leak that the id exists on another user. `readUserDoc(auth.userId)` already scopes by user; the entry simply isn't in the requesting user's doc.
+
+**Code surfaces:**
+
+- `backend/src/services/portfolioiq/portfolioStore.service.ts` — added `dismissedAt`/`dismissedReason` to PortfolioLedgerEntry; added `LEDGER_PATCH_WHITELIST`, `MAX_DISMISSED_REASON_LENGTH`, `validateLedgerPatch`, `updateLedgerEntry` export
+- `backend/src/routes/portfolioiq.routes.ts` — registered `router.patch("/ledger/:id", portfolio.updateLedgerEntry)`
+- `backend/tests/portfolio.ledger.patch.test.ts` (NEW, 14 tests) — whitelist accept/reject, persistence, validation (negative/non-numeric/length/format), null-clear, 404 nonexistent, 404 cross-user isolation, 401 no-auth, empty-body no-op, needsReconciliation cannot be smuggled
+
+**Verification:**
+
+- `npx tsc --noEmit` clean
+- Full suite: 976 passed, 100 skipped, 0 failed (+14 net new tests vs Q8'' baseline)
+- Production smoke: PATCH set all 4 fields → 200 + persisted via GET; non-whitelist field → 400; restore → 200 (round-trip verified on real ledger entry)
+
+**Deploy verification pattern (carried forward from CF-VARIANT-FILTER-LOOSENING arc):** hardened script's `[5/5]` restart did not actually swap the running dist; the new code only loaded after a separate `az webapp restart`. Same pattern as 095deb2 and cbfd963 deploys. Recurring infra issue — captured separately.
 
 ---
 
@@ -4365,11 +4414,22 @@ auto-generated `name` field (`"METHOD PATH"` format, e.g.
 - User toggle to include with orange warning indicator
 - Per-group card: revenue, fees, cost, P&L with color-coded sign
 
-### What's deferred
+### What's deferred — UNBLOCKED 2026-05-26 PM8 (backend endpoint shipped)
 
-**Phase 2 dismiss action** — requires `PATCH /api/portfolio/ledger/:id` (or narrow `POST .../dismiss-reconciliation`). No iOS code touches this endpoint yet.
+**CF-PR-E-BACKEND-ENDPOINTS (CLOSED 2026-05-26 PM8, commit `150d14b`):** PATCH `/api/portfolio/ledger/:id` now live in production with field whitelist (`gradingCost`, `suppliesCost`, `dismissedAt`, `dismissedReason`). Schema adds `dismissedAt` + `dismissedReason` to `PortfolioLedgerEntry` (gradingCost + suppliesCost already in schema from prior PR D batch). Production smoke verified end-to-end. See "CF-PR-E-BACKEND-ENDPOINTS" section below for endpoint contract details.
 
-**Phase 3 — gradingCost + suppliesCost entry forms** — requires backend schema additions (gradingCost/suppliesCost writable on ledger entries) and at least one new endpoint. Code comment in `PortfolioIQView.swift`: `gradingCost + suppliesCost entry forms deferred pending backend endpoint.`
+**Phase 2 dismiss action — now implementable** in iOS. Endpoint contract:
+- `PATCH /api/portfolio/ledger/:id` with `{ "dismissedAt": "<ISO timestamp>", "dismissedReason": "<optional, ≤500 chars>" }`
+- To un-dismiss: PATCH `{ "dismissedAt": null, "dismissedReason": null }`
+- needsReconciliation stays computed from fee state (unaffected by dismiss); iOS layer uses both: badge from needsReconciliation, hide-from-attention from dismissedAt
+
+**Phase 3 — gradingCost + suppliesCost entry forms — now implementable** in iOS. Endpoint contract:
+- `PATCH /api/portfolio/ledger/:id` with `{ "gradingCost": <number ≥0 | null>, "suppliesCost": <number ≥0 | null> }`
+- `null` clears the field
+- Non-numeric / negative → 400 `INVALID_VALUE`
+- Non-whitelisted field → 400 `FIELD_NOT_ALLOWED` (whole patch rejected, no partial application)
+
+Estimated Mac-side completion: ~30-60 min for both Phase 2 dismiss UI + Phase 3 entry forms now that the backend contract is locked.
 
 ### Quality gaps — Day 2 morning scope
 
