@@ -257,25 +257,88 @@ if (-not $deploymentComplete) {
     exit 1
 }
 
-# ===== [5/5] Explicit restart + verification (SHA + feature-probe) =====
+# ===== [5/5] Explicit restart + verification (code-baked SHA + feature-probe) =====
 #
-# Now restart the app explicitly so the new container picks up the new bits
-Write-Host ""
-Write-Host "[5/5] Restarting App Service (single controlled restart)..."
-az webapp restart --resource-group $rg --name $app --output none
-if ($LASTEXITCODE -ne 0) { Write-Error "Restart failed"; exit 1 }
+# CF-DEPLOY-SCRIPT-RESTART-FIX (2026-05-26):
+# Previously this step verified `build.shaShort` from /api/health, but that
+# field reads from the GIT_SHA env var that we set at [1/5] BEFORE the
+# deploy completes. So shaShort flipped to the new value as soon as the
+# implicit App Settings restart happened, even when the new container
+# failed to start and the OLD dist kept serving traffic. 3-for-3 silent
+# old-dist deploys this session (095deb2, cbfd963, 150d14b) all passed
+# the shaShort check while serving stale code.
+#
+# Fix: verify `build.shaFromCode` instead. That field is baked into
+# dist/build-info.json at `npm run build` time (postbuild step) and
+# CANNOT match the new SHA unless the new dist is actually loaded into
+# the running process. True dist-swap detection.
+#
+# shaShort + feature-probe stay as belt-and-suspenders: shaShort catches
+# env-var drift; feature-probe catches the container-failed-to-start case.
 
-Write-Host "    Waiting 45s for container warmup..."
-Start-Sleep -Seconds 45
-
-# Verify /api/health reports the SHA we just deployed (coarse signal --
-# /api/health reads from process.env.GIT_SHA which we set at [1/5], so this
-# check alone is insufficient per Finding 11. The feature-probe below
-# verifies dist/ + node_modules/ actually loaded.)
 Write-Host ""
-Write-Host "Verifying /api/health reports shaShort=$shaShort ..."
+Write-Host "[5/5] Restarting App Service + verifying code-baked SHA flip..."
+
+function Restart-AppService {
+    az webapp restart --resource-group $rg --name $app --output none
+    if ($LASTEXITCODE -ne 0) { Write-Error "Restart failed"; exit 1 }
+}
+
+function Get-HealthShaFromCode {
+    try {
+        $h = Invoke-RestMethod -Uri "$site/api/health" -TimeoutSec 30
+        return $h.build.shaFromCodeShort
+    } catch {
+        return $null
+    }
+}
+
+# First restart attempt.
+Restart-AppService
+Write-Host "    Restart issued. Waiting 60s for container warmup..."
+Start-Sleep -Seconds 60
+
+# Verify shaFromCode (build-baked) matches. The empirical failure window
+# (deploys 095deb2/cbfd963/150d14b) showed the first restart often silently
+# absorbed by Azure during the OneDeploy 'in progress' window. Auto-retry
+# once after a longer wait if shaFromCode hasn't flipped.
+Write-Host ""
+Write-Host "Verifying /api/health build.shaFromCodeShort=$shaShort (true dist-swap signal)..."
+
+$codeVerified = $false
+$retryDone = $false
+for ($i = 0; $i -lt 10; $i++) {
+    $reportedFromCode = Get-HealthShaFromCode
+    Write-Host "    attempt $($i+1): build.shaFromCodeShort=$reportedFromCode"
+    if ($reportedFromCode -eq $shaShort) {
+        $codeVerified = $true
+        break
+    }
+    # After 4 attempts (~60s after first restart + 60s warmup = ~2 min total),
+    # if still no flip, issue a second restart — the manual-workaround pattern
+    # that consistently fixed the silent old-dist deploys this session.
+    if (-not $retryDone -and $i -ge 3) {
+        Write-Host "    shaFromCode still stale after ~2 min — issuing retry restart (this is the manual-workaround pattern automated)..."
+        Restart-AppService
+        Write-Host "    Retry restart issued. Waiting 60s..."
+        Start-Sleep -Seconds 60
+        $retryDone = $true
+        continue
+    }
+    Start-Sleep -Seconds 15
+}
+
+if (-not $codeVerified) {
+    Write-Error "Mismatch after retries (including auto-retry restart): /api/health did not report build.shaFromCodeShort=$shaShort. The new dist did not load into the running container. Check container logs at $scm/api/logs/docker."
+    exit 1
+}
+
+# Belt-and-suspenders: also verify the env-var shaShort (existing check,
+# kept for backwards-compat + drift detection).
+Write-Host ""
+Write-Host "Verifying /api/health build.shaShort=$shaShort (env-var path)..."
 $verified = $false
-for ($i = 0; $i -lt 6; $i++) {
+for ($i = 0; $i -lt 3; $i++) {
     try {
         $health = Invoke-RestMethod -Uri "$site/api/health" -TimeoutSec 30
         $reportedShort = $health.build.shaShort
@@ -287,11 +350,11 @@ for ($i = 0; $i -lt 6; $i++) {
     } catch {
         Write-Host "    attempt $($i+1): /api/health error: $($_.Exception.Message)"
     }
-    Start-Sleep -Seconds 15
+    Start-Sleep -Seconds 10
 }
 
 if (-not $verified) {
-    Write-Error "Mismatch after retries: /api/health did not report shaShort=$shaShort"
+    Write-Error "Mismatch: /api/health did not report shaShort=$shaShort. Env-var drift between [1/5] App Settings + running container."
     exit 1
 }
 
