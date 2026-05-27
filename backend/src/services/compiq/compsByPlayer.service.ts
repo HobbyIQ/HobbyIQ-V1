@@ -150,9 +150,7 @@ export async function fetchCompsByPlayer(
   // passes a cardNumber.
   const effectiveProduct =
     applyCardNumberDisambiguation(input.product, undefined) ?? input.product;
-  // CF-CARDSIGHT-RESOLVER-TIFFANY: pass parallel + year so Tiffany overrides
-  // resolve to the dedicated Tiffany setName when applicable.
-  const releaseName = lookupReleaseName(effectiveProduct, input.parallel, input.cardYear);
+  const releaseName = lookupReleaseName(effectiveProduct);
   if (!releaseName) {
     warnings.push(
       `Product "${input.product}" not in Cardsight release dictionary — searching by literal product string.`,
