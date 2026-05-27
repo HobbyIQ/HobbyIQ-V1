@@ -16,6 +16,7 @@
 (updated 2026-05-26 PM10 — CF-VARIANT-FILTER-BACKTEST **shipped** (5cf1430 live on HobbyIQ3). Three-metric paired backtest infrastructure: env flag bypass, restricted header override, new harness measuring rescue rate / rescue MAPE per tier / T0-stability MAPE delta. **Q7 decision: keep full ladder.** Backtest on 23-card production cohort: 3 T1 rescues (13% rate), T0-stability 0.00% (ladder is purely additive), T1 MAPE 24.4% mean (Trout WMB ×2 at 10.5%, John Gil at 52.4%). T2/T3 not exercised by this cohort — Q8'' catches wrong-card cases before they reach those tiers. Documented cohort + metric limitations; revisit when production accumulates ≥10 T1 or any T2/T3 cases. **Variant filter arc fully closed.**)
 (updated 2026-05-27 — **end-of-session handoff (Windows side)**. Session totals: 7 CFs closed, pricing pipeline coverage expanded from 5/24 → 9-10/23 holdings priced, variant filter arc fully closed across 7 commits with empirical validation + paired backtest infrastructure, deploy script reliability restored, PR E backend endpoints ready for Mac consumption. Day-2 queue + discipline patterns captured below. Windows side full stop; Mac work resumes tomorrow AM.)
 (updated 2026-05-27 AM — **PR E COMPLETE** (01d2cd4). Phase 2 dismiss UI + Phase 3 gradingCost/suppliesCost entry forms shipped. P&L cost recompute surfaced as CF-PR-E-P&L-COST-RECOMPUTE. Manual device verification pending (Drew).)
+(updated 2026-05-27 AM2 — CF-PR-E-P&L-COST-RECOMPUTE **shipped** (0fe88ef live on HobbyIQ3). Phase 1 surfaced a deeper bug than the CF prompt assumed: gradingCost + suppliesCost were stored as schema fields but never deducted from netProceeds/P&L in EITHER create path. Option B authorized (fix formula at both create paths + PATCH handler). Shared `computeLedgerFinancials` helper deducts both costs from netProceeds; called from sellHolding, markHoldingSoldFromEbay, and updateLedgerEntry (when cost fields change). Production smoke validated: existing entry's stale buggy P&L retroactively corrected on next PATCH (netProceeds 100→73.5, P&L 75→48.5 for ebay-sale-partial test entry). Backend suite: 1004 passed (+16 net new). PR E truly complete end-to-end. CF-PORTFOLIO-PL-BACKFILL surfaced as LOW-priority follow-up for untouched entries.)
 
 **Strategic plan:** See `docs/HOBBYIQ_ROADMAP_2026Q2_Q3.md` for the 14-16 week roadmap toward end-of-July CompIQ formalization and mid-September ML moat realization.
 
@@ -143,6 +144,65 @@ None of the 24 current holdings hit all three.
 - /api/health returns SHA `4b88fb5` (deployed code)
 - Production response sources categorized via read-only smoke script
   (not committed)
+
+---
+
+### CF-PR-E-P&L-COST-RECOMPUTE — SHIPPED (2026-05-27 AM2)
+
+**Commit:** `0fe88ef` on `origin/main` — live on HobbyIQ3 (deploy verified via shaFromCodeShort match on first poll; CF-DEPLOY-SCRIPT-RESTART-FIX infrastructure working as designed).
+
+**Triggered by:** Mac PR E completion (`01d2cd4`) shipping Phase 2 dismiss UI + Phase 3 gradingCost/suppliesCost entry forms. iOS writes the costs via PATCH `/api/portfolio/ledger/:id`; user reported costs persisted but P&L number stayed stale.
+
+**Phase 1 finding (deeper than CF prompt assumed):**
+
+The CF prompt assumed a correct P&L formula existed at create-time and just needed to fire on PATCH. Phase 1 investigation showed the formula at BOTH create paths (`sellHolding` + `markHoldingSoldFromEbay`) never referenced `gradingCost` or `suppliesCost` — they were stored fields but never consumed by the P&L computation. Even at entry create with non-null costs, P&L was wrong; PATCH-no-recompute was the visible symptom of a deeper formula bug.
+
+**Phase 2 design lock — Option B authorized:** fix the formula at both create paths AND PATCH handler. Option A (narrow fix — make PATCH re-run the existing buggy formula) would have shipped a no-op recompute; Option C (retroactive backfill) deferred to follow-up CF.
+
+**Implementation:**
+
+- **New shared helper** `computeLedgerFinancials` (exported from `portfolioStore.service.ts`). Single source of truth:
+
+```
+netProceeds = grossProceeds - feesTotal - tax - shipping
+              - (gradingCost ?? 0) - (suppliesCost ?? 0)
+realizedProfitLoss = netProceeds - costBasisSold
+```
+
+  eBay path uses `netPayoutOverride` (eBay-authoritative net, post-platform-fees) as baseline, then subtracts user-side costs on top — eBay doesn't see pre-sale grading or buyer-side supplies.
+
+  Null-safety: missing inputs default to 0. Entries without these costs compute identically to pre-fix (no regression on null-cost entries).
+
+- **`sellHolding`** refactored to call the helper. Now accepts gradingCost + suppliesCost from `req.body` so iOS PR E Phase 3 entry forms can record costs at sell time (not just PATCH later).
+
+- **`markHoldingSoldFromEbay`** refactored to call the helper. `data.gradingCost`/`data.suppliesCost` now deducted from netProceeds (previously stored but unused).
+
+- **`updateLedgerEntry`** (PATCH handler): after spread-merge, if `validation.patch` touched gradingCost or suppliesCost, re-run `computeLedgerFinancials` with merged fields and update `netProceeds` + `realizedProfitLoss` + `realizedProfitLossPct` before persist. Detects manual vs eBay path via `existing.source`. `dismissedAt`/`dismissedReason` changes don't trigger recompute (not financial inputs).
+
+**Tests:**
+
+- `backend/tests/portfolioStore.ledgerFinancials.test.ts` (NEW, 16 tests): helper unit tests across manual + eBay paths, null safety, loss case, divide-by-zero, plus PATCH integration tests (gradingCost reduces P&L; suppliesCost reduces P&L; both accumulate; null clears restore; dismissedAt PATCH doesn't recompute) and sellHolding integration (gradingCost/suppliesCost in `/sell` body flow through to P&L at create).
+- `backend/tests/markHoldingSoldFromEbay.test.ts`: 3 assertions updated to match the post-fix correct values (fixtures had non-null costs but asserted the buggy pre-deduction P&L).
+- `backend/tests/portfolio.ledger.patch.test.ts`: 2 assertions updated from `toBeUndefined` to `?? null toBeNull` because sellHolding now writes `gradingCost: null` at create time (was `undefined` when field was absent from entry).
+
+**Verification:**
+
+- `npx tsc --noEmit` clean
+- Backend suite: **1004 passed**, 100 skipped, 0 failed (+16 net new vs prior 988 baseline)
+- Production smoke: PATCH against a real eBay entry (`ebay-sale-partial`). Pre-PATCH state had stale buggy P&L from prior iOS PATCH activity before fix shipped:
+  - Before: `netPayout=100, gradingCost=25, suppliesCost=1.5, netProceeds=100 (buggy), realizedProfitLoss=75 (buggy)`
+  - After PATCH gradingCost=25 (same value, triggers recompute): `netProceeds=73.5, realizedProfitLoss=48.5`
+  - Math: `100 - 25 - 1.5 = 73.5` ✓; `73.5 - 25 = 48.5` ✓
+
+The recompute retroactively fixed the stale buggy values on this entry — exactly the CF-PORTFOLIO-PL-BACKFILL situation in microcosm.
+
+**Surfaced follow-up: CF-PORTFOLIO-PL-BACKFILL (LOW, cosmetic)**
+
+Existing ledger entries with non-null `gradingCost`/`suppliesCost` that haven't been touched by recompute (no PATCH since fix shipped, no re-create) still carry pre-fix buggy P&L. Pre-launch with single user, impact is minimal — entries get corrected on first PATCH or any operation that flows through `computeLedgerFinancials`. Optional one-time backfill script could walk the ledger and force-recompute every entry.
+
+**Operational note — variant of the deploy SHA gate:**
+
+The CF-DEPLOY-SCRIPT-RESTART-FIX infrastructure shipped yesterday worked end-to-end on this deploy too. `[5/5]` `shaFromCodeShort=0fe88ef` matched on first poll; no auto-retry restart needed. Second consecutive deploy with the new verification path; pattern holding.
 
 ---
 
