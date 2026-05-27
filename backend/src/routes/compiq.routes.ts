@@ -382,6 +382,8 @@ router.post("/search", async (req, res, next) => {
           predictedPrice: null,
           predictedPriceRange: null,
           predictedPriceAttribution: null,
+          trendIQ: null,
+          signalsLastUpdated: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -495,9 +497,14 @@ router.post("/search", async (req, res, next) => {
             : [effectiveFmv, effPremium],
         fairMarketValueLive: noUsableLiveFmv ? null : fmv,
         marketValue: noUsableLiveFmv ? null : fmv,
-        predictedPrice: null,
-        predictedPriceRange: null,
-        predictedPriceAttribution: null,
+        // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate the new
+        // prediction-layer fields so /search response stays in shape parity
+        // with /estimate. Same identity + same comp pool ⇒ same predictedPrice.
+        predictedPrice: (est as any).predictedPrice ?? null,
+        predictedPriceRange: (est as any).predictedPriceRange ?? null,
+        predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,
+        trendIQ: (est as any).trendIQ ?? null,
+        signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
@@ -592,6 +599,7 @@ router.post("/price", async (req, res, next) => {
           // TrendIQ — null on unsupported-sport short-circuit. Field
           // present for response-shape stability across all /price branches.
           trendIQ: null,
+          signalsLastUpdated: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -664,13 +672,16 @@ router.post("/price", async (req, res, next) => {
         // semantic so both fields agree within a response.
         fairMarketValueLive: isThin ? null : fmv,
         marketValue: isThin ? null : fmv,
-        predictedPrice: null,
-        predictedPriceRange: null,
-        predictedPriceAttribution: null,
+        // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
+        // layer fields for /search-equivalent shape parity.
+        predictedPrice: (est as any).predictedPrice ?? null,
+        predictedPriceRange: (est as any).predictedPriceRange ?? null,
+        predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,
         // TrendIQ Phase 1 — forward-looking composite score (Layer 1 only
         // in B.4.a; L2/L3 follow). Always present in the happy path; null
         // on the short-circuit branches above.
         trendIQ: (est as any).trendIQ ?? null,
+        signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence: finalConfidence,
         source,
         trendAnalysis: {
@@ -885,6 +896,7 @@ router.post("/price-by-id", async (req, res, next) => {
           // TrendIQ — null on unsupported-sport short-circuit. Field
           // present for response-shape stability across all branches.
           trendIQ: null,
+          signalsLastUpdated: null,
           confidence: 0,
           source: "unsupported_sport",
           unsupportedSportReason: (est.unsupportedSportReason as string) ?? null,
@@ -930,15 +942,19 @@ router.post("/price-by-id", async (req, res, next) => {
         // with /search and /price (Option X). null when thin market.
         fairMarketValueLive: isThin ? null : fmv,
         marketValue: isThin ? null : fmv,
-        predictedPrice: null,
-        predictedPriceRange: null,
-        predictedPriceAttribution: null,
+        // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — propagate prediction-
+        // layer fields. /price-by-id is the pinned-card analog of /price; the
+        // estimate ⇒ response contract matches.
+        predictedPrice: (est as any).predictedPrice ?? null,
+        predictedPriceRange: (est as any).predictedPriceRange ?? null,
+        predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,
         // TrendIQ Phase 1 — forward-looking composite score. Same shape
         // as /price; computeEstimate populates est.trendIQ in all happy-
         // path branches. Layer 3 currently null in production pending
         // CF-CARDSIGHT-SIBLING-DISCOVERY; composite is two-layer
         // (player + card) until then.
         trendIQ: (est as any).trendIQ ?? null,
+        signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence,
         source,
         trendAnalysis: {
@@ -1041,6 +1057,7 @@ router.post("/bulk", async (req, res, next) => {
             // TrendIQ — null on unsupported-sport short-circuit (per-item
             // in bulk). Shape stability across all branches.
             trendIQ: null,
+            signalsLastUpdated: null,
             confidence: 0,
             trendAnalysis: { market_direction: "flat" },
             source: "unsupported_sport",
@@ -1080,13 +1097,16 @@ router.post("/bulk", async (req, res, next) => {
           // (Option X). null when the engine produced no usable FMV.
           fairMarketValueLive: fmv > 0 ? fmv : null,
           marketValue: fmv > 0 ? fmv : null,
-          predictedPrice: null,
-          predictedPriceRange: null,
-          predictedPriceAttribution: null,
+          // CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — per-item prediction-
+          // layer fields. Matches /search, /price, /price-by-id contract.
+          predictedPrice: (est as any).predictedPrice ?? null,
+          predictedPriceRange: (est as any).predictedPriceRange ?? null,
+          predictedPriceAttribution: (est as any).predictedPriceAttribution ?? null,
           // TrendIQ Phase 1 — per-item composite score. Same shape as
           // /price and /price-by-id. Layer 3 currently null in
           // production pending CF-CARDSIGHT-SIBLING-DISCOVERY.
           trendIQ: (est as any).trendIQ ?? null,
+          signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
           confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
           trendAnalysis: {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
