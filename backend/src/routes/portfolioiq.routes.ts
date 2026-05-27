@@ -26,6 +26,7 @@ router.get("/analytics/calibration", portfolio.getCalibration);
 router.get("/insights/weekly-brief", portfolio.getWeeklyBrief);
 router.post("/feedback/recommendation", portfolio.addRecommendationFeedback);
 router.get("/ledger", portfolio.getLedger);
+router.patch("/ledger/:id", portfolio.updateLedgerEntry);
 router.post("/holdings", portfolio.addHolding);
 router.get("/holdings/:id", portfolio.getHoldingById);
 router.get("/holdings/:id/history", portfolio.getHoldingPriceHistory);

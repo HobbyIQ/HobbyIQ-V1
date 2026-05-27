@@ -242,6 +242,16 @@ interface PortfolioLedgerEntry {
   // fee is null AND eBay did not provide an authoritative netPayout. The
   // reconciliation pass should re-fetch the order and update this entry.
   needsReconciliation?: boolean;
+
+  // ----- User-dismissal of reconciliation prompts (CF-PR-E-BACKEND-ENDPOINTS) -
+  // dismissedAt is a separate user signal from needsReconciliation: the
+  // computed flag stays true (data is genuinely incomplete) but the iOS UI
+  // can hide this entry from the "needs your attention" section once the
+  // user has acknowledged. Re-setting to null reopens the prompt.
+  // dismissedReason is optional free-text the user provided ("don't have
+  // the receipt", "doesn't matter for this entry", etc.).
+  dismissedAt?: string | null;
+  dismissedReason?: string | null;
 }
 
 function normalizeId(value: unknown): string {
@@ -793,6 +803,173 @@ export async function getLedger(req: Request, res: Response) {
     return acc;
   }, { realizedProfitLoss: 0, grossProceeds: 0, netProceeds: 0, costBasisSold: 0 });
   res.json({ userId: auth.userId, count: entries.length, totals, entries });
+}
+
+// CF-PR-E-BACKEND-ENDPOINTS — PATCH /api/portfolio/ledger/:id
+//
+// Allows the iOS / Mac UI to edit the user-supplied annotation fields on a
+// recorded ledger entry: gradingCost, suppliesCost, dismissedAt,
+// dismissedReason. ALL OTHER FIELDS ARE IMMUTABLE — the eBay-source
+// financial fields (granular fees, netPayout, etc.) are authoritative
+// from the ITEM_SOLD ingest path and must not be mutated by user PATCH.
+//
+// needsReconciliation is intentionally NOT in the whitelist: it remains
+// computed from the granular-fee state at ingest time. dismissedAt is the
+// user's "acknowledge — stop nagging me" signal that the UI layers on top.
+//
+// Field whitelist semantics:
+//   - Unmentioned fields in the request body are ignored (no-op, not reject)
+//   - Mentioned fields with `null` value clear the field (allows un-dismiss
+//     + un-set of gradingCost/suppliesCost)
+//   - Numeric fields must be non-negative finite numbers when not null
+//   - dismissedReason must be ≤500 chars when not null
+//
+// Returns the updated entry on success (200), error object on validation
+// or auth failure.
+const LEDGER_PATCH_WHITELIST = new Set([
+  "gradingCost",
+  "suppliesCost",
+  "dismissedAt",
+  "dismissedReason",
+]);
+
+const MAX_DISMISSED_REASON_LENGTH = 500;
+
+function validateLedgerPatch(
+  body: Record<string, unknown>,
+): { ok: true; patch: Partial<PortfolioLedgerEntry> } | { ok: false; error: { message: string; code: string } } {
+  // Reject unknown fields rather than silently dropping. Surfaces typos +
+  // accidental client-side field renames at the API boundary.
+  const incoming = Object.keys(body);
+  const unknown = incoming.filter((k) => !LEDGER_PATCH_WHITELIST.has(k));
+  if (unknown.length > 0) {
+    return {
+      ok: false,
+      error: {
+        message: `Fields not allowed: ${unknown.join(", ")}. Allowed: ${[...LEDGER_PATCH_WHITELIST].join(", ")}`,
+        code: "FIELD_NOT_ALLOWED",
+      },
+    };
+  }
+
+  const patch: Partial<PortfolioLedgerEntry> = {};
+
+  for (const key of ["gradingCost", "suppliesCost"] as const) {
+    if (!(key in body)) continue;
+    const raw = body[key];
+    if (raw === null) {
+      patch[key] = null;
+      continue;
+    }
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 0) {
+      return {
+        ok: false,
+        error: {
+          message: `${key} must be a non-negative number or null`,
+          code: "INVALID_VALUE",
+        },
+      };
+    }
+    patch[key] = num;
+  }
+
+  if ("dismissedAt" in body) {
+    const raw = body.dismissedAt;
+    if (raw === null) {
+      patch.dismissedAt = null;
+    } else if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        patch.dismissedAt = null;
+      } else {
+        const d = new Date(trimmed);
+        if (Number.isNaN(d.getTime())) {
+          return {
+            ok: false,
+            error: {
+              message: "dismissedAt must be a valid ISO timestamp or null",
+              code: "INVALID_VALUE",
+            },
+          };
+        }
+        patch.dismissedAt = d.toISOString();
+      }
+    } else {
+      return {
+        ok: false,
+        error: {
+          message: "dismissedAt must be a string or null",
+          code: "INVALID_VALUE",
+        },
+      };
+    }
+  }
+
+  if ("dismissedReason" in body) {
+    const raw = body.dismissedReason;
+    if (raw === null) {
+      patch.dismissedReason = null;
+    } else if (typeof raw === "string") {
+      if (raw.length > MAX_DISMISSED_REASON_LENGTH) {
+        return {
+          ok: false,
+          error: {
+            message: `dismissedReason must be ≤${MAX_DISMISSED_REASON_LENGTH} characters`,
+            code: "INVALID_VALUE",
+          },
+        };
+      }
+      const trimmed = raw.trim();
+      patch.dismissedReason = trimmed.length > 0 ? trimmed : null;
+    } else {
+      return {
+        ok: false,
+        error: {
+          message: "dismissedReason must be a string or null",
+          code: "INVALID_VALUE",
+        },
+      };
+    }
+  }
+
+  return { ok: true, patch };
+}
+
+export async function updateLedgerEntry(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const id = String(req.params.id ?? "").trim();
+  if (!id) {
+    return res.status(400).json({ error: { message: "Missing ledger entry id", code: "MISSING_ID" } });
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const validation = validateLedgerPatch(body);
+  if (!validation.ok) {
+    return res.status(400).json({ error: validation.error });
+  }
+
+  const doc = await readUserDoc(auth.userId);
+  const index = doc.ledger.findIndex((e) => e.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: { message: "Ledger entry not found", code: "NOT_FOUND" } });
+  }
+
+  // Ownership is implicit: readUserDoc(auth.userId) only returns the
+  // authenticated user's ledger. Belt-and-suspenders: re-check userId on the
+  // entry itself in case future code changes the doc-fetch semantics.
+  const existing = doc.ledger[index];
+  if (existing.userId && existing.userId !== auth.userId) {
+    return res.status(403).json({ error: { message: "Entry not owned by user", code: "FORBIDDEN" } });
+  }
+
+  const updated: PortfolioLedgerEntry = { ...existing, ...validation.patch };
+  doc.ledger[index] = updated;
+  await writeUserDoc(auth.userId, doc);
+
+  res.json({ message: "Ledger entry updated", entry: updated });
 }
 
 export async function addHolding(req: Request, res: Response) {
