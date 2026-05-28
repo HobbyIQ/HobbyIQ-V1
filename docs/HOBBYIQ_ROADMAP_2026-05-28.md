@@ -47,7 +47,7 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 
 | Debt item | Verified state | Implication |
 |---|---|---|
-| Cosmos `hobbyiq-comps-centralus` 22.6% failure rate | App-layer payload defect on `player_trends` upserts (97% are HTTP 400, fire-and-forget swallow, no user-facing impact). NOT regional routing. | LOW priority — surfaced as **CF-PLAYERSCORE-UPSERT-PAYLOAD-FIX** (~2-4h). Was framed as critical infra; isn't. |
+| Cosmos `hobbyiq-comps-centralus` 22-32% failure rate | **Re-characterized 2026-05-26 + empirically reconfirmed 2026-05-28** as cross-partition QUERY rejections (`getPlayerScoreByName` + `getTopPlayersByScore`), NOT upsert payload defects. PR #113 (`81f5c7b`) shipped a defensive id-validation guard against the misdiagnosed upsert hypothesis; keep as defensive coverage, doesn't address the real cause. Current state: 32% of DailyIQ-path player-score lookups (449 calls / 24h) return null silently. NOT regional routing. NOT benign. | ACTIVE in W1 as **CF-PLAYERTRENDS-QUERY-FAILURE** (~4-8h investigation). The earlier "no user-facing impact" framing in this row's previous version was wrong — DailyIQ data quality is degraded by ~32% null-result rate on these reads. |
 | Card Hedge client still in code | Prod `CARDSIGHT_MODE=exclusive`. `off`/`shadow`/`primary` fallback branches are dead code in production. Picker path (`/api/compiq/cardsearch`, `/search-list`) IS still calling CH's `searchCards`. | Picker migration is the real unlock; rest is dead-code cleanup |
 | Original Phase 1 silent regression (router L490-494) | Short-circuit code still present, BUT meaningful-query fall-through at `compiqEstimate.service.ts:858-878` is the documented workaround. Empty-return is the intentional fallback when there's no query text to drive Cardsight catalog lookup. | The 2026-05-27 addendum's "Phase 1 COMPLETE" claim is substantively correct in practice. Not a critical path item. |
 | Cardsight parallel-coverage gaps | Vendor doesn't catalog retail-border parallels (Wal-Mart Border, Target Red, CHR PROS family). Confirmed via Trout WMB ×2, Bonemer, Tommy White, Gage Wood. | Vendor dependency — not fixable our side. Surface honestly via CF-CATALOG-GAP-PRICING-HONESTY. |
@@ -66,7 +66,7 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 
 **Bundle the cheap fixes; start the big one.**
 
-- **CF-PLAYERSCORE-UPSERT-PAYLOAD-FIX** (~2-4h) — identify the 400-triggering field on `PlayerScore` upserts (likely NaN / null / missing required field); validate before upsert; verify 30-day failure rate drops. Closes the Cosmos noise without touching infrastructure.
+- **CF-PLAYERTRENDS-QUERY-FAILURE** (~4-8h investigation, read-only first) — empirically reconfirmed 2026-05-28: 32% of DailyIQ-path cross-partition queries on `player_trends` return HTTP 400. Inversion of the original 2026-05-24 hypothesis (which was framed as an upsert payload defect; that was wrong, but PR #113 / `81f5c7b` shipped a defensive id-validation guard for it anyway — keep as defensive coverage, doesn't fix this). The query is **intermittent at ~32%** — that's the central clue. A flat config problem would be 100%, not a third. Step 1 is to get the actual Cosmos 400 response body (the body names the cause; SDK doesn't surface it via the swallow at `playerScore.service.ts:425`). Hypotheses to validate against the body: cross-partition execution flag, encoding/length on specific player names, result-set size / continuation, RU/query-plan path. HALT after root cause + body capture before any fix. ~~Was previously framed as CF-PLAYERSCORE-UPSERT-PAYLOAD-FIX.~~
 - **CF-VARIANT-MISMATCH-PRICESOURCE-PARITY** (~1h) — variant-mismatch return path at `compiqEstimate.service.ts:1860-1892` needs to surface priceSource/priceSourceInternal/filteredCount/unifiedCount so iOS + sweeps can distinguish failure modes from successful pricing.
 - **CF-PSA-CERT-RESOLUTION-PIPELINE — design phase** — surface design questions before any code: (a) when does iOS read the cert? (manual entry in AddCardView, OCR from PSA slab label, both?) (b) what's the canonical metadata write contract? (overwrite playerName / product / variety / year / cardNumber on PSA success?) (c) backfill semantics for existing 23-holding cohort (run cert lookup for every PSA-graded holding with a non-null cert and propose updates in a HALT-for-review report) (d) failure modes (PSA quota exceeded, cert not found, ambiguous between PSA cert and DNA cert).
 
@@ -236,10 +236,12 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 10. **Phase 4a MCP cache implementation surfaces blob-storage namespace + cache-invalidation design depth.** Mitigation: 3-week budget (vs original 2), Week 7 is design + Pt 1 to surface depth early.
 11. **Q3 calendar slip if any 2 weeks slip.** Mitigation: Week 14 is closeout buffer. If Weeks 1-13 land on time, Week 14 closes Q3; if any 2 weeks slipped, Week 14 absorbs the slip and Q3 milestone shifts to end-of-October.
 
+12. **DailyIQ data quality silently degraded by Cosmos cross-partition query 400s** (NEW 2026-05-28 — corrected back from "Removed risks" demotion). Current empirical state: ~32% of player-score lookups from DailyIQ paths return null due to HTTP 400 on cross-partition queries. User-facing impact: DailyIQ brief + top-players surfaces show sparse/missing player score data. Mitigation: CF-PLAYERTRENDS-QUERY-FAILURE in W1, ~4-8h investigation gated on capturing the actual Cosmos 400 response body before any fix.
+
 **Removed risks (verified non-issues):**
 
-- ~~Cosmos 21% failure rate (Risk 10 original)~~ — re-characterized as app-layer payload defect, no user-facing impact, demoted to LOW-priority CF.
 - ~~Phase 1 silent regression critical path~~ — meaningful-query fall-through is the workaround; severity dropped.
+- ~~Cosmos "no user-facing impact" framing~~ — earlier "Removed risks" entry was wrong. Restored above as Risk 12. The 32% failure rate is real and user-impacting; the inversion (query not upsert) is correct.
 
 ---
 
