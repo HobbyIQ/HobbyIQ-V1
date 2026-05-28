@@ -178,6 +178,15 @@ interface FetchedComps {
    * sport guard in computeEstimate.
    */
   aiCategory: string | null;
+  // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution.
+  // Internal fine-grained source for telemetry/debugging; user-facing
+  // 3-category collapse for response shape (exact/approximate/broad).
+  // Surfaced on /api/compiq/estimate response so iOS can render
+  // appropriate confidence disclosure.
+  priceSourceInternal?: string;
+  priceSource?: "exact" | "approximate" | "broad";
+  parallelMatchFilteredCount?: number;
+  parallelMatchUnifiedCount?: number;
 }
 
 /**
@@ -921,11 +930,29 @@ async function fetchComps(
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
-  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, { grade, limit: 25, queryContext });
+  const {
+    card,
+    sales,
+    variantWarning,
+    aiCategory,
+    priceSource,
+    priceSourceInternal,
+    parallelMatchFilteredCount,
+    parallelMatchUnifiedCount,
+  } = await findCompsRouted(query, { grade, limit: 25, queryContext });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
-    return { comps: [], card: null, variantWarning: [], aiCategory };
+    return {
+      comps: [],
+      card: null,
+      variantWarning: [],
+      aiCategory,
+      priceSource,
+      priceSourceInternal,
+      parallelMatchFilteredCount,
+      parallelMatchUnifiedCount,
+    };
   }
 
   const identity = {
@@ -942,7 +969,16 @@ async function fetchComps(
     console.warn(
       `[compiq.fetchComps] Card Hedge returned 0 comps for card_id=${card.card_id} query="${query}" grade=${grade}`
     );
-    return { comps: [], card: identity, variantWarning, aiCategory };
+    return {
+      comps: [],
+      card: identity,
+      variantWarning,
+      aiCategory,
+      priceSource,
+      priceSourceInternal,
+      parallelMatchFilteredCount,
+      parallelMatchUnifiedCount,
+    };
   }
 
   const mapped: RawComp[] = sales
@@ -956,7 +992,16 @@ async function fetchComps(
   console.log(
     `[compiq.fetchComps] Card Hedge: query="${query}" card_id=${card.card_id} comps=${mapped.length}`
   );
-  return { comps: mapped, card: identity, variantWarning, aiCategory };
+  return {
+    comps: mapped,
+    card: identity,
+    variantWarning,
+    aiCategory,
+    priceSource,
+    priceSourceInternal,
+    parallelMatchFilteredCount,
+    parallelMatchUnifiedCount,
+  };
 }
 
 /**
@@ -2742,6 +2787,16 @@ export async function computeEstimate(
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     variantWarning: fetched.variantWarning,
+    // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. iOS
+    // reads `priceSource` (3-category: exact / approximate / broad).
+    // `priceSourceInternal` is the 7-value telemetry detail; included on
+    // response for ops debugging but not part of the iOS contract.
+    // `parallelMatchFilteredCount` / `parallelMatchUnifiedCount` enable
+    // "N of M comps" disclosure when the user sees approximate/broad.
+    priceSource: fetched.priceSource ?? null,
+    priceSourceInternal: fetched.priceSourceInternal ?? null,
+    parallelMatchFilteredCount: fetched.parallelMatchFilteredCount ?? null,
+    parallelMatchUnifiedCount: fetched.parallelMatchUnifiedCount ?? null,
   };
 }
 

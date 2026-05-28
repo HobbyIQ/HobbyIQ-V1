@@ -29,6 +29,12 @@ import {
 import { searchCatalog, getCardDetail, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
 import { resolveCardId } from "./cardsight.mapper.js";
 import { translateResponse } from "./cardsight.translator.js";
+import {
+  applyParallelTitleMatch,
+  collapsePriceSource,
+  type ParallelPriceSource,
+  type UserFacingPriceSource,
+} from "./parallelTitleMatch.js";
 
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
@@ -46,6 +52,16 @@ type RoutedResult = {
   sales: CardHedgeSale[];
   variantWarning: string[];
   aiCategory: string | null;
+  // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. Internal
+  // fine-grained source for telemetry; user-facing 3-category collapse
+  // for response shape. Both surfaced — response-shaping layer in
+  // compiqEstimate.service.ts decides which (typically just user-facing).
+  priceSourceInternal?: ParallelPriceSource;
+  priceSource?: UserFacingPriceSource;
+  /** Number of sale records after title-match filter (when applied). */
+  parallelMatchFilteredCount?: number;
+  /** Total records in unified bucket before filter (for "N of M" disclosure). */
+  parallelMatchUnifiedCount?: number;
 };
 
 export type QueryContext = {
@@ -180,14 +196,29 @@ async function findCompsViaCardsight(
       }),
     ]);
 
-    const translated = translateResponse(pricing, {
-      gradeCompany: opts.gradeCompany,
-      gradeValue: opts.gradeValue,
-    });
-
     // Detail is usable when present and the API didn't 404. detail.notFound
     // is the sentinel _getCardDetail returns when Cardsight returned 404.
     const detailOk = detail !== null && !detail.notFound;
+
+    // CF-CARDSIGHT-RESOLVER-REDESIGN: title-match-with-specificity-guard.
+    // When _getPricing fell back to the unified bucket (parallel_id filter
+    // returned empty) AND the user specified a parallel AND we have
+    // detail.parallels[], filter the unified bucket by sale title using
+    // sibling-aware exclusion to avoid generic-token over-pull.
+    const siblingParallels = detailOk && detail!.parallels ? detail!.parallels : [];
+    const titleMatchOutcome = applyParallelTitleMatch({
+      pricingResponse: pricing,
+      pricingCameFromUnifiedFallback: pricing.__parallelIdFilterFellBack === true,
+      userParallelInput: opts.queryContext?.parallel,
+      matchedParallelId: mapped.parallelId,
+      siblingParallels,
+    });
+    const filteredPricing = titleMatchOutcome.response;
+
+    const translated = translateResponse(filteredPricing, {
+      gradeCompany: opts.gradeCompany,
+      gradeValue: opts.gradeValue,
+    });
 
     log.info("identity_source", {
       cardId: mapped.cardId,
@@ -237,6 +268,10 @@ async function findCompsViaCardsight(
         sales: [],
         variantWarning: ["cardsight_no_pricing_data", ...mapped.warnings],
         aiCategory: null,
+        priceSourceInternal: titleMatchOutcome.priceSource,
+        priceSource: collapsePriceSource(titleMatchOutcome.priceSource),
+        parallelMatchFilteredCount: titleMatchOutcome.filteredCount,
+        parallelMatchUnifiedCount: titleMatchOutcome.totalUnifiedCount,
       };
     }
 
@@ -256,6 +291,10 @@ async function findCompsViaCardsight(
       })),
       variantWarning: mapped.warnings,
       aiCategory: null,
+      priceSourceInternal: titleMatchOutcome.priceSource,
+      priceSource: collapsePriceSource(titleMatchOutcome.priceSource),
+      parallelMatchFilteredCount: titleMatchOutcome.filteredCount,
+      parallelMatchUnifiedCount: titleMatchOutcome.totalUnifiedCount,
     };
   } catch (err) {
     outcome = err instanceof CardsightTimeoutError ? "timeout" : "error";

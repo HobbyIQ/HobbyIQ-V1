@@ -221,7 +221,12 @@ export function applyCardNumberDisambiguation(
   return product;
 }
 
-function tokenizeParallel(name: string): string[] {
+// Exported for parallelTitleMatch.ts (CF-CARDSIGHT-RESOLVER-REDESIGN).
+// Single source of truth for parallel tokenization shared between
+// parallelMatches (resolver-time) and applyParallelTitleMatch (comp-fetch
+// time). Both consumers must see the same wrapper-strip behavior so a
+// matched parallel resolves identical tokens at filter time.
+export function tokenizeParallel(name: string): string[] {
   // CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (parallelMatches fix): Cardsight
   // catalogs some set-level parallels with a verbose wrapper around the
   // canonical parallel name (e.g. parallelName="Limited Edition (Tiffany)"

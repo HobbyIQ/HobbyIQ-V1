@@ -89,6 +89,15 @@ export interface CardsightPricingResponse {
   meta: { total_records: number; last_sale_date: string | null };
   /** Set to true when the card was not found (404). Never throws for 404. */
   notFound?: boolean;
+  /**
+   * CF-CARDSIGHT-RESOLVER-REDESIGN: indicates whether the response came
+   * from the parallel_id filter or the unified-fallback retry inside
+   * _getPricing. The router's parallelTitleMatch.ts consumes this flag
+   * to decide whether to apply title-matching to the unified bucket.
+   * Not present on responses that weren't subject to a parallel_id query
+   * (i.e. the caller didn't pass parallelId).
+   */
+  __parallelIdFilterFellBack?: boolean;
 }
 
 // ─── Error Types ─────────────────────────────────────────────────────────────
@@ -386,7 +395,11 @@ async function _getPricing(
         parallel_id: opts.parallelId,
         endpoint: "getPricing",
       });
-      return _getPricingRaw(cardId, null);
+      const unified = await _getPricingRaw(cardId, null);
+      // CF-CARDSIGHT-RESOLVER-REDESIGN: tag the response so the router
+      // can decide whether to apply title-matching to the unified bucket.
+      unified.__parallelIdFilterFellBack = true;
+      return unified;
     }
   }
 
