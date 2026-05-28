@@ -55,20 +55,28 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let grade: String
     // CF-AUTOPRICE-GRADE-CONTRACT (2026-05-27): canonical structured grade
     // fields. `gradeCompany` ("PSA", "BGS", "SGC", "CGC") and `gradeValue`
-    // (numeric, e.g. 10, 9, 8.5) replace the joined `grade` label string
-    // as the source of truth for grade-aware pricing. The legacy `grade`
-    // string remains on the wire for display compatibility (older clients
-    // may still consume it).
+    // (Double — supports decimal BGS/CSG grades like 9.5/8.5 alongside
+    // integer PSA grades) replace the joined `grade` label string as
+    // the source of truth for grade-aware pricing. The legacy `grade`
+    // string remains on the wire for display compatibility.
     //
     // Backend autoPriceHolding reads gradingCompany ?? gradeCompany and
     // gradeValue directly — without these fields, /api/compiq/estimate
     // searches the raw/ungraded comp bucket regardless of the user's
     // actual slab grade. See cardsight.translator.ts:31-99.
     //
+    // gradeValue MUST be Double (not Int) — Int? loses the fractional
+    // on BGS 9.5 / CSG 8.5 grades AND crashes JSONDecoder when the
+    // backend sends a decimal number (Swift's strict decoder rejects
+    // "Parsed JSON number 9.5 does not fit in Int"). Backend type
+    // contract is `number`; Double matches and the cardsight translator
+    // does `String(...).trim()` to coerce for match against Cardsight's
+    // `grade_value` string field.
+    //
     // Optional with default nil to preserve backward compat for existing
     // call sites that haven't been threaded through yet.
     let gradeCompany: String?
-    let gradeValue: Int?
+    let gradeValue: Double?
     let purchaseDate: String?
     let purchasePlatform: String?
     let quantity: Double?
@@ -115,7 +123,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         parallel: String = "",
         grade: String = "",
         gradeCompany: String? = nil,
-        gradeValue: Int? = nil,
+        gradeValue: Double? = nil,
         purchaseDate: String? = nil,
         purchasePlatform: String? = nil,
         quantity: Double? = nil,

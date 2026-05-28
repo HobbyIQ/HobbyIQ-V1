@@ -1388,8 +1388,11 @@ struct CompIQResolvedVariant: Identifiable, Hashable, Codable {
     // when the user has selected a graded slab; downstream
     // addInventoryCard call site passes them through to InventoryCard
     // so the backend's autoPriceHolding read contract finds them.
+    //
+    // gradeValue is Double (not Int) so decimal grades like BGS 9.5 /
+    // CSG 8.5 don't truncate or fail JSONDecode on the wire.
     let gradeCompany: String?
-    let gradeValue: Int?
+    let gradeValue: Double?
     let serialNumber: Int?
     let isAuto: Bool
 
@@ -1403,7 +1406,7 @@ struct CompIQResolvedVariant: Identifiable, Hashable, Codable {
         parallel: String? = nil,
         grade: String? = nil,
         gradeCompany: String? = nil,
-        gradeValue: Int? = nil,
+        gradeValue: Double? = nil,
         serialNumber: Int? = nil,
         isAuto: Bool = true
     ) {

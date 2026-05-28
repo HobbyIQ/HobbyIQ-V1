@@ -691,7 +691,13 @@ private struct PortfolioAddSearchStepView: View {
 
         let parsed = parseCardQuery(query)
         let gradeCompany = viewModel.isGraded ? viewModel.gradingCompany.trimmingCharacters(in: .whitespacesAndNewlines) : nil
-        let gradeValue = viewModel.isGraded ? Int(viewModel.gradeValue) : nil
+        // CF-AUTOPRICE-GRADE-CONTRACT: gradeValue is Double on the wire so
+        // BGS 9.5 / CSG 8.5 decimals round-trip. Int(viewModel.gradeValue)
+        // would silently drop the fractional and produce nil for "9.5".
+        let gradeValue: Double? = viewModel.isGraded ? Double(viewModel.gradeValue) : nil
+        // Display string uses formatGradeValue so integer-valued doubles
+        // produce "10" (not "10.0") matching the legacy label format.
+        let gradeDisplay = gradeValue.map { PortfolioSyncService.formatGradeValue($0) }
         viewModel.selectedVariant = CompIQResolvedVariant(
             playerName: parsed.playerName,
             canonicalCardName: [parsed.product, parsed.parallel]
@@ -699,7 +705,7 @@ private struct PortfolioAddSearchStepView: View {
                 .joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines),
             subtitle: viewModel.isGraded
-                ? [gradeCompany, gradeValue.map(String.init)]
+                ? [gradeCompany, gradeDisplay]
                     .compactMap { $0 }
                     .joined(separator: " ")
                 : (parsed.isAuto ? "Auto" : ""),
@@ -707,7 +713,7 @@ private struct PortfolioAddSearchStepView: View {
             setName: parsed.product,
             parallel: parsed.parallel,
             grade: viewModel.isGraded
-                ? [gradeCompany, gradeValue.map(String.init)]
+                ? [gradeCompany, gradeDisplay]
                     .compactMap { $0 }
                     .joined(separator: " ")
                 : "Raw",

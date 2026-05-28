@@ -512,4 +512,124 @@ final class PortfolioSyncMapperTests: XCTestCase {
         XCTAssertEqual(card.playerName, "Mike Trout")
         XCTAssertEqual(card.currentValue, 175.0)
     }
+
+    // MARK: - CF-AUTOPRICE-GRADE-CANONICAL-MIGRATION
+    //
+    // Canonical structured grade (gradeCompany + gradeValue as Double)
+    // must support both integer PSA grades and decimal BGS/CSG grades.
+    // Int? would silently drop the fractional on write AND fail
+    // JSONDecode on read for decimal grades.
+
+    func testMapCardItemToHoldingSendsCanonicalPSA10() {
+        let card = CardItem(
+            playerName: "Mike Trout",
+            isRaw: false,
+            gradingCompany: "PSA",
+            grade: "10"
+        )
+
+        let holding = PortfolioSyncService.mapCardItemToHolding(card)
+
+        XCTAssertEqual(holding.gradeCompany, "PSA")
+        XCTAssertEqual(holding.gradeValue, 10.0)
+        XCTAssertEqual(holding.grade, "10", "legacy display string preserved")
+    }
+
+    func testMapCardItemToHoldingSendsCanonicalDecimalBGS95() {
+        // CRITICAL: this is the case Int? broke. Double? must preserve 9.5.
+        let card = CardItem(
+            playerName: "Roman Anthony",
+            isRaw: false,
+            gradingCompany: "BGS",
+            grade: "9.5"
+        )
+
+        let holding = PortfolioSyncService.mapCardItemToHolding(card)
+
+        XCTAssertEqual(holding.gradeCompany, "BGS")
+        XCTAssertEqual(holding.gradeValue, 9.5, "decimal grade must round-trip without truncation")
+        XCTAssertEqual(holding.grade, "9.5")
+    }
+
+    func testMapCardItemToHoldingSendsNilCanonicalForRawCards() {
+        let card = CardItem(playerName: "Raw Card", isRaw: true)
+
+        let holding = PortfolioSyncService.mapCardItemToHolding(card)
+
+        XCTAssertNil(holding.gradeCompany)
+        XCTAssertNil(holding.gradeValue)
+        XCTAssertEqual(holding.grade, "", "legacy grade is empty for raw")
+    }
+
+    func testMapHoldingToNewCardItemDecodesDecimalGradeValueWithoutCrashing() throws {
+        // Backend backfill writes gradeValue: 9.5 (Double) to Cosmos for
+        // BGS 9.5 holdings. iOS JSONDecoder must accept the JSON number
+        // 9.5 — Int? rejected it with DecodingError.dataCorrupted, breaking
+        // sync for any user with a decimal-grade holding.
+        let json = """
+        {
+            "id": "9DFD3000-0000-4000-8000-000000000010",
+            "playerName": "Roman Anthony",
+            "cardName": "BGS Sample",
+            "cost": 100,
+            "currentValue": 175,
+            "status": "owned",
+            "year": "2024",
+            "setName": "Bowman Chrome",
+            "parallel": "Refractor",
+            "grade": "9.5",
+            "gradeCompany": "BGS",
+            "gradeValue": 9.5
+        }
+        """.data(using: .utf8)!
+
+        let holding = try JSONDecoder().decode(InventoryCard.self, from: json)
+        let card = PortfolioSyncService.mapHoldingToNewCardItem(holding)
+
+        XCTAssertEqual(holding.gradeCompany, "BGS")
+        XCTAssertEqual(holding.gradeValue, 9.5)
+        XCTAssertEqual(card.gradingCompany, "BGS")
+        XCTAssertEqual(card.grade, "9.5", "decimal preserved on display")
+        XCTAssertFalse(card.isRaw)
+    }
+
+    func testMapHoldingToNewCardItemRendersIntegerDoubleWithoutDotZero() throws {
+        // Double 10.0 must display as "10" (matching CardItem.grade
+        // legacy String format), not "10.0".
+        let json = """
+        {
+            "id": "9DFD3000-0000-4000-8000-000000000011",
+            "playerName": "Mike Trout",
+            "cardName": "PSA 10 Sample",
+            "cost": 100,
+            "currentValue": 200,
+            "status": "owned",
+            "year": "2021",
+            "setName": "Topps Chrome",
+            "parallel": "",
+            "grade": "10",
+            "gradeCompany": "PSA",
+            "gradeValue": 10
+        }
+        """.data(using: .utf8)!
+
+        let holding = try JSONDecoder().decode(InventoryCard.self, from: json)
+        let card = PortfolioSyncService.mapHoldingToNewCardItem(holding)
+
+        XCTAssertEqual(card.gradingCompany, "PSA")
+        XCTAssertEqual(card.grade, "10", "integer-valued double renders without .0")
+    }
+
+    // MARK: - formatGradeValue helper
+
+    func testFormatGradeValueIntegerProducesNoDecimal() {
+        XCTAssertEqual(PortfolioSyncService.formatGradeValue(10.0), "10")
+        XCTAssertEqual(PortfolioSyncService.formatGradeValue(9.0), "9")
+        XCTAssertEqual(PortfolioSyncService.formatGradeValue(1.0), "1")
+    }
+
+    func testFormatGradeValueDecimalPreserved() {
+        XCTAssertEqual(PortfolioSyncService.formatGradeValue(9.5), "9.5")
+        XCTAssertEqual(PortfolioSyncService.formatGradeValue(8.5), "8.5")
+    }
 }
