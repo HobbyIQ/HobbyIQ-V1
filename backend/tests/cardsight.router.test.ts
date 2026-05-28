@@ -356,6 +356,83 @@ describe("cardsight.router", () => {
     expect(out.card?.set).toBe("EmergencySet");
     expect(out.card?.year).toBe(2021);
   });
+
+  // CF-CARDSIGHT-TRANSLATER-GRADE-WIRING: compiqEstimate.service.ts (the
+  // sole caller of findCompsRouted) carries gradeCompany/gradeValue on
+  // queryContext, not on the top-level options object. Before the fix,
+  // translateResponse was called with `opts.gradeCompany` only, which was
+  // always undefined from that call-site — so the translator always fell
+  // through to its Raw path and graded[] was dropped. Every graded
+  // holding got priced from raw×multiplier even when Cardsight returned
+  // direct PSA 10 / BGS 9.5 / etc. sales. Worst symptom: Maddux 1987
+  // Topps Traded Tiffany PSA 10 priced at $384 (raw avg × multiplier)
+  // when 7 actual PSA 10 Tiffany sales existed in graded[PSA][10] at
+  // median $1433.
+  it("CF-TRANSLATER-GRADE-WIRING: queryContext.gradeCompany/gradeValue flow into translateResponse when top-level absent", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+
+    await findCompsRouted("Greg Maddux", {
+      grade: "PSA 10",
+      queryContext: {
+        playerName: "Greg Maddux",
+        cardYear: 1987,
+        product: "Topps Traded",
+        parallel: "Tiffany",
+        gradeCompany: "PSA",
+        gradeValue: "10",
+      },
+    });
+
+    expect(mockTranslateResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ gradeCompany: "PSA", gradeValue: "10" }),
+    );
+  });
+
+  it("CF-TRANSLATER-GRADE-WIRING: top-level gradeCompany/gradeValue take precedence over queryContext (back-compat)", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+
+    await findCompsRouted("Greg Maddux", {
+      grade: "BGS 9.5",
+      gradeCompany: "BGS",
+      gradeValue: "9.5",
+      queryContext: {
+        playerName: "Greg Maddux",
+        gradeCompany: "PSA",
+        gradeValue: "10",
+      },
+    });
+
+    expect(mockTranslateResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ gradeCompany: "BGS", gradeValue: "9.5" }),
+    );
+  });
+
+  it("CF-TRANSLATER-GRADE-WIRING: translator receives undefined grade when neither top-level nor queryContext provides it (raw path preserved)", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+
+    await findCompsRouted("Greg Maddux", {
+      grade: "Raw",
+      queryContext: { playerName: "Greg Maddux" },
+    });
+
+    expect(mockTranslateResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ gradeCompany: undefined, gradeValue: undefined }),
+    );
+  });
+
+  it("CF-TRANSLATER-GRADE-WIRING: missing queryContext entirely → translator still receives undefined grade (no crash)", async () => {
+    process.env.CARDSIGHT_MODE = "exclusive";
+
+    await findCompsRouted("Greg Maddux", { grade: "Raw" });
+
+    expect(mockTranslateResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ gradeCompany: undefined, gradeValue: undefined }),
+    );
+  });
 });
 
 

@@ -215,9 +215,17 @@ async function findCompsViaCardsight(
     });
     const filteredPricing = titleMatchOutcome.response;
 
+    // CF-CARDSIGHT-TRANSLATER-GRADE-WIRING: bridge queryContext grade
+    // fields into the translator. compiqEstimate.service.ts (sole caller
+    // of findCompsRouted) carries gradeCompany/gradeValue on queryContext,
+    // not on the top-level options object. Without this coalesce, the
+    // translator falls through to its Raw path and silently ignores
+    // graded[] — every graded holding gets priced from raw×multiplier
+    // even when Cardsight returned direct graded sales. Same nullish-
+    // coalesce pattern that toCardsightQuery uses at line 116-127.
     const translated = translateResponse(filteredPricing, {
-      gradeCompany: opts.gradeCompany,
-      gradeValue: opts.gradeValue,
+      gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany,
+      gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue,
     });
 
     log.info("identity_source", {
