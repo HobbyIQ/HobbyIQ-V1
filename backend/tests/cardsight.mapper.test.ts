@@ -714,6 +714,150 @@ describe("resolveCardId — parallel resolution preserved", () => {
   });
 });
 
+// CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (parallelMatches wrapper fix):
+// Cardsight catalogs some set-level parallels with a verbose wrapper
+// around the canonical name — e.g. "Limited Edition (Tiffany)" for
+// the Maddux 1987 Topps Traded Tiffany RC. tokenizeParallel must strip
+// the wrapper so user input "TIFFANY" satisfies strict-set-equality
+// against ["tiffany"] (extracted from the parenthesized wrapper),
+// instead of failing against ["limited", "edition", "(tiffany)"].
+//
+// Preserves defect #2 strict-equality semantics for non-wrapped
+// parallels: "Refractor" still does NOT match "Chrome Blue Refractor".
+describe("resolveCardId — parallelMatches strips parenthesized wrappers (Tiffany case)", () => {
+  it("Tiffany input matches 'Limited Edition (Tiffany)' parallel via wrapper-strip", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("maddux-card", "Topps Traded")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "maddux-card",
+      name: "Greg Maddux",
+      number: "70T",
+      releaseName: "Topps Traded",
+      setName: "Base Set",
+      year: 1987,
+      parallels: [
+        { id: "limited-edition-tiffany", name: "Limited Edition (Tiffany)", numberedTo: null },
+        { id: "base", name: "Base", numberedTo: null },
+      ],
+    });
+
+    const r = await resolveCardId({
+      playerName: "Greg Maddux",
+      cardYear: 1987,
+      product: "Topps Traded",
+      parallel: "TIFFANY",
+    });
+
+    expect(r.cardId).toBe("maddux-card");
+    expect(r.parallelId).toBe("limited-edition-tiffany");
+  });
+
+  it("Gold input matches 'Refractor (Gold)' parallel via wrapper-strip", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("c", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "c",
+      name: "x",
+      number: "",
+      releaseName: "Topps Update",
+      setName: "Base Set",
+      year: 2020,
+      parallels: [
+        { id: "refractor-gold", name: "Refractor (Gold)", numberedTo: 50 },
+        { id: "refractor", name: "Refractor", numberedTo: null },
+      ],
+    });
+
+    const r = await resolveCardId({
+      playerName: "x",
+      cardYear: 2020,
+      product: "topps update",
+      parallel: "Gold",
+    });
+
+    expect(r.parallelId).toBe("refractor-gold");
+  });
+
+  it("non-wrapped parallel still works (no regression)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("c", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "c",
+      name: "x",
+      number: "",
+      releaseName: "Topps Update",
+      setName: "Base Set",
+      year: 2020,
+      parallels: [
+        { id: "tiffany-plain", name: "Tiffany", numberedTo: null },
+      ],
+    });
+
+    const r = await resolveCardId({
+      playerName: "x",
+      cardYear: 2020,
+      product: "topps update",
+      parallel: "TIFFANY",
+    });
+
+    expect(r.parallelId).toBe("tiffany-plain");
+  });
+
+  it("defect #2 preserved: 'Refractor' still does NOT match 'Chrome Blue Refractor' (no wrapper)", async () => {
+    (cs.searchCatalog as any).mockResolvedValue([catalog("c", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "c",
+      name: "x",
+      number: "",
+      releaseName: "Topps Update",
+      setName: "Base Set",
+      year: 2020,
+      parallels: [
+        { id: "chrome-blue-refractor", name: "Chrome Blue Refractor", numberedTo: null },
+      ],
+    });
+
+    const r = await resolveCardId({
+      playerName: "x",
+      cardYear: 2020,
+      product: "topps update",
+      parallel: "Refractor",
+    });
+
+    // Wrapper-strip doesn't apply (no parens); strict-equality preserved.
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("wrapped vs non-wrapped distinction: 'Tiffany' matches BOTH 'Tiffany' and 'Limited Edition (Tiffany)'", async () => {
+    // Both candidates tokenize to ["tiffany"] (wrapped one via strip).
+    // resolveParallelOnCandidate uses Array.find so picks first match;
+    // verify the resolver doesn't crash and produces a valid parallelId.
+    (cs.searchCatalog as any).mockResolvedValue([catalog("c", "Topps Update")]);
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "c",
+      name: "x",
+      number: "",
+      releaseName: "Topps Update",
+      setName: "Base Set",
+      year: 2020,
+      parallels: [
+        { id: "limited-edition-tiffany", name: "Limited Edition (Tiffany)", numberedTo: null },
+        { id: "tiffany-plain", name: "Tiffany", numberedTo: null },
+      ],
+    });
+
+    const r = await resolveCardId({
+      playerName: "x",
+      cardYear: 2020,
+      product: "topps update",
+      parallel: "Tiffany",
+    });
+
+    // Array.find returns first match. Both tokenize to ["tiffany"] so
+    // the first listed wins. The test doesn't enforce which one as
+    // long as the resolver picks A parallel rather than failing to null.
+    expect(r.parallelId).toBeTruthy();
+    expect(["limited-edition-tiffany", "tiffany-plain"]).toContain(r.parallelId);
+  });
+});
+
 // CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (Phase 1) — release-filter must check
 // both releaseName AND setName. Cardsight's /catalog/search populates setName
 // with the long-form set string (e.g. "1987 Topps Traded Tiffany Baseball")

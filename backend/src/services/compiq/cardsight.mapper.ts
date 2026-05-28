@@ -277,7 +277,22 @@ export function applyCardNumberDisambiguation(
 }
 
 function tokenizeParallel(name: string): string[] {
-  return name
+  // CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (parallelMatches fix): Cardsight
+  // catalogs some set-level parallels with a verbose wrapper around the
+  // canonical parallel name (e.g. parallelName="Limited Edition (Tiffany)"
+  // for the Tiffany Maddux 1987 Topps Traded RC). User input "TIFFANY"
+  // would never satisfy strict-set-equality against ["limited", "edition",
+  // "(tiffany)"], leaving parallelId null and getPricing returning the
+  // mixed base+Tiffany comp pool.
+  //
+  // Strip parenthesized wrappers from the candidate before tokenizing so
+  // "Limited Edition (Tiffany)" tokenizes the same as the user's "Tiffany".
+  // Generalizes to other wrapper patterns ("Refractor (Gold)" → ["gold"]).
+  // Preserves defect #2 strict-equality semantics for non-wrapped parallels
+  // (Refractor ≠ Chrome Blue Refractor remains the contract).
+  const wrapped = name.match(/\(([^)]+)\)/);
+  const stripped = wrapped ? wrapped[1] : name;
+  return stripped
     .split(/[\s\-/]+/)
     .map((t) => t.toLowerCase())
     .filter((t) => t.length > 0);
