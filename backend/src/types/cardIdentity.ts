@@ -1,0 +1,71 @@
+/**
+ * Canonical CardIdentity type — unified identity shape for cards
+ * resolved via cert lookup (any grader) OR Cardsight free-text
+ * catalog search.
+ *
+ * Per CF-UNIFIED-SEARCH-AND-CERT Phase 3 design (23038d7) §3.
+ *
+ * SUPERSEDES the JSDoc-only @typedef CardIdentity at
+ * backend/src/modules/compiq/models/identity.types.ts, which is
+ * advisory-only (module.exports = {}, no runtime export) and uses
+ * a different shape from earlier planning. That file is harmless
+ * but stale; this is the source of truth.
+ */
+
+export type CardIdentitySource =
+  | "psa-cert"
+  | "cardsight-catalog"
+  | "bgs-cert"
+  | "sgc-cert"
+  | "cgc-cert";
+
+export type CardIdentityAttribution = "authoritative" | "ranked";
+
+export interface CardIdentity {
+  /** Stable per-candidate id, e.g. "psa:76556858" or "cardsight:b9d2b2b1..." */
+  candidateId: string;
+  source: CardIdentitySource;
+
+  /**
+   * Names what `confidence` MEANS for this candidate. Per Drew's Addition 1
+   * (Phase 2 review): the confidence field is semantically overloaded
+   * (cert hits are authoritative=1.0; catalog hits are relevance-ranked
+   * 0..1). Rather than leave consumers to check `source` to interpret
+   * the number, attribution makes the meaning explicit on the type
+   * itself.
+   *
+   *   "authoritative": cert grader confirmed identity. confidence === 1.0.
+   *                    Consumers can rely on the identity fields as ground truth.
+   *   "ranked":        catalog/free-text hit. confidence is a relevance score
+   *                    in [0, 1] from rank scoring. Identity fields are best-guess.
+   */
+  attribution: CardIdentityAttribution;
+  /** 0..1; authoritative ⇒ 1.0 */
+  confidence: number;
+
+  // Identity (subset populated by source)
+  player: string | null;
+  year: number | null;
+  brand: string | null;
+  setName: string | null;
+  cardNumber: string | null;
+  parallel: string | null;
+  variation: string | null;
+  isAuto: boolean;
+  serialNumber: string | null;
+
+  // Grade context (cert only — null for catalog candidates)
+  grade: string | null;
+  gradeCompany: string | null;
+  gradeValue: number | null;
+  certNumber: string | null;
+  totalPopulation: number | null;
+  populationHigher: number | null;
+
+  // Display
+  title: string;
+  imageUrl: string | null;
+
+  /** Vendor body for debug / future use. */
+  raw?: unknown;
+}

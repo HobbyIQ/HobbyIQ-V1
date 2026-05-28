@@ -339,6 +339,28 @@ function canonicalParallelFromVariety(variety: string): string | null {
 
 Grade-string parsing (e.g. `"GEM MT 10"` → 10) reuses the existing `gradeParser.ts` (shipped via `8b4465c` CF-AUTOPRICE-GRADE-CANONICAL-MIGRATION).
 
+### `buildPsaTitle()` — verbatim variety in title, canonical in parallel field
+
+**PSA adapter emits the verbatim variety string in `CardIdentity.title`, not the canonical parallel.** A Maddux Tiffany cert renders as:
+
+```
+1987 Topps Traded #70T Greg Maddux Limited Edition (Tiffany) — PSA 10
+```
+
+NOT:
+
+```
+1987 Topps Traded #70T Greg Maddux Tiffany — PSA 10   ← rejected
+```
+
+Locked during W2 implementation (commit referenced below). Rationale:
+
+- VerifyView's "is this my cert?" affordance is the moment misidentification gets caught. The title mirroring PSA's slab text strengthens the trust signal — users see in the app what they read on the holder.
+- `CardIdentity.parallel` separately carries the canonical token (`"Tiffany"`) for matching, pricing, comp-fetch logic. "Verbatim for display, canonical for logic" is a clean split that downstream consumers depend on already.
+- ResultsView verbosity is the tradeoff. VerifyView is the higher-stakes surface; the call goes its way.
+
+A future v1.5/v2 question — whether to add a separate `verbatimVariety` field so consumers can pick — was considered and rejected as scope creep. Powder kept dry for when VerifyView UX feedback surfaces a real need.
+
 ---
 
 ## 6. `certNumber` persistence on `PortfolioHolding`
