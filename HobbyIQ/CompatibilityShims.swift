@@ -1546,6 +1546,8 @@ extension InventoryCard {
             setName: setName,
             parallel: parallel,
             grade: grade,
+            gradeCompany: gradeCompany,
+            gradeValue: gradeValue,
             purchaseDate: purchaseDate,
             purchasePlatform: purchasePlatform,
             quantity: quantity,
@@ -1579,7 +1581,7 @@ extension InventoryCard {
     // camelCase keys — used for encoding and as primary decode attempt
     private enum CodingKeys: String, CodingKey {
         case id, playerName, cardName, cost, currentValue, status
-        case year, setName, parallel, grade
+        case year, setName, parallel, grade, gradeCompany, gradeValue
         case purchaseDate, purchasePlatform, quantity, notes
         case imageFrontUrl, imageBackUrl
         case lowValue, highValue, confidence, method, summary, isAuto
@@ -1602,6 +1604,8 @@ extension InventoryCard {
         case year
         case setName = "set_name"
         case parallel, grade
+        case gradeCompany = "grade_company"
+        case gradeValue = "grade_value"
         case purchaseDate = "purchase_date"
         case purchasePlatform = "purchase_platform"
         case quantity, notes
@@ -1662,6 +1666,10 @@ extension InventoryCard {
             ?? (try? s.decode(String.self, forKey: .parallel)) ?? ""
         self.grade = (try? c.decode(String.self, forKey: .grade))
             ?? (try? s.decode(String.self, forKey: .grade)) ?? ""
+        self.gradeCompany = (try? c.decode(String.self, forKey: .gradeCompany))
+            ?? (try? s.decode(String.self, forKey: .gradeCompany))
+        self.gradeValue = (try? c.decode(Double.self, forKey: .gradeValue))
+            ?? (try? s.decode(Double.self, forKey: .gradeValue))
         self.purchaseDate = (try? c.decode(String.self, forKey: .purchaseDate))
             ?? (try? s.decode(String.self, forKey: .purchaseDate))
         self.purchasePlatform = (try? c.decode(String.self, forKey: .purchasePlatform))
@@ -1741,6 +1749,8 @@ extension InventoryCard {
         try container.encode(setName, forKey: .setName)
         try container.encode(parallel, forKey: .parallel)
         try container.encode(grade, forKey: .grade)
+        try container.encodeIfPresent(gradeCompany, forKey: .gradeCompany)
+        try container.encodeIfPresent(gradeValue, forKey: .gradeValue)
         try container.encodeIfPresent(purchaseDate, forKey: .purchaseDate)
         try container.encodeIfPresent(purchasePlatform, forKey: .purchasePlatform)
         try container.encodeIfPresent(quantity, forKey: .quantity)
@@ -2084,7 +2094,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
         defer { isSearching = false }
 
         let gradeCompanyValue = isGraded ? gradingCompany.trimmingCharacters(in: .whitespacesAndNewlines) : nil
-        let gradeInt = isGraded ? Int(gradeValue) : nil
+        let gradeInt = isGraded ? Double(gradeValue) : nil
         let request = CardEstimateRequest(
             playerName: parsed.playerName,
             cardYear: parsed.cardYear,
@@ -2981,7 +2991,7 @@ extension APIService {
                 group.addTask {
                     let gradeComponents = card.grade?.split(separator: " ", maxSplits: 1)
                     let gradeCompany = gradeComponents?.first.map(String.init)
-                    let gradeValue = gradeComponents?.dropFirst().first.flatMap { Int($0) }
+                    let gradeValue = gradeComponents?.dropFirst().first.flatMap { Double($0) }
                     let yearInt = card.year.flatMap { Int($0) }
 
                     let result = try await APIService.shared.estimateCardDirect(

@@ -1044,7 +1044,7 @@ struct CardEstimateRequest: Encodable {
     let parallel: String?
     let isAuto: Bool?
     let gradeCompany: String?
-    let gradeValue: Int?
+    let gradeValue: Double?
 
     private enum CodingKeys: String, CodingKey {
         case query
