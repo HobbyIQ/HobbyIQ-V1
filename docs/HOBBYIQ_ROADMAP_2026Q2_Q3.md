@@ -1,8 +1,10 @@
 # HobbyIQ Roadmap — 2026 Q2 → Q3
 
+> **⚠ SUPERSEDED 2026-05-28** — Active plan moved to [`HOBBYIQ_ROADMAP_2026-05-28.md`](HOBBYIQ_ROADMAP_2026-05-28.md). Historical bridge in [`ROADMAP_RECONCILIATION_2026-05-28.md`](ROADMAP_RECONCILIATION_2026-05-28.md). Strategic frame shifted to "PROVISIONAL Answer B" (shipped product as moat, ML sequenced Q4-2026 → Q1-2027 as optimization layer, NOT critical path). Mid-September ML-moat target is no longer applicable. This document remains as historical context and is the input to the reconciliation; do NOT plan against it.
+
 **Drafted:** 2026-05-21 (reframed 2026-05-21 PM post Phase 0)
 **Target horizons:** End of July 2026 (CompIQ formalization + ERP) → Mid-September 2026 (ML moat realized — stretch, contingent on Phase 4c data sufficiency)
-**Status:** Active plan
+**Status:** SUPERSEDED 2026-05-28 — see refresh
 **Owner:** Drew
 
 ## Strategic context
