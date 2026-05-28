@@ -282,3 +282,83 @@ Recommended next-session work for this defect: option (3) instrumentation + opti
 9. **App Insights dependency `POST player_trends/docs` is ambiguous** — both queries and upserts hit this URL. Future diagnostics need to disambiguate (e.g., by adding structured logs around each writer/reader).
 10. **App Insights dependency retention is ~1 hour for this AppI instance.** Historical 30-day failure-rate analysis is not currently possible. Worth investigating retention/sampling config before relying on dependency-table analysis for future diagnostics.
 11. **PR #113 stays in production as defensive guard for a non-problem.** It doesn't address the 22-27% rate; that rate is in `getPlayerScoreByName` query path.
+
+---
+
+## Re-investigation 2026-05-28 — empirical re-check, inversion CONFIRMED, deferral INCORRECT
+
+**Date:** 2026-05-28
+**Context:** Triggered during the roadmap-refresh W1 polish sprint, after the refreshed roadmap (`746a023`) propagated the original 2026-05-24 upsert-defect framing without picking up the 2026-05-26 inversion appended above. CF author paused before code, ran an empirical re-check against App Insights (per the "intermittent → it's data/load-dependent" reasoning the 2026-05-26 inversion already established), and inverted the deferral decision based on current state.
+
+**Method:** Read-only App Insights queries via `az monitor app-insights query` against `hobbyiq-insights` (appId `468bd437-5d16-47b4-90fb-5ee5d41726ae`). No code, no env changes.
+
+### Current empirical state — last 72h, all dependency calls to `hobbyiq-comps-centralus`
+
+| Container/op | Total | 200 | 201 | 400 | Failure % |
+|---|---:|---:|---:|---:|---:|
+| `player_trends/docs` | 457 | 313 | 0 | 144 | **31.5%** |
+| `player_trends/pkranges` | 144 | 144 | 0 | 0 | 0% |
+| `comp_logs/docs` | 256 | 200 | 56 | 0 | 0% |
+| `trend_history/docs` | 25 | 16 | 9 | 0 | 0% |
+| 11 smaller endpoints | small N | — | — | 0 | 0% |
+
+**Failure rate sustained.** The 22.6% from 2026-05-24 / 24.4% pattern from 2026-05-12 (worst day) is now 31.5% — slightly worse, in the same regime. Cardsight + other writes are clean. Failures are localized to `player_trends`.
+
+### Smoking-gun pattern — `pkranges` count alignment
+
+`pkranges` is the partition-range lookup the Cosmos SDK fires once before each cross-partition query (to know which partitions to fan out to). 144 successful pkranges calls aligns numerically with 144 HTTP 400 failures on `player_trends/docs`. This is the SDK signature of cross-partition queries firing and failing — strong empirical confirmation that the 144 failures ARE cross-partition queries, not upserts.
+
+### Per-operation breakdown of `player_trends/docs` (last 72h)
+
+| Request endpoint | Total | 400 | 200 | Failure % |
+|---|---:|---:|---:|---:|
+| `GET /api/dailyiq/brief` | 299 | 94 | 205 | 31.4% |
+| `GET /api/dailyiq/players/top/milb` | 75 | 25 | 50 | 33.3% |
+| `GET /api/dailyiq/players/top/mlb` | 75 | 25 | 50 | 33.3% |
+| `(background — no operation)` | 4 | 0 | 4 | 0% |
+| `POST /api/compiq/price-by-id` | 2 | 0 | 2 | 0% |
+| `POST /api/compiq/search` | 2 | 0 | 2 | 0% |
+
+**98.3% of `player_trends/docs` traffic originates from DailyIQ endpoints. 100% of the 400 failures come from DailyIQ paths.** The compiq paths (price-by-id, search) generate 4 upsert writes, all successful. The "" empty-operation rows are background traffic (also clean).
+
+### Code-side confirmation
+
+- `getPlayerScoreByName` ([playerScore.service.ts:413-428](../../backend/src/services/playerScore/playerScore.service.ts#L413-L428)) — cross-partition `SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name`. Partition key is `playerId`, so any query that doesn't filter on `playerId` is cross-partition. Called from `dailyiq.routes.ts:52` (inside `/api/dailyiq/brief` per-player loop) and `playeriq.routes.ts:61`/`:115`.
+- `getTopPlayersByScore` ([playerScore.service.ts:431-450](../../backend/src/services/playerScore/playerScore.service.ts#L431-L450)) — cross-partition `SELECT TOP N * FROM c [WHERE direction] ORDER BY playerIQScore DESC`. Called from `/api/dailyiq/players/top/{milb,mlb}` (per the App Insights operation breakdown above).
+- Both functions catch errors and return `null` / `[]` silently (`console.warn` only). The 32% failure rate IS user-facing as missing/sparse data on DailyIQ surfaces, not a server error.
+
+### Inversion: confirmed. Deferral: incorrect.
+
+**Confirmed:** The 2026-05-26 hypothesis inversion (from "upsert defect" to "cross-partition query issue") is empirically confirmed by:
+- pkranges count alignment (144 pkranges = 144 query failures)
+- Per-operation breakdown (100% of failures from cross-partition query callers)
+- Upsert path empirical health (compiq endpoints, which write via `upsertPlayerScore`, show 0 failures in this window)
+- "Zero `[playerScore] upsert failed:` traces ever observed" carry-forward from 2026-05-26 remains true today
+
+**Incorrect:** The 2026-05-26 inversion's "deferred until DailyIQ traffic resumes" framing assumed traffic was zero at the time. Whether or not that was true then, **DailyIQ traffic is non-zero now**: 449 DailyIQ-path Cosmos query calls over a 24h window, organic from production usage. The deferral's precondition is no longer satisfied — there is present traffic, a present failure rate, and present user-facing impact.
+
+### Re-characterized carry-forward (2026-05-28)
+
+**Was (2026-05-26):** "`getPlayerScoreByName` cross-partition query optimization, deferred until DailyIQ traffic resumes."
+
+**Now (2026-05-28):** **CF-PLAYERTRENDS-QUERY-FAILURE — ACTIVE in W1 polish sprint of the 2026-05-28 refreshed roadmap. ~4-8h investigation, read-only first, gated on capturing the actual Cosmos 400 response body before any fix.**
+
+The 400 response body is the highest-value missing artifact. The SDK swallow at `playerScore.service.ts:425` discards it. Both `dailyiq.routes.ts:52` and the upsert path produce identical-looking `POST .../docs` dependency-table entries in App Insights — the body (response payload of the 400) names the specific Cosmos sub-code or error and would resolve "intermittent at 32%" to a concrete cause.
+
+### Intermittent-at-32% is the central clue
+
+A flat config error (missing cross-partition flag, missing partition key, malformed query syntax) would fail 100% deterministically. 32% says the failure is **input-dependent or load-dependent**:
+
+- Some player names cause encoding/length/special-char issues in `LOWER(c["playerName"]) = @name`
+- Some result sets exceed a continuation-token / page-size threshold
+- Specific RU-bursty queries hit a per-query plan path that 400s
+- Some queries fan out to partitions in a state that rejects the cross-partition request
+
+The 400 body should name which one. Don't propose a fix without it.
+
+### Findings durable (updated 2026-05-28)
+
+12. **DailyIQ traffic is non-zero in production** as of 2026-05-28: 449 cross-partition queries / 24h from `/api/dailyiq/brief` + `/api/dailyiq/players/top/{milb,mlb}`. The 2026-05-26 inversion's deferral was correct under its zero-traffic precondition; that precondition no longer holds.
+13. **The 22.6% → 31.5% trajectory** suggests the failure rate is at minimum stable, possibly drifting upward as more player names enter the dataset (consistent with input-dependent hypothesis). Worth tracking post-fix.
+14. **The 400 response body is the load-bearing missing artifact.** Until captured, all hypotheses about "why intermittent at 32%" are speculation. Step 3 of CF-PLAYERTRENDS-QUERY-FAILURE is to surface it (either by instrumenting the catch at `playerScore.service.ts:425` to log the full error, or by enabling Cosmos SDK diagnostic logging).
+15. **Lesson from the framing-propagation incident:** When a Phase 0 investigation document has appended re-investigation sections, read end-to-end before propagating its findings into plan documents. The 2026-05-28 reconciliation + refresh both inherited the original head section's "upsert defect" framing without picking up the inversion in the appended section, and propagated it into Section 5 of the reconciliation + the verified-debt-state table + the Week 1 plan + the Risk Register of the refresh. The empirical-before-fix HALT gate caught it before code was written for a non-problem.
