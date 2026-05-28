@@ -355,9 +355,51 @@ async function _getPricing(
   cardId: string,
   opts: { parallelId?: string },
 ): Promise<CardsightPricingResponse> {
+  // First-pass: try the call with the parallel_id filter when provided.
+  const firstPass = await _getPricingRaw(cardId, opts.parallelId ?? null);
+
+  // CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (parallel_id fallback): empirical
+  // probing during the 2026-05-27 incident showed Cardsight's pricing
+  // endpoint returns ZERO records when filtered by parallel_id for at
+  // least the Maddux Tiffany case (parallel_id=516f7c55... → 0 raw, 0
+  // graded). The unified call (no parallel_id) returns 156 raw + 59
+  // PSA 10 records. Cardsight does NOT appear to actually tag eBay sales
+  // by parallelId — the parallels[] sub-array is catalog metadata only,
+  // not a filterable comp dimension. Filing this empirical finding
+  // forward; resolver redesign (tomorrow's CF) will decide whether to
+  // continue passing parallel_id at all.
+  //
+  // Fallback semantic: if parallel_id was used AND the response carried
+  // zero comps (raw count 0 AND graded array empty/zero records), retry
+  // the call WITHOUT parallel_id. Preserves the no-parallel-filter
+  // behavior the resolver had before parallel resolution succeeded.
+  // Resolver still binds to the right cardId; comp pool just falls back
+  // to unified (base + all parallels) when parallel filtering yields
+  // empty.
+  if (opts.parallelId) {
+    const firstPassEmpty =
+      (firstPass.raw?.count ?? 0) === 0 &&
+      (firstPass.graded?.length ?? 0) === 0;
+    if (firstPassEmpty && !firstPass.notFound) {
+      log.info("pricing_parallel_filter_empty_fallback", {
+        card_id: cardId,
+        parallel_id: opts.parallelId,
+        endpoint: "getPricing",
+      });
+      return _getPricingRaw(cardId, null);
+    }
+  }
+
+  return firstPass;
+}
+
+async function _getPricingRaw(
+  cardId: string,
+  parallelId: string | null,
+): Promise<CardsightPricingResponse> {
   try {
     const params = new URLSearchParams();
-    if (opts.parallelId) params.set("parallel_id", opts.parallelId);
+    if (parallelId) params.set("parallel_id", parallelId);
     const qs = params.toString();
     const url = `${BASE_URL}/pricing/${encodeURIComponent(cardId)}${qs ? `?${qs}` : ""}`;
     const res = await fetchWithRetry(url);
@@ -367,7 +409,7 @@ async function _getPricing(
         status: res.status,
         card_id: cardId,
         endpoint: "getPricing",
-        parallel_id: opts.parallelId ?? null,
+        parallel_id: parallelId,
       });
       return { ...EMPTY_PRICING };
     }
@@ -383,7 +425,7 @@ async function _getPricing(
     log.warn("api_threw", {
       card_id: cardId,
       endpoint: "getPricing",
-      parallel_id: opts.parallelId ?? null,
+      parallel_id: parallelId,
       error: err?.message ?? String(err),
     });
     return { ...EMPTY_PRICING };
