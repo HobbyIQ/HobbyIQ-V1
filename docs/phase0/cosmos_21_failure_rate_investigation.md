@@ -362,3 +362,88 @@ The 400 body should name which one. Don't propose a fix without it.
 13. **The 22.6% → 31.5% trajectory** suggests the failure rate is at minimum stable, possibly drifting upward as more player names enter the dataset (consistent with input-dependent hypothesis). Worth tracking post-fix.
 14. **The 400 response body is the load-bearing missing artifact.** Until captured, all hypotheses about "why intermittent at 32%" are speculation. Step 3 of CF-PLAYERTRENDS-QUERY-FAILURE is to surface it (either by instrumenting the catch at `playerScore.service.ts:425` to log the full error, or by enabling Cosmos SDK diagnostic logging).
 15. **Lesson from the framing-propagation incident:** When a Phase 0 investigation document has appended re-investigation sections, read end-to-end before propagating its findings into plan documents. The 2026-05-28 reconciliation + refresh both inherited the original head section's "upsert defect" framing without picking up the inversion in the appended section, and propagated it into Section 5 of the reconciliation + the verified-debt-state table + the Week 1 plan + the Risk Register of the refresh. The empirical-before-fix HALT gate caught it before code was written for a non-problem.
+
+---
+
+## Re-investigation 2026-05-28 PM — direct Cosmos diagnostic probe, classification A LOCKED, name-format bug surfaced
+
+**Date:** 2026-05-28 PM (same day as the morning's empirical re-check, which inverted the deferral on the 2026-05-26 hypothesis)
+**Context:** Morning re-check (above) confirmed the inversion (query failures, not upserts) and showed 32% rate on DailyIQ paths is current and material. Roadmap + reconciliation got "ACTIVE not deferred" corrections (`463b031`). Instrumentation patch deployed (`aa61097`). When synthetic traffic surfaced 514 application-layer successes alongside 514 dependency-layer 400s — the same query-count match — the structural ambiguity between (A) benign SDK chatter and (B) silently-broken partition with merged-result data loss had to be resolved directly. App-layer 0% failures is the precise signal the dangerous case (B) also produces, so could not close as benign on app-layer evidence alone.
+**Method:** Direct ad-hoc Cosmos SDK diagnostic probe (`backend/scripts/playertrends-query-diag-adhoc.cjs`) connecting to prod Cosmos with prod credentials. Two independent decisive tests: (1) `readPartitionKeyRanges()` to count partitions, and (2) completeness check across 8 known players × 2 passes.
+
+### Decisive test 1 — partition count
+
+```
+readPartitionKeyRanges → count: 1
+  range: { id: "0", min: "", max: "FF", status: "online" }
+```
+
+**One partition.** This refutes any "3-partition fan-out" hypothesis structurally — there is no fan-out possible. The 3:1 dependency-row-to-logical-query ratio is SDK-internal protocol chatter (likely query-plan probe + actual query + metadata round-trip pattern). With one partition, the "broken partition" case is mechanically impossible: there is no other partition for the SDK to silently rely on.
+
+### Decisive test 2 — completeness check
+
+| Player | rowCount | Stored id | Score | Note |
+|---|---:|---|---:|---|
+| Mike Trout | 1 | 545361 | 45 | matched both passes (deterministic) |
+| Greg Maddux | 1 | 118120 | 54 | matched both passes |
+| Ken Griffey Jr. | 1 | 115135 | 52 | matched both passes |
+| Caleb Bonemer | 1 | 815352 | 42 | matched both passes |
+| Bobby Cox | 1 | 112764 | 67 | matched both passes |
+| Bobby Witt Jr. | 0 | (see below) | n/a | **name-format mismatch — secondary finding** |
+| John Gilbert | 0 | (not stored) | n/a | genuinely absent |
+| Tommy White | 0 | (not stored) | n/a | genuinely absent |
+
+5/8 known players returned their data deterministically across two passes. **No flapping. No silent drops.** All "rowCount=0" results were verified by either (a) name-format mismatch (Witt — see below) or (b) genuine absence (cards not yet scored).
+
+### Classification (locked)
+
+| Hypothesis | Verdict | Evidence |
+|---|---|---|
+| **A. Benign SDK chatter** | ✅ **CONFIRMED + LOCKED** | Single partition, all completeness checks pass, deterministic, no app errors, RU costs flat at ~3.0-3.13 per query |
+| **B. Partition genuinely broken** | ❌ REFUTED — structurally impossible | Only 1 partition; the dangerous "merged result silently dropping data from broken partition" requires ≥2 partitions to occur |
+| **C. Query edge case on `WHERE LOWER`** | ❌ REFUTED | All known players (queried with correct stored form) match correctly; pathological inputs (empty, single-char, unicode, uuid) all return cleanly without app-layer errors |
+
+The 32% dependency-row 400 rate is **normal Cosmos SDK protocol chatter on a single-partition cross-partition query**. The application never sees the 400; the SDK absorbs it (likely as a recoverable query-plan-probe negative response). Zero data loss verified directly.
+
+### Secondary finding — CF-PLAYERNAME-CANONICALIZATION (separately surfaced)
+
+The completeness check itself surfaced the **actual** bug behind the morning's "silent nulls on DailyIQ" symptom framing:
+
+```
+Caller query: "Bobby Witt Jr."  (with period)     → rowCount=0  ← false miss
+Stored form:  "Bobby Witt Jr"   (no period)        → rowCount=1  match id=677951
+Caller: "Bobby Witt"            (no Jr.)           → rowCount=0  ← false miss
+Caller: "BOBBY WITT JR"         (uppercase)        → rowCount=1  match id=677951 (LOWER() handles case)
+```
+
+Confirmed by direct query `SELECT c.id, c.playerName WHERE CONTAINS(LOWER(c.playerName), "witt")` → one row, `playerName: "Bobby Witt Jr"` (no trailing period). DailyIQ callers passing `"Bobby Witt Jr."` (with period — common MLB Stats / public-API format) get null silently because the `WHERE LOWER(c["playerName"]) = @name` exact-equality comparison misses on punctuation.
+
+**This is a real DailyIQ-quality bug**, completely separate mechanism from the Cosmos 400 chatter. The morning's symptom framing ("silent nulls on DailyIQ degrading data quality") was **right about the symptom and wrong about the mechanism**. Filed forward as **CF-PLAYERNAME-CANONICALIZATION** with explicit Phase 1 scoping requirement (don't fix just Witt's period — enumerate the full mismatch surface including accents on show-relevant players like Acuña, Peña, Yoán).
+
+### Why the 400 body was not captured (and why it doesn't matter)
+
+The investigation also attempted to capture the actual Cosmos 400 response body via a `globalThis.fetch` wrapper (`backend/scripts/playertrends-fetch-wrap-adhoc.cjs`). Result: `depCallCount: 0`. The `@azure/cosmos` SDK uses its own HTTP layer via `@azure/core-rest-pipeline` (not `globalThis.fetch`), so the wrapper intercepted nothing. Capturing the body would require hooking `node:http`/`node:https` directly or implementing a custom Pipeline transform — additional 30-60min work.
+
+Decision: **not pursued.** The body would explain the SDK MECHANISM behind the 400 but cannot move the LOCKED classification. Single partition + completeness verified are the structural and empirical proofs that the dangerous case is impossible. The body is mechanism-informative but classification-orthogonal.
+
+### Findings durable (updated 2026-05-28 PM)
+
+16. **`player_trends` container is single-partition** as of 2026-05-28. Partition key path `/playerId` is configured but Cosmos has only provisioned one physical partition under the current RU/storage profile. Cross-partition queries on this container still incur the SDK's query-plan / cross-partition protocol overhead (3:1 dependency-row ratio observed) even though there's only one partition to scan.
+
+17. **32% dependency-row 400 rate is normal SDK chatter** for the JS Cosmos SDK doing cross-partition queries on a single-partition container. Application sees 0% failures; data is fully reachable; completeness verified. Not a defect to fix.
+
+18. **Name-format mismatch on `getPlayerScoreByName`** is the actual DailyIQ-quality bug. Stored canonical form lacks trailing periods on suffixes (e.g., "Bobby Witt Jr" not "Bobby Witt Jr."); LOWER()-eq comparison misses punctuation differences. Filed as **CF-PLAYERNAME-CANONICALIZATION** with Phase 1 scoping requirement to enumerate the full mismatch surface (periods, accents, apostrophes, hyphens, suffix presence/absence, etc.).
+
+19. **PR #113 stays in production** as defensive coverage of the id-validation edge case it was written for. Don't remove. Adds zero overhead at the failure path it guards (skip + return null when id invalid).
+
+20. **Instrumentation patch (`aa61097`) stays in production** through the CF-PLAYERNAME-CANONICALIZATION verification cycle. The success/failure events on `getPlayerScoreByName` will confirm the canonicalization fix lands. Remove in a cleanup commit after that CF closes.
+
+### Lesson — "no app errors" ≠ "no user impact"
+
+The morning's `463b031` correction (and the matching cosmos appendix `4bfb043`) claimed "32% of DailyIQ player-score lookups return null silently, degrading the daily brief + top-players surfaces." That phrasing was based on inferring user impact from the dependency-aggregate 32% rate. The PM investigation revealed:
+
+- The 32% is per-dependency-row, not per-application-query (refuted by 514 app-layer success events against 514 c400s)
+- The SDK absorbs the 400s; application sees success
+- BUT: silent nulls DO happen on DailyIQ — via a different mechanism (name-format mismatch)
+
+The "0 app errors" signal is necessary but not sufficient to close a user-impact question. The completeness check (querying known data and verifying it returns) is what separated structural impossibility (single partition refutes B) from the actually-present name-format bug (silently misses on punctuation). **Pressing past "close as benign" surfaced the real bug.** Both findings — the Cosmos classification A and the name-format bug — required different empirical tests; neither alone would have closed the question.
