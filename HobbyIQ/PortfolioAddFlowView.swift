@@ -127,6 +127,12 @@ final class PortfolioAddFlowViewModel: ObservableObject {
             setName: variant.setName ?? "",
             parallel: variant.parallel ?? "",
             grade: variant.grade ?? "",
+            // CF-AUTOPRICE-GRADE-CONTRACT: pass canonical structured grade
+            // to backend so autoPriceHolding requests Cardsight's
+            // response.graded[company][value] bucket instead of falling
+            // through to raw/ungraded comps.
+            gradeCompany: variant.gradeCompany,
+            gradeValue: variant.gradeValue,
             purchaseDate: purchaseDateString,
             purchasePlatform: purchasePlatform.rawValue,
             lowValue: estimateResult?.quickSaleValue,
@@ -705,6 +711,11 @@ private struct PortfolioAddSearchStepView: View {
                     .compactMap { $0 }
                     .joined(separator: " ")
                 : "Raw",
+            // CF-AUTOPRICE-GRADE-CONTRACT: carry canonical structured grade
+            // through the variant so the addInventoryCard path can populate
+            // InventoryCard.gradeCompany/gradeValue for backend autoPriceHolding.
+            gradeCompany: gradeCompany,
+            gradeValue: gradeValue,
             serialNumber: nil,
             isAuto: parsed.isAuto
         )

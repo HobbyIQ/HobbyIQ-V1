@@ -1382,6 +1382,14 @@ struct CompIQResolvedVariant: Identifiable, Hashable, Codable {
     let setName: String?
     let parallel: String?
     let grade: String?
+    // CF-AUTOPRICE-GRADE-CONTRACT: canonical structured grade carried
+    // alongside the joined `grade` display string. PortfolioAddFlowView
+    // populates these from viewModel.gradingCompany + viewModel.gradeValue
+    // when the user has selected a graded slab; downstream
+    // addInventoryCard call site passes them through to InventoryCard
+    // so the backend's autoPriceHolding read contract finds them.
+    let gradeCompany: String?
+    let gradeValue: Int?
     let serialNumber: Int?
     let isAuto: Bool
 
@@ -1394,6 +1402,8 @@ struct CompIQResolvedVariant: Identifiable, Hashable, Codable {
         setName: String? = nil,
         parallel: String? = nil,
         grade: String? = nil,
+        gradeCompany: String? = nil,
+        gradeValue: Int? = nil,
         serialNumber: Int? = nil,
         isAuto: Bool = true
     ) {
@@ -1405,6 +1415,8 @@ struct CompIQResolvedVariant: Identifiable, Hashable, Codable {
         self.setName = setName
         self.parallel = parallel
         self.grade = grade
+        self.gradeCompany = gradeCompany
+        self.gradeValue = gradeValue
         self.serialNumber = serialNumber
         self.isAuto = isAuto
     }

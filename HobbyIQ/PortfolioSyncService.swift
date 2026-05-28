@@ -177,7 +177,18 @@ final class PortfolioSyncService {
 
     /// Maps a local CardItem to the InventoryCard wire type for POST/PATCH.
     static func mapCardItemToHolding(_ card: CardItem) -> InventoryCard {
-        InventoryCard(
+        // CF-AUTOPRICE-GRADE-CONTRACT: send canonical gradeCompany + gradeValue
+        // alongside the legacy `grade` string. Backend autoPriceHolding reads
+        // the canonical fields to drive grade-aware Cardsight pricing
+        // (otherwise the request falls into the raw/ungraded comp bucket).
+        // Legacy `grade` retained for display compatibility.
+        let trimmedCompany = card.gradingCompany.trimmingCharacters(in: .whitespacesAndNewlines)
+        let canonicalCompany: String? = card.isRaw || trimmedCompany.isEmpty ? nil : trimmedCompany
+        let canonicalValue: Int? = card.isRaw
+            ? nil
+            : Int(card.grade.trimmingCharacters(in: .whitespacesAndNewlines))
+
+        return InventoryCard(
             playerName: card.playerName,
             cardName: card.cardTitle.isEmpty ? card.playerName : card.cardTitle,
             cost: card.purchasePrice,
@@ -187,6 +198,8 @@ final class PortfolioSyncService {
             setName: card.setName,
             parallel: card.parallel,
             grade: card.isRaw ? "" : card.grade,
+            gradeCompany: canonicalCompany,
+            gradeValue: canonicalValue,
             notes: card.notes.isEmpty ? nil : card.notes,
             isAuto: card.isAuto,
             photos: card.photoURLs.isEmpty ? nil : card.photoURLs,
@@ -196,15 +209,33 @@ final class PortfolioSyncService {
 
     /// Builds a new CardItem from a server-side InventoryCard holding.
     static func mapHoldingToNewCardItem(_ holding: InventoryCard) -> CardItem {
+        // CF-AUTOPRICE-GRADE-CONTRACT: prefer canonical fields from the
+        // server. If gradeCompany/gradeValue are present, populate the
+        // CardItem split-grade fields directly. Otherwise fall back to
+        // the legacy `grade` string (which may itself be empty for raw
+        // cards or a label like "10" for cards added before the
+        // canonical contract was wired through).
+        let canonicalCompany = holding.gradeCompany?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let canonicalValueStr = holding.gradeValue.map(String.init)
+        let resolvedCompany = canonicalCompany?.isEmpty == false ? canonicalCompany! : ""
+        let resolvedGradeValue = canonicalValueStr ?? holding.grade
+        // `isRaw` derives from canonical presence first, falling back to
+        // legacy grade-empty semantic so existing server data still maps
+        // to ungraded cards correctly before backfill runs.
+        let isRaw: Bool = canonicalCompany?.isEmpty == false
+            ? false
+            : holding.grade.isEmpty
+
         let card = CardItem(
             playerName: holding.playerName,
-            isRaw: holding.grade.isEmpty,
+            isRaw: isRaw,
             cardTitle: holding.cardName,
             year: Int(holding.year),
             setName: holding.setName,
             parallel: holding.parallel,
             isAuto: holding.isAuto,
-            grade: holding.grade,
+            gradingCompany: resolvedCompany,
+            grade: resolvedGradeValue,
             purchasePrice: holding.cost,
             currentValue: holding.currentValue,
             status: holding.status,
@@ -237,8 +268,20 @@ final class PortfolioSyncService {
         if !pending.contains("setName")      { card.setName = holding.setName }
         if !pending.contains("parallel")     { card.parallel = holding.parallel }
         if !pending.contains("grade") {
-            card.grade = holding.grade
-            card.isRaw = holding.grade.isEmpty
+            // CF-AUTOPRICE-GRADE-CONTRACT: prefer canonical gradeCompany +
+            // gradeValue from the server holding. Fall back to legacy
+            // `grade` string for holdings that haven't been backfilled yet.
+            let canonicalCompany = holding.gradeCompany?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let canonicalValueStr = holding.gradeValue.map(String.init)
+            if canonicalCompany.isEmpty == false {
+                card.gradingCompany = canonicalCompany
+                card.grade = canonicalValueStr ?? holding.grade
+                card.isRaw = false
+            } else {
+                card.gradingCompany = ""
+                card.grade = holding.grade
+                card.isRaw = holding.grade.isEmpty
+            }
         }
         if !pending.contains("isAuto")       { card.isAuto = holding.isAuto }
         if !pending.contains("notes")        { card.notes = holding.notes ?? "" }

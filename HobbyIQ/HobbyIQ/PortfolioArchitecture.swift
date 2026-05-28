@@ -53,6 +53,22 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let setName: String
     let parallel: String
     let grade: String
+    // CF-AUTOPRICE-GRADE-CONTRACT (2026-05-27): canonical structured grade
+    // fields. `gradeCompany` ("PSA", "BGS", "SGC", "CGC") and `gradeValue`
+    // (numeric, e.g. 10, 9, 8.5) replace the joined `grade` label string
+    // as the source of truth for grade-aware pricing. The legacy `grade`
+    // string remains on the wire for display compatibility (older clients
+    // may still consume it).
+    //
+    // Backend autoPriceHolding reads gradingCompany ?? gradeCompany and
+    // gradeValue directly — without these fields, /api/compiq/estimate
+    // searches the raw/ungraded comp bucket regardless of the user's
+    // actual slab grade. See cardsight.translator.ts:31-99.
+    //
+    // Optional with default nil to preserve backward compat for existing
+    // call sites that haven't been threaded through yet.
+    let gradeCompany: String?
+    let gradeValue: Int?
     let purchaseDate: String?
     let purchasePlatform: String?
     let quantity: Double?
@@ -98,6 +114,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         setName: String = "",
         parallel: String = "",
         grade: String = "",
+        gradeCompany: String? = nil,
+        gradeValue: Int? = nil,
         purchaseDate: String? = nil,
         purchasePlatform: String? = nil,
         quantity: Double? = nil,
@@ -134,6 +152,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.setName = setName
         self.parallel = parallel
         self.grade = grade
+        self.gradeCompany = gradeCompany
+        self.gradeValue = gradeValue
         self.purchaseDate = purchaseDate
         self.purchasePlatform = purchasePlatform
         self.quantity = quantity
