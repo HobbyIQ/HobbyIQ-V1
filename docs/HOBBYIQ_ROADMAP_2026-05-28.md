@@ -51,7 +51,7 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 | Card Hedge client still in code | Prod `CARDSIGHT_MODE=exclusive`. `off`/`shadow`/`primary` fallback branches are dead code in production. Picker path (`/api/compiq/cardsearch`, `/search-list`) IS still calling CH's `searchCards`. | Picker migration is the real unlock; rest is dead-code cleanup |
 | Original Phase 1 silent regression (router L490-494) | Short-circuit code still present, BUT meaningful-query fall-through at `compiqEstimate.service.ts:858-878` is the documented workaround. Empty-return is the intentional fallback when there's no query text to drive Cardsight catalog lookup. | The 2026-05-27 addendum's "Phase 1 COMPLETE" claim is substantively correct in practice. Not a critical path item. |
 | Cardsight parallel-coverage gaps | Vendor doesn't catalog retail-border parallels (Wal-Mart Border, Target Red, CHR PROS family). Confirmed via Trout WMB ×2, Bonemer, Tommy White, Gage Wood. | Vendor dependency — not fixable our side. Surface honestly via CF-CATALOG-GAP-PRICING-HONESTY. |
-| Data-contamination class (iOS field contract) | Recurring — playerName contamination, wrong product field, phantom setName field. Server-side workarounds in place (normalizePlayerName, field-name shim, tokenizeParallel wrapper-strip). | Real fix is CF-PSA-CERT-RESOLUTION-PIPELINE — cert-at-scan canonical metadata via existing psaCert.service.ts. |
+| Data-contamination class (iOS field contract) | Recurring — playerName contamination, wrong product field, phantom setName field. Server-side workarounds in place (normalizePlayerName, field-name shim, tokenizeParallel wrapper-strip). | Real fix is **CF-UNIFIED-SEARCH-AND-CERT** (renamed and expanded from the original CF-PSA-CERT-RESOLUTION-PIPELINE per design `23038d7`) — clean identity entry path via cert lookup OR Cardsight catalog → canonical CardIdentity → committed to portfolio. v1 ships the input contract; existing contaminated holdings stay on legacy paths per design §14 scope discipline. |
 | Inert prior work (Tiffany dictionary, etc.) | Removed in `a0609e1` (Phase 2 Commit A). | Closed. |
 
 ---
@@ -62,29 +62,42 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 
 **Sequencing principle:** Data-quality foundation first → product honesty → infrastructure resilience → signal validation → product hardening. ML is Q4+.
 
-### Week 1 (2026-06-02 → 2026-06-08) — Polish sprint + CF-PSA-CERT design
+### Week 1 (2026-06-02 → 2026-06-08) — Polish sprint + CF-UNIFIED-SEARCH-AND-CERT design
 
-**Bundle the cheap fixes; start the big one.**
+**Status: COMPLETE 2026-05-28.** All three W1 items closed in a single same-day session ahead of the planned W1 calendar window. Shipped items production-verified; design item committed and HALTed for implementation.
 
-- **CF-PLAYERNAME-CANONICALIZATION** (~2-4h after Phase 1 scoping) — surfaced 2026-05-28 during the CF-PLAYERTRENDS-QUERY-FAILURE investigation as the **actual** bug behind the morning's "silent nulls on DailyIQ" symptom framing. `getPlayerScoreByName("Bobby Witt Jr.")` returns null because the stored canonical form is `"Bobby Witt Jr"` (no trailing period); the `WHERE LOWER(c["playerName"]) = @name` comparison misses on punctuation differences between callers and storage. Phase 1 read-only investigation (~1h) characterizes the full mismatch surface (period suffixes, accented characters like Acuña / Peña — show-relevant, apostrophes, hyphens, "III" / "Sr." / initials) and decides reuse-vs-new normalization. Existing `normalizePlayerName` helper referenced in prior sessions; check why it isn't applied at the query boundary. Phase 2 fix (~1-2h) normalizes both sides of the comparison consistently. Phase 3 verification: known mismatches (Witt Jr.-with-period, accented names) now resolve + regression on correctly-formed names. HALT after Phase 1 (scope) and Phase 2/3 (diff) before deploy.
-- ~~**CF-PLAYERTRENDS-QUERY-FAILURE**~~ — **RETIRED 2026-05-28**: investigated → classified A (benign SDK chatter, zero data loss). Container is single-partition; completeness check across 8 known players × 2 passes shows all data reachable deterministically. The 32% dependency-row 400 rate is normal Cosmos SDK protocol chatter, not a user-impacting defect. Instrumentation (`aa61097`) stays in production through CF-PLAYERNAME-CANONICALIZATION's verification (the success/fail event logging confirms the canonicalization fix); remove in a cleanup commit after that. The real symptom-of-concern (silent nulls on DailyIQ) is taken up by CF-PLAYERNAME-CANONICALIZATION above.
-- **CF-VARIANT-MISMATCH-PRICESOURCE-PARITY** (~1h) — variant-mismatch return path at `compiqEstimate.service.ts:1860-1892` needs to surface priceSource/priceSourceInternal/filteredCount/unifiedCount so iOS + sweeps can distinguish failure modes from successful pricing.
-- **CF-PSA-CERT-RESOLUTION-PIPELINE — design phase** — surface design questions before any code: (a) when does iOS read the cert? (manual entry in AddCardView, OCR from PSA slab label, both?) (b) what's the canonical metadata write contract? (overwrite playerName / product / variety / year / cardNumber on PSA success?) (c) backfill semantics for existing 23-holding cohort (run cert lookup for every PSA-graded holding with a non-null cert and propose updates in a HALT-for-review report) (d) failure modes (PSA quota exceeded, cert not found, ambiguous between PSA cert and DNA cert).
+- ✅ **CF-PLAYERNAME-CANONICALIZATION** — **SHIPPED + PRODUCTION-VERIFIED 2026-05-28** (`b51b763`). Canonical playerName field on `PlayerScore` + indexed exact-match lookup + 76-record backfill + reusable diagnostic scripts. `getPlayerScoreByName("Bobby Witt Jr.")` (with period) now resolves correctly. Accents handled incidentally by general punctuation/NFKD strip per Drew's "free if general" framing. Surfaced as the actual DailyIQ-quality bug behind the morning's symptom framing during CF-PLAYERTRENDS-QUERY-FAILURE investigation (closed same day as classification A — benign SDK chatter, zero data loss; see `61e88c6` doc closure). 1116 tests pass (+10 net new). matchedVia telemetry confirms 0 legacy-lower hits = backfill complete.
+- ~~**CF-PLAYERTRENDS-QUERY-FAILURE**~~ — **RETIRED 2026-05-28**: investigated → classified A (benign SDK chatter, zero data loss). Container is single-partition; completeness check across 8 known players × 2 passes shows all data reachable deterministically. Instrumentation (`aa61097`) stays in production through CF-PLAYERNAME-CANONICALIZATION's verification cycle; remove in a cleanup commit after a week of zero `legacy-lower` hits.
+- ✅ **CF-VARIANT-MISMATCH-PRICESOURCE-PARITY** — **SHIPPED + PRODUCTION-VERIFIED 2026-05-28** (`ccd05dc`). 4-line propagation of the router's parallel-resolution attribution onto the variant-mismatch response. Verified end-to-end on Bonemer Gold PSA 9 (priceSource present with propagated "broad" / "unified-no-cardsight-match"). 1122 tests pass (+6 net new) including scope-lock negative regression tests for no-recent-comps and unsupported_sport paths. CF-PRICESOURCE-PARITY-FULL opened as MEDIUM future for the three other non-success paths.
+- ✅ **CF-UNIFIED-SEARCH-AND-CERT — DESIGN COMMITTED 2026-05-28** (`23038d7`). Renamed and expanded from the original CF-PSA-CERT-RESOLUTION-PIPELINE per a same-day W1 architecture session. Three-phase delivery (v1 standalone unified search + verify + comp-card with dual-mode input and extensible cert-grader abstraction; v1.5 BGS/SGC/CGC per-grader CFs slot in via registry; v2 scan integration deferred to its own future design phase). Drew-locked decisions: D1 — Cardsight only, CF-PICKER-MIGRATE absorbed into v1's foundation work; D2 — cherry-pick OneDrive `CardScanResultView` for verify UI only; D3 — v2 scan deferred, v1 notes extension point. Phase 1 discovery at `0fbc5e2`; Phase 3 design at `23038d7`. HALT before implementation; v1 implementation scope honestly revised from 1.5-2 weeks to 3-5 weeks calendar (see Weeks 2-6 below).
 
-**Milestone:** polish sprint shipped + CF-PSA-CERT design HALT for Drew review.
+**Milestone:** polish sprint shipped end-to-end; design committed for unified search + cert + verify v1.
 
-### Weeks 2-3 (2026-06-09 → 2026-06-22) — CF-PSA-CERT-RESOLUTION-PIPELINE implementation
+### Weeks 2-6 (2026-06-09 → 2026-07-13) — CF-UNIFIED-SEARCH-AND-CERT v1 implementation
 
-**Data-quality foundation. This is the root fix for the data-contamination class that has been resurfacing every session.**
+**Honestly revised scope** vs. the original W2-W3 estimate. v1 implementation per design `23038d7` §13 is **17-22 focused days = 3-5 weeks calendar pace**. Original CF-PSA-CERT-RESOLUTION-PIPELINE estimate (1.5-2 weeks) was for a thinner scope; CF-UNIFIED-SEARCH-AND-CERT expanded the scope explicitly during design to absorb:
 
-- **Week 2: Backend implementation** — extend AddCardView flow to call `/api/psa/cert/:certNumber` when user enters a PSA cert, populate canonical metadata fields from response, store cert number on the holding as a new schema field. Map PSA response variety → canonical parallel name (dictionary lookup with fallback to raw text).
-- **Week 3: iOS scan-flow wiring + backfill** — iOS hook into card-scan or manual-entry, surface confirmation dialog with PSA-returned metadata before commit, allow user override. One-shot backfill script (similar to `486775b`'s Maddux data correction): iterate PSA-graded holdings, call cert lookup, propose updates, HALT-for-review before any write.
+- (a) **Cert-grader abstraction** — registry + interface + adapter pattern so v1.5 BGS/SGC/CGC each ship as service-file + one-line registration (zero v1 touches). Load-bearing per design §1.
+- (b) **Unified `/api/search/cards` endpoint with server-side dispatcher** — supports v1.5 backend-only deploys without coordinated iOS commits. Auto-detect via registry `recognizes()` predicates; explicit `hint` field for iOS override.
+- (c) **CF-PICKER-MIGRATE-TO-CARDSIGHT absorbed into v1 per D1** — was a separate W5-W6 workstream; now part of v1's foundation work. v1 ships on the future-proof Cardsight path; CHR PROS class coverage gaps surfaced honestly via the existing `warnings` array rather than hidden by building on legacy CardHedge.
+- (d) **Canonical `CardIdentity` type + iOS Codable mirror + explicit `attribution: "authoritative" | "ranked"` field** — single canonical shape populated by every cert grader and the Cardsight catalog adapter.
+- (e) **VerifyView as new screen** — cherry-picked from OneDrive `CardScanResultView` per D2 and adapted for `CardIdentity`. Slots between picker results and existing `CompIQPricedCardView`. v1 has NO commit-to-portfolio action (extension point built in for v2).
 
-**Milestone:** every PSA-graded holding has authoritative metadata; data-contamination class is closed at source.
+**Week-by-week (target — adjust at implementation start if Drew picks alternate sequencing):**
 
-### Week 4 (2026-06-23 → 2026-06-29) — CF-CATALOG-GAP-PRICING-HONESTY
+- **Week 2 (Jun 09-15):** Backend foundation — cert-grader abstraction + registry + interface; PSA grader adapter (thin wrap of existing `psaCert.service.ts`); `CertGraderError` typed errors.
+- **Week 3 (Jun 16-22):** Backend dispatcher — unified `/api/search/cards` endpoint; `CardIdentity` type + Cardsight catalog adapter; refactor existing autograph/color/scoring logic from `compiq.routes.ts:763-800` into shared helper.
+- **Week 4 (Jun 23-29):** CF-PICKER-MIGRATE-TO-CARDSIGHT internal swap — `compiq.routes.ts:6` and `:753` replaced; shape-adapter preserves CardHedge response shape for legacy clients (empirical verification per §15 operational note). `PortfolioHolding` schema additions for `certNumber` / `certGrader`. Backend tests.
+- **Week 5 (Jun 30 - Jul 06):** iOS — unified search input UI with auto-detect dispatch and `hint` field; `ResultsView` refactor of `CompIQVariantPickerView`; `CompIQSearchService.search()` method + Codable models for `CardIdentity` / `UnifiedSearchResponse`.
+- **Week 6 (Jul 07-13):** iOS — `VerifyView` (cherry-pick `CardScanResultView` per D2, adapt for `CardIdentity`); state model wiring + navigation; smoke sweeps (Cardsight catalog 23-holding cohort + cert flow with known PSA certs incl. Witt 76556858); pre-deploy + deploy + production verification.
 
-**Be honest about un-priceable cards. Trout WMB / John Gil class.**
+**Milestone:** v1 unified search + cert + verify + comp-card flow live in production. Phase 3 CH decommission is **partially shipped** via the absorbed picker migration; the remaining CH cleanup (dead-code removal, env var scrubbing, `fn-cardhedge-comps` disable, `cardHedgeCardId` schema rename decision) becomes a small cleanup commit attached to v1 ship (~half day).
+
+**Reference:** [`docs/phase0/unified_search_design_2026-05-28.md`](phase0/unified_search_design_2026-05-28.md) (`23038d7`) — full architecture, locked decisions D1/D2/D3, scope estimates per workstream, v1.5 and v2 forward-compat notes.
+
+### Week 7 (2026-07-14 → 2026-07-20) — CF-CATALOG-GAP-PRICING-HONESTY
+
+**Be honest about un-priceable cards. Trout WMB / John Gil class.** Shifted from W4 due to W2-W6 absorption of unified-search v1.
 
 - Backend response shape: surface a new field signaling pricing confidence tier (e.g., `pricingTier: "direct-graded" | "raw-multiplier" | "sibling-pool" | "variant-mismatch"`). Map from existing priceSource/source values.
 - iOS surface: add "limited data — approximate" or "approximate" chip on holdings where the pricing tier isn't `direct-graded`. Render alongside FMV with muted styling.
@@ -92,53 +105,48 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 
 **Milestone:** product honesty about catalog-gap cards. Trout WMB shows "approximate" rather than a confident $382.50.
 
-### Weeks 5-6 (2026-06-30 → 2026-07-13) — Phase 3 CH decommission
+### ~~Weeks 5-6 — Phase 3 CH decommission~~ — **ABSORBED into Weeks 2-6 above**
 
-**The narrow, real work: picker migration. Everything else is dead-code cleanup.**
+Per D1, the CF-PICKER-MIGRATE-TO-CARDSIGHT picker migration is v1 foundation work, no longer a separate workstream. The remaining CH cleanup (dead-code removal, env vars, `fn-cardhedge-comps` disable, `cardHedgeCardId` rename) is a small follow-up commit attached to v1 ship — not a separate W5-W6 window.
 
-- **Week 5: CF-PICKER-MIGRATE-TO-CARDSIGHT** — design + implementation. Resolve variant-disambiguation, autograph-detection, image_url normalization, and iOS-contract preservation per the existing CF design notes in `SESSION_HANDOFF.md`. Backend: replace `searchCards` calls in `compiq.routes.ts:6` and `:753` with `searchCatalog` equivalents. iOS: validate the picker UI flow against new response shape.
-- **Week 6: CH dead-code removal** — delete `cardhedge.client.ts`, remove `off`/`shadow`/`primary` mode branches from `cardsight.router.ts` (kept exclusive-only), remove `CARD_HEDGE_API_KEY` and related env vars from App Service, scrub `copilot-instructions.md` references, disable `fn-cardhedge-comps` per the Linux Consumption SKU workaround documented in Phase 0. Decide `cardHedgeCardId` schema column rename vs naming-debt accept.
-
-**Milestone:** Phase 3 fully closed. CH out of active code paths. Documented architecture matches deployed reality.
-
-### Weeks 7-9 (2026-07-14 → 2026-08-03) — Phase 4a MCP cache layer
+### Weeks 8-10 (2026-07-21 → 2026-08-10) — Phase 4a MCP cache layer
 
 **Production resilience. The 'first deploy silently failed to rsync dist' incident this session is a small-radius version of the bigger risk: Cardsight outage = full prediction outage today.**
 
-Original roadmap budgeted Weeks 5-6 (2 weeks). Honest estimate based on existing in-process cache + the actual operational requirements: **3 weeks**.
+Original roadmap budgeted Weeks 5-6 (2 weeks). Honest estimate based on existing in-process cache + the actual operational requirements: **3 weeks**. Shifted from W7-9 to W8-10 due to W2-W6 absorbing unified-search v1.
 
-- **Week 7: Design + implementation Pt 1** — decision: in-process cache layer extension vs separate MCP service. Lean: in-process extension (existing `cacheWrap` is already there; the work is adding player-slug-keyed reads + cache-miss telemetry + stale-flag fallback). Blob storage decision: reuse existing 14-function blob pipeline or build new namespace.
-- **Week 8: Implementation Pt 2 + invalidation** — cache reader by player-slug, TTL respect, miss → live Cardsight call → write to cache. Signal pipeline triggers re-fetch on >5% predicted-price move; otherwise nightly refresh. Stale-flag in response when Cardsight down + cache stale (never serve nothing).
-- **Week 9: Observability + deploy + bake-in** — cache hit rate dashboard in App Insights. Decision on cache-hit telemetry pollution (add `cache_hit: boolean` to comp_logs vs move writer outside cacheWrap). Production deploy. Monitor cache hit rate trajectory (target: >80% within 1 week).
+- **Week 8: Design + implementation Pt 1** — decision: in-process cache layer extension vs separate MCP service. Lean: in-process extension (existing `cacheWrap` is already there; the work is adding player-slug-keyed reads + cache-miss telemetry + stale-flag fallback). Blob storage decision: reuse existing 14-function blob pipeline or build new namespace.
+- **Week 9: Implementation Pt 2 + invalidation** — cache reader by player-slug, TTL respect, miss → live Cardsight call → write to cache. Signal pipeline triggers re-fetch on >5% predicted-price move; otherwise nightly refresh. Stale-flag in response when Cardsight down + cache stale (never serve nothing).
+- **Week 10: Observability + deploy + bake-in** — cache hit rate dashboard in App Insights. Decision on cache-hit telemetry pollution (add `cache_hit: boolean` to comp_logs vs move writer outside cacheWrap). Production deploy. Monitor cache hit rate trajectory (target: >80% within 1 week).
 
 **Milestone:** Cardsight outage no longer = full outage. p95 prediction latency drops materially.
 
-### Weeks 10-11 (2026-08-04 → 2026-08-17) — Phase 4b signal validation
+### Weeks 11-12 (2026-08-11 → 2026-08-24) — Phase 4b signal validation
 
-**Finish the unfinished foundation. The signal pipeline collects; whether it influences predictions correctly is the open question.**
+**Finish the unfinished foundation. The signal pipeline collects; whether it influences predictions correctly is the open question.** Shifted from W10-11.
 
-- **Week 10: Backtest re-run + A/B harness** — Phase 4b backtest methodology was in flight per addendum (CF-BACKTEST-REPEATS, CF-BACKTEST-DETERMINISTIC). Re-run with current code state. Capture per-signal MAPE contribution. Determine if signal-on predictions outperform signal-off on accuracy.
-- **Week 11: A/B run + interpretation** — 7-day production A/B (50% traffic gets full signal blend, 50% gets compsMomentum-only). Statistical significance gate. Decision on per-signal weight adjustments. Capture findings.
+- **Week 11: Backtest re-run + A/B harness** — Phase 4b backtest methodology was in flight per addendum (CF-BACKTEST-REPEATS, CF-BACKTEST-DETERMINISTIC). Re-run with current code state. Capture per-signal MAPE contribution. Determine if signal-on predictions outperform signal-off on accuracy.
+- **Week 12: A/B run + interpretation** — 7-day production A/B (50% traffic gets full signal blend, 50% gets compsMomentum-only). Statistical significance gate. Decision on per-signal weight adjustments. Capture findings.
 
 **Milestone:** signals demonstrably influence predictions, weights calibrated against measured contribution, or honest "signals don't move predictions enough to justify the cost" finding with retirement decisions per project memory `compsmomentum_weight_lock`.
 
-### Weeks 12-13 (2026-08-18 → 2026-08-31) — Product hardening sprint
+### Weeks 13-14 (2026-08-25 → 2026-09-07) — Product hardening sprint
 
-**The work that's been deferred while shipping features. Audit, calibrate, surface.**
+**The work that's been deferred while shipping features. Audit, calibrate, surface.** Shifted from W12-13.
 
-- **Week 12: comp_logs audit + data-quality scorecards** — what's the real schema completeness (cardId null, parallel literal-only, schema gaps from SOAK_LOG)? Build a dashboard showing the row-count growth trajectory + per-field completeness. This is the data substrate for any future ML — if it's polluted now, ML can't help.
-- **Week 13: Prediction confidence calibration + grade-wiring audit re-run** — compare `predictedPrice` to actual ledger sales prices (where available). Are bounded multipliers actually predictive? Run `graded-holdings-sweep.cjs` again post-debt-cleanup. Surface mismatches as CFs.
+- **Week 13: comp_logs audit + data-quality scorecards** — what's the real schema completeness (cardId null, parallel literal-only, schema gaps from SOAK_LOG)? Build a dashboard showing the row-count growth trajectory + per-field completeness. This is the data substrate for any future ML — if it's polluted now, ML can't help.
+- **Week 14: Prediction confidence calibration + grade-wiring audit re-run** — compare `predictedPrice` to actual ledger sales prices (where available). Are bounded multipliers actually predictive? Run `graded-holdings-sweep.cjs` again post-debt-cleanup. Surface mismatches as CFs.
 
 **Milestone:** the product is calibrated, the data substrate is measured, the audit harness is institutionalized as a periodic check.
 
-### Week 14 (2026-09-01 → 2026-09-07) — Q3 closeout + Q4 ML prep
+### Week 15 — Q3 closeout + Q4 ML prep — **shifts ~1 week past Q3 boundary** (2026-09-08 → 2026-09-14)
 
-**Honest milestone landing. Not "ML moat realized" (the original mid-Sep target). Replaced with:**
+**Honest milestone landing.** The W2-W6 unified-search-v1 absorption pushed the original Week 14 closeout to Week 15. Q3 milestone now lands **mid-September** rather than 2026-09-07. Closeout content unchanged:
 
 - Q3 deliverable: **product hardened, data-quality root-fix landed, signal validation complete, infrastructure debt down to manageable backlog.**
 - Q4 ML prep: assess `comp_logs` row count + outcome-tracking gap. Decide whether Phase 4c training pipeline can kick off Oct 1 with extant data + outcome-via-ledger, or whether it needs eBay-scraping outcome expansion (multi-week project) as a prerequisite.
 
-**Milestone:** Q3 closeout retrospective + Q4 ML kickoff plan committed to roadmap.
+**Milestone:** Q3 closeout retrospective + Q4 ML kickoff plan committed to roadmap. **Q3 calendar boundary slip acknowledged**: with unified-search v1 honestly scoped at 3-5 weeks (W2-W6), the previously-tight Q3 milestone (Sep 07) shifts to mid-September; the original Q3 calendar buffer (Week 14 closeout) is consumed. Drew can either (a) accept Q3 milestone at mid-September; (b) compress one of the shifted items (4a/4b/hardening) by ~1 week; (c) trim scope on one of them. Decision deferrable until v1 ships and actual W2-W6 calendar lands.
 
 ---
 
@@ -179,9 +187,10 @@ iOS development continues parallel to backend phases.
 | Window | iOS scope |
 |---|---|
 | Weeks 1-3 (Jun) | Bug 3 device test, Bug 4 fix, D.4 publish/revise/end/status UI, ITEM_SOLD consumer pipeline iOS-side |
-| Weeks 4-6 (Jul) | CF-PSA-CERT iOS scan flow (Week 3 backend prerequisite), CF-CATALOG-GAP-PRICING-HONESTY iOS surface, picker migration iOS validation |
-| Weeks 7-10 (Jul-Aug) | iOS Double? branch (`ios-grade-canonical-WIP-windows / 57ab110`) Mac compile + ship, CF-IOS-FIELD-CONTRACT-FIX (now substantially closed by PSA cert pipeline) |
-| Weeks 11-14 (Aug-Sep) | CF-DAILYIQ-MOVEMENT-INTEGRATION, CF-DUAL-CACHE-UNIFY, CF-PORTFOLIO-MOVEMENT-HISTORY |
+| Weeks 4-6 (Jun-Jul) | **CF-UNIFIED-SEARCH-AND-CERT v1 iOS pieces** — picker migration validation (Cardsight response shape), new unified search input UI with auto-detect dispatch, `ResultsView` refactor of `CompIQVariantPickerView`, new `VerifyView` (cherry-pick from OneDrive `CardScanResultView` per D2), `CompIQSearchService.search()` + Codable models for `CardIdentity` / `UnifiedSearchResponse`. Mac access required for build/runtime verification. |
+| Week 7 (Jul) | CF-CATALOG-GAP-PRICING-HONESTY iOS surface — pricing tier chips on holdings, muted styling for non-direct-graded |
+| Weeks 8-11 (Jul-Aug) | iOS Double? branch (`ios-grade-canonical-WIP-windows / 57ab110`) Mac compile + ship, CF-IOS-FIELD-CONTRACT-FIX (now substantially closed by unified-search v1's clean entry path) |
+| Weeks 12-15 (Aug-Sep) | CF-DAILYIQ-MOVEMENT-INTEGRATION, CF-DUAL-CACHE-UNIFY, CF-PORTFOLIO-MOVEMENT-HISTORY |
 
 iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task-list, not roadmap-tracked.
 
@@ -191,9 +200,9 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 
 ### End of Q3 2026 (2026-09-30)
 
-- ✅ Data-quality root fix shipped (PSA cert pipeline live, backfill complete)
+- ✅ Data-quality root fix shipped (CF-UNIFIED-SEARCH-AND-CERT v1 live: cert lookup + Cardsight search + canonical CardIdentity + VerifyView)
 - ✅ Catalog-gap pricing honesty surfaced (iOS chips, confidence tiers in response)
-- ✅ Phase 3 CH decommission complete (picker migrated, dead code removed)
+- ✅ Phase 3 CH decommission complete (picker migration absorbed into v1 W2-W6; remaining CH cleanup small follow-up commit)
 - ✅ Phase 4a MCP cache layer live (>80% hit rate, Cardsight outage resilience verified)
 - ✅ Phase 4b signal validation complete (signal contribution measured, weights calibrated or retired)
 - ✅ Product hardening sprint complete (comp_logs audited, prediction calibration measured)
@@ -223,20 +232,20 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 
 **Carry-forward from original roadmap (still active):**
 
-1. **Cardsight coverage gap** (Risk 1 original) — still active. Mitigated by CF-CATALOG-GAP-PRICING-HONESTY in Week 4 (honest "approximate" labels rather than coverage improvement).
+1. **Cardsight coverage gap** (Risk 1 original) — still active. Mitigated by CF-CATALOG-GAP-PRICING-HONESTY in **Week 7** (shifted from W4; honest "approximate" labels rather than coverage improvement).
 2. **MCP layer bigger than estimated** (Risk 2 original) — re-estimated 2 → 3 weeks honestly. Still a risk if invalidation logic surfaces design questions.
 3. **Sparse outcome data limits ML quality** (Risk 3 original) — now a Q4 risk, not Q3. Data-sufficiency gate at end of Phase 4c explicitly addresses this.
 4. **Production ML incident** (Risk 7 original) — Q4+ concern. Phase 4d rollback infrastructure remains in scope.
-5. **Observability layer partial restoration emission gap** (Risk 8 original) — still active. Address opportunistically in product hardening sprint (Week 12 comp_logs audit).
+5. **Observability layer partial restoration emission gap** (Risk 8 original) — still active. Address opportunistically in product hardening sprint (**Week 13** comp_logs audit; shifted from W12).
 6. **Compaction summary fabrication pattern** (Risk 11 original) — discipline pattern from `copilot-instructions.md`. Carried forward.
 
 **New risks surfaced 2026-05-28:**
 
 7. **Strategic frame reframe ("PROVISIONAL Answer B") gets locked in by accumulation rather than deliberate decision.** Mitigation: Drew schedules a fresh-session moat-narrative confirmation explicitly. Don't let "we're shipping Answer B's work" become "Answer B is locked" without a deliberate check.
-8. **iOS scan-flow PSA cert integration surfaces unforeseen UX issues.** Mitigation: Week 1 design phase HALT for Drew review before Weeks 2-3 implementation. Capture failure modes (cert not found, ambiguous, quota exceeded) before code.
-9. **Picker migration (Week 5) reveals Cardsight searchCatalog can't match CH searchCards on variant-disambiguation.** Mitigation: Week 5 is design + implementation, so design HALT before deletion in Week 6.
-10. **Phase 4a MCP cache implementation surfaces blob-storage namespace + cache-invalidation design depth.** Mitigation: 3-week budget (vs original 2), Week 7 is design + Pt 1 to surface depth early.
-11. **Q3 calendar slip if any 2 weeks slip.** Mitigation: Week 14 is closeout buffer. If Weeks 1-13 land on time, Week 14 closes Q3; if any 2 weeks slipped, Week 14 absorbs the slip and Q3 milestone shifts to end-of-October.
+8. **CF-UNIFIED-SEARCH-AND-CERT v1 implementation surfaces unforeseen scope during W2-W6.** v1 design `23038d7` honest-scoped to 3-5 weeks (W2-W6) absorbing cert-grader abstraction + unified dispatcher + picker migration per D1 + canonical CardIdentity + VerifyView. Mitigation: design HALT preserved; implementation phase HALTs at end-of-week for each of W2-W6 for Drew status check + re-scope opportunity. If v1 overruns W6, Q3 closeout shifts proportionally per item 11 below.
+9. **Picker migration (absorbed into W4 per D1) reveals Cardsight searchCatalog can't match CH searchCards on variant-disambiguation, autograph detection, or image_url normalization.** Mitigation: shape-adapter verified empirically against iOS contract before deployment per design `23038d7` §15 operational note; existing autograph/color/scoring logic preserved (refactored to shared helper, not rewritten); shipped on the Cardsight-only path per D1 with CHR PROS class gap surfaced honestly via `warnings` array rather than hidden.
+10. **Phase 4a MCP cache implementation surfaces blob-storage namespace + cache-invalidation design depth.** Mitigation: 3-week budget (vs original 2), **Week 8** is design + Pt 1 to surface depth early (shifted from W7).
+11. **Q3 calendar slip from unified-search v1 absorption.** v1's W2-W6 honest 3-5 week scope (vs original 1.5-2 weeks at refresh) pushed downstream items by ~3 weeks net. Q3 closeout (was W14) is now Week 15 (mid-September), past the original 2026-09-07 Q3 boundary. **Q3 buffer is consumed before implementation begins.** Mitigation: Drew accepts mid-September Q3 milestone OR compresses one shifted item (4a/4b/hardening) by ~1 week OR trims scope on one. Decision deferrable until v1 ships and actual W2-W6 calendar lands. If v1 also overruns W6, Q3 milestone shifts to end-of-September / early-October.
 
 12. **DailyIQ data quality degraded by name-format mismatch on `getPlayerScoreByName` cross-partition lookup** (REPLACES the earlier mid-day "Risk 12: Cosmos 400s" framing that was retired same-day after empirical disconfirmation). Stored canonical playerName form differs from caller-supplied form on punctuation and accents (e.g., stored "Bobby Witt Jr" vs caller "Bobby Witt Jr." with period; accented names like Acuña / Peña presumed at risk pending Phase 1 scope). The `WHERE LOWER(c["playerName"]) = @name` comparison misses on those, callers see deterministic silent nulls. Mitigation: CF-PLAYERNAME-CANONICALIZATION in W1 with Phase 1 read-only scoping HALT before fix to enumerate the full mismatch surface, not just the one found.
 
