@@ -150,7 +150,17 @@ export async function fetchCompsByPlayer(
   // passes a cardNumber.
   const effectiveProduct =
     applyCardNumberDisambiguation(input.product, undefined) ?? input.product;
-  const releaseName = lookupReleaseName(effectiveProduct);
+  // CF-CARDSIGHT-RESOLVER-COMPREHENSIVE Phase 3: pass parallel + cardYear so
+  // set-level parallel overrides (Tiffany) fire from the player-level
+  // aggregator too. Backward-compatible: nullish parallel/year falls through
+  // to base dictionary lookup as before.
+  const releaseName = lookupReleaseName(
+    effectiveProduct,
+    input.parallel ?? null,
+    typeof input.cardYear === "number" && Number.isFinite(input.cardYear)
+      ? input.cardYear
+      : null,
+  );
   if (!releaseName) {
     warnings.push(
       `Product "${input.product}" not in Cardsight release dictionary — searching by literal product string.`,

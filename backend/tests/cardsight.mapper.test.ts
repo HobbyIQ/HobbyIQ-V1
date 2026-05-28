@@ -19,6 +19,7 @@ import {
   resolveCardId,
   warmResolveCardIdCache,
   __resolveCardIdInternals,
+  lookupReleaseName,
 } from "../src/services/compiq/cardsight.mapper";
 
 type Catalog = Awaited<ReturnType<typeof cs.searchCatalog>>[number];
@@ -710,5 +711,218 @@ describe("resolveCardId — parallel resolution preserved", () => {
 
     expect(r.cardId).toBe("only-id");
     expect(r.parallelId).toBe("blue-id");
+  });
+});
+
+// CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (Phase 1) — release-filter must check
+// both releaseName AND setName. Cardsight's /catalog/search populates setName
+// with the long-form set string (e.g. "1987 Topps Traded Tiffany Baseball")
+// while releaseName is shorter or undefined. For dictionary overrides that
+// return long-form setName (set-level parallels like Tiffany — Phase 3),
+// the filter MUST narrow on setName to actually function.
+describe("resolveCardId — release-filter releaseName OR setName parity (Phase 1)", () => {
+  it("releaseName-only match still works (preserves base case behavior)", async () => {
+    // Single candidate match via releaseName like the existing test at line 57.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("bowman-1", "Bowman", "Topps 100"),
+      catalog("topps-update-1", "Topps Update", "Base Set"),
+      catalog("finest-1", "Finest", "Base Set"),
+    ]);
+
+    const r = await resolveCardId({ playerName: "Player X", cardYear: 2017, product: "topps update" });
+
+    expect(r.cardId).toBe("topps-update-1");
+    expect(r.matchConfidence).toBe("exact");
+  });
+
+  it("setName-only match narrows when releaseName mismatches but setName equals expectedRelease", async () => {
+    // Simulates the Tiffany scenario: dictionary returns long-form setName
+    // ("1987 Topps Traded Tiffany Baseball"), Cardsight populates this in
+    // setName while releaseName is shorter ("Topps Traded"). The filter
+    // must match on setName to lock onto the Tiffany cardId.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("base-cardid", "Topps Traded", "1987 Topps Traded Baseball"),
+      catalog("tiffany-cardid", "Topps Traded", "1987 Topps Traded Tiffany Baseball"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Greg Maddux",
+      cardYear: 1987,
+      product: "1987 Topps Traded Tiffany Baseball", // simulates Phase 3 dictionary return
+    });
+
+    expect(r.cardId).toBe("tiffany-cardid");
+    expect(r.matchConfidence).toBe("exact");
+    // Critical: pricing-probe must NOT have been called, since the filter
+    // narrowed to a single candidate before the probe step.
+    expect(cs.getPricing).not.toHaveBeenCalled();
+  });
+
+  it("both fields populated and matching prefers the first matching candidate", async () => {
+    // Confirms OR semantics: when both releaseName and setName equal the
+    // expectedRelease for the same candidate, it still works (not double-counted).
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("match-1", "topps update", "topps update"),
+      catalog("other-1", "Bowman", "Base Set"),
+    ]);
+
+    const r = await resolveCardId({ playerName: "Player X", cardYear: 2017, product: "topps update" });
+
+    expect(r.cardId).toBe("match-1");
+    expect(r.matchConfidence).toBe("exact");
+  });
+
+  it("neither field matches → filter falls through to greedy (preserves no-op safety net behavior)", async () => {
+    // Live behavior for base cases: dictionary returns short releaseName
+    // ("Topps Chrome"), Cardsight setName is long-form ("2021 Topps Chrome
+    // Baseball"). Neither matches "topps chrome" exactly, so filter falls
+    // through. Greedy probe picks the highest-records candidate as before.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("c1", "Other", "2021 Topps Chrome Baseball"),
+      catalog("c2", "Other", "2021 Topps Chrome Baseball"),
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const records = { c1: 50, c2: 300 }[id] ?? 0;
+      return Promise.resolve(pricing(records));
+    });
+
+    const r = await resolveCardId({ playerName: "Mike Trout", cardYear: 2021, product: "topps chrome" });
+
+    expect(r.cardId).toBe("c2"); // greedy max-records winner
+    expect(cs.getPricing).toHaveBeenCalled();
+    expect(r.warnings.some((w) => w.includes("No candidates matched release"))).toBe(true);
+  });
+});
+
+// CF-CARDSIGHT-RESOLVER-COMPREHENSIVE (Phase 3) — Tiffany dictionary
+// overrides. Re-ship of 486775b (reverted in f67f9d2). With Phase 1's
+// releaseName-OR-setName filter in place, these overrides actually function.
+describe("lookupReleaseName — Tiffany overrides (Phase 3)", () => {
+  // ── Positive matches: 14 enumerated Tiffany sets ───────────────────────
+  it("Topps Tiffany 1984 — returns dedicated setName", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1984)).toBe("1984 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1985", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1985)).toBe("1985 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1986", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1986)).toBe("1986 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1987", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1987)).toBe("1987 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1988", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1988)).toBe("1988 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1989", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1989)).toBe("1989 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1990", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1990)).toBe("1990 Topps Tiffany Baseball");
+  });
+  it("Topps Tiffany 1991", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1991)).toBe("1991 Topps Tiffany Baseball");
+  });
+
+  it("Topps Traded Tiffany 1986", () => {
+    expect(lookupReleaseName("Topps Traded", "Tiffany", 1986)).toBe("1986 Topps Traded Tiffany Baseball");
+  });
+  it("Topps Traded Tiffany 1987 — Maddux RC reference case", () => {
+    expect(lookupReleaseName("Topps Traded", "Tiffany", 1987)).toBe("1987 Topps Traded Tiffany Baseball");
+  });
+  it("Topps Traded Tiffany 1989", () => {
+    expect(lookupReleaseName("Topps Traded", "Tiffany", 1989)).toBe("1989 Topps Traded Tiffany Baseball");
+  });
+  it("Topps Traded Tiffany 1991", () => {
+    expect(lookupReleaseName("Topps Traded", "Tiffany", 1991)).toBe("1991 Topps Traded Tiffany Baseball");
+  });
+
+  it("Fleer Tiffany 1996", () => {
+    expect(lookupReleaseName("Fleer", "Tiffany", 1996)).toBe("1996 Fleer Tiffany Baseball");
+  });
+  it("Fleer Tiffany 1997", () => {
+    expect(lookupReleaseName("Fleer", "Tiffany", 1997)).toBe("1997 Fleer Tiffany Baseball");
+  });
+
+  // ── Case-insensitivity + whitespace tolerance ──────────────────────────
+  it("parallel uppercase TIFFANY still triggers override", () => {
+    expect(lookupReleaseName("Topps Traded", "TIFFANY", 1987)).toBe("1987 Topps Traded Tiffany Baseball");
+  });
+  it("product lowercase still triggers override", () => {
+    expect(lookupReleaseName("topps traded", "Tiffany", 1987)).toBe("1987 Topps Traded Tiffany Baseball");
+  });
+  it("product with surrounding whitespace still triggers override", () => {
+    expect(lookupReleaseName("  Topps Traded  ", "Tiffany", 1987)).toBe("1987 Topps Traded Tiffany Baseball");
+  });
+  it("parallel with surrounding whitespace still triggers override", () => {
+    expect(lookupReleaseName("Topps Traded", " Tiffany ", 1987)).toBe("1987 Topps Traded Tiffany Baseball");
+  });
+
+  // ── Negative matches — gaps + out-of-range + non-Tiffany ───────────────
+  // NOTE: "Topps" and "Topps Traded" are NOT in the base
+  // COMPIQ_TO_CARDSIGHT_RELEASES dictionary (which only covers chrome
+  // variants + bowman + panini + donruss). When the Tiffany override
+  // doesn't fire, lookupReleaseName falls through and returns null.
+  // The dictionary-miss behavior triggers the resolver's
+  // "searching by player name only" warning, which is the correct
+  // existing semantic for unmapped flagship products.
+  it("Topps Traded Tiffany 1984 (gap year) — override misses, base dict misses → null", () => {
+    expect(lookupReleaseName("Topps Traded", "Tiffany", 1984)).toBeNull();
+  });
+  it("Topps Tiffany 1992 (out of enumerated range) → null", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", 1992)).toBeNull();
+  });
+  it("Topps Refractor 1987 (non-Tiffany parallel) → null", () => {
+    expect(lookupReleaseName("Topps", "Refractor", 1987)).toBeNull();
+  });
+  it("Bowman Chrome with Tiffany parallel + matching year → base release (Bowman Chrome has no Tiffany override)", () => {
+    // Demonstrates that even with year + parallel set, products without
+    // an override fall through to the base dictionary which DOES contain
+    // "bowman chrome".
+    expect(lookupReleaseName("Bowman Chrome", "Tiffany", 2024)).toBe("Bowman Chrome");
+  });
+  it("Topps with parallel but no year falls through to base dict (miss → null)", () => {
+    expect(lookupReleaseName("Topps", "Tiffany")).toBeNull();
+  });
+  it("Topps with year but no parallel falls through to base dict (miss → null)", () => {
+    expect(lookupReleaseName("Topps", null, 1987)).toBeNull();
+  });
+  it("Topps with non-finite year falls through to base dict (miss → null)", () => {
+    expect(lookupReleaseName("Topps", "Tiffany", NaN)).toBeNull();
+  });
+  it("Bowman Chrome — backward-compat single-arg call still works", () => {
+    expect(lookupReleaseName("Bowman Chrome")).toBe("Bowman Chrome");
+  });
+  it("Topps Chrome — backward-compat single-arg call still works", () => {
+    expect(lookupReleaseName("Topps Chrome")).toBe("Topps Chrome");
+  });
+  it("Unknown product — returns null (existing semantic preserved)", () => {
+    expect(lookupReleaseName("Some Random Product")).toBeNull();
+  });
+});
+
+// Integration test — confirm the full _resolveCardId pipeline targets the
+// Tiffany cardId via the Phase 1 setName-aware release-filter.
+describe("resolveCardId — Tiffany integration (Phase 1 + Phase 3)", () => {
+  it("Maddux 1987 Topps Traded Tiffany resolves to dedicated Tiffany cardId", async () => {
+    // Cardsight returns both the base and Tiffany cardIds. With Phase 3's
+    // override, lookupReleaseName returns "1987 Topps Traded Tiffany Baseball"
+    // — Phase 1's setName-aware filter narrows to the Tiffany cardId BEFORE
+    // pricing-probe greedy would pick the base (higher records).
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("base-tt-1987", "Topps Traded", "1987 Topps Traded Baseball"),
+      catalog("tiffany-tt-1987", "Topps Traded", "1987 Topps Traded Tiffany Baseball"),
+    ]);
+
+    const r = await resolveCardId({
+      playerName: "Greg Maddux",
+      cardYear: 1987,
+      product: "Topps Traded",
+      parallel: "Tiffany",
+    });
+
+    expect(r.cardId).toBe("tiffany-tt-1987");
+    expect(r.matchConfidence).toBe("exact");
+    expect(cs.getPricing).not.toHaveBeenCalled(); // narrowed to single candidate
   });
 });
