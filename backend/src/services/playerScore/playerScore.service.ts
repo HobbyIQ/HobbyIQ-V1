@@ -329,6 +329,236 @@ function logUpsertStatsThrottled(): void {
 }
 
 /**
+ * Numeric id discriminator. Per CF-PLAYERTRENDS-DUPLICATE-RECORDS (see
+ * docstring on PlayerScore.playerId in types/playerScore.ts), numeric
+ * MLB-id form is canonical and slug form is transient. The write-path
+ * merge only fires when the incoming id is numeric (slug→slug merges
+ * are a no-op by definition — there's nothing to merge INTO).
+ */
+const NUMERIC_PLAYER_ID_RE = /^\d+$/;
+
+/**
+ * Copy player_trend_history snapshots from a slug-form partition to the
+ * numeric-form partition. Cosmos doesn't allow in-place partition-key
+ * mutation, so this is delete-and-rewrite per snapshot.
+ *
+ * Idempotency:
+ *  - Existence-checked at target partition before each create — re-runs
+ *    skip already-copied snapshots.
+ *  - Source delete tolerates "already deleted" (404) — concurrent runs
+ *    or partial prior runs don't double-fail.
+ *
+ * Failure semantics: per-snapshot errors are counted and surfaced via
+ * the return value (caller surfaces as an aggregated
+ * `playerScore_slug_merge_partial_failure` event when count > 0).
+ * Does NOT throw — partial copy is acceptable and the parent slug
+ * record gets deleted regardless (see comment on caller).
+ */
+async function copyAndDeleteHistorySnapshots(
+  fromPlayerId: string,
+  toPlayerId: string,
+): Promise<{ copied: number; skipped: number; errors: number }> {
+  if (!historyContainer) return { copied: 0, skipped: 0, errors: 0 };
+
+  let snapshots: Array<Record<string, unknown> & { id: string; playerId: string; snapshotAt?: string }>;
+  try {
+    const { resources } = await historyContainer.items
+      .query<Record<string, unknown> & { id: string; playerId: string; snapshotAt?: string }>(
+        {
+          query: 'SELECT * FROM c WHERE c["playerId"] = @pid',
+          parameters: [{ name: "@pid", value: fromPlayerId }],
+        },
+        { partitionKey: fromPlayerId },
+      )
+      .fetchAll();
+    snapshots = resources;
+  } catch (err) {
+    return { copied: 0, skipped: 0, errors: 1 };
+  }
+
+  let copied = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const s of snapshots) {
+    // Re-key: snapshot id is `{playerId}_{ts}` per historyDoc construction;
+    // rebuild with the target playerId prefix.
+    const suffix = s.id.startsWith(`${fromPlayerId}_`)
+      ? s.id.slice(fromPlayerId.length + 1)
+      : String(
+          (typeof s.snapshotAt === "string" && Date.parse(s.snapshotAt))
+            || Date.now(),
+        );
+    const newId = `${toPlayerId}_${suffix}`;
+
+    // Existence check at target partition. 404 = doesn't exist, proceed.
+    let existsAtTarget = false;
+    try {
+      const { resource } = await historyContainer.item(newId, toPlayerId).read();
+      if (resource) existsAtTarget = true;
+    } catch (err: unknown) {
+      const code = (err as { code?: number })?.code;
+      if (code !== 404) {
+        errors += 1;
+        continue;
+      }
+    }
+
+    if (existsAtTarget) {
+      // Already copied in a prior run. Clean up the source snapshot and
+      // move on.
+      try {
+        await historyContainer.item(s.id, fromPlayerId).delete();
+      } catch (_) {
+        // Tolerate — source may also have been deleted by a prior run.
+      }
+      skipped += 1;
+      continue;
+    }
+
+    try {
+      await historyContainer.items.create({ ...s, id: newId, playerId: toPlayerId });
+      copied += 1;
+    } catch (err) {
+      errors += 1;
+      continue;
+    }
+
+    try {
+      await historyContainer.item(s.id, fromPlayerId).delete();
+    } catch (_) {
+      // Tolerate — concurrent run or partial state. The copy succeeded;
+      // leaving the source snapshot does not double-count downstream
+      // because the parent slug player_trends record is about to be
+      // deleted, making this partition unreachable.
+    }
+  }
+
+  return { copied, skipped, errors };
+}
+
+/**
+ * CF-PLAYERTRENDS-DUPLICATE-RECORDS write-path fix.
+ *
+ * Merges any orphan slug-form player_trends records into the canonical
+ * numeric record before the numeric upsert lands. Called from
+ * `upsertPlayerScore` ONLY when the incoming id is numeric.
+ *
+ * Concurrent-call safety: this helper is called per-upsert. If two
+ * upserts for the same player race, both query (both see the slug
+ * candidate), both attempt history copy (each snapshot is existence-
+ * checked at target partition, so duplicates short-circuit), both
+ * attempt slug delete (first wins, second 404s and tolerates). Net
+ * result: idempotent under concurrency without explicit locking.
+ *
+ * Partial-failure semantics: per-snapshot errors do NOT block the
+ * parent slug record's delete. Partial state (some snapshots copied,
+ * some not) is acceptable because (a) re-running the merge is
+ * idempotent and (b) leaving the slug record in place would cause
+ * infinite re-merge attempts on every future upsert. The aggregated
+ * `playerScore_slug_merge_partial_failure` warn event surfaces the
+ * partial-state cases as grep-able discrete findings for post-deploy
+ * telemetry; per-snapshot logs alone would bury the signal in noise.
+ */
+async function mergeSlugRecordsIfPresent(
+  canonical: string,
+  numericId: string,
+  numericPlayerId: string,
+): Promise<void> {
+  if (!canonical || !trendsContainer || !historyContainer) return;
+
+  let candidates: PlayerScore[];
+  try {
+    const { resources } = await trendsContainer.items
+      .query<PlayerScore>({
+        query:
+          'SELECT * FROM c WHERE c["playerNameNormalized"] = @canonical AND c.id != @numericId',
+        parameters: [
+          { name: "@canonical", value: canonical },
+          { name: "@numericId", value: numericId },
+        ],
+      })
+      .fetchAll();
+    candidates = resources;
+  } catch (err) {
+    // Query failure is non-fatal — fall through; the numeric upsert
+    // proceeds and the slug record remains for the next attempt.
+    console.warn(JSON.stringify({
+      event: "playerScore_slug_merge_query_failed",
+      source: "playerScore.service",
+      canonical,
+      numericId,
+      message: (err as Error).message,
+    }));
+    return;
+  }
+
+  for (const slug of candidates) {
+    // Defensive: only dedupe slug-form into numeric. If we ever see a
+    // numeric-vs-numeric duplicate (shouldn't happen under MLB id
+    // uniqueness), log and skip rather than silently merge.
+    if (NUMERIC_PLAYER_ID_RE.test(slug.id)) {
+      console.warn(JSON.stringify({
+        event: "playerScore_dedupe_unexpected_numeric_collision",
+        source: "playerScore.service",
+        canonical,
+        numericId,
+        otherId: slug.id,
+      }));
+      continue;
+    }
+
+    const histCounts = await copyAndDeleteHistorySnapshots(
+      slug.playerId,
+      numericPlayerId,
+    );
+
+    try {
+      await trendsContainer.item(slug.id, slug.playerId).delete();
+      console.log(JSON.stringify({
+        event: "playerScore_slug_record_merged",
+        source: "playerScore.service",
+        canonical,
+        numericId,
+        slugId: slug.id,
+        slugPlayerId: slug.playerId,
+        historyCopied: histCounts.copied,
+        historySkipped: histCounts.skipped,
+        historyErrors: histCounts.errors,
+      }));
+      if (histCounts.errors > 0) {
+        // Higher-signal aggregated event per CF-PLAYERTRENDS-DUPLICATE-
+        // RECORDS Phase 2 Addition 1. Grep-able as a discrete finding:
+        // "any merges land in partial state?" Per-snapshot logs alone
+        // would bury this in noise.
+        console.warn(JSON.stringify({
+          event: "playerScore_slug_merge_partial_failure",
+          source: "playerScore.service",
+          canonical,
+          numericId,
+          slugId: slug.id,
+          historyCopied: histCounts.copied,
+          historySkipped: histCounts.skipped,
+          historyErrors: histCounts.errors,
+        }));
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: number })?.code;
+      if (code !== 404) {
+        console.warn(JSON.stringify({
+          event: "playerScore_slug_record_delete_failed",
+          source: "playerScore.service",
+          slugId: slug.id,
+          slugPlayerId: slug.playerId,
+          message: (err as Error).message,
+        }));
+      }
+      // 404 = concurrent run already deleted; tolerate silently.
+    }
+  }
+}
+
+/**
  * Upsert a PlayerScore document. Also fires a fire-and-forget write to
  * `player_trend_history` so the PlayerIQView score chart has data over time.
  *
@@ -368,6 +598,24 @@ export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
   try {
     await initContainers();
     if (!trendsContainer) return;
+
+    // CF-PLAYERTRENDS-DUPLICATE-RECORDS (2026-05-28): merge any orphan
+    // slug-form record for this canonical player into the numeric one
+    // BEFORE upsert. Only fires when current id is numeric — slug→slug
+    // merges are a no-op by definition. See `mergeSlugRecordsIfPresent`
+    // docstring for concurrent-call safety + partial-failure semantics.
+    if (
+      NUMERIC_PLAYER_ID_RE.test(docToWrite.id)
+      && typeof docToWrite.playerNameNormalized === "string"
+      && docToWrite.playerNameNormalized.length > 0
+    ) {
+      await mergeSlugRecordsIfPresent(
+        docToWrite.playerNameNormalized,
+        docToWrite.id,
+        docToWrite.playerId,
+      );
+    }
+
     await trendsContainer.items.upsert(docToWrite);
   } catch (err) {
     console.warn("[playerScore] upsert failed:", (err as Error).message);
@@ -401,6 +649,14 @@ export const __playerScoreInternals = {
     _upsertStats.lastLogAt = 0;
   },
   getStats: () => ({ ..._upsertStats }),
+  // CF-PLAYERTRENDS-DUPLICATE-RECORDS test surface
+  mergeSlugRecordsIfPresent,
+  copyAndDeleteHistorySnapshots,
+  NUMERIC_PLAYER_ID_RE,
+  setContainersForTest: (trends: Container | null, history: Container | null): void => {
+    trendsContainer = trends;
+    historyContainer = history;
+  },
 };
 
 /** Read by playerId (preferred — single-partition lookup). */

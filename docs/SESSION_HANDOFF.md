@@ -93,6 +93,7 @@ Pricing pipeline progress (admin-testing-hobbyiq 23-holding cohort):
 - **CF-CARDHEDGE-SIGNAL-RENAME** (implementation)
 - **CF-PICKER-MIGRATE-TO-CARDSIGHT** (~6-9h)
 - **CF-CARDIDENTITY-RESOLUTION-WEIGHTING** — Ken Griffey concern from earlier in arc; "TRADED" prefix stripping causes wrong-card matches (1989 UD #1 instead of Topps Traded)
+- **CF-PLAYERTRENDS-SLUG-RE-RESOLUTION** (NEW, LOW backlog, surfaced 2026-05-28 during CF-PLAYERTRENDS-DUPLICATE-RECORDS Phase 1) — sibling to CF-PLAYERTRENDS-DUPLICATE-RECORDS (roadmap §"out of scope" entry). Persistent slug-form `player_trends` records remain only for players whose MLB id has never resolved at write time (minor league pre-call-up, pre-MLB-era, college, name mismatch in MLB people index). The Phase 2 design intentionally scoped re-resolution OUT: the duplicate-records write-path merge handles the auto-collapse case (numeric resolves later → slug merged into numeric on next upsert), but an orphan slug whose MLB id NEVER resolves stays an orphan forever. Future work: periodic background job that re-runs MLB resolution against slug-form records and triggers the same merge path on success. Scope estimate: ~2-3h (Cosmos query for slug-form records + resolveMlbPlayerId batch loop + leverage existing `mergeSlugRecordsIfPresent` helper). Not show-blocking; affects accuracy of orphan player stats over time.
 
 ### Outstanding Windows autonomous work
 
