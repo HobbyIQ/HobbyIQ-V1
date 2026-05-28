@@ -409,8 +409,53 @@ export async function getPlayerScore(playerId: string): Promise<PlayerScore | nu
   }
 }
 
+/**
+ * Extract structured detail from an Azure Cosmos SDK error for
+ * CF-PLAYERTRENDS-QUERY-FAILURE diagnostics. The SDK's `ErrorResponse`
+ * carries code/substatus/body/activityId — all of which are discarded
+ * by the existing `(err as Error).message` log path. The body is the
+ * load-bearing artifact (names the specific Cosmos sub-error like
+ * "Cross partition query is required..." / continuation issues / etc.).
+ */
+function extractCosmosError(err: unknown): Record<string, unknown> {
+  const e = err as Record<string, unknown>;
+  return {
+    code: e?.code ?? null,
+    substatus: e?.substatus ?? null,
+    activityId: e?.activityId ?? null,
+    message: e instanceof Error ? e.message : String(err),
+    body: e?.body ?? null,
+    headers: e?.headers ?? null,
+    diagnostics: e?.diagnostics ?? null,
+    name: e?.name ?? null,
+  };
+}
+
+/** Approximate response size in bytes for diff-vs-failures. Stringify is
+ *  ~O(n); at ~19 calls/hour total volume this is cheap. */
+function approxBytes(resources: unknown): number {
+  try {
+    return JSON.stringify(resources).length;
+  } catch {
+    return -1;
+  }
+}
+
 /** Read by playerName (case-insensitive). Cross-partition query. */
 export async function getPlayerScoreByName(playerName: string): Promise<PlayerScore | null> {
+  // CF-PLAYERTRENDS-QUERY-FAILURE diagnostic instrumentation. SAME input
+  // fields captured on success + failure so App Insights traces can be
+  // diffed across the 32% failure / 68% success split. The intermittency
+  // is the puzzle; failure-only logging would name "what failed" but not
+  // "what distinguishes failing inputs from succeeding ones". Both
+  // structured-trace events ("playerScore_getByName_failed" + "_ok")
+  // share schema for diff-ability; safe to remove once root cause
+  // captured + fix shipped.
+  const inputCapture = {
+    playerName,
+    playerNameNormalized: playerName?.trim?.()?.toLowerCase?.() ?? null,
+    playerNameLength: playerName?.length ?? null,
+  };
   try {
     await initContainers();
     if (!trendsContainer) return null;
@@ -420,9 +465,27 @@ export async function getPlayerScoreByName(playerName: string): Promise<PlayerSc
         parameters: [{ name: "@name", value: playerName.trim().toLowerCase() }],
       })
       .fetchAll();
+    console.log(JSON.stringify({
+      event: "playerScore_getByName_ok",
+      source: "playerScore.service",
+      caller: "getPlayerScoreByName",
+      input: inputCapture,
+      result: {
+        rowCount: resources?.length ?? 0,
+        responseBytesApprox: approxBytes(resources),
+        hadHit: (resources?.length ?? 0) > 0,
+      },
+    }));
     return resources?.[0] ?? null;
   } catch (err) {
-    console.warn("[playerScore] getByName failed:", (err as Error).message);
+    console.warn(JSON.stringify({
+      event: "playerScore_getByName_failed",
+      source: "playerScore.service",
+      caller: "getPlayerScoreByName",
+      input: inputCapture,
+      query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
+      cosmosError: extractCosmosError(err),
+    }));
     return null;
   }
 }
@@ -439,15 +502,50 @@ export async function getTopPlayersByScore(
     const safeLimit = Math.max(1, Math.min(100, limit));
     const where = direction ? 'WHERE c["playerIQDirection"] = @dir' : "";
     const params = direction ? [{ name: "@dir", value: direction }] : [];
-    const { resources } = await trendsContainer.items
-      .query<PlayerScore>({
-        query: `SELECT TOP ${safeLimit} * FROM c ${where} ORDER BY c["playerIQScore"] DESC`,
-        parameters: params,
-      })
-      .fetchAll();
-    return resources ?? [];
+    const queryText = `SELECT TOP ${safeLimit} * FROM c ${where} ORDER BY c["playerIQScore"] DESC`;
+    const inputCapture = {
+      limit,
+      safeLimit,
+      direction: direction ?? null,
+    };
+    try {
+      const { resources } = await trendsContainer.items
+        .query<PlayerScore>({
+          query: queryText,
+          parameters: params,
+        })
+        .fetchAll();
+      console.log(JSON.stringify({
+        event: "playerScore_topQuery_ok",
+        source: "playerScore.service",
+        caller: "getTopPlayersByScore",
+        input: inputCapture,
+        query: queryText,
+        result: {
+          rowCount: resources?.length ?? 0,
+          responseBytesApprox: approxBytes(resources),
+        },
+      }));
+      return resources ?? [];
+    } catch (innerErr) {
+      // CF-PLAYERTRENDS-QUERY-FAILURE diagnostic instrumentation (paired
+      // with getPlayerScoreByName above). Same structured-trace pattern,
+      // same input-capture object as the success log for diff-ability.
+      console.warn(JSON.stringify({
+        event: "playerScore_topQuery_failed",
+        source: "playerScore.service",
+        caller: "getTopPlayersByScore",
+        input: inputCapture,
+        query: queryText,
+        cosmosError: extractCosmosError(innerErr),
+      }));
+      return [];
+    }
   } catch (err) {
-    console.warn("[playerScore] top query failed:", (err as Error).message);
+    // Outer catch covers initContainers() failure (pre-query). Keep the
+    // original simple log shape — this is not the cross-partition query
+    // failure path that CF-PLAYERTRENDS-QUERY-FAILURE is investigating.
+    console.warn("[playerScore] top query failed (pre-query):", (err as Error).message);
     return [];
   }
 }
