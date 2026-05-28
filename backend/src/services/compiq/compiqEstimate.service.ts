@@ -1870,6 +1870,20 @@ export async function computeEstimate(
       source: "variant-mismatch",
       daysSinceNewestComp: null,
       variantWarning: fetched.variantWarning,
+      // CF-VARIANT-MISMATCH-PRICESOURCE-PARITY (2026-05-28): propagate
+      // the router's parallel-resolution attribution onto the variant-
+      // mismatch response. The four fields describe HOW the comp POOL
+      // was constructed by the router (parallel-id / title-matched /
+      // unified) — that attribution remains accurate when the variant
+      // filter rejects the pool downstream. Variant rejection itself
+      // is communicated via `source: "variant-mismatch"` + variantWarning
+      // (different axis). Parity with the successful path's surface at
+      // line 2796-2799 unblocks iOS/sweeps/backtests distinguishing
+      // variant-mismatch failures from other no-FMV outcomes.
+      priceSource: fetched.priceSource ?? null,
+      priceSourceInternal: fetched.priceSourceInternal ?? null,
+      parallelMatchFilteredCount: fetched.parallelMatchFilteredCount ?? null,
+      parallelMatchUnifiedCount: fetched.parallelMatchUnifiedCount ?? null,
       compQuality: {
         totalComps: 0,
         usedComps: 0,
