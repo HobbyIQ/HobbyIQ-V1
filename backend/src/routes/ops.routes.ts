@@ -388,4 +388,143 @@ router.get("/report", requireOpsToken, async (req: Request, res: Response) => {
   });
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// Cardsight upstream diagnostic probe (admin-only, read-only).
+//
+// CF-AUTOPRICE-GRADE-CANONICAL-MIGRATION (2026-05-27 incident): /api/compiq/
+// estimate began returning source=no-recent-comps + cardIdentity=null for
+// ALL queries (including uncached ones), while /api/compiq/cardsearch
+// (which uses Card Hedge legacy upstream) continued returning hits. This
+// endpoint probes Cardsight's catalog + pricing APIs directly from inside
+// the App Service (which has the IP-allowlisted CARDSIGHT_API_KEY) and
+// returns the raw upstream response shape so we can classify the issue:
+//   A) Healthy 200 with records → resolver/cache issue (our problem)
+//   B) HTTP error → vendor incident
+//   C) 200 with empty records → vendor data issue
+//   D) 401/403/429 → API key or quota issue
+//
+// Behind requireOpsToken. Read-only — no state mutations. Should be
+// removed or feature-gated after the incident is resolved.
+// ────────────────────────────────────────────────────────────────────────────
+router.get("/cardsight-probe", requireOpsToken, async (req: Request, res: Response) => {
+  const query = String(req.query.query ?? "Mike Trout 2021 Topps Chrome").trim();
+  const yearParam = req.query.year ? String(req.query.year) : null;
+  const apiKey = process.env.CARDSIGHT_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ success: false, error: "CARDSIGHT_API_KEY not configured" });
+    return;
+  }
+  const BASE_URL = "https://api.cardsight.ai/v1";
+
+  // ── Step 1: searchCatalog ──────────────────────────────────────────
+  const catalogParams = new URLSearchParams({
+    q: query,
+    type: "card",
+    segment: "baseball",
+    take: "10",
+  });
+  if (yearParam) catalogParams.set("year", yearParam);
+
+  const catalogStart = Date.now();
+  let catalogOutcome: Record<string, unknown> = {};
+  let firstCardId: string | null = null;
+  try {
+    const r = await fetch(`${BASE_URL}/catalog/search?${catalogParams}`, {
+      headers: { "X-API-Key": apiKey },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const latencyMs = Date.now() - catalogStart;
+    const raw = await r.text();
+    let body: any = null;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      body = { __parseError: true, rawLength: raw.length, rawSample: raw.slice(0, 200) };
+    }
+    const resultsLen = Array.isArray(body?.results) ? body.results.length : null;
+    if (resultsLen != null && resultsLen > 0) {
+      firstCardId = body.results[0]?.id ?? null;
+    }
+    catalogOutcome = {
+      httpStatus: r.status,
+      ok: r.ok,
+      latencyMs,
+      contentLength: raw.length,
+      contentType: r.headers.get("content-type"),
+      resultsCount: resultsLen,
+      firstResult: Array.isArray(body?.results) && body.results[0]
+        ? {
+            id: body.results[0].id,
+            name: body.results[0].name,
+            year: body.results[0].year,
+            releaseName: body.results[0].releaseName,
+            setName: body.results[0].setName,
+          }
+        : null,
+      rawResponseSample: typeof raw === "string" ? raw.slice(0, 500) : null,
+    };
+  } catch (e: any) {
+    catalogOutcome = {
+      ok: false,
+      errorName: e?.name ?? "unknown",
+      errorMessage: e?.message ?? String(e),
+      latencyMs: Date.now() - catalogStart,
+    };
+  }
+
+  // ── Step 2: getPricing for the first catalog hit (if any) ──────────
+  let pricingOutcome: Record<string, unknown> | null = null;
+  if (firstCardId) {
+    const pricingStart = Date.now();
+    try {
+      const r = await fetch(`${BASE_URL}/pricing/${firstCardId}`, {
+        headers: { "X-API-Key": apiKey },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const latencyMs = Date.now() - pricingStart;
+      const raw = await r.text();
+      let body: any = null;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        body = { __parseError: true, rawLength: raw.length, rawSample: raw.slice(0, 200) };
+      }
+      const rawCount = body?.raw?.count ?? null;
+      const gradedCompanies = Array.isArray(body?.graded)
+        ? body.graded.map((g: any) => ({
+            company_name: g.company_name,
+            gradeKeys: Array.isArray(g.grades) ? g.grades.map((gr: any) => gr.grade_value) : null,
+          }))
+        : null;
+      pricingOutcome = {
+        cardId: firstCardId,
+        httpStatus: r.status,
+        ok: r.ok,
+        latencyMs,
+        contentLength: raw.length,
+        contentType: r.headers.get("content-type"),
+        rawCount,
+        gradedCompanies,
+        rawResponseSample: typeof raw === "string" ? raw.slice(0, 500) : null,
+      };
+    } catch (e: any) {
+      pricingOutcome = {
+        cardId: firstCardId,
+        ok: false,
+        errorName: e?.name ?? "unknown",
+        errorMessage: e?.message ?? String(e),
+        latencyMs: Date.now() - pricingStart,
+      };
+    }
+  }
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    query,
+    yearParam,
+    searchCatalog: catalogOutcome,
+    getPricing: pricingOutcome,
+  });
+});
+
 export default router;
