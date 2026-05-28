@@ -80,6 +80,22 @@ export interface PlayerScore {
   updatedAt: string;            // ISO8601
   dataSource: "realtime_estimate" | "nightly_job" | "manual_seed";
   confidence: Confidence;       // Overall — based on data availability
+
+  // Match/lookup canonical form.
+  //
+  // CF-PLAYERNAME-CANONICALIZATION (2026-05-28). Computed via
+  // canonicalizePlayerName(playerName) on every upsert.
+  // getPlayerScoreByName queries this field with an exact-match
+  // comparison (indexed) instead of the previous LOWER(playerName)
+  // function-call comparison that missed on punctuation / accent
+  // differences between caller and stored forms (e.g. "Bobby Witt Jr."
+  // vs stored "Bobby Witt Jr", "Acuña" vs stored "Acuna").
+  //
+  // Optional in the type because legacy stored documents (pre-backfill)
+  // don't have it yet; the read path falls back to LOWER(playerName)
+  // when the new query returns 0 rows. Field becomes required after
+  // the 2026-05-28 backfill commit removes the fallback.
+  playerNameNormalized?: string;
 }
 
 /**
@@ -146,4 +162,42 @@ export function playerNameSlug(name: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Canonical-form playerName for player_trends storage + lookup.
+ *
+ * CF-PLAYERNAME-CANONICALIZATION (2026-05-28). Composes:
+ *   1. Unicode NFKD normalization + combining-mark strip (accents)
+ *      \u2014 "Acu\u00f1a" \u2192 "Acuna", "Pe\u00f1a" \u2192 "Pena"
+ *   2. Lowercase
+ *   3. Punctuation strip (periods, commas, apostrophes including
+ *      curly variants) \u2014 "Bobby Witt Jr." \u2192 "Bobby Witt Jr",
+ *      "O'Brien" \u2192 "OBrien"
+ *   4. Suffix drop (jr|sr|ii|iii|iv with optional trailing period)
+ *      \u2014 "Bobby Witt Jr" \u2192 "Bobby Witt"
+ *      Both "Bobby Witt Jr." (with period) and "Bobby Witt Jr"
+ *      (without) collapse to the same canonical "bobby witt", which
+ *      is the entire point of this CF.
+ *   5. Whitespace collapse + trim
+ *
+ * Hyphens are intentionally preserved (Sosa-Lopez vs Sosalopez are
+ * different real names).
+ *
+ * Composition note (not import): the playerResolver.service.ts has a
+ * similar `normalizePlayerName` for MLB cache keys. Don't import or
+ * mutate it \u2014 that helper drives cache-miss behavior in resolution
+ * and any change risks cache thrash. Duplicate the small logic here;
+ * the layering (types module, no service deps) is worth the ~5 lines.
+ */
+export function canonicalizePlayerName(name: string | null | undefined): string {
+  if (!name) return "";
+  return String(name)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.,'\u2019\u2018`]/g, "")
+    .replace(/\s+(jr|sr|ii|iii|iv)\b\.?/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

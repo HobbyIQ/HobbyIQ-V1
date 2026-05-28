@@ -15,6 +15,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import {
   deriveLabel,
   playerNameSlug,
+  canonicalizePlayerName,
   type Confidence,
   type MarketScore,
   type PerformanceScore,
@@ -355,10 +356,19 @@ export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
     return;
   }
 
+  // CF-PLAYERNAME-CANONICALIZATION (2026-05-28): always set
+  // playerNameNormalized on write. Indexed exact-match lookup field for
+  // getPlayerScoreByName. Independent of any other normalization paths
+  // in the codebase.
+  const docToWrite: PlayerScore = {
+    ...score,
+    playerNameNormalized: canonicalizePlayerName(score.playerName),
+  };
+
   try {
     await initContainers();
     if (!trendsContainer) return;
-    await trendsContainer.items.upsert(score);
+    await trendsContainer.items.upsert(docToWrite);
   } catch (err) {
     console.warn("[playerScore] upsert failed:", (err as Error).message);
     return;
@@ -370,7 +380,7 @@ export async function upsertPlayerScore(score: PlayerScore): Promise<void> {
     try {
       if (!historyContainer) return;
       const historyDoc = {
-        ...score,
+        ...docToWrite,
         id: `${score.playerId}_${Date.now()}`,
         playerId: score.playerId, // partition key
         snapshotAt: score.updatedAt,
@@ -441,49 +451,77 @@ function approxBytes(resources: unknown): number {
   }
 }
 
-/** Read by playerName (case-insensitive). Cross-partition query. */
+/**
+ * Read by playerName, canonicalized (case + punctuation + accent + suffix-
+ * insensitive). Cross-partition query.
+ *
+ * CF-PLAYERNAME-CANONICALIZATION (2026-05-28). Primary query is indexed
+ * exact-match on `playerNameNormalized`; falls back to LOWER(playerName)
+ * for documents that haven't been backfilled yet (the 76 existing
+ * records pre-2026-05-28). Once the backfill commit confirms all
+ * documents carry playerNameNormalized, the fallback can be removed in
+ * a cleanup commit.
+ *
+ * Existing CF-PLAYERTRENDS-QUERY-FAILURE diagnostic instrumentation is
+ * preserved (closed 2026-05-28 as classification A — the 32% 400 rate
+ * is benign SDK chatter). The success/failure event stream now also
+ * serves as the verification harness for the canonicalization fix.
+ */
 export async function getPlayerScoreByName(playerName: string): Promise<PlayerScore | null> {
-  // CF-PLAYERTRENDS-QUERY-FAILURE diagnostic instrumentation. SAME input
-  // fields captured on success + failure so App Insights traces can be
-  // diffed across the 32% failure / 68% success split. The intermittency
-  // is the puzzle; failure-only logging would name "what failed" but not
-  // "what distinguishes failing inputs from succeeding ones". Both
-  // structured-trace events ("playerScore_getByName_failed" + "_ok")
-  // share schema for diff-ability; safe to remove once root cause
-  // captured + fix shipped.
+  const canonical = canonicalizePlayerName(playerName);
   const inputCapture = {
     playerName,
-    playerNameNormalized: playerName?.trim?.()?.toLowerCase?.() ?? null,
+    playerNameCanonical: canonical,
     playerNameLength: playerName?.length ?? null,
   };
   try {
     await initContainers();
     if (!trendsContainer) return null;
-    const { resources } = await trendsContainer.items
+
+    // Primary: indexed exact-match on canonical form.
+    const primary = await trendsContainer.items
       .query<PlayerScore>({
-        query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
-        parameters: [{ name: "@name", value: playerName.trim().toLowerCase() }],
+        query: 'SELECT TOP 1 * FROM c WHERE c["playerNameNormalized"] = @canonical',
+        parameters: [{ name: "@canonical", value: canonical }],
       })
       .fetchAll();
+
+    let matched = primary.resources?.[0] ?? null;
+    let matchedVia: "canonical" | "legacy-lower" | "miss" = matched ? "canonical" : "miss";
+
+    // Migration fallback: documents written before the backfill don't
+    // have playerNameNormalized yet. Try LOWER(playerName) for those.
+    // Removed in a cleanup commit after backfill completion verified.
+    if (!matched) {
+      const legacy = await trendsContainer.items
+        .query<PlayerScore>({
+          query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
+          parameters: [{ name: "@name", value: playerName.trim().toLowerCase() }],
+        })
+        .fetchAll();
+      matched = legacy.resources?.[0] ?? null;
+      if (matched) matchedVia = "legacy-lower";
+    }
+
     console.log(JSON.stringify({
       event: "playerScore_getByName_ok",
       source: "playerScore.service",
       caller: "getPlayerScoreByName",
       input: inputCapture,
       result: {
-        rowCount: resources?.length ?? 0,
-        responseBytesApprox: approxBytes(resources),
-        hadHit: (resources?.length ?? 0) > 0,
+        rowCount: matched ? 1 : 0,
+        matchedVia,
+        hadHit: !!matched,
       },
     }));
-    return resources?.[0] ?? null;
+    return matched;
   } catch (err) {
     console.warn(JSON.stringify({
       event: "playerScore_getByName_failed",
       source: "playerScore.service",
       caller: "getPlayerScoreByName",
       input: inputCapture,
-      query: 'SELECT TOP 1 * FROM c WHERE LOWER(c["playerName"]) = @name',
+      query: 'SELECT TOP 1 * FROM c WHERE c["playerNameNormalized"] = @canonical',
       cosmosError: extractCosmosError(err),
     }));
     return null;
