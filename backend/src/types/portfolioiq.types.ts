@@ -103,4 +103,22 @@ export interface PortfolioHolding {
   // ship with new ids (e.g. "HGA").
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
+  // CF-INVENTORYIQ-R1 — Cardsight catalog UUID persisted onto the
+  // holding at write time so identity-based re-pricing / catalog
+  // enrichment lookups don't pay the text-canonicalization tax that
+  // historical re-resolution paths incur. Populated when an iOS pick
+  // resolves a Cardsight candidate (W5-Windows UnifiedSearchResponse
+  // surfaces it as `candidate.candidateId = "cardsight:<uuid>"`);
+  // backend write paths defensively strip the "cardsight:" prefix so
+  // the stored form is always the bare UUID regardless of which form
+  // the client sends. Remains undefined / null for pre-R1 holdings,
+  // for cert-only saves, and for manual-entry holdings where no
+  // Cardsight match was resolved. Both states are valid; consumers
+  // must tolerate absence and fall back to text-field resolution.
+  //
+  // Per InventoryIQ design doc Section 4 R1 (06a5d4e). Field is
+  // additive and backward-compatible — existing holdings parse and
+  // serialize unchanged, same posture as W4's certNumber / certGrader
+  // (683b26f).
+  cardsightCardId?: string | null;
 }

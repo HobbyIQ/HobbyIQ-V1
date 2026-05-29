@@ -386,6 +386,43 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
   );
 }
 
+// CF-INVENTORYIQ-R1 — write-side normalizer for `cardsightCardId`.
+// Applied by addHolding + updateHolding so the stored form is always
+// the bare Cardsight UUID regardless of which shape the client sends.
+//   - non-string input (undefined / null): pass through unchanged
+//   - empty string: normalize to null (treats "" in this field as a
+//     client bug, not data)
+//   - "cardsight:<uuid>" prefixed form: strip the prefix and emit a
+//     structured warn event so post-deploy telemetry can confirm
+//     whether iOS picker is sending the bare UUID (event count = 0)
+//     or the prefixed form (event count > 0 -> iOS contract drift
+//     worth fixing in W5-iOS)
+//   - bare UUID (or any other string shape): pass through unchanged
+function normalizeR1CardsightCardId<T extends { cardsightCardId?: string | null }>(
+  holding: T,
+  holdingId: string,
+  source: string,
+): T {
+  const raw = holding.cardsightCardId;
+  if (typeof raw !== "string") return holding;
+
+  if (raw === "") {
+    return { ...holding, cardsightCardId: null };
+  }
+
+  if (raw.startsWith("cardsight:")) {
+    console.warn(JSON.stringify({
+      event: "portfoliohq_cardsightCardId_prefix_stripped",
+      source,
+      holdingId,
+      prefixedForm: raw.slice(0, 30) + (raw.length > 30 ? "..." : ""),
+    }));
+    return { ...holding, cardsightCardId: raw.slice("cardsight:".length) };
+  }
+
+  return holding;
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -1156,10 +1193,15 @@ export async function addHolding(req: Request, res: Response) {
 
   const incoming = (req.body ?? {}) as Record<string, unknown>;
   const { id, ...rest } = incoming;
-  const holding: PortfolioHolding = {
+  let holding: PortfolioHolding = {
     ...(rest as Omit<PortfolioHolding, "id">),
     id: normalizeId(id),
   };
+  holding = normalizeR1CardsightCardId(
+    holding,
+    holding.id,
+    "portfolioStore.service.addHolding",
+  );
 
   const doc = await readUserDoc(auth.userId);
   const now = new Date().toISOString();
@@ -1229,7 +1271,12 @@ export async function updateHolding(req: Request, res: Response) {
   if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
   const previous = doc.holdings[id];
-  const next = { ...doc.holdings[id], ...(req.body as PortfolioHolding), id };
+  let next = { ...doc.holdings[id], ...(req.body as PortfolioHolding), id };
+  next = normalizeR1CardsightCardId(
+    next,
+    id,
+    "portfolioStore.service.updateHolding",
+  );
   const now = new Date().toISOString();
   next.lastUpdated = next.lastUpdated ?? now;
 
