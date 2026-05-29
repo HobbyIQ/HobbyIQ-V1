@@ -5,6 +5,7 @@ import { normalizeGradeCompany, normalizeParallel } from "./normalizationDiction
 import { normalizePlayerName } from "./cardsight.mapper.js";
 import { type CardHedgeCard } from "./cardhedge.client.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
+import { getPricing, type CardsightSaleRecord } from "./cardsight.client.js";
 import {
   parseCardQuery,
   getCompVariantMismatchReasons,
@@ -844,6 +845,39 @@ async function fetchBroaderTrend(
   };
 }
 
+// CF-PRICE-BY-ID-MIGRATION — Grade selector for the pinned cardsightCardId
+// branch in fetchComps. Cardsight returns raw + graded as separate
+// structures; CardHedge's getCardSales filtered by grade server-side.
+// We replicate the filter on our side from the grade string.
+//
+// Grade string shapes (built upstream by formatGrade(gradeCompany, gradeValue)):
+//   - "Raw"           → use pricing.raw.records (ungraded)
+//   - "PSA 10"        → company="PSA", value="10" — find that grade in
+//                       pricing.graded[]; return records or [] if missing
+//   - "BGS 9.5"       → decimal grade values supported
+//   - anything else   → safe fallback to raw records (preserves the prior
+//                       behavior of "no specific grade → broadest pool")
+export function selectSalesByGrade(
+  pricing: { raw?: { records: CardsightSaleRecord[] }; graded: Array<{ company_name: string; grades: Array<{ grade_value: string; records: CardsightSaleRecord[] }> }> },
+  grade: string,
+): CardsightSaleRecord[] {
+  if (!grade || grade === "Raw") {
+    return pricing.raw?.records ?? [];
+  }
+  const match = grade.match(/^([A-Za-z]+)\s+(\d+(?:\.\d+)?)$/);
+  if (!match) {
+    return pricing.raw?.records ?? [];
+  }
+  const company = match[1].toUpperCase();
+  const value = match[2];
+  const companyEntry = pricing.graded.find(
+    (c) => c.company_name.toUpperCase() === company,
+  );
+  if (!companyEntry) return [];
+  const gradeEntry = companyEntry.grades.find((g) => g.grade_value === value);
+  return gradeEntry?.records ?? [];
+}
+
 async function fetchComps(
   query: string,
   grade: string = "Raw",
@@ -856,16 +890,10 @@ async function fetchComps(
   // dependency of this path.
 
   // ----- Phase 2 — meaningful-query fall-through ------------------------
-  // Re-applies the routing change from PR #110 (originally shipped as
-  // commit 9124e54, reverted as 83ea415, attempted as Step A standalone
-  // PR as commit f5cd3e7, rolled back same-day pending Phase 2's
-  // queryContext plumbing + dictionary expansion).
-  //
   // When the iOS client sends a meaningful `query` text alongside
-  // cardHedgeCardId, fetchComps falls through to findCompsRouted →
-  // resolveCardId → Cardsight getPricing under CARDSIGHT_MODE=exclusive.
-  // The cardHedgeCardId remains the prediction cache key in the route
-  // layer — only the fetch path changes.
+  // cardsightCardId, fetchComps falls through to findCompsRouted →
+  // resolveCardId → Cardsight getPricing. The pinned-cardId path below
+  // is the fast direct route when we already have the resolved cardId.
   //
   // The `query !== pinnedCardId` check guards against iOS sending the
   // opaque cardId as the query (iOS resolvedLabel falls back to cardId
@@ -877,31 +905,35 @@ async function fetchComps(
     pinnedCardId !== undefined &&
     trimmedQuery !== pinnedCardId.trim();
 
-  // ----- Card-Ladder-style pinned card_id path --------------------------
-  // When the iOS client picked a specific Card Hedge card from the search
-  // list AND no meaningful free-text query came along, take the legacy
-  // cardhedge-namespace path. Under CARDSIGHT_MODE=exclusive this returns
-  // [] (router's cardIdSource=cardhedge guard fires) — the correct
-  // fallback when there's no text to drive a Cardsight catalog lookup.
+  // ----- Pinned cardsightCardId path ------------------------------------
+  // CF-PRICE-BY-ID-MIGRATION (first sub-CF of CF-CARDHEDGE-DECOMMISSION-
+  // FULL Phase 2): when the caller has already resolved a Cardsight
+  // cardId (UUID), call cardsight.client.getPricing() directly. Skips
+  // the text-resolution step (resolveCardId in cardsight.mapper) since
+  // we already have the canonical cardId.
+  //
+  // Replaces the legacy CH path which called
+  // getCardSalesRouted(pinnedCardId, ..., cardIdSource: "cardhedge")
+  // and returned [] under CARDSIGHT_MODE=exclusive.
+  //
+  // Grade filtering is client-side here (CardHedge's getCardSales did
+  // it server-side). Cardsight returns raw + graded as separate
+  // structures; we select records based on the requested grade string.
   if (pinnedCardId && !hasMeaningfulQuery) {
-    const sales = await getCardSalesRouted(pinnedCardId, grade, 25, { cardIdSource: "cardhedge" });
-    // Pull set/player/variant for display by looking up via search (best effort).
-    let identityCard: any = null;
-    try {
-      const hits = await searchCardsRouted(query || pinnedCardId, 20);
-      identityCard = hits.find((h) => h.card_id === pinnedCardId) ?? null;
-    } catch {
-      identityCard = null;
-    }
-    const identity = identityCard
+    const pricing = await getPricing(pinnedCardId);
+
+    // Build identity from Cardsight catalog response when present;
+    // fall back to a stub when the cardId wasn't found.
+    const catalogCard = pricing.card;
+    const identity = catalogCard
       ? {
-          card_id: identityCard.card_id,
-          title: identityCard.title ?? identityCard.name ?? null,
-          player: identityCard.player ?? null,
-          set: identityCard.set ?? null,
-          year: identityCard.year ?? null,
-          number: identityCard.number ?? null,
-          variant: identityCard.variant ?? null,
+          card_id: catalogCard.id,
+          title: catalogCard.name ?? null,
+          player: catalogCard.player ?? null,
+          set: catalogCard.setName ?? null,
+          year: catalogCard.year ?? null,
+          number: catalogCard.number ?? null,
+          variant: null,
         }
       : {
           card_id: pinnedCardId,
@@ -913,20 +945,39 @@ async function fetchComps(
           variant: null,
         };
 
+    if (pricing.notFound) {
+      console.warn(`[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not found in catalog`);
+      return { comps: [], card: identity, variantWarning: [], aiCategory: null };
+    }
+
+    // Client-side grade filter. Grade string is "Raw" or "<COMPANY> <VALUE>"
+    // (e.g. "PSA 10", "BGS 9.5"). For Raw, use the ungraded raw.records.
+    // For a graded request, find the matching company + grade value in
+    // pricing.graded[]; return that grade's records or [] if no match.
+    const sales = selectSalesByGrade(pricing, grade);
+
     if (sales.length === 0) {
-      console.warn(`[compiq.fetchComps] pinned card_id=${pinnedCardId} returned 0 comps`);
+      console.warn(
+        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} returned 0 comps`
+      );
       return { comps: [], card: identity, variantWarning: [], aiCategory: null };
     }
 
     const mapped: RawComp[] = sales
       .map((s) => ({
         price: s.price,
-        title: s.title || [identity.year, identity.set, identity.player, identity.number, identity.variant].filter(Boolean).join(" "),
+        title:
+          s.title ||
+          [identity.year, identity.set, identity.player, identity.number, identity.variant]
+            .filter(Boolean)
+            .join(" "),
         soldDate: s.date ?? "",
       }))
       .filter((c) => c.price > 0);
 
-    console.log(`[compiq.fetchComps] pinned card_id=${pinnedCardId} comps=${mapped.length}`);
+    console.log(
+      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} comps=${mapped.length}`
+    );
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
   }
 
@@ -1472,7 +1523,7 @@ export async function computeEstimate(
         : parsed?.grade ?? undefined,
   };
 
-  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardHedgeCardId, queryContext);
+  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardsightCardId, queryContext);
 
   // ── Sport-scope guard ────────────────────────────────────────────────────
   // CompIQ currently supports baseball only (issue #7). If Card Hedge's AI
@@ -1544,7 +1595,7 @@ export async function computeEstimate(
   // that the pinned path can't always populate (the card_id may not appear
   // in the top-20 `searchCards` hits used for the cosmetic identity lookup),
   // which would otherwise wipe valid comps.
-  if (fetched.card && body.playerName && !body.cardHedgeCardId) {
+  if (fetched.card && body.playerName && !body.cardsightCardId) {
     const wanted = body.playerName
       .toLowerCase()
       .split(/\s+/)

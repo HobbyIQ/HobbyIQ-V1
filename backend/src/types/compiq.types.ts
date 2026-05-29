@@ -14,8 +14,20 @@ export interface CompIQEstimateRequest {
   gradeCompany?: string;
   gradeValue?: number;
   isAuto?: boolean;
-  /** Pin pricing to a specific Card Hedge card_id (skips text identification). */
-  cardHedgeCardId?: string;
+  /**
+   * Pin pricing to a specific Cardsight catalog cardId (UUID).
+   * Skips text identification — fetchComps routes the pinned-id branch
+   * to cardsight.client.getPricing() directly, with client-side grade
+   * filtering applied to the response's raw + graded company/grade tree.
+   *
+   * Renamed from `cardHedgeCardId` as part of CF-PRICE-BY-ID-MIGRATION
+   * (first sub-CF of CF-CARDHEDGE-DECOMMISSION-FULL Phase 2). Wire key
+   * for `/api/compiq/price-by-id` request body is `cardsightCardId`;
+   * the route handler accepts the legacy `cardHedgeCardId` key with a
+   * structured warn event during transition (dropped in
+   * CF-CARDHEDGE-NAMING-CLEANUP once telemetry confirms zero usage).
+   */
+  cardsightCardId?: string;
 }
 
 export interface CompIQEstimateResponse {

@@ -122,7 +122,7 @@ describe("CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — response shape parity",
   it("/api/compiq/price-by-id propagates predictedPrice + trendIQ + signalsLastUpdated", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
-      .send({ cardHedgeCardId: "fixture-card-id" });
+      .send({ cardsightCardId: "fixture-card-id" });
     expect(res.status).toBe(200);
     expectPredictionFieldsPropagated(res.body);
   });

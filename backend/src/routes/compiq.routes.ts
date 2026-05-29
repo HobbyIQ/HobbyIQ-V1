@@ -721,10 +721,17 @@ router.post("/price", async (req, res, next) => {
 //                                     2026-05-29 (CF-UNIFIED-SEARCH-AND-CERT
 //                                     W5-Windows).
 // 2. POST /api/compiq/price-by-id   — pins a CompIQ estimate to a specific
-//                                     CardHedge card_id. **Still on CardHedge**
-//                                     pending CF-CARDHEDGE-DECOMMISSION-FULL
-//                                     (HIGH backlog) which migrates pricing +
-//                                     deletes cardhedge.client.ts entirely.
+//                                     Cardsight cardId (UUID). Migrated from
+//                                     CardHedge 2026-05-30 via
+//                                     CF-PRICE-BY-ID-MIGRATION (first sub-CF
+//                                     of CF-CARDHEDGE-DECOMMISSION-FULL).
+//                                     fetchComps's pinned-id branch calls
+//                                     cardsight.client.getPricing() directly;
+//                                     request body wire key renamed
+//                                     cardHedgeCardId → cardsightCardId with
+//                                     dual-accept transition + warn telemetry
+//                                     (CF-CARDHEDGE-NAMING-CLEANUP drops the
+//                                     alias once telemetry confirms zero use).
 //
 // `/api/compiq/search-list` was the legacy CardHedge-shape picker endpoint.
 // **Deleted** in this commit per Phase 1 caller grep (no runtime consumers
@@ -736,18 +743,37 @@ router.post("/price", async (req, res, next) => {
 router.post("/price-by-id", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
-    const { cardHedgeCardId, query, gradeCompany, gradeValue } = req.body || {};
-    if (!cardHedgeCardId || typeof cardHedgeCardId !== "string") {
-      return res.status(400).json({ success: false, error: 'Missing "cardHedgeCardId" field' });
+    const { cardsightCardId, cardHedgeCardId, query, gradeCompany, gradeValue } = req.body || {};
+
+    // CF-PRICE-BY-ID-MIGRATION (D1 wire-gap decision Option a):
+    // dual-accept the legacy cardHedgeCardId wire-key during transition.
+    // Emit a structured warn event when the legacy form is sent so
+    // post-deploy telemetry can confirm zero usage before
+    // CF-CARDHEDGE-NAMING-CLEANUP drops the alias entirely.
+    let resolvedCardId: string | null =
+      typeof cardsightCardId === "string" && cardsightCardId.length > 0
+        ? cardsightCardId
+        : null;
+    if (!resolvedCardId && typeof cardHedgeCardId === "string" && cardHedgeCardId.length > 0) {
+      console.warn(JSON.stringify({
+        event: "compiq_priceByIdLegacyKey_used",
+        source: "compiq.routes.priceByIdHandler",
+        legacyKey: "cardHedgeCardId",
+        recommendedKey: "cardsightCardId",
+      }));
+      resolvedCardId = cardHedgeCardId;
+    }
+    if (!resolvedCardId) {
+      return res.status(400).json({ success: false, error: 'Missing "cardsightCardId" field' });
     }
     const cacheKey = normalizeCacheKey(
-      "compiq:price-by-id:v3",
-      `${cardHedgeCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`
+      "compiq:price-by-id:v4",
+      `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`
     );
     const result = await cacheWrap(cacheKey, async () => {
       const body: CompIQEstimateRequest = {
-        playerName: typeof query === "string" ? query.trim() : cardHedgeCardId,
-        cardHedgeCardId,
+        playerName: typeof query === "string" ? query.trim() : resolvedCardId,
+        cardsightCardId: resolvedCardId,
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
       };
@@ -763,7 +789,7 @@ router.post("/price-by-id", async (req, res, next) => {
         return {
           ...buildEngineMeta(),
           success: true,
-          cardHedgeCardId,
+          cardsightCardId: resolvedCardId,
           summary: (est.verdict as string) ?? "Unsupported sport.",
           marketTier: { value: null, high: null },
           buyZone: [null, null],
@@ -813,7 +839,7 @@ router.post("/price-by-id", async (req, res, next) => {
       return {
         ...buildEngineMeta(),
         success: true,
-        cardHedgeCardId,
+        cardsightCardId: resolvedCardId,
         summary: est.verdict ?? "Estimate based on available market data.",
         marketTier: isThin ? { value: null, high: null } : { value: fmv, high: premium },
         buyZone: isThin ? [null, null] : [quick * 0.9, quick],
@@ -859,26 +885,26 @@ router.post("/price-by-id", async (req, res, next) => {
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
     // carried a non-empty free-text `query`, store that with
-    // querySource="free_text"; otherwise store cardHedgeCardId in the
+    // querySource="free_text"; otherwise store cardsightCardId in the
     // query slot with querySource="card_id" (self-describing semantics).
     {
       const trimmedQuery =
         typeof query === "string" ? query.trim() : "";
-      const queryForCorpus = trimmedQuery.length > 0 ? trimmedQuery : cardHedgeCardId;
+      const queryForCorpus = trimmedQuery.length > 0 ? trimmedQuery : resolvedCardId;
       const querySource: "free_text" | "card_id" =
         trimmedQuery.length > 0 ? "free_text" : "card_id";
-      // /price-by-id is always pinned to a Card Hedge card_id, so
-      // override cardIdSource regardless of whether cardIdentity made
-      // it into the response.
+      // /price-by-id is pinned to a Cardsight cardId post-CF-PRICE-BY-ID-
+      // MIGRATION; override cardIdSource regardless of whether cardIdentity
+      // made it into the response.
       writeTelemetryEntries({
         query: queryForCorpus,
         querySource,
         endpoint: "/api/compiq/price-by-id",
         durationMs: Date.now() - handlerStart,
         result,
-        ...extractTelemetryCohortFromResult(result, queryForCorpus, "cardhedge"),
+        ...extractTelemetryCohortFromResult(result, queryForCorpus, "cardsight"),
         // Force cardId to the pinned id even if cardIdentity is absent.
-        cardId: cardHedgeCardId,
+        cardId: resolvedCardId,
       });
     }
   } catch (err) {
