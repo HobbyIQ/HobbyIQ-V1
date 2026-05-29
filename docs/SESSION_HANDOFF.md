@@ -105,6 +105,29 @@ Pricing pipeline progress (admin-testing-hobbyiq 23-holding cohort):
 - **CF-ALERTS-WEBHOOK-UPGRADE** (NEW, LOW backlog, captured 2026-05-29 with CF-LAUNCH-READINESS-100 Phase 2 decisions) — extend the `hobbyiq-ops-alerts` action group to include a Slack/Teams webhook receiver alongside the current email-only `drew@justtheboysandcards.com`. Email is sufficient at single-operator launch stage; webhook becomes relevant if email-to-action latency proves binding at 500/1000-tier traffic. No webhook infrastructure exists today; ~30-60 min setup.
 - **CF-CERT-LOOKUP-CACHE** (NEW, LOW backlog, captured 2026-05-29 during CF-UNIFIED-SEARCH-AND-CERT W3 pre-flight as design §16 deferred decision) — whether to cache cert lookups via the existing `cacheWrap` pattern (suggested 24h TTL per design §16). Defer rationale: PSA Public API 8 req/s observed during the cardsight-cert-investigation arc is NOT binding at v1 cert volume; adding cache to the W3 dispatcher would extend scope into per-grader adapter internals which would break the abstraction's grader-independence contract. Each grader's adapter handles its own caching independently when needed. Open if: (a) PSA rate becomes binding at higher tier launch traffic, OR (b) a future grader's adapter (BGS / SGC / CGC) wants the pattern. Implementation per grader = small `cacheWrap` extension on `lookup()`; not architectural.
 
+## W5 of CF-UNIFIED-SEARCH-AND-CERT — scope expanded 2026-05-29 (after W4 picker deferral)
+
+**Original W5 scope** (per design doc 23038d7 §13 iOS workstream): unified search input UI + auto-detect dispatch (hint field), `ResultsView` refactor of `CompIQVariantPickerView`, `VerifyView` cherry-pick from OneDrive `CardScanResultView` (per D2), `CompIQSearchService.search()` method + Codable models for `CardIdentity` / `UnifiedSearchResponse`, state model + navigation. ~7-9 focused days.
+
+**W4 deferral absorbed into W5** (decided 2026-05-29 Phase 1 review — Choice Y + Option A): the `/api/compiq/cardsearch` migration originally scoped for W4 was deferred when Phase 1 pre-flight surfaced that Cardsight `searchCatalog` lacks two iOS-consumed fields. W5 now also ships:
+
+- Backend `/api/compiq/cardsearch` migration to `UnifiedSearchResponse` shape (or deprecation in favor of `/api/search/cards` shipped W3 at `d5a3169`)
+- Backend `/api/compiq/search-list` migration or deprecation — no active consumer; cleanest is deprecate
+- The `image_url` + `variant` resolution problem (see open question below)
+
+**Open question for W5 kickoff — `image_url` + `variant` resolution.** Cardsight `searchCatalog` returns `{ id, name, number, releaseName, setName, year, player? }`. The iOS picker visually depends on:
+
+- `image_url`: thumbnail on every row (`CompIQVariantPickerView.swift:196`) — primary visual element of every row
+- `variant`: electric-blue 3rd-line distinguishing parallels (`CompIQVariantPickerView.swift:222-227`) — the ONLY differentiator between identical-looking parallel rows (Refractor / Blue / Gold / Red / Superfractor)
+
+Three resolution paths for W5 to evaluate explicitly at kickoff:
+
+  (i) **Add `image_url` + `variant` to `UnifiedSearchResponse`,** populated from `/catalog/cards/{id}` detail. Solve N+1 latency via parallel fetch + rate-limit awareness (Cardsight ~8 req/s observed during cardsight-cert-investigation), OR via batched detail call if Cardsight supports it. Verification of batch support is the first concrete W5 task.
+  (ii) **Drop `image_url` + `variant` from the picker UX.** Rebuild iOS picker around set/year/number alone, with confirmation-step UI showing full detail per-tap rather than per-row. Substantial iOS rework, simpler backend.
+  (iii) **Different backend strategy entirely** — alternative Cardsight endpoint, alternative source for image+parallel data (e.g. CardHedge stays the image+variant authority while Cardsight handles search identity — hybrid).
+
+NOT a W4 decision. Captured here so W5 kickoff addresses it explicitly rather than discovering it mid-implementation. The Choice Y commitment (consolidate onto `UnifiedSearchResponse`) is preserved across all three paths — only the field provenance differs.
+
 ### Outstanding Windows autonomous work
 
 **CF-PHASE4B-SIGNAL-HARM-DIAGNOSIS** re-run was executing autonomously starting 13:09 UTC yesterday. Should be long-complete. **Action item before tomorrow's session begins:** check `git log` on `origin/main` for Phase 1-4 commits. Findings affect TrendIQ display polish (Day 3 multi-day plan scope) and Phase 5 portfolio integration framing.

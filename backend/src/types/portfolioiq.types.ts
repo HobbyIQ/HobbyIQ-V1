@@ -87,4 +87,20 @@ export interface PortfolioHolding {
   ebayOfferId?: string | null;
   ebayListingId?: string | null;
   ebayListingPublishedAt?: string | null;
+  // CF-UNIFIED-SEARCH-AND-CERT W4 — cert identity persisted onto the
+  // holding so re-pricing / re-resolution flows can re-query the
+  // original grader without losing provenance. Populated by the W6
+  // VerifyView "save card" flow when the source is a cert lookup;
+  // remains undefined / null for holdings created from free-text
+  // search or imported pre-W6. Both fields are additive and
+  // backward-compatible — existing holdings parse and serialize
+  // unchanged.
+  //
+  // certGrader uses the same grader-id enum used by the cert-grader
+  // registry (psa / bgs / sgc / cgc) in upper-case display form for
+  // wire / Cosmos consistency with the legacy gradingCompany field.
+  // String widening preserves forward-compat for v1.5 graders that
+  // ship with new ids (e.g. "HGA").
+  certNumber?: string | null;
+  certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
 }
