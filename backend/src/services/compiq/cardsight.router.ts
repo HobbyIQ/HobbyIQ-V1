@@ -7,11 +7,10 @@
  * Engine code does not see the routing -- only routed result. See
  * ADR-cardsight-migration-2026-05-18.md for the original migration design.
  *
- * Type names CardHedgeCard / CardHedgeSale preserved as the routed-result
- * shape (relocated here from the deleted cardhedge.client.ts). They no
- * longer reflect a vendor -- just a stable contract for the pricing
- * pipeline downstream. Rename to vendor-neutral names is
- * CF-CARDHEDGE-NAMING-CLEANUP scope.
+ * Routed-result types RoutedCard / RoutedSale are vendor-neutral and
+ * describe the stable contract for the pricing pipeline downstream
+ * (relocated here from the deleted cardhedge.client.ts and renamed per
+ * CF-CARDHEDGE-NAMING-CLEANUP).
  *
  * Log event vocabulary (post-cutover, simplified):
  *   - "cardsight.findComps.start" / "cardsight.findComps.end"
@@ -40,11 +39,10 @@ const log = {
 };
 
 // Routed-result types. Relocated here from cardhedge.client.ts (deleted
-// per CF-CARDHEDGE-HARD-CUTOVER). Names preserved for backward
-// compatibility with downstream consumers (compiqEstimate.service.ts);
-// rename to vendor-neutral names is CF-CARDHEDGE-NAMING-CLEANUP scope.
+// per CF-CARDHEDGE-HARD-CUTOVER) and renamed to vendor-neutral
+// RoutedCard / RoutedSale per CF-CARDHEDGE-NAMING-CLEANUP.
 
-export interface CardHedgeCard {
+export interface RoutedCard {
   card_id: string;
   player?: string;
   set?: string;
@@ -55,7 +53,7 @@ export interface CardHedgeCard {
   name?: string;
 }
 
-export interface CardHedgeSale {
+export interface RoutedSale {
   price: number;
   date: string | null;
   grade: string;
@@ -66,8 +64,8 @@ export interface CardHedgeSale {
 }
 
 type RoutedResult = {
-  card: CardHedgeCard | null;
-  sales: CardHedgeSale[];
+  card: RoutedCard | null;
+  sales: RoutedSale[];
   variantWarning: string[];
   aiCategory: string | null;
   // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. Internal
@@ -125,7 +123,7 @@ function emptyCardsightResult(warnings: string[] = []): RoutedResult {
   };
 }
 
-function csToRoutedCard(cs: any): CardHedgeCard {
+function csToRoutedCard(cs: any): RoutedCard {
   return {
     card_id: cs.id,
     player: cs.player ?? undefined,
@@ -211,7 +209,7 @@ async function findCompsViaCardsight(
       year: detailOk ? detail!.year : (pricing.card?.year ?? null),
     });
 
-    const baseCard: CardHedgeCard = {
+    const baseCard: RoutedCard = {
       card_id: mapped.cardId,
       title: pricing.card?.name ?? undefined,
       // Defect #7 fix: Cardsight's pricing.card has no `player` field
@@ -300,7 +298,7 @@ export async function findCompsRouted(
 export async function searchCardsRouted(
   query: string,
   limit: number = 20,
-): Promise<CardHedgeCard[]> {
+): Promise<RoutedCard[]> {
   // Post-CF-CARDHEDGE-HARD-CUTOVER: Cardsight-only.
   const cs = await searchCatalog(query, { take: limit });
   return cs.map(csToRoutedCard);
@@ -312,7 +310,7 @@ export async function getCardSalesRouted(
   cardId: string,
   grade: string,
   limit: number,
-): Promise<CardHedgeSale[]> {
+): Promise<RoutedSale[]> {
   // Post-CF-CARDHEDGE-HARD-CUTOVER: `cardIdSource` discriminant removed.
   // Every cardId is now a Cardsight UUID. `limit` retained in the
   // signature for caller backward-compat but not threaded into Cardsight

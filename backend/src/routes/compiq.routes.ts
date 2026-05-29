@@ -721,17 +721,10 @@ router.post("/price", async (req, res, next) => {
 //                                     2026-05-29 (CF-UNIFIED-SEARCH-AND-CERT
 //                                     W5-Windows).
 // 2. POST /api/compiq/price-by-id   — pins a CompIQ estimate to a specific
-//                                     Cardsight cardId (UUID). Migrated from
-//                                     CardHedge 2026-05-30 via
-//                                     CF-PRICE-BY-ID-MIGRATION (first sub-CF
-//                                     of CF-CARDHEDGE-DECOMMISSION-FULL).
+//                                     Cardsight cardId (UUID).
 //                                     fetchComps's pinned-id branch calls
-//                                     cardsight.client.getPricing() directly;
-//                                     request body wire key renamed
-//                                     cardHedgeCardId → cardsightCardId with
-//                                     dual-accept transition + warn telemetry
-//                                     (CF-CARDHEDGE-NAMING-CLEANUP drops the
-//                                     alias once telemetry confirms zero use).
+//                                     cardsight.client.getPricing() directly.
+//                                     Request body wire key: cardsightCardId.
 //
 // `/api/compiq/search-list` was the legacy CardHedge-shape picker endpoint.
 // **Deleted** in this commit per Phase 1 caller grep (no runtime consumers
@@ -743,26 +736,12 @@ router.post("/price", async (req, res, next) => {
 router.post("/price-by-id", async (req, res, next) => {
   const handlerStart = Date.now();
   try {
-    const { cardsightCardId, cardHedgeCardId, query, gradeCompany, gradeValue } = req.body || {};
+    const { cardsightCardId, query, gradeCompany, gradeValue } = req.body || {};
 
-    // CF-PRICE-BY-ID-MIGRATION (D1 wire-gap decision Option a):
-    // dual-accept the legacy cardHedgeCardId wire-key during transition.
-    // Emit a structured warn event when the legacy form is sent so
-    // post-deploy telemetry can confirm zero usage before
-    // CF-CARDHEDGE-NAMING-CLEANUP drops the alias entirely.
-    let resolvedCardId: string | null =
+    const resolvedCardId =
       typeof cardsightCardId === "string" && cardsightCardId.length > 0
         ? cardsightCardId
         : null;
-    if (!resolvedCardId && typeof cardHedgeCardId === "string" && cardHedgeCardId.length > 0) {
-      console.warn(JSON.stringify({
-        event: "compiq_priceByIdLegacyKey_used",
-        source: "compiq.routes.priceByIdHandler",
-        legacyKey: "cardHedgeCardId",
-        recommendedKey: "cardsightCardId",
-      }));
-      resolvedCardId = cardHedgeCardId;
-    }
     if (!resolvedCardId) {
       return res.status(400).json({ success: false, error: 'Missing "cardsightCardId" field' });
     }

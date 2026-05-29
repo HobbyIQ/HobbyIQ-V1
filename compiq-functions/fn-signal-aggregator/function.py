@@ -16,12 +16,13 @@ from shared.career_arc import career_arc_signal
 from shared.playoff_calendar import get_playoff_signal
 
 WEIGHTS = {
-    # CF-CARDHEDGE-SIGNAL-RENAME (2026-05-25, design at 80e9971): renamed
-    # signal output key from "cardhedge" -> "compsMomentum" so the signal
-    # name reflects what it measures (recent_7_avg / prior_7_avg comp price
-    # momentum) rather than the data-source vendor. fn-cardhedge-comps
-    # source function file name DEFERRED per design (function reflects data
-    # source, factually accurate).
+    # compsMomentum: recent_7_avg / prior_7_avg comp price momentum. Signal
+    # name reflects what it measures (renamed from "cardhedge" via
+    # CF-CARDHEDGE-SIGNAL-RENAME 2026-05-25). The producer fn-cardhedge-comps
+    # was deleted by CF-CARDHEDGE-HARD-CUTOVER (10ad39d, 2026-05-29);
+    # compsMomentum currently returns the fallback "unavailable" multiplier
+    # 1.0 pending CF-COMPSMOMENTUM-GREENFIELD-CARDSIGHT (greenfield Python
+    # Cardsight Function reimplementation).
     "compsMomentum": 0.20,
     "ebay": 0.20,
     "reddit": 0.15,

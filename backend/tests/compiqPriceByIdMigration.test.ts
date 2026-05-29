@@ -1,23 +1,19 @@
-// CF-PRICE-BY-ID-MIGRATION — coverage for the new behavior shipped by
-// the first sub-CF of CF-CARDHEDGE-DECOMMISSION-FULL Phase 2.
+// CF-PRICE-BY-ID-MIGRATION — coverage retained post-CF-CARDHEDGE-
+// NAMING-CLEANUP. Dual-accept transition for the legacy cardHedgeCardId
+// wire key has been removed; cardsightCardId is the sole accepted form.
 //
 // Covers:
 //   1. selectSalesByGrade helper (Raw, PSA 10, BGS 9.5, malformed grade,
 //      missing company, missing grade value) — direct unit tests of the
-//      client-side grade filter that replaces CardHedge's server-side
-//      filtering.
-//   2. /api/compiq/price-by-id dual-accept transition (D1 wire-gap
-//      Option a): legacy cardHedgeCardId still works + emits a
-//      structured warn event with the exact agreed shape; new
-//      cardsightCardId is the preferred wire key.
-//   3. /api/compiq/price-by-id missing-field rejection: requests with
-//      neither key return 400 with the updated error message.
-//
-// Tests at (1) are pure-function unit tests. Tests at (2)/(3) hit the
-// real route via supertest using the same fixture-card-id pattern as
-// compiqRoutePredictionShape.test.ts.
+//      client-side grade filter.
+//   2. /api/compiq/price-by-id cardsightCardId wire-key handling.
+//   3. /api/compiq/price-by-id missing-field rejection: 400 when the
+//      cardsightCardId field is missing or empty.
+//   4. Legacy cardHedgeCardId in request body is silently ignored (no
+//      destructure, no dual-accept) — request lacking cardsightCardId
+//      returns 400 regardless of whether legacy field is present.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import request from "supertest";
 import app from "../src/app";
 import {
@@ -100,68 +96,35 @@ describe("selectSalesByGrade (CF-PRICE-BY-ID-MIGRATION grade filter)", () => {
   });
 });
 
-describe("/api/compiq/price-by-id wire-key handling (CF-PRICE-BY-ID-MIGRATION)", () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-  });
-
-  afterEach(() => {
-    warnSpy.mockRestore();
-  });
-
-  it("accepts the new cardsightCardId wire key without emitting the legacy-key warn event", async () => {
+describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CLEANUP)", () => {
+  it("accepts the cardsightCardId wire key", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .send({ cardsightCardId: "fixture-card-id" });
     expect(res.status).toBe(200);
-
-    const legacyEvents = warnSpy.mock.calls
-      .map((args) => (typeof args[0] === "string" ? args[0] : ""))
-      .filter((s) => s.includes("compiq_priceByIdLegacyKey_used"));
-    expect(legacyEvents.length).toBe(0);
   });
 
-  it("dual-accept: legacy cardHedgeCardId still works and emits the structured warn event", async () => {
-    const res = await request(app)
-      .post("/api/compiq/price-by-id")
-      .send({ cardHedgeCardId: "fixture-card-id" });
-    expect(res.status).toBe(200);
-
-    const legacyEvents = warnSpy.mock.calls
-      .map((args) => (typeof args[0] === "string" ? args[0] : ""))
-      .filter((s) => s.includes("compiq_priceByIdLegacyKey_used"));
-    expect(legacyEvents.length).toBeGreaterThanOrEqual(1);
-
-    // Exact agreed shape (mirrors the lock from Drew's D1 wire-gap
-    // decision lock).
-    const parsed = JSON.parse(legacyEvents[0]);
-    expect(parsed).toEqual({
-      event: "compiq_priceByIdLegacyKey_used",
-      source: "compiq.routes.priceByIdHandler",
-      legacyKey: "cardHedgeCardId",
-      recommendedKey: "cardsightCardId",
-    });
-  });
-
-  it("400 when neither cardsightCardId nor cardHedgeCardId is provided, error names the new field", async () => {
+  it("400 when cardsightCardId is missing, error names the field", async () => {
     const res = await request(app).post("/api/compiq/price-by-id").send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       success: false,
       error: 'Missing "cardsightCardId" field',
     });
-
-    // Missing-field path does NOT emit the legacy-key warn event —
-    // the event fires only on the successful dual-accept path.
-    const legacyEvents = warnSpy.mock.calls
-      .map((args) => (typeof args[0] === "string" ? args[0] : ""))
-      .filter((s) => s.includes("compiq_priceByIdLegacyKey_used"));
-    expect(legacyEvents.length).toBe(0);
   });
 
-  it("cardsightCardId takes precedence when both keys are sent (no warn event)", async () => {
+  it("400 when only the legacy cardHedgeCardId wire key is sent (no dual-accept; field ignored)", async () => {
+    const res = await request(app)
+      .post("/api/compiq/price-by-id")
+      .send({ cardHedgeCardId: "legacy-card-id" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      error: 'Missing "cardsightCardId" field',
+    });
+  });
+
+  it("cardsightCardId is used when both keys are sent (legacy silently ignored)", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .send({
@@ -169,13 +132,6 @@ describe("/api/compiq/price-by-id wire-key handling (CF-PRICE-BY-ID-MIGRATION)",
         cardHedgeCardId: "legacy-card-id",
       });
     expect(res.status).toBe(200);
-    // Response echoes cardsightCardId (the preferred wire-key form).
     expect(res.body.cardsightCardId).toBe("fixture-card-id");
-
-    // Warn event does not fire when the new key is also provided.
-    const legacyEvents = warnSpy.mock.calls
-      .map((args) => (typeof args[0] === "string" ? args[0] : ""))
-      .filter((s) => s.includes("compiq_priceByIdLegacyKey_used"));
-    expect(legacyEvents.length).toBe(0);
   });
 });

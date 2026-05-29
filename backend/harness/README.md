@@ -64,7 +64,7 @@ produces identical outputs. Period.
 
 - Stages, pipeline, and models must take `Clock` via constructor or
   function arg. No bare `Date.now()` or `new Date()` calls.
-- Adapters (Card Hedge, Cosmos, eBay) and config files are exempt.
+- Adapters (Cardsight, Cosmos, eBay) and config files are exempt.
 - A pre-commit lint check enforces this — see
   `backend/harness/scripts/check-determinism.mjs` (wired in Step 2 once
   `stages/` and `pipeline/` dirs exist).

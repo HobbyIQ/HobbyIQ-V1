@@ -55,7 +55,7 @@ approximately at line range L2491–L2503 of that transcript (a `az storage acco
 - `az functionapp show -g rg-hobbyiq-dev -n fn-compiq --query state` → `Running`
 - `az webapp show -g rg-hobbyiq-dev -n compiq-mcp --query state` → `Running`
 - `az functionapp function list -g rg-hobbyiq-dev -n fn-compiq` → all 14 functions enumerated
-  (fn-backtest-runner, fn-cardhedge-comps, fn-ebay-signals, fn-news-signals, fn-nightly-comp-prefetch, fn-odds-signals, fn-price-floor, fn-reddit-signals, fn-search-intent, fn-serve-signals, fn-signal-aggregator, fn-stats-signals, fn-trends-signals, fn-youtube-signals)
+  (fn-backtest-runner, fn-cardhedge-comps [deleted 2026-05-29 at 10ad39d], fn-ebay-signals, fn-news-signals, fn-nightly-comp-prefetch, fn-odds-signals, fn-price-floor, fn-reddit-signals, fn-search-intent, fn-serve-signals, fn-signal-aggregator, fn-stats-signals, fn-trends-signals, fn-youtube-signals)
 - App Insights query for `AuthenticationFailed` / `AuthorizationFailure` / `403 Forbidden` across `fn-compiq`, `hobbyiq-insights`, `appi-hobbyiq-prod`, `HobbyIQ3` over the 15-minute window post-restart → zero rows on all four components.
 - Setting length sanity: standard form 190 chars (matches pre-rotation length); extended form 434 chars (matches pre-rotation length); `AccountName=stcompiqfnotgm2` field unchanged in all four settings.
 

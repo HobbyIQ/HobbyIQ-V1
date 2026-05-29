@@ -20,12 +20,8 @@ export interface CompIQEstimateRequest {
    * to cardsight.client.getPricing() directly, with client-side grade
    * filtering applied to the response's raw + graded company/grade tree.
    *
-   * Renamed from `cardHedgeCardId` as part of CF-PRICE-BY-ID-MIGRATION
-   * (first sub-CF of CF-CARDHEDGE-DECOMMISSION-FULL Phase 2). Wire key
-   * for `/api/compiq/price-by-id` request body is `cardsightCardId`;
-   * the route handler accepts the legacy `cardHedgeCardId` key with a
-   * structured warn event during transition (dropped in
-   * CF-CARDHEDGE-NAMING-CLEANUP once telemetry confirms zero usage).
+   * Wire key for `/api/compiq/price-by-id` request body is
+   * `cardsightCardId` (CardHedge fully decommissioned at 10ad39d).
    */
   cardsightCardId?: string;
 }

@@ -16,6 +16,8 @@ Covers deferrals: **§1, §2, §7** of the baseline report (Mocha-port load fail
 
 ## §2 — Spot-check Card Hedge fast path + fallback through prod
 
+> SUPERSEDED 2026-05-29 by CF-CARDHEDGE-HARD-CUTOVER (10ad39d). CardHedge AI fast path + `card-match` endpoint no longer exist; this section is preserved as audit-trail of what Phase C deferred from the baseline report. Cardsight-backed equivalent verification lives in CF-CARDHEDGE-HARD-CUTOVER's smoke checks.
+
 Covers deferrals: **§5, §6** of the baseline report (CH AI-match wiring tests).
 
 - [ ] Issue 3 prod `/api/compiq/estimate` calls covering both code paths:

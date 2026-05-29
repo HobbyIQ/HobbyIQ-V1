@@ -334,16 +334,18 @@ resolve(chCard) → attributeKey | null
 
 ### 5.2 `detectAutograph` — reuse existing constant
 
-Source the autograph prefix list from the existing production constant `AUTO_NUMBER_PREFIXES` in [backend/src/services/compiq/cardhedge.client.ts](../src/services/compiq/cardhedge.client.ts) (lines 279–297):
+> NOTE 2026-05-29: `AUTO_NUMBER_PREFIXES` was a CH-era constant in the deleted `cardhedge.client.ts` (removed by CF-CARDHEDGE-HARD-CUTOVER at 10ad39d). The prefix list below is preserved here as the design reference; a Cardsight-era equivalent constant landing is part of CF-COMPSMOMENTUM-GREENFIELD-CARDSIGHT if/when auto detection by `number` prefix is re-implemented against Cardsight's catalog.
+
+Autograph prefix list (preserved from the original constant):
 
 ```
 CPA, BCP-A, BCPA, BPA, PA, CRA, RA, BCRA, BSA, BCA,
 TCA, USA, AU, BBA, BSPA, FA, ROA
 ```
 
-Plus existing fallback: any of the words `auto`, `autograph`, `signed`, `signature` in `variantRaw` or `description`. This is the same detection already used by `findCompsByQuery` so behavior stays consistent.
+Plus existing fallback: any of the words `auto`, `autograph`, `signed`, `signature` in `variantRaw` or `description`.
 
-**Design rule:** `parallel_attributes` is the source of truth for *which* auto parallels exist; `AUTO_NUMBER_PREFIXES` is the bridge from CH's number text to the boolean.
+**Design rule:** `parallel_attributes` is the source of truth for *which* auto parallels exist; the prefix list is the bridge from the catalog vendor's number text to the boolean.
 
 ### 5.3 `normalizeVariant` — alias lookup
 
