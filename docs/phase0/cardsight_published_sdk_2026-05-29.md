@@ -491,3 +491,277 @@ After your review:
 - If not, the doc itself is informational for the next session to pick up at W5 kickoff
 
 Either way, no code changes. No SDK installs. The investigation is purely documentation output, as scoped.
+
+---
+
+# Appendix — empirical follow-up (2026-05-29 late session)
+
+**Headline:** Empirical follow-up resolves path (iv) NEGATIVE (`ai_query` is natural-language synthesis, not structured search) and empirically validates path (i) variant resolution via detail endpoint (11 parallels returned for the Bobby Witt Jr probe, exact match for existing `CardsightParallel` shape). Image gap remains real with no URL shortcut. W5 picker question narrows to image-fetch mitigation strategy (lazy / top-N / parallelize / cache-budget). Phase 4a naming flag clarified; architecture unchanged. One new backlog item surfaced: `CF-CARDSIGHT-PRICING-BULK`.
+
+Drew authorized two targeted read-only probes against `https://api.cardsight.ai/v1` and `https://mcp.cardsight.ai/` to close specific gaps from the "What's NOT verifiable" table in §1. **Both were honored as read-only** — single GETs against the catalog detail endpoint and MCP protocol enumeration via direct HTTP JSON-RPC. No SDK installs, no writes, no package.json changes. API key pulled from `HobbyIQ3` Azure app settings via `az` CLI; never echoed to chat or commit content.
+
+## A1 — `catalog.cards.get(cardId)` response shape (empirical)
+
+**Cardsight cardId used:** `6134bc63-0859-4807-aad0-93e11263c2ed` — a Bobby Witt Jr Topps Chrome Update entry observed in this session's App Insights traces (from the Phase 3a/3b production smoke; 903 records on the unified-fallback bucket, suggests a popular well-populated catalog entry). Not guessed.
+
+**Request:**
+```
+GET https://api.cardsight.ai/v1/catalog/cards/6134bc63-0859-4807-aad0-93e11263c2ed
+Headers: X-API-Key: <from-Azure>
+```
+
+**Full response body (verbatim):**
+```json
+{
+  "releaseId": "e7032954-f178-4c7b-ad9b-34df92179b15",
+  "setId":     "ce5ef8d8-e1c0-4a6c-9581-0410718828a7",
+  "id":        "6134bc63-0859-4807-aad0-93e11263c2ed",
+  "number":    "USC35",
+  "name":      "Bobby Witt Jr.",
+  "releaseName": "Topps Chrome Update",
+  "releaseYear": "2022",
+  "setName":   "Base Set",
+  "parallelCount": 11,
+  "parallels": [
+    { "id": "694bada8-ce0c-40d1-b83f-a17e447c7311", "name": "Aqua Refractor",       "numberedTo": 250 },
+    { "id": "b7696526-5137-4a53-8615-8065241b5159", "name": "Blue Refractor",       "numberedTo": 199 },
+    { "id": "832c34be-84bc-4ca6-9469-a3fa32142b7a", "name": "Gold Refractor",       "numberedTo": 50 },
+    { "id": "b6b19e95-ad2b-4751-812e-f969fae1d22f", "name": "Green Refractor",      "numberedTo": 75 },
+    { "id": "8048075f-78fe-429c-b6d2-81aa81e2fb89", "name": "Pink Wave Refractor" },
+    { "id": "da425554-5baa-4cb9-9259-e4bb0fc36254", "name": "Printing Plates",      "numberedTo": 4 },
+    { "id": "8c60a7bc-2098-4e33-8c31-80237f4ad838", "name": "Purple Refractor" },
+    { "id": "91e10ff2-9915-4791-b686-19abf8fbf717", "name": "Red Refractor",        "numberedTo": 25 },
+    { "id": "aca7f605-418d-4369-8451-4615b3de8a84", "name": "Refractor",            "numberedTo": 299 },
+    { "id": "a1c7e1b4-4d16-4d51-85e3-a0802b4ec817", "name": "SuperFractor",         "numberedTo": 1 },
+    { "id": "0d489c78-54b8-4b12-bc62-53fd28102b17", "name": "X-Fractor",            "numberedTo": 99 }
+  ],
+  "attributes": ["MLB-KCR", "RC"]
+}
+```
+
+### A1.1 — Field-by-field assessment
+
+| Field | Type | Present in our existing `CardsightCardDetail`? | W5 picker relevance |
+|---|---|---|---|
+| `id` | string (UUID) | ✅ | Hit identifier |
+| `name` | string | ✅ | Player / card name |
+| `number` | string | ✅ | Card number ("USC35") |
+| `releaseName` | string | ✅ | "Topps Chrome Update" — composite year+set, picker subtitle source |
+| `releaseYear` | **string** | ❌ — our type has `year: number` | Mismatch worth noting; current client likely converts |
+| `setName` | string | ✅ | "Base Set" — short form |
+| `parallels` | `Array<{ id, name, numberedTo? }>` | ✅ — exact shape match with our existing `CardsightParallel` | **LOAD-BEARING: solves the W4 variant gap at the detail endpoint** |
+| `parallelCount` | number | ❌ (new) | Convenience; could be derived from `parallels.length` |
+| `attributes` | `string[]` | ❌ (new) | `["MLB-KCR", "RC"]` — team code + rookie flag. Could enrich picker display |
+| `releaseId` | string (UUID) | ❌ (new) | Cross-reference to release record (could enable secondary fetches) |
+| `setId` | string (UUID) | ❌ (new) | Cross-reference to set record |
+
+**Image fields: NONE.** No `image_url`, `front_image_url`, `image`, `thumbnail`, or any other image-bearing field at any level (top-level or nested in parallels[]). **Empirically confirms** that the detail endpoint does NOT solve the image gap — `client.images.getCard()` is a strictly separate fetch.
+
+### A1.2 — W5 path implications, empirically anchored
+
+**Path (i) "fetch /catalog/cards/{id} per hit" — variant problem genuinely solved.** The `parallels` array gives exactly what the picker needs for the electric-blue 3rd line. 11 parallel variants for this Witt card means one detail call expands one search hit into up-to-12 displayable parallel rows (base + 11). Picker UX implication worth flagging at W5 kickoff: does the picker show ONE row per BASE CARD (with parallels drilldown on tap) or N rows per BASE CARD (one per parallel for direct selection)? Either is implementable; affects the search-hits-to-rows fan-out.
+
+**Path (i) image problem still requires `get_card_image` per card.** No CDN-redirect URL shortcut (empirically confirmed in MCP `get_card_image` tool definition below: format `"json"` returns **base64 bytes**, not a URL).
+
+**Concurrency math, sharpened with the new data:**
+- A typical picker page is 20-50 search hits
+- Per-hit detail fetch: 20-50 calls. At Cardsight's observed ~8 req/s rate, that's 2.5-6.3 seconds of fan-out
+- Per-hit image fetch: same 20-50 calls (additional fan-out). Same 2.5-6.3 seconds, sequential
+- **Total naive worst case: 5-12.5 seconds of fan-out before picker render**
+
+**Mitigations available** (NOT pre-decided; W5 design):
+- Lazy-fetch on row visibility (SwiftUI `onAppear` per row → backend → cache → display)
+- Top-N priority fetch (e.g. first 5 hits eagerly, remainder lazy)
+- Parallelize detail + image fetches per card (`Promise.all` halves the wall-clock to 2.5-6.3s)
+- Backend caches detail + image responses for `DETAIL_TTL_SEC` (already 24h) — second-time-same-card is sub-second
+
+### A1.3 — Type-mismatch flag worth a future tweak
+
+The `releaseYear` field is a **string** in the live response (`"2022"`), while our existing `CardsightCardDetail.year` is typed `number`. Our `_getCardDetail` client implementation likely coerces this at deserialization. Not breaking — just worth noting for any future SDK swap (the SDK's auto-generated type would type-faithful `string`, requiring a casting layer or a fix in our consumers).
+
+---
+
+## A2 — MCP server tool inventory
+
+**Probe approach:** direct HTTP JSON-RPC to `mcp.cardsight.ai/?k=<key>` from PowerShell using `Invoke-WebRequest`. No Claude Desktop config changes; no MCP-client install; **strictly stateless protocol-level enumeration.** This was the cleaner read-only path Drew's kickoff allowed for ("alternatively use direct HTTP").
+
+### A2.1 — Initialize handshake (server identity)
+
+Request:
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"hobbyiq-investigation","version":"0.0.1"}}}
+```
+
+Response (SSE-wrapped JSON, content quoted):
+```json
+{
+  "protocolVersion": "2025-06-18",
+  "capabilities": { "tools": {}, "resources": {}, "prompts": {} },
+  "serverInfo": { "name": "CardSightAI MCP Proxy", "version": "1.0.0" }
+}
+```
+
+**Server identity confirmed:** `CardSightAI MCP Proxy v1.0.0`. The literal name "**MCP Proxy**" is empirically load-bearing — this is a proxy over the REST API, not a different backend.
+
+### A2.2 — Tool inventory (90 tools enumerated)
+
+Full count from `tools/list`: **90 tools**. Organized by domain (names verbatim):
+
+**Catalog read (21 tools):**
+`search_catalog, search_cards, get_card, search_sets, get_set, get_set_cards, search_releases, get_release, get_release_cards, list_segments, list_manufacturers, list_attributes, get_attribute, search_parallels, get_parallel, get_random_cards, get_random_sets, get_random_releases, list_fields, get_field, list_release_calendar`
+
+**Collections (12 tools — most are WRITE operations we don't currently use):**
+`list_collections, get_collection, create_collection, update_collection, delete_collection, list_collection_cards, add_collection_card, get_collection_card, update_collection_card, remove_collection_card, get_collection_analytics, get_collection_breakdown`
+
+**Collectors (5 tools, write-heavy):**
+`list_collectors, get_collector, create_collector, update_collector, delete_collector`
+
+**Collection card images (4 tools — distinct from catalog images):**
+`get_collection_card_image, get_collection_card_thumbnail, list_collection_set_progress, get_collection_set_progress, get_collection_set_progress_parallel`
+
+**Binders (8 tools — sub-organization within collections):**
+`list_binders, get_binder, create_binder, update_binder, delete_binder, list_binder_cards, add_binder_card, remove_binder_card`
+
+**Want lists (8 tools):**
+`list_lists, get_list, create_list, update_list, delete_list, list_list_cards, add_list_card, remove_list_card`
+
+**Pricing (4 tools — INCLUDING `get_card_pricing_bulk` 1-100 batch):**
+`get_card_pricing, get_card_pricing_bulk, get_card_marketplace, get_card_population, get_set_population, get_release_population`
+
+**Grading (3 tools):**
+`list_grading_companies, list_grading_company_types, list_grading_company_grades`
+
+**Image (1 tool):**
+`get_card_image` — `format: "raw" | "json"` enum. **Confirmed empirically: `"json"` returns base64-encoded image bytes with metadata, NOT a CDN-redirect URL.** No image-URL collapse possible.
+
+**Identification (3 tools):**
+`identify_card` (defaults to baseball segment), `identify_card_by_segment` (sport-specific, more accurate), `detect_card` (presence check only)
+
+**Search / discovery (7 tools):**
+`ai_query, autocomplete_cards, autocomplete_sets, autocomplete_releases, autocomplete_segments, autocomplete_manufacturers, autocomplete_years`
+
+**Feedback (7 tools — write):**
+`submit_general_feedback, submit_card_feedback, submit_identify_feedback, submit_release_feedback, submit_set_feedback, submit_manufacturer_feedback, get_feedback`
+
+**Health / subscription (3 tools):**
+`health_check, health_check_auth, get_subscription`
+
+**Other / misc:** `get_catalog_statistics`
+
+### A2.3 — Resources (1) and prompts (3)
+
+`resources/list`:
+```json
+{"resources":[{"uri":"api://config","name":"API Configuration","description":"Current API proxy configuration","mimeType":"application/json"}]}
+```
+
+One resource — the API proxy configuration. Not directly relevant to picker / W5; useful for debugging.
+
+`prompts/list`: 3 prompts (verbatim names): `price_check, parallel_comparison, find_rookies`. Server-side prompt templates with arguments. Not relevant to picker; useful for AI-assistant UX in a future LLM-driven feature.
+
+### A2.4 — **PATH (iv) BINARY RESOLVED — NEGATIVE.** `ai_query` is NOT a search backend.
+
+The `ai_query` tool's inputSchema confirms `{ query: string, collectionId?: string, maxIterations?: number }`. Its description is unambiguous (quoted verbatim from the MCP server's tool definition):
+
+> "Ask CardSightAI's server-side assistant a natural-language question about the catalog or a specific collection. The server-side assistant has access to the same catalog tools and returns a **synthesized answer**."
+>
+> "Use `ai_query` for **fuzzy, multi-step questions where you would otherwise need to chain 3+ tools and reason across them**. Example: 'What were the best Topps rookie cards from 1989 that are now affordable but have growth potential?'"
+>
+> "Use `ai_query` when the user wants a **recommendation or interpretation, not raw data.**"
+>
+> "**Don't use `ai_query` for known specific lookups — `get_card`, `get_card_pricing`, `search_cards` are faster and cheaper.**"
+
+**This empirically resolves the W4-deferred path (iv) binary as NEGATIVE:**
+
+- `ai_query` returns a synthesized natural-language answer, not a structured `CardIdentity[]`-shape result
+- It's designed for AI-assistant chat-driven UX, NOT for backend search dispatch
+- Picker latency would also be unacceptable: the description allows up to 5 internal tool iterations by default
+- **Path (iv) as conceived is NOT viable as a picker backend.**
+
+`autocomplete_cards` (the other tool path-iv considered) is also not richer than `search_cards` — its description explicitly says "Quickly turn into candidate full names + IDs" and points back to `search_cards` for richer data + filters.
+
+**Practical W5 implication:** path (iv) is removed from consideration. The picker question collapses to paths (i) / (ii) / (iii). Path (i) is the empirically-most-promising given the detail endpoint cleanly returns parallels (A1 above); image cost still requires mitigation strategy.
+
+### A2.5 — Phase 4a roadmap naming flag CLARIFIED (not changed)
+
+The MCP server's literal name is "**CardSightAI MCP Proxy**." Combined with the tool inventory mapping 1:1 to REST endpoints, this empirically confirms:
+
+- **The MCP is a proxy over the same REST backend.** Same data, same rate limits implicitly, same response shapes inside `_meta.toolResult` content.
+- **Our planned Phase 4a outage-resilience cache layer would interpose the same way regardless of whether we hit MCP or REST.** They are interchangeable transport surfaces for the same upstream system.
+- The naming-confusion concern from the prior investigation (§5, §10) is real — Cardsight's "MCP" naming refers to their proxy of REST for AI-assistant consumers, while our roadmap's "MCP-mediated cache layer" referred to using MCP as a different protocol to access Cardsight. Today's empirical finding clarifies but does not change the implication: **the Phase 4a naming may want a refresh; the architectural goal does not change.**
+
+### A2.6 — NEW surfaced opportunity: `get_card_pricing_bulk` (separate from W5)
+
+Description verbatim:
+> "Get completed-sales pricing for many cards in one call (1–100 card UUIDs). **One round-trip is much faster than calling `get_card_pricing` per-card.**"
+
+Our existing `cardsight.client.ts` has no bulk-pricing equivalent. We currently call per-card pricing during estimate / sibling-pool computation. **This is a candidate optimization independent of the picker question** — likely worth its own CF if the per-card pricing fan-out becomes binding under traffic (currently not binding at v1 volume per the cardsight-cert-investigation arc).
+
+**Recommendation:** capture as a new LOW backlog CF (`CF-CARDSIGHT-PRICING-BULK`) at the time of the optional handoff update, scoped to "evaluate bulk-pricing endpoint for use in sibling-pool / candidate-pool computation paths where multiple cardIds are priced sequentially today."
+
+---
+
+## A3 — Honest accounting of what's STILL unverified
+
+After this follow-up:
+
+| Item | Status |
+|---|---|
+| `catalog.cards.get()` response shape | ✅ **Resolved empirically** (A1) |
+| Full MCP tool inventory | ✅ **Resolved empirically** (A2.2) |
+| `ai_query()` response shape | ✅ **Resolved by tool definition** (A2.4): synthesized text, not structured `CardIdentity[]`. Path (iv) NOT viable. |
+| `catalog.search()` response shape | ⏳ **Still unverified.** Only the search-result shape from the Node SDK's auto-generated types could confirm. Would require an SDK install (out of scope) OR a live `catalog.search` call. The Phase 1 investigation's empirical-from-our-existing-client knowledge (`{ id, name, number, releaseName, setName, year, player? }` with no image, no parallel) remains the working assumption. |
+| `get_card_image({ format: 'json' })` exact JSON shape | ✅ **Resolved by tool definition** (A2.2 + tool description: returns "base64-encoded image bytes and metadata") — NOT a URL. No CDN-redirect shortcut. |
+| Free-tier per-endpoint ceiling distribution | ⏳ **Still unverified** — would require headed-browser fetch of JS-rendered docs or account dashboard. Operational; not W5-load-bearing. |
+
+## A4 — Net effect on the W5 picker question
+
+**Before this follow-up:** 4 paths with path (iv) as the most-promising-if-viable candidate, with binary verification deferred to W5 kickoff.
+
+**After this follow-up:**
+
+- **Path (iv) is removed from consideration.** `ai_query` returns synthesized text, not structured search results. Confirmed by tool definition + workflow guidance baked into the MCP server.
+- **Path (i) is the empirically-strongest survivor** for variant resolution: detail endpoint returns `parallels[]` cleanly + `attributes[]` as bonus picker enrichment. Image cost remains real and requires a mitigation strategy.
+- **Path (ii) and (iii) remain available** as alternatives if path (i)'s image-fetch mitigation proves operationally complex.
+
+**The W5 kickoff question is now sharper:**
+
+> "Given path (i) cleanly solves the variant gap via per-hit detail fetch (~2.5-6.3s fan-out at observed rate limits) but the image gap requires a separate per-hit fetch (another ~2.5-6.3s) with no CDN-redirect shortcut available — which image-cost mitigation strategy fits the iOS picker UX best: lazy-fetch on row visibility, top-N priority, parallelize detail+image per card, or accept the latency budget and rely on the existing 24h cache?"
+
+This is a concrete design question with an empirical answer space, not an open architectural question. W5 kickoff's empirical pre-flight collapses from "~1 hour of SDK probes" to "0 minutes" — the work is done.
+
+---
+
+## A5 — Investigation scope discipline upheld
+
+- ✅ Read-only API calls only (one GET on `/v1/catalog/cards/{id}`; three MCP protocol calls — `initialize`, `tools/list`, `resources/list`, `prompts/list`)
+- ✅ No SDK install; no `package.json` modifications
+- ✅ No `npm install` in any HobbyIQ repo
+- ✅ No `claude_desktop_config.json` modifications — Drew's hard rule about surfacing the diff before applying is moot because direct HTTP JSON-RPC eliminated the need
+- ✅ API key never echoed; pulled via `az` CLI directly into PowerShell session memory, used as request header only
+- ✅ No writes to Cardsight (no `create_*`, `add_*`, `update_*`, `delete_*` calls — only read enumeration of the tool list)
+- ✅ No production data mutation
+- ✅ Investigation output is markdown documentation only
+
+The single `mcp-tools-list.txt` scratch file created at `c:/tmp/` is operator-machine-local and not committed.
+
+---
+
+## A6 — What this follow-up resolved vs. what remains unverified
+
+**Empirically resolved by this follow-up:**
+
+- ✅ **Path (iv) viability** — NEGATIVE per A2.4. `ai_query` is a server-side AI assistant returning synthesized natural-language answers, NOT structured `CardIdentity[]`. Confirmed by verbatim tool definition: *"Don't use `ai_query` for known specific lookups."*
+- ✅ **Detail endpoint parallel shape** — exact match for our existing `CardsightParallel` type (A1). 11 entries for the Bobby Witt Jr probe with `{ id, name, numberedTo? }` per entry.
+- ✅ **MCP tool inventory** — 90 tools enumerated across 12 functional domains (A2.2). Explicit identity as a **proxy** of REST endpoints, not a separate backend.
+- ✅ **Phase 4a naming clarity** — MCP and REST are the same backend with 1:1 mapping. Architectural goal of the Phase 4a cache layer is unchanged; the naming-confusion concern is real but cosmetic. No design rework needed.
+
+**Still NOT empirically verified (captured for W5 kickoff or future tier work, NOT blocking commit):**
+
+- ⏳ **Per-card image fetch latency** — needed to size the W5 image-fetch mitigation strategy (lazy / top-N / parallelize / cache-budget decision). Best verified via a one-time read-only measurement against 5-10 cards at W5 kickoff. Single point-in-time measurement; doesn't require any committed harness.
+- ⏳ **`get_card_pricing_bulk` response shape** — not probed because POST framing kept it out of scope per Drew's read-only-GET hard rule. Could be probed at any future point via a single read-only POST (the call is read in semantics even though it uses POST for the 1-100 cardId array body).
+- ⏳ **Detail endpoint shape consistency across non-MLB cards** — only one MLB card probed. Worth a 2-3 card sanity check at W5 kickoff if non-baseball categories (basketball, football, Pokémon, etc.) matter for launch positioning. Empirically inexpensive to verify.
+- ⏳ **`catalog.search()` response shape** — carried over from the original investigation (§A3 + Phase 1 §1). Working assumption from our existing `cardsight.client.ts` empirical knowledge holds: `{ id, name, number, releaseName, setName, year, player? }`, no image, no parallel. SDK install or direct REST call would resolve definitively. Not W5-blocking; the W5 design absorbs whatever shape it turns out to be via path (i) detail-fetch fallback.
+- ⏳ **Free-tier per-endpoint ceiling distribution** — operational, deferrable until rate becomes binding at higher launch tiers.
+
+**Decision framing:** W5 picks which of the still-unverified items to verify based on actual decision needs at kickoff. None are blockers for the W5 picker-question narrowing (image-fetch mitigation decision) since the empirically-resolved findings already pin the question shape.
