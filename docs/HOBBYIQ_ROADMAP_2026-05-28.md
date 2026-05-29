@@ -84,25 +84,21 @@ Influencer-driven launch context (free-access seeding to influencer partnerships
 
 **Milestone:** polish sprint shipped end-to-end; design committed for unified search + cert + verify v1.
 
-### Weeks 2-6 (2026-06-09 → 2026-07-13) — CF-UNIFIED-SEARCH-AND-CERT v1 implementation
+### Weeks 2-6 (originally 2026-06-09 → 2026-07-13) — CF-UNIFIED-SEARCH-AND-CERT v1 implementation
 
-**Honestly revised scope** vs. the original W2-W3 estimate. v1 implementation per design `23038d7` §13 is **17-22 focused days = 3-5 weeks calendar pace**. Original CF-PSA-CERT-RESOLUTION-PIPELINE estimate (1.5-2 weeks) was for a thinner scope; CF-UNIFIED-SEARCH-AND-CERT expanded the scope explicitly during design to absorb:
+**Sequencing reshape locked 2026-05-29 (Option B):** v1 implementation ran ahead of the calendar window with same-day Windows-side shipping; W5-iOS deferred per single-user-pre-launch picker-breakage-acceptable framing (see "Option B sequence — locked 2026-05-29 late session" at end of this doc). Status per backend workstream:
 
-- (a) **Cert-grader abstraction** — registry + interface + adapter pattern so v1.5 BGS/SGC/CGC each ship as service-file + one-line registration (zero v1 touches). Load-bearing per design §1.
-- (b) **Unified `/api/search/cards` endpoint with server-side dispatcher** — supports v1.5 backend-only deploys without coordinated iOS commits. Auto-detect via registry `recognizes()` predicates; explicit `hint` field for iOS override.
-- (c) **CF-PICKER-MIGRATE-TO-CARDSIGHT absorbed into v1 per D1** — was a separate W5-W6 workstream; now part of v1's foundation work. v1 ships on the future-proof Cardsight path; CHR PROS class coverage gaps surfaced honestly via the existing `warnings` array rather than hidden by building on legacy CardHedge.
-- (d) **Canonical `CardIdentity` type + iOS Codable mirror + explicit `attribution: "authoritative" | "ranked"` field** — single canonical shape populated by every cert grader and the Cardsight catalog adapter.
-- (e) **VerifyView as new screen** — cherry-picked from OneDrive `CardScanResultView` per D2 and adapted for `CardIdentity`. Slots between picker results and existing `CompIQPricedCardView`. v1 has NO commit-to-portfolio action (extension point built in for v2).
+- ✅ **W2 — SHIPPED 2026-05-29** (`dd7ec17`). Cert-grader abstraction + registry + PSA grader adapter (5 source files + 1 test file + design doc §5 update). Title strategy locked (A) — verbatim variety string in `CardIdentity.title` for VerifyView slab-fidelity, canonical parallel token in `CardIdentity.parallel` for matching/pricing. 49 new tests; backend suite 1130 → 1179 green.
+- ✅ **W3 — SHIPPED 2026-05-29** (`d5a3169`). Unified dispatcher + Cardsight catalog adapter + `POST /api/search/cards` endpoint (session-gated). `UnifiedSearchResponse` shape per design §4; `cardsightCatalogToCardIdentity` with year=0 sentinel handling; `rankCatalogHits` Cardsight-shape-specific (path A locked vs shape-agnostic abstraction); 48 new tests across dispatcher / adapter / endpoint; backend suite 1179 → 1227 green. Side-effect import of certGraders chain at the unifiedSearch index so registry is populated at module-load time. Cert lookup caching deferred per design §16 as CF-CERT-LOOKUP-CACHE LOW backlog.
+- ✅ **W4 — SHIPPED 2026-05-29** (`683b26f`). `PortfolioHolding.certNumber` + `certGrader` additive schema fields (5 round-trip tests + backward-compat coverage); backend suite 1227 → 1232 green. Picker migration originally scoped to W4 was DEFERRED to W5 after Phase 1 pre-flight surfaced Cardsight `searchCatalog` lacks `image_url` + `variant` fields the iOS picker depends on — captured as Choice Y + Option A coordination decision.
+- ✅ **W5-Windows — SHIPPED 2026-05-29** (`06b585d`). `/api/compiq/cardsearch` migrated to the unified dispatcher; `/api/compiq/search-list` DELETED (no callers per Phase 1 caller grep); Cardsight catalog adapter extended with `enrichWithDetails` (concurrency-8, cs:detail 24h cache reuse, partial-failure aggregated event + notFound info event); CardIdentity additive `parallels?` + `attributes?` fields; shared `withConcurrency` + `withConcurrencyResult` extracted from dailyiq to `services/shared/concurrency.ts`. 26 new tests; backend suite 1232 → 1258 green. Production smoke: 4/4 cardsearch queries returned UnifiedSearchResponse with 331 enriched parallels across hits; 15-min telemetry watch clean. **Path (i) variant resolution empirically validated** (per the Cardsight published-SDK investigation Appendix A1 at [`docs/phase0/cardsight_published_sdk_2026-05-29.md`](phase0/cardsight_published_sdk_2026-05-29.md)).
+- ⏳ **W5-iOS — PENDING (Mac-required, future workstream).** Rebuild `CompIQVariantPickerView` against `UnifiedSearchResponse` shape (consume `candidates[].parallels[]` for the electric-blue 3rd line and `attributes[]` for enrichment); Codable models for `CardIdentity` / `CardsightParallel` / `UnifiedSearchResponse`; image-fetch mitigation strategy decision (lazy / top-N / parallelize / cache-budget — recommendation pending kickoff); (α)/(β) transport architecture decision (default β — stay on backend `/api/search/cards`, the W3 endpoint shipped at `d5a3169`); update `CompIQSearchService.search()`; smoke + device verification + deploy. **Picker is broken for users during the gap** between W5-Windows ship and W5-iOS ship — accepted trade-off under single-user pre-launch framing. Operational alternatives documented in SESSION_HANDOFF.md.
 
-**Week-by-week (target — adjust at implementation start if Drew picks alternate sequencing):**
+**Empirically resolved (no longer open questions):**
 
-- **Week 2 (Jun 09-15):** Backend foundation — cert-grader abstraction + registry + interface; PSA grader adapter (thin wrap of existing `psaCert.service.ts`); `CertGraderError` typed errors.
-- **Week 3 (Jun 16-22):** Backend dispatcher — unified `/api/search/cards` endpoint; `CardIdentity` type + Cardsight catalog adapter; refactor existing autograph/color/scoring logic from `compiq.routes.ts:763-800` into shared helper.
-- **Week 4 (Jun 23-29):** CF-PICKER-MIGRATE-TO-CARDSIGHT internal swap — `compiq.routes.ts:6` and `:753` replaced; shape-adapter preserves CardHedge response shape for legacy clients (empirical verification per §15 operational note). `PortfolioHolding` schema additions for `certNumber` / `certGrader`. Backend tests.
-- **Week 5 (Jun 30 - Jul 06):** iOS — unified search input UI with auto-detect dispatch and `hint` field; `ResultsView` refactor of `CompIQVariantPickerView`; `CompIQSearchService.search()` method + Codable models for `CardIdentity` / `UnifiedSearchResponse`.
-- **Week 6 (Jul 07-13):** iOS — `VerifyView` (cherry-pick `CardScanResultView` per D2, adapt for `CardIdentity`); state model wiring + navigation; smoke sweeps (Cardsight catalog 23-holding cohort + cert flow with known PSA certs incl. Witt 76556858); pre-deploy + deploy + production verification.
-
-**Milestone:** v1 unified search + cert + verify + comp-card flow live in production. Phase 3 CH decommission is **partially shipped** via the absorbed picker migration; the remaining CH cleanup (dead-code removal, env var scrubbing, `fn-cardhedge-comps` disable, `cardHedgeCardId` schema rename decision) becomes a small cleanup commit attached to v1 ship (~half day).
+- **Path (iv) `ai.query` / `autocomplete.cards`:** RESOLVED NEGATIVE per the Cardsight published-SDK investigation Appendix A2.4 (Cardsight's own MCP tool documentation explicitly says `ai_query` is natural-language synthesis returning synthesized answers, not structured `CardIdentity[]`; "Don't use `ai_query` for known specific lookups"). `autocomplete_cards` similarly not richer than `search_cards`.
+- **Path (i) variant gap:** EMPIRICALLY VALIDATED 2026-05-29 (Appendix A1) and SHIPPED in W5-Windows. Bobby Witt Jr probe returned `parallels: Array<{ id, name, numberedTo? }>` with 11 entries exact-match to existing `CardsightParallel` shape from W3. Plus `attributes[]` as bonus picker enrichment.
+- **Image gap (per-hit `get_card_image` cost):** still real; resolution deferred to W5-iOS image-fetch mitigation strategy. SDK investigation confirmed no CDN-redirect URL shortcut available (Appendix A2 — `get_card_image({ format: 'json' })` returns base64 bytes, not a URL). Operational mitigation in iOS via SwiftUI patterns.
 
 **Reference:** [`docs/phase0/unified_search_design_2026-05-28.md`](phase0/unified_search_design_2026-05-28.md) (`23038d7`) — full architecture, locked decisions D1/D2/D3, scope estimates per workstream, v1.5 and v2 forward-compat notes.
 
@@ -116,11 +112,25 @@ Influencer-driven launch context (free-access seeding to influencer partnerships
 
 **Milestone:** product honesty about catalog-gap cards. Trout WMB shows "approximate" rather than a confident $382.50.
 
-### ~~Weeks 5-6 — Phase 3 CH decommission~~ — **ABSORBED into Weeks 2-6 above**
+### Phase 3 CH decommission — B-then-A sequencing (restructured 2026-05-29 late session)
 
-Per D1, the CF-PICKER-MIGRATE-TO-CARDSIGHT picker migration is v1 foundation work, no longer a separate workstream. The remaining CH cleanup (dead-code removal, env vars, `fn-cardhedge-comps` disable, `cardHedgeCardId` rename) is a small follow-up commit attached to v1 ship — not a separate W5-W6 window.
+- ✅ **W5-Windows user-facing endpoint migration SHIPPED** (`06b585d`). `/api/compiq/cardsearch` migrated from CardHedge to Cardsight via the unified dispatcher; `/api/compiq/search-list` deleted entirely (no callers per Phase 1 caller grep). Picker → cardsearch flow now Cardsight-native.
+- ⏳ **CF-CARDHEDGE-DECOMMISSION-FULL (HIGH backlog, next backend workstream)** — per Drew's Option B sequence handles the remaining CardHedge cleanup:
+  - `/api/compiq/price-by-id` migration from CardHedge to Cardsight
+  - `cardhedge.client.ts` file deletion
+  - `fn-cardhedge-comps` Azure Function disable
+  - `CARD_HEDGE_API_KEY` + CH env vars removal from `HobbyIQ3` App Settings
+  - CardHedge subscription cancellation (business action, post-code-removal)
+  - `copilot-instructions.md` update to remove CardHedge references
+  - `cardHedgeCardId` field naming decision on `PortfolioHolding` — rename to a vendor-neutral column or accept as legacy name (data migration decision)
+  - Test / fixture cleanup that references CardHedge
+  - Deeper code references the W5-Windows Phase 1 caller grep didn't fully enumerate (~unknown extent until empirical Phase 1 grep)
 
-### Weeks 8-10 (2026-07-21 → 2026-08-10) — Phase 4a MCP cache layer
+Scope estimate: **~4-6h** given unknown CH integration footprint. Real Phase 1 grep required for full enumeration before scoping fix. Not in v1 user-facing scope; sequenced after W5-Windows ship + InventoryIQ design (per Option B section below). See SESSION_HANDOFF.md backlog entry for canonical scope.
+
+### Weeks 8-10 (2026-07-21 → 2026-08-10) — Phase 4a Backend cache layer
+
+**Naming refresh 2026-05-29:** previously titled "MCP-mediated cache layer" — renamed for clarity now that Cardsight publishes a native MCP server at `mcp.cardsight.ai` (empirically confirmed 2026-05-29 — see [`docs/phase0/cardsight_published_sdk_2026-05-29.md`](phase0/cardsight_published_sdk_2026-05-29.md) Appendix A2). Cardsight's MCP is a proxy of REST exposing catalog/identification to AI agents; our planned cache layer interposes the same way regardless of whether requests transit REST or MCP — they're the same Cardsight backend. Architecture goal unchanged: outage absorption + REST volume reduction + observability interposition.
 
 **Production resilience. The 'first deploy silently failed to rsync dist' incident this session is a small-radius version of the bigger risk: Cardsight outage = full prediction outage today.**
 
@@ -286,3 +296,44 @@ When a workstream completes: update with `**COMPLETE** (date, commit SHA)`. When
 This is the plan. Execute, measure, adjust, ship. ML happens later — not skipped.
 
 End of refresh.
+
+---
+
+## Option B sequence — locked 2026-05-29 late session
+
+Per Drew's framing 2026-05-29 (post-W5-Windows ship): build the backend out then go to UI. HobbyIQ pre-launch is single-user (Drew), so iOS picker breakage during the gap window between W5-Windows and W5-iOS is acceptable operational cost — Drew uses `/api/search/cards` directly + curl/Postman during the gap. Backend-out-then-UI sequencing is cheaper than coordinated backend+iOS commits at this stage.
+
+**Sequential workstream (B-sequential, not parallel):**
+
+1. ✅ **W5-Windows** (`06b585d`) — Cardsight-backed `/api/compiq/cardsearch` with detail enrichment per path (i). DONE.
+2. ⏳ **InventoryIQ design investigation** (next) — empirical inventory of HobbyIQ's holdings layer + Cardsight collection schema comparison + recommendations doc. **Cardsight as REFERENCE for modeling, NOT inventory implementation.** ~2-3h. Output: design doc at `docs/phase0/inventoryiq_design_<date>.md`.
+3. ⏳ **CF-CARDHEDGE-DECOMMISSION-FULL** — full CardHedge removal across code/infra/business per the canonical scope in SESSION_HANDOFF.md. ~4-6h.
+4. ⏳ **Q1 evaluation** — empirical inspection of Cardsight `grades.companies.*` endpoints (`list_grading_companies` + `list_grading_company_types` + `list_grading_company_grades` per Cardsight published-SDK Appendix A2.2) to determine v1.5 grader integration viability. ~30-45 min.
+5. ⏳ **Q1 implementation** (per Drew's "all grading data in the app" framing) — implement adapters for whatever grader coverage Cardsight provides via `grades.companies.*`. ~3-5h. May land BGS / SGC / CGC adapters via the W2 cert-grader registry abstraction (the load-bearing pluggability that W2 was designed for).
+6. ⏳ **W5-iOS** — Mac-required. Picker rebuild against `UnifiedSearchResponse` shape per the W5 section above + W3's `/api/search/cards` endpoint.
+
+**Sequencing rationale:** the InventoryIQ design + CardHedge decommission + Q1 grade-endpoint evaluation are all pure backend / data-modeling work that benefits from being done before iOS rebuild — iOS rebuild absorbs whatever grader coverage Q1 delivers (one rebuild, not two), and the InventoryIQ design potentially changes the `PortfolioHolding` shape that iOS would render. Doing iOS first would risk a second rebuild after these land.
+
+---
+
+## Strategic reshape — open questions from 2026-05-29
+
+Four Scope-B-class strategic questions surfaced during the 2026-05-29 Cardsight published-SDK investigation + the 2026-05-29 PM follow-up empirical work. **Captured for future evaluation; NOT pre-decided in this commit.** Each is sufficient on its own to drive a separate dedicated review session.
+
+### Q1 — v1.5 grader scope vs Cardsight `grades.companies.*` endpoint
+
+Cardsight publishes `list_grading_companies`, `list_grading_company_types`, `list_grading_company_grades` MCP tools (Appendix A2.2). These could potentially back v1.5 cert-grader additions (BGS / SGC / CGC) without per-grader cert-API integration. **Question:** does Cardsight's grader-data coverage match what's needed for a CertGrader adapter (identity / cert verification / pop counts), or only catalog-side grade taxonomy? Resolved empirically by Option B step 4 above; informs whether v1.5 grader adapters land per Cardsight (cheaper, vendor-mediated) or per direct cert-API integration (richer per grader, more maintenance).
+
+### Q2 — v2 scan timing vs `identify.card`
+
+Cardsight publishes `identify.card` (and `identify_card_by_segment`) accepting image URLs — pre-built infrastructure for the v2 scan workstream originally scoped as its own design phase (D3 lock — scan deferred). **Question:** does Cardsight's identify endpoint coverage + accuracy + latency justify pulling v2 scan forward, OR does the scan UX experience that lands on top of identify (OCR mode choice, accuracy fallback handling, multi-card-in-frame disambiguation) still require the dedicated v2 design phase? D3 lock stands until empirically re-evaluated; this question informs WHEN to schedule that re-evaluation.
+
+### Q3 — `PortfolioHolding` architecture vs Cardsight `collections` entities
+
+Cardsight publishes 12 collection-management tools (`create_collection` / `add_collection_card` / `update_collection_card` / `list_collection_set_progress` / etc.) for inventory management as a SaaS-like service. **Question:** does HobbyIQ's `PortfolioHolding` architecture compose with Cardsight's collections as the backing store (Cardsight-as-inventory-backend), OR does HobbyIQ's portfolio remain self-hosted with Cardsight as catalog reference only? Resolved by the InventoryIQ design investigation in Option B step 2. Major architectural call with multi-week downstream consequences for portfolio analytics, P&L semantics, multi-user portability, eBay integration ownership, and Cardsight-vendor-lock-in posture.
+
+### Q4 — W3 search architecture vs Cardsight `catalog.search`
+
+W3's dispatcher uses `searchCatalog` (`/catalog/search`) which returns cards-only with the field-shape limitation that drove the W4 deferral. Cardsight also publishes `catalog.search` (global cross-entity fuzzy search across cards / sets / releases / parallels with relevance scores) which W3 doesn't currently use. **Question:** is the cross-entity search surface useful for HobbyIQ's picker UX (e.g. "Topps Chrome" finding both releases AND specific cards), or is the cards-only narrower endpoint cleaner for our use case? Worth re-evaluating during W5-iOS picker rebuild — depending on the picker information architecture, cross-entity discovery could change the search UX meaningfully. Captured separately as `CF-CATALOG-SEARCH-UPGRADE` (MEDIUM backlog).
+
+Each of Q1-Q4 is dropped into the active Option B sequence at the appropriate point. Q1 lands in step 4-5 above. Q2 lands as a re-evaluation gate when v2 design phase approaches. Q3 lands in step 2 above (InventoryIQ design). Q4 lands during W5-iOS or later iOS-polish work.
