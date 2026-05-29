@@ -8,20 +8,13 @@
 
 ---
 
-## Strategic frame: PROVISIONAL Answer B
+## Strategic frame (locked 2026-05-29)
 
-> **Shipped product (algorithmic forward projection + grade-aware pricing + portfolio integration) IS the moat. ML training (Phase 4c-4e) is sequenced-later as Q4-2026 → Q1-2027 optimization layer, NOT critical path, NOT out-of-scope.**
+Answer B confirmed: The shipped product — cascade-detected prediction + grade-aware pricing + portfolio integration — IS the moat. ML training (Phase 4c-4e) is sequenced as a v2.0 capability, gated on post-launch data volume.
 
-**The "PROVISIONAL" qualifier is load-bearing.** The narrative reframe ("shipped product is the moat, not the trained ML model") is **pending Drew's clear-headed fresh-session confirmation** before external/strategic positioning shifts. The WORK in this document is correct under both Answer A and Answer B and is non-regretful regardless — it improves data quality, ships product, validates signals, and lands infrastructure debt. So the work begins now.
+Reasoning: Answer A (trained model serving 75%+ traffic) is structurally data-blocked pre-launch. Single-operator usage cannot generate ML-training-scale labeled outcome data; that volume can only materialize post-launch when real user traffic produces predictions and matched sale outcomes. The shipped integrated product is therefore what the business launches on; the ML moat is the optimization layer that becomes possible after launch traffic produces the labeled data foundation.
 
-**Why provisional, not locked:**
-- Answer A as defined ("trained model serving 75%+") is data-blocked at the present row-accumulation rate (~1660/month), pushing arrival to late-2026/2027 regardless of prioritization. So pretending to pursue A in Q3 would just be theater.
-- Answer B's narrative is genuinely true to what's shipped — but reframing the moat externally is a strategic decision Drew should make once, deliberately, in a fresh session with the data spread out. Not as a side-effect of debugging Maddux Tiffany.
-
-**What changes if Drew later confirms Answer A instead:**
-- Workstreams 1-7 below all still ship — they are foundation work for any ML training path, not Answer-B-specific
-- Workstream 8 (ML sequenced Q4-2026 → Q1-2027) gets pulled forward to "starts as soon as data sufficiency permits, regardless of product hardening status"
-- The Q3 closeout milestone shifts from "product hardening + signal validation complete" to "ML training pipeline running on whatever data exists, GO/NO-GO gate at end of Q3"
+This is not "give up on the ML moat" — it is "recognize the ML moat is the post-launch optimization, not the launch-time differentiator. The launch-time moat is the integrated product itself, which competitors cannot replicate by buying comps."
 
 ---
 
@@ -56,6 +49,18 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 
 ---
 
+## Launch-readiness workstream — staged scaling tiers
+
+Per Drew's framing (2026-05-29): build the system for 100 users, then incrementally raise the ceiling — 100 → 500 → 1000 → 5000 → 20000. Each tier verifies current capacity, identifies the binding constraint that would break at the next tier, fixes it, and proves the new ceiling holds.
+
+- **CF-LAUNCH-READINESS-100**: shipped 2026-05-29 (see closeout doc at [`docs/phase0/launch_readiness_100_2026-05-29.md`](phase0/launch_readiness_100_2026-05-29.md)). Cosmos autoscale (`dailyiq_briefs`, `portfolio`) + 6 monitoring alerts + verified end-to-end alert delivery.
+- **CF-LAUNCH-READINESS-500**: future. Candidate binding constraints from 100-tier surfacing: `player_trends` write throughput (currently flat 400 RU/s manual; estimate-driven writes can throttle under sustained load), rate-limiter capacity (200 req/min/IP needs evaluation at 500-tier load patterns).
+- **CF-LAUNCH-READINESS-1000, -5000, -20000**: future, each gated on previous tier verification.
+
+Influencer-driven launch context (free-access seeding to influencer partnerships, target 20K+ users) sets the upper tier as the practical launch target. Launch date is not yet committed to the plan; staged scaling work proceeds independent of date commitment, since each tier's work is non-regretful regardless of when launch lands.
+
+---
+
 ## The Q3 plan — 14 weeks from 2026-05-28
 
 **Capacity assumption:** Solo operator, ~1-2 focused sessions per major workstream, no contractor. Calendar pace per the 2026-05-27 addendum's "sustainable pace" framing. One serious production incident absorbs 1-2 days and shifts dependent milestones back by that amount.
@@ -65,6 +70,12 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 ### Week 1 (2026-06-02 → 2026-06-08) — Polish sprint + CF-UNIFIED-SEARCH-AND-CERT design
 
 **Status: COMPLETE 2026-05-28.** All three W1 items closed in a single same-day session ahead of the planned W1 calendar window. Shipped items production-verified; design item committed and HALTed for implementation.
+
+**Same-day W1 follow-ons (2026-05-28 PM → 2026-05-29):**
+
+- ✅ **CF-PLAYERTRENDS-DUPLICATE-RECORDS — SHIPPED + PRODUCTION-VERIFIED 2026-05-28** (`b864af5`). Slug→numeric merge on numeric upsert + one-shot cleanup script. 4 known dupes resolved: Mike Trout + Ken Griffey via organic production traffic merge within 10 min of deploy (load-bearing production-quality signal); Bobby Cox via targeted `/api/playeriq/refresh` (7-snapshot merge, all hard rules met); John Gil via cleanup script. Final state: 76 → 72 docs, 0 duplicate sets. CF-PLAYERTRENDS-SLUG-RE-RESOLUTION captured as LOW backlog for orphan slugs whose MLB id never resolves.
+- ✅ **CF-UNIFIED-SEARCH-AND-CERT W2 — SHIPPED 2026-05-29** (`dd7ec17`). Cert-grader abstraction + registry + PSA grader adapter (5 source files + 1 test file + design doc §5 update). Title strategy locked (A) — verbatim variety string in `CardIdentity.title` for VerifyView slab-fidelity, canonical parallel token in `CardIdentity.parallel` for matching/pricing. 49 new tests; backend suite 1130 → 1179 green.
+- ✅ **CF-LAUNCH-READINESS-100 — SHIPPED 2026-05-29.** First tier of staged scaling workstream (see new launch-readiness section below).
 
 - ✅ **CF-PLAYERNAME-CANONICALIZATION** — **SHIPPED + PRODUCTION-VERIFIED 2026-05-28** (`b51b763`). Canonical playerName field on `PlayerScore` + indexed exact-match lookup + 76-record backfill + reusable diagnostic scripts. `getPlayerScoreByName("Bobby Witt Jr.")` (with period) now resolves correctly. Accents handled incidentally by general punctuation/NFKD strip per Drew's "free if general" framing. Surfaced as the actual DailyIQ-quality bug behind the morning's symptom framing during CF-PLAYERTRENDS-QUERY-FAILURE investigation (closed same day as classification A — benign SDK chatter, zero data loss; see `61e88c6` doc closure). 1116 tests pass (+10 net new). matchedVia telemetry confirms 0 legacy-lower hits = backfill complete.
 - ~~**CF-PLAYERTRENDS-QUERY-FAILURE**~~ — **RETIRED 2026-05-28**: investigated → classified A (benign SDK chatter, zero data loss). Container is single-partition; completeness check across 8 known players × 2 passes shows all data reachable deterministically. Instrumentation (`aa61097`) stays in production through CF-PLAYERNAME-CANONICALIZATION's verification cycle; remove in a cleanup commit after a week of zero `legacy-lower` hits.
@@ -224,7 +235,7 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 - **CF-VARIANT-FILTER-WRONG-CARD-DETECTION, CF-PARALLEL-CANONICALIZATION** — LOW priority, parked. Address opportunistically when adjacent code is touched.
 - **CF-EBAY-LISTING-SIGNAL-REWORK** — design complete 2026-05-25; implementation deferred until eBay-scraping outcome expansion is on the table (Phase 4c data sufficiency gate decision).
 - **CF-CARDIDENTITY-RESOLUTION-WEIGHTING** (Griffey "TRADED" prefix case) — LOW priority unless CF-PSA-CERT pipeline doesn't fully address it.
-- **CF-PLAYERTRENDS-DUPLICATE-RECORDS** (MEDIUM backlog, surfaced 2026-05-28 during CF-PLAYERNAME-CANONICALIZATION investigation) — `player_trends` has 4 known duplicate stored records where the same player is stored under both numeric MLB id AND `playerNameSlug` slug id (Bobby Cox 112764 + bobby-cox; Ken Griffey Jr. 115135 + ken-griffey-jr; John Gil 808535 + john-gil; Mike Trout 545361 + mike-trout). Write-path identity inconsistency: `upsertPlayerScore` writes with whichever id the caller has at the time. Same write-path neighborhood as the canonicalization fix that just shipped (`b51b763`) — so sequence after it to avoid merge conflicts. Scope estimate: ~2-4h (write-path consistency fix + cleanup script for the 4 known dupes, plus a sweep for any more that accumulated). Not show-blocking; surfaces as duplicate `playerScore_getByName_ok canonical` events for the affected players (both stored rows match the same canonical playerNameNormalized, so the SELECT TOP 1 returns whichever Cosmos orders first — could be either across calls).
+- ~~**CF-PLAYERTRENDS-DUPLICATE-RECORDS**~~ — **SHIPPED 2026-05-28** (`b864af5`). Slug→numeric merge on numeric upsert + one-shot cleanup script. All 4 known dupes resolved (76 → 72 docs, 0 duplicate sets). Mike Trout + Ken Griffey merged organically by production traffic within 10 min of deploy (load-bearing production-quality signal). CF-PLAYERTRENDS-SLUG-RE-RESOLUTION captured as LOW backlog follow-up for orphan slugs whose MLB id never resolves at write time.
 
 ---
 
@@ -241,7 +252,7 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 
 **New risks surfaced 2026-05-28:**
 
-7. **Strategic frame reframe ("PROVISIONAL Answer B") gets locked in by accumulation rather than deliberate decision.** Mitigation: Drew schedules a fresh-session moat-narrative confirmation explicitly. Don't let "we're shipping Answer B's work" become "Answer B is locked" without a deliberate check.
+7. ~~**Strategic frame reframe ("PROVISIONAL Answer B") gets locked in by accumulation rather than deliberate decision.**~~ — **RETIRED 2026-05-29**: Answer B confirmed and locked deliberately (see Strategic frame section above). ML moves to v2.0 backlog per CF-ML-MOAT-V2; launch-readiness becomes the active workstream gating the launch.
 8. **CF-UNIFIED-SEARCH-AND-CERT v1 implementation surfaces unforeseen scope during W2-W6.** v1 design `23038d7` honest-scoped to 3-5 weeks (W2-W6) absorbing cert-grader abstraction + unified dispatcher + picker migration per D1 + canonical CardIdentity + VerifyView. Mitigation: design HALT preserved; implementation phase HALTs at end-of-week for each of W2-W6 for Drew status check + re-scope opportunity. If v1 overruns W6, Q3 closeout shifts proportionally per item 11 below.
 9. **Picker migration (absorbed into W4 per D1) reveals Cardsight searchCatalog can't match CH searchCards on variant-disambiguation, autograph detection, or image_url normalization.** Mitigation: shape-adapter verified empirically against iOS contract before deployment per design `23038d7` §15 operational note; existing autograph/color/scoring logic preserved (refactored to shared helper, not rewritten); shipped on the Cardsight-only path per D1 with CHR PROS class gap surfaced honestly via `warnings` array rather than hidden.
 10. **Phase 4a MCP cache implementation surfaces blob-storage namespace + cache-invalidation design depth.** Mitigation: 3-week budget (vs original 2), **Week 8** is design + Pt 1 to surface depth early (shifted from W7).
