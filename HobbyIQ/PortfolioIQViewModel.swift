@@ -516,6 +516,8 @@ final class PortfolioIQViewModel: ObservableObject {
                 setName: card.setName,
                 parallel: card.parallel,
                 grade: card.grade,
+                gradeCompany: card.gradeCompany,
+                gradeValue: card.gradeValue,
                 purchaseDate: card.purchaseDate,
                 purchasePlatform: card.purchasePlatform,
                 quantity: card.quantity,
