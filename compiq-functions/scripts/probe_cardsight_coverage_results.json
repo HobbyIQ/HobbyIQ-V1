@@ -1,0 +1,1287 @@
+{
+  "run_at": "2026-05-29T20:00:10.316728Z",
+  "failed_players": [
+    {
+      "player": "Juan Soto",
+      "year_hint": 2018,
+      "probes": [
+        {
+          "query": "Juan Soto baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "82682cdb-3e3a-4b7a-9419-a8afa103d8fb",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Topps",
+            "setName": "1988 Topps Baseball Autographs (Series 2)",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Juan Soto",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "b75b10e8-9cd1-4dcb-9bef-c80c68e2a090",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Juan Soto 2018",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "c94fa91c-e25a-41eb-a94f-a7ae4b84cc14",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Big League Breakthrough",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Juan Soto",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "c94fa91c-e25a-41eb-a94f-a7ae4b84cc14",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Big League Breakthrough",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Juan Soto",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "b75b10e8-9cd1-4dcb-9bef-c80c68e2a090",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Juan Soto",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "c94fa91c-e25a-41eb-a94f-a7ae4b84cc14",
+            "name": "Juan Soto",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Big League Breakthrough",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Mookie Betts",
+      "year_hint": 2018,
+      "probes": [
+        {
+          "query": "Mookie Betts baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "3fac45b9-6091-4380-a8ef-e48ebd242247",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Leaf Press Pass Premium Baseball",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mookie Betts",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "db36f5aa-a2ce-4c76-98fb-e98997dd5a96",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mookie Betts 2018",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "aba4ae63-24ac-462d-bf2d-519b53b25de8",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman Chrome",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mookie Betts",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "aba4ae63-24ac-462d-bf2d-519b53b25de8",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman Chrome",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mookie Betts",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "db36f5aa-a2ce-4c76-98fb-e98997dd5a96",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mookie Betts",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "aba4ae63-24ac-462d-bf2d-519b53b25de8",
+            "name": "Mookie Betts",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman Chrome",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Vladimir Guerrero Jr",
+      "year_hint": 2019,
+      "probes": [
+        {
+          "query": "Vladimir Guerrero Jr baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "5375dde9-2eca-455f-8fc4-ad5f1f2c89da",
+            "name": "Vladimir Guerrero Jr.",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Topps Chrome Update",
+            "setName": "1989 Topps Baseball Autographs",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Vladimir Guerrero Jr",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "734dbc2f-c5ca-4b36-b960-f6bb0027517b",
+            "name": "Vladimir Guerrero Jr",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Topps Archives",
+            "setName": "1953 Topps Who-Z-At Star?",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Vladimir Guerrero Jr 2019",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6971d26c-1a3a-4669-ab82-f415afbd66a1",
+            "name": "Vladimir Guerrero Jr.",
+            "player": null,
+            "year": "2019",
+            "releaseName": "Bowman",
+            "setName": "30th Anniversary",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Vladimir Guerrero Jr",
+          "opts": {
+            "year": 2019
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6971d26c-1a3a-4669-ab82-f415afbd66a1",
+            "name": "Vladimir Guerrero Jr.",
+            "player": null,
+            "year": "2019",
+            "releaseName": "Bowman",
+            "setName": "30th Anniversary",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Vladimir Guerrero",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "97f7efea-af8b-41c2-b5c3-e8b8e44fe535",
+            "name": "Vladimir Guerrero",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Donruss",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Vladimir Guerrero",
+          "opts": {
+            "year": 2019
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "f8a138b3-9a9c-4c11-a8a1-63a228355ab9",
+            "name": "Vladimir Guerrero",
+            "player": null,
+            "year": "2019",
+            "releaseName": "Finest",
+            "setName": "Originals Autographs",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Bobby Witt Jr",
+      "year_hint": 2022,
+      "probes": [
+        {
+          "query": "Bobby Witt Jr baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "509159e9-2f53-42f7-83e9-f185e0cb059d",
+            "name": "Bobby Witt Jr.",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Topps Chrome Update",
+            "setName": "1989 Topps Baseball Autographs",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Bobby Witt Jr",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "601db7d6-8a4c-45f7-b0c6-19211b72ce37",
+            "name": "Bobby Witt Jr",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Topps Brooklyn Collection",
+            "setName": "Autographs",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Bobby Witt Jr 2022",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6c895063-5dce-4258-bdd3-26b02f77997e",
+            "name": "Bobby Witt Jr.",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Bowman",
+            "setName": "3D",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Bobby Witt Jr",
+          "opts": {
+            "year": 2022
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "b216357f-8e88-4b42-877e-d664aa4a72c1",
+            "name": "Bobby Witt Jr",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Topps Black & White",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Bobby Witt",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "16b607cd-e6ee-4718-9875-365e94005438",
+            "name": "Bobby Witt",
+            "player": null,
+            "year": "2020",
+            "releaseName": "Bowman Platinum",
+            "setName": "Precious Elements",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Bobby Witt",
+          "opts": {
+            "year": 2022
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6c895063-5dce-4258-bdd3-26b02f77997e",
+            "name": "Bobby Witt Jr.",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Bowman",
+            "setName": "3D",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Paul Skenes",
+      "year_hint": 2024,
+      "probes": [
+        {
+          "query": "Paul Skenes baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "f9644d68-5939-4a15-8aed-21cfdf6112bb",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Leaf Press Pass Premium Baseball",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Paul Skenes",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "85c6db52-6c68-45b6-94f1-04380d51e213",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Paul Skenes 2024",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "0b96b9e8-d4bd-40b7-ad50-2725b6deeba6",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Paul Skenes",
+          "opts": {
+            "year": 2024
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "0b96b9e8-d4bd-40b7-ad50-2725b6deeba6",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Paul Skenes",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "85c6db52-6c68-45b6-94f1-04380d51e213",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Paul Skenes",
+          "opts": {
+            "year": 2024
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "0b96b9e8-d4bd-40b7-ad50-2725b6deeba6",
+            "name": "Paul Skenes",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Jackson Holliday",
+      "year_hint": 2024,
+      "probes": [
+        {
+          "query": "Jackson Holliday baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6117c140-40a0-4c7c-a6b3-9c4fa0b0ac12",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Panini Stars & Stripes",
+            "setName": "USA Baseball Silhouettes Signatures Jerseys",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Jackson Holliday",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "10c14175-1882-425b-a48e-4a59137e21d7",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Jackson Holliday 2024",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "f01d46fd-252a-4fb8-8bdc-3d17c692cf47",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Jackson Holliday",
+          "opts": {
+            "year": 2024
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "f01d46fd-252a-4fb8-8bdc-3d17c692cf47",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Jackson Holliday",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "10c14175-1882-425b-a48e-4a59137e21d7",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Jackson Holliday",
+          "opts": {
+            "year": 2024
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "f01d46fd-252a-4fb8-8bdc-3d17c692cf47",
+            "name": "Jackson Holliday",
+            "player": null,
+            "year": "2024",
+            "releaseName": "Bowman",
+            "setName": "A.I.",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Corbin Carroll",
+      "year_hint": 2023,
+      "probes": [
+        {
+          "query": "Corbin Carroll baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "bf8eb75b-d972-468e-a7a2-5ded597b28dc",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Topps",
+            "setName": "1988 Topps Baseball Autographs (Series 2)",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Corbin Carroll",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "62898cbe-7ebc-480b-a8d9-fef54a24d824",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Corbin Carroll 2023",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6ed90379-afb7-40ca-8323-f3f0165fd9f6",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Corbin Carroll",
+          "opts": {
+            "year": 2023
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6ed90379-afb7-40ca-8323-f3f0165fd9f6",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Corbin Carroll",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "62898cbe-7ebc-480b-a8d9-fef54a24d824",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Corbin Carroll",
+          "opts": {
+            "year": 2023
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6ed90379-afb7-40ca-8323-f3f0165fd9f6",
+            "name": "Corbin Carroll",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Gunnar Henderson",
+      "year_hint": 2023,
+      "probes": [
+        {
+          "query": "Gunnar Henderson baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "1e85aebe-f50b-48f1-a6fb-8a948bf66167",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Topps",
+            "setName": "1988 Topps Baseball Autographs (Series 2)",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Gunnar Henderson",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "cf5f2969-76c7-44b0-b0e7-dbdb6f3db49d",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Gunnar Henderson 2023",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "3eb3ae01-ce5c-4f6a-bd21-089c88bc718b",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Gunnar Henderson",
+          "opts": {
+            "year": 2023
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "3eb3ae01-ce5c-4f6a-bd21-089c88bc718b",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Gunnar Henderson",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "cf5f2969-76c7-44b0-b0e7-dbdb6f3db49d",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Gunnar Henderson",
+          "opts": {
+            "year": 2023
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "3eb3ae01-ce5c-4f6a-bd21-089c88bc718b",
+            "name": "Gunnar Henderson",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    }
+  ],
+  "sanity_players": [
+    {
+      "player": "Mike Trout",
+      "year_hint": 2011,
+      "probes": [
+        {
+          "query": "Mike Trout baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "944041de-bb81-4fab-941c-c6cda6cc5474",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Panini Absolute",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mike Trout",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "0e66e21e-2436-4ece-bfad-333ab1bd0825",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mike Trout 2011",
+          "opts": {},
+          "hit_count": 17,
+          "top_hit": {
+            "id": "69079f8d-a5c6-417b-9344-58cfb2dc4eb2",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2011",
+            "releaseName": "Bowman",
+            "setName": "Bowman's Best Prospects",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mike Trout",
+          "opts": {
+            "year": 2011
+          },
+          "hit_count": 16,
+          "top_hit": {
+            "id": "69079f8d-a5c6-417b-9344-58cfb2dc4eb2",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2011",
+            "releaseName": "Bowman",
+            "setName": "Bowman's Best Prospects",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mike Trout",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "0e66e21e-2436-4ece-bfad-333ab1bd0825",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Mike Trout",
+          "opts": {
+            "year": 2011
+          },
+          "hit_count": 16,
+          "top_hit": {
+            "id": "69079f8d-a5c6-417b-9344-58cfb2dc4eb2",
+            "name": "Mike Trout",
+            "player": null,
+            "year": "2011",
+            "releaseName": "Bowman",
+            "setName": "Bowman's Best Prospects",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Shohei Ohtani",
+      "year_hint": 2018,
+      "probes": [
+        {
+          "query": "Shohei Ohtani baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "44493666-7530-4cb2-bdb6-8c1b8ee5b42e",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Panini Absolute",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Shohei Ohtani",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "9c5bb246-68d3-4a2e-afd7-568fc0f7e7fa",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Shohei Ohtani 2018",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "8d27563f-c717-4601-a177-01e615e00ab0",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Shohei Ohtani",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "8d27563f-c717-4601-a177-01e615e00ab0",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Shohei Ohtani",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "9c5bb246-68d3-4a2e-afd7-568fc0f7e7fa",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Shohei Ohtani",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "8d27563f-c717-4601-a177-01e615e00ab0",
+            "name": "Shohei Ohtani",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Aaron Judge",
+      "year_hint": 2017,
+      "probes": [
+        {
+          "query": "Aaron Judge baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "043172e6-867c-4a5f-b332-3500a11b03f4",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Panini Absolute",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Aaron Judge",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "1ad89784-b11d-4cb4-b395-a788098c778b",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Aaron Judge 2017",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "ce341b7d-5269-4176-a726-99b07ff7157e",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2017",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Aaron Judge",
+          "opts": {
+            "year": 2017
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "ce341b7d-5269-4176-a726-99b07ff7157e",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2017",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Aaron Judge",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "1ad89784-b11d-4cb4-b395-a788098c778b",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2026",
+            "releaseName": "Bowman",
+            "setName": "Anime",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Aaron Judge",
+          "opts": {
+            "year": 2017
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "ce341b7d-5269-4176-a726-99b07ff7157e",
+            "name": "Aaron Judge",
+            "player": null,
+            "year": "2017",
+            "releaseName": "Bowman",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    },
+    {
+      "player": "Ronald Acuna Jr",
+      "year_hint": 2018,
+      "probes": [
+        {
+          "query": "Ronald Acuna Jr baseball",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "9f71fee7-c038-4652-9864-04e8b3a421e9",
+            "name": "Ronald Acuna Jr.",
+            "player": null,
+            "year": "2022",
+            "releaseName": "Panini Absolute",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Ronald Acuna Jr",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "925504ac-99fd-4957-969f-96ad623d16ab",
+            "name": "Ronald Acuna Jr",
+            "player": null,
+            "year": "2023",
+            "releaseName": "Topps",
+            "setName": "Home Field Advantage",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Ronald Acuna Jr 2018",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "6bb87200-e8cd-4437-88b3-5d2626d314a5",
+            "name": "Ronald Acuna Jr.",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Donruss Optic",
+            "setName": "Base Set",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Ronald Acuna Jr",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "e6440a13-ef46-40fb-a74d-fe31eed85c7d",
+            "name": "Ronald Acuna Jr",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Panini Chronicles",
+            "setName": "Classics",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Ronald Acuna",
+          "opts": {},
+          "hit_count": 20,
+          "top_hit": {
+            "id": "e9c9393b-d92a-4731-9a86-5629d80bf361",
+            "name": "Ronald Acuna",
+            "player": null,
+            "year": "2025",
+            "releaseName": "Topps Chrome",
+            "setName": "1990 Topps Baseball",
+            "number": null
+          },
+          "top_hit_usable": true
+        },
+        {
+          "query": "Ronald Acuna",
+          "opts": {
+            "year": 2018
+          },
+          "hit_count": 20,
+          "top_hit": {
+            "id": "5e0d1495-8ceb-41ce-9a43-ec73f356c874",
+            "name": "Ronald Acuna",
+            "player": null,
+            "year": "2018",
+            "releaseName": "Bowman",
+            "setName": "Big League Breakthrough",
+            "number": null
+          },
+          "top_hit_usable": true
+        }
+      ]
+    }
+  ],
+  "failed_summary": {
+    "pattern_summary": [
+      {
+        "label": "{player} baseball",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      },
+      {
+        "label": "{player}",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      },
+      {
+        "label": "{player} {year}",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      },
+      {
+        "label": "{player} + year_param",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      },
+      {
+        "label": "normalized({player})",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      },
+      {
+        "label": "normalized({player}) + year_param",
+        "any_hit_players": 8,
+        "usable_top_hit_players": 8,
+        "total_players": 8
+      }
+    ]
+  },
+  "sanity_summary": {
+    "pattern_summary": [
+      {
+        "label": "{player} baseball",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      },
+      {
+        "label": "{player}",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      },
+      {
+        "label": "{player} {year}",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      },
+      {
+        "label": "{player} + year_param",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      },
+      {
+        "label": "normalized({player})",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      },
+      {
+        "label": "normalized({player}) + year_param",
+        "any_hit_players": 4,
+        "usable_top_hit_players": 4,
+        "total_players": 4
+      }
+    ]
+  }
+}

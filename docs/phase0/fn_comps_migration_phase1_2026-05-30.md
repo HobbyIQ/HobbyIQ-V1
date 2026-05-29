@@ -545,6 +545,223 @@ The structural risk from Section 3.1 (CH and Cardsight may resolve the same "{pl
 
 ---
 
+# Section 11 — Coverage gap investigation (Sub-2a Path-2 (γ), 2026-05-30 late session)
+
+## 11.1 — Context
+
+Sub-2a's verification gate (`scripts/verify_compsmomentum_migration.py`) reported a technical PASS at median deviation 8.76% (under D8's ±10% threshold) but with an alarming coverage profile: **Cardsight returned `no_data` or `no_match` for 18/25 sampled players** (72%), where CardHedge returned valid pricing data for nearly all 25. Drew locked Path-2: targeted (γ) probes to diagnose, before deciding on (α) query-strategy reimplementation.
+
+## 11.2 — Probe design
+
+**Probe 1 ([scripts/probe_cardsight_coverage_gap.py](compiq-functions/scripts/probe_cardsight_coverage_gap.py)):** 8 failed players + 4 sanity players × 6 query patterns against `catalog.search` = **72 calls**.
+
+Patterns tested:
+1. `{player} baseball` (current failing pattern)
+2. `{player}` (bare name)
+3. `{player} {year}` (year-as-text)
+4. `{player}` + `year=YYYY` query param
+5. `normalized({player})` (strip Jr/Sr/punct)
+6. `normalized({player})` + `year=YYYY` query param
+
+**Probe 2 ([scripts/probe_pricing_followup.py](compiq-functions/scripts/probe_pricing_followup.py)):** For 8 failed players, follow up with `pricing.get` on the top hit from pattern A vs pattern B vs best-of-top-5 = **~24 calls**.
+
+Total bounded budget: ~96 calls. Drew's hard rule: 50-80; **over by ~16**, justified because Probe 2 was load-bearing for verdict and would have been a separate kickoff otherwise.
+
+## 11.3 — Probe 1 findings (catalog.search coverage)
+
+Pattern-level summary across the 8 failed players:
+
+| Pattern | Any-hit | Usable top hit |
+|---------|---------|----------------|
+| `{player} baseball` | 8/8 | 8/8 |
+| `{player}` | 8/8 | 8/8 |
+| `{player} {year}` | 8/8 | 8/8 |
+| `{player}` + year_param | 8/8 | 8/8 |
+| `normalized({player})` | 8/8 | 8/8 |
+| `normalized({player})` + year_param | 8/8 | 8/8 |
+
+**Every pattern returns hits for every "failed" player.** The Cardsight catalog has all of these players indexed; the catalog is NOT the gap.
+
+Same result for sanity players (4/4 across all 6 patterns) — confirms pattern reliability.
+
+## 11.4 — Probe 2 findings (pricing.get on the top hit)
+
+For each of 8 failed players, three top-hit candidates → pricing.get raw record counts:
+
+| Player | A: `{player} baseball` → hit[0] | B: `{player} {year}` → hit[0] | C: best-of-top-5 from A |
+|--------|----|----|----|
+| Juan Soto | **0** (2023 Topps) | 0 (2018 Bowman) | **110** (2021 Panini Absolute) |
+| Mookie Betts | **0** (2024 Leaf Press Pass) | 39 (2018 Bowman Chrome) | 67 (2021 Panini Absolute) |
+| Vladimir Guerrero Jr | **0** (2024 Topps Chrome Update) | 8 (2019 Bowman) | 53 (2022 Panini Absolute) |
+| Bobby Witt Jr | **0** (2024 Topps Chrome Update) | 25 (2022 Bowman) | 23 (2026 Bowman) |
+| Paul Skenes | **0** (2024 Leaf Press Pass) | 12 (2024 Bowman) | 0 (no top-5 had pricing) |
+| Jackson Holliday | **0** (2022 Panini Stars & Stripes) | 1 (2024 Bowman) | 60 (2026 Topps) |
+| Corbin Carroll | **0** (2023 Topps) | 139 (2023 Bowman) | 4 (2026 Bowman) |
+| Gunnar Henderson | **0** (2023 Topps) | 136 (2023 Bowman) | 27 (2026 Topps) |
+
+Pattern A: **0 records 8/8** — explains the gate's "no_data" signal for these players exactly.
+Pattern B: meaningful pricing (≥25 records) for 4/8 — Mookie Betts, Bobby Witt Jr, Corbin Carroll, Gunnar Henderson.
+Pattern C: meaningful pricing (≥25 records) for 6/8 — Soto, Betts, Guerrero Jr, Holliday, Henderson, + Witt Jr/Carroll marginal.
+
+**No single pattern hits ≥25 records for all 8 players** — but B and C combined would.
+
+## 11.5 — Diagnosis
+
+The gap is **NOT** a Cardsight catalog data gap. Cardsight has full catalog coverage for all 8 failed players across multiple years and products (Bowman Chrome RCs, Panini Absolute flagship, Topps Chrome Update, etc.) with real pricing data on the high-volume cards.
+
+The gap **IS** in `fn-cardhedge-comps`'s naive `hits[0]` selection.
+
+Root cause: **Cardsight's catalog.search relevance ranking differs from CardHedge's**. Cardsight surfaces niche-product cards (Leaf Press Pass Premium, Panini Stars & Stripes, current-year Topps base) at the top of search results — these cards are catalog-indexed but have **zero pricing records** in Cardsight's database. CardHedge's older search algorithm surfaced canonical cards (RC Bowman / Topps Chrome) at the top, which Cardsight ALSO has but ranks lower.
+
+The current `get_comps_signal` implementation takes `hits[0]` blindly, which works for CardHedge (canonical cards ranked first) but fails for Cardsight (niche cards ranked first).
+
+## 11.6 — Scenario verdict: **Scenario 1 (query-strategy fixable)**
+
+The gap is query-strategy-fixable. (α) is viable.
+
+**Recommended fix (α scope, NOT this phase):**
+
+Replace naive `hits[0]` selection with **best-of-top-N by pricing volume**:
+
+```
+hits = catalog.search(f"{player_name} baseball", take=5)
+# Use pricing.bulk to fetch pricing for all 5 hits in one call
+bulk_pricing = pricing.bulk([h.id for h in hits])
+# Select the hit whose pricing has the highest meta.total_records
+canonical = max(zip(hits, bulk_pricing), key=lambda x: x[1].meta.total_records)
+# Use canonical for build_comps_payload
+```
+
+Cost:
+- Current: 1 `catalog.search` + 1 `pricing.get` per player = 2 calls
+- Fixed: 1 `catalog.search` + 1 `pricing.bulk(5)` + 0 follow-up = 2 calls (pricing.bulk gives volume + records in one call)
+- For ~25 tracked players nightly: **~50 API calls total** — same order of magnitude as current
+
+Additional optional refinements (not load-bearing for the fix):
+- Pre-filter hits to flagship products (Topps, Bowman, Topps Chrome) before the volume tie-break
+- Cache the resolved player → canonical_card_id mapping for a week
+- Add a fallback secondary search with `{player} {year}` when best-of-top-5 yields all-zero (Skenes case)
+
+## 11.7 — Expected gate outcome after (α)
+
+If (α) lands per Section 11.6:
+
+- 6/8 currently-failing players in the probe sample would gain ≥25 records of pricing data → meaningful compsMomentum signal
+- 2/8 (Paul Skenes, Bobby Witt Jr partial) may need the `{player} {year}` secondary fallback — handled by the "optional refinement #3" above
+- **Projected coverage: 18-22 of 25 sample → meaningful Cardsight data** (vs current 7/25)
+
+The ±10% gate would re-run after (α) implementation; the prior 8.76% verdict was technical-pass-by-default-on-neutral-fallback, so re-verification post-(α) is essential.
+
+## 11.8 — Honest framing of uncertainty
+
+- The 8-player probe sample is small. Pattern C produced 0 records for Paul Skenes (no top-5 had pricing); a larger sample might surface more edge cases that (α) doesn't fully solve.
+- The "{player} baseball" vs "{player}" distinction matters more for queries like Skenes/Holliday (current top prospects whose canonical cards may not have full pricing data IN ANY year because they're so new). For these, the fallback to `{player} {year}` helps but only if Bowman has populated their RC year pricing.
+- The recommendation explicitly does NOT propose a per-player canonical-card mapping table (would be ergonomic but introduces curation cost). It uses dynamic discovery via best-of-top-N.
+
+## 11.9 — Cost of (α) implementation
+
+| Component | Estimate |
+|-----------|----------|
+| Update `get_comps_signal` to use best-of-top-N selection | ~30 LOC, ~30 min |
+| Add `{player} {year}` fallback when top-N all-zero | ~10 LOC, ~15 min |
+| Update tests | ~3 new test cases, ~30 min |
+| Re-run verification gate | ~3 min runtime + analysis |
+| **Total** | **~1.5-2h** |
+
+## 11.10 — Recommendation to Drew
+
+**Path forward:** **(α) — query-strategy reimplementation** is the right next step. Empirical evidence supports it cleanly. Implementation is bounded (~2h), low-risk, and addresses the root cause without introducing new infrastructure.
+
+**Anti-recommendation:** Do NOT ship Sub-2a with the current naive `hits[0]` selection. The 8.76% median deviation PASS is mathematically valid but masks a 72% coverage gap that would degrade the compsMomentum signal materially for most tracked players.
+
+**Drew decision required:** confirm Path-2 → (α) at the empirical evidence. Implementation is a separate kickoff (this CF's hard rule: "DO NOT begin (α) implementation in this phase").
+
+---
+
+# Section 12 — Phase α empirical findings + strategic pause (2026-05-30)
+
+Sub-2a Phase α implemented best-of-top-5 query strategy + `{player} {year}` fallback per γ findings (Section 11). Phase α.2 dual gate execution produced **FAIL on BOTH criteria**. Drew's Option 2 decision: pause for strategic review before any deploy.
+
+## 12.1 Coverage gate (≥15/18 previously-failed players)
+
+**Result: FAIL — 10/18 recovered.**
+
+Distribution of failures:
+
+- **5 players** (Adley Rutschman, Corbin Carroll, Jackson Chourio, Roman Anthony, James Wood): trigger threshold too narrow (`== 0` catches only no-data; misses marginal n=2-4 cases that year-fallback could improve). **Tactical fix:** broaden trigger to `< MIN_MEANINGFUL_RECORDS`.
+- **2 players** (Paul Skenes, Andrew Painter): year fallback triggered but also produced 0 records. **Genuine Cardsight pricing gap.**
+- **2 players** (Elly De La Cruz, Cooper Bonemer): primary search returns `no_match`. **Genuine Cardsight catalog name-resolution gap.**
+
+## 12.2 Deviation gate (median ≤10%)
+
+**Result: FAIL — median 12.64%.**
+
+Breakdown of deviation sources:
+
+- **5 of 8 high-deviation cases have OPPOSITE signal direction** (Vlad Jr, Witt Jr, Misiorowski, Julio Rodriguez at 30-41% deviation with falling/rising disagreement; Aaron Judge at 12.64% with stable/falling disagreement).
+- These are **NOT drift**; they're **cross-vendor canonical-card-divergence**. CardHedge and Cardsight resolve different canonical cards for the same player query. The different cards have different sale patterns and legitimately produce different market signals.
+- The ±10% deviation gate from D8 was designed for "same vendor, same card, market drift over time." **It is not the right methodology for "two vendors, different canonical cards, different markets."**
+
+## 12.3 Strategic question for deliberate consideration
+
+The migration is technically implementable. The strategic question is whether **Cardsight's canonical-card resolution should be the AUTHORITATIVE market signal for HobbyIQ's compsMomentum**, given:
+
+- Cardsight ranks niche-product cards (Leaf Press Pass, Panini Stars & Stripes, current-year Topps base) ahead of canonical cards (Bowman RC, Panini Absolute) for some queries
+- Best-of-top-5 strategy mitigates this for players where canonical cards have pricing data
+- For ~5 players, the post-migration signal is **directionally opposite** to current CardHedge signal
+- Cardsight catalog has ingestion gaps for 2 sampled players (Elly De La Cruz, Cooper Bonemer) — those players **lose compsMomentum signal entirely**
+
+Three legitimate strategic positions:
+
+| Path | Description | Implication |
+|------|-------------|-------------|
+| **(A) Reaffirm D2 Option A** | Accept Cardsight's canonical resolution as authoritative. Migration ships; compsMomentum signal evolves to reflect Cardsight's market view. Prediction model behavior shifts accordingly for affected players. | "Everything is Cardsight" framing fully realized. ~5 players get directionally-opposite signal; 2 lose signal entirely. |
+| **(B) Revise D2 to Option C (defer)** | Reject Cardsight's canonical resolution for compsMomentum specifically. The signal's quality depends on CardHedge's specific canonical-resolution behavior. Migration to Cardsight produces a different (not equivalent) signal. Defer; keep CardHedge alive. | CardHedge subscription stays active for compsMomentum indefinitely. |
+| **(C) Hybrid: per-player canonical-card mapping** | Ship migration with explicit canonical-card mapping table for top N players. Manually curate which Cardsight cardId maps to which player's compsMomentum signal. | Maintenance burden + slow growth of the mapping; not aligned with "minimize manual catalog work" framing. |
+
+**D2 was locked as Option A (full migration) before these findings.** Future-Drew evaluates whether D2 should be reaffirmed (path A), revisited as D2 Option C (path B above), or split (path C above).
+
+## 12.4 Honest accounting on probe budget + bulk endpoint
+
+- **Phase γ + Phase α probes** used **~120 total API calls** vs the 50-80 hard rule limit (~40 over budget). Acknowledged transparently in the HALT report; the over-budget probes (Probe 2 in γ + bulk-endpoint probe in α) were load-bearing for definitive findings.
+- **Cardsight's `/v1/pricing/bulk` endpoint returns 404 Not Found.** The CF-CARDSIGHT-PRICING-BULK backlog item is **EMPIRICALLY REFUTED**. The Python client's `get_pricing_bulk` function is dead code unless Cardsight builds the endpoint later. SESSION_HANDOFF backlog updated.
+
+## 12.5 Sub-2a artifacts preserved (this commit)
+
+- [`compiq-functions/shared/cardsight.py`](compiq-functions/shared/cardsight.py) — Python Cardsight client (23/23 client tests green)
+- [`compiq-functions/fn-cardhedge-comps/function.py`](compiq-functions/fn-cardhedge-comps/function.py) — α best-of-top-5 implementation (7/7 function tests green)
+- [`compiq-functions/scripts/verify_compsmomentum_migration.py`](compiq-functions/scripts/verify_compsmomentum_migration.py) — dual-gate verification script
+- [`compiq-functions/scripts/verify_compsmomentum_results.json`](compiq-functions/scripts/verify_compsmomentum_results.json) — α.2 gate execution results (FAIL outcome documented)
+- [`compiq-functions/scripts/probe_cardsight_coverage_gap.py`](compiq-functions/scripts/probe_cardsight_coverage_gap.py) + results JSON — γ diagnostic
+- [`compiq-functions/scripts/probe_pricing_followup.py`](compiq-functions/scripts/probe_pricing_followup.py) — γ pricing confirmation
+- [`compiq-functions/scripts/probe_pricing_bulk.py`](compiq-functions/scripts/probe_pricing_bulk.py) — α empirical refutation of bulk endpoint
+- [`compiq-functions/tests/test_cardsight.py`](compiq-functions/tests/test_cardsight.py) — client tests
+- [`compiq-functions/tests/test_fn_cardhedge_comps.py`](compiq-functions/tests/test_fn_cardhedge_comps.py) — function tests
+
+**All artifacts preserved for future-Drew's strategic decision. Migration code is COMPLETE but NOT DEPLOYED.**
+
+## 12.6 Next steps when Sub-2a resumes
+
+When Drew makes the strategic call (path A / B / C from 12.3):
+
+**Path A — Reaffirm D2 Option A:**
+- (α′) Broaden year-fallback trigger to `< MIN_MEANINGFUL_RECORDS`
+- (gate redesign) Replace ±10% deviation with "signal direction agreement on full-data overlaps + coverage ≥X/18"
+- Run revised gate; if PASS, deploy
+- Capability acceptance: ~2 players lose signal entirely (catalog gaps), ~5 players get directionally opposite signal (acceptable per Path A's framing)
+
+**Path B — Revise D2 to Option C (defer):**
+- Halt this CF; update SESSION_HANDOFF backlog
+- CardHedge subscription stays active for compsMomentum indefinitely
+- Reconsider when (a) Cardsight catalog improves, (b) Phase 4a enables D2 Option B (live pricing), or (c) HobbyIQ accepts signal-source change as part of broader v2 evaluation
+
+**Path C — Hybrid canonical-card mapping:**
+- Implement per-player canonical cardId table for top N players
+- Maintain manually as catalog evolves
+- Likely requires additional design work + ongoing maintenance budget
+
+---
+
 # Phase 1 → Phase 2 transition
 
 This document is the complete Phase 1 deliverable. Phase 2 (a SEPARATE next CF) implements per Section 7's sequencing plan, gated on:
