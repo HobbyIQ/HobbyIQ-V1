@@ -3,7 +3,7 @@ import { compiqEstimate, computeEstimate, simulateWhatIf } from "../services/com
 import { cacheWrap } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
-import { searchCards } from "../services/compiq/cardhedge.client.js";
+import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
 import {
   parseCardQuery,
   buildCompSearchQuery,
@@ -281,61 +281,39 @@ router.get("/comps-by-player", async (req, res, next) => {
 });
 
 // POST /api/compiq/cardsearch
-// Lightweight catalog lookup used by the iOS Search picker â€” returns up to
-// `limit` candidate cards (default 50, hard cap 50) so users can find
-// less-common variants/parallels in a single page. The ceiling matches
-// Card Hedge's per-page maximum enforced in cardhedge.client.ts. Proxies
-// Card Hedge `/cards/card-search` with the server-side API key (the iOS
-// app must NEVER hold that key) and normalizes the response so the client
-// gets a single `image_url` per hit no matter which image field Card
-// Hedge populated.
+//
+// Per CF-UNIFIED-SEARCH-AND-CERT W5-Windows (2026-05-29): migrated
+// from CardHedge to the unified-search dispatcher (Cardsight + cert-
+// grader registry). Returns `UnifiedSearchResponse` per the W3
+// design (23038d7 §4) — same shape as /api/search/cards.
+//
+// **Picker breakage during W5-iOS gap window is an accepted trade-off**
+// per the Phase 1 coordination resolution: the iOS picker as currently
+// deployed expects the legacy `{ ok: true, hits: [...] }` shape; the
+// W5-iOS rebuild migrates it to the new shape. Drew's operational
+// picker use during the gap routes through /api/search/cards directly.
+//
+// CardHedge is dead; the next CF (CF-CARDHEDGE-DECOMMISSION-FULL,
+// HIGH backlog) handles the remaining /price-by-id migration +
+// cardhedge.client.ts deletion + Azure Function disable + env-var
+// cleanup. W5-Windows handles the user-facing endpoint migration;
+// the decommission CF handles the rest.
 router.post("/cardsearch", async (req, res, next) => {
   try {
-    const { query, limit } = req.body || {};
+    const { query, hint } = req.body || {};
     if (!query || typeof query !== "string" || !query.trim()) {
       return res.status(400).json({ success: false, error: 'Missing or invalid "query" field' });
     }
-    // Variant picker uses one Card Hedge page (max 50). Lower defaults
-    // would silently clamp clients that ask for more.
-    const cap = Math.max(1, Math.min(Number(limit) || 50, 50));
-    const raw = await searchCards(query.trim(), cap);
-    const hits = raw.map((c: any) => {
-      const imageCandidates: unknown[] = [
-        c?.front_image_url,
-        c?.image_url,
-        c?.front_image,
-        c?.image,
-        Array.isArray(c?.images) && c.images.length > 0
-          ? (typeof c.images[0] === "string" ? c.images[0] : c.images[0]?.url)
-          : undefined,
-      ];
-      const imageUrl = imageCandidates.find(
-        (u): u is string => typeof u === "string" && /^https?:\/\//i.test(u),
-      ) ?? null;
-      const yearVal: number | null =
-        typeof c?.year === "number"
-          ? c.year
-          : typeof c?.year === "string" && /^\d{4}$/.test(c.year)
-            ? Number(c.year)
-            : null;
-      return {
-        card_id: String(c?.card_id ?? c?.id ?? ""),
-        title:
-          (typeof c?.description === "string" && c.description) ||
-          (typeof c?.title === "string" && c.title) ||
-          (typeof c?.name === "string" && c.name) ||
-          [c?.year, c?.set, c?.player, c?.number ? `#${c.number}` : null]
-            .filter(Boolean)
-            .join(" "),
-        player: typeof c?.player === "string" ? c.player : null,
-        year: yearVal,
-        set: typeof c?.set === "string" ? c.set : null,
-        card_number: typeof c?.number === "string" ? c.number : null,
-        variant: typeof c?.variant === "string" ? c.variant : null,
-        image_url: imageUrl,
-      };
-    }).filter((h) => h.card_id);
-    res.json({ ok: true, hits });
+    let hintParam: "cert" | "freetext" | undefined;
+    if (hint === "cert" || hint === "freetext") {
+      hintParam = hint;
+    } else if (hint !== undefined) {
+      return res
+        .status(400)
+        .json({ success: false, error: '`hint` must be either "cert" or "freetext" when provided' });
+    }
+    const response = await dispatchSearch(query, hintParam);
+    res.json(response);
   } catch (err) {
     next(err);
   }
@@ -735,122 +713,25 @@ router.post("/price", async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Card-Ladder-style two-step search
+// Two-step pricing flow (W5-Windows state):
 //
-// 1. POST /api/compiq/search-list { query }
-//      â†’ returns up to 20 matching card variants (player, set, year, #, variant)
-//        with no comps/pricing. The iOS client renders this as a picker.
-// 2. POST /api/compiq/price-by-id { cardHedgeCardId, query?, gradeCompany?, gradeValue? }
-//      â†’ returns the full CompIQ estimate pinned to that exact card_id.
+// 1. POST /api/compiq/cardsearch    — Cardsight-backed search via unified
+//                                     dispatcher; returns UnifiedSearchResponse
+//                                     (W3 shape). Migrated from CardHedge
+//                                     2026-05-29 (CF-UNIFIED-SEARCH-AND-CERT
+//                                     W5-Windows).
+// 2. POST /api/compiq/price-by-id   — pins a CompIQ estimate to a specific
+//                                     CardHedge card_id. **Still on CardHedge**
+//                                     pending CF-CARDHEDGE-DECOMMISSION-FULL
+//                                     (HIGH backlog) which migrates pricing +
+//                                     deletes cardhedge.client.ts entirely.
+//
+// `/api/compiq/search-list` was the legacy CardHedge-shape picker endpoint.
+// **Deleted** in this commit per Phase 1 caller grep (no runtime consumers
+// outside the route itself; only doc references remained). iOS picker as
+// currently deployed uses /api/compiq/cardsearch; W5-iOS rebuilds it
+// against UnifiedSearchResponse.
 // ---------------------------------------------------------------------------
-
-router.post("/search-list", async (req, res, next) => {
-  try {
-    const { query } = req.body || {};
-    if (!query || typeof query !== "string" || !query.trim()) {
-      return res.status(400).json({ success: false, error: 'Missing "query" field' });
-    }
-    const { searchCards } = await import("../services/compiq/cardhedge.client.js");
-    const cacheKey = normalizeCacheKey("compiq:search-list:v2", query);
-    const result = await cacheWrap(cacheKey, async () => {
-      const hits = await searchCards(query.trim(), 30);
-
-      // ----- Autograph detection -------------------------------------------
-      // Card Hedge does NOT label autographs explicitly in `variant`.
-      // The autograph signal is encoded in `set`, `number`, or `title` via
-      // tokens like "Auto", "Autograph", "Signature", or number prefixes
-      // CPA / CDA / BDPA / PA- / -AU / RAP / 1stPA etc.
-      const AUTO_TEXT_RE = /\b(auto|autograph|autographs|signature|signed)\b/i;
-      const AUTO_NUMBER_RE = /(^|[^a-z])(cpa|cda|bdpa|cra|cdra|prospect ?auto|1st\s*pa|pa-|-au\b|ap-|rap)/i;
-
-      const isAutograph = (c: any): boolean => {
-        const blob = `${c.set ?? ""} ${c.number ?? ""} ${c.title ?? ""} ${c.name ?? ""} ${c.variant ?? ""}`;
-        return AUTO_TEXT_RE.test(blob) || AUTO_NUMBER_RE.test(blob);
-      };
-
-      // ----- Query-intent parsing ------------------------------------------
-      const q = query.toLowerCase();
-      const wantsAuto = AUTO_TEXT_RE.test(q);
-      const COLOR_RE = /\b(sky\s+blue|royal\s+blue|navy|aqua|red|blue|green|gold|orange|purple|pink|yellow|black|white|silver|atomic|prizm|mojo|shimmer|wave|rainbow|refractor)\b/gi;
-      const wantedColors = Array.from(q.matchAll(COLOR_RE)).map((m) => m[0].toLowerCase().replace(/\s+/g, " "));
-
-      const enriched = hits.map((c) => {
-        const auto = isAutograph(c);
-        const variantText = (c.variant ?? "").toLowerCase();
-        const setText = (c.set ?? "").toLowerCase();
-        const numberText = (c.number ?? "").toLowerCase();
-
-        // Score: exact color match in variant > color match in set > nothing.
-        let colorScore = 0;
-        if (wantedColors.length > 0) {
-          for (const col of wantedColors) {
-            if (variantText.includes(col)) colorScore += 3;
-            else if (setText.includes(col)) colorScore += 1;
-          }
-          // Penalize "sky blue" being matched when user wanted plain "blue" alone.
-          if (wantedColors.includes("blue") && !wantedColors.some((c) => c !== "blue") && variantText.includes("sky blue")) {
-            colorScore -= 1;
-          }
-        }
-
-        const autoScore = wantsAuto ? (auto ? 5 : -2) : 0;
-
-        // Promote "1st" / rookie variants when present, mildly.
-        const rookieBoost = /\b(1st|rookie|rc)\b/i.test(`${setText} ${numberText} ${variantText}`) ? 0.5 : 0;
-
-        const sortScore = colorScore + autoScore + rookieBoost;
-
-        const variantWithAuto =
-          auto && c.variant && !/auto/i.test(c.variant) ? `${c.variant} Auto` : c.variant ?? null;
-
-        return {
-          cardHedgeCardId: c.card_id,
-          player: c.player ?? null,
-          set: c.set ?? null,
-          year: c.year ?? null,
-          number: c.number ?? null,
-          variant: variantWithAuto,
-          isAutograph: auto,
-          title: c.title ?? c.name ?? null,
-          displayLabel: [c.year, c.set, c.player, c.number, variantWithAuto]
-            .filter(Boolean)
-            .join(" "),
-          sortScore,
-        };
-      });
-
-      // Stable sort: highest score first; preserve original order on ties.
-      const ranked = enriched
-        .map((e, i) => ({ e, i }))
-        .sort((a, b) => b.e.sortScore - a.e.sortScore || a.i - b.i)
-        .map(({ e }) => {
-          const { sortScore, ...rest } = e;
-          return rest;
-        });
-
-      // When the user explicitly asked for an autograph, hide the
-      // non-autograph variants so the picker doesn't drown the user.
-      const filtered = wantsAuto ? ranked.filter((r) => r.isAutograph) : ranked;
-
-      // Cap to 20 for display.
-      const finalResults = filtered.slice(0, 20);
-
-      return {
-        success: true,
-        query: query.trim(),
-        count: finalResults.length,
-        filters: {
-          wantsAuto,
-          wantedColors,
-        },
-        results: finalResults,
-      };
-    }, CACHE_TTL_SECONDS);
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-});
 
 router.post("/price-by-id", async (req, res, next) => {
   const handlerStart = Date.now();
@@ -872,11 +753,11 @@ router.post("/price-by-id", async (req, res, next) => {
       };
       const est = await computeEstimate(body);
 
-      // Unsupported-sport short-circuit â€” defensive guard for /price-by-id.
-      // UI normally only pins card_ids surfaced via /search-list (which is
-      // Baseball-locked via _searchCards), so this branch should never fire
-      // in practice. But if a non-baseball card_id ever leaks through, we
-      // return the same shape as /search / /price rather than silently
+      // Unsupported-sport short-circuit — defensive guard for /price-by-id.
+      // UI normally only pins card_ids surfaced via the picker
+      // (Baseball-locked at the search layer), so this branch should never
+      // fire in practice. But if a non-baseball card_id ever leaks through,
+      // we return the same shape as /search / /price rather than silently
       // mis-pricing.
       if (est.source === "unsupported_sport") {
         return {

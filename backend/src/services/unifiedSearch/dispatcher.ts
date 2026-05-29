@@ -43,7 +43,10 @@ import {
   type CertLookupResult,
 } from "../certGraders/certGrader.js";
 import { searchCatalog } from "../compiq/cardsight.client.js";
-import { cardsightCatalogToCardIdentity } from "./cardsightCatalogAdapter.js";
+import {
+  cardsightCatalogToCardIdentity,
+  enrichWithDetails,
+} from "./cardsightCatalogAdapter.js";
 import { rankCatalogHits } from "./rankCatalogHits.js";
 import type { CardIdentity } from "../../types/cardIdentity.js";
 import type {
@@ -133,9 +136,23 @@ async function dispatchFreetextMode(
 ): Promise<UnifiedSearchResponse> {
   const catalogHits = await searchCatalog(trimmed, { take: FREETEXT_TAKE_DEFAULT });
   const ranked = rankCatalogHits(catalogHits, trimmed);
-  const candidates = ranked.map(({ hit, score }) =>
-    cardsightCatalogToCardIdentity(hit, score),
-  );
+
+  // Per CF-UNIFIED-SEARCH-AND-CERT W5-Windows D1: enrich ranked
+  // catalog hits with detail-endpoint data (parallels[] + attributes[])
+  // before mapping to CardIdentity. The enrichment is concurrency-
+  // limited and cacheWrap-protected at the client layer; failed
+  // per-hit fetches surface as an aggregated warn event and leave
+  // the candidate without parallels/attributes rather than dropping
+  // the hit.
+  const rankedHits = ranked.map(({ hit }) => hit);
+  const enriched = await enrichWithDetails(rankedHits);
+
+  // Stitch detail back onto each (hit, score) pair, preserving rank order.
+  const candidates = ranked.map(({ hit, score }, idx) => {
+    const detail = enriched[idx]?.detail;
+    return cardsightCatalogToCardIdentity(hit, score, detail);
+  });
+
   return {
     input: { raw: input, detectedMode: "freetext" },
     candidates,

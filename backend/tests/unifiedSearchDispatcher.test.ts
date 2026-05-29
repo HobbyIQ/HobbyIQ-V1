@@ -16,9 +16,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/services/compiq/cardsight.client.js", () => ({
   searchCatalog: vi.fn(),
+  getCardDetail: vi.fn(),
 }));
 
-import { searchCatalog } from "../src/services/compiq/cardsight.client.js";
+import {
+  getCardDetail,
+  searchCatalog,
+} from "../src/services/compiq/cardsight.client.js";
 import { dispatchSearch } from "../src/services/unifiedSearch/dispatcher.js";
 import {
   __resetRegistryForTest,
@@ -31,6 +35,7 @@ import {
 import type { CardIdentity } from "../src/types/cardIdentity.js";
 
 const mockedSearchCatalog = searchCatalog as unknown as ReturnType<typeof vi.fn>;
+const mockedGetCardDetail = getCardDetail as unknown as ReturnType<typeof vi.fn>;
 
 function makeIdentity(overrides: Partial<CardIdentity> = {}): CardIdentity {
   return {
@@ -96,6 +101,20 @@ function makeGrader(opts: {
 beforeEach(() => {
   __resetRegistryForTest();
   mockedSearchCatalog.mockReset();
+  mockedGetCardDetail.mockReset();
+  // Default detail mock returns a minimal valid CardsightCardDetail so
+  // dispatcher tests that don't care about enrichment specifics get
+  // sensible behavior without per-test setup.
+  mockedGetCardDetail.mockResolvedValue({
+    id: "stub",
+    name: "stub",
+    number: "1",
+    releaseName: "stub",
+    setName: "stub",
+    year: 2024,
+    parallels: [],
+    attributes: [],
+  });
 });
 
 afterEach(() => {
@@ -291,5 +310,82 @@ describe("dispatchSearch — freetext mode", () => {
     const r = await dispatchSearch("blue");
     expect(r.candidates[0].candidateId).toBe("cardsight:blue");
     expect(r.candidates[1].candidateId).toBe("cardsight:base");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// W5-Windows — freetext-mode detail enrichment
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("dispatchSearch — W5 freetext enrichment", () => {
+  it("populates parallels and attributes from detail enrichment on each candidate", async () => {
+    mockedSearchCatalog.mockResolvedValueOnce([
+      { id: "abc", name: "Bobby Witt Jr", number: "USC35", releaseName: "Topps Chrome Update", setName: "Base Set", year: 2022, player: "Bobby Witt Jr" },
+    ]);
+    mockedGetCardDetail.mockResolvedValueOnce({
+      id: "abc",
+      name: "Bobby Witt Jr",
+      number: "USC35",
+      releaseName: "Topps Chrome Update",
+      setName: "Base Set",
+      year: 2022,
+      parallels: [
+        { id: "p1", name: "Refractor", numberedTo: 299 },
+        { id: "p2", name: "SuperFractor", numberedTo: 1 },
+      ],
+      attributes: ["MLB-KCR", "RC"],
+    });
+    const r = await dispatchSearch("Bobby Witt Jr");
+    expect(r.candidates).toHaveLength(1);
+    expect(r.candidates[0].parallels).toHaveLength(2);
+    expect(r.candidates[0].parallels?.[0].name).toBe("Refractor");
+    expect(r.candidates[0].attributes).toEqual(["MLB-KCR", "RC"]);
+  });
+
+  it("calls getCardDetail with the cardId from each search hit, in rank order", async () => {
+    mockedSearchCatalog.mockResolvedValueOnce([
+      { id: "first", name: "X", number: "1", releaseName: "Topps", setName: "Base", year: 2024, player: "X" },
+      { id: "second", name: "Y", number: "2", releaseName: "Topps", setName: "Base", year: 2024, player: "Y" },
+    ]);
+    await dispatchSearch("anything");
+    expect(mockedGetCardDetail).toHaveBeenCalledTimes(2);
+    const calledIds = mockedGetCardDetail.mock.calls.map((c) => c[0]);
+    expect(calledIds).toEqual(["first", "second"]);
+  });
+
+  it("leaves parallels/attributes undefined on the candidate when detail fetch fails for that hit", async () => {
+    mockedSearchCatalog.mockResolvedValueOnce([
+      { id: "ok", name: "OK", number: "1", releaseName: "Topps", setName: "Base", year: 2024, player: "OK" },
+      { id: "boom", name: "Boom", number: "2", releaseName: "Topps", setName: "Base", year: 2024, player: "Boom" },
+    ]);
+    mockedGetCardDetail
+      .mockResolvedValueOnce({
+        id: "ok", name: "OK", number: "1", releaseName: "Topps", setName: "Base", year: 2024,
+        parallels: [{ id: "p", name: "Refractor" }],
+        attributes: ["RC"],
+      })
+      .mockRejectedValueOnce(new Error("upstream timeout"));
+    const r = await dispatchSearch("anything");
+    expect(r.candidates).toHaveLength(2);
+    const okCand = r.candidates.find((c) => c.candidateId === "cardsight:ok");
+    const boomCand = r.candidates.find((c) => c.candidateId === "cardsight:boom");
+    expect(okCand?.parallels).toHaveLength(1);
+    expect(boomCand?.parallels).toBeUndefined();
+    expect(boomCand?.attributes).toBeUndefined();
+  });
+
+  it("does NOT enrich on cert-mode dispatch (PSA path stays untouched)", async () => {
+    registerCertGrader(makeGrader({
+      id: "psa",
+      recognizes: () => true,
+    }));
+    await dispatchSearch("12345678");
+    expect(mockedGetCardDetail).not.toHaveBeenCalled();
+  });
+
+  it("does NOT enrich on empty input (zero searchCatalog calls)", async () => {
+    await dispatchSearch("");
+    expect(mockedSearchCatalog).not.toHaveBeenCalled();
+    expect(mockedGetCardDetail).not.toHaveBeenCalled();
   });
 });

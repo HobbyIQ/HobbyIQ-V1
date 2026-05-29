@@ -12,6 +12,10 @@
  * but stale; this is the source of truth.
  */
 
+import type { CardsightParallel } from "../services/compiq/cardsight.client.js";
+
+export type { CardsightParallel };
+
 export type CardIdentitySource =
   | "psa-cert"
   | "cardsight-catalog"
@@ -65,6 +69,29 @@ export interface CardIdentity {
   // Display
   title: string;
   imageUrl: string | null;
+
+  /**
+   * Per CF-UNIFIED-SEARCH-AND-CERT W5-Windows (2026-05-29) — detail-
+   * enriched fields populated by the Cardsight catalog adapter when
+   * the dispatcher fans out per-hit `getCardDetail` fetches. Cert-
+   * source candidates (PSA / future graders) leave these undefined.
+   *
+   * `parallels` carries the empirically-verified
+   * Array<{ id, name, numberedTo? }> shape from the Cardsight detail
+   * endpoint — used by the iOS picker (W5-iOS) to distinguish near-
+   * identical rows (Refractor / Blue / Gold / Red / Superfractor).
+   *
+   * `attributes` carries free-form tags from Cardsight (e.g.
+   * "MLB-KCR", "RC"). Empty-array when the upstream response omits
+   * them; absent when detail enrichment was not attempted (cert path).
+   *
+   * Both fields are OPTIONAL. Absent on cert-source candidates;
+   * present-but-empty on Cardsight catalog candidates where the
+   * upstream response carried no parallels / attributes; present-and-
+   * populated on the common case.
+   */
+  parallels?: CardsightParallel[];
+  attributes?: string[];
 
   /** Vendor body for debug / future use. */
   raw?: unknown;

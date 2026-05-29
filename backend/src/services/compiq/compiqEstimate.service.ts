@@ -1488,7 +1488,8 @@ export async function computeEstimate(
   // only the free-text query path (findCompsByQuery → identifyCard). The
   // pinned-card-id path never sets aiCategory because category is not
   // resolved there; that path is gated upstream by the iOS picker, which
-  // is fed by /search-list → searchCards (Baseball-locked).
+  // is fed by /cardsearch → Cardsight (Baseball-locked at the catalog
+  // search layer via segment=baseball).
   const SUPPORTED_SPORTS = new Set(["baseball"]);
   const detectedCategory = fetched.aiCategory;
   if (detectedCategory && !SUPPORTED_SPORTS.has(detectedCategory.toLowerCase())) {

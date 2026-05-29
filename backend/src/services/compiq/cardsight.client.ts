@@ -58,6 +58,16 @@ export interface CardsightCardDetail {
   setName: string;
   year: number;
   parallels: CardsightParallel[];
+  /**
+   * Free-form attribute tags from Cardsight (e.g. ["MLB-KCR", "RC"]).
+   * Surfaced by the catalog detail response; empirically verified
+   * 2026-05-29 (Cardsight published-SDK investigation Appendix A1).
+   * Always an array — empty when the upstream response omits the field
+   * or sets it to a non-array value. Optional in the interface for
+   * backward-compat with consumers that don't read it; the mapper
+   * below always populates `[]` when absent.
+   */
+  attributes?: string[];
   /** Set to true when the card was not found (404). Never throws for 404. */
   notFound?: boolean;
 }
@@ -288,6 +298,7 @@ function _notFoundDetail(cardId: string): CardsightCardDetail {
     setName: "",
     year: 0,
     parallels: [],
+    attributes: [],
     notFound: true,
   };
 }
@@ -324,6 +335,9 @@ async function _getCardDetail(cardId: string): Promise<CardsightCardDetail> {
       setName: body.setName ?? "",
       year,
       parallels: Array.isArray(body.parallels) ? (body.parallels as CardsightParallel[]) : [],
+      attributes: Array.isArray(body.attributes)
+        ? (body.attributes.filter((a: unknown): a is string => typeof a === "string"))
+        : [],
     };
   } catch (err: any) {
     if (err instanceof CardsightTimeoutError) throw err;

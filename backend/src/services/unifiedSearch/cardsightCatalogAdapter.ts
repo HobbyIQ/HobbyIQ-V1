@@ -19,11 +19,24 @@
 // uses 0 as the not-found sentinel; passing 0 through to CardIdentity
 // would mislead consumers into rendering "0" as the card year).
 
-import type { CardsightCatalogResult } from "../compiq/cardsight.client.js";
+import {
+  getCardDetail,
+  type CardsightCatalogResult,
+  type CardsightCardDetail,
+} from "../compiq/cardsight.client.js";
+import { withConcurrencyResult } from "../shared/concurrency.js";
 import type {
   CardIdentity,
   CardIdentityAttribution,
 } from "../../types/cardIdentity.js";
+
+// Detail-enrichment concurrency limit. Empirically derived from the
+// cardsight-cert-investigation arc (~8 req/s observed on the Cardsight
+// catalog endpoints). Stacks additively with `fetchWithRetry`'s
+// exponential backoff in cardsight.client.ts:152-195 — the pool caps
+// outbound rate, retry handles any upstream 429 that slips through.
+// Revisit if production observation differs.
+const DETAIL_ENRICHMENT_CONCURRENCY = 8;
 
 // Autograph signal regexes. Lifted as-is from the legacy CardHedge
 // pipeline at compiq.routes.ts:763-764 — the text patterns are
@@ -93,13 +106,24 @@ export function buildCatalogTitle(c: CardsightCatalogResult): string {
  * `rankCatalogHits`, NOT a cert-grader certainty.
  *
  * Catalog list does not carry parallel/variation/serial info; those
- * live on /catalog/cards/{id} detail (CardsightCardDetail). The
- * adapter sets them to null/false; downstream consumers fetch detail
- * via VerifyView's "load details" step when needed.
+ * live on /catalog/cards/{id} detail (CardsightCardDetail). When
+ * `detail` is supplied (per CF-UNIFIED-SEARCH-AND-CERT W5-Windows
+ * dispatcher enrichment), the `parallels` array and `attributes`
+ * are populated from it; when absent, those fields remain undefined
+ * on the returned CardIdentity (cert-source candidates also leave
+ * them undefined by design).
+ *
+ * Image data is intentionally NOT enriched here — Cardsight's
+ * `get_card_image` is a separate per-card binary fetch with no URL
+ * shortcut (empirically confirmed 2026-05-29 follow-up Appendix A2).
+ * W5-iOS picker handles image fetch via the SDK / direct endpoint
+ * with whichever mitigation strategy (lazy / top-N / cache) the
+ * picker UX chooses.
  */
 export function cardsightCatalogToCardIdentity(
   c: CardsightCatalogResult,
   rankingScore: number,
+  detail?: CardsightCardDetail,
 ): CardIdentity {
   const attribution: CardIdentityAttribution = "ranked";
   // Year=0 is Cardsight's not-found sentinel; surface as null rather
@@ -133,6 +157,92 @@ export function cardsightCatalogToCardIdentity(
     title: buildCatalogTitle(c),
     imageUrl: null,
 
+    // Detail-enriched fields. Undefined when detail isn't supplied or
+    // arrived as a notFound sentinel; populated otherwise.
+    parallels: detail && !detail.notFound ? detail.parallels : undefined,
+    attributes:
+      detail && !detail.notFound
+        ? (detail.attributes ?? [])
+        : undefined,
+
     raw: c,
   };
+}
+
+/**
+ * Enrich a ranked Cardsight catalog hit list with detail-endpoint data
+ * (parallels[] + attributes[]) via concurrency-limited per-hit fetches.
+ *
+ * **Partial-failure semantics** (per CF-UNIFIED-SEARCH-AND-CERT W5-
+ * Windows decision D1+D2): individual detail-fetch failures DO NOT
+ * drop the hit from the response. Failed fetches surface as a single
+ * aggregated `cardsight_detail_fetch_partial_failure` warn event for
+ * grep-able post-deploy observability — per-fetch logs alone would
+ * bury the signal in normal Cardsight chatter.
+ *
+ * Caching: each `getCardDetail` call already wraps `cacheWrap` with
+ * key `cs:detail:{cardId}` TTL 24h (see cardsight.client.ts:285-289).
+ * Warm-cache hits short-circuit at the client layer; the concurrency
+ * pool here only spans actual cold fetches.
+ *
+ * Returns one `(hit, detail | undefined)` pair per input hit, in
+ * input order. Caller passes both through to
+ * `cardsightCatalogToCardIdentity(hit, score, detail)`.
+ */
+export async function enrichWithDetails(
+  hits: CardsightCatalogResult[],
+): Promise<Array<{ hit: CardsightCatalogResult; detail: CardsightCardDetail | undefined }>> {
+  if (hits.length === 0) return [];
+  const settled = await withConcurrencyResult(
+    hits,
+    DETAIL_ENRICHMENT_CONCURRENCY,
+    async (hit) => getCardDetail(hit.id),
+  );
+
+  let failures = 0;
+  const enriched = hits.map((hit, idx) => {
+    const r = settled[idx];
+    if (r.ok && !r.value.notFound) {
+      return { hit, detail: r.value };
+    }
+    // r.ok=false (thrown) OR r.ok=true + notFound sentinel both leave
+    // the candidate without parallels/attributes. The aggregated
+    // partial-failure event below only counts thrown errors — those
+    // are infrastructure-class signals (timeout, upstream 5xx).
+    //
+    // notFound from a search-returned cardId is a different signal:
+    // Cardsight's search said the card exists, but its detail endpoint
+    // says it doesn't. That's a data-consistency observation worth
+    // logging discretely (info-level, distinct event name) so
+    // post-deploy telemetry can grep for it. If it shows up, that's a
+    // candidate for upstream-feedback follow-up.
+    if (!r.ok) {
+      failures += 1;
+    } else if (r.value.notFound) {
+      console.log(
+        JSON.stringify({
+          event: "cardsight_detail_notfound_from_search",
+          source: "unifiedSearch.cardsightCatalogAdapter",
+          cardId: hit.id,
+        }),
+      );
+    }
+    return { hit, detail: undefined };
+  });
+
+  if (failures > 0) {
+    // Aggregated event per CF-PLAYERTRENDS-DUPLICATE-RECORDS
+    // partial-failure pattern (b864af5) — grep-able discrete finding,
+    // not buried in per-fetch noise.
+    console.warn(
+      JSON.stringify({
+        event: "cardsight_detail_fetch_partial_failure",
+        source: "unifiedSearch.cardsightCatalogAdapter",
+        totalHits: hits.length,
+        failures,
+      }),
+    );
+  }
+
+  return enriched;
 }

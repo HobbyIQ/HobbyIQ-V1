@@ -1,17 +1,37 @@
-// CF-UNIFIED-SEARCH-AND-CERT v1 W3 — Cardsight catalog adapter tests.
+// CF-UNIFIED-SEARCH-AND-CERT v1 W3 + W5-Windows — Cardsight catalog adapter tests.
 //
-// Covers the three exported helpers:
-//   - cardsightCatalogToCardIdentity (shape mapping + year=0 sentinel)
+// Covers the exported helpers:
+//   - cardsightCatalogToCardIdentity (shape mapping + year=0 sentinel
+//                                     + W5 detail enrichment)
 //   - detectAutoFromBlob              (autograph signal across fields)
 //   - buildCatalogTitle               (display string composition)
+//   - enrichWithDetails               (W5 concurrency-limited detail
+//                                     fetch + partial-failure semantics)
 
-import { describe, expect, it } from "vitest";
-import type { CardsightCatalogResult } from "../src/services/compiq/cardsight.client.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../src/services/compiq/cardsight.client.js", async () => {
+  const actual = await vi.importActual<any>("../src/services/compiq/cardsight.client.js");
+  return {
+    ...actual,
+    getCardDetail: vi.fn(),
+  };
+});
+
+import {
+  getCardDetail,
+  type CardsightCardDetail,
+  type CardsightCatalogResult,
+  type CardsightParallel,
+} from "../src/services/compiq/cardsight.client.js";
 import {
   buildCatalogTitle,
   cardsightCatalogToCardIdentity,
   detectAutoFromBlob,
+  enrichWithDetails,
 } from "../src/services/unifiedSearch/cardsightCatalogAdapter.js";
+
+const mockedGetCardDetail = getCardDetail as unknown as ReturnType<typeof vi.fn>;
 
 function makeCatalogResult(overrides: Partial<CardsightCatalogResult> = {}): CardsightCatalogResult {
   return {
@@ -227,5 +247,191 @@ describe("buildCatalogTitle", () => {
         year: 0,
       }),
     ).toBe("Unknown card");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// W5-Windows — detail-enriched cardsightCatalogToCardIdentity
+// ─────────────────────────────────────────────────────────────────────────
+
+function makeParallel(name: string, numberedTo?: number): CardsightParallel {
+  return {
+    id: `par-${name.replace(/\s+/g, "-").toLowerCase()}`,
+    name,
+    ...(numberedTo !== undefined ? { numberedTo } : {}),
+  };
+}
+
+function makeDetail(overrides: Partial<CardsightCardDetail> = {}): CardsightCardDetail {
+  return {
+    id: "c-fixture",
+    name: "Detail Name",
+    number: "1",
+    releaseName: "Topps Chrome Update",
+    setName: "Base Set",
+    year: 2022,
+    parallels: [],
+    attributes: [],
+    ...overrides,
+  };
+}
+
+describe("cardsightCatalogToCardIdentity — W5 detail enrichment", () => {
+  it("populates parallels[] when detail is supplied", () => {
+    const hit = makeCatalogResult();
+    const detail = makeDetail({
+      parallels: [
+        makeParallel("Refractor", 299),
+        makeParallel("Blue Refractor", 199),
+        makeParallel("SuperFractor", 1),
+      ],
+    });
+    const id = cardsightCatalogToCardIdentity(hit, 1.0, detail);
+    expect(id.parallels).toHaveLength(3);
+    expect(id.parallels?.[0].name).toBe("Refractor");
+    expect(id.parallels?.[2].numberedTo).toBe(1);
+  });
+
+  it("populates attributes[] when detail is supplied", () => {
+    const hit = makeCatalogResult();
+    const detail = makeDetail({ attributes: ["MLB-KCR", "RC"] });
+    const id = cardsightCatalogToCardIdentity(hit, 1.0, detail);
+    expect(id.attributes).toEqual(["MLB-KCR", "RC"]);
+  });
+
+  it("leaves parallels and attributes undefined when detail is omitted (cert-path / no enrichment)", () => {
+    const hit = makeCatalogResult();
+    const id = cardsightCatalogToCardIdentity(hit, 1.0);
+    expect(id.parallels).toBeUndefined();
+    expect(id.attributes).toBeUndefined();
+  });
+
+  it("leaves parallels and attributes undefined when detail is notFound sentinel", () => {
+    const hit = makeCatalogResult();
+    const detail: CardsightCardDetail = {
+      ...makeDetail(),
+      parallels: [makeParallel("ignored")],
+      attributes: ["IGNORED"],
+      notFound: true,
+    };
+    const id = cardsightCatalogToCardIdentity(hit, 1.0, detail);
+    expect(id.parallels).toBeUndefined();
+    expect(id.attributes).toBeUndefined();
+  });
+
+  it("attributes defaults to empty array when detail has parallels but no attributes field", () => {
+    const hit = makeCatalogResult();
+    const detail = makeDetail({
+      parallels: [makeParallel("Refractor")],
+      // attributes intentionally omitted from this override; makeDetail
+      // defaults to [] but the runtime can also see undefined from older
+      // cached responses.
+    });
+    delete (detail as { attributes?: string[] }).attributes;
+    const id = cardsightCatalogToCardIdentity(hit, 1.0, detail);
+    expect(id.parallels).toHaveLength(1);
+    expect(id.attributes).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// enrichWithDetails — concurrency + partial-failure semantics
+// ─────────────────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  mockedGetCardDetail.mockReset();
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("enrichWithDetails", () => {
+  it("returns empty array on empty input without calling getCardDetail", async () => {
+    const out = await enrichWithDetails([]);
+    expect(out).toEqual([]);
+    expect(mockedGetCardDetail).not.toHaveBeenCalled();
+  });
+
+  it("maps each hit to its detail in input order", async () => {
+    mockedGetCardDetail
+      .mockResolvedValueOnce(makeDetail({ id: "a", parallels: [makeParallel("A")] }))
+      .mockResolvedValueOnce(makeDetail({ id: "b", parallels: [makeParallel("B")] }))
+      .mockResolvedValueOnce(makeDetail({ id: "c", parallels: [makeParallel("C")] }));
+    const hits = [
+      makeCatalogResult({ id: "a" }),
+      makeCatalogResult({ id: "b" }),
+      makeCatalogResult({ id: "c" }),
+    ];
+    const out = await enrichWithDetails(hits);
+    expect(out).toHaveLength(3);
+    expect(out[0].detail?.parallels[0].name).toBe("A");
+    expect(out[1].detail?.parallels[0].name).toBe("B");
+    expect(out[2].detail?.parallels[0].name).toBe("C");
+  });
+
+  it("preserves the hit on a failed detail fetch with detail=undefined (partial-failure tolerance)", async () => {
+    mockedGetCardDetail
+      .mockResolvedValueOnce(makeDetail({ id: "ok" }))
+      .mockRejectedValueOnce(new Error("upstream-blew-up"))
+      .mockResolvedValueOnce(makeDetail({ id: "fine" }));
+    const hits = [
+      makeCatalogResult({ id: "ok" }),
+      makeCatalogResult({ id: "boom" }),
+      makeCatalogResult({ id: "fine" }),
+    ];
+    const out = await enrichWithDetails(hits);
+    expect(out).toHaveLength(3);
+    expect(out[0].detail?.id).toBe("ok");
+    expect(out[1].detail).toBeUndefined();
+    expect(out[2].detail?.id).toBe("fine");
+  });
+
+  it("notFound-sentinel detail maps to undefined (treated the same as a thrown error)", async () => {
+    mockedGetCardDetail.mockResolvedValueOnce({
+      ...makeDetail({ id: "x" }),
+      notFound: true,
+    });
+    const out = await enrichWithDetails([makeCatalogResult({ id: "x" })]);
+    expect(out[0].detail).toBeUndefined();
+  });
+
+  it("emits the aggregated cardsight_detail_fetch_partial_failure warn event when any fetch throws", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockedGetCardDetail
+      .mockResolvedValueOnce(makeDetail({ id: "a" }))
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockRejectedValueOnce(new Error("boom2"));
+    await enrichWithDetails([
+      makeCatalogResult({ id: "a" }),
+      makeCatalogResult({ id: "b" }),
+      makeCatalogResult({ id: "c" }),
+    ]);
+    const warnedJson = warnSpy.mock.calls.find((call) =>
+      String(call[0]).includes("cardsight_detail_fetch_partial_failure"),
+    );
+    expect(warnedJson).toBeDefined();
+    const payload = JSON.parse(String(warnedJson![0]));
+    expect(payload.event).toBe("cardsight_detail_fetch_partial_failure");
+    expect(payload.source).toBe("unifiedSearch.cardsightCatalogAdapter");
+    expect(payload.totalHits).toBe(3);
+    expect(payload.failures).toBe(2);
+    warnSpy.mockRestore();
+  });
+
+  it("does NOT emit the partial-failure event when every fetch succeeds", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockedGetCardDetail
+      .mockResolvedValueOnce(makeDetail({ id: "a" }))
+      .mockResolvedValueOnce(makeDetail({ id: "b" }));
+    await enrichWithDetails([
+      makeCatalogResult({ id: "a" }),
+      makeCatalogResult({ id: "b" }),
+    ]);
+    const partialFailureWarned = warnSpy.mock.calls.some((call) =>
+      String(call[0]).includes("cardsight_detail_fetch_partial_failure"),
+    );
+    expect(partialFailureWarned).toBe(false);
+    warnSpy.mockRestore();
   });
 });

@@ -8,12 +8,13 @@
 //
 // Why Cardsight-shape-specific (not shape-agnostic): the W3
 // implementation choice deliberately keeps the helper bound to
-// Cardsight's `CardsightCatalogResult` shape. W4 picker migration
-// (CF-PICKER-MIGRATE-TO-CARDSIGHT, absorbed into v1 per D1) migrates
-// the legacy /api/compiq/search-list off CardHedge onto Cardsight,
-// at which point the legacy route can call THIS helper. Until W4,
-// search-list keeps its inline CardHedge-keyed logic at
-// compiq.routes.ts:758-836 untouched.
+// Cardsight's `CardsightCatalogResult` shape. W5-Windows (2026-05-29)
+// migrated `/api/compiq/cardsearch` to call this helper via the
+// unified dispatcher; the legacy `/api/compiq/search-list` route
+// was DELETED in the same commit per Phase 1 caller-grep findings
+// (no runtime consumers outside the route itself). The original
+// CardHedge-shape ranking logic is gone with the route — no more
+// shape transition state to manage.
 //
 // The ranking math (autograph score + color score + rookie boost +
 // stable sort by score then original order) is preserved exactly

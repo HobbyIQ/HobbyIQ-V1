@@ -6,7 +6,7 @@
 // appearance via computeDailyScore. Output feeds buildDailyBrief (dailyiq.routes.ts)
 // and the scheduled dailyiq.job.
 //
-// No external deps: concurrency is implemented as a small worker pool below.
+// No external deps: concurrency comes from the shared worker-pool helper.
 //
 // Activity filter:
 //   Hitters:  >= 3 plate appearances
@@ -17,6 +17,7 @@
 // primary record and attach the hitter line as `dailyStats.secondaryStats`.
 
 import { computeDailyScore } from "./dailyScore.service.js";
+import { withConcurrency } from "../shared/concurrency.js";
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -249,23 +250,10 @@ async function fetchJsonWithRetry<T>(url: string): Promise<T> {
   }
 }
 
-async function withConcurrency<T, U>(
-  items: T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<U>,
-): Promise<U[]> {
-  const results: U[] = new Array(items.length);
-  let cursor = 0;
-  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, async () => {
-    while (true) {
-      const idx = cursor++;
-      if (idx >= items.length) return;
-      results[idx] = await fn(items[idx], idx);
-    }
-  });
-  await Promise.all(workers);
-  return results;
-}
+// withConcurrency moved to backend/src/services/shared/concurrency.ts
+// 2026-05-29 (CF-UNIFIED-SEARCH-AND-CERT W5-Windows) so the unified-
+// search detail-enrichment path can share the same helper without
+// reach-across-domains imports.
 
 // ── Per-game ingestion ─────────────────────────────────────────────────────
 
