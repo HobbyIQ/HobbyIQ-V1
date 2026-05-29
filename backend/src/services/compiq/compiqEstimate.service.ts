@@ -3,8 +3,7 @@ import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./cardsight.mapper.js";
-import { type CardHedgeCard } from "./cardhedge.client.js";
-import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
+import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext, type CardHedgeCard } from "./cardsight.router.js";
 import { getPricing, type CardsightSaleRecord } from "./cardsight.client.js";
 import {
   parseCardQuery,

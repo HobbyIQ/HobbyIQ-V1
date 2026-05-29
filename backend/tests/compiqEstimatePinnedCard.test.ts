@@ -1,33 +1,28 @@
 /**
  * /api/compiq/price-by-id pinned-cardsightCardId path coverage.
  *
- * Pre-CF-PRICE-BY-ID-MIGRATION: fetchComps's pinned-id branch called
- * cardhedge.client.getCardSales (returned [] under CARDSIGHT_MODE=
- * exclusive — route was effectively broken in production).
- *
- * Post-CF-PRICE-BY-ID-MIGRATION: fetchComps's pinned-id branch calls
- * cardsight.client.getPricing(cardsightCardId) directly, transforms
+ * Post-CF-PRICE-BY-ID-MIGRATION (5640084): fetchComps's pinned-id branch
+ * calls cardsight.client.getPricing(cardsightCardId) directly, transforms
  * the raw + graded company/grade tree into RawComp[] via the new
  * selectSalesByGrade helper, and lets the rest of computeEstimate
  * (TrendIQ + prediction layer + FMV) run over Cardsight-sourced comps.
+ *
+ * Post-CF-CARDHEDGE-HARD-CUTOVER: the meaningful-query fall-through path
+ * (Test 2) now also routes through cardsight.router.findCompsRouted -- no
+ * CardHedge fallback exists. RoutedResult shape preserved verbatim, so
+ * the test's mock fixture port mechanically.
  *
  * Tests:
  *  1. Pinned-id branch (query === cardsightCardId): cardsight.getPricing
  *     called, comps preserved (player-identity guard bypassed via the
  *     existing !body.cardsightCardId short-circuit).
  *  2. Meaningful-query fall-through: when query !== cardsightCardId,
- *     fetchComps falls through to findCompsRouted — under
- *     CARDSIGHT_MODE=off (test default) this delegates to
- *     cardhedge.findCompsByQuery; under CARDSIGHT_MODE=exclusive
- *     (production) it routes to Cardsight via resolveCardId+getPricing.
- *     Either way the pinned-id branch is NOT taken.
+ *     fetchComps falls through to findCompsRouted (Cardsight-only post-
+ *     hard-cutover). The pinned-id branch is NOT taken.
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
-// Mock the cardsight client BEFORE importing the service under test.
-// vi.mock calls are hoisted; the service picks up the mock when it
-// resolves its dependency. The path must match the literal specifier
-// used by the source: `./cardsight.client.js` from compiqEstimate.service.ts.
+// Mock cardsight.client for the pinned-id branch (CF-PRICE-BY-ID-MIGRATION).
 vi.mock("../src/services/compiq/cardsight.client.js", async (importActual) => {
   const actual = (await importActual()) as Record<string, unknown>;
   return {
@@ -37,18 +32,22 @@ vi.mock("../src/services/compiq/cardsight.client.js", async (importActual) => {
   };
 });
 
-// Also mock the cardhedge client for the meaningful-query fall-through
-// test below — under CARDSIGHT_MODE=off (test default) findCompsRouted
-// delegates to findCompsByQuery here.
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-  findCompsByQuery: vi.fn(),
-}));
+// Mock cardsight.router for the meaningful-query fall-through. Post-
+// CF-CARDHEDGE-HARD-CUTOVER, this replaces the prior cardhedge.client mock.
+// RoutedResult shape (card/sales/variantWarning/aiCategory) ported verbatim.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
 import * as cardSight from "../src/services/compiq/cardsight.client.js";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardsightRouter from "../src/services/compiq/cardsight.router.js";
 
 describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRATION)", () => {
   const PINNED_ID = "6134bc63-1a2b-4c3d-9e0f-aabbccddeeff";
@@ -113,9 +112,11 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
     // The pinned-id branch called Cardsight getPricing with the pinned UUID.
     expect(cardSight.getPricing).toHaveBeenCalledWith(PINNED_ID);
 
-    // Legacy CardHedge path NOT invoked for the pinned-id case.
-    expect(cardHedge.getCardSales).not.toHaveBeenCalled();
-    expect(cardHedge.searchCards).not.toHaveBeenCalled();
+    // Post-CF-CARDHEDGE-HARD-CUTOVER: confirm the routed Cardsight path
+    // (findCompsRouted) was NOT called for the pinned-id case -- the
+    // pinned-id branch should short-circuit before reaching the router.
+    expect(cardsightRouter.findCompsRouted).not.toHaveBeenCalled();
+    expect(cardsightRouter.searchCardsRouted).not.toHaveBeenCalled();
 
     // Sanity: variantWarning must NOT contain "player_mismatch".
     const variantWarning = (result.variantWarning as string[] | undefined) ?? [];
@@ -130,14 +131,16 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
       price: 40 + i,
       date: isoDaysAgo(i % 5),
       grade: "Raw",
-      source: "card_hedge",
-      sale_type: "buy_it_now",
+      source: "cardsight",
+      sale_type: null,
       title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
       url: null,
     }));
-    // findCompsByQuery returns the RoutedResult shape (under
-    // CARDSIGHT_MODE=off, findCompsRouted delegates here directly).
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    // Post-CF-CARDHEDGE-HARD-CUTOVER: meaningful-query fall-through routes
+    // through cardsight.router.findCompsRouted (Cardsight-only). The
+    // RoutedResult shape is preserved -- this mock fixture matches what
+    // the prior cardhedge.client findCompsByQuery mock provided verbatim.
+    (cardsightRouter.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: PINNED_ID,
         title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
@@ -161,8 +164,8 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
     expect(result.compsUsed).toBeGreaterThan(0);
     expect(result.source).not.toBe("no-recent-comps");
 
-    // The fall-through path must call findCompsByQuery.
-    expect(cardHedge.findCompsByQuery).toHaveBeenCalled();
+    // The fall-through path must call findCompsRouted.
+    expect(cardsightRouter.findCompsRouted).toHaveBeenCalled();
 
     // The pinned-id branch (Cardsight getPricing) must NOT be taken.
     expect(cardSight.getPricing).not.toHaveBeenCalled();

@@ -1,13 +1,20 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-  findCompsByQuery: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) matches the prior cardhedge findCompsByQuery shape.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("computeEstimate unsupported_sport contract", () => {
   beforeAll(() => {
@@ -19,7 +26,7 @@ describe("computeEstimate unsupported_sport contract", () => {
   });
 
   it("always emits predictedPriceRange key (null) on unsupported_sport responses", async () => {
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-1",
         title: "1986 Fleer Michael Jordan PSA 8",

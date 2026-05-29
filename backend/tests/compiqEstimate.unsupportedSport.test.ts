@@ -15,16 +15,21 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  // Free-text path uses findCompsByQuery.
-  findCompsByQuery: vi.fn(),
-  // Imported but not exercised in this test.
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) matches the prior cardhedge findCompsByQuery shape.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
   beforeAll(() => {
@@ -36,7 +41,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
   });
 
   it("short-circuits with source=unsupported_sport when CH AI identifies Basketball", async () => {
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-jordan-basketball-test",
         title: "Michael Jordan 1986 Fleer Basketball Rookie",
@@ -72,7 +77,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
     const today = new Date();
     const isoDaysAgo = (n: number) =>
       new Date(today.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-trout-baseball-test",
         title: "Mike Trout 2011 Topps Update Baseball",
@@ -107,7 +112,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
     const today = new Date();
     const isoDaysAgo = (n: number) =>
       new Date(today.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-fallback-baseball",
         title: "Some Baseball Card",
@@ -138,7 +143,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
   });
 
   it("short-circuits with source=unsupported_sport when CH AI identifies Football", async () => {
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-herbert-football-test",
         title: "Justin Herbert 2020 Panini Prizm",

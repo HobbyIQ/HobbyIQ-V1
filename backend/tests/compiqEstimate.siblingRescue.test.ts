@@ -17,37 +17,42 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import request from "supertest";
 
-// Direct comp fetch path: cardhedge.client mocks. Return a valid card
-// identity (so cardIdentity gets populated) but ZERO recent sales (forces
-// the thin-data insufficient branch).
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(async () => []),
-  searchCards: vi.fn(async () => [
-    {
-      card_id: "exact-card-uuid",
-      title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
-      player: "Caleb Bonemer",
-      set: "Bowman Draft Chrome",
-      year: 2024,
-      number: "CPA-CBO",
-      variant: "Chrome Prospect Autograph",
-    },
-  ]),
-  findCompsByQuery: vi.fn(async () => ({
-    card: {
-      card_id: "exact-card-uuid",
-      title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
-      player: "Caleb Bonemer",
-      set: "Bowman Draft Chrome",
-      year: 2024,
-      number: "CPA-CBO",
-      variant: "Chrome Prospect Autograph",
-    },
-    sales: [], // ← thin-data trigger
-    variantWarning: [],
-    aiCategory: "Baseball",
-  })),
-}));
+// Direct comp fetch path: post-CF-CARDHEDGE-HARD-CUTOVER mocks target
+// cardsight.router instead of the deleted cardhedge.client. Return a
+// valid card identity (so cardIdentity gets populated) but ZERO recent
+// sales (forces the thin-data insufficient branch).
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getCardSalesRouted: vi.fn(async () => []),
+    searchCardsRouted: vi.fn(async () => [
+      {
+        card_id: "exact-card-uuid",
+        title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
+        player: "Caleb Bonemer",
+        set: "Bowman Draft Chrome",
+        year: 2024,
+        number: "CPA-CBO",
+        variant: "Chrome Prospect Autograph",
+      },
+    ]),
+    findCompsRouted: vi.fn(async () => ({
+      card: {
+        card_id: "exact-card-uuid",
+        title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
+        player: "Caleb Bonemer",
+        set: "Bowman Draft Chrome",
+        year: 2024,
+        number: "CPA-CBO",
+        variant: "Chrome Prospect Autograph",
+      },
+      sales: [], // ← thin-data trigger
+      variantWarning: [],
+      aiCategory: "Baseball",
+    })),
+  };
+});
 
 // Sibling-pool path: fetchCompsByPlayer mock. fetchSiblingSales (the
 // imported helper in compiqEstimate) wraps this and excludes the exact

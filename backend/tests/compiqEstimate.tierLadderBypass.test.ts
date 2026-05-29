@@ -17,14 +17,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-  findCompsByQuery: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) matches the prior cardhedge findCompsByQuery shape.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import app from "../src/app";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
@@ -50,7 +57,7 @@ async function signIn(username: string, password: string): Promise<string> {
 function mockDrakeBaldwinT1Fixture() {
   const now = Date.now();
   const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
-  (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+  (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
     card: {
       card_id: "card-drake-blue-auto-150",
       title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",

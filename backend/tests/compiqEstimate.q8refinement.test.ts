@@ -17,14 +17,22 @@
 
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-  findCompsByQuery: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) is identical to the prior cardhedge findCompsByQuery
+// shape, so mock fixtures port verbatim.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFound + autoPrefixMismatch)", () => {
   it("Gage Wood Gold Auto (wrong-card: auto requested → BASE BDC-4 resolved): SHORT-CIRCUITS", async () => {
@@ -33,7 +41,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
     const now = Date.now();
     const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
 
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "26fae2a4-2f50-460a-9f74-175f4840faef",
         title: "Gage Wood",
@@ -82,7 +90,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
     const now = Date.now();
     const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
 
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "496a7e19-b26d-4f48-9fae-e66d6961c27a",
         title: "Caleb Bonemer",
@@ -126,7 +134,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
     const now = Date.now();
     const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
 
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "fda530ab-e925-460e-ab88-63199ef975e9",
         title: "Mike Trout",
@@ -176,7 +184,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
     // Right-card auto case: user wants auto + Gold parallel; Cardsight
     // resolves the auto card_id (CPA-XYZ) but lacks the Gold parallel
     // separately. autoPrefixMismatch=false (both auto) → ladder runs.
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-some-auto",
         title: "Some Prospect Auto",
@@ -219,7 +227,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
 
     // Q8 original case: no parallelNotFound warning at all → Q8'' detection
     // skips this branch entirely → tier ladder applies.
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-drake-blue-auto-150",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
@@ -258,7 +266,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
     const now = Date.now();
     const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
 
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-x",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",

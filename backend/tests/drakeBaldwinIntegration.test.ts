@@ -22,14 +22,21 @@
 
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-  findCompsByQuery: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) matches the prior cardhedge findCompsByQuery shape.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 promotion", () => {
   it("promotes to T1 (drop parallel) when no comp title matches 'Blue Refractor' but auto/player do", async () => {
@@ -38,7 +45,7 @@ describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 prom
     const now = Date.now();
     const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
 
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-drake-blue-auto-150",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
@@ -121,7 +128,7 @@ describe("variant-mismatch fallback — Mechanism 1 still fires when tier ladder
     // invariant, so every tier hard-rejects → T3 exhausted →
     // variant-mismatch short-circuit fires → Mechanism 1 produces a
     // predictedPrice substitute.
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-drake-blue-auto-150",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",

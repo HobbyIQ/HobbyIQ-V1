@@ -1,11 +1,21 @@
-"""H6 — Price floor detection (Cosmos DB).
+"""H6 -- Price floor detection (Cosmos DB).
 
 Each card (id keyed by `card_id` = e.g. "{player}|{year}|{set}|{cardNumber}|{grade}|{variant}")
 has a 90-day minimum sold price stored in Cosmos. The pricing engine never
 predicts below this floor.
 
-Primary data source: Card Hedge AI (`shared.cardhedge`). eBay is the
-fallback when Card Hedge has no comps for the card.
+History:
+- Original primary data source: Card Hedge AI. eBay was the fallback.
+- CF-CARDHEDGE-HARD-CUTOVER (2026-05-30): CardHedge subscription cancelled.
+  update_floor_from_ebay is stubbed to a no-op. `read_floor` and
+  `apply_price_floor` are preserved verbatim -- they only read existing
+  Cosmos entries (vendor-agnostic) and stay load-bearing for the prediction
+  engine's floor-enforcement path.
+
+Future Cardsight Function (former Sub-2b scope) should restore
+update_floor_from_ebay with Cardsight-primary (shared/cardsight.py
+get_pricing) + eBay fallback path. Preserves the same Cosmos floor
+container contract.
 
 Cosmos config (env vars):
     COSMOS_ENDPOINT         account endpoint URL
@@ -18,12 +28,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timedelta
 from typing import Any
-
-import requests
-
-from shared.cardhedge import get_card_sales, search_cards
 
 DB_NAME = os.environ.get("COSMOS_DB", "compiq")
 CONTAINER_NAME = os.environ.get("COSMOS_FLOOR_CONTAINER", "price_floors")
@@ -50,7 +55,14 @@ def _container():
 
 
 def read_floor(card_id: str) -> dict[str, Any] | None:
-    """Return the stored floor doc, or None when absent/unreachable."""
+    """Return the stored floor doc, or None when absent/unreachable.
+
+    Vendor-agnostic read path -- preserved verbatim through CF-CARDHEDGE-
+    HARD-CUTOVER. Reads only; the floor value was written by whichever
+    primary source was active at write time (CardHedge historically, then
+    eBay fallback). Future Cardsight-sourced writes land in the same
+    Cosmos doc shape.
+    """
     container = _container()
     if not container:
         return None
@@ -67,117 +79,44 @@ def update_floor_from_ebay(
     variant: str,
     ebay_token: str,
 ) -> dict[str, Any]:
-    """Refresh the 90-day price floor for a card.
+    """STUBBED per CF-CARDHEDGE-HARD-CUTOVER.
 
-    Card Hedge is the primary source; eBay is the fallback. Trims the bottom
-    5% as outliers, takes the min of what remains, and upserts to Cosmos.
+    Original implementation:
+      Primary: Card Hedge (search_cards + get_card_sales, 90-day window,
+        trim bottom 5%, min as floor).
+      Fallback: eBay sold listings (Buy/Browse API with soldDateRange).
+      Persist: upsert to Cosmos `price_floors` container.
 
-    Returns {"floor": float|None, "source": "card_hedge"|"ebay"|"cached"|"no_data"}.
+    Stubbed because CardHedge is dead. eBay fallback path is also retired
+    here to avoid partial-functionality confusion (the fallback was
+    eBay-only when CH returned empty; now CH is always empty, so
+    "fallback" would effectively become "primary" -- a substantive code
+    change that belongs in the greenfield Cardsight Function rather than
+    a hard-cutover stub).
+
+    Returns the same shape the prior implementation returned so the
+    Functions that call this (fn-price-floor HTTP route, future Cardsight
+    nightly prefetch) can rely on the contract without crashing.
     """
-    container = _container()
-
-    sold_prices: list[float] = []
-    source = "no_data"
-
-    # ---- Primary: Card Hedge ----
-    try:
-        hits = search_cards(f"{player_name} {variant} baseball card", limit=3)
-        if hits:
-            ch_id = str(hits[0].get("id") or hits[0].get("card_id") or "")
-            if ch_id:
-                ch_sales = get_card_sales(
-                    ch_id, grade=grade if grade and grade != "raw" else None, limit=200
-                )
-                cutoff = datetime.utcnow() - timedelta(days=90)
-                for s in ch_sales:
-                    price = float(s.get("price") or 0)
-                    if price <= 0:
-                        continue
-                    sold_at = s.get("date")
-                    try:
-                        if sold_at and datetime.fromisoformat(
-                            sold_at.replace("Z", "+00:00")
-                        ).replace(tzinfo=None) < cutoff:
-                            continue
-                    except Exception:
-                        pass
-                    sold_prices.append(price)
-                if sold_prices:
-                    source = "card_hedge"
-    except Exception as exc:  # noqa: BLE001
-        logging.warning("Card Hedge floor fetch failed for %s: %s", card_id, exc)
-
-    # ---- Fallback: eBay sold listings ----
-    if not sold_prices:
-        end = datetime.utcnow()
-        start = end - timedelta(days=90)
-        query_term = " ".join(
-            p for p in [player_name, grade, variant, "baseball card"] if p
-        ).strip()
-        try:
-            resp = requests.get(
-                "https://api.ebay.com/buy/browse/v1/item_summary/search",
-                headers={"Authorization": f"Bearer {ebay_token}"},
-                params={
-                    "q": query_term,
-                    "category_ids": "212",
-                    "filter": (
-                        f"buyingOptions:{{FIXED_PRICE}},"
-                        f"soldDateRange:[{start.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-                        f"..{end.strftime('%Y-%m-%dT%H:%M:%SZ')}]"
-                    ),
-                    "limit": 200,
-                },
-                timeout=20,
-            )
-            items = resp.json().get("itemSummaries", []) if resp.ok else []
-        except Exception:
-            items = []
-
-        sold_prices = [
-            float(i["price"]["value"])
-            for i in items
-            if isinstance(i.get("price"), dict) and "value" in i["price"]
-        ]
-        if sold_prices:
-            source = "ebay"
-
-    if not sold_prices:
-        cached = read_floor(card_id) if container else None
-        if cached:
-            return {"floor": cached.get("floor"), "source": "cached"}
-        return {"floor": None, "source": "no_data"}
-
-    sold_prices.sort()
-    trim = max(1, int(len(sold_prices) * 0.05))
-    trimmed = sold_prices[trim:] or sold_prices
-    floor = round(min(trimmed), 2)
-
-    doc = {
-        "id": card_id,
-        "player_name": player_name,
-        "grade": grade,
-        "variant": variant,
-        "floor": floor,
-        "comp_count_90d": len(sold_prices),
-        "source": source,
-        "updated_at": datetime.utcnow().isoformat(),
-    }
-    if container:
-        try:
-            container.upsert_item(doc)
-        except Exception as exc:  # noqa: BLE001
-            logging.warning("Cosmos upsert failed for %s: %s", card_id, exc)
-
-    return {
-        "floor": floor,
-        "source": source,
-        "comp_count": len(sold_prices),
-    }
+    logging.info(
+        "cosmos_floor.update_floor_from_ebay: stubbed (CF-CARDHEDGE-HARD-CUTOVER) "
+        "card_id=%s",
+        card_id,
+    )
+    return {"floor": None, "source": "stubbed", "comp_count": 0}
 
 
 def apply_price_floor(predicted_price: float, card_id: str) -> dict[str, Any]:
-    """Final-step floor enforcement before returning any prediction."""
+    """Final-step floor enforcement before returning any prediction.
+
+    Vendor-agnostic enforcement path -- preserved verbatim through
+    CF-CARDHEDGE-HARD-CUTOVER. Reads existing Cosmos floor docs and
+    clamps the prediction if below floor.
+
+    Behavior with empty floor container (post-cutover, before greenfield
+    Cardsight writes resume): read_floor returns None, no clamp applied,
+    predicted_price passes through unchanged. Safe degradation.
+    """
     doc = read_floor(card_id)
     floor = doc.get("floor") if doc else None
     if floor is not None and predicted_price < floor:

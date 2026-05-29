@@ -1,342 +1,688 @@
 {
   "verdict": "FAIL",
-  "deviation_pass": false,
-  "coverage_pass": false,
-  "median_deviation": 0.1264131551901336,
-  "mean_deviation": 0.1466605026065643,
-  "p90_deviation": 0.40182947185684714,
-  "deviation_threshold": 0.1,
-  "coverage_threshold": 15,
+  "gate1_pass": true,
+  "gate2_pass": true,
+  "gate3_pass": false,
+  "coverage_recovered": 13,
+  "coverage_threshold": 12,
   "coverage_denominator": 18,
-  "coverage_recovered": 10,
-  "meaningful_data_players": 21,
-  "sample_size": 25,
+  "gate2_pass_ratio": 1.0,
+  "gate3_pass_ratio": 0.42105263157894735,
+  "quality_pass_ratio_threshold": 0.8,
+  "meaningful_data_player_count": 19,
   "rows": [
     {
       "player": "Mike Trout",
       "previously_failed": false,
-      "ch_multiplier": 1.048,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 0.953,
       "cs_signal": "stable",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Mike Trout",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0906,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_falling",
+        "thirds_medians": [
+          2.2649999999999997,
+          1.79,
+          1.79
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.79
+      },
+      "ch_multiplier_informational": 1.048,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Shohei Ohtani",
       "previously_failed": false,
-      "ch_multiplier": 1.051,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.066,
       "cs_signal": "stable",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Shohei Ohtani",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0143,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_falling",
+        "thirds_medians": [
+          5.08,
+          3.065,
+          2.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 3.065
+      },
+      "ch_multiplier_informational": 1.061,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Aaron Judge",
       "previously_failed": false,
-      "ch_multiplier": 0.973,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 0.85,
       "cs_signal": "falling",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Aaron Judge",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1264,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.695,
+          2.95,
+          1.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 2.695
+      },
+      "ch_multiplier_informational": 0.973,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Ronald Acuna Jr",
       "previously_failed": false,
-      "ch_multiplier": 1.2,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Ronald Acuna Jr.",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_rising",
+        "thirds_medians": [
+          1.6549999999999998,
+          1.775,
+          1.86
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.775
+      },
+      "ch_multiplier_informational": 1.2,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Bryce Harper",
       "previously_failed": false,
-      "ch_multiplier": 1.2,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Bryce Harper",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.53,
+          1.805,
+          3.0
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 2.53
+      },
+      "ch_multiplier_informational": 1.2,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Bo Bichette",
       "previously_failed": false,
-      "ch_multiplier": 0.992,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.066,
       "cs_signal": "stable",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Bo Bichette",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0746,
-      "coverage_recovered": false
+      "meaningful_data": true,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.055,
+          2.7,
+          1.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 2.055
+      },
+      "ch_multiplier_informational": 0.992,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Juan Soto",
       "previously_failed": true,
-      "ch_multiplier": 0.928,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.047,
       "cs_signal": "stable",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Juan Soto",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1282,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_rising",
+        "thirds_medians": [
+          2.035,
+          3.355,
+          4.28
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 3.355
+      },
+      "ch_multiplier_informational": 0.928,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Mookie Betts",
       "previously_failed": true,
-      "ch_multiplier": 1.094,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.013,
       "cs_signal": "stable",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Mookie Betts",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.074,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          1.65,
+          1.44,
+          3.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.65
+      },
+      "ch_multiplier_informational": 1.094,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Vladimir Guerrero Jr",
       "previously_failed": true,
-      "ch_multiplier": 0.85,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Panini Absolute",
+      "cs_card_name": "Vladimir Guerrero Jr.",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.4118,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          6.655,
+          1.69,
+          10.03
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 6.655
+      },
+      "ch_multiplier_informational": 0.85,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Wander Franco",
       "previously_failed": true,
-      "ch_multiplier": 1.066,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Wander Franco",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1257,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_falling",
+        "thirds_medians": [
+          1.8399999999999999,
+          1.24,
+          0.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.24
+      },
+      "ch_multiplier_informational": 1.066,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Bobby Witt Jr",
       "previously_failed": true,
-      "ch_multiplier": 0.881,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 23,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Bobby Witt Jr.",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.3621,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.25,
+          14.475000000000001,
+          8.225
+        ],
+        "third_counts": [
+          7,
+          8,
+          8
+        ],
+        "overall_median_of_thirds": 8.225
+      },
+      "ch_multiplier_informational": 0.881,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Adley Rutschman",
       "previously_failed": true,
-      "ch_multiplier": 0.85,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "stable",
       "cs_comp_count": 3,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Adley Rutschman",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1765,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 0.85,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Corbin Carroll",
       "previously_failed": true,
-      "ch_multiplier": 1.069,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "stable",
-      "cs_comp_count": 4,
-      "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0645,
-      "coverage_recovered": false
+      "cs_comp_count": 25,
+      "cs_release_name": "Topps",
+      "cs_card_name": "Corbin Carroll",
+      "cs_selection_path": "year_fallback_best_of_top_5",
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_rising",
+        "thirds_medians": [
+          1.67,
+          2.495,
+          2.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 2.495
+      },
+      "ch_multiplier_informational": 1.069,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Gunnar Henderson",
       "previously_failed": true,
-      "ch_multiplier": 1.2,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Topps",
+      "cs_card_name": "Gunnar Henderson",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          1.99,
+          1.4,
+          1.85
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.85
+      },
+      "ch_multiplier_informational": 1.2,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Paul Skenes",
       "previously_failed": true,
-      "ch_multiplier": 0.983,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "no_data",
       "cs_comp_count": 0,
+      "cs_release_name": "",
+      "cs_card_name": "",
       "cs_selection_path": "n/a",
-      "deviation": 0.0173,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 0.953,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Elly De La Cruz",
       "previously_failed": true,
-      "ch_multiplier": 1.096,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "no_match",
       "cs_comp_count": 0,
+      "cs_release_name": "",
+      "cs_card_name": "",
       "cs_selection_path": "n/a",
-      "deviation": 0.0876,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 1.096,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Jackson Holliday",
       "previously_failed": true,
-      "ch_multiplier": 0.983,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.177,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Topps",
+      "cs_card_name": "Jackson Holliday",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1974,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.745,
+          1.15,
+          1.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.99
+      },
+      "ch_multiplier_informational": 0.983,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Jackson Chourio",
       "previously_failed": true,
-      "ch_multiplier": 0.873,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
-      "cs_signal": "stable",
-      "cs_comp_count": 3,
-      "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1455,
-      "coverage_recovered": false
+      "cs_signal": "rising",
+      "cs_comp_count": 25,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Jackson Chourio",
+      "cs_selection_path": "year_fallback_best_of_top_5",
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_rising",
+        "thirds_medians": [
+          1.865,
+          1.8900000000000001,
+          1.99
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 1.8900000000000001
+      },
+      "ch_multiplier_informational": 0.873,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Roman Anthony",
       "previously_failed": true,
-      "ch_multiplier": 0.85,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
-      "cs_signal": "stable",
-      "cs_comp_count": 4,
-      "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1765,
-      "coverage_recovered": false
+      "cs_signal": "rising",
+      "cs_comp_count": 25,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Roman Anthony",
+      "cs_selection_path": "year_fallback_best_of_top_5",
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": true,
+      "gate3_diagnostic": {
+        "pattern": "monotonic_rising",
+        "thirds_medians": [
+          2.0949999999999998,
+          3.0149999999999997,
+          4.5
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 3.0149999999999997
+      },
+      "ch_multiplier_informational": 0.85,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Andrew Painter",
       "previously_failed": true,
-      "ch_multiplier": 1.071,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "no_data",
       "cs_comp_count": 0,
+      "cs_release_name": "",
+      "cs_card_name": "",
       "cs_selection_path": "n/a",
-      "deviation": 0.0663,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 1.071,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Cooper Bonemer",
       "previously_failed": true,
-      "ch_multiplier": 1.085,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "no_match",
       "cs_comp_count": 0,
+      "cs_release_name": "",
+      "cs_card_name": "",
       "cs_selection_path": "n/a",
-      "deviation": 0.0783,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 1.085,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Junior Caminero",
       "previously_failed": true,
-      "ch_multiplier": 1.2,
-      "ch_signal": "rising",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "stable",
       "cs_comp_count": 6,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Junior Caminero",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.1667,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          3.375,
+          5.75,
+          5.5
+        ],
+        "third_counts": [
+          2,
+          2,
+          2
+        ],
+        "overall_median_of_thirds": 5.5
+      },
+      "ch_multiplier_informational": 1.2,
+      "ch_signal_informational": "rising",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "James Wood",
       "previously_failed": true,
-      "ch_multiplier": 0.959,
-      "ch_signal": "stable",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.0,
       "cs_signal": "stable",
       "cs_comp_count": 2,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "James Wood",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.0428,
-      "coverage_recovered": false
+      "meaningful_data": false,
+      "gate1_coverage_pass": false,
+      "gate2_signal_quality_pass": null,
+      "gate3_directional_pass": null,
+      "gate3_diagnostic": null,
+      "ch_multiplier_informational": 0.959,
+      "ch_signal_informational": "stable",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Jacob Misiorowski",
       "previously_failed": true,
-      "ch_multiplier": 0.905,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.168,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Bowman",
+      "cs_card_name": "Jacob Misiorowski",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.2906,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.725,
+          7.5,
+          5.5
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 5.5
+      },
+      "ch_multiplier_informational": 0.905,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     },
     {
       "player": "Julio Rodriguez",
       "previously_failed": true,
-      "ch_multiplier": 0.85,
-      "ch_signal": "falling",
-      "ch_comp_count": 27,
-      "cs_multiplier": 1.2,
       "cs_signal": "rising",
       "cs_comp_count": 25,
+      "cs_release_name": "Topps Allen & Ginter",
+      "cs_card_name": "Julio Rodriguez",
       "cs_selection_path": "primary_best_of_top_5",
-      "deviation": 0.4118,
-      "coverage_recovered": true
+      "meaningful_data": true,
+      "gate1_coverage_pass": true,
+      "gate2_signal_quality_pass": true,
+      "gate3_directional_pass": false,
+      "gate3_diagnostic": {
+        "pattern": "flip_flop",
+        "thirds_medians": [
+          2.995,
+          1.645,
+          2.5
+        ],
+        "third_counts": [
+          8,
+          8,
+          9
+        ],
+        "overall_median_of_thirds": 2.5
+      },
+      "ch_multiplier_informational": 0.85,
+      "ch_signal_informational": "falling",
+      "ch_comp_count_informational": 27
     }
   ],
-  "run_at": "2026-05-29T20:14:11.315224Z"
+  "run_at": "2026-05-29T20:55:10.127727Z"
 }

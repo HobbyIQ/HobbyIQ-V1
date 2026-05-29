@@ -1,85 +1,94 @@
 import { beforeAll, vi } from "vitest";
 import request from "supertest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  getCardSales: vi.fn(async (cardId?: string) => {
-    if (!cardId) return [];
-    const title =
-      cardId === "ohtani-base"
-        ? "2018 Topps Chrome Shohei Ohtani #150 PSA 10"
-        : "2024 Bowman Chrome Blake Burke PSA 10 Auto";
-    const now = Date.now();
-    return Array.from({ length: 8 }, (_, i) => ({
-      price: 950 + i * 20,
-      date: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(),
-      grade: "PSA 10",
-      source: "card_hedge",
-      sale_type: "auction",
-      title,
-      url: null,
-    }));
-  }),
-  searchCards: vi.fn(async (query?: string) => {
-    const q = (query ?? "").toLowerCase();
-    if (!q) return [];
-    if (q.includes("ohtani")) {
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's three exports
+// (findCompsRouted, getCardSalesRouted, searchCardsRouted) return shapes
+// identical to the prior cardhedge.client equivalents -- factory bodies
+// port verbatim with only the function names renamed.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getCardSalesRouted: vi.fn(async (cardId?: string) => {
+      if (!cardId) return [];
+      const title =
+        cardId === "ohtani-base"
+          ? "2018 Topps Chrome Shohei Ohtani #150 PSA 10"
+          : "2024 Bowman Chrome Blake Burke PSA 10 Auto";
+      const now = Date.now();
+      return Array.from({ length: 8 }, (_, i) => ({
+        price: 950 + i * 20,
+        date: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(),
+        grade: "PSA 10",
+        source: "cardsight",
+        sale_type: "auction",
+        title,
+        url: null,
+      }));
+    }),
+    searchCardsRouted: vi.fn(async (query?: string) => {
+      const q = (query ?? "").toLowerCase();
+      if (!q) return [];
+      if (q.includes("ohtani")) {
+        return [
+          {
+            card_id: "ohtani-base",
+            title: "2018 Topps Chrome Shohei Ohtani #150 PSA 10",
+            player: "Shohei Ohtani",
+          },
+        ];
+      }
       return [
         {
-          card_id: "ohtani-base",
-          title: "2018 Topps Chrome Shohei Ohtani #150 PSA 10",
-          player: "Shohei Ohtani",
-        },
-      ];
-    }
-    return [
-      {
-        card_id: "blake-burke",
-        title: "2024 Bowman Chrome Blake Burke PSA 10 Auto",
-        player: "Blake Burke",
-      },
-    ];
-  }),
-  findCompsByQuery: vi.fn(async (query?: string) => {
-    const isOhtani = (query ?? "").toLowerCase().includes("ohtani");
-    const card = isOhtani
-      ? {
-          card_id: "ohtani-base",
-          title: "2018 Topps Chrome Shohei Ohtani #150 PSA 10",
-          player: "Shohei Ohtani",
-          set: "Topps Chrome",
-          year: 2018,
-          number: "150",
-          variant: "Base",
-        }
-      : {
           card_id: "blake-burke",
           title: "2024 Bowman Chrome Blake Burke PSA 10 Auto",
           player: "Blake Burke",
-          set: "Bowman Chrome",
-          year: 2024,
-          number: null,
-          variant: "Orange Wave Auto",
-        };
+        },
+      ];
+    }),
+    findCompsRouted: vi.fn(async (query?: string) => {
+      const isOhtani = (query ?? "").toLowerCase().includes("ohtani");
+      const card = isOhtani
+        ? {
+            card_id: "ohtani-base",
+            title: "2018 Topps Chrome Shohei Ohtani #150 PSA 10",
+            player: "Shohei Ohtani",
+            set: "Topps Chrome",
+            year: 2018,
+            number: "150",
+            variant: "Base",
+          }
+        : {
+            card_id: "blake-burke",
+            title: "2024 Bowman Chrome Blake Burke PSA 10 Auto",
+            player: "Blake Burke",
+            set: "Bowman Chrome",
+            year: 2024,
+            number: null,
+            variant: "Orange Wave Auto",
+          };
 
-    const now = Date.now();
-    const sales = Array.from({ length: 8 }, (_, i) => ({
-      price: 950 + i * 20,
-      date: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(),
-      grade: "PSA 10",
-      source: "card_hedge",
-      sale_type: "auction",
-      title: card.title,
-      url: null,
-    }));
+      const now = Date.now();
+      const sales = Array.from({ length: 8 }, (_, i) => ({
+        price: 950 + i * 20,
+        date: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(),
+        grade: "PSA 10",
+        source: "cardsight",
+        sale_type: "auction",
+        title: card.title,
+        url: null,
+      }));
 
-    return {
-      card,
-      sales,
-      variantWarning: [],
-      aiCategory: "Baseball",
-    };
-  }),
-}));
+      return {
+        card,
+        sales,
+        variantWarning: [],
+        aiCategory: "Baseball",
+      };
+    }),
+  };
+});
 
 import app from "../src/app";
 describe("/api/compiq/estimate", () => {

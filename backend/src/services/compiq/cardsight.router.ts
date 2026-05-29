@@ -1,31 +1,25 @@
 /**
- * Routing layer for Card Hedge -> Cardsight migration. Mode controlled by CARDSIGHT_MODE env var.
- * Engine code does not see mode; only routed result. See ADR-cardsight-migration-2026-05-18.md.
+ * Cardsight routing layer. Post-CF-CARDHEDGE-HARD-CUTOVER (2026-05-30):
+ * collapsed to Cardsight-only -- the mode toggle (off/shadow/primary/
+ * exclusive) is removed because CardHedge subscription was cancelled
+ * and shared/cardhedge.client.ts is deleted.
  *
- * Modes: "off" | "shadow" | "primary" | "exclusive"
+ * Engine code does not see the routing -- only routed result. See
+ * ADR-cardsight-migration-2026-05-18.md for the original migration design.
  *
- * Log event vocabulary:
- *   - "shadow_comparison"
- *   - "shadow_search_comparison"
- *   - "shadow_pricing_comparison"
- *   - "shadow_pricing_skipped_namespace_check"
- *   - "shape_mapping_field_missing" (debug)
- *   - "primary_mode_cardhedge_namespace_only" (warn)
- *   - "invalid_mode" (warn)
+ * Type names CardHedgeCard / CardHedgeSale preserved as the routed-result
+ * shape (relocated here from the deleted cardhedge.client.ts). They no
+ * longer reflect a vendor -- just a stable contract for the pricing
+ * pipeline downstream. Rename to vendor-neutral names is
+ * CF-CARDHEDGE-NAMING-CLEANUP scope.
  *
- * Namespace constraint: All cardId values passed to getCardSalesRouted from
- * compiqEstimate.service.ts are Card Hedge IDs (cardIdSource: "cardhedge").
- * Cardsight pricing is never called for cardhedge IDs in this PR; shadow/
- * primary/exclusive modes skip cardsight and emit log events as specified.
+ * Log event vocabulary (post-cutover, simplified):
+ *   - "cardsight.findComps.start" / "cardsight.findComps.end"
+ *   - "identity_source"
+ *   - "getCardDetail_failed" (warn)
+ *   - "cardsight_error" (warn)
  */
 
-import {
-  searchCards,
-  getCardSales,
-  findCompsByQuery,
-  type CardHedgeCard,
-  type CardHedgeSale,
-} from "./cardhedge.client.js";
 import { searchCatalog, getCardDetail, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
 import { resolveCardId } from "./cardsight.mapper.js";
 import { translateResponse } from "./cardsight.translator.js";
@@ -38,14 +32,38 @@ import {
 
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", ...fields }), fields),
+    console.log(JSON.stringify({ event, source: "cardsight.router", ...fields })),
   warn: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", level: "warn", ...fields }), fields),
+    console.log(JSON.stringify({ event, source: "cardsight.router", level: "warn", ...fields })),
   debug: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", level: "debug", ...fields }), fields),
+    console.log(JSON.stringify({ event, source: "cardsight.router", level: "debug", ...fields })),
 };
 
-type CardsightMode = "off" | "shadow" | "primary" | "exclusive";
+// Routed-result types. Relocated here from cardhedge.client.ts (deleted
+// per CF-CARDHEDGE-HARD-CUTOVER). Names preserved for backward
+// compatibility with downstream consumers (compiqEstimate.service.ts);
+// rename to vendor-neutral names is CF-CARDHEDGE-NAMING-CLEANUP scope.
+
+export interface CardHedgeCard {
+  card_id: string;
+  player?: string;
+  set?: string;
+  year?: number | string;
+  number?: string;
+  variant?: string;
+  title?: string;
+  name?: string;
+}
+
+export interface CardHedgeSale {
+  price: number;
+  date: string | null;
+  grade: string;
+  source: string;
+  sale_type: string | null;
+  title: string | null;
+  url: string | null;
+}
 
 type RoutedResult = {
   card: CardHedgeCard | null;
@@ -54,7 +72,7 @@ type RoutedResult = {
   aiCategory: string | null;
   // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. Internal
   // fine-grained source for telemetry; user-facing 3-category collapse
-  // for response shape. Both surfaced — response-shaping layer in
+  // for response shape. Both surfaced -- response-shaping layer in
   // compiqEstimate.service.ts decides which (typically just user-facing).
   priceSourceInternal?: ParallelPriceSource;
   priceSource?: UserFacingPriceSource;
@@ -69,11 +87,9 @@ export type QueryContext = {
   cardYear?: string | number;
   product?: string;
   parallel?: string;
-  // Phase 2 v2 — defect #11: cardNumber threaded through so resolveCardId can
+  // Phase 2 v2 -- defect #11: cardNumber threaded through so resolveCardId can
   // disambiguate via detail-probe AND so the LRU cache key includes it for
-  // proper per-cardNumber cache entries. Without this field, parsed.cardNumber
-  // from iOS displayLabels (post-defect-#8 fix) was silently dropped at the
-  // router boundary.
+  // proper per-cardNumber cache entries.
   cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: string;
@@ -86,32 +102,6 @@ export type FindCompsRoutedOptions = {
   gradeValue?: string;
   queryContext?: QueryContext;
 };
-
-function normalizeMode(value: string | undefined): CardsightMode {
-  const raw = (value ?? "off").toLowerCase();
-  if (raw === "off" || raw === "shadow" || raw === "primary" || raw === "exclusive") {
-    return raw;
-  }
-  log.warn("invalid_mode", { mode: value ?? null, fallbackMode: "off" });
-  return "off";
-}
-
-function summarize(result: RoutedResult, durationMs: number, hasError = false) {
-  return {
-    compsCount: result.sales.length,
-    firstThreeTitles: result.sales.slice(0, 3).map((s) => s.title ?? ""),
-    totalValueApprox:
-      Math.round(result.sales.reduce((sum, s) => sum + (s.price ?? 0), 0) * 100) / 100,
-    durationMs,
-    hasError,
-  };
-}
-
-async function timed<T>(fn: () => Promise<T>): Promise<{ result: T; durationMs: number }> {
-  const start = Date.now();
-  const result = await fn();
-  return { result, durationMs: Date.now() - start };
-}
 
 function toCardsightQuery(query: string, opts: FindCompsRoutedOptions) {
   const ctx = opts.queryContext ?? {};
@@ -135,8 +125,8 @@ function emptyCardsightResult(warnings: string[] = []): RoutedResult {
   };
 }
 
-function csToChCard(cs: any): CardHedgeCard {
-  const ch: CardHedgeCard = {
+function csToRoutedCard(cs: any): CardHedgeCard {
+  return {
     card_id: cs.id,
     player: cs.player ?? undefined,
     set: cs.setName ?? undefined,
@@ -145,10 +135,6 @@ function csToChCard(cs: any): CardHedgeCard {
     title: cs.name ?? undefined,
     name: cs.name ?? undefined,
   };
-  (["card_id", "player", "set", "year", "number", "title", "name"] as const).forEach((f) => {
-    if (ch[f] == null) log.debug("shape_mapping_field_missing", { field: f, source: "cardsight", cardId: cs.id });
-  });
-  return ch;
 }
 
 // ── findCompsRouted ─────────────────────────────────────────────────────────
@@ -179,7 +165,7 @@ async function findCompsViaCardsight(
     cardId = mapped.cardId;
 
     // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (investigation a6c6dd9):
-    // /pricing/{id}'s embedded `card` object is SPARSE — setName/year
+    // /pricing/{id}'s embedded `card` object is SPARSE -- setName/year
     // come back undefined for Cardsight-exclusive resolved cards.
     // /catalog/cards/{id} (getCardDetail) returns RICH metadata
     // (releaseName, setName, releaseYear, parallels[]). Fetch both in
@@ -196,15 +182,9 @@ async function findCompsViaCardsight(
       }),
     ]);
 
-    // Detail is usable when present and the API didn't 404. detail.notFound
-    // is the sentinel _getCardDetail returns when Cardsight returned 404.
     const detailOk = detail !== null && !detail.notFound;
 
     // CF-CARDSIGHT-RESOLVER-REDESIGN: title-match-with-specificity-guard.
-    // When _getPricing fell back to the unified bucket (parallel_id filter
-    // returned empty) AND the user specified a parallel AND we have
-    // detail.parallels[], filter the unified bucket by sale title using
-    // sibling-aware exclusion to avoid generic-token over-pull.
     const siblingParallels = detailOk && detail!.parallels ? detail!.parallels : [];
     const titleMatchOutcome = applyParallelTitleMatch({
       pricingResponse: pricing,
@@ -216,13 +196,7 @@ async function findCompsViaCardsight(
     const filteredPricing = titleMatchOutcome.response;
 
     // CF-CARDSIGHT-TRANSLATER-GRADE-WIRING: bridge queryContext grade
-    // fields into the translator. compiqEstimate.service.ts (sole caller
-    // of findCompsRouted) carries gradeCompany/gradeValue on queryContext,
-    // not on the top-level options object. Without this coalesce, the
-    // translator falls through to its Raw path and silently ignores
-    // graded[] — every graded holding gets priced from raw×multiplier
-    // even when Cardsight returned direct graded sales. Same nullish-
-    // coalesce pattern that toCardsightQuery uses at line 116-127.
+    // fields into the translator.
     const translated = translateResponse(filteredPricing, {
       gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany,
       gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue,
@@ -240,25 +214,12 @@ async function findCompsViaCardsight(
     const baseCard: CardHedgeCard = {
       card_id: mapped.cardId,
       title: pricing.card?.name ?? undefined,
-      // Defect #7 fix: Cardsight's pricing.card object has no `player` field
-      // (player name lives in `name`). Without the fallback, baseCard.player
-      // is always undefined under Cardsight, and the CH-identity guard in
-      // compiqEstimate.service.ts builds a haystack that's just `card.title`
-      // — trip-prone for any player whose surname isn't in the title string
-      // (which under Cardsight equals `pricing.card.name`, often just the
-      // bare player name with no surname differentiation).
-      //
-      // Player attribution gap still open post-Phase-2: getCardDetail also
-      // doesn't return `player`. The pricing.card.player ?? pricing.card.name
-      // fallback chain is preserved (investigation noted player attribution
-      // is a separate concern out of scope for this CF).
+      // Defect #7 fix: Cardsight's pricing.card has no `player` field
+      // (player name lives in `name`). Fallback chain preserved through
+      // CF-CARDHEDGE-HARD-CUTOVER.
       player: pricing.card?.player ?? pricing.card?.name ?? undefined,
-      // cardIdentity.set carries the PRODUCT LINE ("Bowman Chrome") that
-      // sibling-discovery callers expect. Cardsight's `releaseName` is the
-      // product line; `setName` is the subset within a release ("Base Set",
-      // "Chrome Prospect Autographs"). Prior code mapped pricing.card.setName
-      // here which was BOTH semantically misaligned (subset not product) AND
-      // structurally broken (undefined in practice).
+      // cardIdentity.set carries the PRODUCT LINE; Cardsight's `releaseName`
+      // is the product line; `setName` is the subset within a release.
       set: detailOk
         ? detail!.releaseName
         : (pricing.card?.setName ?? undefined),
@@ -322,78 +283,16 @@ export async function findCompsRouted(
   query: string,
   opts: FindCompsRoutedOptions = {},
 ): Promise<RoutedResult> {
-  const mode = normalizeMode(process.env.CARDSIGHT_MODE);
-  const chOpts = { grade: opts.grade, limit: opts.limit };
-
-  if (mode === "off") {
-    return findCompsByQuery(query, chOpts) as Promise<RoutedResult>;
+  // Post-CF-CARDHEDGE-HARD-CUTOVER: mode discriminant collapsed. Always
+  // routes via Cardsight. Errors (other than timeouts, which propagate)
+  // surface as empty result with "cardsight_error" warning.
+  try {
+    return await findCompsViaCardsight(query, opts);
+  } catch (err: any) {
+    if (err instanceof CardsightTimeoutError) throw err;
+    log.warn("cardsight_error", { query, error: err?.message ?? String(err) });
+    return emptyCardsightResult(["cardsight_error"]);
   }
-
-  if (mode === "exclusive") {
-    try {
-      return await findCompsViaCardsight(query, opts);
-    } catch (err: any) {
-      if (err instanceof CardsightTimeoutError) throw err;
-      log.warn("cardsight_error", { mode, query, error: err?.message ?? String(err) });
-      return emptyCardsightResult(["cardsight_error"]);
-    }
-  }
-
-  if (mode === "primary") {
-    try {
-      const cardsight = await findCompsViaCardsight(query, opts);
-      if (cardsight.sales.length > 0) return cardsight;
-      return findCompsByQuery(query, chOpts) as Promise<RoutedResult>;
-    } catch (err: any) {
-      log.warn("cardsight_error", { mode, query, error: err?.message ?? String(err) });
-      return findCompsByQuery(query, chOpts) as Promise<RoutedResult>;
-    }
-  }
-
-  // shadow
-  const [ch, cs] = await Promise.all([
-    timed(() => findCompsByQuery(query, chOpts) as Promise<RoutedResult>)
-      .then(({ result, durationMs }) => ({ result, durationMs, hasError: false, error: null as unknown }))
-      .catch((err: unknown) => ({
-        result: emptyCardsightResult(["cardhedge_error"]),
-        durationMs: 0,
-        hasError: true,
-        error: err,
-      })),
-    timed(() => findCompsViaCardsight(query, opts))
-      .then(({ result, durationMs }) => ({ result, durationMs, hasError: false, error: null as unknown }))
-      .catch((err: unknown) => ({
-        result: emptyCardsightResult(["cardsight_error"]),
-        durationMs: 0,
-        hasError: true,
-        error: err,
-      })),
-  ]);
-
-  log.info("shadow_comparison", {
-    query: {
-      playerName: opts.queryContext?.playerName ?? null,
-      cardYear: opts.queryContext?.cardYear ?? null,
-      product: opts.queryContext?.product ?? null,
-      parallel: opts.queryContext?.parallel ?? null,
-      gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany ?? null,
-      gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue ?? null,
-    },
-    cardhedge: summarize(ch.result, ch.durationMs, ch.hasError),
-    cardsight: summarize(cs.result, cs.durationMs, cs.hasError),
-    selectedSource: "card_hedge",
-  });
-
-  if (ch.hasError && ch.error) throw ch.error;
-  if (cs.hasError && cs.error) {
-    log.warn("cardsight_error", {
-      mode,
-      query,
-      error: (cs.error as any)?.message ?? String(cs.error),
-    });
-  }
-
-  return ch.result;
 }
 
 // ── searchCardsRouted ───────────────────────────────────────────────────────
@@ -402,43 +301,9 @@ export async function searchCardsRouted(
   query: string,
   limit: number = 20,
 ): Promise<CardHedgeCard[]> {
-  const mode = normalizeMode(process.env.CARDSIGHT_MODE);
-  if (mode === "off") {
-    return searchCards(query, limit);
-  }
-  if (mode === "exclusive") {
-    const cs = await searchCatalog(query, { take: limit });
-    return cs.map(csToChCard);
-  }
-  if (mode === "primary") {
-    const cs = await searchCatalog(query, { take: limit });
-    if (cs.length > 0) return cs.map(csToChCard);
-    return searchCards(query, limit);
-  }
-  // shadow
-  const [ch, cs] = await Promise.all([
-    timed(() => searchCards(query, limit))
-      .then(({ result, durationMs }) => ({ result, durationMs, hasError: false, error: null as unknown }))
-      .catch((err: unknown) => ({ result: [] as CardHedgeCard[], durationMs: 0, hasError: true, error: err })),
-    timed(() => searchCatalog(query, { take: limit }))
-      .then(({ result, durationMs }) => ({ result, durationMs, hasError: false, error: null as unknown }))
-      .catch((err: unknown) => ({ result: [] as any[], durationMs: 0, hasError: true, error: err })),
-  ]);
-  log.info("shadow_search_comparison", {
-    query,
-    cardhedge: {
-      count: ch.result.length,
-      firstThree: ch.result.slice(0, 3).map((c: any) => c.title ?? c.name ?? ""),
-    },
-    cardsight: {
-      count: cs.result.length,
-      firstThree: cs.result.slice(0, 3).map((c: any) => c.name ?? ""),
-    },
-    durationMs: { cardhedge: ch.durationMs, cardsight: cs.durationMs },
-    hasError: { cardhedge: ch.hasError, cardsight: cs.hasError },
-  });
-  if (ch.hasError && ch.error) throw ch.error;
-  return ch.result;
+  // Post-CF-CARDHEDGE-HARD-CUTOVER: Cardsight-only.
+  const cs = await searchCatalog(query, { take: limit });
+  return cs.map(csToRoutedCard);
 }
 
 // ── getCardSalesRouted ──────────────────────────────────────────────────────
@@ -447,50 +312,21 @@ export async function getCardSalesRouted(
   cardId: string,
   grade: string,
   limit: number,
-  opts?: { cardIdSource?: "cardhedge" | "cardsight" },
 ): Promise<CardHedgeSale[]> {
-  const mode = normalizeMode(process.env.CARDSIGHT_MODE);
-  const cardIdSource = opts?.cardIdSource ?? "cardhedge";
-
-  async function cardsightSales(): Promise<CardHedgeSale[]> {
-    const pricing = await getPricing(cardId);
-    const translated = translateResponse(pricing, {});
-    return translated.map((t) => ({
-      price: t.price,
-      date: t.soldDate ?? null,
-      grade,
-      source: "cardsight",
-      sale_type: null,
-      title: t.title ?? null,
-      url: null,
-    }));
-  }
-
-  if (mode === "off") {
-    return getCardSales(cardId, grade, limit);
-  }
-  if (mode === "shadow") {
-    if (cardIdSource === "cardhedge") {
-      log.info("shadow_pricing_skipped_namespace_check", {
-        reason: "cardId_is_cardhedge_namespace",
-        cardId,
-      });
-      return getCardSales(cardId, grade, limit);
-    }
-    log.info("shadow_pricing_comparison", { cardId, cardIdSource, singleSource: "cardsight" });
-    return cardsightSales();
-  }
-  if (mode === "primary") {
-    if (cardIdSource === "cardhedge") {
-      log.warn("primary_mode_cardhedge_namespace_only", { cardId });
-      return getCardSales(cardId, grade, limit);
-    }
-    return cardsightSales();
-  }
-  // exclusive
-  if (cardIdSource === "cardhedge") {
-    log.warn("primary_mode_cardhedge_namespace_only", { cardId });
-    return [];
-  }
-  return cardsightSales();
+  // Post-CF-CARDHEDGE-HARD-CUTOVER: `cardIdSource` discriminant removed.
+  // Every cardId is now a Cardsight UUID. `limit` retained in the
+  // signature for caller backward-compat but not threaded into Cardsight
+  // pricing (which returns the full record set; caller slices).
+  void limit;
+  const pricing = await getPricing(cardId);
+  const translated = translateResponse(pricing, {});
+  return translated.map((t) => ({
+    price: t.price,
+    date: t.soldDate ?? null,
+    grade,
+    source: "cardsight",
+    sale_type: null,
+    title: t.title ?? null,
+    url: null,
+  }));
 }

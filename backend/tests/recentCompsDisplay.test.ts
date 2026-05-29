@@ -17,14 +17,21 @@
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
-  findCompsByQuery: vi.fn(),
-  getCardSales: vi.fn(),
-  searchCards: vi.fn(),
-}));
+// Post-CF-CARDHEDGE-HARD-CUTOVER: mocks target cardsight.router instead
+// of the deleted cardhedge.client. The router's findCompsRouted return
+// shape (RoutedResult) matches the prior cardhedge findCompsByQuery shape.
+vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    findCompsRouted: vi.fn(),
+    getCardSalesRouted: vi.fn(),
+    searchCardsRouted: vi.fn(),
+  };
+});
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
-import * as cardHedge from "../src/services/compiq/cardhedge.client.js";
+import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 const today = new Date();
 const isoDaysAgo = (n: number) =>
@@ -48,7 +55,7 @@ describe("recentComps display (issue #24)", () => {
 
   it("PSA 7 target: recentComps surfaces ORIGINAL CH sale prices (not normalized intermediates)", async () => {
     const psa7Prices = [100, 110, 95, 105, 120, 115, 98, 102];
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-test-psa7",
         title: "Ronald Acuna Jr 2018 Topps Update PSA 7",
@@ -103,7 +110,7 @@ describe("recentComps display (issue #24)", () => {
       { price: 400, grade: "PSA 9", title: "Cross Player 2020 Topps PSA 9 B" },
       { price: 390, grade: "PSA 9", title: "Cross Player 2020 Topps PSA 9 C" },
     ];
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-test-crossgrade",
         title: "Cross Grade Test Card",
@@ -153,7 +160,7 @@ describe("recentComps display (issue #24)", () => {
 
   it("Raw target: prices unchanged and grade label is \"Raw\" when title has no grading company", async () => {
     const rawPrices = [50, 55, 48, 52, 60, 58, 49, 51];
-    (cardHedge.findCompsByQuery as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-test-raw",
         title: "Raw Test Card",
