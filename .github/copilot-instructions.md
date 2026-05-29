@@ -62,20 +62,17 @@ iOS App (CompIQ SwiftUI)
         v
 hobbyiq3 backend (TypeScript, Express on Azure App Service)
   - /api/compiq/price | /price-by-id | /estimate | /comps-by-player
-  - Cardsight is primary comp source via cardsight.router (exclusive mode)
-  - cardhedge.client still imported but bypassed at runtime (see CURRENT STATE)
+  - Cardsight is the sole comp source via cardsight.router
         |
         v
 compiq-mcp server (TypeScript, OpenAI GPT-4o)
   - Receives card data at prediction time
-  - Fetches comps via HTTP from hobbyiq3 /api/compiq/comps-by-player (since Phase 2)
-  - NO LONGER reads fn-cardhedge-comps blob writes (Phase 2 verified 2026-05-27)
+  - Fetches comps via HTTP from hobbyiq3 /api/compiq/comps-by-player
   - Builds pricing prompt with full signal context
   - Returns structured PriceResult JSON
         |
         v
 Azure Functions (timer-driven signals + Cardsight-backed pricing)
-  fn-cardhedge-comps      (timer, nightly 02:00 UTC) — ZOMBIE: still firing, zero consumers post-Phase-2
   fn-nightly-comp-prefetch(timer, nightly 02:30 UTC) — per-card cache + floor + PSA pop (M2)
   fn-ebay-signals         (timer, every 4hr)
   fn-reddit-signals       (timer, every 2hr)
@@ -106,42 +103,22 @@ context; when they conflict with this section, **this section wins.**
 
 ### Comp data flow (post Phase 1 + Phase 2)
 
-- **Primary comp source:** Cardsight API (catalog + pricing), accessed via
-  `backend/src/services/compiq/cardsight.router.ts` under
-  `CARDSIGHT_MODE=exclusive` (production setting on hobbyiq3).
+- **Sole comp source:** Cardsight API (catalog + pricing), accessed via
+  `backend/src/services/compiq/cardsight.router.ts`.
 - **MCP comp fetching:** `mcp-server/compsLoader.ts` calls hobbyiq3's
   `/api/compiq/comps-by-player` endpoint via HTTP (Phase 2, PR #121, shipped
-  2026-05-27). MCP NO LONGER reads `compiq-signals/{slug}/cardhedge.json`
-  blob writes.
+  2026-05-27).
 - **Backend caching:** `compsByPlayer.service.ts` aggregate cache (6h TTL,
   Redis-backed) + per-cardId Cardsight pricing cache (6h TTL via
-  `cardhedge.client`'s wrapper, which was kept for cache machinery despite
-  the name). Per-cardId resolution LRU at 7-day TTL.
-- **iOS-facing endpoints unchanged:** `/api/compiq/price`,
-  `/api/compiq/price-by-id`, `/api/compiq/estimate` work the same shape;
-  internals now route through Cardsight.
+  `cardsight.router`'s cacheWrap). Per-cardId resolution LRU at 7-day TTL.
+- **iOS-facing endpoints:** `/api/compiq/price`, `/api/compiq/price-by-id`,
+  `/api/compiq/estimate` — Cardsight-backed via cardsight.router.
 
-### CH (Card Hedge) residual state — partial cleanup
+### CardHedge: fully decommissioned
 
-- `fn-cardhedge-comps` (the nightly blob writer) **still fires at 02:00 UTC**
-  writing valid blobs that zero production consumers read. Tracked as
-  CF-FN-CARDHEDGE-DISABLE; durable disable requires `fn-compiq` redeploy
-  (Linux Function App read-only constraint prevents `az`-side disable).
-- `cardhedge.client.ts` **still in the repo with 4 production imports**:
-  `cardsight.router.ts:28`, `compiqEstimate.service.ts:5` (type-only),
-  `compiq.routes.ts:6` + `:735` (search-list dead path). Production paths
-  reach `cardhedge.client.ts` even under `CARDSIGHT_MODE=exclusive` — the
-  precise consumer that requires `CARD_HEDGE_API_KEY` at runtime is **not
-  yet identified** (2026-05-27 WS4.3 finding: removing the env var on
-  hobbyiq3 caused `/price` and `/estimate` to return empty comps; env var
-  restored). Tracked as CF-CARDHEDGE-CLIENT-DELETE; investigation pending.
-- `CARD_HEDGE_API_KEY` env var: **removed from compiq-mcp** (Phase 2 has
-  no CH dependency), **kept on hobbyiq3** (runtime consumer not yet
-  identified per above), **kept on fn-compiq** (zombie preservation;
-  removes once CF-FN-CARDHEDGE-DISABLE lands).
-- `ch-monitor.yml` Phase 3a GitHub Action: **disabled 2026-05-27** — the
-  blobs it monitors are still being written but no production consumer
-  reads them, so monitoring is no-op.
+CardHedge fully removed at CF-CARDHEDGE-HARD-CUTOVER (10ad39d, 2026-05-29).
+`fn-cardhedge-comps` deleted, `cardhedge.client.ts` deleted, `CARD_HEDGE_API_KEY`
+removed from `hobbyiq3` + `fn-compiq`, `ch-monitor.yml` removed.
 
 ### Deploy infrastructure (post 2026-05-24 incident hardening)
 
@@ -176,9 +153,9 @@ context; when they conflict with this section, **this section wins.**
 - Phase 2 (compsLoader HTTP rewire): shipped PR #121 at SHA `eb87559`,
   deployed to compiq-mcp via Kudu `098460e6`, verified 5/5 demo /predict
   smoke matches local exactly.
-- Phase 3 (decommission): partial. fn-cardhedge-comps still fires
-  (CF-FN-CARDHEDGE-DISABLE). cardhedge.client.ts still in repo
-  (CF-CARDHEDGE-CLIENT-DELETE).
+- Phase 3 (decommission): COMPLETE at CF-CARDHEDGE-HARD-CUTOVER (10ad39d,
+  2026-05-29) — fn-cardhedge-comps deleted, cardhedge.client.ts deleted,
+  CARD_HEDGE_API_KEY removed from hobbyiq3 + fn-compiq.
 
 ---
 
@@ -258,48 +235,24 @@ Blob cache key pattern: `compiq/signals/{player_name_slug}/{signal_type}.json`
 Per-card comps key:     `compiq/signals/{player_name_slug}/{card_id}/comps.json`
 
 Signal weights in final aggregation (sum to 1.00):
-- Card Hedge: 0.20 (12hr TTL — **HISTORICAL: was PRIMARY sold-data source; replaced by Cardsight 2026-05-26 onward, see CURRENT STATE**)
-- eBay:       0.20 (4hr TTL — BIN-drop + sell-through blend)
-- Reddit:     0.15 (2hr TTL)
-- Trends:     0.15 (6hr TTL)
-- Odds:       0.15 (4hr TTL)
-- Stats:      0.10 (2hr TTL)
-- News:       0.05 (3hr TTL)
+- compsMomentum: 0.20 (12hr TTL — Cardsight-backed; currently returns the
+  fallback "unavailable" multiplier 1.0 pending CF-COMPSMOMENTUM-GREENFIELD-CARDSIGHT)
+- eBay:          0.20 (4hr TTL — BIN-drop + sell-through blend)
+- Reddit:        0.15 (2hr TTL)
+- Trends:        0.15 (6hr TTL)
+- Odds:          0.15 (4hr TTL)
+- Stats:         0.10 (2hr TTL)
+- News:          0.05 (3hr TTL)
 
-### Comp source (current: Cardsight; historical: Card Hedge)
-
-Cardsight is the primary catalog + comp source as of MCP rewire Phase 2
-(2026-05-27). Card Hedge is being decommissioned; the sections below describe
-what's CURRENTLY active and what's HISTORICAL.
-
-#### Cardsight (CURRENT primary, 2026-05-26 onward)
+### Comp source — Cardsight
 
 - Base URL: `https://api.cardsight.ai/v1`
-- Auth: `X-API-Key: ${CARDSIGHT_API_KEY}` (separate from Card Hedge's key)
-- Production gating: `CARDSIGHT_MODE=exclusive` on hobbyiq3 (set via App
-  Settings). Routing layer in `backend/src/services/compiq/cardsight.router.ts`.
+- Auth: `X-API-Key: ${CARDSIGHT_API_KEY}`
+- Routing layer: `backend/src/services/compiq/cardsight.router.ts`.
 - Cache: 6h TTL on `getPricing` + `searchCatalog`; 24h on `getCardDetail`;
   7-day LRU on `resolveCardId` outcomes.
 - Aggregate endpoint: `GET /api/compiq/comps-by-player?playerName=...&product=...&cardYear=...`
-  on hobbyiq3 — MCP's `compsLoader.ts` calls this. Phase 2 of MCP rewire.
-
-#### Card Hedge (HISTORICAL — see CURRENT STATE section above)
-
-Card Hedge was the primary comp source pre-2026-05-26. The HTTP client at
-`backend/src/services/compiq/cardhedge.client.ts` is still in the repo with
-4 active imports but its runtime paths are bypassed under
-`CARDSIGHT_MODE=exclusive` (with one un-identified exception that requires
-`CARD_HEDGE_API_KEY` on hobbyiq3 — see CURRENT STATE section). Eventual
-deletion tracked as CF-CARDHEDGE-CLIENT-DELETE.
-
-For historical reference (NOT current operating model):
-
-- Base URL: `https://api.cardhedger.com/v1`
-- Auth header: `X-API-Key: ${CARD_HEDGE_API_KEY}`
-- Endpoints: `POST /cards/card-search`, `POST /cards/comps`, `POST /cards/card-match`
-- Prices returned as strings in dollars (coerce to float, do NOT divide by 100)
-- MCP server formerly read cached comps written by `fn-cardhedge-comps`; that
-  blob-read path was removed in Phase 2 (2026-05-27).
+  on hobbyiq3 — MCP's `compsLoader.ts` calls this.
 
 ---
 
@@ -330,10 +283,8 @@ All Azure Functions require these in Application Settings:
 
 ```
 AZURE_BLOB_CONNECTION_STRING    your blob storage connection string
-CARDSIGHT_API_KEY               your Cardsight API key (PRIMARY catalog + comp source post-2026-05-26)
-CARDSIGHT_MODE                  exclusive (production setting; gates router to Cardsight-only)
+CARDSIGHT_API_KEY               your Cardsight API key (sole catalog + comp source)
 HOBBYIQ_BACKEND_URL             on compiq-mcp: URL of hobbyiq3 backend (compsLoader calls /api/compiq/comps-by-player)
-CARD_HEDGE_API_KEY              HISTORICAL — still required on hobbyiq3 + fn-compiq pending CF-CARDHEDGE-CLIENT-DELETE (see CURRENT STATE)
 EBAY_APP_ID                     from developer.ebay.com (free)
 EBAY_CERT_ID                    from developer.ebay.com (free)
 REDDIT_CLIENT_ID                from reddit.com/prefs/apps (free)
@@ -422,21 +373,13 @@ Always auto-flag these conditions in pricing output:
   comp-volume gating computed for the card (H10)
 - Never skip the sell-through rate or BIN-trend checks when building eBay
   signals — both feed the eBay multiplier blend (H5 + H7)
-- Never call Card Hedge live at prediction time — HISTORICAL: this rule
-  applied when CH was primary. Current state: Cardsight is primary, accessed
-  via `cardsight.router` under `CARDSIGHT_MODE=exclusive`. CH paths are
-  bypassed at runtime (with one un-identified exception per CURRENT STATE
-  section). The MCP server now fetches comps via HTTP from hobbyiq3's
-  `/api/compiq/comps-by-player`, NOT from `fn-cardhedge-comps` blob writes.
+- Never reintroduce CardHedge — Cardsight is the sole comp source via
+  `cardsight.router`. MCP fetches comps via HTTP from hobbyiq3's
+  `/api/compiq/comps-by-player`.
 - Never use raw eBay sold data for comps when Cardsight data is available —
-  Cardsight is the primary source post-2026-05-26; eBay is the fallback.
-  HISTORICAL: same rule applied with CH as primary.
-- Never trust an identity match with confidence below 0.80 — applies to any
-  catalog-resolution step (Cardsight `resolveCardId` or legacy CH paths) —
-  reject and require manual card-id assignment.
-- Card Hedge prices: HISTORICAL — strings in dollars (coerce to float, do
-  NOT divide by 100). Cardsight returns numeric values directly per its
-  OpenAPI spec.
+  Cardsight is the primary source; eBay is the fallback.
+- Never trust an identity match with confidence below 0.80 — applies to
+  Cardsight `resolveCardId` — reject and require manual card-id assignment.
 
 ---
 

@@ -41,7 +41,7 @@ The reconciliation doc's Section 5 listed accumulated debt. Empirical verificati
 | Debt item | Verified state | Implication |
 |---|---|---|
 | Cosmos `hobbyiq-comps-centralus` 32% dependency-row 400 rate | **Final classification 2026-05-28: A, benign SDK chatter, zero data loss.** Investigated three times across two days. Final empirical evidence: container is **single partition** (refutes fan-out / broken-partition structurally), **completeness check across 8 known players × 2 passes shows all data reachable deterministically** (refutes silent data loss). The 32% is per-dependency-row, application sees 0% failures, SDK absorbs internally. Honest flip-flop noted: morning's "ACTIVE / DailyIQ degraded" framing was based on dependency-aggregate inference; today's direct probe + completeness check was definitive. | **No fix needed.** PR #113 (`81f5c7b`) stays as defensive coverage of an unrelated edge case. **The morning's symptom framing (silent nulls on DailyIQ) was right — but the mechanism is name-format mismatch, not Cosmos 400s.** That is the actual W1 target as **CF-PLAYERNAME-CANONICALIZATION**. |
-| Card Hedge client still in code | Prod `CARDSIGHT_MODE=exclusive`. `off`/`shadow`/`primary` fallback branches are dead code in production. Picker path (`/api/compiq/cardsearch`, `/search-list`) IS still calling CH's `searchCards`. | Picker migration is the real unlock; rest is dead-code cleanup |
+| Card Hedge client still in code | Prod `CARDSIGHT_MODE=exclusive`. `off`/`shadow`/`primary` fallback branches are dead code in production. Picker path (`/api/compiq/cardsearch`, `/search-list`) IS still calling CH's `searchCards`. | Picker migration is the real unlock; rest is dead-code cleanup. ✅ RESOLVED at CF-CARDHEDGE-HARD-CUTOVER ([10ad39d](https://github.com/HobbyIQ/HobbyIQ-V1/commit/10ad39d), 2026-05-29) |
 | Original Phase 1 silent regression (router L490-494) | Short-circuit code still present, BUT meaningful-query fall-through at `compiqEstimate.service.ts:858-878` is the documented workaround. Empty-return is the intentional fallback when there's no query text to drive Cardsight catalog lookup. | The 2026-05-27 addendum's "Phase 1 COMPLETE" claim is substantively correct in practice. Not a critical path item. |
 | Cardsight parallel-coverage gaps | Vendor doesn't catalog retail-border parallels (Wal-Mart Border, Target Red, CHR PROS family). Confirmed via Trout WMB ×2, Bonemer, Tommy White, Gage Wood. | Vendor dependency — not fixable our side. Surface honestly via CF-CATALOG-GAP-PRICING-HONESTY. |
 | Data-contamination class (iOS field contract) | Recurring — playerName contamination, wrong product field, phantom setName field. Server-side workarounds in place (normalizePlayerName, field-name shim, tokenizeParallel wrapper-strip). | Real fix is **CF-UNIFIED-SEARCH-AND-CERT** (renamed and expanded from the original CF-PSA-CERT-RESOLUTION-PIPELINE per design `23038d7`) — clean identity entry path via cert lookup OR Cardsight catalog → canonical CardIdentity → committed to portfolio. v1 ships the input contract; existing contaminated holdings stay on legacy paths per design §14 scope discipline. |
@@ -112,21 +112,10 @@ Influencer-driven launch context (free-access seeding to influencer partnerships
 
 **Milestone:** product honesty about catalog-gap cards. Trout WMB shows "approximate" rather than a confident $382.50.
 
-### Phase 3 CH decommission — B-then-A sequencing (restructured 2026-05-29 late session)
+### Phase 3 CH decommission — COMPLETE 2026-05-29
 
-- ✅ **W5-Windows user-facing endpoint migration SHIPPED** (`06b585d`). `/api/compiq/cardsearch` migrated from CardHedge to Cardsight via the unified dispatcher; `/api/compiq/search-list` deleted entirely (no callers per Phase 1 caller grep). Picker → cardsearch flow now Cardsight-native.
-- ⏳ **CF-CARDHEDGE-DECOMMISSION-FULL (HIGH backlog, next backend workstream)** — per Drew's Option B sequence handles the remaining CardHedge cleanup:
-  - `/api/compiq/price-by-id` migration from CardHedge to Cardsight
-  - `cardhedge.client.ts` file deletion
-  - `fn-cardhedge-comps` Azure Function disable
-  - `CARD_HEDGE_API_KEY` + CH env vars removal from `HobbyIQ3` App Settings
-  - CardHedge subscription cancellation (business action, post-code-removal)
-  - `copilot-instructions.md` update to remove CardHedge references
-  - `cardHedgeCardId` field naming decision on `PortfolioHolding` — rename to a vendor-neutral column or accept as legacy name (data migration decision)
-  - Test / fixture cleanup that references CardHedge
-  - Deeper code references the W5-Windows Phase 1 caller grep didn't fully enumerate (~unknown extent until empirical Phase 1 grep)
-
-Scope estimate: **~4-6h** given unknown CH integration footprint. Real Phase 1 grep required for full enumeration before scoping fix. Not in v1 user-facing scope; sequenced after W5-Windows ship + InventoryIQ design (per Option B section below). See SESSION_HANDOFF.md backlog entry for canonical scope.
+- ✅ **W5-Windows user-facing endpoint migration SHIPPED** (`06b585d`). `/api/compiq/cardsearch` migrated from CardHedge to Cardsight via the unified dispatcher; `/api/compiq/search-list` deleted entirely. Picker → cardsearch flow Cardsight-native.
+- ✅ **CF-CARDHEDGE-HARD-CUTOVER SHIPPED** ([10ad39d](https://github.com/HobbyIQ/HobbyIQ-V1/commit/10ad39d), 2026-05-29) — full removal: `fn-cardhedge-comps` deleted from compiq-functions (schedule disabled via `func azure functionapp publish` — the canonical disable mechanism for package-deployed Functions per Finding 3 of commit body); `cardhedge.client.ts` deleted; `CARD_HEDGE_API_KEY` + CH env vars removed from `HobbyIQ3` + `fn-compiq`; 9 test files rewritten to mock `cardsight.router`; 1191/1191 backend tests green; deploy + smoke 3/3 PASS. CF-PRICE-BY-ID-MIGRATION previously shipped at [5640084](https://github.com/HobbyIQ/HobbyIQ-V1/commit/5640084). CF-CARDHEDGE-NAMING-CLEANUP deferred (LOW backlog — `cardHedgeCardId` column + `CardHedgeCard`/`CardHedgeSale` type names retained for backward compat at single-user pre-launch). `compsMomentum` 0.20-weight slot returns fallback `{multiplier: 1.0, signal: "unavailable"}` pending CF-COMPSMOMENTUM-GREENFIELD-CARDSIGHT (HIGH backlog — load-bearing for prediction quality; `build_comps_payload` ~50 LOC pure helper preserved verbatim in 10ad39d commit body for the greenfield implementation).
 
 ### Weeks 8-10 (2026-07-21 → 2026-08-10) — Phase 4a Backend cache layer
 
@@ -223,7 +212,7 @@ iOS Phase 5 device verification (pending per `7f758cd` handoff) is operator-task
 
 - ✅ Data-quality root fix shipped (CF-UNIFIED-SEARCH-AND-CERT v1 live: cert lookup + Cardsight search + canonical CardIdentity + VerifyView)
 - ✅ Catalog-gap pricing honesty surfaced (iOS chips, confidence tiers in response)
-- ✅ Phase 3 CH decommission complete (picker migration absorbed into v1 W2-W6; remaining CH cleanup small follow-up commit)
+- ✅ Phase 3 CH decommission complete (picker migration absorbed into v1 W2-W6; remaining CH cleanup shipped via CF-CARDHEDGE-HARD-CUTOVER 10ad39d 2026-05-29)
 - ✅ Phase 4a MCP cache layer live (>80% hit rate, Cardsight outage resilience verified)
 - ✅ Phase 4b signal validation complete (signal contribution measured, weights calibrated or retired)
 - ✅ Product hardening sprint complete (comp_logs audited, prediction calibration measured)
@@ -307,7 +296,7 @@ Per Drew's framing 2026-05-29 (post-W5-Windows ship): build the backend out then
 
 1. ✅ **W5-Windows** (`06b585d`) — Cardsight-backed `/api/compiq/cardsearch` with detail enrichment per path (i). DONE.
 2. ⏳ **InventoryIQ design investigation** (next) — empirical inventory of HobbyIQ's holdings layer + Cardsight collection schema comparison + recommendations doc. **Cardsight as REFERENCE for modeling, NOT inventory implementation.** ~2-3h. Output: design doc at `docs/phase0/inventoryiq_design_<date>.md`.
-3. ⏳ **CF-CARDHEDGE-DECOMMISSION-FULL** — full CardHedge removal across code/infra/business per the canonical scope in SESSION_HANDOFF.md. ~4-6h.
+3. ✅ **CF-CARDHEDGE-HARD-CUTOVER** ([10ad39d](https://github.com/HobbyIQ/HobbyIQ-V1/commit/10ad39d), 2026-05-29) — full CardHedge removal across code/infra. CardHedge subscription cancellation (business action) = remaining open item.
 4. ⏳ **Q1 evaluation** — empirical inspection of Cardsight `grades.companies.*` endpoints (`list_grading_companies` + `list_grading_company_types` + `list_grading_company_grades` per Cardsight published-SDK Appendix A2.2) to determine v1.5 grader integration viability. ~30-45 min.
 5. ⏳ **Q1 implementation** (per Drew's "all grading data in the app" framing) — implement adapters for whatever grader coverage Cardsight provides via `grades.companies.*`. ~3-5h. May land BGS / SGC / CGC adapters via the W2 cert-grader registry abstraction (the load-bearing pluggability that W2 was designed for).
 6. ⏳ **W5-iOS** — Mac-required. Picker rebuild against `UnifiedSearchResponse` shape per the W5 section above + W3's `/api/search/cards` endpoint.
