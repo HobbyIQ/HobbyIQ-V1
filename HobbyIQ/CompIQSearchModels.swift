@@ -12,7 +12,7 @@ struct CompIQVariantSearchRequest: Codable {
 }
 
 struct CompIQVariantHit: Codable, Identifiable, Hashable {
-    let cardHedgeCardId: String
+    let cardsightCardId: String
     let player: String?
     let set: String?
     let year: Int?
@@ -22,19 +22,18 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     let displayLabel: String?
     let imageUrl: String?
 
-    var id: String { cardHedgeCardId }
+    var id: String { cardsightCardId }
 
     var resolvedLabel: String {
         if let displayLabel, displayLabel.isEmpty == false { return displayLabel }
         if let title, title.isEmpty == false { return title }
         let parts = [set, player, number, variant].compactMap { $0 }
-        return parts.isEmpty ? cardHedgeCardId : parts.joined(separator: " ")
+        return parts.isEmpty ? cardsightCardId : parts.joined(separator: " ")
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        // cardsearch returns "card_id"; keep internal property name the same
-        cardHedgeCardId = try container.decode(String.self, forKey: .cardHedgeCardId)
+        cardsightCardId = try container.decode(String.self, forKey: .cardsightCardId)
         player = try? container.decodeIfPresent(String.self, forKey: .player)
         set = try? container.decodeIfPresent(String.self, forKey: .set)
         year = try? container.decodeIfPresent(Int.self, forKey: .year)
@@ -48,7 +47,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case cardHedgeCardId = "card_id"
+        case cardsightCardId = "card_id"
         case player, set, year
         case number = "card_number"
         case variant, title, displayLabel
@@ -56,7 +55,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     init(
-        cardHedgeCardId: String,
+        cardsightCardId: String,
         player: String? = nil,
         set: String? = nil,
         year: Int? = nil,
@@ -66,7 +65,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         displayLabel: String? = nil,
         imageUrl: String? = nil
     ) {
-        self.cardHedgeCardId = cardHedgeCardId
+        self.cardsightCardId = cardsightCardId
         self.player = player
         self.set = set
         self.year = year
@@ -78,7 +77,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     init(from holding: InventoryCard) {
-        self.cardHedgeCardId = holding.id.uuidString
+        self.cardsightCardId = holding.id.uuidString
         self.player = holding.playerName
         self.set = holding.setName.isEmpty ? nil : holding.setName
         self.year = Int(holding.year)
@@ -116,10 +115,10 @@ struct CompIQVariantListResponse: Codable {
 // MARK: - Price By ID (POST /api/compiq/price-by-id)
 
 struct CompIQPriceByIdRequest: Codable {
-    let cardHedgeCardId: String
+    let cardsightCardId: String
     let query: String?
     let gradeCompany: String?
-    let gradeValue: Int?
+    let gradeValue: Double?
 }
 
 struct PriceZone: Codable, Hashable {
@@ -282,7 +281,7 @@ struct TrendIQWeights: Codable {
 
 struct CompIQPriceByIdResponse: Codable {
     let success: Bool?
-    let cardHedgeCardId: String?
+    let cardsightCardId: String?
     let summary: String?
     let marketTier: CompIQPriceMarketTier?
     /// Phase 3: renamed from `fmv`. The canonical market value from the engine.
@@ -350,7 +349,7 @@ struct CompIQPriceByIdResponse: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         success = try? container.decodeIfPresent(Bool.self, forKey: .success)
-        cardHedgeCardId = try? container.decodeIfPresent(String.self, forKey: .cardHedgeCardId)
+        cardsightCardId = try? container.decodeIfPresent(String.self, forKey: .cardsightCardId)
         summary = try? container.decodeIfPresent(String.self, forKey: .summary)
         marketTier = try? container.decodeIfPresent(CompIQPriceMarketTier.self, forKey: .marketTier)
         marketValue = try? container.decodeIfPresent(Double.self, forKey: .marketValue)
@@ -408,7 +407,7 @@ struct CompIQPriceByIdResponse: Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case success, cardHedgeCardId, summary, marketTier
+        case success, cardsightCardId, summary, marketTier
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
         case confidence, source, trendAnalysis, recentComps

@@ -103,9 +103,9 @@ struct APIService {
         return try await post(path: "/api/compiq/cardsearch", body: body, responseType: CompIQVariantListResponse.self)
     }
 
-    func priceByCardId(cardHedgeCardId: String, query: String?, gradeCompany: String?, gradeValue: Int?) async throws -> CompIQPriceByIdResponse {
+    func priceByCardId(cardsightCardId: String, query: String?, gradeCompany: String?, gradeValue: Double?) async throws -> CompIQPriceByIdResponse {
         let body = CompIQPriceByIdRequest(
-            cardHedgeCardId: cardHedgeCardId,
+            cardsightCardId: cardsightCardId,
             query: query,
             gradeCompany: gradeCompany,
             gradeValue: gradeValue

@@ -43,12 +43,12 @@ struct CompIQPricedCardView: View {
             }
         }
 
-        var gradeValue: Int? {
+        var gradeValue: Double? {
             switch self {
             case .raw: return nil
             case .psa9: return 9
             case .psa10: return 10
-            case .bgs95: return 10 // BGS 9.5 maps to gradeValue 10
+            case .bgs95: return 9.5
             }
         }
     }
@@ -1102,7 +1102,7 @@ struct CompIQPricedCardView: View {
 
         do {
             let response = try await CompIQSearchService.shared.priceByCardId(
-                hit.cardHedgeCardId,
+                hit.cardsightCardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
                 gradeCompany: selectedGrade.gradeCompany,
                 gradeValue: selectedGrade.gradeValue
@@ -1263,7 +1263,7 @@ private extension CompIQPriceByIdResponse {
         let json = #"""
         {
             "success": true,
-            "cardHedgeCardId": "preview-1",
+            "cardsightCardId": "preview-1",
             "summary": "Buy — Strong value at current pricing with rising trend and 8 recent comps in the last 30 days.",
             "marketTier": { "value": 42.50, "high": 67.00 },
             "buyZone": [28.00, 38.00],

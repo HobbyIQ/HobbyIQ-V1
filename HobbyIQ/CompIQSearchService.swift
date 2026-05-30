@@ -31,16 +31,16 @@ final class CompIQSearchService {
         return hits
     }
 
-    /// Fetches full pricing data for a specific card variant by its Card Hedge ID.
+    /// Fetches full pricing data for a specific card variant by its Cardsight ID.
     func priceByCardId(
         _ id: String,
         query: String?,
         gradeCompany: String?,
-        gradeValue: Int?
+        gradeValue: Double?
     ) async throws -> CompIQPriceByIdResponse {
         logger.info("Fetching price for cardId: \(id)")
         let response = try await APIService.shared.priceByCardId(
-            cardHedgeCardId: id,
+            cardsightCardId: id,
             query: query,
             gradeCompany: gradeCompany,
             gradeValue: gradeValue
