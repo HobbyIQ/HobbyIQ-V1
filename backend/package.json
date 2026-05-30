@@ -19,6 +19,7 @@
     "@azure/cosmos": "^4.9.3",
     "@azure/identity": "^4.13.1",
     "@azure/storage-blob": "^12.31.0",
+    "@opentelemetry/instrumentation-undici": "^0.28.0",
     "apn": "^2.2.0",
     "applicationinsights": "^3.14.0",
     "cors": "^2.8.5",

@@ -1,4 +1,6 @@
 import * as appInsights from "applicationinsights";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import app from "./app.js";
 import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
@@ -9,6 +11,15 @@ import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.
 // Initialize App Insights — must be called before the server handles requests.
 // The Azure App Service agent (ApplicationInsightsAgent_EXTENSION_VERSION=~3)
 // handles deep instrumentation; this SDK call enables custom telemetry and live metrics.
+//
+// CF-APPINSIGHTS-FETCH-INSTRUMENTATION: the v3 SDK + agent extension only hook
+// Node's legacy http/https modules (Cosmos, fn-compiq Azure SDK, IMDS). Calls
+// via the global fetch API (Node 18+, undici-backed) are NOT auto-instrumented
+// -- empirically confirmed by CF-CARDSIGHT-GRADE-ID-PATTERN Phase 3.4 telemetry
+// gap (zero Cardsight deps despite 28+ comps returned). Adding
+// @opentelemetry/instrumentation-undici restores fetch visibility by hooking
+// undici's diagnostics_channel. Registers AFTER appInsights.start() so the
+// instrumentation picks up the v3 SDK's global tracer provider.
 if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
   try {
     appInsights
@@ -20,7 +31,10 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
       .setAutoCollectConsole(true, true)
       .setSendLiveMetrics(true)
       .start();
-    console.log("[AppInsights] Telemetry active");
+    registerInstrumentations({
+      instrumentations: [new UndiciInstrumentation()],
+    });
+    console.log("[AppInsights] Telemetry active (undici fetch instrumentation registered)");
   } catch (err: any) {
     console.warn("[AppInsights] Init failed:", err.message);
   }
