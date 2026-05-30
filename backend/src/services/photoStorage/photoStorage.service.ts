@@ -121,7 +121,10 @@ export async function issueSasUploadUrl(opts: IssueSasUploadUrlOptions): Promise
   };
 }
 
-export async function deleteBlobByUrl(blobUrl: string): Promise<void> {
+// Parse a blob URL and validate it points at our configured account +
+// container. Returns the blob name. Shared by deleteBlobByUrl and
+// downloadBlobByUrl below.
+function parseBlobUrlOrThrow(blobUrl: string): string {
   let parsed: URL;
   try {
     parsed = new URL(blobUrl);
@@ -138,8 +141,11 @@ export async function deleteBlobByUrl(blobUrl: string): Promise<void> {
   if (segments.length < 2 || segments[0] !== CONTAINER_NAME) {
     throw new Error(`Invalid blob URL for our container: ${blobUrl}`);
   }
-  const blobName = segments.slice(1).map((s) => decodeURIComponent(s)).join("/");
+  return segments.slice(1).map((s) => decodeURIComponent(s)).join("/");
+}
 
+export async function deleteBlobByUrl(blobUrl: string): Promise<void> {
+  const blobName = parseBlobUrlOrThrow(blobUrl);
   const blobServiceClient = getBlobServiceClient();
   const blobClient = blobServiceClient
     .getContainerClient(CONTAINER_NAME)
@@ -152,6 +158,20 @@ export async function deleteBlobByUrl(blobUrl: string): Promise<void> {
     if (statusCode === 404) return;
     throw err;
   }
+}
+
+// CF-CARDSIGHT-IDENTIFY-INTEGRATION: download a blob's bytes by URL
+// for server-side forwarding to Cardsight identify. Reuses the same
+// URL validation as deleteBlobByUrl so callers can't trick this into
+// downloading from arbitrary storage accounts.
+export async function downloadBlobByUrl(blobUrl: string): Promise<Buffer> {
+  const blobName = parseBlobUrlOrThrow(blobUrl);
+  const blobServiceClient = getBlobServiceClient();
+  const blobClient = blobServiceClient
+    .getContainerClient(CONTAINER_NAME)
+    .getBlobClient(blobName);
+
+  return await blobClient.downloadToBuffer();
 }
 
 export const PHOTO_STORAGE_CONFIG = {

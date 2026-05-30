@@ -137,6 +137,21 @@ export class CardsightNotFoundError extends Error {
   }
 }
 
+// CF-CARDSIGHT-IDENTIFY-INTEGRATION: distinct from CardsightApiError so
+// callers can map validation failures (image too small, wrong format,
+// etc.) to user-facing 400 responses instead of a generic upstream 502.
+// Cardsight identify returns { error, code } on 400; we surface both.
+export class CardsightValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly requestId: string | null = null,
+  ) {
+    super(message);
+    this.name = "CardsightValidationError";
+  }
+}
+
 // ─── Internal Helpers ────────────────────────────────────────────────────────
 
 function apiKey(): string | null {
@@ -163,10 +178,13 @@ const EMPTY_PRICING: CardsightPricingResponse = {
  * Fetch with exponential backoff retry on 429/500+.
  * Throws CardsightTimeoutError on timeout, CardsightApiError on 4xx/5xx after max retries.
  */
+const DEFAULT_NON_THROW_STATUSES: ReadonlySet<number> = new Set([404]);
+
 export async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
   attempt = 0,
+  nonThrowStatuses: ReadonlySet<number> = DEFAULT_NON_THROW_STATUSES,
 ): Promise<Response> {
   let res: Response;
   try {
@@ -201,10 +219,10 @@ export async function fetchWithRetry(
       backoffMs,
     });
     await new Promise<void>((r) => setTimeout(r, backoffMs));
-    return fetchWithRetry(url, options, attempt + 1);
+    return fetchWithRetry(url, options, attempt + 1, nonThrowStatuses);
   }
 
-  if (!res.ok && res.status !== 404) {
+  if (!res.ok && !nonThrowStatuses.has(res.status)) {
     const requestId = res.headers?.get?.("x-request-id") ?? null;
     throw new CardsightApiError(
       `Cardsight API error: ${res.status}`,
@@ -457,4 +475,199 @@ async function _getPricingRaw(
     });
     return { ...EMPTY_PRICING };
   }
+}
+
+// ─── CF-CARDSIGHT-IDENTIFY-INTEGRATION ───────────────────────────────────────
+//
+// Wraps Cardsight's POST /v1/identify/card image-identification endpoint.
+// Empirical contract per pre-Phase-2 probe (4 calls, 2026-05-30):
+//
+//   Input shape: multipart/form-data with field name "image" (also accepts
+//                "file" field name or raw body w/ Content-Type: image/jpeg;
+//                we pick the "image" multipart convention as canonical).
+//   Min dimension: 100px on any side (Cardsight returns 400 + VALIDATION_ERROR
+//                  otherwise).
+//   200 response shape (regardless of success: true/false):
+//     {
+//       success: boolean,         // false when no card detected or image
+//                                 // quality insufficient -- NOT an error!
+//       requestId: string,
+//       processingTime: number,   // ms
+//       detections?: [...],       // present when success:true with finds
+//       messages?: [{type, message}]  // info/warnings (image quality, etc)
+//     }
+//   400 response shape:
+//     { error: string, code: "VALIDATION_ERROR" }
+//   Rate limit: 8 req/s shared with catalog endpoints (per-key global bucket)
+//
+// Decision lock from Phase 1: use fetch pattern (NOT cardsightai SDK) for
+// 100% codebase consistency with existing Cardsight surfaces.
+
+export interface CardsightIdentifyParallel {
+  id: string;
+  name: string;
+  numberedTo?: number | null;
+}
+
+export interface CardsightIdentifyCard {
+  id: string;
+  segmentId?: string;
+  releaseId?: string;
+  setId?: string;
+  year?: string;
+  manufacturer?: string;
+  releaseName?: string;
+  setName?: string;
+  name?: string;
+  number?: string;
+  parallel?: CardsightIdentifyParallel;
+}
+
+export interface CardsightIdentifyGradeValue {
+  id?: string;
+  value: string;
+  condition: string;
+}
+
+export interface CardsightIdentifyGradeCompany {
+  id?: string;
+  name: string;
+}
+
+export interface CardsightIdentifyQualifier {
+  id?: string;
+  code: string;
+}
+
+export interface CardsightIdentifyGrading {
+  confidence: string;
+  company: CardsightIdentifyGradeCompany;
+  grade?: CardsightIdentifyGradeValue;
+  qualifier?: CardsightIdentifyQualifier;
+  autoGrade?: CardsightIdentifyGradeValue;
+}
+
+export interface CardsightIdentifyDetection {
+  confidence: string;
+  card: CardsightIdentifyCard;
+  grading?: CardsightIdentifyGrading;
+}
+
+export interface CardsightIdentifyMessage {
+  type: string;
+  message: string;
+}
+
+export interface CardsightIdentifyResponse {
+  success: boolean;
+  requestId: string;
+  processingTime: number;
+  detections?: CardsightIdentifyDetection[];
+  messages?: CardsightIdentifyMessage[];
+}
+
+interface CardsightIdentifyValidationBody {
+  error: string;
+  code: string;
+}
+
+/**
+ * Submit an image to Cardsight's identify endpoint.
+ *
+ * Returns the response body verbatim regardless of `success: true/false` --
+ * the caller decides UX based on the shape. Cardsight's `success: false`
+ * indicates "no card detected" or "image quality insufficient", which is
+ * a normal API outcome NOT an error.
+ *
+ * Throws:
+ *   - CardsightValidationError on 400 (image dimensions too small, wrong
+ *     format, etc.) -- callers map to user-facing 400 with the message
+ *   - CardsightTimeoutError on timeout after 20s
+ *   - CardsightApiError on persistent 429/5xx after 3-retry exponential
+ *     backoff
+ *
+ * Does NOT cache (each image is unique). Caching the response would be
+ * semantically wrong and would consume cache space without benefit.
+ */
+export async function identify(
+  imageBuffer: Buffer | Uint8Array,
+  filename = "image.jpg",
+  mimeType = "image/jpeg",
+): Promise<CardsightIdentifyResponse> {
+  if (!apiKey()) {
+    throw new CardsightApiError(
+      "CARDSIGHT_API_KEY not set in env",
+      0,
+      null,
+    );
+  }
+
+  const start = Date.now();
+  log.info("identify_start", {
+    endpoint: "identify",
+    filename,
+    mime_type: mimeType,
+    bytes: imageBuffer.byteLength,
+  });
+
+  const form = new FormData();
+  // Cast required: TS DOM lib's BlobPart expects strict ArrayBuffer, but
+  // Node's Buffer typedef uses ArrayBufferLike (includes SharedArrayBuffer).
+  // Runtime contract is fine; the cast acknowledges the type-system friction.
+  form.append(
+    "image",
+    new Blob([imageBuffer as unknown as BlobPart], { type: mimeType }),
+    filename,
+  );
+
+  // 400 (validation) intercepted below; everything else uses default
+  // retry/throw behavior (timeout, 429+5xx retry, other 4xx throws ApiError).
+  const res = await fetchWithRetry(
+    `${BASE_URL}/identify/card`,
+    {
+      method: "POST",
+      body: form,
+      headers: { Accept: "application/json" },
+    },
+    0,
+    new Set([400, 404]),
+  );
+
+  const requestId = res.headers.get("x-request-id");
+  const rateLimitRemaining = res.headers.get("x-ratelimit-remaining");
+
+  if (res.status === 400) {
+    let body: CardsightIdentifyValidationBody;
+    try {
+      body = (await res.json()) as CardsightIdentifyValidationBody;
+    } catch {
+      throw new CardsightValidationError(
+        "Cardsight returned 400 with unparseable body",
+        "PARSE_ERROR",
+        requestId,
+      );
+    }
+    log.warn("identify_validation_error", {
+      endpoint: "identify",
+      code: body.code,
+      error: body.error,
+      request_id: requestId,
+      rate_limit_remaining: rateLimitRemaining,
+      elapsed_ms: Date.now() - start,
+    });
+    throw new CardsightValidationError(body.error, body.code, requestId);
+  }
+
+  const body = (await res.json()) as CardsightIdentifyResponse;
+  log.info("identify_end", {
+    endpoint: "identify",
+    request_id: body.requestId ?? requestId,
+    processing_time_ms: body.processingTime,
+    success: body.success,
+    detection_count: body.detections?.length ?? 0,
+    message_count: body.messages?.length ?? 0,
+    rate_limit_remaining: rateLimitRemaining,
+    elapsed_ms: Date.now() - start,
+  });
+  return body;
 }
