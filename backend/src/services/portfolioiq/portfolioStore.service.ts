@@ -5,6 +5,7 @@ import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
+import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -420,6 +421,37 @@ function normalizeR1CardsightCardId<T extends { cardsightCardId?: string | null 
     return { ...holding, cardsightCardId: raw.slice("cardsight:".length) };
   }
 
+  return holding;
+}
+
+// CF-CARDSIGHT-GRADE-ID-PATTERN R2. Opportunistically populates
+// `cardsightGradeId` on the holding by resolving (gradeCompany,
+// gradeValue, isAuto) against Cardsight's grades taxonomy.
+//
+// Additive complementary per the R2 design -- on resolver miss the
+// existing value is left untouched (null is a permanent valid state;
+// a previously-populated UUID stays even if the resolver no longer
+// matches, since that captures an earlier successful resolution).
+//
+// Never throws -- the resolver swallows network / 4xx / 5xx errors
+// and returns null on every miss path.
+async function populateCardsightGradeId<T extends PortfolioHolding>(
+  holding: T,
+): Promise<T> {
+  const company =
+    String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim();
+  const value = toNumber((holding as any).gradeValue, 0);
+  const isAuto = Boolean(holding.isAuto);
+
+  const resolved = await resolveCardsightGradeId(
+    company.length > 0 ? company : undefined,
+    value > 0 ? value : undefined,
+    isAuto,
+  );
+
+  if (resolved) {
+    return { ...holding, cardsightGradeId: resolved };
+  }
   return holding;
 }
 
@@ -1202,6 +1234,7 @@ export async function addHolding(req: Request, res: Response) {
     holding.id,
     "portfolioStore.service.addHolding",
   );
+  holding = await populateCardsightGradeId(holding);
 
   const doc = await readUserDoc(auth.userId);
   const now = new Date().toISOString();
@@ -1277,6 +1310,7 @@ export async function updateHolding(req: Request, res: Response) {
     id,
     "portfolioStore.service.updateHolding",
   );
+  next = await populateCardsightGradeId(next);
   const now = new Date().toISOString();
   next.lastUpdated = next.lastUpdated ?? now;
 
@@ -1836,12 +1870,13 @@ export async function refreshHolding(req: Request, res: Response) {
   const holding = doc.holdings[id];
   if (!holding) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
+  doc.holdings[id] = await populateCardsightGradeId(holding);
+
   try {
-    await autoPriceHolding(doc, holding, holding, "refresh");
+    await autoPriceHolding(doc, doc.holdings[id], doc.holdings[id], "refresh");
   } catch {
-    holding.freshnessStatus = "Live";
-    holding.lastUpdated = new Date().toISOString();
-    doc.holdings[id] = holding;
+    doc.holdings[id].freshnessStatus = "Live";
+    doc.holdings[id].lastUpdated = new Date().toISOString();
   }
   await writeUserDoc(auth.userId, doc);
   res.json({ message: "Holding refreshed", id });

@@ -121,4 +121,27 @@ export interface PortfolioHolding {
   // serialize unchanged, same posture as W4's certNumber / certGrader
   // (683b26f).
   cardsightCardId?: string | null;
+  // CF-CARDSIGHT-GRADE-ID-PATTERN — Cardsight leaf grade UUID
+  // persisted onto the holding at write time when the resolver
+  // matches (gradeCompany, gradeValue, isAuto) to Cardsight's grades
+  // taxonomy. SUPPLEMENTARY aggregation FK alongside the existing
+  // text grade fields (gradeCompany, gradeValue, certNumber,
+  // certGrader); NOT a replacement. Holdings remain valid in any of:
+  //   - certNumber + certGrader + cardsightGradeId
+  //   - certNumber + certGrader only (Cardsight doesn't cover the
+  //     grader / type)
+  //   - gradeCompany + gradeValue + cardsightGradeId (text grade
+  //     matched to taxonomy)
+  //   - gradeCompany + gradeValue only (text grade only, no
+  //     Cardsight match — including manual ungradeable entries)
+  // Null is a permanent valid state -- the resolver returns null on
+  // every miss path (unknown grader, unknown type, unknown grade
+  // value, network failure) and the holding persists fine without it.
+  //
+  // Resolver: resolveCardsightGradeId at
+  // backend/src/services/cardsight/cardsightGradesTaxonomy.ts.
+  // Per InventoryIQ design Section 2.3 R2; per CF-CARDSIGHT-GRADES-
+  // ENDPOINT-EVAL (006176d) Finding 2 GREEN. Same posture as R1
+  // (cardsightCardId) -- additive, backward-compatible, no migration.
+  cardsightGradeId?: string | null;
 }

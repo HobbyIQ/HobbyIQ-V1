@@ -97,6 +97,16 @@ export async function cacheWrap<T>(
   return result;
 }
 
+/**
+ * Test-only escape hatch -- clears the in-memory cache state so
+ * tests don't bleed cache hits across each other. Do not call from
+ * production code; mirrors the `__resetRegistryForTest` pattern in
+ * certGraders/registry.ts.
+ */
+export function __resetMemoryCacheForTest(): void {
+  _memory.clear();
+}
+
 export async function isRedisReady(): Promise<boolean> {
   try {
     const client = await getClient();
