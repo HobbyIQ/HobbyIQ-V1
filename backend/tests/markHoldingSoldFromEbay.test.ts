@@ -40,7 +40,6 @@ async function addHolding(
       quantity: 1,
       purchasePrice: 100,
       totalCostBasis: 100,
-      currentValue: 200,
       ...overrides,
     });
   expect(res.status).toBe(201);
@@ -250,7 +249,7 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
   it("idempotent on (holdingId, ebayOrderId): replay returns marked-sold-deduped, no duplicate ledger, no state change", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = "ebay-sale-idem";
-    await addHolding(sessionId, holdingId, { quantity: 4, purchasePrice: 25, totalCostBasis: 100, currentValue: 400 });
+    await addHolding(sessionId, holdingId, { quantity: 4, purchasePrice: 25, totalCostBasis: 100 });
 
     const first = await markHoldingSoldFromEbay(
       userId,
@@ -288,7 +287,7 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
   it("idempotency does NOT collide on different orderIds for the same holding", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = "ebay-sale-multi-order";
-    await addHolding(sessionId, holdingId, { quantity: 4, purchasePrice: 25, totalCostBasis: 100, currentValue: 400 });
+    await addHolding(sessionId, holdingId, { quantity: 4, purchasePrice: 25, totalCostBasis: 100 });
 
     const a = await markHoldingSoldFromEbay(
       userId,
@@ -364,7 +363,6 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
         quantity: 1,
         purchasePrice: 30,
         totalCostBasis: 30,
-        currentValue: 60,
       });
     expect(add.status).toBe(201);
 

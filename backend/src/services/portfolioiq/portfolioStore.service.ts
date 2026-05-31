@@ -445,10 +445,9 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
 //
 // gradingCompany is INTENTIONALLY NOT in the strip set — see
 // CF-AUTOPRICE-FIELD-NAME-SHIM at L358-367, owns the rename separately.
-// currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
-// premiumValue / suggestedListPrice are INTENTIONALLY NOT stripped this
-// phase — their writers are deferred to CF-CURRENTVALUE-DIMENSION-
-// CANONICALIZE, which must settle the unpriced fallback before stop.
+// CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2 (2026-05-31): the 6 FMV-derived
+// fields below joined the strip set once their writers stopped (Ship 2 of
+// the canonicalize CF). Wire computes them via composeHoldingWireShape.
 const DEPRECATED_HOLDING_KEYS: readonly string[] = [
   // β detail-only (sourced from estimate response only)
   "confidence",
@@ -478,6 +477,13 @@ const DEPRECATED_HOLDING_KEYS: readonly string[] = [
   "bowmanFirst",
   "isPatch",
   "statusCategory",
+  // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: FMV-derived, writers stopped
+  "currentValue",
+  "totalProfitLoss",
+  "totalProfitLossPct",
+  "quickSaleValue",
+  "premiumValue",
+  "suggestedListPrice",
 ];
 
 function stripDeprecatedHoldingKeys(
@@ -629,11 +635,7 @@ async function autoPriceHolding(
 
   const updated: PortfolioHolding = {
     ...holding,
-    currentValue: fairValue,
     fairMarketValue: fairValue,
-    quickSaleValue: toNumber((estimate as any)?.quickSaleValue, fairValue * 0.88),
-    premiumValue: toNumber((estimate as any)?.premiumValue, fairValue * 1.15),
-    suggestedListPrice: toNumber((estimate as any)?.suggestedListPrice, fairValue * 1.05),
     predictedPrice,
     predictedPriceLow,
     predictedPriceHigh,
@@ -644,19 +646,14 @@ async function autoPriceHolding(
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     lastUpdated: now,
-    // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: writer no longer stamps
-    // movementComposite / movementImpliedPct / movementCoverage (β
-    // detail-only — sourced from estimate response on POST /api/compiq/*
-    // only). confidence / compsUsed (holding-level) dropped; provenance
-    // belongs on a detail-view endpoint when needed. marketSpeed /
-    // marketPressure dropped with Gate-2 β liquidity-risk consumers.
-    // freshnessStatus is computed at response assembly from
-    // predictedPriceUpdatedAt / movementUpdatedAt — no longer stamped.
+    // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: writer no longer stamps
+    // currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
+    // premiumValue / suggestedListPrice. The wire computes all 6 at response
+    // assembly from cached fairMarketValue + stored quantity + cost basis
+    // via composeHoldingWireShape (responseAssembly.ts). Phase C drops still
+    // hold: movement detail β, confidence / compsUsed (holding), marketSpeed /
+    // marketPressure (Gate-2 β), freshnessStatus.
   };
-
-  const basis = toNumber(updated.totalCostBasis, toNumber(updated.purchasePrice, 0) * Math.max(1, toNumber(updated.quantity, 1)));
-  updated.totalProfitLoss = fairValue - basis;
-  updated.totalProfitLossPct = basis > 0 ? ((fairValue - basis) / basis) * 100 : 0;
 
   appendPriceHistory(doc, holding.id, {
     at: now,
@@ -1413,7 +1410,7 @@ export async function updateHolding(req: Request, res: Response) {
     (req.body ?? {}) as Record<string, unknown>,
     res,
   );
-  let next = { ...doc.holdings[id], ...(cleanBody as PortfolioHolding), id };
+  let next = { ...doc.holdings[id], ...(cleanBody as Partial<PortfolioHolding>), id };
   next = normalizeR1CardsightCardId(
     next,
     id,
@@ -1731,16 +1728,17 @@ export async function sellHolding(req: Request, res: Response) {
     delete doc.holdings[id];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
-    const currentValuePerUnit = quantityOwned > 0 ? (computeTotalValue(holding) ?? 0) / quantityOwned : 0;
-    const nextCurrentValue = currentValuePerUnit * remainingQty;
+    // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: currentValue / totalProfitLoss
+    // / totalProfitLossPct no longer stamped — wire computes them post-sale
+    // from cached fairMarketValue × the new quantity (remainingQty) via
+    // composeHoldingWireShape (computeDisplayValue + computeCostBasisTotal).
+    // The per-unit FMV is preserved through the spread; the wire applies the
+    // updated qty so post-sale total currentValue stays correct.
     doc.holdings[id] = {
       ...holding,
       quantity: remainingQty,
       purchasePrice: avgUnitCost,
       totalCostBasis: updatedCostBasis,
-      currentValue: nextCurrentValue,
-      totalProfitLoss: nextCurrentValue - updatedCostBasis,
-      totalProfitLossPct: updatedCostBasis > 0 ? ((nextCurrentValue - updatedCostBasis) / updatedCostBasis) * 100 : 0,
       lastUpdated: new Date().toISOString(),
     };
   }
@@ -1937,20 +1935,14 @@ export async function markHoldingSoldFromEbay(
     delete doc.holdings[holdingId];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
-    const currentValuePerUnit =
-      quantityOwned > 0 ? (computeTotalValue(holding) ?? 0) / quantityOwned : 0;
-    const nextCurrentValue = currentValuePerUnit * remainingQty;
+    // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: same currentValue / P&L
+    // writer-stop as sellHolding. Wire computes the post-sale display value
+    // and P&L from cached fairMarketValue + the decremented quantity.
     doc.holdings[holdingId] = {
       ...holding,
       quantity: remainingQty,
       purchasePrice: avgUnitCost,
       totalCostBasis: updatedCostBasis,
-      currentValue: nextCurrentValue,
-      totalProfitLoss: nextCurrentValue - updatedCostBasis,
-      totalProfitLossPct:
-        updatedCostBasis > 0
-          ? ((nextCurrentValue - updatedCostBasis) / updatedCostBasis) * 100
-          : 0,
       lastUpdated: new Date().toISOString(),
     };
   }
@@ -2177,11 +2169,7 @@ export async function repriceHoldingsForUser(
 
       const updated: PortfolioHolding = {
         ...holding,
-        currentValue: fairValue,
         fairMarketValue: fairValue,
-        quickSaleValue: toNumber((estimate as any)?.quickSaleValue, fairValue * 0.88),
-        premiumValue: toNumber((estimate as any)?.premiumValue, fairValue * 1.15),
-        suggestedListPrice: toNumber((estimate as any)?.suggestedListPrice, fairValue * 1.05),
         predictedPrice: repricePredictedPrice,
         predictedPriceLow: repricePredictedPriceLow,
         predictedPriceHigh: repricePredictedPriceHigh,
@@ -2192,15 +2180,12 @@ export async function repriceHoldingsForUser(
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         lastUpdated: now,
-        // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: confidence / compsUsed
-        // (holding) + marketSpeed / marketPressure (Gate-2 β) + movement
-        // detail (composite / impliedPct / coverage β) + freshnessStatus
-        // (computed at response assembly) — all dropped.
+        // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: currentValue / P&L
+        // (3 fields) and quickSale / premium / suggestedList (3 fields)
+        // no longer stamped — wire computes them via composeHoldingWireShape.
+        // Phase C drops still hold (movement detail β, confidence /
+        // compsUsed (holding), marketSpeed / marketPressure, freshnessStatus).
       };
-
-      const basis = toNumber(updated.totalCostBasis, toNumber(updated.purchasePrice, 0) * Math.max(1, toNumber(updated.quantity, 1)));
-      updated.totalProfitLoss = fairValue - basis;
-      updated.totalProfitLossPct = basis > 0 ? ((fairValue - basis) / basis) * 100 : 0;
 
       appendPriceHistory(doc, holding.id, {
         at: now,

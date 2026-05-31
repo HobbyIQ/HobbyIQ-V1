@@ -45,7 +45,6 @@ async function seedLedgerEntry(sessionId: string, suffix: string): Promise<strin
       quantity: 1,
       purchasePrice: 100,
       totalCostBasis: 100,
-      currentValue: 200,
     });
   expect(addRes.status).toBe(201);
 

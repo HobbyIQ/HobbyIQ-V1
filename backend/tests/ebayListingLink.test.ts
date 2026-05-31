@@ -42,7 +42,6 @@ describe("eBay listing link helpers (PR D.6)", () => {
         quantity: 1,
         purchasePrice: 100,
         totalCostBasis: 100,
-        currentValue: 200,
       });
     expect(add.status).toBe(201);
 
@@ -74,7 +73,6 @@ describe("eBay listing link helpers (PR D.6)", () => {
         quantity: 1,
         purchasePrice: 50,
         totalCostBasis: 50,
-        currentValue: 75,
       });
 
     await linkEbayListing(userId, holdingId, {
@@ -122,7 +120,6 @@ describe("eBay listing link helpers (PR D.6)", () => {
         quantity: 1,
         purchasePrice: 30,
         totalCostBasis: 30,
-        currentValue: 60,
       });
 
     await linkEbayListing(userId, holdingId, {
@@ -153,7 +150,6 @@ describe("eBay listing link helpers (PR D.6)", () => {
         quantity: 1,
         purchasePrice: 40,
         totalCostBasis: 40,
-        currentValue: 80,
       });
 
     await linkEbayListing(userId, holdingId, {
@@ -191,7 +187,6 @@ describe("eBay listing link helpers (PR D.6)", () => {
           quantity: 1,
           purchasePrice: 50,
           totalCostBasis: 50,
-          currentValue: 90,
         });
     }
     await linkEbayListing(userId, a, { offerId: "OFFER-DUP", listingId: "LIST-A" });

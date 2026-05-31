@@ -203,7 +203,6 @@ async function seedLedgerEntry(sessionId: string, suffix: string, costBasis = 10
       quantity: 1,
       purchasePrice: costBasis,
       totalCostBasis: costBasis,
-      currentValue: 200,
     });
   expect(addRes.status).toBe(201);
 
@@ -344,7 +343,6 @@ describe("CF-PR-E-P&L-COST-RECOMPUTE — sellHolding deducts costs at create tim
         quantity: 1,
         purchasePrice: 100,
         totalCostBasis: 100,
-        currentValue: 200,
       });
 
     const sell = await request(app)

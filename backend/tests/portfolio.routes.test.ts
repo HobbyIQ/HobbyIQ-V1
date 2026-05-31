@@ -36,7 +36,6 @@ describe("Portfolio routes", () => {
         quantity: 3,
         purchasePrice: 100,
         totalCostBasis: 300,
-        currentValue: 450,
       });
 
     expect(add.status).toBe(201);
@@ -119,7 +118,6 @@ describe("Portfolio routes — playerId resolution (PR #68)", () => {
         quantity: 1,
         purchasePrice: 50,
         totalCostBasis: 50,
-        currentValue: 100,
       });
     expect(add.status).toBe(201);
 
@@ -162,7 +160,6 @@ describe("Portfolio routes — playerId resolution (PR #68)", () => {
         quantity: 1,
         purchasePrice: 1,
         totalCostBasis: 1,
-        currentValue: 1,
       });
     expect(add.status).toBe(201);
 
