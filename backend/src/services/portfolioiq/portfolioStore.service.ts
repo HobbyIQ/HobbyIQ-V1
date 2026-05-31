@@ -355,6 +355,27 @@ function toIso(value: unknown, fallback = new Date()): string {
   return fallback.toISOString();
 }
 
+// CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase A (2026-05-31): compute currentValue
+// on read from fairMarketValue (+ quantity). Two helpers because existing
+// read sites use inconsistent dimensional conventions (per-unit vs total)
+// invisible at quantity=1 (see CF-CURRENTVALUE-DIMENSION-CANONICALIZE
+// backlog and the per-site dimension map in this CF's commit message).
+// Helpers return null when FMV is absent so each caller preserves its own
+// unpriced-case default. Writers continue to populate the cached field
+// this phase; readers diverge to compute-on-read.
+function computePerUnitValue(holding: PortfolioHolding | undefined | null): number | null {
+  if (!holding) return null;
+  const fmv = (holding as { fairMarketValue?: number }).fairMarketValue;
+  return typeof fmv === "number" && Number.isFinite(fmv) ? fmv : null;
+}
+
+function computeTotalValue(holding: PortfolioHolding | undefined | null): number | null {
+  const perUnit = computePerUnitValue(holding);
+  if (perUnit === null) return null;
+  const qty = Math.max(1, toNumber(holding?.quantity, 1));
+  return perUnit * qty;
+}
+
 // CF-AUTOPRICE-FIELD-NAME-SHIM (2026-05-26): iOS write path historically
 // sends phantom field names (year, setName, cardName) rather than the
 // canonical TS-typed names (cardYear, product, cardTitle). addHolding
@@ -613,8 +634,8 @@ function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">)
 
 function evaluateHoldingAlerts(doc: UserDoc, previous: PortfolioHolding | undefined, next: PortfolioHolding): void {
   const basis = toNumber(next.totalCostBasis, toNumber(next.purchasePrice, 0) * Math.max(1, toNumber(next.quantity, 1)));
-  const prevValue = toNumber(previous?.currentValue, 0);
-  const nextValue = toNumber(next.currentValue, 0);
+  const prevValue = computePerUnitValue(previous) ?? 0;
+  const nextValue = computePerUnitValue(next) ?? 0;
   const playerName = String(next.playerName ?? "Unknown");
   const cardTitle = String(next.cardTitle ?? "Card");
 
@@ -685,12 +706,12 @@ function computePortfolioHealth(holdings: PortfolioHolding[]): {
   staleDataRisk: number;
   downsideRisk: number;
 } {
-  const valued = holdings.filter((h) => toNumber(h.currentValue, 0) > 0);
-  const total = valued.reduce((sum, h) => sum + toNumber(h.currentValue, 0), 0);
+  const valued = holdings.filter((h) => (computeTotalValue(h) ?? 0) > 0);
+  const total = valued.reduce((sum, h) => sum + (computeTotalValue(h) ?? 0), 0);
 
   let concentrationRisk = 0;
   if (total > 0) {
-    const weights = valued.map((h) => toNumber(h.currentValue, 0) / total);
+    const weights = valued.map((h) => (computeTotalValue(h) ?? 0) / total);
     const hhi = weights.reduce((sum, w) => sum + w * w, 0);
     concentrationRisk = Math.min(100, Math.round(hhi * 200));
   }
@@ -705,7 +726,12 @@ function computePortfolioHealth(holdings: PortfolioHolding[]): {
   }).length;
   const staleDataRisk = valued.length > 0 ? Math.round((staleCount / valued.length) * 100) : 0;
 
-  const downsideCount = valued.filter((h) => toNumber(h.totalProfitLossPct, 0) <= -10).length;
+  const downsideCount = valued.filter((h) => {
+    const totalValue = computeTotalValue(h) ?? 0;
+    const basis = toNumber(h.totalCostBasis, 0);
+    const pct = basis > 0 ? ((totalValue - basis) / basis) * 100 : 0;
+    return pct <= -10;
+  }).length;
   const downsideRisk = valued.length > 0 ? Math.round((downsideCount / valued.length) * 100) : 0;
 
   const score = Math.max(
@@ -770,7 +796,7 @@ function buildWeeklyNarrative(doc: UserDoc) {
       const history = (doc.priceHistoryByHolding[h.id] ?? []).sort((a, b) => a.at.localeCompare(b.at));
       const latest = history.length > 0 ? history[history.length - 1] : null;
       const weekAnchor = history.find((p) => new Date(p.at).getTime() >= weekAgo) ?? history[0] ?? null;
-      const latestValue = toNumber(latest?.value, toNumber(h.currentValue, 0));
+      const latestValue = toNumber(latest?.value, computePerUnitValue(h) ?? 0);
       const anchorValue = toNumber(weekAnchor?.value, latestValue);
       const movePct = anchorValue > 0 ? ((latestValue - anchorValue) / anchorValue) * 100 : 0;
       return {
@@ -882,7 +908,7 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
       .toLowerCase();
     if (EXCLUDED_STATUS.has(status)) continue;
     const qty = Math.max(1, toNumber(h.quantity, 1));
-    totalValue += toNumber(h.currentValue, 0) * qty;
+    totalValue += (computePerUnitValue(h) ?? 0) * qty;
     const basis = toNumber(h.totalCostBasis, 0);
     totalCost += basis > 0
       ? basis
@@ -1238,7 +1264,7 @@ export async function addHolding(req: Request, res: Response) {
 
   const doc = await readUserDoc(auth.userId);
   const now = new Date().toISOString();
-  const value = toNumber(holding.currentValue, toNumber(holding.purchasePrice, 0));
+  const value = computePerUnitValue(holding) ?? toNumber(holding.purchasePrice, 0);
   appendPriceHistory(doc, holding.id, {
     at: now,
     value,
@@ -1249,7 +1275,6 @@ export async function addHolding(req: Request, res: Response) {
 
   holding.lastUpdated = holding.lastUpdated ?? now;
   holding.freshnessStatus = holding.freshnessStatus ?? "Live";
-  holding.suggestedListPrice = toNumber((holding as any).suggestedListPrice, toNumber(holding.listingPrice, 0));
   doc.holdings[holding.id] = { ...doc.holdings[holding.id], ...holding };
 
   try {
@@ -1314,8 +1339,8 @@ export async function updateHolding(req: Request, res: Response) {
   const now = new Date().toISOString();
   next.lastUpdated = next.lastUpdated ?? now;
 
-  const prevValue = toNumber(previous.currentValue, 0);
-  const nextValue = toNumber(next.currentValue, 0);
+  const prevValue = computePerUnitValue(previous) ?? 0;
+  const nextValue = computePerUnitValue(next) ?? 0;
   if (nextValue > 0 && Math.abs(nextValue - prevValue) > 0.0001) {
     appendPriceHistory(doc, id, {
       at: toIso(next.lastUpdated, new Date()),
@@ -1562,7 +1587,7 @@ export async function sellHolding(req: Request, res: Response) {
     return res.status(400).json({ error: { message: "Invalid sell quantity", code: "INVALID_QUANTITY" } });
   }
 
-  const unitSalePrice = toNumber(req.body?.salePrice, toNumber(holding.currentValue, 0));
+  const unitSalePrice = toNumber(req.body?.salePrice, computePerUnitValue(holding) ?? 0);
   if (unitSalePrice <= 0) {
     return res.status(400).json({ error: { message: "Invalid sale price", code: "INVALID_SALE_PRICE" } });
   }
@@ -1624,7 +1649,7 @@ export async function sellHolding(req: Request, res: Response) {
     delete doc.holdings[id];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
-    const currentValuePerUnit = quantityOwned > 0 ? toNumber(holding.currentValue, 0) / quantityOwned : 0;
+    const currentValuePerUnit = quantityOwned > 0 ? (computeTotalValue(holding) ?? 0) / quantityOwned : 0;
     const nextCurrentValue = currentValuePerUnit * remainingQty;
     doc.holdings[id] = {
       ...holding,
@@ -1832,7 +1857,7 @@ export async function markHoldingSoldFromEbay(
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
     const currentValuePerUnit =
-      quantityOwned > 0 ? toNumber(holding.currentValue, 0) / quantityOwned : 0;
+      quantityOwned > 0 ? (computeTotalValue(holding) ?? 0) / quantityOwned : 0;
     const nextCurrentValue = currentValuePerUnit * remainingQty;
     doc.holdings[holdingId] = {
       ...holding,

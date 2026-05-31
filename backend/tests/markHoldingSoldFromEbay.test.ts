@@ -125,11 +125,14 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
   it("happy path partial sale: prorates costBasis and currentValue, holdingRemoved=false", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = "ebay-sale-partial";
+    // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase A: setup expresses the holding's
+    // value via stored facts (fairMarketValue × quantity = 100 × 4 = $400 total)
+    // instead of pre-caching currentValue. Post-sale assertion at 300 stands.
     await addHolding(sessionId, holdingId, {
       quantity: 4,
       purchasePrice: 25, // unit cost
       totalCostBasis: 100,
-      currentValue: 400,
+      fairMarketValue: 100,
     });
 
     const result = await markHoldingSoldFromEbay(
