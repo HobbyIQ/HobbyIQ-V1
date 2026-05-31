@@ -1257,6 +1257,96 @@ function computeConfidenceInterval(params: {
 }
 
 // ---------------------------------------------------------------------------
+// CF-FMV-NOWCAST Ship 1 — per-FMV uncertainty band
+// ---------------------------------------------------------------------------
+// Reuses the spreadPct table from computeConfidenceInterval above AND adds
+// a staleness widening (computeConfidenceInterval today widens only on low
+// samples + high trendPct — Ship 1 adds: an old newest-comp widens the band
+// even with many samples).
+//
+// `siblingPath: true` starts the spread one band wider, matching the lower
+// confidence cap (65 vs main-path 95) the sibling-pool rescue path emits.
+//
+// Honesty rule: when sampleCount or daysSinceNewest is unknown, default to
+// the widest spread. We never know less and emit narrower.
+//
+// Output: {low, high} or {null, null} when FMV is unusable (null / 0 / NaN).
+export function computeFmvBand(
+  fmv: number | null,
+  params: {
+    sampleCount?: number | null;
+    daysSinceNewest?: number | null;
+    basedOn?: BroaderTrend["basedOn"] | null;
+    trendPct?: number | null;
+    siblingPath?: boolean;
+  } = {},
+): { low: number | null; high: number | null } {
+  if (typeof fmv !== "number" || !Number.isFinite(fmv) || fmv <= 0) {
+    return { low: null, high: null };
+  }
+
+  const sampleCount =
+    typeof params.sampleCount === "number" && Number.isFinite(params.sampleCount)
+      ? params.sampleCount
+      : null;
+  const daysSinceNewest =
+    typeof params.daysSinceNewest === "number" && Number.isFinite(params.daysSinceNewest)
+      ? params.daysSinceNewest
+      : null;
+  const basedOn = params.basedOn ?? "insufficient";
+  const trendPct =
+    typeof params.trendPct === "number" && Number.isFinite(params.trendPct)
+      ? params.trendPct
+      : 0;
+
+  // Mirror computeConfidenceInterval (L1232-1242). Unknown sampleCount ->
+  // widest band per the honesty rule.
+  let spreadPct: number;
+  if (sampleCount == null) {
+    spreadPct = 0.5;
+  } else if (sampleCount >= 20 && basedOn === "exact") {
+    spreadPct = 0.08;
+  } else if (sampleCount >= 10) {
+    spreadPct = 0.15;
+  } else if (sampleCount >= 5) {
+    spreadPct = 0.22;
+  } else if (sampleCount >= 2) {
+    spreadPct = 0.35;
+  } else {
+    spreadPct = 0.5;
+  }
+
+  // Trend-widening (mirrors computeConfidenceInterval L1244).
+  if (Math.abs(trendPct) >= 20) spreadPct *= 1.3;
+
+  // Staleness widening — NEW in Ship 1. An old newest-comp widens the band
+  // independently of sample count. Unknown daysSinceNewest -> widest staleness.
+  if (daysSinceNewest == null) {
+    spreadPct = Math.max(spreadPct, 0.5);
+  } else if (daysSinceNewest > 90) {
+    spreadPct *= 1.5;
+  } else if (daysSinceNewest > 30) {
+    spreadPct *= 1.25;
+  } else if (daysSinceNewest > 7) {
+    spreadPct *= 1.1;
+  }
+
+  // Sibling-pool path starts one band wider (its confidence cap is 65 vs
+  // main-path 95 — the FMV is derived from related-card sales, not exact).
+  if (params.siblingPath) {
+    spreadPct *= 1.25;
+  }
+
+  // Final clamp.
+  spreadPct = Math.max(0.05, Math.min(0.75, spreadPct));
+
+  return {
+    low: Math.round(fmv * (1 - spreadPct)),
+    high: Math.round(fmv * (1 + spreadPct)),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // CF-VARIANT-FILTER-LOOSENING — tier ladder constants + helpers
 // ---------------------------------------------------------------------------
 
@@ -1565,6 +1655,8 @@ export async function computeEstimate(
           }
         : null,
       fairMarketValue: 0,
+      fairMarketValueLow: null,
+      fairMarketValueHigh: null,
       marketValue: null,
       predictedPrice: null,
       predictedPriceRange: null,
@@ -1863,6 +1955,8 @@ export async function computeEstimate(
       dealScore: 0,
       quickSaleValue: null,
       fairMarketValue: null,
+      fairMarketValueLow: null,
+      fairMarketValueHigh: null,
       marketValue: null,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
@@ -2085,16 +2179,47 @@ export async function computeEstimate(
           (combinedCount >= 3 && (combinedDaysSinceNewest == null || combinedDaysSinceNewest > 365));
 
         if (!stillInsufficient) {
-          const sortedPrices = combinedSales.map((s) => s.price).sort((a, b) => a - b);
-          const fairMarketValue =
-            sortedPrices.length % 2 === 1
-              ? sortedPrices[(sortedPrices.length - 1) / 2]
-              : (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2;
+          // CF-FMV-NOWCAST Ship 1: route through the existing exported
+          // velocity-weighted median (getSaleVelocityWeight at L219-229 gives
+          // 48h:5x, 7d:2x, 21d:1x, 30d:0.3x, older:0.1x — same decay law as
+          // the main pipeline). combinedSales carries epoch-ms `ts`; pass as
+          // the `date` field which getSaleVelocityWeight handles natively.
+          // Defensive fallback: if computeWeightedMedian returns null (only
+          // possible when every sample is filtered out — combinedCount===0
+          // guard above already prevented this), reuse the plain median to
+          // preserve the never-emit-NaN contract.
+          const weightedFmv = computeWeightedMedian(
+            combinedSales.map((s) => ({ price: s.price, date: s.ts })),
+          );
+          let fairMarketValue: number;
+          if (weightedFmv !== null) {
+            fairMarketValue = weightedFmv;
+          } else {
+            const sortedPrices = combinedSales.map((s) => s.price).sort((a, b) => a - b);
+            fairMarketValue =
+              sortedPrices.length % 2 === 1
+                ? sortedPrices[(sortedPrices.length - 1) / 2]
+                : (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2;
+          }
+          // CF-FMV-NOWCAST trend-knob insertion point (NOT implemented this
+          // ship — evidence-gated decision per ground-truth trace). When a
+          // bounded trend signal arrives on the sibling-pool path, multiply
+          // here:  fairMarketValue = fairMarketValue * trendCorrection
+          // (factor clamped to e.g. [0.85, 1.15] for the thin-data path).
+          // The downstream quickSale/premium/suggestedList cascade off `fmv`
+          // so the correction propagates without additional plumbing.
           const round2 = (n: number) => Math.round(n * 100) / 100;
           const fmv = round2(fairMarketValue);
           const quickSaleValue = round2(fmv * 0.88);
           const premiumValue = round2(fmv * 1.15);
           const suggestedListPrice = round2(fmv * 1.05);
+          const siblingFmvBand = computeFmvBand(fmv, {
+            sampleCount: combinedCount,
+            daysSinceNewest: combinedDaysSinceNewest,
+            basedOn: "broader",
+            trendPct: 0,
+            siblingPath: true,
+          });
 
           // Confidence: scale with combined-pool size + recency, then cap at 65.
           const recencyFactor =
@@ -2126,6 +2251,8 @@ export async function computeEstimate(
             dealScore: 0,
             quickSaleValue,
             fairMarketValue: fmv,
+            fairMarketValueLow: siblingFmvBand.low,
+            fairMarketValueHigh: siblingFmvBand.high,
             marketValue: fmv,
             premiumValue,
             suggestedListPrice,
@@ -2204,6 +2331,8 @@ export async function computeEstimate(
       dealScore: 0,
       quickSaleValue: null,
       fairMarketValue: null,
+      fairMarketValueLow: null,
+      fairMarketValueHigh: null,
       marketValue: null,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
@@ -2774,6 +2903,19 @@ export async function computeEstimate(
   const tierVerdictOverride = VARIANT_TIER_VERDICT[chosenTier];
   const verdictText = tierVerdictOverride ?? result.verdict ?? "Hold";
 
+  // CF-FMV-NOWCAST Ship 1: per-FMV uncertainty band. Inputs live in scope
+  // here from the broaderTrend block above + daysSinceNewest from L2007.
+  // The band is additive — the FMV composition itself is unchanged.
+  const mainFmvBand = computeFmvBand(
+    typeof fairMarketValue === "number" ? fairMarketValue : null,
+    {
+      sampleCount: bwRecent + bwOlder,
+      daysSinceNewest,
+      basedOn: bwBasedOn,
+      trendPct: bwTrendPct,
+    },
+  );
+
   return {
     cardTitle,
     verdict: verdictText,
@@ -2781,6 +2923,8 @@ export async function computeEstimate(
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
     fairMarketValue,
+    fairMarketValueLow: mainFmvBand.low,
+    fairMarketValueHigh: mainFmvBand.high,
     marketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
     predictedPrice: __predicted.predictedPrice,
     predictedPriceRange: __predicted.predictedPriceRange,

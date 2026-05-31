@@ -190,6 +190,16 @@ interface CompIQCardDetail {
 
   // Valuation
   fairMarketValue: number;
+  // CF-FMV-NOWCAST Ship 1 amendment (2026-05-31): per-FMV uncertainty band.
+  // Optional + nullable (additive — iOS Codable's default ignores unknown
+  // keys; existing decoders unaffected). Null when fairMarketValue is
+  // null/0/NaN. Spread widens with thin AND stale comps. The sibling-pool
+  // rescue path starts the spread one band wider (mirrors the path's 65
+  // confidence cap vs main-path 95). Computed by `computeFmvBand` at
+  // `backend/src/services/compiq/compiqEstimate.service.ts` and emitted on
+  // every wire return that carries `fairMarketValue` (real value or null).
+  fairMarketValueLow?: number | null;
+  fairMarketValueHigh?: number | null;
   quickSaleValue: number;
   premiumValue: number;
   suggestedListPrice: number | null;

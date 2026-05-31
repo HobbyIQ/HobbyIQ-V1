@@ -33,6 +33,14 @@ export interface CompIQEstimateResponse {
   dealScore: number;
   quickSaleValue: number;
   fairMarketValue: number;
+  /**
+   * CF-FMV-NOWCAST Ship 1 — per-FMV uncertainty band. Optional + nullable
+   * (additive contract): null when fairMarketValue is null/0/NaN. Widens
+   * with thin and stale comps; the sibling-pool path starts one band wider.
+   * iOS treats unknown / absent as "no band available."
+   */
+  fairMarketValueLow?: number | null;
+  fairMarketValueHigh?: number | null;
   premiumValue: number;
   explanation: string[];
   marketDNA: {
