@@ -75,7 +75,7 @@ Drift symptoms documented in code comments:
 | `cardsightCardId` \| null | Cardsight FK (R1) | Cardsight catalog UUID — load-bearing for movement-history join + corpus join |
 | `cardsightGradeId` \| null | Cardsight FK (R2) | Cardsight grade taxonomy UUID |
 
-**CACHED PIPELINE OUTPUTS (KEEP — minimal set for dashboard-list rendering — 7 fields):**
+**CACHED PIPELINE OUTPUTS (KEEP — minimal set for dashboard-list rendering — 10 fields per Phase B amendment 2026-05-31):**
 
 | Field | Justification (compute cost + staleness tolerance + freshness signal) |
 |---|---|
@@ -86,34 +86,36 @@ Drift symptoms documented in code comments:
 | `predictedPriceUpdatedAt` \| null | Timestamp paired with prediction cache; staleness signal. |
 | `movementDirection` \| null | **Compute cost:** signal aggregator fetch via fn-serve-signals (~200ms-1s); unacceptable per-holding during dashboard render. **Staleness tolerance:** signal aggregator runs every 2h; staleness up to that interval is product-tolerable. **Freshness signal:** `movementUpdatedAt`. |
 | `movementUpdatedAt` \| null | Timestamp paired with movement cache; staleness signal. |
+| `verdict` \| null | **Phase B amendment (2026-05-31) — promoted from REMOVE.** Actionable dashboard signal (the wire's plain-English Buy/Hold/Sell sentence). Computing on read would require re-running VerdictEngine (`backend/src/modules/compiq/services/verdict/VerdictEngine.ts:14`) which consumes `{dealScore, priceLanes, market, arbitrage, confidence, marketDNA}` — none of those except priceLanes is cached on the holding. Caching is cheaper than re-running computeEstimate per-row. **Staleness signal:** `lastUpdated`. |
+| `recommendation` \| null | **Phase B amendment** — same engine origin as `verdict` (`result.action` per `compiqEstimate.service.ts:2780`). Promoted from REMOVE for the same reason. |
+| `predictedPriceMechanism` \| null | **Phase B amendment** — honesty display + corpus stratifier (`"trendiq-projection" \| "multiplier-anchored" \| "unavailable"`). Recipe `predictedPrice === FMV ? "unavailable" : "trendiq-projection"` is lossy: it cannot distinguish the multiplier-anchored Mechanism-1 fallback path (Bowman family) from the success path. Keeping cached preserves fidelity to the methodology §2.2 mechanism enum. |
 
-That's **7 cached fields** (FMV + 4 prediction + 2 movement). Total canonical shape: **33 stored facts + 7 cached pipeline outputs = 40 fields**, vs 73 today.
+That's **10 cached fields** (FMV + 4 prediction + 2 movement + verdict + recommendation + predictedPriceMechanism). Total canonical shape: **33 stored facts + 10 cached pipeline outputs = 43 fields**, vs 73 today.
 
-**DROPPED — secondary derived (compute at response time from cached + stored — 22 fields):**
+**DROPPED — secondary derived (compute at response time from cached + stored — 19 fields per Phase B amendment):**
+
+Per Phase B amendment 2026-05-31: `verdict`, `recommendation`, `predictedPriceMechanism` PROMOTED from this REMOVE table into the cached set above (10 cached). The 7 β fields below stay REMOVED from `PortfolioHolding` but are sourced from the estimate response on **estimate-bearing card-detail endpoints only** (`POST /api/compiq/{estimate,price,price-by-id}`). They are **EXPLICITLY OMITTED from the portfolio wire** (`GET /api/portfolio`, `GET /api/portfolio/holdings`, `GET /api/portfolio/holdings/:id`). iOS list views render without; iOS detail views call the estimate endpoint to fetch β richness.
 
 | Field | Why dropped | How replaced |
 |---|---|---|
 | `currentValue` | Secondary derivative: `fairMarketValue × quantity` | Compute at response assembly |
-| `quickSaleValue` | Secondary: FMV × discount factor | Compute at response assembly |
-| `premiumValue` | Secondary: FMV × 1.15 (per `compiq.routes.ts:408, 623, 810, 974`, all use `?? fmv * 1.15` fallback — pure derivative). VerdictEngine reads `holding.fairMarketValue × 1.15` directly | Compute at response assembly + at VerdictEngine call site |
-| `suggestedListPrice` | Secondary | Compute at response assembly |
-| `netEstimatedValue` | Secondary | Compute at response assembly |
-| `totalProfitLoss` | **Secondary — THIS IS THE STALE-P&L BUG SOURCE** | Compute at response assembly from `fairMarketValue - totalCostBasis` per quantity scale |
+| `quickSaleValue` | Secondary: FMV × discount factor. **Phase B layer uses success-path multiplier 0.85** (per `PriceDistributionEngine.ts:5`); writer fallback 0.88 path produces stale-cache delta (CF-CURRENTVALUE-DIMENSION-CANONICALIZE unifies). | Compute at response assembly |
+| `premiumValue` | Secondary: FMV × 1.15. **Phase B layer FLATTENS to normal-market 1.15** (writer fallback + estimate-success at marketSpeed="normal"); the estimate-success fast (1.25) / slow (1.10) speed bands are not reproducible at response assembly since `marketSpeed` is dropped under Gate-2 β. Flattening is the accepted consequence — losing the speed-conditional premium signal is acceptable per the Gate-2 β framing (advanced portfolio analytics deferred to W2). CF-CURRENTVALUE-DIMENSION-CANONICALIZE unifies. | Compute at response assembly + at VerdictEngine call site |
+| `suggestedListPrice` | Secondary: FMV × 1.05 (writer fallback; estimate-success path coincides at `compiqEstimate.service.ts:2097`) | Compute at response assembly |
+| `netEstimatedValue` | **Phase B finding:** declared on `PortfolioHolding` at L56 but NEVER POPULATED anywhere in the backend (grep verified). Today's wire value is always undefined. Recipe (likely `premiumValue - fees - tax - shipping`) ties to W2 eBay-finances (fee fields are themselves DROPPED below). | Layer OMITS the field; no faithful definition today; revisit in W2 eBay-finances |
+| `totalProfitLoss` | **Secondary — THIS IS THE STALE-P&L BUG SOURCE** | Compute at response assembly from `fairMarketValue × quantity - totalCostBasis` |
 | `totalProfitLossPct` | Same | Compute at response assembly |
-| `compsUsed` | Provenance for cached FMV; cheaper to expose via separate `/pricing-provenance` endpoint than to bloat every holding | Detail-view fetch when needed |
-| `predictedPriceMechanism` | Pure label paired with `predictedPrice`; iOS can infer mechanism from whether `predictedPrice == fairMarketValue` (unavailable) or differs (trendiq-projection) | Computed at response assembly OR served at detail-view tap |
-| `movementComposite` | Secondary signal detail; only needed at detail view, not list | Detail-view fetch |
-| `movementImpliedPct` | Same | Detail-view fetch |
-| `movementCoverage` | Same | Detail-view fetch |
+| `compsUsed` | **β: detail-only.** Provenance for cached FMV; on `POST /api/compiq/*` response. | Estimate response only; OMITTED from portfolio wire |
+| `movementComposite` | **β: detail-only.** Signal detail; on `POST /api/compiq/*` via `trendIQ.composite`. | Estimate response only; OMITTED from portfolio wire |
+| `movementImpliedPct` | **β: detail-only.** Same via `trendIQ.impliedPct`. | Same |
+| `movementCoverage` | **β: detail-only.** Same via `trendIQ.coverage`. | Same |
 | `marketSpeed` | **Gate 2 = β LOCKED:** drop field AND both consumer paths AND shelve alert-generation reshape to W2. Two consumers were reading this: liquidity-risk alerts at `portfolioStore.service.ts:666-676`, AND portfolio-health concentration at `:698`. Neither is v1 surface — alerts are sell-now's family (W2 per §5.2); liquidity-concentration is advanced portfolio analytics, not core to the wedge. Drop the field + the alert-generation code + the concentration view code together; the alert/concentration features return as W2 work when the reshape ships. **Do NOT drop the field while leaving a v1 surface reading it broken** — but per β, no v1 surface reads it. | β: drop field + alert-generation code + concentration-view code; reshape deferred to W2 |
 | `marketPressure` | Same Gate 2 = β: drop field + alert consumer code + concentration consumer code together. | Same |
-| `confidence` | Composite scalar; user-visible at-glance; replaceable by detail-view fetch OR compute from `predictedPriceMechanism + compsUsed` at response time | Compute at response assembly OR detail-view fetch |
-| `expectedDaysToSell` | Pipeline output; user-visible label; detail-view fetch | Detail-view fetch |
-| `verdict` | Pipeline label, user-visible; computable from cached FMV + movement at response time | Compute at response assembly from cached signals |
-| `recommendation` | Same as `verdict` | Compute at response assembly |
+| `confidence` | **β: detail-only.** Composite scalar; on `POST /api/compiq/*` via `confidence: { pricingConfidence, liquidityConfidence, timingConfidence }`. | Estimate response only; OMITTED from portfolio wire |
+| `expectedDaysToSell` | **β: detail-only.** Pipeline output; on `POST /api/compiq/*` via `exitStrategy.expectedDaysToSell`. | Estimate response only; OMITTED from portfolio wire |
 | `parallelDetected` | Pure derivative of `parallel`; never used per grep | Drop entirely |
-| `explanationBullets` | Pipeline output, large array, mostly UX text | Detail-view fetch |
-| `freshnessStatus` | Pure label ("Live"/"Updated today"/"Yesterday"/"Needs refresh") derivable from `lastUpdated` | Compute at response assembly |
+| `explanationBullets` | **β: detail-only.** Pipeline output, large array, mostly UX text; on `POST /api/compiq/*` via `explanation`. | Estimate response only; OMITTED from portfolio wire |
+| `freshnessStatus` | Pure label ("Live"/"Updated Today"/"Yesterday"/"Needs refresh") derivable from a success-only pricing timestamp. **Phase B status: CACHED PASS-THROUGH** (not yet computed at response assembly). An age-bucket compute-from-`lastUpdated` recipe was attempted and reverted: `lastUpdated` is bumped on reprice-FAILURE too (`portfolioStore.service.ts:2047-2056` stamps `lastUpdated: now` + `freshnessStatus: "Stale"` simultaneously), so an age-based recipe reads `"Live"` on holdings whose last reprice failed, losing the `"Stale"` signal. **Phase C scope:** identify a success-only timestamp (verify whether `predictedPriceUpdatedAt` / `movementUpdatedAt` qualify — both are set only on success-path estimate writes; add a dedicated `pricedAt` only if neither does), compute `freshnessStatus` from that at response assembly, drop the cached field. This is the root-cause fix for the false-"Live"-after-failed-reprice bug. | Phase B: cached pass-through. Phase C: compute from success-only timestamp at response assembly. |
 | `trend` | Superseded by `movementDirection` (cached) | Replaced |
 
 **DROPPED — duplicates / legacy / unused — 11 fields:**
@@ -132,7 +134,7 @@ That's **7 cached fields** (FMV + 4 prediction + 2 movement). Total canonical sh
 | `riskLevel` | Zero read sites per grep; pure type cruft |
 | `statusCategory` | Single read site at `portfolioStore.service.ts:880` as fallback; consolidate to a single canonical `cardStatus` field at storage time (separate cleanup CF) |
 
-**Final shape: 40 fields** (33 stored + 7 cached) vs 73 today. **45% reduction.** "Into the 30s" of stored facts as Drew predicted; ~7 cached exceptions each with stated compute-cost + staleness-tolerance + freshness-signal justification.
+**Final shape (Phase B amendment 2026-05-31): 43 fields** (33 stored + 10 cached) vs 73 today. **41% reduction.** 30 fields removed (19 secondary-derived + 11 duplicates/legacy below). "Into the 30s" of stored facts as Drew predicted; 10 cached exceptions each with stated compute-cost + staleness-tolerance + freshness-signal justification. The 7 β fields (`confidence`, `expectedDaysToSell`, `compsUsed`, `explanationBullets`, `movementComposite`, `movementImpliedPct`, `movementCoverage`) are sourced from the estimate response on estimate-bearing card-detail endpoints only and OMITTED from the portfolio wire.
 
 ### 1.4 Required vs optional — v1 canonical contract
 
@@ -148,6 +150,7 @@ That's **7 cached fields** (FMV + 4 prediction + 2 movement). Total canonical sh
 - Reject unknown keys with a warning header (NOT a 4xx during transition); after iOS rebuild + 1-week monitor, escalate to 4xx reject
 - Validate every `photos[]` entry via `parseBlobUrlOrThrow` (`photoStorage.service.ts:127`)
 - Response-time computation: dropped fields compute fresh at every response — no caching of secondary derivatives anywhere in the response pipeline
+- **Phase B (2026-05-31) — anti-corruption wire layer BUILT** at [`backend/src/services/portfolioiq/responseAssembly.ts`](../../backend/src/services/portfolioiq/responseAssembly.ts) (`composeHoldingWireShape` / `composePortfolioListResponse`). All 3 portfolio wire paths route through it — explicit field-mapping, no holding-object spread. Phase C (writer stops) and Phase D (type deletion) cannot silently drop a wire field; the contract test at [`backend/tests/portfolioWireShape.contract.test.ts`](../../backend/tests/portfolioWireShape.contract.test.ts) locks both presence-on-portfolio-wire (cached-10 + CHEAP-7) and absence-on-portfolio-wire (the 7 β fields). Card-detail (`POST /api/compiq/*`) is already explicit-mapped at `compiqEstimate.service.ts:2777-2854` and was NOT reworked; gap: success-path response does NOT carry `suggestedListPrice` (only the sibling-pool fallback at L2131 does) — pre-existing, surface in W2 card-detail polish, NOT a Phase B regression.
 
 ### 1.6 Backfill posture
 

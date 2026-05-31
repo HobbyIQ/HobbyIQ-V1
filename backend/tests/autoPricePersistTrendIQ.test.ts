@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from "vitest";
 import request from "supertest";
+import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 
 process.env.COMPIQ_CORPUS_DISABLED = "1";
 // Effectively disable the batch-reprice freshness gate + per-user throttle
@@ -89,31 +90,35 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function signIn(): Promise<string> {
+async function signIn(): Promise<{ sessionId: string; userId: string }> {
   const res = await request(app)
     .post("/api/auth/signin")
     .send({ username: "HobbyIQ", password: "Baseball25" });
   expect(res.status).toBe(200);
   expect(res.body.sessionId).toBeTruthy();
-  return res.body.sessionId as string;
+  return {
+    sessionId: res.body.sessionId as string,
+    userId: res.body.user?.userId as string,
+  };
 }
 
+// CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: read storage directly via
+// readUserDoc instead of through GET /api/portfolio/holdings/:id. The
+// portfolio wire (post Phase B anti-corruption layer) intentionally omits
+// β fields like movementComposite / movementImpliedPct / movementCoverage;
+// these tests verify the WRITER persists them and therefore must observe
+// raw storage, not the wire shape.
 async function getHoldingFromStore(
-  sessionId: string,
+  userId: string,
   holdingId: string,
 ): Promise<any | null> {
-  const res = await request(app)
-    .get(`/api/portfolio/holdings/${holdingId}`)
-    .set("x-session-id", sessionId);
-  if (res.status === 404) return null;
-  expect(res.status).toBe(200);
-  // getHoldingById returns the holding object directly.
-  return res.body ?? null;
+  const doc = await readUserDoc(userId);
+  return doc.holdings[holdingId] ?? null;
 }
 
 describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHolding)", () => {
   it("persists 5 movement fields from trendIQ when computeEstimate returns it", async () => {
-    const sessionId = await signIn();
+    const { sessionId, userId } = await signIn();
     const holdingId = `movement-test-add-${Date.now()}`;
     const addRes = await request(app)
       .post("/api/portfolio/holdings")
@@ -129,7 +134,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHold
       });
     expect(addRes.status).toBe(201);
 
-    const stored = await getHoldingFromStore(sessionId, holdingId);
+    const stored = await getHoldingFromStore(userId, holdingId);
     expect(stored).not.toBeNull();
     expect(stored.movementDirection).toBe("up");
     expect(stored.movementComposite).toBe(1.108);
@@ -139,7 +144,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHold
   });
 
   it("leaves movement fields null when computeEstimate returns no trendIQ (fallback path)", async () => {
-    const sessionId = await signIn();
+    const { sessionId, userId } = await signIn();
     const holdingId = `movement-test-fallback-${Date.now()}`;
 
     // Reach back into the mocked service and shadow next call with a
@@ -185,7 +190,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHold
       });
     expect(addRes.status).toBe(201);
 
-    const stored = await getHoldingFromStore(sessionId, holdingId);
+    const stored = await getHoldingFromStore(userId, holdingId);
     expect(stored).not.toBeNull();
     expect(stored.movementDirection ?? null).toBeNull();
     expect(stored.movementComposite ?? null).toBeNull();
@@ -197,7 +202,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHold
 
 describe("CF-AUTOPRICE-PERSIST-TRENDIQ — repriceHoldingsForUser (site 2, via /reprice/batch)", () => {
   it("persists 5 movement fields when batch reprice fires for a holding with trendIQ", async () => {
-    const sessionId = await signIn();
+    const { sessionId, userId } = await signIn();
     const holdingId = `movement-test-reprice-${Date.now()}`;
 
     // Seed the holding with a fallback-shape estimate (no trendIQ) so the
@@ -244,7 +249,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — repriceHoldingsForUser (site 2, via /
     expect(addRes.status).toBe(201);
 
     // Verify pre-reprice state — movement fields null per the seed mock.
-    const preReprice = await getHoldingFromStore(sessionId, holdingId);
+    const preReprice = await getHoldingFromStore(userId, holdingId);
     expect(preReprice).not.toBeNull();
     expect(preReprice.movementDirection ?? null).toBeNull();
 
@@ -299,7 +304,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — repriceHoldingsForUser (site 2, via /
     expect(targetUpdate, `reprice did not touch holding ${holdingId}; full body: ${JSON.stringify(repriceRes.body)}`).toBeDefined();
     expect(targetUpdate.status, `reprice status for ${holdingId}: ${JSON.stringify(targetUpdate)}`).toBe("repriced");
 
-    const stored = await getHoldingFromStore(sessionId, holdingId);
+    const stored = await getHoldingFromStore(userId, holdingId);
     expect(stored).not.toBeNull();
     expect(stored.movementDirection).toBe("down");
     expect(stored.movementComposite).toBe(0.92);

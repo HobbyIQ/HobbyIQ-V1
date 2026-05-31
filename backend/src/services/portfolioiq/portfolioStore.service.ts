@@ -6,6 +6,7 @@ import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
+import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -113,7 +114,7 @@ interface RecommendationFeedback {
   createdAt: string;
 }
 
-async function readUserDoc(userId: string): Promise<UserDoc> {
+export async function readUserDoc(userId: string): Promise<UserDoc> {
   const cached = getCached(userId);
   if (cached) return cached;
 
@@ -363,13 +364,13 @@ function toIso(value: unknown, fallback = new Date()): string {
 // Helpers return null when FMV is absent so each caller preserves its own
 // unpriced-case default. Writers continue to populate the cached field
 // this phase; readers diverge to compute-on-read.
-function computePerUnitValue(holding: PortfolioHolding | undefined | null): number | null {
+export function computePerUnitValue(holding: PortfolioHolding | undefined | null): number | null {
   if (!holding) return null;
   const fmv = (holding as { fairMarketValue?: number }).fairMarketValue;
   return typeof fmv === "number" && Number.isFinite(fmv) ? fmv : null;
 }
 
-function computeTotalValue(holding: PortfolioHolding | undefined | null): number | null {
+export function computeTotalValue(holding: PortfolioHolding | undefined | null): number | null {
   const perUnit = computePerUnitValue(holding);
   if (perUnit === null) return null;
   const qty = Math.max(1, toNumber(holding?.quantity, 1));
@@ -872,7 +873,10 @@ export async function getHoldings(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
   const doc = await readUserDoc(auth.userId);
-  const holdings = Object.values(doc.holdings);
+  const items = Object.values(doc.holdings);
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
+  // layer; explicit wire-shape per contract_freeze_v1 §1.3.
+  const holdings = composePortfolioListResponse(items);
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
 
@@ -931,8 +935,12 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
   const doc = await readUserDoc(auth.userId);
-  const items = Object.values(doc.holdings);
-  const summary = summarizeHoldings(items);
+  const rawItems = Object.values(doc.holdings);
+  const summary = summarizeHoldings(rawItems);
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
+  // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
+  // reads off raw holdings (uses Phase A compute-on-read helpers).
+  const items = composePortfolioListResponse(rawItems);
   res.json({ success: true, userId: auth.userId, items, summary });
 }
 
@@ -1317,7 +1325,10 @@ export async function getHoldingById(req: Request, res: Response) {
   const doc = await readUserDoc(auth.userId);
   const holding = doc.holdings[id];
   if (!holding) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
-  res.json(holding);
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
+  // layer; this endpoint runs no estimate, so β fields are null here too.
+  // iOS detail-view β richness comes from POST /api/compiq/*.
+  res.json(composeHoldingWireShape(holding));
 }
 
 export async function updateHolding(req: Request, res: Response) {
