@@ -589,7 +589,13 @@ async function autoPriceHolding(
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
   });
 
-  const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, toNumber(holding.currentValue, 0)));
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase D1: dropped the legacy
+  // `toNumber(holding.currentValue, 0)` tail of this fallback chain.
+  // currentValue was removed from PortfolioHolding in D1; C2 had
+  // already stopped its writer, so this read was dead-after-C2 (no
+  // writer fed it → returned 0 → caught by the `fairValue <= 0`
+  // short-circuit at the next line).
+  const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
 
   if (fairValue <= 0) {
     return holding;

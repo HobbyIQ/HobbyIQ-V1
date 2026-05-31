@@ -1,19 +1,28 @@
+// CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase D1 (2026-05-31): 28 deprecated
+// fields removed from this type. The canonical v1 shape (contract
+// freeze §1.3, Phase B amendment) is 33 stored facts + 10 cached
+// pipeline outputs. Two BLOCKED legacy fields stay: `setName` and
+// `gradingCompany` — both held by CF-AUTOPRICE-FIELD-NAME-SHIM's
+// typed-fallback reads in portfolioStore.service.ts and retire when
+// that shim CF lands the iOS canonical-write + Cosmos backfill.
+//
+// Storage-removable D2 follow-ups (not in D1): wire-shape trims of
+// the 7 computed CHEAP fields (gated on iOS repoint), legacy-fallback
+// drops (gated on production probes Q1/Q2/Q3), Zod 4xx escalation
+// (gated on 1-week strip-and-warn monitor). `purchasePrice` ->
+// `acquisitionCost` rename is its own CF.
 export interface PortfolioHolding {
   id: string;
   playerName?: string;
   cardTitle?: string;
   cardYear?: number;
-  brand?: string;
   setName?: string;
   cardNumber?: string;
   product?: string;
   parallel?: string;
   serialNumber?: string;
   isAuto?: boolean;
-  isPatch?: boolean;
   variation?: string;
-  bowmanFirst?: boolean;
-  grade?: string;
   gradingCompany?: string;
   gradeCompany?: string;
   gradeValue?: number;
@@ -22,16 +31,9 @@ export interface PortfolioHolding {
   totalCostBasis?: number;
   purchaseDate?: string | number;
   purchaseSource?: string;
-  feesPaid?: number;
-  taxPaid?: number;
-  shippingPaid?: number;
   listingUrl?: string;
   listingPrice?: number;
-  currentValue?: number;
-  quickSaleValue?: number;
   fairMarketValue?: number;
-  suggestedListPrice?: number;
-  premiumValue?: number;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from
@@ -42,34 +44,16 @@ export interface PortfolioHolding {
   predictedPriceMechanism?: string | null;
   predictedPriceUpdatedAt?: string | null;
   // CF-AUTOPRICE-PERSIST-TRENDIQ — persisted TrendIQ movement fields so
-  // the iOS dashboard can render direction (▲/▼/—) + magnitude without
-  // re-querying /estimate per holding. Populated only when computeEstimate
-  // returns a trendIQ object (success path); fallback paths leave these
-  // null. Movement fields are FORWARD-looking (TrendIQ composite); the
-  // BACKWARD-looking trend field elsewhere on this type reflects historical
-  // momentum from comp history alone.
+  // the iOS dashboard can render direction (▲/▼/—) without re-querying
+  // /estimate per holding. Populated only when computeEstimate returns
+  // a trendIQ object (success path); fallback paths leave these null.
+  // Phase C dropped the cached composite/impliedPct/coverage triple —
+  // those β-detail values are sourced from the estimate response only.
   movementDirection?: string | null;
-  movementComposite?: number | null;
-  movementImpliedPct?: number | null;
-  movementCoverage?: string | null;
   movementUpdatedAt?: string | null;
-  netEstimatedValue?: number;
-  totalProfitLoss?: number;
-  totalProfitLossPct?: number;
   verdict?: string;
   recommendation?: string;
-  trend?: string;
-  riskLevel?: string;
-  marketSpeed?: string;
-  marketPressure?: string;
-  expectedDaysToSell?: number;
-  confidence?: number;
-  compsUsed?: number;
-  parallelDetected?: string;
-  explanationBullets?: string[];
-  freshnessStatus?: string;
   lastUpdated?: string | number;
-  statusCategory?: string;
   notes?: string;
   // MLB Stats personId resolved from playerName at addHolding time (PR #68, 2026-05).
   // Optional and lazily populated — older holdings created before this PR may not have it.
