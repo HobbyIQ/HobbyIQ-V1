@@ -62,12 +62,11 @@
 // semantics (cost-basis proxy vs $0) before the C/D deploy.
 
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
-import { computePerUnitValue, computeTotalValue } from "./portfolioStore.service.js";
-
-function toFiniteNumber(value: unknown, fallback = 0): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
+import {
+  computePerUnitValue,
+  computeCostBasisTotal,
+  computeDisplayValue,
+} from "./portfolioStore.service.js";
 
 function applyMultiplierOrNull(value: number | null, multiplier: number): number | null {
   return value === null ? null : value * multiplier;
@@ -169,10 +168,15 @@ export interface PortfolioHoldingWire {
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
   const fmvPerUnit = computePerUnitValue(holding);
-  const fmvTotal = computeTotalValue(holding);
 
-  const currentValue = fmvTotal ?? 0;
-  const basis = toFiniteNumber(holding.totalCostBasis, 0);
+  // CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1: currentValue is the
+  // "value-or-cost" display total. For priced holdings: FMV × qty. For
+  // unpriced-with-cost: total cost basis (proxy — what the user paid is
+  // the closest honest number we can show, NOT zero). For truly unknown:
+  // 0. P&L applies its own basis > 0 guard so a cost-proxy nets to $0/
+  // 0% (NOT -100%), which is the unpriced-deploy-gate fix.
+  const currentValue = computeDisplayValue(holding);
+  const basis = computeCostBasisTotal(holding);
   const totalProfitLoss = basis > 0 ? currentValue - basis : 0;
   const totalProfitLossPct = basis > 0 ? ((currentValue - basis) / basis) * 100 : 0;
 

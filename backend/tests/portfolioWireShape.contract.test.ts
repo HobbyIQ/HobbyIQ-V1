@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import app from "../src/app";
 import { freshnessFromPricingTimestamp } from "../src/services/portfolioiq/responseAssembly.js";
+import {
+  computeDisplayValue,
+  computeCostBasisTotal,
+  summarizeHoldings,
+} from "../src/services/portfolioiq/portfolioStore.service.js";
 
 // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B — wire-shape contract lock.
 //
@@ -202,29 +207,124 @@ describe("Portfolio wire shape — contract lock", () => {
       }
     });
 
-    it("unpriced holding: SHAPE valid; value assertions pending CF-CURRENTVALUE-DIMENSION-CANONICALIZE", async () => {
+    it("(a) unpriced + cost: currentValue == costTotal; P&L nets to 0 (NOT -100%); FMV/multipliers null", async () => {
       const { sessionId } = await signIn();
-      await addHolding(sessionId, UNPRICED_FIXTURE);
+      await addHolding(sessionId, UNPRICED_FIXTURE); // totalCostBasis: 25
 
       const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
       const item = (res.body.items as any[]).find((h) => h.id === UNPRICED_FIXTURE.id);
       expect(item).toBeDefined();
 
-      // Shape: every cached + CHEAP key present (FMV may be null)
+      // Shape lock
       for (const f of CACHED_TEN) expect(item).toHaveProperty(f);
       for (const f of CHEAP_SEVEN) expect(item).toHaveProperty(f);
-
-      // β fields still absent
       for (const f of BETA_FIELDS_FORBIDDEN_ON_PORTFOLIO_WIRE) {
         expect(item).not.toHaveProperty(f);
       }
 
-      // VALUE assertions deferred: when FMV is null, the layer returns
-      // currentValue: 0 / quickSaleValue: null / premiumValue: null / etc.
-      // CF-CURRENTVALUE-DIMENSION-CANONICALIZE will canonicalize this
-      // (cost-basis proxy vs 0/null). Re-enable strict value assertions
-      // for the unpriced fixture in that CF's contract amendment.
+      // CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1 (option A — cost-proxy):
+      // currentValue falls back to cost total; P&L guard pins to 0; per-unit
+      // pricing fields stay null. KEY: NOT -100% (the prior bug).
+      expect(item.currentValue).toBe(25);
+      expect(item.totalProfitLoss).toBe(0);
+      expect(item.totalProfitLossPct).toBe(0);
+      expect(item.totalProfitLossPct).not.toBe(-100);
       expect(item.fairMarketValue).toBeNull();
+      expect(item.quickSaleValue).toBeNull();
+      expect(item.premiumValue).toBeNull();
+      expect(item.suggestedListPrice).toBeNull();
+      expect(item.freshnessStatus).toBe("Needs refresh");
+    });
+
+    it("(b) unpriced + no cost: currentValue == 0; P&L == 0; FMV null", async () => {
+      const { sessionId } = await signIn();
+      await addHolding(sessionId, {
+        id: "wire-shape-unpriced-nocost",
+        playerName: "Unknown Player",
+        cardTitle: "Catalog stub",
+        cardYear: 2024,
+        product: "Bowman",
+        parallel: "Base",
+        gradeCompany: "Raw",
+        quantity: 1,
+        // No purchasePrice, no totalCostBasis, no FMV.
+        lastUpdated: FRESH_NOW_ISO,
+      });
+
+      const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
+      const item = (res.body.items as any[]).find((h) => h.id === "wire-shape-unpriced-nocost");
+      expect(item).toBeDefined();
+      expect(item.currentValue).toBe(0);
+      expect(item.totalProfitLoss).toBe(0);
+      expect(item.totalProfitLossPct).toBe(0);
+      expect(item.fairMarketValue).toBeNull();
+    });
+
+    it("(c) priced + cost (regression): normal TOTAL P&L holds", async () => {
+      const { sessionId } = await signIn();
+      await addHolding(sessionId, PRICED_FIXTURE);
+
+      const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
+      const item = (res.body.items as any[]).find((h) => h.id === PRICED_FIXTURE.id);
+      expect(item.currentValue).toBe(100); // FMV × 1
+      expect(item.totalProfitLoss).toBe(25); // 100 - 75
+      expect(item.totalProfitLossPct).toBeCloseTo((25 / 75) * 100, 5);
+      expect(item.fairMarketValue).toBe(100);
+    });
+
+    it("(d) priced + no cost: currentValue == FMV × qty; P&L guarded to 0; FMV non-null", async () => {
+      const { sessionId } = await signIn();
+      await addHolding(sessionId, {
+        id: "wire-shape-priced-nocost",
+        playerName: "Paul Skenes",
+        cardTitle: "Test no-cost",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        parallel: "Base",
+        gradeCompany: "PSA",
+        gradeValue: 10,
+        quantity: 1,
+        // No purchasePrice, no totalCostBasis.
+        fairMarketValue: 100,
+        lastUpdated: FRESH_NOW_ISO,
+      });
+
+      const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
+      const item = (res.body.items as any[]).find((h) => h.id === "wire-shape-priced-nocost");
+      expect(item.currentValue).toBe(100); // FMV × 1
+      expect(item.fairMarketValue).toBe(100);
+      // basis > 0 guard pins P&L when there is no cost basis.
+      expect(item.totalProfitLoss).toBe(0);
+      expect(item.totalProfitLossPct).toBe(0);
+    });
+
+    it("(e) qty>1 priced: currentValue == FMV × qty (TOTAL); fairMarketValue stays PER-UNIT (NOT × qty)", async () => {
+      const { sessionId } = await signIn();
+      await addHolding(sessionId, {
+        id: "wire-shape-qty4",
+        playerName: "Multi-unit test",
+        cardTitle: "qty 4 lot",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        parallel: "Base",
+        gradeCompany: "PSA",
+        gradeValue: 10,
+        quantity: 4,
+        purchasePrice: 25,
+        totalCostBasis: 100,
+        fairMarketValue: 100,
+        lastUpdated: FRESH_NOW_ISO,
+      });
+
+      const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
+      const item = (res.body.items as any[]).find((h) => h.id === "wire-shape-qty4");
+      expect(item.currentValue).toBe(400); // FMV × qty = 100 × 4
+      expect(item.totalProfitLoss).toBe(300); // 400 - 100 (total basis)
+      expect(item.fairMarketValue).toBe(100); // PER-UNIT, NOT × qty
+      // Per-unit multipliers stay per-unit.
+      expect(item.quickSaleValue).toBeCloseTo(100 * 0.85, 5);
+      expect(item.premiumValue).toBeCloseTo(100 * 1.15, 5);
+      expect(item.suggestedListPrice).toBeCloseTo(100 * 1.05, 5);
     });
   });
 
@@ -261,6 +361,102 @@ describe("Portfolio wire shape — contract lock", () => {
       for (const f of BETA_FIELDS_FORBIDDEN_ON_PORTFOLIO_WIRE) {
         expect(res.body, `β field "${f}" must not appear on single-GET wire`).not.toHaveProperty(f);
       }
+    });
+  });
+
+  describe("CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1 — direct helper unit tests", () => {
+    it("computeDisplayValue: priced -> FMV × qty", () => {
+      expect(
+        computeDisplayValue({ id: "x", quantity: 4, fairMarketValue: 100 } as any),
+      ).toBe(400);
+      expect(
+        computeDisplayValue({ id: "x", quantity: 1, fairMarketValue: 50 } as any),
+      ).toBe(50);
+    });
+
+    it("computeDisplayValue: unpriced + totalCostBasis -> costTotal", () => {
+      expect(
+        computeDisplayValue({ id: "x", totalCostBasis: 25 } as any),
+      ).toBe(25);
+    });
+
+    it("computeDisplayValue: unpriced + purchasePrice + qty -> purchasePrice × qty (cost-proxy fallback)", () => {
+      expect(
+        computeDisplayValue({ id: "x", quantity: 4, purchasePrice: 25 } as any),
+      ).toBe(100);
+    });
+
+    it("computeDisplayValue: unpriced + no cost -> 0", () => {
+      expect(computeDisplayValue({ id: "x" } as any)).toBe(0);
+      expect(computeDisplayValue(null)).toBe(0);
+      expect(computeDisplayValue(undefined)).toBe(0);
+    });
+
+    it("computeCostBasisTotal: totalCostBasis path takes precedence", () => {
+      expect(
+        computeCostBasisTotal({ id: "x", totalCostBasis: 100, purchasePrice: 25, quantity: 2 } as any),
+      ).toBe(100);
+    });
+
+    it("computeCostBasisTotal: purchasePrice × max(1, qty) fallback when no totalCostBasis", () => {
+      expect(
+        computeCostBasisTotal({ id: "x", purchasePrice: 25, quantity: 4 } as any),
+      ).toBe(100);
+      expect(
+        computeCostBasisTotal({ id: "x", purchasePrice: 50 } as any),
+      ).toBe(50); // qty defaults to max(1, 1) = 1
+      expect(computeCostBasisTotal({ id: "x" } as any)).toBe(0);
+    });
+
+    it("summarizeHoldings: total includes unpriced-at-cost; P&L not depressed by it", () => {
+      const summary = summarizeHoldings([
+        // Priced: FMV 100 × qty 1 = 100; cost 75 -> P&L +25
+        { id: "p", quantity: 1, fairMarketValue: 100, totalCostBasis: 75 } as any,
+        // Unpriced-with-cost: no FMV, cost 25 -> contributes 25 to BOTH totals (nets to 0 in P&L)
+        { id: "u", quantity: 1, totalCostBasis: 25 } as any,
+      ]);
+      expect(summary.totalValue).toBe(125); // 100 + 25
+      expect(summary.totalCost).toBe(100);  // 75 + 25
+      expect(summary.totalGainLoss).toBe(25); // P&L = 25, NOT 0 (the unpriced cancels itself)
+      expect(summary.totalGainLossPct).toBeCloseTo((25 / 100) * 100, 5);
+      // KEY: the unpriced holding did NOT depress the summary's totalValue
+      // to be less than totalCost. The cost-proxy nets to 0 P&L contribution.
+    });
+
+    it("HHI regression: adding an unpriced holding does not change concentration (unpriced still excluded)", async () => {
+      const { sessionId } = await signIn();
+      // Tests share the seeded user doc; just measure before/after the
+      // unpriced add and assert it does NOT shift concentrationRisk.
+      const before = await request(app)
+        .get("/api/portfolio/health/score")
+        .set("x-session-id", sessionId);
+      expect(before.status).toBe(200);
+      expect(Number.isFinite(before.body.concentrationRisk)).toBe(true);
+
+      await addHolding(sessionId, {
+        id: "hhi-unpriced",
+        playerName: "Test",
+        cardTitle: "unpriced for HHI",
+        cardYear: 2024,
+        product: "Bowman",
+        parallel: "Base",
+        gradeCompany: "Raw",
+        quantity: 1,
+        purchasePrice: 25,
+        totalCostBasis: 25,
+        // no FMV
+        lastUpdated: FRESH_NOW_ISO,
+      });
+
+      const after = await request(app)
+        .get("/api/portfolio/health/score")
+        .set("x-session-id", sessionId);
+      expect(after.status).toBe(200);
+      // Unpriced contributes zero to HHI (filter excludes), so concentration
+      // is unchanged. No NaN, no crash.
+      expect(after.body.concentrationRisk).toBe(before.body.concentrationRisk);
+      expect(typeof after.body.score).toBe("number");
+      expect(Number.isFinite(after.body.score)).toBe(true);
     });
   });
 

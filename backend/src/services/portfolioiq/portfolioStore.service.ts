@@ -375,6 +375,36 @@ export function computeTotalValue(holding: PortfolioHolding | undefined | null):
   return perUnit * qty;
 }
 
+// CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1 (2026-05-31).
+// Single source for "total cost basis": stored totalCostBasis when present,
+// else purchasePrice × max(1, quantity). Used by the wire-assembly P&L
+// recipe AND by computeDisplayValue's unpriced-fallback. Centralizing
+// here means a future cost-basis convention change has one site to touch.
+export function computeCostBasisTotal(holding: PortfolioHolding | undefined | null): number {
+  if (!holding) return 0;
+  const qty = Math.max(1, toNumber(holding.quantity, 1));
+  return toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * qty);
+}
+
+// CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1 — "value-or-cost" display
+// value (TOTAL). Resolves the wire-side blast-radius for unpriced holdings:
+// previously an FMV-null holding rendered currentValue=0 + totalProfitLoss=
+// -basis + totalProfitLossPct=-100% (the user saw their unpriced cards as
+// a full-cost loss). Layer-cake fallback:
+//   1. FMV × qty when FMV is present and > 0       (priced — TOTAL)
+//   2. computeCostBasisTotal when it's > 0          (unpriced-at-cost proxy)
+//   3. 0 only when neither FMV nor cost is known    (truly unknown)
+// The downstream wire P&L recipe applies its own basis > 0 guard so a
+// cost-proxy currentValue nets to 0 P&L (not -100%) for unpriced holdings.
+export function computeDisplayValue(holding: PortfolioHolding | undefined | null): number {
+  if (!holding) return 0;
+  const fmvTotal = computeTotalValue(holding);
+  if (fmvTotal !== null && fmvTotal > 0) return fmvTotal;
+  const costTotal = computeCostBasisTotal(holding);
+  if (costTotal > 0) return costTotal;
+  return 0;
+}
+
 // CF-AUTOPRICE-FIELD-NAME-SHIM (2026-05-26): iOS write path historically
 // sends phantom field names (year, setName, cardName) rather than the
 // canonical TS-typed names (cardYear, product, cardTitle). addHolding
@@ -949,11 +979,13 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
       .toLowerCase();
     if (EXCLUDED_STATUS.has(status)) continue;
     const qty = Math.max(1, toNumber(h.quantity, 1));
-    totalValue += (computePerUnitValue(h) ?? 0) * qty;
-    const basis = toNumber(h.totalCostBasis, 0);
-    totalCost += basis > 0
-      ? basis
-      : toNumber(h.purchasePrice, 0) * qty;
+    // CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1: portfolio total uses
+    // computeDisplayValue so it agrees with per-row currentValue and
+    // unpriced-with-cost holdings show at cost (not $0). The summary's
+    // P&L denominator is totalCost (via computeCostBasisTotal-equivalent
+    // below), so the cost-proxy contributions cancel out cleanly.
+    totalValue += computeDisplayValue(h);
+    totalCost += computeCostBasisTotal(h);
     cardCount += qty;
   }
   const totalGainLoss = totalValue - totalCost;
