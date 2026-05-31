@@ -88,8 +88,6 @@ interface UserDoc {
 interface PortfolioPricePoint {
   at: string;
   value: number;
-  confidence?: number;
-  compsUsed?: number;
   source?: string;
 }
 
@@ -409,6 +407,68 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
   );
 }
 
+// CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: write-boundary strip for fields
+// dropped from the v1 canonical PortfolioHolding shape per contract §1.3.
+// Strip-and-warn mode (NOT 4xx) per §1.5 — after iOS rebuild + 1-week
+// monitor, escalate to 4xx in a follow-up CF. Keeps the body-spread from
+// re-introducing dropped fields onto stored holdings.
+//
+// gradingCompany is INTENTIONALLY NOT in the strip set — see
+// CF-AUTOPRICE-FIELD-NAME-SHIM at L358-367, owns the rename separately.
+// currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
+// premiumValue / suggestedListPrice are INTENTIONALLY NOT stripped this
+// phase — their writers are deferred to CF-CURRENTVALUE-DIMENSION-
+// CANONICALIZE, which must settle the unpriced fallback before stop.
+const DEPRECATED_HOLDING_KEYS: readonly string[] = [
+  // β detail-only (sourced from estimate response only)
+  "confidence",
+  "expectedDaysToSell",
+  "compsUsed",
+  "explanationBullets",
+  "movementComposite",
+  "movementImpliedPct",
+  "movementCoverage",
+  // Gate-2 β (alert + concentration consumers dropped)
+  "marketSpeed",
+  "marketPressure",
+  // Computed at response assembly now
+  "freshnessStatus",
+  // Zero-write zombie / superseded fields
+  "netEstimatedValue",
+  "parallelDetected",
+  "trend",
+  "riskLevel",
+  // Duplicates / legacy
+  "brand",
+  "setName",
+  "grade",
+  "feesPaid",
+  "taxPaid",
+  "shippingPaid",
+  "bowmanFirst",
+  "isPatch",
+  "statusCategory",
+];
+
+function stripDeprecatedHoldingKeys(
+  body: Record<string, unknown>,
+  res: Response,
+): Record<string, unknown> {
+  const deprecated: string[] = [];
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (DEPRECATED_HOLDING_KEYS.includes(k)) {
+      deprecated.push(k);
+    } else {
+      clean[k] = v;
+    }
+  }
+  if (deprecated.length > 0) {
+    res.setHeader("X-PortfolioHolding-Deprecated-Keys", deprecated.join(","));
+  }
+  return clean;
+}
+
 // CF-INVENTORYIQ-R1 — write-side normalizer for `cardsightCardId`.
 // Applied by addHolding + updateHolding so the stored form is always
 // the bare Cardsight UUID regardless of which shape the client sends.
@@ -493,8 +553,6 @@ async function autoPriceHolding(
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
   });
 
-  const confidence = toNumber((estimate as any)?.confidence?.pricingConfidence, 0);
-  const compsUsed = toNumber((estimate as any)?.compsUsed, 0);
   const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, toNumber(holding.currentValue, 0)));
 
   if (fairValue <= 0) {
@@ -527,17 +585,14 @@ async function autoPriceHolding(
   // absent, in which case movement fields land as null. movementUpdatedAt
   // falls back to current time when trendIQ.lastUpdated is null so the
   // dashboard can still surface freshness from this write.
+  //
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: only movementDirection +
+  // movementUpdatedAt are persisted on the holding. movementComposite /
+  // movementImpliedPct / movementCoverage are β detail-only and
+  // sourced from the estimate response on POST /api/compiq/* only.
   const __trendIQ = (estimate as any)?.trendIQ ?? null;
-  const rawComposite = __trendIQ?.composite;
-  const rawImpliedPct = __trendIQ?.impliedPct;
   const movementDirection =
     typeof __trendIQ?.direction === "string" ? __trendIQ.direction : null;
-  const movementComposite =
-    typeof rawComposite === "number" && Number.isFinite(rawComposite) ? rawComposite : null;
-  const movementImpliedPct =
-    typeof rawImpliedPct === "number" && Number.isFinite(rawImpliedPct) ? rawImpliedPct : null;
-  const movementCoverage =
-    typeof __trendIQ?.coverage === "string" ? __trendIQ.coverage : null;
   const movementUpdatedAt = __trendIQ
     ? (__trendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
     : null;
@@ -555,18 +610,18 @@ async function autoPriceHolding(
     predictedPriceMechanism,
     predictedPriceUpdatedAt,
     movementDirection,
-    movementComposite,
-    movementImpliedPct,
-    movementCoverage,
     movementUpdatedAt,
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
-    confidence,
-    compsUsed,
-    marketSpeed: String((estimate as any)?.marketDNA?.speed ?? holding.marketSpeed ?? "Normal"),
-    marketPressure: String((estimate as any)?.marketDNA?.marketCondition ?? holding.marketPressure ?? "Balanced Market"),
-    freshnessStatus: "Live",
     lastUpdated: now,
+    // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: writer no longer stamps
+    // movementComposite / movementImpliedPct / movementCoverage (β
+    // detail-only — sourced from estimate response on POST /api/compiq/*
+    // only). confidence / compsUsed (holding-level) dropped; provenance
+    // belongs on a detail-view endpoint when needed. marketSpeed /
+    // marketPressure dropped with Gate-2 β liquidity-risk consumers.
+    // freshnessStatus is computed at response assembly from
+    // predictedPriceUpdatedAt / movementUpdatedAt — no longer stamped.
   };
 
   const basis = toNumber(updated.totalCostBasis, toNumber(updated.purchasePrice, 0) * Math.max(1, toNumber(updated.quantity, 1)));
@@ -576,8 +631,6 @@ async function autoPriceHolding(
   appendPriceHistory(doc, holding.id, {
     at: now,
     value: fairValue,
-    confidence,
-    compsUsed,
     source,
   });
 
@@ -685,25 +738,17 @@ function evaluateHoldingAlerts(doc: UserDoc, previous: PortfolioHolding | undefi
     });
   }
 
-  const speed = String(next.marketSpeed ?? "").toLowerCase();
-  const pressure = String(next.marketPressure ?? "").toLowerCase();
-  if (speed.includes("slow") || pressure.includes("weak")) {
-    addAlert(doc, {
-      level: "info",
-      type: "liquidity-risk",
-      holdingId: String(next.id),
-      playerName,
-      cardTitle,
-      message: `${playerName} liquidity risk flagged (${next.marketSpeed ?? "unknown speed"}).`,
-      context: { marketSpeed: next.marketSpeed ?? null, marketPressure: next.marketPressure ?? null },
-    });
-  }
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C (Gate-2 β): liquidity-risk
+  // alert dropped. marketSpeed/marketPressure are no longer cached on
+  // holdings; the alert generator AND the consumer in computePortfolioHealth
+  // (liquidityRisk component) are removed together. Sell-now alerts return
+  // in W2 with their own reshape. PortfolioAlert.type union still includes
+  // "liquidity-risk" for backward-compat reads of existing alerts in Cosmos.
 }
 
 function computePortfolioHealth(holdings: PortfolioHolding[]): {
   score: number;
   concentrationRisk: number;
-  liquidityRisk: number;
   staleDataRisk: number;
   downsideRisk: number;
 } {
@@ -716,9 +761,6 @@ function computePortfolioHealth(holdings: PortfolioHolding[]): {
     const hhi = weights.reduce((sum, w) => sum + w * w, 0);
     concentrationRisk = Math.min(100, Math.round(hhi * 200));
   }
-
-  const liquidityCount = valued.filter((h) => String(h.marketSpeed ?? "").toLowerCase().includes("slow")).length;
-  const liquidityRisk = valued.length > 0 ? Math.round((liquidityCount / valued.length) * 100) : 0;
 
   const staleCount = valued.filter((h) => {
     const updated = new Date(toIso(h.lastUpdated, new Date(0))).getTime();
@@ -735,16 +777,28 @@ function computePortfolioHealth(holdings: PortfolioHolding[]): {
   }).length;
   const downsideRisk = valued.length > 0 ? Math.round((downsideCount / valued.length) * 100) : 0;
 
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: liquidityRisk dropped (Gate-2 β).
+  // Weights renormalized by dividing prior weights by remaining-sum 0.75 so
+  // the deduction ceiling recovers to 100 and the score floor stays at 0:
+  //   concentration: 0.30 / 0.75 = 0.40
+  //   stale:         0.20 / 0.75 = 0.267
+  //   downside:      0.25 / 0.75 = 0.333
   const score = Math.max(
     0,
-    Math.min(100, 100 - Math.round(concentrationRisk * 0.3 + liquidityRisk * 0.25 + staleDataRisk * 0.2 + downsideRisk * 0.25)),
+    Math.min(100, 100 - Math.round(concentrationRisk * 0.40 + staleDataRisk * 0.267 + downsideRisk * 0.333)),
   );
 
-  return { score, concentrationRisk, liquidityRisk, staleDataRisk, downsideRisk };
+  return { score, concentrationRisk, staleDataRisk, downsideRisk };
 }
 
 function buildCalibrationReport(doc: UserDoc) {
-  type Sample = { confidence: number; absPctError: number };
+  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: confidence/compsUsed dropped
+  // from PortfolioPricePoint schema (no longer a meaningful per-entry
+  // signal — provenance lives on the estimate response). Calibration
+  // collapses to overall MAE. Per-confidence-band binning would need a
+  // re-source from the estimate corpus (CF-PREDICTION-CORPUS) rather
+  // than from priceHistory entries.
+  type Sample = { absPctError: number };
   const samples: Sample[] = [];
 
   for (const entry of doc.ledger) {
@@ -757,24 +811,8 @@ function buildCalibrationReport(doc: UserDoc) {
     if (predicted <= 0 || actualNetUnit <= 0) continue;
 
     const absPctError = Math.abs((predicted - actualNetUnit) / actualNetUnit) * 100;
-    const confidence = Math.max(0, Math.min(100, toNumber(anchor?.confidence, 50)));
-    samples.push({ confidence, absPctError });
+    samples.push({ absPctError });
   }
-
-  const bins = [
-    { key: "0-40", min: 0, max: 40 },
-    { key: "41-60", min: 41, max: 60 },
-    { key: "61-80", min: 61, max: 80 },
-    { key: "81-100", min: 81, max: 100 },
-  ].map((b) => {
-    const points = samples.filter((s) => s.confidence >= b.min && s.confidence <= b.max);
-    const mae = points.length > 0 ? points.reduce((sum, p) => sum + p.absPctError, 0) / points.length : 0;
-    return {
-      bucket: b.key,
-      count: points.length,
-      meanAbsolutePctError: Number(mae.toFixed(2)),
-    };
-  });
 
   const overallMae = samples.length > 0
     ? samples.reduce((sum, s) => sum + s.absPctError, 0) / samples.length
@@ -783,7 +821,6 @@ function buildCalibrationReport(doc: UserDoc) {
   return {
     sampleCount: samples.length,
     meanAbsolutePctError: Number(overallMae.toFixed(2)),
-    bins,
   };
 }
 
@@ -1257,7 +1294,10 @@ export async function addHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
 
-  const incoming = (req.body ?? {}) as Record<string, unknown>;
+  const incoming = stripDeprecatedHoldingKeys(
+    (req.body ?? {}) as Record<string, unknown>,
+    res,
+  );
   const { id, ...rest } = incoming;
   let holding: PortfolioHolding = {
     ...(rest as Omit<PortfolioHolding, "id">),
@@ -1276,13 +1316,10 @@ export async function addHolding(req: Request, res: Response) {
   appendPriceHistory(doc, holding.id, {
     at: now,
     value,
-    confidence: toNumber(holding.confidence, 0),
-    compsUsed: toNumber(holding.compsUsed, 0),
     source: "add",
   });
 
   holding.lastUpdated = holding.lastUpdated ?? now;
-  holding.freshnessStatus = holding.freshnessStatus ?? "Live";
   doc.holdings[holding.id] = { ...doc.holdings[holding.id], ...holding };
 
   try {
@@ -1340,7 +1377,11 @@ export async function updateHolding(req: Request, res: Response) {
   if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
   const previous = doc.holdings[id];
-  let next = { ...doc.holdings[id], ...(req.body as PortfolioHolding), id };
+  const cleanBody = stripDeprecatedHoldingKeys(
+    (req.body ?? {}) as Record<string, unknown>,
+    res,
+  );
+  let next = { ...doc.holdings[id], ...(cleanBody as PortfolioHolding), id };
   next = normalizeR1CardsightCardId(
     next,
     id,
@@ -1356,8 +1397,6 @@ export async function updateHolding(req: Request, res: Response) {
     appendPriceHistory(doc, id, {
       at: toIso(next.lastUpdated, new Date()),
       value: nextValue,
-      confidence: toNumber(next.confidence, 0),
-      compsUsed: toNumber(next.compsUsed, 0),
       source: "update",
     });
   }
@@ -1671,7 +1710,6 @@ export async function sellHolding(req: Request, res: Response) {
       totalProfitLoss: nextCurrentValue - updatedCostBasis,
       totalProfitLossPct: updatedCostBasis > 0 ? ((nextCurrentValue - updatedCostBasis) / updatedCostBasis) * 100 : 0,
       lastUpdated: new Date().toISOString(),
-      freshnessStatus: "Updated Today",
     };
   }
 
@@ -1882,7 +1920,6 @@ export async function markHoldingSoldFromEbay(
           ? ((nextCurrentValue - updatedCostBasis) / updatedCostBasis) * 100
           : 0,
       lastUpdated: new Date().toISOString(),
-      freshnessStatus: "Updated Today",
     };
   }
 
@@ -1911,7 +1948,6 @@ export async function refreshHolding(req: Request, res: Response) {
   try {
     await autoPriceHolding(doc, doc.holdings[id], doc.holdings[id], "refresh");
   } catch {
-    doc.holdings[id].freshnessStatus = "Live";
     doc.holdings[id].lastUpdated = new Date().toISOString();
   }
   await writeUserDoc(auth.userId, doc);
@@ -2045,11 +2081,15 @@ export async function repriceHoldingsForUser(
             ? "Insufficient comps"
             : "Low confidence";
         const now = new Date().toISOString();
+        // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: failure-path no longer
+        // stamps confidence / compsUsed (holding-level β; sourced from
+        // estimate response only) or freshnessStatus ("Stale" intent now
+        // surfaces via age-bucket on predictedPriceUpdatedAt /
+        // movementUpdatedAt — both FROZEN here since the failure path
+        // doesn't bump them, so the wire renders ≥ "Updated Today" by
+        // age, never falsely "Live").
         doc.holdings[holding.id] = {
           ...holding,
-          compsUsed,
-          confidence,
-          freshnessStatus: "Stale",
           verdict: reasonLabel,
           recommendation: "Hold",
           lastUpdated: now,
@@ -2092,21 +2132,13 @@ export async function repriceHoldingsForUser(
       // shape iOS reads from GET /api/portfolio. Pull-to-refresh + scheduled
       // reprice route through HERE; addHolding-style flows route through
       // autoPriceHolding.
+      //
+      // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: composite / impliedPct /
+      // coverage are β detail-only (estimate response only); only
+      // movementDirection + movementUpdatedAt persist on the holding.
       const repriceTrendIQ = (estimate as any)?.trendIQ ?? null;
-      const repriceRawComposite = repriceTrendIQ?.composite;
-      const repriceRawImpliedPct = repriceTrendIQ?.impliedPct;
       const repriceMovementDirection =
         typeof repriceTrendIQ?.direction === "string" ? repriceTrendIQ.direction : null;
-      const repriceMovementComposite =
-        typeof repriceRawComposite === "number" && Number.isFinite(repriceRawComposite)
-          ? repriceRawComposite
-          : null;
-      const repriceMovementImpliedPct =
-        typeof repriceRawImpliedPct === "number" && Number.isFinite(repriceRawImpliedPct)
-          ? repriceRawImpliedPct
-          : null;
-      const repriceMovementCoverage =
-        typeof repriceTrendIQ?.coverage === "string" ? repriceTrendIQ.coverage : null;
       const repriceMovementUpdatedAt = repriceTrendIQ
         ? (repriceTrendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
         : null;
@@ -2124,18 +2156,14 @@ export async function repriceHoldingsForUser(
         predictedPriceMechanism: repricePredictedPriceMechanism,
         predictedPriceUpdatedAt: repricePredictedPriceUpdatedAt,
         movementDirection: repriceMovementDirection,
-        movementComposite: repriceMovementComposite,
-        movementImpliedPct: repriceMovementImpliedPct,
-        movementCoverage: repriceMovementCoverage,
         movementUpdatedAt: repriceMovementUpdatedAt,
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
-        confidence,
-        compsUsed,
-        marketSpeed: String((estimate as any)?.marketDNA?.speed ?? holding.marketSpeed ?? "Normal"),
-        marketPressure: String((estimate as any)?.marketDNA?.marketCondition ?? holding.marketPressure ?? "Balanced Market"),
-        freshnessStatus: "Live",
         lastUpdated: now,
+        // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: confidence / compsUsed
+        // (holding) + marketSpeed / marketPressure (Gate-2 β) + movement
+        // detail (composite / impliedPct / coverage β) + freshnessStatus
+        // (computed at response assembly) — all dropped.
       };
 
       const basis = toNumber(updated.totalCostBasis, toNumber(updated.purchasePrice, 0) * Math.max(1, toNumber(updated.quantity, 1)));
@@ -2145,8 +2173,6 @@ export async function repriceHoldingsForUser(
       appendPriceHistory(doc, holding.id, {
         at: now,
         value: fairValue,
-        confidence,
-        compsUsed,
         source,
       });
 

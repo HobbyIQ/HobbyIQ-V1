@@ -35,17 +35,18 @@
 //   • suggestedListPrice — writer fallback `fairValue * 1.05`. Layer
 //     matches. Estimate-success also uses `fmv * 1.05` (sibling-pool
 //     path, compiqEstimate.service.ts:2097); recipes coincide.
-//   • freshnessStatus — CACHED PASS-THROUGH this phase. Writers stamp
-//     operationally ("Live" at autoPrice, "Updated Today" at sell,
-//     "Stale" at reprice-fail). A compute-from-lastUpdated recipe was
-//     attempted and REVERTED — lastUpdated bumps on reprice FAILURE
-//     too (portfolioStore.service.ts:2047-2056), so an age-based recipe
-//     reads "Live" on holdings whose last reprice failed, losing the
-//     "Stale" signal. Phase C scope: compute from a success-only
-//     timestamp (verify predictedPriceUpdatedAt / movementUpdatedAt
-//     qualify; add pricedAt only if neither does), then drop the cached
-//     field. See CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C scope in
-//     SESSION_HANDOFF.md.
+//   • freshnessStatus — COMPUTED FROM SUCCESS-ONLY TIMESTAMP (Phase C).
+//     Phase B carried freshnessStatus as cached pass-through; Phase C
+//     replaces with `freshnessFromPricingTimestamp` (below) which reads
+//     predictedPriceUpdatedAt → movementUpdatedAt → "Needs refresh".
+//     Both pricing timestamps are written only inside the success
+//     branches of autoPriceHolding / repriceHoldingsForUser; the
+//     failure path preserves their prior values via `...holding`
+//     spread. This resolves the false-"Live"-after-failed-reprice
+//     bug that an age-based recipe keyed on `lastUpdated` would
+//     otherwise produce (writer bumps `lastUpdated: now` on failure
+//     at portfolioStore.service.ts:2052-2055 alongside
+//     `freshnessStatus: "Stale"`).
 //   • netEstimatedValue — declared on PortfolioHolding type at L56 but
 //     NEVER POPULATED anywhere in the backend (grep verified). Today's
 //     wire value is always undefined. Layer OMITS the field; the
@@ -70,6 +71,35 @@ function toFiniteNumber(value: unknown, fallback = 0): number {
 
 function applyMultiplierOrNull(value: number | null, multiplier: number): number | null {
   return value === null ? null : value * multiplier;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+// CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: compute freshnessStatus from a
+// success-only pricing timestamp instead of cached pass-through. The writer
+// stamps cached freshnessStatus operationally — including "Stale" on
+// reprice FAILURE at portfolioStore.service.ts:2052 alongside a bumped
+// `lastUpdated` — so a recipe keyed on `lastUpdated` would falsely read
+// "Live" on failed-reprice holdings. predictedPriceUpdatedAt and
+// movementUpdatedAt are written only inside the success branches of
+// autoPriceHolding (after the `if (fairValue <= 0) return holding;`
+// guard) and repriceHoldingsForUser's success path; the failure path
+// preserves their prior values via the `...holding` spread. Both
+// qualify as success-only timestamps. Recipe prefers
+// predictedPriceUpdatedAt (broadest success coverage) and falls back
+// to movementUpdatedAt (set only when trendIQ is present).
+export function freshnessFromPricingTimestamp(h: PortfolioHolding | undefined | null): string {
+  if (!h) return "Needs refresh";
+  const stamp = h.predictedPriceUpdatedAt ?? h.movementUpdatedAt ?? null;
+  if (!stamp) return "Needs refresh";
+  const ts = new Date(stamp as string).getTime();
+  if (!Number.isFinite(ts)) return "Needs refresh";
+  const ageMs = Date.now() - ts;
+  if (ageMs < HOUR_MS) return "Live";
+  if (ageMs < DAY_MS) return "Updated Today";
+  if (ageMs < 2 * DAY_MS) return "Yesterday";
+  return "Needs refresh";
 }
 
 export interface PortfolioHoldingWire {
@@ -134,7 +164,7 @@ export interface PortfolioHoldingWire {
   quickSaleValue: number | null;
   premiumValue: number | null;
   suggestedListPrice: number | null;
-  freshnessStatus: string | null;
+  freshnessStatus: string;
 }
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
@@ -208,7 +238,7 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     quickSaleValue: applyMultiplierOrNull(fmvPerUnit, 0.85),
     premiumValue: applyMultiplierOrNull(fmvPerUnit, 1.15),
     suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, 1.05),
-    freshnessStatus: holding.freshnessStatus ?? null,
+    freshnessStatus: freshnessFromPricingTimestamp(holding),
   };
 }
 

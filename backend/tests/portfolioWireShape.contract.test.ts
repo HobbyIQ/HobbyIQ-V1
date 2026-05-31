@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 import app from "../src/app";
+import { freshnessFromPricingTimestamp } from "../src/services/portfolioiq/responseAssembly.js";
 
 // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B — wire-shape contract lock.
 //
@@ -160,11 +161,34 @@ describe("Portfolio wire shape — contract lock", () => {
       expect(item.quickSaleValue).toBeCloseTo(100 * 0.85, 5); // success-path multiplier
       expect(item.premiumValue).toBeCloseTo(100 * 1.15, 5);   // flat (Gate-2 β: marketSpeed dropped)
       expect(item.suggestedListPrice).toBeCloseTo(100 * 1.05, 5);
-      // freshnessStatus passes through cached value verbatim this phase.
-      // Phase C will compute it from a success-only timestamp (root-cause
-      // fix for false-"Live"-after-failed-reprice — see SESSION_HANDOFF
-      // Phase C scope + CF-PORTFOLIOHOLDING-FIELD-PRUNE deploy gate).
+      // freshnessStatus computed from predictedPriceUpdatedAt (success-only
+      // timestamp; failure-path doesn't bump it). Fresh fixture has the
+      // timestamp set to NOW → recipe returns "Live" (age < 1h).
       expect(item.freshnessStatus).toBe("Live");
+    });
+
+    it("priced-then-failed-reprice: predictedPriceUpdatedAt stale + lastUpdated fresh -> degraded label (no false Live)", async () => {
+      const { sessionId } = await signIn();
+      // Simulate the post-Phase-C state after a reprice-FAILURE: the
+      // failure path bumps `lastUpdated` to now but preserves
+      // predictedPriceUpdatedAt at its prior value. The wire layer
+      // reads predictedPriceUpdatedAt → "Updated Today"/"Yesterday"/
+      // "Needs refresh" by age (NOT "Live"), correctly degrading.
+      const oldStamp = new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(); // 30h ago
+      await addHolding(sessionId, {
+        ...PRICED_FIXTURE,
+        id: "wire-shape-failed-reprice",
+        predictedPriceUpdatedAt: oldStamp,
+        movementUpdatedAt: oldStamp,
+        lastUpdated: new Date().toISOString(), // freshly bumped (failure-path mirror)
+      });
+
+      const res = await request(app).get("/api/portfolio").set("x-session-id", sessionId);
+      const item = (res.body.items as any[]).find((h) => h.id === "wire-shape-failed-reprice");
+      expect(item).toBeDefined();
+      // 30h ago -> < 48h -> "Yesterday". The key property: NOT "Live".
+      expect(item.freshnessStatus).not.toBe("Live");
+      expect(item.freshnessStatus).toBe("Yesterday");
     });
 
     it("priced holding: 7 β fields ABSENT from wire", async () => {
@@ -237,6 +261,37 @@ describe("Portfolio wire shape — contract lock", () => {
       for (const f of BETA_FIELDS_FORBIDDEN_ON_PORTFOLIO_WIRE) {
         expect(res.body, `β field "${f}" must not appear on single-GET wire`).not.toHaveProperty(f);
       }
+    });
+  });
+
+  describe("freshnessFromPricingTimestamp — direct unit test", () => {
+    // Decoupled from the unpriced-wire path (whose value assertions remain
+    // stubbed pending CF-CURRENTVALUE-DIMENSION-CANONICALIZE). Locks the
+    // null-timestamp branch on its own.
+    it('returns "Needs refresh" when both predictedPriceUpdatedAt and movementUpdatedAt are null', () => {
+      expect(freshnessFromPricingTimestamp({ id: "x" } as any)).toBe("Needs refresh");
+      expect(
+        freshnessFromPricingTimestamp({
+          id: "y",
+          predictedPriceUpdatedAt: null,
+          movementUpdatedAt: null,
+        } as any),
+      ).toBe("Needs refresh");
+    });
+
+    it('falls back to movementUpdatedAt when predictedPriceUpdatedAt is null', () => {
+      const recent = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      expect(
+        freshnessFromPricingTimestamp({
+          id: "z",
+          predictedPriceUpdatedAt: null,
+          movementUpdatedAt: recent,
+        } as any),
+      ).toBe("Live");
+    });
+
+    it('handles undefined holding -> "Needs refresh"', () => {
+      expect(freshnessFromPricingTimestamp(undefined)).toBe("Needs refresh");
     });
   });
 

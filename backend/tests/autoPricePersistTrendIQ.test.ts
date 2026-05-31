@@ -137,10 +137,11 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — autoPriceHolding (site 1, via addHold
     const stored = await getHoldingFromStore(userId, holdingId);
     expect(stored).not.toBeNull();
     expect(stored.movementDirection).toBe("up");
-    expect(stored.movementComposite).toBe(1.108);
-    expect(stored.movementImpliedPct).toBe(10.8);
-    expect(stored.movementCoverage).toBe("full");
     expect(stored.movementUpdatedAt).toBe(NOW_ISO_FIXED);
+    // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: movementComposite /
+    // movementImpliedPct / movementCoverage are β detail-only and no
+    // longer persisted on the holding. They remain available on
+    // POST /api/compiq/* via the estimate response's trendIQ.
   });
 
   it("leaves movement fields null when computeEstimate returns no trendIQ (fallback path)", async () => {
@@ -307,9 +308,7 @@ describe("CF-AUTOPRICE-PERSIST-TRENDIQ — repriceHoldingsForUser (site 2, via /
     const stored = await getHoldingFromStore(userId, holdingId);
     expect(stored).not.toBeNull();
     expect(stored.movementDirection).toBe("down");
-    expect(stored.movementComposite).toBe(0.92);
-    expect(stored.movementImpliedPct).toBe(-8.0);
-    expect(stored.movementCoverage).toBe("no_segment");
     expect(stored.movementUpdatedAt).toBe(NOW_ISO_FIXED);
+    // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: see addHolding-site comment above.
   });
 });
