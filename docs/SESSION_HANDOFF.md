@@ -57,6 +57,8 @@ If smoke surfaces issue: HALT, debug, potential rollback.
 
 **Strategic plan (active 2026-05-29 — Answer B LOCKED):** See [`docs/HOBBYIQ_ROADMAP_2026-05-28.md`](HOBBYIQ_ROADMAP_2026-05-28.md) for the active 15-week Q3 plan under Answer B (shipped product as moat, ML training moved to v2.0 backlog as CF-ML-MOAT-V2 — see LOW backlog below). Launch-readiness as active workstream gating the launch: staged scaling tiers 100 → 500 → 1000 → 5000 → 20000; CF-LAUNCH-READINESS-100 shipped today, CF-LAUNCH-READINESS-500 candidate constraints captured. The strategic frame is PROVISIONAL pending fresh-session confirmation; the WORK is non-regretful under either fork answer. **W1 sprint complete same-day 2026-05-28** (canonicalization `b51b763`, variant-mismatch parity `ccd05dc`, unified-search design `23038d7`); roadmap amended (W1-amendment commit below) to reflect honest 3-5 week v1 scope and W2-W6 placement with downstream shifts.
 
+**Forward-pricing design:** See docs/phase0/signal_durability_methodology_2026-05-31.md — factor model + signal-durability archetypes (seed priors, corpus-calibrated). Calibration gated on CF-PREDICTION-CORPUS-EMISSION-COVERAGE + CF-PREDICTION-CORPUS-CALL-CONTEXT.
+
 **Active design docs:**
 - [`docs/phase0/unified_search_design_2026-05-28.md`](phase0/unified_search_design_2026-05-28.md) — CF-UNIFIED-SEARCH-AND-CERT v1 architecture (`23038d7`). 647 lines, 17 sections. D1/D2/D3 locked in preamble. v1 implementation gated on this design + roadmap amendment.
 - [`docs/phase0/unified_search_current_state_2026-05-28.md`](phase0/unified_search_current_state_2026-05-28.md) — Phase 1 discovery (`0fbc5e2`) consumed by the design.
