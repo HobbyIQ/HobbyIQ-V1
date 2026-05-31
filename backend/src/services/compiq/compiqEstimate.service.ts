@@ -1347,6 +1347,127 @@ export function computeFmvBand(
 }
 
 // ---------------------------------------------------------------------------
+// CF-PREDICTION-CORPUS-EMISSION-COVERAGE — unified corpus emit
+// ---------------------------------------------------------------------------
+// Single source for the prediction_log payload. Called from every FMV-
+// returning path in computeEstimate (main success + 4 fallback paths) so
+// the corpus captures the full pricing population, not just the happy path.
+//
+// Handles missing data: `trendIQ` absent → zero-coverage stub
+// (composite=1.0, direction="flat", coverage="insufficient", null
+// components); `forwardProjectionFactor` defaults to 1.0; `compsUsed`
+// defaults to 0. The payload field set + ordering matches the original
+// inline emit at L2854-2897 to keep the dual-emit stdout JSON shape
+// identical for the burn-in window.
+//
+// The emit itself is fire-and-forget — try/catch wraps both the
+// console.log (to be safe against weird payloads) and the
+// writePredictionLog call (writer is already non-throwing, but the
+// caller's try/catch protects against future refactor regressions).
+//
+// `surfacedPrice` is computed here from `predictedPrice ?? fairMarketValue`
+// per methodology — names the MAPE target unambiguously. The paired
+// `surfacedPriceSource` distinguishes "predictedPrice was the headline"
+// from "fairMarketValue was the headline" so a future analyst can
+// stratify. `"none"` covers degenerate paths (unsupported_sport).
+//
+// `source` / `callContext` left omitted — defaulted to "estimate" at the
+// writer per CF-PREDICTION-CORPUS-CALL-CONTEXT's pending plumb-through.
+export function emitPredictionToCorpus(params: {
+  cardIdentity?: { card_id: string | null } | null;
+  body: {
+    playerName?: string;
+    cardYear?: number;
+    product?: string;
+    parallel?: string;
+    gradeCompany?: string;
+    gradeValue?: number;
+    cardsightCardId?: string;
+  };
+  fairMarketValue: number | null;
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "unavailable";
+  predictedPrice: number | null;
+  predictedPriceRange: { low: number; high: number } | null;
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "unavailable";
+  forwardProjectionFactor?: number;
+  trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
+  compsUsed?: number;
+}): void {
+  try {
+    const fmv =
+      typeof params.fairMarketValue === "number" && Number.isFinite(params.fairMarketValue)
+        ? params.fairMarketValue
+        : null;
+    const predicted =
+      typeof params.predictedPrice === "number" && Number.isFinite(params.predictedPrice)
+        ? params.predictedPrice
+        : null;
+    const surfacedPrice = predicted ?? fmv ?? null;
+    const surfacedPriceSource: "predictedPrice" | "fairMarketValue" | "none" =
+      predicted !== null
+        ? "predictedPrice"
+        : fmv !== null
+        ? "fairMarketValue"
+        : "none";
+
+    const trendIQ = params.trendIQ
+      ? {
+          composite: params.trendIQ.composite,
+          direction: params.trendIQ.direction,
+          coverage: params.trendIQ.coverage,
+          components: {
+            playerMomentum: params.trendIQ.components.playerMomentum?.multiplier ?? null,
+            cardTrajectory: params.trendIQ.components.cardTrajectory?.multiplier ?? null,
+            segmentTrajectory: params.trendIQ.components.segmentTrajectory?.multiplier ?? null,
+          },
+          lastUpdated: params.trendIQ.lastUpdated,
+        }
+      : {
+          // Zero-coverage stub for fallback paths that don't compute trendIQ.
+          // composite=1.0 + coverage="insufficient" mirror forwardProjection.ts
+          // graceful-degradation semantics; lastUpdated=null preserves the
+          // "no signal anchor" distinction from a fresh 1.0-composite signal.
+          composite: 1.0,
+          direction: "flat" as const,
+          coverage: "insufficient" as const,
+          components: {
+            playerMomentum: null,
+            cardTrajectory: null,
+            segmentTrajectory: null,
+          },
+          lastUpdated: null,
+        };
+
+    const __predictionEmit = {
+      eventType: "prediction_emitted" as const,
+      timestamp: new Date().toISOString(),
+      cardsightCardId:
+        params.cardIdentity?.card_id ?? params.body.cardsightCardId ?? null,
+      playerName: params.body.playerName ?? null,
+      cardYear: params.body.cardYear ?? null,
+      product: params.body.product ?? null,
+      parallel: params.body.parallel ?? null,
+      gradeCompany: params.body.gradeCompany ?? null,
+      gradeValue: params.body.gradeValue ?? null,
+      fairMarketValue: fmv,
+      fmvMechanism: params.fmvMechanism,
+      surfacedPrice,
+      surfacedPriceSource,
+      predictedPrice: predicted,
+      predictedPriceRange: params.predictedPriceRange,
+      predictedPriceMechanism: params.predictedPriceMechanism,
+      forwardProjectionFactor: params.forwardProjectionFactor ?? 1.0,
+      trendIQ,
+      compsUsed: params.compsUsed ?? 0,
+    };
+    console.log("[compiq.prediction_emitted] " + JSON.stringify(__predictionEmit));
+    writePredictionLog(__predictionEmit);
+  } catch {
+    // Logging must never block a pricing response.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CF-VARIANT-FILTER-LOOSENING — tier ladder constants + helpers
 // ---------------------------------------------------------------------------
 
@@ -1639,6 +1760,19 @@ export async function computeEstimate(
     );
     const sportLower = detectedCategory.toLowerCase();
     const unsupportedReason = `CompIQ currently supports baseball cards only. This appears to be a ${sportLower} card.`;
+    // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: emit on the unsupported-sport
+    // path. fmvMechanism="unavailable", FMV=null, predicted=null →
+    // surfacedPriceSource="none". Identity may still resolve (Cardsight
+    // returned a card record even though the sport was wrong).
+    emitPredictionToCorpus({
+      cardIdentity: fetched.card ? { card_id: fetched.card.card_id ?? null } : null,
+      body,
+      fairMarketValue: null,
+      fmvMechanism: "unavailable",
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceMechanism: "unavailable",
+    });
     return {
       source: "unsupported_sport",
       unsupportedSportReason: unsupportedReason,
@@ -1948,6 +2082,26 @@ export async function computeEstimate(
       `[compiq.computeEstimate] variant-mismatch guard tripped: query="${cardTitle}" reason="${missing}"`
     );
 
+    // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: emit on variant-mismatch.
+    // fmvMechanism="unavailable" (FMV null); predicted comes from
+    // mechanism1 (multiplier-anchored Bowman-family fallback) and is null
+    // for non-Bowman cards — override mechanism to "unavailable" in that
+    // case so the corpus stays honest about which rows have a real
+    // forward prediction.
+    emitPredictionToCorpus({
+      cardIdentity: fetched.card ? { card_id: fetched.card.card_id ?? null } : null,
+      body,
+      fairMarketValue: null,
+      fmvMechanism: "unavailable",
+      predictedPrice: mechanism1.predictedPrice,
+      predictedPriceRange: mechanism1.predictedPriceRange,
+      predictedPriceMechanism:
+        mechanism1.predictedPrice !== null
+          ? mechanism1.predictedPriceAttribution.mechanism
+          : "unavailable",
+      compsUsed: compsAfterVariantFilter.length,
+    });
+
     return {
       cardTitle,
       verdict: `No comps found for this exact variant (missing: ${missing}). Card Hedge doesn't have sold data for this card yet.`,
@@ -2244,6 +2398,25 @@ export async function computeEstimate(
               `query="${cardTitle}"`
           );
 
+          // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: emit on sibling-pool
+          // rescue success. fmvMechanism="sibling-pool-weighted-median"
+          // (Ship 1 of CF-FMV-NOWCAST routed combinedSales through the
+          // velocity-weighted median). trendIQ is not computed on this
+          // path — the helper substitutes a zero-coverage stub.
+          emitPredictionToCorpus({
+            cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
+            body,
+            fairMarketValue: fmv,
+            fmvMechanism: "sibling-pool-weighted-median",
+            predictedPrice: mechanism1.predictedPrice,
+            predictedPriceRange: mechanism1.predictedPriceRange,
+            predictedPriceMechanism:
+              mechanism1.predictedPrice !== null
+                ? mechanism1.predictedPriceAttribution.mechanism
+                : "unavailable",
+            compsUsed: combinedCount,
+          });
+
           return {
             cardTitle,
             verdict: siblingVerdict,
@@ -2323,6 +2496,24 @@ export async function computeEstimate(
         }
       }
     }
+
+    // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: emit on no-recent-comps
+    // short-circuit. fmvMechanism="unavailable" (FMV null); predicted
+    // comes from mechanism1 if Bowman-family, else null. compsUsed is
+    // the raw fetched-comps count (which failed the sufficiency gate).
+    emitPredictionToCorpus({
+      cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
+      body,
+      fairMarketValue: null,
+      fmvMechanism: "unavailable",
+      predictedPrice: mechanism1.predictedPrice,
+      predictedPriceRange: mechanism1.predictedPriceRange,
+      predictedPriceMechanism:
+        mechanism1.predictedPrice !== null
+          ? mechanism1.predictedPriceAttribution.mechanism
+          : "unavailable",
+      compsUsed: fetched.comps.length,
+    });
 
     return {
       cardTitle,
@@ -2851,50 +3042,22 @@ export async function computeEstimate(
   // object the stdout serializes — so the two emissions stay shape-
   // identical and the corpus inherits zero parsing cost. Do NOT await
   // the corpus call (writePredictionLog is fire-and-forget; returns void).
-  try {
-    const __predictionEmit = {
-      eventType: "prediction_emitted" as const,
-      timestamp: new Date().toISOString(),
-      // Cardsight catalog UUID (R1 FK) — corpus partition key + outcome
-      // join axis. Prefer the resolved cardId from the catalog fetch
-      // (cardIdentity.card_id, declared at L1986) over the request-side
-      // input (body.cardsightCardId). Both are the same UUID in the
-      // pinned-cardId case; only the resolved value is populated for
-      // free-text searches. Null when neither is present — the corpus
-      // writer assigns the sentinel "__unresolved__" partition + sets
-      // joinable=false (record-kept per methodology §3.5 LOW band).
-      cardsightCardId: cardIdentity?.card_id ?? body.cardsightCardId ?? null,
-      playerName: body.playerName ?? null,
-      cardYear: body.cardYear ?? null,
-      product: body.product ?? null,
-      parallel: body.parallel ?? null,
-      gradeCompany: body.gradeCompany ?? null,
-      gradeValue: body.gradeValue ?? null,
-      fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
-      predictedPrice: __predicted.predictedPrice,
-      predictedPriceRange: __predicted.predictedPriceRange,
-      predictedPriceMechanism: __predicted.predictedPriceAttribution.mechanism,
-      forwardProjectionFactor: __predicted.forwardProjectionFactor,
-      trendIQ: {
-        composite: trendIQ.composite,
-        direction: trendIQ.direction,
-        coverage: trendIQ.coverage,
-        components: {
-          playerMomentum: trendIQ.components.playerMomentum?.multiplier ?? null,
-          cardTrajectory: trendIQ.components.cardTrajectory?.multiplier ?? null,
-          segmentTrajectory: trendIQ.components.segmentTrajectory?.multiplier ?? null,
-        },
-        lastUpdated: trendIQ.lastUpdated,
-      },
-      compsUsed: comps.length,
-    };
-    console.log("[compiq.prediction_emitted] " + JSON.stringify(__predictionEmit));
-    // Fire-and-forget Cosmos write per methodology §2.4. Returns void
-    // synchronously; never throws; never blocks the prediction response.
-    writePredictionLog(__predictionEmit);
-  } catch {
-    // Logging must never block a pricing response.
-  }
+  // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: main-path success emit via the
+  // unified helper. Replaces the prior inline payload construction. Same
+  // payload shape; the helper adds `fmvMechanism`, `surfacedPrice`,
+  // `surfacedPriceSource`.
+  emitPredictionToCorpus({
+    cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
+    body,
+    fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+    fmvMechanism: "main-pipeline",
+    predictedPrice: __predicted.predictedPrice,
+    predictedPriceRange: __predicted.predictedPriceRange,
+    predictedPriceMechanism: __predicted.predictedPriceAttribution.mechanism,
+    forwardProjectionFactor: __predicted.forwardProjectionFactor,
+    trendIQ,
+    compsUsed: comps.length,
+  });
 
   // CF-VARIANT-FILTER-LOOSENING (Q2 lock): when the tier ladder selected
   // T1/T2/T3, override the orchestrator's verdict with the tier-specific

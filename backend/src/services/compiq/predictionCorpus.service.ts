@@ -158,6 +158,19 @@ export interface PredictionEmitInput {
   gradeCompany: string | null;
   gradeValue: number | null;
   fairMarketValue: number | null;
+  // CF-PREDICTION-CORPUS-EMISSION-COVERAGE (2026-05-31): the FMV-mechanism
+  // axis. Tags how `fairMarketValue` was computed — distinct from
+  // `predictedPriceMechanism` (how the FORWARD prediction was computed).
+  // Stratifies MAPE / accuracy queries by which fallback path served the
+  // row, so the corpus can answer "is sibling-pool MAPE worse than
+  // main-pipeline MAPE?" Required.
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "unavailable";
+  // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: the headline price the user
+  // actually saw on the wire. predictedPrice ?? fairMarketValue ?? null —
+  // names the MAPE target unambiguously regardless of path. Paired with
+  // `surfacedPriceSource` for stratification.
+  surfacedPrice: number | null;
+  surfacedPriceSource: "predictedPrice" | "fairMarketValue" | "none";
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
   predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "unavailable";
@@ -237,6 +250,9 @@ interface PredictionLogDocument {
   gradeCompany: string | null;
   gradeValue: number | null;
   fairMarketValue: number | null;
+  fmvMechanism: PredictionEmitInput["fmvMechanism"];
+  surfacedPrice: number | null;
+  surfacedPriceSource: PredictionEmitInput["surfacedPriceSource"];
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
   predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "unavailable";
@@ -259,6 +275,12 @@ interface PredictionLogDocument {
  * is fixed for stability. null/undefined collapse to null in the JSON.
  */
 function inputSignature(input: PredictionEmitInput): string {
+  // CF-PREDICTION-CORPUS-EMISSION-COVERAGE (2026-05-31): `fmvMechanism`
+  // joined the signature so a card that switches paths within the 60-min
+  // rate-limit window (e.g., variant-mismatch yesterday → sibling-pool
+  // today) produces a distinct row instead of being silently deduped.
+  // A true-repeat (same identity, same path) still dedups within the
+  // window — the intended invariant.
   const stable = JSON.stringify({
     playerName: input.playerName ?? null,
     cardYear: input.cardYear ?? null,
@@ -266,6 +288,7 @@ function inputSignature(input: PredictionEmitInput): string {
     parallel: input.parallel ?? null,
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
+    fmvMechanism: input.fmvMechanism,
   });
   return createHash("sha256").update(stable).digest("hex");
 }
@@ -310,6 +333,9 @@ function buildDocument(
     gradeCompany: input.gradeCompany,
     gradeValue: input.gradeValue,
     fairMarketValue: input.fairMarketValue,
+    fmvMechanism: input.fmvMechanism,
+    surfacedPrice: input.surfacedPrice,
+    surfacedPriceSource: input.surfacedPriceSource,
     predictedPrice: input.predictedPrice,
     predictedPriceRange: input.predictedPriceRange,
     predictedPriceMechanism: input.predictedPriceMechanism,

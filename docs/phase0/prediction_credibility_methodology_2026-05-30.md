@@ -142,6 +142,19 @@ interface PredictionLogEntry {
 
   // ── Input features (what the model saw) ────────────────────────────
   fairMarketValue: number | null;               // anchor (the "rear-view comp")
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "unavailable";
+                                                // CF-PREDICTION-CORPUS-EMISSION-COVERAGE
+                                                //   (2026-05-31): the FMV-mechanism axis,
+                                                //   distinct from predictedPriceMechanism.
+                                                //   "main-pipeline"               → 5-layer composition
+                                                //                                   (anchor × trend × momentum × R² regression
+                                                //                                    per PricingPipeline.ts:203-411)
+                                                //   "sibling-pool-weighted-median" → Ship 1 routing of combinedSales
+                                                //                                    through computeWeightedMedian
+                                                //   "unavailable"                 → FMV null/0 (variant-mismatch,
+                                                //                                    no-recent-comps, unsupported_sport)
+                                                //   Joined into the rate-limit signature so a card that switches
+                                                //   paths within the 60-min dedup window produces a distinct row.
   compsUsed: number;                            // sample size driving FMV + trend
 
   // ── Output (what the model said) ───────────────────────────────────
@@ -149,6 +162,17 @@ interface PredictionLogEntry {
   predictedPriceRange: { low: number; high: number } | null;
   predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "unavailable";
   forwardProjectionFactor: number;
+  surfacedPrice: number | null;                 // CF-PREDICTION-CORPUS-EMISSION-COVERAGE:
+                                                //   the headline value the user saw on the wire.
+                                                //   predictedPrice ?? fairMarketValue ?? null.
+                                                //   Names the §4.2 MAPE target unambiguously
+                                                //   regardless of which path served the row.
+  surfacedPriceSource: "predictedPrice" | "fairMarketValue" | "none";
+                                                //   Stratification axis for the surfaced-price MAPE.
+                                                //   "predictedPrice"   → predicted was the headline
+                                                //                        (eligible for forward-direction hit-rate)
+                                                //   "fairMarketValue"  → FMV was the headline (predicted null)
+                                                //   "none"             → no price surfaced (e.g. unsupported_sport)
   predictionDirection: "rising" | "falling" | "stable";  // DERIVED from
     // predictedPrice vs fairMarketValue using DIRECTION_BAND_PCT
     // (the single named constant defined in §4.3 — recalibration is one line).

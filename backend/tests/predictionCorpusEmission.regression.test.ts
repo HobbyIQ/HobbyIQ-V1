@@ -98,6 +98,14 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "forwardProjectionFactor",
   "trendIQ",
   "compsUsed",
+  // CF-PREDICTION-CORPUS-EMISSION-COVERAGE (2026-05-31): three new fields
+  // landed on the canonical payload — fmvMechanism (FMV-mechanism axis),
+  // surfacedPrice (the headline value the user saw on the wire), and
+  // surfacedPriceSource (predictedPrice vs fairMarketValue vs none).
+  // Documented in prediction_credibility_methodology_2026-05-30.md §2.2.
+  "fmvMechanism",
+  "surfacedPrice",
+  "surfacedPriceSource",
 ] as const;
 
 const EXPECTED_TRENDIQ_KEYS = [
