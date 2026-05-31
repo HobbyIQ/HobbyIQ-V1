@@ -253,20 +253,33 @@ interface PredictionCorpusHealthEntry {
 - Periodic flush via 30s `setInterval` in the same process: atomic Cosmos patch to the `${today}_${replicaId}` doc with `attempts += delta_attempts`, `successes += delta_successes`, `failures.count += delta_failures`. ONE batched roundtrip per replica per 30s.
 - Lossy on crash/deploy (last <30s of counter increments). Acceptable — Drew's discipline accepts cached-with-known-staleness for non-critical-path observability.
 
-**Daily query to measure completeness:**
+**Daily query to measure completeness AND joinable rate:**
 
-```kql
-// Cosmos query, NOT KQL (App Insights):
+The doc shape also tracks `joinableCount` + `unresolvedCount` per replica
+per day (STEP 3 build). Both rates are MANDATORY reporting alongside the
+write-completeness signal — Drew's STEP 3 lock: "the joinable rate is
+mandatory, not optional — it bounds the accuracy-claimable subset, so we
+need it observable from day one alongside write-success."
+
+```text
+// Cosmos query (NOT KQL App Insights — retention gap §1.3):
 prediction_corpus_health WHERE date == "YYYY-MM-DD"
-   ↓
-totalAttempts = sum(attempts), totalSuccesses = sum(successes), totalFailures = sum(failures.count)
+   ↓ aggregate across replicas
+totalAttempts        = sum(attempts)
+totalSuccesses       = sum(successes)
+totalJoinableCount   = sum(joinableCount)
+totalUnresolvedCount = sum(unresolvedCount)
+totalFailures        = sum(failures.count)
    ↓
 prediction_log WHERE timestamp BETWEEN startOf(YYYY-MM-DD) AND endOf(YYYY-MM-DD)
    ↓
 actual_persisted = count()
    ↓
-lossRate = (totalAttempts - actual_persisted) / totalAttempts
-divergence = (totalSuccesses - actual_persisted)
+// Write-completeness (drift alarm; approximate per §2.6 framing):
+lossRate     = (totalAttempts - actual_persisted) / totalAttempts
+divergence   = (totalSuccesses - actual_persisted)
+// Joinable rate (MANDATORY-not-optional reporting):
+joinableRate = totalJoinableCount / totalAttempts
 ```
 
 **Two health signals (drift alarm, NOT audit):**
@@ -276,6 +289,10 @@ divergence = (totalSuccesses - actual_persisted)
 1. **`lossRate > 1% sustained AND attempts > N` per day** → write-failure investigation triggers. The volume gate (`attempts > N`, default N=200) prevents noise-triggered alarms at cold-start when single-digit attempts make a one-event miss look like 25% loss. At launch volume the gate is meaningless; pre-launch it's the difference between "real signal" and "low-N noise."
 
 2. **`divergence != 0` AND `attempts > N`** → counter and actual-rows disagree more than the in-process counter/writer race would explain. Either a counter-vs-write race exceeding the 30s flush window, or Cosmos writes returning success without persisting (rare; flag-worthy).
+
+**Mandatory reporting (NOT alarmed) — joinableRate:**
+
+Per the STEP 3 build lock: `joinableRate = totalJoinableCount / totalAttempts` MUST be reported alongside every accuracy claim — never optional, never aggregated-away. It bounds the accuracy-claimable subset (only `joinable === true` rows can be outcome-joined per §3.5). A claim that doesn't carry joinableRate is incomplete reporting: a 60% direction hit-rate is meaningful only if the reader knows whether it was measured on 90% joinable rows (corpus is healthy and broadly accuracy-claimable) or 20% joinable rows (most attempts were unresolved and dropped, claim covers a narrow slice). This is reporting-only — no threshold fires an alarm — because a low joinableRate reflects upstream search-resolution quality, not corpus health per se. Both signals are observable from day one via the same `prediction_corpus_health` container.
 
 **Trade-off honestly carried:** adds one extra Cosmos container + small periodic write per replica (~1 write per replica per 30s). Cost negligible. The alternative (per-write Cosmos counter) adds a roundtrip to the fire-and-forget path, defeating the latency-off-prediction-path intent.
 

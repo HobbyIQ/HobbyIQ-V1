@@ -54,6 +54,15 @@ import type { TrendIQDirection, TrendIQCoverage } from "./trendIQ.types.js";
 // ACCURACY-DASHBOARD) imports them without coupling to this write-path
 // service. Per methodology §4.3 single-source-of-truth invariant.
 import { derivePredictionDirection } from "./predictionConstants.js";
+// STEP 3: write-completeness health counter. Per methodology §2.6 we
+// record each attempt + success/failure resolution into a Cosmos doc
+// per-replica per-day. The counter calls are fire-and-forget and
+// never throw — same discipline as this writer.
+import {
+  recordAttempt,
+  recordSuccess,
+  recordFailure,
+} from "./predictionCorpusHealth.service.js";
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -342,22 +351,33 @@ export function writePredictionLog(input: PredictionEmitInput): void {
   // Pre-mark to deduplicate concurrent calls before the async write resolves.
   lastWriteByKey.set(rateLimitKey, now);
 
+  // STEP 3 — record attempt POST-rate-limit-dedup, PRE-async-write.
+  // joinable mirrors the buildDocument logic: real cardId → true; null → false.
+  // Counter is fire-and-forget (per the health-service contract); never blocks.
+  const joinable = !!input.cardsightCardId;
+  recordAttempt(joinable);
+
   void (async () => {
     try {
       const container = await getContainer();
       if (!container) {
-        // Rollback the rate-limit marker so the next call can retry once Cosmos comes back.
+        // Cosmos unavailable. Roll back the rate-limit marker so the next
+        // call can retry once Cosmos comes back. Count this as a failure
+        // since we attempted to write but couldn't reach the container.
         lastWriteByKey.delete(rateLimitKey);
+        recordFailure(new Error("Cosmos container unavailable"));
         return;
       }
 
       const doc = buildDocument(input, now);
       await container.items.create(doc);
+      recordSuccess();
     } catch (err) {
       console.warn(
         "[predictionCorpus] write failed:",
         (err as Error).message,
       );
+      recordFailure(err);
     }
   })();
 }
