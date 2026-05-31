@@ -92,15 +92,45 @@ Three reasons that compound:
 
 **Cosmos container:** `prediction_log`
 **Partition key:** `/cardsightCardId` (NOT `/userId` — see §2.3)
-**Document id:** `${cardsightCardId}_${timestamp_epoch_ms}` (matches the `trend_history` pattern at `playerScore/trendHistory.service.ts:113`)
+**Document id:** `${cardsightCardId}_${timestamp_epoch_ms}` for resolved rows (matches the `trend_history` pattern at `playerScore/trendHistory.service.ts:113`)
+
+**Null-cardId handling (added during CF-PREDICTION-CORPUS STEP 2 build, Option A locked):**
+
+When the prediction emits without a resolved `cardsightCardId` (free-text search where catalog resolution failed, or `predictedPriceMechanism === "unavailable"`), the row is still persisted for record-keeping per §3.5 but flagged unjoinable. Cosmos partition path can't accept null — sentinel substitution:
+
+- **Stored `cardsightCardId` value:** the literal string `"__unresolved__"` (sentinel; never confused with a real 36-char Cardsight UUID)
+- **Stored `id` value:** `__unresolved___${inputSigShort}_${epochMs}` where `inputSigShort` = first 8 hex chars of SHA-256 of the normalized request tuple (playerName, cardYear, product, parallel, gradeCompany, gradeValue) — collision-resistant within the sentinel partition at high write volume
+- **New row-level flag:** `joinable: boolean` — true when the stored `cardsightCardId` is a real Cardsight UUID; false when it's the sentinel
+- **Trade-off accepted for v1:** the `__unresolved__` sentinel partition is single-keyed → potential hot-partition at launch-tier write volume. v1 single-user volume makes this hypothetical. Forward-only upgrade path: at CF-LAUNCH-READINESS-500 if Cosmos throttle metrics show partition-level 429s on `__unresolved__`, evolve to hashed bucketing (`__unresolved_<2-hex-chars>__` = 256 buckets); new rows hash-bucketed, existing rows keep sentinel, enumeration widens the `WHERE` clause; no data rewrite needed.
 
 **Document shape:**
 
 ```typescript
 interface PredictionLogEntry {
   // ── Cosmos identity ─────────────────────────────────────────────────
-  id: string;                                   // ${cardsightCardId}_${epochMs}
+  id: string;                                   // ${cardsightCardId}_${epochMs} for resolved rows;
+                                                //   __unresolved___${inputSigShort}_${epochMs} for null-cardId rows
+                                                //   (see null-cardId handling addendum above)
   cardsightCardId: string;                      // PARTITION KEY (the join axis to outcomes)
+                                                //   Either a real 36-char Cardsight UUID OR the
+                                                //   literal sentinel "__unresolved__" when the
+                                                //   prediction was emitted with null cardId.
+  joinable: boolean;                            // MIGRATION-STABLE FILTER. True when cardsightCardId
+                                                //   is a real Cardsight UUID (row can be outcome-joined
+                                                //   via §3); false when it's a sentinel (row exists for
+                                                //   record-keeping per §3.5 LOW band; MUST be excluded
+                                                //   from any accuracy claim).
+                                                //
+                                                //   LOAD-BEARING: every accuracy query MUST filter on
+                                                //   `joinable === true` — NEVER on the partition value
+                                                //   pattern (e.g. `WHERE cardsightCardId != '__unresolved__'`).
+                                                //   The A→B upgrade at CF-LAUNCH-READINESS-500 (sentinel
+                                                //   `__unresolved__` → hashed buckets `__unresolved_XX__`)
+                                                //   changes the partition value set but does NOT change
+                                                //   the joinable semantics. Queries filtering on
+                                                //   `joinable` survive the upgrade unchanged; queries
+                                                //   filtering on partition-value strings break silently.
+                                                //   Hard rule: joinable is the only correct discriminator.
 
   // ── Identity context ────────────────────────────────────────────────
   playerName: string | null;
@@ -129,14 +159,23 @@ interface PredictionLogEntry {
   // ── Signal provenance ──────────────────────────────────────────────
   trendIQ: {
     composite: number;
-    direction: "rising" | "falling" | "stable";
-    coverage: "full" | "card_only" | "no_segment" | "insufficient";
+    direction: "up" | "flat" | "down";        // internal TrendIQ direction
+                                              // (distinct from predictionDirection above);
+                                              // per backend/src/services/compiq/trendIQ.types.ts:11
+    coverage: TrendIQCoverage;                // 7-value union: "full" | "no_segment" | "no_card" |
+                                              //   "segment_only" | "card_only" | "player_only" | "insufficient";
+                                              //   per backend/src/services/compiq/trendIQ.types.ts:13-20.
+                                              //   Imported by predictionCorpus.service.ts as source of truth
+                                              //   to prevent drift.
     components: {
       playerMomentum: number | null;
       cardTrajectory: number | null;
       segmentTrajectory: number | null;
     };
-    lastUpdated: string;
+    lastUpdated: string | null;                 // nullable: aggregator may have
+                                                //   no last-write timestamp (all
+                                                //   signals unavailable → composite
+                                                //   1.0 with no timestamp anchor)
   };
 
   // ── Request provenance ─────────────────────────────────────────────

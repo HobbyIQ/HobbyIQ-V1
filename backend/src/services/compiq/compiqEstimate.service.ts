@@ -52,6 +52,7 @@ import {
 // CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B locked) —
 // TrendIQ-driven forward projection layer on top of fairMarketValue.
 import { computePredictedPrice } from "./forwardProjection.js";
+import { writePredictionLog } from "./predictionCorpus.service.js";
 
 // Issue #25 Phase 3 — trim peer-pool diagnostics for the wire response.
 // We keep counts only; sample comp data is not surfaced to the client.
@@ -2707,40 +2708,61 @@ export async function computeEstimate(
     trendIQ,
   );
 
-  // Structured event log for future ML training corpus (Q5 deferred to
-  // CF-PREDICTION-CORPUS for formal storage; for now emit to stdout so
-  // App Service log stream captures tuples from day 1).
+  // Structured event log for the ML training corpus.
+  // CF-PREDICTION-CORPUS STEP 1 (cardId emission, prior commit) added
+  // cardsightCardId so the corpus's join axis to outcomes is clean from
+  // day 1. CF-PREDICTION-CORPUS STEP 2 (this commit) added the Cosmos
+  // writer consuming the same emit object verbatim per methodology §2.2.
+  //
+  // DUAL-EMIT BURN-IN per methodology §2.4: stdout emission preserved
+  // alongside the Cosmos write. After confirmed live for one week, drop
+  // the stdout in a separate CF.
+  //
+  // The corpus call MUST be non-blocking and MUST share the SAME emit
+  // object the stdout serializes — so the two emissions stay shape-
+  // identical and the corpus inherits zero parsing cost. Do NOT await
+  // the corpus call (writePredictionLog is fire-and-forget; returns void).
   try {
-    console.log(
-      "[compiq.prediction_emitted] " +
-        JSON.stringify({
-          eventType: "prediction_emitted",
-          timestamp: new Date().toISOString(),
-          playerName: body.playerName ?? null,
-          cardYear: body.cardYear ?? null,
-          product: body.product ?? null,
-          parallel: body.parallel ?? null,
-          gradeCompany: body.gradeCompany ?? null,
-          gradeValue: body.gradeValue ?? null,
-          fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
-          predictedPrice: __predicted.predictedPrice,
-          predictedPriceRange: __predicted.predictedPriceRange,
-          predictedPriceMechanism: __predicted.predictedPriceAttribution.mechanism,
-          forwardProjectionFactor: __predicted.forwardProjectionFactor,
-          trendIQ: {
-            composite: trendIQ.composite,
-            direction: trendIQ.direction,
-            coverage: trendIQ.coverage,
-            components: {
-              playerMomentum: trendIQ.components.playerMomentum?.multiplier ?? null,
-              cardTrajectory: trendIQ.components.cardTrajectory?.multiplier ?? null,
-              segmentTrajectory: trendIQ.components.segmentTrajectory?.multiplier ?? null,
-            },
-            lastUpdated: trendIQ.lastUpdated,
-          },
-          compsUsed: comps.length,
-        }),
-    );
+    const __predictionEmit = {
+      eventType: "prediction_emitted" as const,
+      timestamp: new Date().toISOString(),
+      // Cardsight catalog UUID (R1 FK) — corpus partition key + outcome
+      // join axis. Prefer the resolved cardId from the catalog fetch
+      // (cardIdentity.card_id, declared at L1986) over the request-side
+      // input (body.cardsightCardId). Both are the same UUID in the
+      // pinned-cardId case; only the resolved value is populated for
+      // free-text searches. Null when neither is present — the corpus
+      // writer assigns the sentinel "__unresolved__" partition + sets
+      // joinable=false (record-kept per methodology §3.5 LOW band).
+      cardsightCardId: cardIdentity?.card_id ?? body.cardsightCardId ?? null,
+      playerName: body.playerName ?? null,
+      cardYear: body.cardYear ?? null,
+      product: body.product ?? null,
+      parallel: body.parallel ?? null,
+      gradeCompany: body.gradeCompany ?? null,
+      gradeValue: body.gradeValue ?? null,
+      fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+      predictedPrice: __predicted.predictedPrice,
+      predictedPriceRange: __predicted.predictedPriceRange,
+      predictedPriceMechanism: __predicted.predictedPriceAttribution.mechanism,
+      forwardProjectionFactor: __predicted.forwardProjectionFactor,
+      trendIQ: {
+        composite: trendIQ.composite,
+        direction: trendIQ.direction,
+        coverage: trendIQ.coverage,
+        components: {
+          playerMomentum: trendIQ.components.playerMomentum?.multiplier ?? null,
+          cardTrajectory: trendIQ.components.cardTrajectory?.multiplier ?? null,
+          segmentTrajectory: trendIQ.components.segmentTrajectory?.multiplier ?? null,
+        },
+        lastUpdated: trendIQ.lastUpdated,
+      },
+      compsUsed: comps.length,
+    };
+    console.log("[compiq.prediction_emitted] " + JSON.stringify(__predictionEmit));
+    // Fire-and-forget Cosmos write per methodology §2.4. Returns void
+    // synchronously; never throws; never blocks the prediction response.
+    writePredictionLog(__predictionEmit);
   } catch {
     // Logging must never block a pricing response.
   }
