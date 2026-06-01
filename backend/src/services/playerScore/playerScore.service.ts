@@ -251,7 +251,21 @@ function overallConfidence(market: Confidence, performance: Confidence): Confide
   return rank[market] <= rank[performance] ? market : performance;
 }
 
-/** Build a full PlayerScore doc from its parts. */
+/**
+ * Build a full PlayerScore doc from its parts.
+ *
+ * DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE Part 1 (2026-06-01): returns
+ * `null` for unresolvable names (mlbPlayerId == null after the
+ * MiLB-aware resolver fanout). Pre-retirement we fell back to
+ * `playerNameSlug(playerName)` as the Cosmos id, which produced
+ * slug-keyed orphan rows that downstream cross-partition readers
+ * (`getPlayerScoreByName`, `getTopPlayersByScore`) surfaced as stale
+ * data once the writer stopped refreshing them. Null return + structured
+ * warn at the call site is the canonical no-op for these names; callers
+ * (updatePlayerScoreFromEstimate / refreshPlayerScoreForJob) skip the
+ * upsert entirely. Distinct from the `isValidCosmosId` rejection
+ * (which catches well-formed-name → bad-slug edge cases).
+ */
 export function buildPlayerScore(
   playerName: string,
   market: MarketScore,
@@ -262,24 +276,32 @@ export function buildPlayerScore(
     position: string | null;
   },
   dataSource: PlayerScore["dataSource"] = "realtime_estimate",
-): PlayerScore {
+): PlayerScore | null {
+  if (performance.mlbPlayerId == null) {
+    console.warn(JSON.stringify({
+      event: "playerScore_no_mlb_match_skip",
+      source: "playerScore.service",
+      playerName,
+      reason: "no_mlb_match",
+    }));
+    return null;
+  }
   const blended = computePlayerIQScore(market, performance);
-  const playerId =
-    performance.mlbPlayerId != null
-      ? String(performance.mlbPlayerId)
-      : playerNameSlug(playerName);
+  const playerId = String(performance.mlbPlayerId);
   // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1: derive league + level from the
   // sportId carried out of the MiLB-aware resolver. sportId=1 → MLB / level
   // null per the iOS chip convention; any other resolved sportId is MiLB
-  // with its mapped level (AAA/AA/A+/A/Rookie). Unresolved (sportId null
-  // because mlbPlayerId null) falls back to the legacy "unknown" league —
-  // those rows are filtered out by the slug-fallback drop in §3 anyway.
-  const league: PlayerScore["league"] =
-    performance.sportId === 1 ? "MLB" : performance.sportId != null ? "MiLB" : "unknown";
+  // with its mapped level (AAA/AA/A+/A/Rookie). The prior "unknown" league
+  // fallback for sportId-null rows was retired in Part 1 along with the
+  // slug fallback.
+  // INVARIANT (resolver contract): past the mlbPlayerId-null guard above,
+  // mlbPlayerId != null ⟺ sportId != null. searchPlayerPerson returns
+  // {person, sportId: number} or null — it cannot return a person without
+  // an accompanying numeric sportId. If this invariant breaks, the resolver
+  // or its caller has regressed.
+  const league: PlayerScore["league"] = performance.sportId === 1 ? "MLB" : "MiLB";
   const level: PlayerScore["level"] =
-    performance.sportId == null || performance.sportId === 1
-      ? null
-      : levelFromSport(performance.sportId);
+    performance.sportId === 1 ? null : levelFromSport(performance.sportId);
   return {
     id: playerId,
     playerId,
@@ -914,6 +936,7 @@ export async function updatePlayerScoreFromEstimate(
     const market = computeMarketScore(playerName, snapshots);
     const performance = await computePerformanceScore(playerName);
     const score = buildPlayerScore(playerName, market, performance, "realtime_estimate");
+    if (score === null) return null;
     await upsertPlayerScore(score);
     return score;
   } catch (err) {
@@ -940,6 +963,7 @@ export async function refreshPlayerScoreForJob(
     const market = computeMarketScore(playerName, snapshots);
     const performance = await computePerformanceScore(playerName);
     const score = buildPlayerScore(playerName, market, performance, "nightly_job");
+    if (score === null) return null;
     await upsertPlayerScore(score);
     return score;
   } catch (err) {

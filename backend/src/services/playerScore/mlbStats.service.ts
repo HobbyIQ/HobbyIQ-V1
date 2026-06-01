@@ -74,31 +74,6 @@ async function fetchJson(url: string, timeoutMs = 8000): Promise<any | null> {
   }
 }
 
-/**
- * @deprecated DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31):
- * dead code. Was the sole helper for `getMlbMomentum`'s player lookup;
- * replaced by `searchPlayerPerson` (sportId-iterating across MLB + MiLB
- * levels 11-16). Zero call sites remain in the repo. Kept in place
- * temporarily to avoid surprise removal during the canonicalize CF cycle;
- * delete in a follow-up cleanup pass once Phase 1 is stable in production.
- */
-async function getPlayerId(playerName: string): Promise<{
-  id: number;
-  team: string | null;
-  position: string | null;
-} | null> {
-  const url = `${MLB_BASE}/people/search?names=${encodeURIComponent(playerName)}&sportId=1`;
-  const data = await fetchJson(url);
-  const people = data?.people;
-  if (!Array.isArray(people) || people.length === 0) return null;
-  const p = people[0];
-  return {
-    id: Number(p.id),
-    team: p?.currentTeam?.name ?? null,
-    position: p?.primaryPosition?.abbreviation ?? null,
-  };
-}
-
 function avgStat(games: any[], key: string): number {
   const vals = games
     .map((g) => g?.stat?.[key])

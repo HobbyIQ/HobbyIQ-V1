@@ -133,11 +133,12 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MLB player (sportId=1)", 
     expect(perf.confidence).toBe("high");
 
     const doc = buildPlayerScore(playerName, NEUTRAL_MARKET, perf);
-    expect(doc.league).toBe("MLB");
-    expect(doc.level).toBeNull();
-    expect(doc.mlbPlayerId).toBe(99001);
-    expect(doc.id).toBe("99001");
-    expect(doc.playerId).toBe("99001");
+    expect(doc).not.toBeNull();
+    expect(doc!.league).toBe("MLB");
+    expect(doc!.level).toBeNull();
+    expect(doc!.mlbPlayerId).toBe(99001);
+    expect(doc!.id).toBe("99001");
+    expect(doc!.playerId).toBe("99001");
 
     // Resolver was called once for sportId=1 and game-log fetched.
     const urls = fetchStub.mock.calls.map((c) => c[0] as string);
@@ -199,11 +200,12 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MiLB player (sportId=12 /
     expect(perf.confidence).toBe("high");
 
     const doc = buildPlayerScore(playerName, NEUTRAL_MARKET, perf);
-    expect(doc.league).toBe("MiLB");
-    expect(doc.level).toBe("AA");
-    expect(doc.mlbPlayerId).toBe(99012);
-    expect(doc.id).toBe("99012");
-    expect(doc.playerId).toBe("99012");
+    expect(doc).not.toBeNull();
+    expect(doc!.league).toBe("MiLB");
+    expect(doc!.level).toBe("AA");
+    expect(doc!.mlbPlayerId).toBe(99012);
+    expect(doc!.id).toBe("99012");
+    expect(doc!.playerId).toBe("99012");
 
     // Resolver iterated MLB → AAA → AA (three /people/search calls).
     const searchCalls = fetchStub.mock.calls
@@ -216,16 +218,19 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MiLB player (sportId=12 /
   });
 });
 
-// ─── §3 deferred — CURRENT (unchanged) behavior assertion ───────────────────
+// ─── §3 RETIRED (Part 1) — no_mlb_match skip / no row ───────────────────────
 
-describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — unresolved player (current slug fallback)", () => {
-  it("falls through ALL sportIds and CURRENT behavior is slug-form id + isValidCosmosId still accepts it (slug retirement deferred)", async () => {
-    // Asserts the §3-deferred contract: no_mlb_match conversion is NOT in
-    // this CF. The writer still produces a slug-keyed doc, and the dedup
-    // helper + read-side fallback in playeriq.routes.ts L62-63/L117 keep
-    // working as today. When DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE lands,
-    // this test flips to assert a skip with reason="no_mlb_match".
-    const playerName = "Phase1Test Unresolvable";
+describe("DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE Part 1 — unresolved player (no row, structured warn)", () => {
+  it("falls through ALL sportIds → buildPlayerScore returns null + emits playerScore_no_mlb_match_skip warn", async () => {
+    // Post-retirement contract: the writer no longer manufactures a
+    // slug-keyed orphan row when MLB resolution misses at every level.
+    // buildPlayerScore early-returns null and emits a structured warn
+    // (distinct from isValidCosmosId rejection so the two skip classes
+    // remain separable in telemetry). Callers (updatePlayerScoreFromEstimate
+    // + refreshPlayerScoreForJob) skip the upsert when the builder returns
+    // null. Pre-retirement behavior — slug-form id, league "unknown",
+    // isValidCosmosId true — is the prior contract this test flipped from.
+    const playerName = "PartOneTest Unresolvable";
     stubFetch([
       // Every sportId returns empty.
       { match: /people\/search/, body: { people: [] } },
@@ -241,17 +246,35 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — unresolved player (curren
     expect(perf.performanceScore).toBe(50);
     expect(perf.confidence).toBe("low");
 
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const doc = buildPlayerScore(playerName, NEUTRAL_MARKET, perf);
-    // CURRENT behavior: mlbPlayerId null → playerId falls back to slug.
-    expect(doc.mlbPlayerId).toBeNull();
-    expect(doc.id).toBe("phase1test-unresolvable");
-    expect(doc.playerId).toBe("phase1test-unresolvable");
-    // League stays "unknown" (sportId is null, not 1, not numeric MiLB).
-    expect(doc.league).toBe("unknown");
-    expect(doc.level).toBeNull();
 
-    // The slug-keyed id is a VALID Cosmos id (a-z/0-9/-) so the upsert
-    // guard does NOT short-circuit — slug write still lands today.
-    expect(isValidCosmosId(doc.id)).toBe(true);
+    // No row produced. This is the load-bearing assertion of the CF —
+    // downstream callers `updatePlayerScoreFromEstimate` +
+    // `refreshPlayerScoreForJob` short-circuit before upsert when buildPlayerScore
+    // returns null, so unresolvable names stop generating new orphan rows
+    // in player_trends.
+    expect(doc).toBeNull();
+
+    // Structured warn emitted exactly once with reason="no_mlb_match".
+    // The dedicated reason value lets ops tooling distinguish this skip
+    // class from `isValidCosmosId` rejections (well-formed name → bad
+    // Cosmos id) and from `playerScore_upsert_stats` throttled aggregate.
+    const noMatchCalls = warnSpy.mock.calls
+      .map((c) => String(c[0]))
+      .filter((s) => s.includes("playerScore_no_mlb_match_skip"));
+    expect(noMatchCalls.length).toBe(1);
+    const parsed = JSON.parse(noMatchCalls[0]);
+    expect(parsed.event).toBe("playerScore_no_mlb_match_skip");
+    expect(parsed.source).toBe("playerScore.service");
+    expect(parsed.reason).toBe("no_mlb_match");
+    expect(parsed.playerName).toBe(playerName);
+
+    // Sanity: isValidCosmosId would still have accepted the prior slug
+    // form — this proves the new skip path is distinct from the existing
+    // bad-id guard rather than incidentally overlapping with it.
+    expect(isValidCosmosId("partonetest-unresolvable")).toBe(true);
+
+    warnSpy.mockRestore();
   });
 });

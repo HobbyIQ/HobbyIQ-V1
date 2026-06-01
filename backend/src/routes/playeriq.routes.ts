@@ -13,7 +13,6 @@
 import { Router, type Request, type Response } from "express";
 import {
   getPlayerScoreByName,
-  getPlayerScore,
   getTopPlayersByScore,
   refreshPlayerScoreForJob,
   getPlayerTrendHistory,
@@ -48,6 +47,14 @@ router.get("/top", async (req: Request, res: Response) => {
 });
 
 // Score history for a player. Looks up by name → playerId → history container.
+//
+// DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE Part 1 (2026-06-01): when the
+// name lookup misses there is no longer a slug-form playerId to query
+// against — pre-retirement we tried `getPlayerTrendHistory(playerNameSlug(name))`
+// which returned snapshots written by the prior slug-keyed writer fallback.
+// Post-retirement the writer skips unresolvable names entirely, so the slug
+// read could only surface stale orphan rows. Empty payload is the canonical
+// response for a name-miss.
 router.get("/:playerName/history", async (req: Request, res: Response) => {
   const raw = req.params.playerName;
   const name = decodeURIComponent(typeof raw === "string" ? raw : "").trim();
@@ -59,11 +66,14 @@ router.get("/:playerName/history", async (req: Request, res: Response) => {
   const limit = Number.isFinite(limitNum) ? limitNum : 30;
   try {
     const current = await getPlayerScoreByName(name);
-    const playerId = current?.playerId ?? playerNameSlug(name);
-    const history = await getPlayerTrendHistory(playerId, limit);
+    if (!current) {
+      res.json({ playerName: name, playerId: null, points: [], count: 0 });
+      return;
+    }
+    const history = await getPlayerTrendHistory(current.playerId, limit);
     res.json({
       playerName: name,
-      playerId,
+      playerId: current.playerId,
       points: history.map((h) => ({
         playerIQScore: h.playerIQScore,
         playerIQDirection: h.playerIQDirection,
@@ -112,19 +122,25 @@ router.get("/:playerName", async (req: Request, res: Response) => {
     return;
   }
   try {
+    // DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE Part 1 (2026-06-01): the
+    // prior `getPlayerScore(playerNameSlug(name))` fallback between the
+    // name lookup and the live-build path read slug-keyed rows written by
+    // the retired writer fallback. With the writer no longer producing
+    // slug-keyed rows, the slug read could only surface stale orphans.
+    // Name miss flows directly to the live-build / stub path.
     let score = await getPlayerScoreByName(name);
-    if (!score) {
-      score = await getPlayerScore(playerNameSlug(name));
-    }
     if (!score) {
       // No cached score — try to build one live from CompIQ snapshots + MLB
       // momentum. Rate-limited internally; returns null when there's no data
-      // to compute from (e.g. a prospect with no comps yet).
+      // to compute from (e.g. a prospect with no comps yet) AND now when the
+      // name doesn't resolve to an MLB person id at all (Part-1 writer skip).
       score = await updatePlayerScoreFromEstimate(name);
     }
     if (!score) {
       // Still nothing. Return a 200 stub so the iOS detail screen can render
       // the rest of the page (stats card, etc.) instead of bailing on 404.
+      // The stub's `playerId` keeps the slug form for iOS routing continuity
+      // — it's a wire-shape value, not a Cosmos lookup key.
       res.json({
         playerId: playerNameSlug(name),
         playerName: name,
