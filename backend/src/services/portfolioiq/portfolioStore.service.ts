@@ -1325,6 +1325,79 @@ export async function updateLedgerEntry(req: Request, res: Response) {
   res.json({ message: "Ledger entry updated", entry: updated });
 }
 
+/**
+ * CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): identity-gate
+ * shared between addHolding and updateHolding.
+ *
+ * Pre-CF the create + update paths persisted whatever the caller sent,
+ * with try/catch around autoPriceHolding and player resolution that
+ * tolerated failure ("failure must never block holding creation"). The
+ * combined effect was a silent permit on null-identity rows — a POST of
+ * `{playerName: "Paul Skenes"}` landed a holding with all identity
+ * fields null + 201 OK, then the scheduled reprice ran a Cardsight
+ * playerName-only search that either returned `unavailable` (Skenes,
+ * 1 comp) or surfaced a wrong-card price (Witt $5, 22 comps from a
+ * completely different card). Both shapes are user-visible-wrong; the
+ * Witt class is worse because it looks correct.
+ *
+ * The gate requires non-empty `playerName` AND at least one of:
+ *   - `cardsightCardId` alone (covers identify-then-save flows where
+ *     iOS holds a Cardsight UUID without text fields), OR
+ *   - both `cardYear` AND `product` (free-text identity, no Cardsight UUID).
+ *
+ * This is an API contract change. iOS must surface a 400 with
+ * `code: "MISSING_IDENTITY_FIELDS"` as "missing fields" UX, not a
+ * generic crash. Pre-launch tests that previously sent
+ * playerName-only payloads will now 400 — intended behavior.
+ */
+type HoldingIdentityCheck =
+  | { ok: true }
+  | { ok: false; missing: string[] };
+
+function validateHoldingIdentity(
+  holding: Partial<PortfolioHolding>,
+): HoldingIdentityCheck {
+  const playerName = String(holding.playerName ?? "").trim();
+  const cardYearNum = toNumber(holding.cardYear, 0);
+  const hasCardYear = holding.cardYear != null && cardYearNum > 0;
+  const productRaw =
+    typeof holding.product === "string" ? holding.product.trim() : "";
+  const hasProduct = productRaw !== "";
+  const csidRaw =
+    typeof holding.cardsightCardId === "string"
+      ? holding.cardsightCardId.trim()
+      : "";
+  const hasCardsightCardId = csidRaw !== "";
+
+  const missing: string[] = [];
+  if (!playerName) missing.push("playerName");
+  if (!hasCardsightCardId) {
+    if (!hasCardYear) missing.push("cardYear");
+    if (!hasProduct) missing.push("product");
+  }
+  return missing.length === 0 ? { ok: true } : { ok: false, missing };
+}
+
+function respondMissingIdentity(res: Response, missing: string[]): void {
+  // Structured 400 — iOS handoff shape locked here. The `missing` array
+  // is sorted in spec order (playerName first, then cardYear, then
+  // product) so the UX surface can show them in a stable order.
+  const ordered = [
+    ...(missing.includes("playerName") ? ["playerName"] : []),
+    ...(missing.includes("cardYear") ? ["cardYear"] : []),
+    ...(missing.includes("product") ? ["product"] : []),
+  ];
+  res.status(400).json({
+    error: {
+      code: "MISSING_IDENTITY_FIELDS",
+      message: "Holding requires card identity",
+      missing: ordered,
+      hint:
+        "Provide non-empty playerName plus (cardYear AND product), or alternatively a non-empty cardsightCardId.",
+    },
+  });
+}
+
 export async function addHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
@@ -1344,6 +1417,17 @@ export async function addHolding(req: Request, res: Response) {
     "portfolioStore.service.addHolding",
   );
   holding = await populateCardsightGradeId(holding);
+
+  // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: gate must run AFTER
+  // normalizeR1CardsightCardId (which can hoist cardsightCardId from
+  // legacy field shapes) AND AFTER populateCardsightGradeId, so the
+  // identity check sees the final resolved cardsightCardId. Reject
+  // null-identity payloads BEFORE any persistence side-effects.
+  const identityCheck = validateHoldingIdentity(holding);
+  if (!identityCheck.ok) {
+    respondMissingIdentity(res, identityCheck.missing);
+    return;
+  }
 
   const doc = await readUserDoc(auth.userId);
   const now = new Date().toISOString();
@@ -1423,6 +1507,20 @@ export async function updateHolding(req: Request, res: Response) {
     "portfolioStore.service.updateHolding",
   );
   next = await populateCardsightGradeId(next);
+
+  // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: symmetric with addHolding.
+  // Validates the merged AFTER-state — an update of an existing legacy
+  // null-identity row to {quantity: 5} still blocks (the merged state
+  // is still null-identity); an update that ADDS cardYear+product OR
+  // cardsightCardId passes (the merged state has identity). Forces
+  // legacy null-identity rows to be fixed-by-update or recreated,
+  // never silently persisted in another permissive write.
+  const identityCheck = validateHoldingIdentity(next);
+  if (!identityCheck.ok) {
+    respondMissingIdentity(res, identityCheck.missing);
+    return;
+  }
+
   const now = new Date().toISOString();
   next.lastUpdated = next.lastUpdated ?? now;
 
@@ -2076,6 +2174,35 @@ export async function repriceHoldingsForUser(
   const updates: BatchRepriceResult["updates"] = [];
 
   for (const holding of candidates) {
+    // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): defense-in-depth
+    // safety net. After the validation gate at addHolding/updateHolding, no
+    // NEW null-identity rows can be persisted. But legacy/edge rows that
+    // existed before the gate (or arrived through a non-validated import
+    // path) would still hit computeEstimate with a playerName-only query —
+    // the pathway that produced Bobby Witt Jr's wrong-card $5 surface
+    // (Cardsight's playerName-only search returns the highest-volume
+    // arbitrary card for that player). Skip those rows here and emit a
+    // structured warn so legacy null-identity holdings stop generating
+    // wrong-card prices even before the user fixes them via update.
+    const reprCardYear = shimmedCardYear(holding);
+    const reprCsid = String((holding as any).cardsightCardId ?? "").trim();
+    if ((reprCardYear == null || !(toNumber(reprCardYear, 0) > 0)) && reprCsid === "") {
+      console.warn(JSON.stringify({
+        event: "repriceHoldingsForUser_skipped_cardless",
+        source: "portfolioStore.service",
+        holdingId: holding.id,
+        userId,
+        reason: "missing_card_identity",
+        playerName: String(holding.playerName ?? "").trim() || null,
+      }));
+      skipped += 1;
+      updates.push({
+        id: holding.id,
+        status: "skipped",
+        reason: "missing_card_identity (cardYear=null AND cardsightCardId=null)",
+      });
+      continue;
+    }
     try {
       const estimate = await computeEstimate({
         playerName: String(holding.playerName ?? "").trim(),
@@ -2268,3 +2395,16 @@ export async function runBatchReprice(req: Request, res: Response) {
   });
   return res.json(result);
 }
+
+/**
+ * CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): test-only
+ * internals surface. Exposes the private `writeUserDoc` so tests can
+ * seed legacy null-identity holdings that BYPASS the new validation
+ * gate — exercising the defense-in-depth reprice safety net for
+ * exactly the rows it's meant to catch. Mirrors the `__playerScoreInternals`
+ * pattern from playerScore.service.ts:663. Do not call from production.
+ */
+export const __portfolioStoreInternals = {
+  writeUserDoc,
+  validateHoldingIdentity,
+};

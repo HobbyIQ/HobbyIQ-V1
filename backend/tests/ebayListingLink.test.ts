@@ -38,6 +38,9 @@ describe("eBay listing link helpers (PR D.6)", () => {
       .send({
         id: holdingId,
         playerName: "Paul Skenes",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Bowman Chrome",
         cardTitle: "2024 Bowman Chrome Auto",
         quantity: 1,
         purchasePrice: 100,
@@ -69,6 +72,9 @@ describe("eBay listing link helpers (PR D.6)", () => {
       .send({
         id: holdingId,
         playerName: "Jackson Holliday",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Topps Chrome",
         cardTitle: "2024 Topps Chrome RC",
         quantity: 1,
         purchasePrice: 50,
@@ -116,6 +122,9 @@ describe("eBay listing link helpers (PR D.6)", () => {
       .send({
         id: holdingId,
         playerName: "Wyatt Langford",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Bowman Chrome",
         cardTitle: "2024 Bowman Chrome Auto",
         quantity: 1,
         purchasePrice: 30,
@@ -146,6 +155,9 @@ describe("eBay listing link helpers (PR D.6)", () => {
       .send({
         id: holdingId,
         playerName: "Jasson Dominguez",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Bowman Chrome",
         cardTitle: "2024 Bowman Chrome",
         quantity: 1,
         purchasePrice: 40,
@@ -183,6 +195,9 @@ describe("eBay listing link helpers (PR D.6)", () => {
         .send({
           id,
           playerName: "Bobby Witt Jr",
+          // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+          cardYear: 2020,
+          product: "Bowman Chrome",
           cardTitle: "2020 Bowman Chrome",
           quantity: 1,
           purchasePrice: 50,

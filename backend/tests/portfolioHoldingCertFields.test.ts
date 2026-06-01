@@ -48,6 +48,8 @@ describe("PortfolioHolding cert-identity fields (W4)", () => {
         playerName: "Greg Maddux",
         cardTitle: "1987 Topps Traded Tiffany",
         cardYear: 1987,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Topps Traded",
         certNumber: "76556858",
         certGrader: "PSA",
       });
@@ -76,7 +78,8 @@ describe("PortfolioHolding cert-identity fields (W4)", () => {
       const add = await request(app)
         .post("/api/portfolio/holdings")
         .set("x-session-id", session)
-        .send({ id, playerName: "Test", certNumber: "00000000", certGrader: grader });
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        .send({ id, playerName: "Test", cardYear: 2024, product: "Test Set", certNumber: "00000000", certGrader: grader });
       expect(add.status).toBe(201);
 
       const get = await request(app)
@@ -97,6 +100,9 @@ describe("PortfolioHolding cert-identity fields (W4)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Test Set",
         certNumber: null,
         certGrader: null,
       });
@@ -124,6 +130,8 @@ describe("PortfolioHolding cert-identity fields (W4)", () => {
         playerName: "Legacy Holding",
         cardTitle: "1989 Upper Deck #1",
         cardYear: 1989,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Upper Deck",
       });
     expect(add.status).toBe(201);
 
@@ -153,6 +161,9 @@ describe("PortfolioHolding cert-identity fields (W4)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Test Set",
         certNumber: "12345678",
         certGrader: "PSA",
         quantity: 1,

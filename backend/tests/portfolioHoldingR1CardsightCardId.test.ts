@@ -117,6 +117,10 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): null
+        // csid does NOT satisfy the identity gate; cardYear+product do.
+        cardYear: 2024,
+        product: "Test Set",
         cardsightCardId: null,
       });
     expect(add.status).toBe(201);
@@ -138,6 +142,10 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): empty
+        // csid does NOT satisfy the identity gate; cardYear+product do.
+        cardYear: 2024,
+        product: "Test Set",
         cardsightCardId: "",
       });
     expect(add.status).toBe(201);
@@ -163,6 +171,8 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         playerName: "Legacy Holding",
         cardTitle: "1989 Upper Deck #1",
         cardYear: 1989,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Upper Deck",
       });
     expect(add.status).toBe(201);
 
@@ -294,7 +304,9 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
     await request(app)
       .post("/api/portfolio/holdings")
       .set("x-session-id", session)
-      .send({ id: holdingId, playerName: "Test", quantity: 1 });
+      // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): cardYear
+      // + product satisfy the gate; the subsequent PATCH adds csid.
+      .send({ id: holdingId, playerName: "Test", cardYear: 2024, product: "Test Set", quantity: 1 });
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

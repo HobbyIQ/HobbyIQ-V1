@@ -32,6 +32,9 @@ describe("Portfolio routes", () => {
       .send({
         id: "test-holding-1",
         playerName: "Paul Skenes",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Bowman Chrome",
         cardTitle: "2024 Bowman Chrome Auto",
         quantity: 3,
         purchasePrice: 100,
@@ -115,6 +118,8 @@ describe("Portfolio routes — playerId resolution (PR #68)", () => {
         playerName: "Mike Trout",
         cardTitle: "2011 Topps Update RC",
         cardYear: 2011,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Topps Update",
         quantity: 1,
         purchasePrice: 50,
         totalCostBasis: 50,
@@ -157,6 +162,8 @@ describe("Portfolio routes — playerId resolution (PR #68)", () => {
         playerName: "Zzz Definitely Not Real",
         cardTitle: "Fake 2099 Phantom",
         cardYear: 2099,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Phantom Set",
         quantity: 1,
         purchasePrice: 1,
         totalCostBasis: 1,

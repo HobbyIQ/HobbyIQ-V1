@@ -41,6 +41,9 @@ async function seedLedgerEntry(sessionId: string, suffix: string): Promise<strin
     .send({
       id: holdingId,
       playerName: "Mike Trout",
+      // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+      cardYear: 2011,
+      product: "Topps Update",
       cardTitle: "2011 Topps Update Mike Trout Patch Test",
       quantity: 1,
       purchasePrice: 100,

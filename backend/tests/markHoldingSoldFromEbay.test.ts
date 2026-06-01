@@ -36,6 +36,9 @@ async function addHolding(
     .send({
       id,
       playerName: "Paul Skenes",
+      // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+      cardYear: 2024,
+      product: "Bowman Chrome",
       cardTitle: "2024 Bowman Chrome Auto",
       quantity: 1,
       purchasePrice: 100,
@@ -359,6 +362,9 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
       .send({
         id: holdingId,
         playerName: "Wyatt Langford",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Topps Chrome",
         cardTitle: "2024 Topps Chrome RC",
         quantity: 1,
         purchasePrice: 30,

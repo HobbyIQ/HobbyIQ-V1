@@ -106,6 +106,8 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
         id: holdingId,
         playerName: "Aaron Judge",
         cardYear: 2017,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Topps Update",
         gradeCompany: "PSA",
         gradeValue: 10,
         isAuto: false,
@@ -129,6 +131,9 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .send({
         id: holdingId,
         playerName: "Mike Trout",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2021,
+        product: "Topps Chrome",
         gradingCompany: "PSA",
         gradeValue: 9,
         isAuto: false,
@@ -152,6 +157,9 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Test Set",
         gradeCompany: "FakeGrader",
         gradeValue: 10,
         isAuto: false,
@@ -178,6 +186,8 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
         id: holdingId,
         playerName: "Test",
         cardYear: 1989,
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        product: "Upper Deck",
         cardTitle: "Raw 1989 Upper Deck #1",
       });
     expect(add.status).toBe(201);
@@ -200,6 +210,9 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2024,
+        product: "Test Set",
         gradeCompany: "PSA",
         gradeValue: 10,
         isAuto: false,

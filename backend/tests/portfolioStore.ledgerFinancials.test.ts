@@ -199,6 +199,10 @@ async function seedLedgerEntry(sessionId: string, suffix: string, costBasis = 10
     .send({
       id: holdingId,
       playerName: "Mike Trout",
+      // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): cardYear
+      // + product satisfy the validation gate.
+      cardYear: 2011,
+      product: "Topps Update",
       cardTitle: "2011 Topps Update Mike Trout P&L Test",
       quantity: 1,
       purchasePrice: costBasis,
@@ -339,6 +343,9 @@ describe("CF-PR-E-P&L-COST-RECOMPUTE — sellHolding deducts costs at create tim
       .send({
         id: holdingId,
         playerName: "Mike Trout",
+        // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01).
+        cardYear: 2011,
+        product: "Topps Update",
         cardTitle: "Test card",
         quantity: 1,
         purchasePrice: 100,
