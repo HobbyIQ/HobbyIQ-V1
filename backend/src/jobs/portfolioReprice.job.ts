@@ -92,6 +92,86 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * CF-REPRICE-SKIP-REASON-TELEMETRY (2026-06-01): emit one structured
+ * warn per skipped holding alongside the aggregate counts so the
+ * skip-rate KQL can decompose by class without App Insights archaeology
+ * across the [compiq.computeEstimate variant-mismatch guard tripped] +
+ * cardsight.findComps traces.
+ *
+ * Verdict labels:
+ *   - "variant-mismatch"  -> computeEstimate source = variant-mismatch
+ *                            (Cardsight Q8'' wrong-card class)
+ *   - "insufficient-comps" -> source = no-recent-comps OR compsUsed
+ *                             gate failed without a variant signal
+ *   - "low-confidence"    -> confidence gate failed without the above
+ *   - "error"             -> computeEstimate threw
+ *
+ * Excludes the cardless safety-net class (reason starts with
+ * "missing_card_identity"): the identity CF's
+ * repriceHoldingsForUser_skipped_cardless event already covers it
+ * at the row level. Double-emit avoided to keep the KQL
+ * decomposition clean.
+ *
+ * Same JSON-warn shape as repriceHoldingsForUser_skipped_cardless +
+ * playerScore_no_mlb_match_skip — composable with the existing
+ * skip-rate parser without changes. Payload bounded (reason
+ * truncated to 500 chars defensive cap) and contains no PII or
+ * secrets (just the holding id + the resolver-derived reason string).
+ */
+const REASON_TRUNCATE_LEN = 500;
+
+function verdictFromUpdate(
+  status: "repriced" | "skipped" | "error" | "fresh",
+  reason: string,
+): "variant-mismatch" | "insufficient-comps" | "low-confidence" | "error" {
+  if (status === "error") return "error";
+  // Confidence-gate reason shape from portfolioStore.service.ts:
+  //   "confidence-gate: confidence=N<55, compsUsed=N<3, fairValue=N<=0
+  //    (source=X, daysSinceNewestComp=N)"
+  if (/source=variant-mismatch\b/i.test(reason)) return "variant-mismatch";
+  if (/source=no-recent-comps\b/i.test(reason)) return "insufficient-comps";
+  if (/compsUsed=\d+<\d+/i.test(reason)) return "insufficient-comps";
+  if (/confidence=\d+<\d+/i.test(reason)) return "low-confidence";
+  // Defensive fallback when reason shape drifts — still emit, classify
+  // as low-confidence (the safest catch-all for a confidence-gate skip).
+  return "low-confidence";
+}
+
+function emitPerHoldingSkipEvents(
+  userId: string,
+  updates: Array<{
+    id: string;
+    status: "repriced" | "skipped" | "error" | "fresh";
+    reason?: string;
+    cardsightCardId?: string | null;
+  }>,
+): void {
+  for (const u of updates) {
+    if (u.status !== "skipped" && u.status !== "error") continue;
+    const reason = String(u.reason ?? "");
+    // Cardless-class double-emit avoidance: this row was already
+    // structured-warned by repriceHoldingsForUser_skipped_cardless at
+    // the row-iteration site.
+    if (reason.startsWith("missing_card_identity")) continue;
+    const truncated =
+      reason.length > REASON_TRUNCATE_LEN
+        ? reason.slice(0, REASON_TRUNCATE_LEN) + "...(truncated)"
+        : reason;
+    console.warn(
+      JSON.stringify({
+        event: "portfolioReprice_skipped_holding",
+        source: "portfolioReprice.job",
+        userId,
+        holdingId: u.id,
+        cardsightCardId: u.cardsightCardId ?? null,
+        verdict: verdictFromUpdate(u.status, reason),
+        reason: truncated,
+      }),
+    );
+  }
+}
+
+/**
  * Walk every user with a portfolio document and reprice their holdings.
  *
  * Safe to call manually (e.g. from a one-shot admin endpoint or a test).
@@ -146,6 +226,7 @@ export async function runPortfolioRepriceJob(): Promise<RepriceJobSummary> {
         skipped += result.skipped;
         freshSkipped += result.freshSkipped ?? 0;
         if (result.requested > 0) usersWithHoldings += 1;
+        emitPerHoldingSkipEvents(userId, result.updates);
       } catch (err: any) {
         errors += 1;
         console.error(
@@ -232,3 +313,15 @@ export function stopPortfolioRepriceJob(): void {
     _intervalTimer = null;
   }
 }
+
+/**
+ * CF-REPRICE-SKIP-REASON-TELEMETRY (2026-06-01): test-only internals.
+ * Mirrors the __playerScoreInternals + __portfolioStoreInternals
+ * pattern. Lets tests unit-exercise the verdict mapping + the per-
+ * holding emit-and-filter logic without driving the full job pipeline.
+ * Do not call from production.
+ */
+export const __portfolioRepriceJobInternals = {
+  emitPerHoldingSkipEvents,
+  verdictFromUpdate,
+};

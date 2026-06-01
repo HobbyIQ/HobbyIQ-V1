@@ -2088,7 +2088,18 @@ export interface BatchRepriceResult {
   skipped: number;
   reason?: string;
   gates?: { minPricingConfidence: number; minCompsUsed: number };
-  updates: Array<{ id: string; status: "repriced" | "skipped" | "error" | "fresh"; reason?: string }>;
+  updates: Array<{
+    id: string;
+    status: "repriced" | "skipped" | "error" | "fresh";
+    reason?: string;
+    /**
+     * CF-REPRICE-SKIP-REASON-TELEMETRY (2026-06-01): threaded so the
+     * job-level per-holding skip-emit can include it without a Cosmos
+     * re-read of the user's doc. Optional — repriced/fresh entries
+     * leave it undefined; cardless entries are known-null.
+     */
+    cardsightCardId?: string | null;
+  }>;
   /** Set when the entire request was throttled (no work performed). */
   throttled?: boolean;
   /** Number of holdings skipped because their lastUpdated was within minAgeMs. */
@@ -2200,6 +2211,7 @@ export async function repriceHoldingsForUser(
         id: holding.id,
         status: "skipped",
         reason: "missing_card_identity (cardYear=null AND cardsightCardId=null)",
+        cardsightCardId: null,
       });
       continue;
     }
@@ -2251,12 +2263,18 @@ export async function repriceHoldingsForUser(
           recommendation: "Hold",
           lastUpdated: now,
         };
+        const reprCsid =
+          typeof (holding as any).cardsightCardId === "string" &&
+          ((holding as any).cardsightCardId as string).trim() !== ""
+            ? ((holding as any).cardsightCardId as string).trim()
+            : null;
         updates.push({
           id: holding.id,
           status: "skipped",
           reason: `confidence-gate: ${failed.join(", ")} (source=${estSource || "ok"}${
             daysSinceNewestComp !== null ? `, daysSinceNewestComp=${daysSinceNewestComp}` : ""
           })`,
+          cardsightCardId: reprCsid,
         });
         continue;
       }
@@ -2332,7 +2350,17 @@ export async function repriceHoldingsForUser(
       updates.push({ id: holding.id, status: "repriced" });
     } catch (error: any) {
       skipped += 1;
-      updates.push({ id: holding.id, status: "error", reason: error?.message ?? "estimate-failed" });
+      const errCsid =
+        typeof (holding as any).cardsightCardId === "string" &&
+        ((holding as any).cardsightCardId as string).trim() !== ""
+          ? ((holding as any).cardsightCardId as string).trim()
+          : null;
+      updates.push({
+        id: holding.id,
+        status: "error",
+        reason: error?.message ?? "estimate-failed",
+        cardsightCardId: errCsid,
+      });
     }
   }
 
