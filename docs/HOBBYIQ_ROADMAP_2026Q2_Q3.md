@@ -249,6 +249,40 @@ Consumes carry-forwards #1-#4 from PR D.6 handoff:
 - Users can complete a sale entry from eBay webhook through reconciliation to tax export
 - Tax export validated against a CPA-ready format (consult or use a real one)
 
+### Phase 6.5 — iOS end-to-end product finalization (added 2026-06-01)
+
+**Item:** iOS end-to-end testing run → product finalization.
+
+**Intent:** exercise the full vertical loop IN-APP, not in isolated component tests. A single user-on-device run that goes:
+
+```
+add holding (InventoryIQ)
+  → list on eBay (D.3/D.4 EbayListingDraftView publish)
+  → real sale (eBay-side buyer purchase; same event as loop-verification's prod sale)
+  → sold/ledger state visible (Phase 5 portfolio dashboard reflects sold; ledger entry visible)
+  → finances reconciliation display (PR E / Phase 6 UI surfaces granular fees + netPayout)
+  → P&L (Phase 6 P&L view shows the real reconciled number, not the pre-Finances inflated one)
+```
+
+**Doubles as the real end-to-end backend verification.** The single real sale that drives this in-app run IS the same event the EBAY-LOOP-VERIFICATION runbook calls for. There are not two separate "prove the backend" and "verify iOS" tests — there is one user-driven sale that, instrumented properly, proves both surfaces in one transaction. Capturing the raw ITEM_SOLD envelope + the raw Sell Finances transaction response during this run is mandatory (data-shape ground truth).
+
+**Dependencies — ordered:**
+
+1. **EBAY-LOOP-VERIFICATION** (Drew-gated; runbook delivered): eBay developer-console subscription state confirmed (ITEM_SOLD topic added if not already), a real production small-dollar sale flows through the webhook handler, `markHoldingSoldFromEbay` writes a real ledger row with a real `ebayOrderId`.
+2. **EBAY-FINANCES-SLICE-A** (entitlement + sell.finances scope append + re-consent + real Finances response captured + corrected mapping table produced).
+3. **EBAY-FINANCES-SLICE-B** (server-only enrichment helper + on-demand reconcile route + tests + proven on real order).
+4. **EBAY-FINANCES-SLICE-C** (scheduled sweep + observability + dry-run).
+5. **Phase 6 PR E iOS surfaces** must render the post-enrichment fee detail + `needsReconciliation` state + tax-export grouping. Pre-Finances iOS would display "no fee data" placeholders; post-Finances iOS displays the actual numbers.
+
+**Acceptance — single deliverable:** the full inventory → list → sell → finances reconciliation → P&L loop demonstrably works VISIBLY in the iOS app for one real prod sale on one device. Captured artifacts (mandatory, saved at apply time):
+
+- A demo recording (screen capture) of the in-app flow end-to-end.
+- The raw ITEM_SOLD envelope JSON from the prod webhook (saved verbatim from `webhook_events`).
+- The raw Sell Finances transaction response JSON (saved verbatim from the API call).
+- Before-and-after of the ledger row: pre-enrichment (`needsReconciliation=true`, fees null, inflated P&L) and post-enrichment (`needsReconciliation=false`, fees populated, real P&L).
+
+This is the launch-readiness gate for the inventory→list→sell→reconcile→P&L vertical. Until this completes, the loop is theoretical.
+
 ## Parallel Mac/iOS workstream
 
 Backend phases above are Windows-side. iOS queue runs parallel:
