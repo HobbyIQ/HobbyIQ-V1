@@ -8,6 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { promises as fs } from "fs";
+import { testCallContext } from "./_helpers/testCallContext.js";
 
 // Mock the corpus writer + health counter so we can observe what the helper
 // actually emits, without touching Cosmos. The mock factory MUST cover every
@@ -48,6 +49,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
   describe("emitPredictionToCorpus helper — surfacedPrice derivation", () => {
     it("predicted present + FMV present -> surfacedPrice = predicted, source = predictedPrice", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-aaa" },
         body: BASE_BODY,
         fairMarketValue: 100,
@@ -64,6 +66,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("predicted null + FMV present -> surfacedPrice = FMV, source = fairMarketValue", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-bbb" },
         body: BASE_BODY,
         fairMarketValue: 100,
@@ -79,6 +82,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("predicted null + FMV null -> surfacedPrice = null, source = none", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: null,
         body: BASE_BODY,
         fairMarketValue: null,
@@ -94,6 +98,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("FMV NaN / Infinity coerce to null (defensive)", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-nan" },
         body: BASE_BODY,
         fairMarketValue: NaN,
@@ -111,6 +116,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
   describe("emitPredictionToCorpus helper — trendIQ-null stub", () => {
     it("absent trendIQ -> zero-coverage stub (composite=1.0, coverage=insufficient, direction=flat)", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-stub" },
         body: BASE_BODY,
         fairMarketValue: 50,
@@ -131,6 +137,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("forwardProjectionFactor defaults to 1.0 when omitted", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-default" },
         body: BASE_BODY,
         fairMarketValue: 100,
@@ -145,6 +152,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("compsUsed defaults to 0 when omitted", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-default-comps" },
         body: BASE_BODY,
         fairMarketValue: null,
@@ -161,6 +169,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
   describe("emitPredictionToCorpus helper — fmvMechanism tagging", () => {
     it("main-pipeline tag flows through to payload", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-main" },
         body: BASE_BODY,
         fairMarketValue: 100,
@@ -174,6 +183,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("sibling-pool-weighted-median tag flows through to payload", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-sib" },
         body: BASE_BODY,
         fairMarketValue: 50,
@@ -189,6 +199,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
     it("unavailable tag flows through to payload", () => {
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: null,
         body: BASE_BODY,
         fairMarketValue: null,
@@ -280,6 +291,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
 
       // First emit: main-pipeline
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-dedup-test" },
         body: BASE_BODY,
         fairMarketValue: 100,
@@ -290,6 +302,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       });
       // Second emit: sibling-pool — same card identity, different mechanism
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-dedup-test" },
         body: BASE_BODY,
         fairMarketValue: 95,
@@ -323,6 +336,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       // CF additions: fmvMechanism, surfacedPrice, surfacedPriceSource.
       // Verify all are present (and NOTHING from the pre-CF set is missing).
       emitPredictionToCorpus({
+        callContext: testCallContext,
         cardIdentity: { card_id: "card-main-pin" },
         body: BASE_BODY,
         fairMarketValue: 100,

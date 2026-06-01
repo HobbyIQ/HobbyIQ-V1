@@ -153,7 +153,22 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
 
       let currentPrice: number | null = null;
       try {
-        const result = await computeEstimate(req);
+        // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): PriceAlert
+        // schema (priceAlerts.repository.ts:25-37) has no holdingId
+        // field — only userId + cardId (where cardId is a Cardsight
+        // catalog UUID, not a portfolio reference). buildEstimateRequest
+        // above builds a free-text-style CompIQEstimateRequest from
+        // alert.cardSnapshot, not a cardsightCardId-pinned one. So:
+        // userId known, holdingId null, routedFromHolding=false per
+        // the conservative explicit-opt-in rule. If alerts ever grow
+        // a holdingId field, the routedFromHolding=true path is one
+        // edit away.
+        const result = await computeEstimate(req, {
+          source: "price-alert-evaluator",
+          userId: alert.userId,
+          holdingId: null,
+          routedFromHolding: false,
+        });
         const fair = (result as { fairMarketValue?: unknown })?.fairMarketValue;
         currentPrice = typeof fair === "number" && fair > 0 ? fair : null;
       } catch (err: any) {

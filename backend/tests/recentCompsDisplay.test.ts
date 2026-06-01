@@ -31,6 +31,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 const today = new Date();
@@ -82,7 +83,7 @@ describe("recentComps display (issue #24)", () => {
       playerName: "Ronald Acuna Jr 2018 Topps Update",
       gradeCompany: "PSA",
       gradeValue: 7,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     const recent = result.recentComps as RecentComp[];
     expect(Array.isArray(recent)).toBe(true);
@@ -137,7 +138,7 @@ describe("recentComps display (issue #24)", () => {
     // grade, so both PSA 7 and PSA 9 comps remain in the pool.
     const result = (await computeEstimate({
       playerName: "Cross Player",
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     const recent = result.recentComps as RecentComp[];
     expect(Array.isArray(recent)).toBe(true);
@@ -187,7 +188,7 @@ describe("recentComps display (issue #24)", () => {
 
     const result = (await computeEstimate({
       playerName: "Raw Player",
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     const recent = result.recentComps as RecentComp[];
     expect(Array.isArray(recent)).toBe(true);

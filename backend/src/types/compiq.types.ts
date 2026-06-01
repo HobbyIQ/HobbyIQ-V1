@@ -26,6 +26,78 @@ export interface CompIQEstimateRequest {
   cardsightCardId?: string;
 }
 
+/**
+ * CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): closed source enum for
+ * the `source` attribution field on the prediction_log corpus. Every
+ * caller of `computeEstimate` must supply one of these literals via the
+ * `PredictionCallContext` parameter; `tsc` rejects free strings at
+ * compile time so no caller can silently emit "unknown".
+ *
+ * Naming convention: <subsystem>-<route-or-job>[-<subreason>].
+ * Subsystems: "compiq" (free-text + structured price endpoints),
+ * "portfolio" (user-initiated holding writes + scheduled reprice),
+ * "price-alert-evaluator" (background job).
+ *
+ * Each value is documented inline with the upstream entry point it
+ * attributes to + whether it routes from a portfolio holding (which
+ * decides the §4.2/4.3 join-key: routedFromHolding=true rows join to
+ * PortfolioLedgerEntry sales via holdingId+userId; routedFromHolding=false
+ * rows join to outcomes only via cardsightCardId / the broader
+ * eBay-sold path).
+ */
+export type PredictionCorpusSource =
+  /** POST /api/compiq/search — free-text DashboardView search */
+  | "compiq-search-freetext"
+  /** POST /api/compiq/price — free-text alias of /search */
+  | "compiq-price-freetext"
+  /** POST /api/compiq/price-by-id — cardsightCardId-pinned price */
+  | "compiq-price-by-id"
+  /** POST /api/compiq/bulk — per-query in the bulk array */
+  | "compiq-bulk-freetext"
+  /** POST /api/compiq/grade-premium — fires twice (raw + PSA10) */
+  | "compiq-grade-premium"
+  /** POST /api/compiq/estimate — structured-input direct estimate */
+  | "compiq-estimate-structured"
+  /** POST /api/compiq/simulate — what-if exit/hold simulator */
+  | "compiq-simulate-whatif"
+  /** autoPriceHolding called from addHolding (POST /portfolio/holdings) */
+  | "portfolio-autoprice-add"
+  /** autoPriceHolding called from updateHolding (PUT/PATCH /portfolio/holdings/:id) */
+  | "portfolio-autoprice-update"
+  /** autoPriceHolding called from refreshHolding (POST /portfolio/holdings/:id/refresh) */
+  | "portfolio-autoprice-refresh"
+  /** repriceHoldingsForUser — both scheduled job + manual /reprice/batch */
+  | "portfolio-reprice"
+  /** runPriceAlertEvaluator background job — no holdingId; PriceAlert
+   *  schema has only cardId+userId, no holding linkage. */
+  | "price-alert-evaluator";
+
+/**
+ * CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution context
+ * threaded from each computeEstimate caller into the corpus emit. These
+ * are DESCRIPTIVE/attribution fields — NOT folded into inputSignature
+ * (the same card priced from two endpoints is still the same prediction).
+ *
+ *   - source: REQUIRED, no default. tsc enforces every caller supplies it.
+ *   - userId: present iff caller has authenticated upstream context
+ *             (portfolio + price-alert paths). Free-text public callers
+ *             (compiq-*) pass null.
+ *   - holdingId: present iff the call routes from a specific portfolio
+ *                holding. Portfolio autoprice + reprice paths set this;
+ *                everything else null.
+ *   - routedFromHolding: explicit boolean. Defaults false at every caller
+ *                        unless that caller's intent is holding-routed
+ *                        (the C rule — conservative explicit-opt-in to
+ *                        prevent accidental claims). The §4.2/4.3
+ *                        sale-join switches on this flag.
+ */
+export interface PredictionCallContext {
+  source: PredictionCorpusSource;
+  userId?: string | null;
+  holdingId?: string | null;
+  routedFromHolding: boolean;
+}
+
 export interface CompIQEstimateResponse {
   cardTitle: string;
   verdict: string;

@@ -46,6 +46,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardSight from "../src/services/compiq/cardsight.client.js";
 import * as cardsightRouter from "../src/services/compiq/cardsight.router.js";
 
@@ -102,7 +103,7 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
     const result = (await computeEstimate({
       playerName: QUERY_EQUALS_PINNED,
       cardsightCardId: PINNED_ID,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     // Primary assertion: the player-identity guard must NOT wipe the
     // pinned comps (the !body.cardsightCardId short-circuit holds).
@@ -158,7 +159,7 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
     const result = (await computeEstimate({
       playerName: REAL_QUERY, // meaningful query, different from PINNED_ID
       cardsightCardId: PINNED_ID,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     // The fall-through path must surface comps.
     expect(result.compsUsed).toBeGreaterThan(0);

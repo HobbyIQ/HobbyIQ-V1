@@ -22,6 +22,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", () => ({
 }));
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as router from "../src/services/compiq/cardsight.router.js";
 
 const mockFindCompsRouted = router.findCompsRouted as unknown as ReturnType<typeof vi.fn>;
@@ -57,7 +58,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
       parallel: "Refractor",
       gradeCompany: "PSA",
       gradeValue: 10,
-    } as any);
+    } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
     const [, opts] = mockFindCompsRouted.mock.calls[0];
@@ -76,7 +77,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
     await computeEstimate({
       playerName: "2011 Topps Update Baseball Mike Trout US175 Base",
       cardsightCardId: "fake-pinned-id",
-    } as any);
+    } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
     const [, opts] = mockFindCompsRouted.mock.calls[0];
@@ -92,7 +93,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
       playerName: "Mike Trout",
       cardYear: 2011,
       product: "Topps Update",
-    } as any);
+    } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
     const [, opts] = mockFindCompsRouted.mock.calls[0];
@@ -106,7 +107,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
     await computeEstimate({
       playerName: "2024 Bowman Draft Chrome Baseball Caleb Bonemer CPA-CBO Base Auto",
       cardsightCardId: "fake-pinned-id-bonemer",
-    } as any);
+    } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
     const [, opts] = mockFindCompsRouted.mock.calls[0];
@@ -121,7 +122,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
     await computeEstimate({
       playerName: "2011 Topps Update Baseball Mike Trout US175 Base",
       cardsightCardId: "fake-pinned-id-trout",
-    } as any);
+    } as any, testCallContext);
 
     const [, opts] = mockFindCompsRouted.mock.calls[0];
     expect(opts.queryContext.cardNumber).toBe("US175");
@@ -133,7 +134,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
       cardYear: 2024,
       product: "Bowman Draft Chrome",
       cardNumber: "CPA-CBO",
-    } as any);
+    } as any, testCallContext);
 
     const [, opts] = mockFindCompsRouted.mock.calls[0];
     expect(opts.queryContext.cardNumber).toBe("CPA-CBO");
@@ -144,7 +145,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
       playerName: "Mike Trout",
       cardYear: 2011,
       product: "Topps Update",
-    } as any);
+    } as any, testCallContext);
 
     const [, opts] = mockFindCompsRouted.mock.calls[0];
     expect(opts.queryContext.cardNumber).toBeUndefined();

@@ -337,7 +337,14 @@ router.post("/search", async (req, res, next) => {
       console.log(
         `[compiq.search] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence} searchQuery="${searchQuery}"`
       );
-      const est = await computeEstimate(body);
+      // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/search
+      // is the free-text DashboardView search. Public route, no auth context.
+      const est = await computeEstimate(body, {
+        source: "compiq-search-freetext",
+        userId: null,
+        holdingId: null,
+        routedFromHolding: false,
+      });
 
       // Unsupported-sport short-circuit (issue #7). computeEstimate returns
       // source="unsupported_sport" when CH's AI identified the query as a
@@ -555,7 +562,14 @@ router.post("/price", async (req, res, next) => {
       console.log(
         `[compiq.price] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
-      const est = await computeEstimate(body);
+      // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price
+      // is the free-text alias of /search.
+      const est = await computeEstimate(body, {
+        source: "compiq-price-freetext",
+        userId: null,
+        holdingId: null,
+        routedFromHolding: false,
+      });
 
       // Unsupported-sport short-circuit â€” mirrors /search response shape so
       // iOS clients receive identical behavior across the two endpoints.
@@ -756,7 +770,14 @@ router.post("/price-by-id", async (req, res, next) => {
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
       };
-      const est = await computeEstimate(body);
+      // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price-by-id
+      // pins to a Cardsight UUID. Public route, no auth context.
+      const est = await computeEstimate(body, {
+        source: "compiq-price-by-id",
+        userId: null,
+        holdingId: null,
+        routedFromHolding: false,
+      });
 
       // Unsupported-sport short-circuit — defensive guard for /price-by-id.
       // UI normally only pins card_ids surfaced via the picker
@@ -922,7 +943,14 @@ router.post("/bulk", async (req, res, next) => {
       safeQueries.map(async (query) => {
         const parsed = parseCardQuery(query);
         const body: CompIQEstimateRequest = requestFromParsed(parsed);
-        const est = await computeEstimate(body);
+        // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/bulk
+        // per-query — same source for every item in a single bulk request.
+        const est = await computeEstimate(body, {
+          source: "compiq-bulk-freetext",
+          userId: null,
+          holdingId: null,
+          routedFromHolding: false,
+        });
 
         // Unsupported-sport short-circuit â€” per-item. Bulk responses can
         // include a mix of baseball + non-baseball queries; each item gets
@@ -1054,9 +1082,18 @@ router.post("/grade-premium", async (req, res, next) => {
     const base = req.body as CompIQEstimateRequest;
 
     // Run two estimates in parallel â€” raw and PSA 10
+    // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): both halves of the
+    // grade-premium calc emit under the same source so the corpus can
+    // count grade-premium-driven rows as one cohort.
+    const gradePremiumCtx = {
+      source: "compiq-grade-premium" as const,
+      userId: null,
+      holdingId: null,
+      routedFromHolding: false,
+    };
     const [rawResult, psa10Result] = await Promise.all([
-      computeEstimate({ ...base, gradeCompany: undefined, gradeValue: undefined }),
-      computeEstimate({ ...base, gradeCompany: "PSA", gradeValue: 10 }),
+      computeEstimate({ ...base, gradeCompany: undefined, gradeValue: undefined }, gradePremiumCtx),
+      computeEstimate({ ...base, gradeCompany: "PSA", gradeValue: 10 }, gradePremiumCtx),
     ]);
 
     const rawFmv = (rawResult.fairMarketValue as number) ?? 0;

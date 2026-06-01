@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CompIQEstimateRequest } from "../../types/compiq.types.js";
+import { CompIQEstimateRequest, type PredictionCallContext } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./cardsight.mapper.js";
@@ -1371,8 +1371,14 @@ export function computeFmvBand(
 // from "fairMarketValue was the headline" so a future analyst can
 // stratify. `"none"` covers degenerate paths (unsupported_sport).
 //
-// `source` / `callContext` left omitted — defaulted to "estimate" at the
-// writer per CF-PREDICTION-CORPUS-CALL-CONTEXT's pending plumb-through.
+// CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): callContext is now
+// REQUIRED — every caller of computeEstimate threads a typed
+// PredictionCallContext, and computeEstimate forwards it to every emit
+// site (the 5 paths from CF-PREDICTION-CORPUS-EMISSION-COVERAGE). The
+// corpus row gains 4 attribution fields: source (closed enum),
+// userId, holdingId, routedFromHolding. These are DESCRIPTIVE — they
+// must NOT enter inputSignature (same card priced from two endpoints
+// is the same prediction, just attributed differently).
 export function emitPredictionToCorpus(params: {
   cardIdentity?: { card_id: string | null } | null;
   body: {
@@ -1392,6 +1398,7 @@ export function emitPredictionToCorpus(params: {
   forwardProjectionFactor?: number;
   trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
   compsUsed?: number;
+  callContext: PredictionCallContext;
 }): void {
   try {
     const fmv =
@@ -1459,6 +1466,18 @@ export function emitPredictionToCorpus(params: {
       forwardProjectionFactor: params.forwardProjectionFactor ?? 1.0,
       trendIQ,
       compsUsed: params.compsUsed ?? 0,
+      // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution
+      // axis — descriptive, NOT folded into inputSignature. The
+      // §4.2/4.3 sale-join switches on routedFromHolding:
+      //   - routedFromHolding=true → join via holdingId+userId to
+      //     PortfolioLedgerEntry sale outcomes (the portfolio-attributable
+      //     forward-direction hit-rate signal);
+      //   - routedFromHolding=false → join via cardsightCardId to the
+      //     broader eBay-sold outcome path (population MAPE).
+      source: params.callContext.source,
+      userId: params.callContext.userId ?? null,
+      holdingId: params.callContext.holdingId ?? null,
+      routedFromHolding: params.callContext.routedFromHolding,
     };
     console.log("[compiq.prediction_emitted] " + JSON.stringify(__predictionEmit));
     writePredictionLog(__predictionEmit);
@@ -1623,8 +1642,15 @@ export interface ComputeEstimateOptions {
 
 export async function computeEstimate(
   body: CompIQEstimateRequest,
+  callContext: PredictionCallContext,
   options: ComputeEstimateOptions = {},
 ): Promise<Record<string, unknown>> {
+  // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): callContext is the
+  // attribution axis for every emitPredictionToCorpus call below. The
+  // 5 emit sites (unsupported_sport, variant-mismatch, sibling-pool,
+  // no-recent-comps, main-pipeline) each forward this through unchanged.
+  // tsc rejects free-string sources at the caller because callContext.source
+  // is the closed `PredictionCorpusSource` literal union.
 
   // CF-PLAYERNAME-NORMALIZATION (2026-05-26): strip contamination tokens
   // from playerName before any catalog lookup. iOS scan path historically
@@ -1778,6 +1804,7 @@ export async function computeEstimate(
       predictedPrice: null,
       predictedPriceRange: null,
       predictedPriceMechanism: "unavailable",
+      callContext,
     });
     return {
       source: "unsupported_sport",
@@ -2106,6 +2133,7 @@ export async function computeEstimate(
           ? mechanism1.predictedPriceAttribution.mechanism
           : "unavailable",
       compsUsed: compsAfterVariantFilter.length,
+      callContext,
     });
 
     return {
@@ -2421,6 +2449,7 @@ export async function computeEstimate(
                 ? mechanism1.predictedPriceAttribution.mechanism
                 : "unavailable",
             compsUsed: combinedCount,
+            callContext,
           });
 
           return {
@@ -2519,6 +2548,7 @@ export async function computeEstimate(
           ? mechanism1.predictedPriceAttribution.mechanism
           : "unavailable",
       compsUsed: fetched.comps.length,
+      callContext,
     });
 
     return {
@@ -3063,6 +3093,7 @@ export async function computeEstimate(
     forwardProjectionFactor: __predicted.forwardProjectionFactor,
     trendIQ,
     compsUsed: comps.length,
+    callContext,
   });
 
   // CF-VARIANT-FILTER-LOOSENING (Q2 lock): when the tier ladder selected
@@ -3221,6 +3252,13 @@ export async function simulateWhatIf(body: {
     gradeCompany: body.gradeCompany,
     gradeValue: body.gradeValue,
     isAuto: body.isAuto,
+  }, {
+    // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): public what-if route,
+    // no authenticated user upstream, never holding-routed.
+    source: "compiq-simulate-whatif",
+    userId: null,
+    holdingId: null,
+    routedFromHolding: false,
   });
 
   const buyPrice = Math.max(0.01, Number(body.buyPrice ?? (estimate.fairMarketValue as number) ?? 0));
@@ -3313,7 +3351,15 @@ async function isTierLadderHeaderAuthorized(req: Request): Promise<boolean> {
 
 export async function compiqEstimate(req: Request, res: Response) {
   const tierLadderDisabledByHeader = await isTierLadderHeaderAuthorized(req);
-  const data = await computeEstimate(req.body || {}, { tierLadderDisabledByHeader });
+  const data = await computeEstimate(req.body || {}, {
+    // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/estimate
+    // is the structured-input direct estimate (iOS sends parsed fields).
+    // Public route, no auth, never holding-routed.
+    source: "compiq-estimate-structured",
+    userId: null,
+    holdingId: null,
+    routedFromHolding: false,
+  }, { tierLadderDisabledByHeader });
   // Stamp engine identity marker (pricingEngine / engineVersion / computedAt).
   // Non-breaking: existing clients ignore unknown JSON fields.
   //

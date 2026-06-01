@@ -49,6 +49,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 // a subset of TrendIQCoverage and a wrong-vocabulary TrendIQDirection;
 // fixed by importing the source of truth here.)
 import type { TrendIQDirection, TrendIQCoverage } from "./trendIQ.types.js";
+import type { PredictionCorpusSource } from "../../types/compiq.types.js";
 // DIRECTION_BAND_PCT + derivePredictionDirection live in the neutral
 // predictionConstants module so the future read path (CF-PREDICTION-
 // ACCURACY-DASHBOARD) imports them without coupling to this write-path
@@ -195,22 +196,19 @@ export interface PredictionEmitInput {
   };
   compsUsed: number;
   timestamp: string; // ISO 8601 — prediction emit time
-  // Request provenance — optional; defaults applied when omitted. Methodology
-  // §2.2 includes these but the v1 emission site doesn't have route-level
-  // identity threaded yet (different routes call computeEstimate); a future
-  // CF-PREDICTION-CORPUS-CALL-CONTEXT plumbs them through.
-  source?:
-    | "estimate"
-    | "price"
-    | "price-by-id"
-    | "cardsearch-pin"
-    | "reprice-batch"
-    | "reprice-job"
-    | "from-card-create";
-  callContext?: {
-    userId?: string | null;
-    routedFromHolding?: string | null;
-  };
+  // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution axis,
+  // threaded from each computeEstimate caller. Flat fields (not nested
+  // under a `callContext` object) so the emit-payload === stdout-shape
+  // invariant holds across the dual-emit channel without parsing.
+  // source uses the closed PredictionCorpusSource literal union — tsc
+  // enforces every caller supplies one of the documented members.
+  // routedFromHolding is the §4.2/4.3 sale-join switch (true → join
+  // via holdingId+userId to PortfolioLedgerEntry; false → join via
+  // cardsightCardId to the broader eBay-sold path).
+  source: PredictionCorpusSource;
+  userId: string | null;
+  holdingId: string | null;
+  routedFromHolding: boolean;
 }
 
 /**
@@ -260,8 +258,15 @@ interface PredictionLogDocument {
   trendIQ: PredictionEmitInput["trendIQ"];
   compsUsed: number;
   timestamp: string;
-  source: string;
-  callContext?: PredictionEmitInput["callContext"];
+  // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution axis,
+  // identical shape to PredictionEmitInput (the writer copies these
+  // verbatim from the input). The §4.2/4.3 sale-join consumer reads
+  // `routedFromHolding` to switch between PortfolioLedgerEntry-join
+  // (true) vs eBay-sold cardsightCardId-join (false). Methodology §2.2.
+  source: PredictionEmitInput["source"];
+  userId: string | null;
+  holdingId: string | null;
+  routedFromHolding: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -343,8 +348,14 @@ function buildDocument(
     trendIQ: input.trendIQ,
     compsUsed: input.compsUsed,
     timestamp: input.timestamp,
-    source: input.source ?? "estimate",
-    callContext: input.callContext,
+    // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution copied
+    // verbatim from the emit object. source is now required from the
+    // closed PredictionCorpusSource enum at the input layer — no more
+    // ?? "estimate" defaulting.
+    source: input.source,
+    userId: input.userId,
+    holdingId: input.holdingId,
+    routedFromHolding: input.routedFromHolding,
   };
 }
 

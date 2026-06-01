@@ -71,6 +71,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import { writePredictionLog } from "../src/services/compiq/predictionCorpus.service.js";
 
 // ─── Expected stable key set ───────────────────────────────────────────────
@@ -106,6 +107,16 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "fmvMechanism",
   "surfacedPrice",
   "surfacedPriceSource",
+  // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): four attribution
+  // fields landed flat on the payload. Methodology §2.2 amended for the
+  // join-key role: routedFromHolding=true → PortfolioLedgerEntry-join
+  // via holdingId+userId; routedFromHolding=false → eBay-sold
+  // cardsightCardId-join. source is the closed PredictionCorpusSource
+  // literal union — tsc enforces every caller supplies a documented value.
+  "source",
+  "userId",
+  "holdingId",
+  "routedFromHolding",
 ] as const;
 
 const EXPECTED_TRENDIQ_KEYS = [
@@ -141,7 +152,7 @@ describe("CF-PREDICTION-CORPUS STEP 2 — prediction_emitted stdout shape regres
       parallel: "Base",
       gradeCompany: "PSA",
       gradeValue: 10,
-    } as any);
+    } as any, testCallContext);
 
     // Find the prediction_emitted log line (other logs may also fire).
     const predictionLogCalls = consoleLogSpy.mock.calls.filter((call) => {
@@ -196,7 +207,7 @@ describe("CF-PREDICTION-CORPUS STEP 2 — prediction_emitted stdout shape regres
       parallel: "Base",
       gradeCompany: "PSA",
       gradeValue: 10,
-    } as any);
+    } as any, testCallContext);
 
     // The corpus writer was called exactly once.
     expect((writePredictionLog as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);

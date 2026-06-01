@@ -578,7 +578,19 @@ async function autoPriceHolding(
   holding: PortfolioHolding,
   previous: PortfolioHolding | undefined,
   source: string,
+  userId?: string,
 ): Promise<PortfolioHolding> {
+  // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): map the legacy
+  // string source ("add" / "update" / "refresh") to the closed
+  // PredictionCorpusSource literal union. Defaults to add for any
+  // unknown caller — tsc would have caught a free string at the
+  // computeEstimate call site, so this is purely a defensive map.
+  const corpusSource =
+    source === "update"
+      ? "portfolio-autoprice-update"
+      : source === "refresh"
+      ? "portfolio-autoprice-refresh"
+      : "portfolio-autoprice-add";
   const estimate = await computeEstimate({
     playerName: String(holding.playerName ?? "").trim(),
     cardYear: shimmedCardYear(holding),
@@ -587,6 +599,11 @@ async function autoPriceHolding(
     isAuto: Boolean(holding.isAuto),
     gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+  }, {
+    source: corpusSource,
+    userId: userId ?? null,
+    holdingId: holding.id,
+    routedFromHolding: true,
   });
 
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase D1: dropped the legacy
@@ -1442,7 +1459,7 @@ export async function addHolding(req: Request, res: Response) {
   doc.holdings[holding.id] = { ...doc.holdings[holding.id], ...holding };
 
   try {
-    await autoPriceHolding(doc, doc.holdings[holding.id], undefined, "add");
+    await autoPriceHolding(doc, doc.holdings[holding.id], undefined, "add", auth.userId);
   } catch {
     // Keep the saved holding even if live pricing fails.
   }
@@ -1537,7 +1554,7 @@ export async function updateHolding(req: Request, res: Response) {
   doc.holdings[id] = next;
 
   try {
-    await autoPriceHolding(doc, doc.holdings[id], previous, "update");
+    await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
   } catch {
     evaluateHoldingAlerts(doc, previous, next);
   }
@@ -2074,7 +2091,7 @@ export async function refreshHolding(req: Request, res: Response) {
   doc.holdings[id] = await populateCardsightGradeId(holding);
 
   try {
-    await autoPriceHolding(doc, doc.holdings[id], doc.holdings[id], "refresh");
+    await autoPriceHolding(doc, doc.holdings[id], doc.holdings[id], "refresh", auth.userId);
   } catch {
     doc.holdings[id].lastUpdated = new Date().toISOString();
   }
@@ -2224,6 +2241,15 @@ export async function repriceHoldingsForUser(
         isAuto: Boolean(holding.isAuto),
         gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
         gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+      }, {
+        // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): scheduled +
+        // manual batch reprice both flow through here; same source for
+        // both — the §4.2/4.3 join distinguishes by userId+holdingId,
+        // not by manual-vs-scheduled.
+        source: "portfolio-reprice",
+        userId,
+        holdingId: holding.id,
+        routedFromHolding: true,
       });
 
       const confidence = toNumber((estimate as any)?.confidence?.pricingConfidence, 0);

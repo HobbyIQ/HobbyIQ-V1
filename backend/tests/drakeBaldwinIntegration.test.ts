@@ -36,6 +36,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 promotion", () => {
@@ -74,7 +75,7 @@ describe("Drake Baldwin integration — CF-VARIANT-FILTER-LOOSENING tier T1 prom
       product: "Bowman Chrome",
       parallel: "Blue Refractor",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     // Source: success path (not variant-mismatch — the ladder rescued it).
     expect(result.source).toBe("live");
@@ -155,7 +156,7 @@ describe("variant-mismatch fallback — Mechanism 1 still fires when tier ladder
       product: "Bowman Chrome",
       parallel: "Blue Refractor",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     // Tier ladder exhausted at T3 → fall through to variant-mismatch.
     expect(result.source).toBe("variant-mismatch");

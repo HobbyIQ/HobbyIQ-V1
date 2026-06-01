@@ -14,6 +14,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("computeEstimate unsupported_sport contract", () => {
@@ -43,7 +44,7 @@ describe("computeEstimate unsupported_sport contract", () => {
 
     const result = (await computeEstimate({
       playerName: "1986 Fleer Michael Jordan PSA 8",
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("unsupported_sport");
     expect(Object.prototype.hasOwnProperty.call(result, "predictedPrice")).toBe(true);

@@ -43,6 +43,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", () => ({
 }));
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as router from "../src/services/compiq/cardsight.router.js";
 
 const mockFindCompsRouted = router.findCompsRouted as unknown as ReturnType<typeof vi.fn>;
@@ -168,7 +169,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       parallel: "Gold",  // none of the returned sales have "Gold" → variant mismatch
       gradeCompany: "PSA",
       gradeValue: 9,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("variant-mismatch");
     // All four priceSource fields present on the response.
@@ -196,7 +197,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       parallel: "Gold",
       gradeCompany: "PSA",
       gradeValue: 9,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("variant-mismatch");
     expect(result.priceSource).toBe("approximate");
@@ -220,7 +221,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       parallel: "Gold",
       gradeCompany: "PSA",
       gradeValue: 9,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("variant-mismatch");
     expect(result.priceSource).toBe("exact");
@@ -244,7 +245,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       parallel: "Gold",
       gradeCompany: "PSA",
       gradeValue: 9,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("variant-mismatch");
     expect(result.priceSource).toBeNull();
@@ -281,7 +282,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — scope-lock regression (othe
       product: "Test Set",
       gradeCompany: "PSA",
       gradeValue: 9,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("no-recent-comps");
     expect(result.priceSource).toBeUndefined();
@@ -299,7 +300,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — scope-lock regression (othe
       product: "Fleer",
       gradeCompany: "PSA",
       gradeValue: 8,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("unsupported_sport");
     expect(result.priceSource).toBeUndefined();

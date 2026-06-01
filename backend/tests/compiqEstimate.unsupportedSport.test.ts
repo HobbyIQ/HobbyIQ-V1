@@ -29,6 +29,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
@@ -62,7 +63,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
       playerName: "1986 Fleer Michael Jordan PSA 8",
       gradeCompany: "PSA",
       gradeValue: 8,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("unsupported_sport");
     expect(typeof result.unsupportedSportReason).toBe("string");
@@ -102,7 +103,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
 
     const result = (await computeEstimate({
       playerName: "Mike Trout 2011 Topps Update",
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).not.toBe("unsupported_sport");
     expect(result.unsupportedSportReason).toBeUndefined();
@@ -137,7 +138,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
 
     const result = (await computeEstimate({
       playerName: "2024 Topps Some Player",
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).not.toBe("unsupported_sport");
   });
@@ -164,7 +165,7 @@ describe("computeEstimate — unsupported-sport guard (issue #7)", () => {
       playerName: "2020 Panini Prizm Justin Herbert PSA 10",
       gradeCompany: "PSA",
       gradeValue: 10,
-    } as any)) as Record<string, unknown>;
+    } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("unsupported_sport");
     expect(result.detectedSport).toBe("Football");

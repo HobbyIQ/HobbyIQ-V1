@@ -32,6 +32,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 });
 
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service";
+import { testCallContext } from "./_helpers/testCallContext.js";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
 describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFound + autoPrefixMismatch)", () => {
@@ -71,7 +72,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Bowman Draft",
       parallel: "Gold",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     expect(result.source).toBe("variant-mismatch");
     expect(result.marketValue).toBeNull();
@@ -121,7 +122,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Bowman Chrome",
       parallel: "Blue",
       isAuto: false,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     expect(result.source).toBe("variant-mismatch");
     expect(result.compQuality?.reasons?.cardsight_wrong_card).toBe(6);
@@ -163,7 +164,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Topps Update",
       parallel: "Blue",
       isAuto: false,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     // Q8'' does NOT fire (autoPrefixMismatch=false). Tier ladder runs.
     // T0 rejects all comps for parallel_mismatch (no "blue" in titles).
@@ -211,7 +212,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Bowman Chrome",
       parallel: "Gold",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     // Q8'' does NOT fire (both auto, no mismatch). T1 rescue legitimate.
     expect(result.source).toBe("live");
@@ -252,7 +253,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Bowman Chrome",
       parallel: "Blue Refractor",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     expect(result.source).toBe("live");
     expect(result.compQuality?.variantStrictness).toBe("T1");
@@ -291,7 +292,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
       product: "Bowman Chrome",
       parallel: "Blue Refractor",
       isAuto: true,
-    } as any)) as Record<string, any>;
+    } as any, testCallContext)) as Record<string, any>;
 
     expect(result.source).toBe("live");
     expect(result.compQuality?.variantStrictness).toBe("T1");

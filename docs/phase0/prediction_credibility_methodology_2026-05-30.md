@@ -202,14 +202,62 @@ interface PredictionLogEntry {
                                                 //   1.0 with no timestamp anchor)
   };
 
-  // ── Request provenance ─────────────────────────────────────────────
+  // ── Request provenance (attribution) ───────────────────────────────
   timestamp: string;                            // ISO 8601 — prediction emit time
-  source: "estimate" | "price" | "price-by-id" | "cardsearch-pin"
-        | "reprice-batch" | "reprice-job" | "from-card-create";
-  callContext?: {
-    userId?: string | null;
-    routedFromHolding?: string | null;
-  };
+  source: PredictionCorpusSource;               // CF-PREDICTION-CORPUS-CALL-CONTEXT
+                                                //   (2026-06-01): closed enum threaded
+                                                //   from every computeEstimate caller.
+                                                //   tsc rejects unrecognized values at
+                                                //   compile time so no caller can emit
+                                                //   "unknown". Twelve members documented
+                                                //   in backend/src/types/compiq.types.ts:
+                                                //   "compiq-search-freetext" / "-price-freetext"
+                                                //   / "-price-by-id" / "-bulk-freetext"
+                                                //   / "-grade-premium" / "-estimate-structured"
+                                                //   / "-simulate-whatif" (public compiq routes);
+                                                //   "portfolio-autoprice-add" / "-update" / "-refresh"
+                                                //   (per upstream addHolding / updateHolding /
+                                                //   refreshHolding flow); "portfolio-reprice"
+                                                //   (scheduled + manual batch); "price-alert-evaluator"
+                                                //   (background job).
+  userId: string | null;                        // CF-PREDICTION-CORPUS-CALL-CONTEXT:
+                                                //   present iff the caller had authenticated
+                                                //   upstream context (portfolio + price-alert
+                                                //   paths). Free-text public compiq routes
+                                                //   pass null.
+  holdingId: string | null;                     // CF-PREDICTION-CORPUS-CALL-CONTEXT:
+                                                //   present iff the call routed from a
+                                                //   specific portfolio holding (portfolio-*
+                                                //   sources). Everything else null.
+  routedFromHolding: boolean;                   // CF-PREDICTION-CORPUS-CALL-CONTEXT:
+                                                //   THE §4.2/4.3 SALE-JOIN SWITCH.
+                                                //     true  → row joins to PortfolioLedgerEntry
+                                                //             sale outcomes via holdingId + userId
+                                                //             (portfolio-attributable forward-
+                                                //             direction hit-rate signal); the
+                                                //             prediction was made for a known
+                                                //             holding whose eventual sale we own.
+                                                //     false → row joins to outcomes only via
+                                                //             cardsightCardId (the broader eBay-
+                                                //             sold population MAPE path); we know
+                                                //             the prediction was emitted but the
+                                                //             "owner of the sale" is unknown.
+                                                //   Conservative explicit-opt-in: defaults to
+                                                //   false at every caller unless the upstream
+                                                //   intent is holding-routed. Prevents accidental
+                                                //   claims of holding-attribution.
+                                                //
+                                                //   Descriptive-not-identity: source / userId /
+                                                //   holdingId / routedFromHolding do NOT enter
+                                                //   inputSignature (the rate-limit dedup hash).
+                                                //   A card priced from /api/compiq/search and
+                                                //   from a portfolio reprice within the dedup
+                                                //   window is the SAME prediction, just attributed
+                                                //   differently — one of the two writes is the
+                                                //   one that lands by virtue of arriving first;
+                                                //   the other's attribution is dropped. This is
+                                                //   intentional and preserves the "exactly-once
+                                                //   per prediction" semantic of the corpus.
 }
 ```
 
@@ -220,7 +268,25 @@ Three reasons (unchanged from Rev 1):
 2. **Matches the `trend_history` precedent** at `playerScore/trendHistory.service.ts:23` — same temporal-comp aggregation per card.
 3. **Public/free-text predictions have no userId.** UserId partition would force a sentinel single hot partition.
 
-Per-user accuracy analytics doable as cross-partition query filtered by `callContext.userId` — pay the cost at cold analytics time, not at hot write time.
+Per-user accuracy analytics doable as cross-partition query filtered by `userId` (now a flat field, no longer nested under `callContext`) — pay the cost at cold analytics time, not at hot write time.
+
+### 2.3a Join-key role for §4.2 (surfaced-price MAPE) + §4.3 (forward-direction hit-rate)
+
+CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): the attribution fields land joinable rows in **two distinct outcome-join cohorts**, segmented by the `routedFromHolding` flag:
+
+**routedFromHolding=true (portfolio-attributable cohort)** — join key: `(holdingId, userId, timestamp)`:
+- Source enums: `portfolio-autoprice-add`, `portfolio-autoprice-update`, `portfolio-autoprice-refresh`, `portfolio-reprice`.
+- Outcome source: `PortfolioLedgerEntry` rows where the user sold the holding. Match the eventual sale price to the row's `surfacedPrice` for the MAPE numerator; compute predictedDirection vs realized direction for hit-rate.
+- Population character: per-user, per-holding — the analyst can stratify by user cohort, holding age, and (after CF-PR-E-COMPLETE) by gradingCost-adjusted P&L.
+
+**routedFromHolding=false (broad eBay-sold cohort)** — join key: `(cardsightCardId, timestamp)`:
+- Source enums: `compiq-search-freetext`, `compiq-price-freetext`, `compiq-price-by-id`, `compiq-bulk-freetext`, `compiq-grade-premium`, `compiq-estimate-structured`, `compiq-simulate-whatif`, `price-alert-evaluator`.
+- Outcome source: any eBay/Cardsight sale of the same `cardsightCardId` within the prediction's forward window (§4.3 N-day cutoff). The cohort is population-level — no "owner" of the sale.
+- Population character: every public-route call contributes; per-user analytics not possible (userId may be null for compiq-* paths).
+
+The flag separation enables clean per-cohort decomposition of the surfaced-price MAPE without per-row `userId IS NULL` heuristics. KQL pattern: `prediction_log | where joinable | where routedFromHolding == true | summarize ... by source` decomposes the portfolio cohort by upstream entry point.
+
+**Attribution caveat:** same-card predictions arriving from different sources within the dedup window collapse to one row with the first arriver's source. A portfolio-reprice coincident with a free-text query for the same card can therefore land as `routedFromHolding=false`, slightly undercounting the portfolio cohort in §4.2. Expected negligible at current (single-user / low-coincidence) rates; revisit if the portfolio cohort appears undercounted relative to reprice volume.
 
 ### 2.4 Write path — fire-and-forget, mirroring `trend_history`
 
