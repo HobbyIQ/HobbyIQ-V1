@@ -19,7 +19,7 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 
 ## The problems being solved
 
-**1. Silent prediction regression (reframed).** The router's `primary_mode_cardhedge_namespace_only` short-circuit in `CARDSIGHT_MODE=exclusive` returns `[]` for cardhedge-namespace IDs. Header comment at `cardsight.router.ts` L17-L20 explicitly states Cardsight pricing is never called for cardhedge IDs in this iteration. Severity cannot be quantified from existing telemetry (warn captured at ~9% in App Insights). Phase 1 Track B builds the migration that closes this gap.
+**1. Silent prediction regression (reframed).** **RESOLVED 2026-06-01.** Warn `primary_mode_cardhedge_namespace_only` removed by CF-CARDHEDGE-HARD-CUTOVER (`10ad39d`, 2026-05-29) plus the antecedent CF-PRICE-BY-ID-MIGRATION (`5640084`). Step-0 verification on 2026-06-01: 0 warns over last 7d, 0 warns over last 30d; warn-emit string grep-zero in `backend/src/`; `getCardSalesRouted` is a 21-line Cardsight-only passthrough with no namespace discriminant and no `[]` short-circuit; the pinned-cardId path at `compiqEstimate.service.ts` now calls `getPricing()` directly. The bug's prerequisite (`cardhedge.client.ts`) was deleted by `10ad39d`. *(Historical for reference:* the router's `primary_mode_cardhedge_namespace_only` short-circuit in `CARDSIGHT_MODE=exclusive` returned `[]` for cardhedge-namespace IDs. Header comment at `cardsight.router.ts` L17-L20 explicitly stated Cardsight pricing was never called for cardhedge IDs in that iteration. Severity could not be quantified from existing telemetry (warn captured at ~9% in App Insights). Phase 1 Track B was scoped to close this gap; structurally eliminated ahead of schedule by the hard cutover.*)
 
 **2. Card Hedge dependency (resolved at router; cleanup pending).** Card Hedge subscription cancelled 2026-05-19. CH is functionally disconnected at the router (`CARDSIGHT_MODE=exclusive` + Site B short-circuit returns `[]` without calling CH at prediction time). Remaining work is code/config cleanup: delete the client, remove env vars, disable the ingestion function, scrub docs.
 
@@ -70,7 +70,7 @@ Known gaps carried forward:
 
 **Phase 1 success criteria:**
 - Track A: writer flowing, soak completes without backslide, Day-10 schema-gap decisions made.
-- Track B: zero `primary_mode_cardhedge_namespace_only` warns post-deploy; no direct `cardhedge.client` imports from route files; endpoint success rates unchanged.
+- Track B: zero `primary_mode_cardhedge_namespace_only` warns post-deploy; no direct `cardhedge.client` imports from route files; endpoint success rates unchanged. **MET 2026-06-01.** Verified zero warns over both 7d and 30d windows on App Insights; `cardhedge.client.ts` deleted entirely by CF-CARDHEDGE-HARD-CUTOVER (`10ad39d`), so no direct imports possible.
 
 ### Phase 2 — REMOVED
 
