@@ -1732,6 +1732,12 @@ export async function computeEstimate(
       body.gradeValue !== undefined
         ? String(body.gradeValue)
         : parsed?.grade ?? undefined,
+    // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+    // pass effectiveIsAuto so resolveCardId can re-select candidates
+    // whose card-number auto-prefix matches user intent (the Q8'' wrong-
+    // card guard's upstream half). effectiveIsAuto was computed at L1648
+    // from body.isAuto || /\b(auto|autograph|autographed)\b/.test(body.parallel).
+    isAuto: effectiveIsAuto,
   };
 
   let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardsightCardId, queryContext);

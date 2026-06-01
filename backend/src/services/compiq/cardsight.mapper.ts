@@ -39,6 +39,18 @@ export interface CompIQQueryInput {
   cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: string;
+  /**
+   * CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+   * effectiveIsAuto from upstream — compiqEstimate computes it from
+   * (body.isAuto || /\b(auto|autograph|autographed)\b/.test(body.parallel))
+   * at compiqEstimate.service.ts:1648. When supplied, _resolveCardId
+   * compares the scored top candidate's card-number auto-prefix against
+   * this flag and attempts a single-pass re-resolve to a matching
+   * candidate from the scored pool if mismatched. When omitted, the
+   * legacy non-auto-aware selection path is preserved (older callers
+   * unaffected).
+   */
+  isAuto?: boolean;
 }
 
 export interface CardsightResolution {
@@ -267,11 +279,77 @@ export function tokenizeParallel(name: string): string[] {
 // Safety fallback: when no parallel matches strictly, parallelId stays null
 // and getPricing is called without a parallel filter — returns the full
 // pricing pool, downstream filtering can disambiguate.
-function parallelMatches(input: string, candidate: string): boolean {
+function parallelMatchesStrict(input: string, candidate: string): boolean {
   const inputTokens = tokenizeParallel(input).sort();
   const candidateTokens = tokenizeParallel(candidate).sort();
   if (inputTokens.length !== candidateTokens.length) return false;
   return inputTokens.every((t, i) => t === candidateTokens[i]);
+}
+
+/**
+ * CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+ * loose CONTIGUOUS-PREFIX matcher used as a SECOND pass after
+ * parallelMatchesStrict misses. User tokens must appear as a contiguous
+ * prefix of the candidate's token list, in the same order — NOT a free
+ * subset.
+ *
+ * Why prefix-and-not-subset: defect #2 (preserved in
+ * `cardsight.mapper.test.ts` "defect #2 preserved: 'Refractor' still
+ * does NOT match 'Chrome Blue Refractor'") requires that a single
+ * generic token like "Refractor" does NOT match a multi-word parallel
+ * where the generic token is a SUFFIX. A subset matcher would bind
+ * "Refractor" → "Chrome Blue Refractor"; a prefix matcher rejects
+ * that (catalog tokens[0] = "chrome" ≠ user tokens[0] = "refractor")
+ * while still binding "gold" → "Gold Refractor" (both [0] = "gold").
+ *
+ * `tokenizeParallel` already case-folds and splits on `[\s\-/]+`, so
+ * the prefix matcher inherits Cardsight's "MIni-Diamond" typo
+ * tolerance (lowercase) and the hyphen↔space normalization
+ * ("mini diamond" ↔ "MIni-Diamond" → both ["mini","diamond"]).
+ *
+ * Safety: the caller (resolveParallelOnCandidate) MUST sort matches by
+ * ascending name token-count so when multiple parallels start with the
+ * user's tokens ("Gold Refractor", "Gold Wave Refractor", "Shimmer
+ * Gold Refractor") the SHORTEST wins. This preserves the spirit of
+ * defect #2 (avoid over-permissive ambiguous matches) while loosening
+ * enough to bind the bare-color-name input pattern.
+ *
+ * Disabled by passing allowLoose=false to resolveParallelOnCandidate
+ * (set by the auto-prefix re-resolve guard when no corrected candidate
+ * exists — see _resolveCardId). This keeps the Q8'' wrong-card guard
+ * intact on auto/base mismatches the re-resolve couldn't fix.
+ */
+function parallelMatchesLoose(input: string, candidate: string): boolean {
+  const inputTokens = tokenizeParallel(input);
+  const candidateTokens = tokenizeParallel(candidate);
+  if (inputTokens.length === 0) return false;
+  if (inputTokens.length > candidateTokens.length) return false;
+  for (let i = 0; i < inputTokens.length; i++) {
+    if (inputTokens[i] !== candidateTokens[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+ * canonical autograph card-number prefix matcher. Mirrors the regex at
+ * compiqEstimate.service.ts:1933 (CARD_NUMBER_AUTO_PREFIX_RE) — kept as
+ * a sibling here so the resolver can apply the same auto-prefix
+ * detection during candidate selection without depending on the
+ * estimate-service layer.
+ *
+ * Returns true when the resolved cardIdentity.number starts with a
+ * known Cardsight autograph prefix (CPA / BCPA / BPA / BCRRA / BCRA /
+ * CRA / BSA / BCA / TCA / USA / BBPA / BSPA / AU / FA / ROA),
+ * separated from the rest of the SKU by `-`, `_`, whitespace, or end
+ * of string.
+ */
+const CARD_NUMBER_AUTO_PREFIX_RE =
+  /^(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa)([-_\s]|$)/i;
+
+function isAutoPrefix(cardNumber: string | null | undefined): boolean {
+  if (!cardNumber) return false;
+  return CARD_NUMBER_AUTO_PREFIX_RE.test(cardNumber.trim());
 }
 
 // ───── Internal: resolution worker (uncached) ────────────────────────────────
@@ -408,7 +486,14 @@ async function _resolveCardId(
 
   // Step B: single candidate? Done. Skip pricing probe.
   if (candidates.length === 1) {
-    return resolveParallelOnCandidate(candidates[0], input, warnings, "exact");
+    const single = applyAutoPrefixGuard(candidates[0], [], input, warnings, query);
+    return resolveParallelOnCandidate(
+      single.chosen,
+      input,
+      warnings,
+      "exact",
+      single.allowLooseParallelMatch,
+    );
   }
 
   // Step C: pricing-probe disambiguation (defect #5). Cardsight returns
@@ -436,7 +521,15 @@ async function _resolveCardId(
     warnings.push(
       `${topK.length} top candidates all had zero pricing data — using top-ranked.`,
     );
-    return resolveParallelOnCandidate(candidates[0], input, warnings, "likely");
+    const fallbackPool = scored.map((s) => ({ candidate: s.candidate, records: s.records }));
+    const empty = applyAutoPrefixGuard(candidates[0], fallbackPool, input, warnings, query);
+    return resolveParallelOnCandidate(
+      empty.chosen,
+      input,
+      warnings,
+      "likely",
+      empty.allowLooseParallelMatch,
+    );
   }
 
   if (dataBearingCount > 1) {
@@ -452,7 +545,83 @@ async function _resolveCardId(
     );
   }
 
-  return resolveParallelOnCandidate(scored[0].candidate, input, warnings, dataBearingCount === 1 ? "exact" : "likely");
+  const guarded = applyAutoPrefixGuard(scored[0].candidate, scored, input, warnings, query);
+  return resolveParallelOnCandidate(
+    guarded.chosen,
+    input,
+    warnings,
+    dataBearingCount === 1 ? "exact" : "likely",
+    guarded.allowLooseParallelMatch,
+  );
+}
+
+/**
+ * CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+ * autograph-prefix re-resolve guard. Two outcomes when input.isAuto is
+ * supplied:
+ *
+ *   1. Chosen candidate's card-number auto-prefix matches input.isAuto
+ *      → return chosen as-is with allowLooseParallelMatch=true.
+ *   2. Chosen candidate's auto-prefix MISMATCHES input.isAuto →
+ *      look for a corrected candidate in the scored pool whose
+ *      auto-prefix matches AND has pricing records > 0. Prefer the
+ *      highest-records match (scored[] is already sorted by records desc).
+ *      If found, swap to it (loose match allowed). If not, keep the
+ *      original chosen card AND set allowLooseParallelMatch=false so
+ *      the strict matcher's miss propagates as a parallelNotFound
+ *      warning — which the downstream Q8'' guard (compiqEstimate.service.ts
+ *      :1937) reads to skip the entire tier ladder. Architectural rule:
+ *      the loose matcher is ONLY ever applied on a card whose auto-ness
+ *      we've actually verified.
+ *
+ * When input.isAuto is undefined (legacy callers), this is a no-op.
+ */
+function applyAutoPrefixGuard(
+  chosen: CardsightCatalogResult,
+  pool: Array<{ candidate: CardsightCatalogResult; records: number }>,
+  input: CompIQQueryInput,
+  warnings: string[],
+  query: string,
+): { chosen: CardsightCatalogResult; allowLooseParallelMatch: boolean } {
+  if (input.isAuto === undefined) {
+    return { chosen, allowLooseParallelMatch: true };
+  }
+  const chosenIsAuto = isAutoPrefix(chosen.number);
+  if (chosenIsAuto === input.isAuto) {
+    return { chosen, allowLooseParallelMatch: true };
+  }
+  const corrected = pool.find(
+    (s) => s.records > 0 && isAutoPrefix(s.candidate.number) === input.isAuto,
+  );
+  if (corrected) {
+    log.info("auto_prefix_reresolve_success", {
+      query,
+      fromCardId: chosen.id,
+      fromNumber: chosen.number,
+      toCardId: corrected.candidate.id,
+      toNumber: corrected.candidate.number,
+      toRecords: corrected.records,
+      userIsAuto: input.isAuto,
+      endpoint: "resolveCardId",
+    });
+    warnings.push(
+      `Re-resolved from "${chosen.number}" to "${corrected.candidate.number}" (auto-prefix corrected for ${input.isAuto ? "auto" : "base"} request).`,
+    );
+    return { chosen: corrected.candidate, allowLooseParallelMatch: true };
+  }
+  log.warn("auto_prefix_reresolve_failed", {
+    query,
+    chosenCardId: chosen.id,
+    chosenNumber: chosen.number,
+    chosenIsAuto,
+    userIsAuto: input.isAuto,
+    candidatePoolSize: pool.length,
+    endpoint: "resolveCardId",
+  });
+  // No corrected candidate available in pool — keep the wrong-prefix
+  // candidate but force strict-only parallel matching downstream so the
+  // Q8'' wrong-card guard's parallelNotFound signal is preserved.
+  return { chosen, allowLooseParallelMatch: false };
 }
 
 async function resolveParallelOnCandidate(
@@ -460,6 +629,14 @@ async function resolveParallelOnCandidate(
   input: CompIQQueryInput,
   warnings: string[],
   matchConfidence: "exact" | "likely",
+  // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+  // when false, ONLY parallelMatchesStrict is consulted — the loose
+  // subset-with-shorter-preference fallback is skipped. Set by the
+  // auto-prefix re-resolve guard in _resolveCardId when the candidate
+  // pool didn't contain a corrected auto-side match. Preserves the
+  // Q8'' wrong-card guard's load-bearing parallelNotFound signal in
+  // exactly the cases the guard is meant to catch.
+  allowLooseParallelMatch: boolean = true,
 ): Promise<CardsightResolution> {
   let parallelId: string | null = null;
   if (input.parallel) {
@@ -475,17 +652,60 @@ async function resolveParallelOnCandidate(
         `Could not load card detail for id=${topCard.id} to resolve parallel "${input.parallel}".`,
       );
     } else {
-      const matched = detail.parallels.find((p) =>
-        parallelMatches(input.parallel!, p.name),
+      // Pass 1: strict set-equality (defect #2 semantics — exact match only).
+      const strictMatched = detail.parallels.find((p) =>
+        parallelMatchesStrict(input.parallel!, p.name),
       );
-      if (matched) {
-        parallelId = matched.id;
+      if (strictMatched) {
+        parallelId = strictMatched.id;
+      } else if (allowLooseParallelMatch) {
+        // Pass 2: loose subset match with shorter-name preference. Sort
+        // matches by ascending token count (then by raw name length as
+        // tiebreak) and pick the shortest. This binds "gold" → "Gold
+        // Refractor" (2 tokens) over "Gold Wave Refractor" (3) or
+        // "Shimmer Gold Refractor" (3) — preserving the spirit of
+        // defect #2 (avoid the over-permissive "wins by iteration
+        // order" failure mode) while loosening enough to bind the
+        // common bare-color-name input pattern.
+        const looseMatches = detail.parallels.filter((p) =>
+          parallelMatchesLoose(input.parallel!, p.name),
+        );
+        if (looseMatches.length > 0) {
+          looseMatches.sort((a, b) => {
+            const aTokens = tokenizeParallel(a.name).length;
+            const bTokens = tokenizeParallel(b.name).length;
+            if (aTokens !== bTokens) return aTokens - bTokens;
+            return a.name.length - b.name.length;
+          });
+          const looseMatched = looseMatches[0];
+          parallelId = looseMatched.id;
+          log.info("parallel_loose_match", {
+            cardId: topCard.id,
+            requestedParallel: input.parallel,
+            matchedParallel: looseMatched.name,
+            matchedParallelId: looseMatched.id,
+            candidatesConsidered: looseMatches.length,
+            endpoint: "resolveCardId",
+          });
+        } else {
+          log.warn("parallel_not_found", {
+            cardId: topCard.id,
+            requestedParallel: input.parallel,
+            availableParallelCount: detail.parallels.length,
+            endpoint: "resolveCardId",
+            allowLooseParallelMatch,
+          });
+          warnings.push(
+            `Parallel "${input.parallel}" not found among ${detail.parallels.length} parallel(s) — returning cardId only.`,
+          );
+        }
       } else {
         log.warn("parallel_not_found", {
           cardId: topCard.id,
           requestedParallel: input.parallel,
           availableParallelCount: detail.parallels.length,
           endpoint: "resolveCardId",
+          allowLooseParallelMatch,
         });
         warnings.push(
           `Parallel "${input.parallel}" not found among ${detail.parallels.length} parallel(s) — returning cardId only.`,
@@ -531,6 +751,12 @@ function buildCacheKey(input: CompIQQueryInput): string {
     (input.cardNumber ?? "").toLowerCase().trim(),
     (input.gradeCompany ?? "").toLowerCase().trim(),
     String(input.gradeValue ?? ""),
+    // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+    // isAuto drives auto-prefix re-resolve in _resolveCardId; same query
+    // with different isAuto values can resolve to DIFFERENT cardIds, so
+    // it must shard cache entries. `isAuto=undefined` (legacy callers)
+    // serializes to "" — same key as pre-CF inputs, no cache invalidation.
+    input.isAuto === undefined ? "" : input.isAuto ? "auto" : "base",
   ].join("|");
 }
 

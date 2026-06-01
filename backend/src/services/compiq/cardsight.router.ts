@@ -91,6 +91,10 @@ export type QueryContext = {
   cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: string;
+  // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
+  // effectiveIsAuto from compiqEstimate, threaded so resolveCardId can
+  // re-select candidates whose card-number auto-prefix matches user intent.
+  isAuto?: boolean;
 };
 
 export type FindCompsRoutedOptions = {
@@ -111,6 +115,8 @@ function toCardsightQuery(query: string, opts: FindCompsRoutedOptions) {
     cardNumber: ctx.cardNumber,
     gradeCompany: opts.gradeCompany ?? ctx.gradeCompany,
     gradeValue: opts.gradeValue ?? ctx.gradeValue,
+    // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01)
+    isAuto: ctx.isAuto,
   };
 }
 
