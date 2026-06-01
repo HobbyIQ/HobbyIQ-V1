@@ -11,6 +11,14 @@ const MLB_BASE = "https://statsapi.mlb.com/api/v1";
 export interface MlbMomentum {
   playerName: string;
   mlbPlayerId: number | null;
+  /**
+   * DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31): matched MLB
+   * Stats API sportId from the resolver fanout (1=MLB, 11=AAA, 12=AA,
+   * 13=A+, 14=A, 16=Rookie). Null when resolution failed at every level.
+   * Drives `level` here and `league` + `level` on the persisted
+   * `player_trends` doc — see playerScore.service.ts:buildPlayerScore.
+   */
+  sportId: number | null;
   statGroup: "hitting" | "pitching" | null;
   /** recent / baseline ratio. 1.0 = neutral. */
   momentumRatio: number;
@@ -21,7 +29,7 @@ export interface MlbMomentum {
   milestone: string | null;
   team: string | null;
   position: string | null;
-  level: string | null;          // null for MLB, "AAA"/"AA"/etc for minor leagues
+  level: string | null;          // null for MLB (sportId=1), "AAA"/"AA"/etc for MiLB
   status: "ok" | "player_not_found" | "no_game_log" | "fetch_failed";
   updatedAt: string;
 }
@@ -37,6 +45,7 @@ function neutral(playerName: string, status: MlbMomentum["status"]): MlbMomentum
   return {
     playerName,
     mlbPlayerId: null,
+    sportId: null,
     statGroup: null,
     momentumRatio: 1.0,
     multiplier: 1.0,
@@ -65,6 +74,14 @@ async function fetchJson(url: string, timeoutMs = 8000): Promise<any | null> {
   }
 }
 
+/**
+ * @deprecated DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31):
+ * dead code. Was the sole helper for `getMlbMomentum`'s player lookup;
+ * replaced by `searchPlayerPerson` (sportId-iterating across MLB + MiLB
+ * levels 11-16). Zero call sites remain in the repo. Kept in place
+ * temporarily to avoid surprise removal during the canonicalize CF cycle;
+ * delete in a follow-up cleanup pass once Phase 1 is stable in production.
+ */
 async function getPlayerId(playerName: string): Promise<{
   id: number;
   team: string | null;
@@ -125,12 +142,31 @@ export async function getMlbMomentum(playerName: string): Promise<MlbMomentum> {
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  const found = await getPlayerId(playerName);
-  if (!found) {
+  // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31): resolve via
+  // searchPlayerPerson (MLB → MiLB fanout across sportIds 1/11/12/13/14/16)
+  // instead of the prior MLB-only getPlayerId. MiLB players now resolve to
+  // a numeric mlbPlayerId AND carry the matched sportId for league/level
+  // derivation downstream in buildPlayerScore. Negative cache at the
+  // getMlbMomentum level (CACHE_TTL_MS=2h) absorbs the 6-call cost on
+  // un-resolvable names — only the first miss pays.
+  const hit = await searchPlayerPerson(playerName);
+  if (!hit) {
     const v = neutral(playerName, "player_not_found");
     cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: v });
     return v;
   }
+  const personId = Number(hit.person?.id);
+  if (!Number.isFinite(personId) || personId <= 0) {
+    const v = neutral(playerName, "player_not_found");
+    cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: v });
+    return v;
+  }
+  const found = {
+    id: personId,
+    team: hit.person?.currentTeam?.name ?? null,
+    position: hit.person?.primaryPosition?.abbreviation ?? null,
+    sportId: hit.sportId,
+  };
 
   const season = new Date().getUTCFullYear();
   let group: "hitting" | "pitching" | null = null;
@@ -151,8 +187,14 @@ export async function getMlbMomentum(playerName: string): Promise<MlbMomentum> {
     const v: MlbMomentum = {
       ...neutral(playerName, "no_game_log"),
       mlbPlayerId: found.id,
+      sportId: found.sportId,
       team: found.team,
       position: found.position,
+      // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1: null for MLB (sportId=1),
+      // mapped value for MiLB. SPORT_ID_TO_LEVEL[1] is "MLB", but the
+      // MlbMomentum.level field's contract is "null for MLB" per its own
+      // docstring above + the iOS chip-rendering convention.
+      level: found.sportId === 1 ? null : levelFromSport(found.sportId),
     };
     cache.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: v });
     return v;
@@ -199,6 +241,7 @@ export async function getMlbMomentum(playerName: string): Promise<MlbMomentum> {
   const value: MlbMomentum = {
     playerName,
     mlbPlayerId: found.id,
+    sportId: found.sportId,
     statGroup: group,
     momentumRatio: Math.round(momentum * 1000) / 1000,
     multiplier,
@@ -207,7 +250,9 @@ export async function getMlbMomentum(playerName: string): Promise<MlbMomentum> {
     milestone,
     team: found.team,
     position: found.position,
-    level: null,
+    // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1: null for MLB (sportId=1) per
+    // the MlbMomentum.level docstring contract; mapped value for MiLB.
+    level: found.sportId === 1 ? null : levelFromSport(found.sportId),
     status: "ok",
     updatedAt: new Date().toISOString(),
   };
@@ -387,16 +432,26 @@ function extractCollege(person: any): string | null {
 export { levelFromSport };
 
 export async function searchMlbPerson(playerName: string): Promise<any | null> {
-  return searchPlayerPerson(playerName);
+  const hit = await searchPlayerPerson(playerName);
+  return hit?.person ?? null;
 }
 
-async function searchPlayerPerson(playerName: string): Promise<any | null> {
+/**
+ * DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31): now returns the
+ * matched sportId alongside the person payload so callers can derive
+ * league + level. `searchMlbPerson` (public) unwraps to preserve its
+ * person-only contract for `dailyiq.routes.ts:574` and other consumers
+ * that don't need the sportId.
+ */
+async function searchPlayerPerson(
+  playerName: string,
+): Promise<{ person: any; sportId: number } | null> {
   // First try MLB roster (sportId=1) — most common case.
   const mlb = await fetchJson(
     `${MLB_BASE}/people/search?names=${encodeURIComponent(playerName)}&sportId=1`,
   );
   const mlbHit = Array.isArray(mlb?.people) && mlb.people.length > 0 ? mlb.people[0] : null;
-  if (mlbHit) return mlbHit;
+  if (mlbHit) return { person: mlbHit, sportId: 1 };
 
   // Fall back to MiLB sports — search each level until we hit. The search
   // endpoint only accepts a single sportId at a time.
@@ -405,7 +460,7 @@ async function searchPlayerPerson(playerName: string): Promise<any | null> {
       `${MLB_BASE}/people/search?names=${encodeURIComponent(playerName)}&sportId=${sid}`,
     );
     const arr = data?.people;
-    if (Array.isArray(arr) && arr.length > 0) return arr[0];
+    if (Array.isArray(arr) && arr.length > 0) return { person: arr[0], sportId: sid };
   }
   return null;
 }
@@ -456,7 +511,10 @@ export async function getPlayerSeasonAndCareerStats(
   const cached = statsCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  const person = await searchPlayerPerson(trimmed);
+  // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1: searchPlayerPerson now returns
+  // {person, sportId}; this consumer only needs the inner person object.
+  const found = await searchPlayerPerson(trimmed);
+  const person = found?.person ?? null;
   if (!person || !person.id) {
     const v = neutralStats(trimmed, "player_not_found");
     statsCache.set(key, { expiresAt: Date.now() + STATS_CACHE_TTL_MS, value: v });

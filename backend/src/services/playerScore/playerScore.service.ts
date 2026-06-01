@@ -24,7 +24,7 @@ import {
   type PlayerScore,
   type TrendSnapshot,
 } from "../../types/playerScore.js";
-import { getMlbMomentum } from "./mlbStats.service.js";
+import { getMlbMomentum, levelFromSport } from "./mlbStats.service.js";
 import { getRecentSnapshotsByPlayer } from "./trendHistory.service.js";
 
 const DB_NAME = process.env.COSMOS_DB ?? process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -175,7 +175,7 @@ export function computeMarketScore(
  */
 export async function computePerformanceScore(
   playerName: string,
-): Promise<PerformanceScore & { mlbPlayerId: number | null; team: string | null; position: string | null }> {
+): Promise<PerformanceScore & { mlbPlayerId: number | null; sportId: number | null; team: string | null; position: string | null }> {
   const mom = await getMlbMomentum(playerName);
   if (mom.status !== "ok") {
     return {
@@ -187,6 +187,7 @@ export async function computePerformanceScore(
       milestone: mom.milestone,
       confidence: "low",
       mlbPlayerId: mom.mlbPlayerId,
+      sportId: mom.sportId,
       team: mom.team,
       position: mom.position,
     };
@@ -203,6 +204,7 @@ export async function computePerformanceScore(
     milestone: mom.milestone,
     confidence: "high",
     mlbPlayerId: mom.mlbPlayerId,
+    sportId: mom.sportId,
     team: mom.team,
     position: mom.position,
   };
@@ -253,7 +255,12 @@ function overallConfidence(market: Confidence, performance: Confidence): Confide
 export function buildPlayerScore(
   playerName: string,
   market: MarketScore,
-  performance: PerformanceScore & { mlbPlayerId: number | null; team: string | null; position: string | null },
+  performance: PerformanceScore & {
+    mlbPlayerId: number | null;
+    sportId: number | null;
+    team: string | null;
+    position: string | null;
+  },
   dataSource: PlayerScore["dataSource"] = "realtime_estimate",
 ): PlayerScore {
   const blended = computePlayerIQScore(market, performance);
@@ -261,6 +268,18 @@ export function buildPlayerScore(
     performance.mlbPlayerId != null
       ? String(performance.mlbPlayerId)
       : playerNameSlug(playerName);
+  // DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1: derive league + level from the
+  // sportId carried out of the MiLB-aware resolver. sportId=1 → MLB / level
+  // null per the iOS chip convention; any other resolved sportId is MiLB
+  // with its mapped level (AAA/AA/A+/A/Rookie). Unresolved (sportId null
+  // because mlbPlayerId null) falls back to the legacy "unknown" league —
+  // those rows are filtered out by the slug-fallback drop in §3 anyway.
+  const league: PlayerScore["league"] =
+    performance.sportId === 1 ? "MLB" : performance.sportId != null ? "MiLB" : "unknown";
+  const level: PlayerScore["level"] =
+    performance.sportId == null || performance.sportId === 1
+      ? null
+      : levelFromSport(performance.sportId);
   return {
     id: playerId,
     playerId,
@@ -268,8 +287,8 @@ export function buildPlayerScore(
     mlbPlayerId: performance.mlbPlayerId,
     team: performance.team,
     position: performance.position,
-    league: performance.mlbPlayerId ? "MLB" : "unknown",
-    level: null,
+    league,
+    level,
     market,
     performance: {
       performanceScore: performance.performanceScore,
