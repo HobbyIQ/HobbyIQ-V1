@@ -416,19 +416,29 @@ A **realized sale price** for the predicted card identity, observed in a known t
 **Per prediction row at time T:**
 
 ```
-prediction_row (T, cardsightCardId, predictedPrice, fairMarketValue, mechanism, ...)
+prediction_row (T, source, userId, holdingId, routedFromHolding,
+                cardsightCardId, predictedPrice, surfacedPrice,
+                fairMarketValue, predictionDirection, mechanism, ...)
    ↓ join
-Source A outcomes:
-  WHERE PortfolioLedgerEntry.holdingId.cardsightCardId == prediction_row.cardsightCardId
-    AND soldAt BETWEEN T AND T + windowDays
 
-Source B outcomes:
-  WHERE CardsightSaleRecord.cardId == prediction_row.cardsightCardId
-    AND saleDate STRICTLY > prediction.timestamp     // NEVER inclusive of T
-    AND saleDate ≤ T + windowDays
+Source A — portfolio cohort (routedFromHolding=true ONLY):
+  ON prediction_row.holdingId == PortfolioLedgerEntry.holdingId
+ AND prediction_row.userId    == PortfolioLedgerEntry.userId
+ AND PortfolioLedgerEntry.soldAt > prediction_row.timestamp     // strict; see below
+ AND PortfolioLedgerEntry.soldAt ≤ T + windowDays
+
+Source B — population (routedFromHolding=false): cardsightCardId-keyed
+   join against Cardsight market comps. BLOCKED — the outcome side of this
+   pipeline (durable post-T comp capture per cardsightCardId) is NOT yet
+   built. §4.2/4.3 today measure Source A only; Source B is reserved for
+   the post-eBay-Finances-ingest milestone.
 ```
 
-**Critical: Source B comps must be STRICTLY AFTER prediction time T.** Cardsight pricing endpoint returns RECENT comps including comps from BEFORE T (which drove the prediction). Joining a comp dated T-3 to a prediction emitted at T isn't measuring forecast accuracy; it's measuring fit-to-known-data — circular. The corpus pipeline MUST filter `saleDate > prediction.timestamp` strictly.
+**Why holdingId+userId (not cardsightCardId) is the Source A join key:** The CF-PREDICTION-CORPUS-CALL-CONTEXT corpus row carries `holdingId` and `userId` directly when `routedFromHolding=true`. Joining on `cardsightCardId` instead would (a) over-collapse — a single holdingId can be repriced under a different cardsightCardId after re-identification, breaking the prediction-to-sale link; and (b) over-fan-out — multiple users holding the same cardsightCardId would cross-join, attributing one user's sale to another's prediction. `(holdingId, userId)` is the durable identity of the position whose sale is the outcome.
+
+**Attribution caveat (see §2.3a):** the corpus rate-limit dedup collapses same-card predictions arriving within the window to the FIRST arriver's `source`. A row attributed to `compiq-search-freetext` may have a `portfolio-reprice` that emitted later in the same dedup window — accuracy stratifications by `source` carry a small first-arriver bias under high cross-source traffic. Negligible at single-user pre-launch volume.
+
+**Critical: Source B comps must be STRICTLY AFTER prediction time T.** Cardsight pricing endpoint returns RECENT comps including comps from BEFORE T (which drove the prediction). Joining a comp dated T-3 to a prediction emitted at T isn't measuring forecast accuracy; it's measuring fit-to-known-data — circular. The corpus pipeline MUST filter `saleDate > prediction.timestamp` strictly. (Source A's `soldAt > prediction_row.timestamp` enforces the same rule symmetrically — a sale BEFORE the prediction is the prediction's input, not its outcome.)
 
 ### 3.3 Window selection — gate to §4 methodology
 
@@ -485,11 +495,76 @@ Pinning success criteria after observing results is the canonical way bad metric
 
 This is a **comparative** claim, not an absolute. We are NOT claiming "predictedPrice is accurate to ±X%." We ARE claiming "predictedPrice beats the obvious baseline by Y% on metric Z."
 
+#### 4.2.1 Join mechanism — pinned (2026-06-01, CF-CORPUS-ACCURACY-INSTRUMENT)
+
+**Cohort:** Source A portfolio cohort only — prediction rows with `routedFromHolding=true`. Source B population path is reserved for the post-eBay-Finances-ingest milestone (see §3.2).
+
+**Legacy bucket — pre-CF-CALL-CONTEXT rows (`source="estimate"`):** rows emitted by the writer prior to the 2026-06-01 CF-PREDICTION-CORPUS-CALL-CONTEXT deploy (7fadeba) carry `source: "estimate"` (not a member of the closed `PredictionCorpusSource` enum) and lack userId/holdingId/routedFromHolding. They are structurally excluded from the portfolio cohort by the existing `routedFromHolding=true` rule — no special-case code needed. A legacy bucket that shrinks in relevance as attributed rows accumulate.
+
+**Join key:** `(holdingId, userId)` per §3.2. NOT `cardsightCardId` for this cohort.
+
+**Selection rule — "most-recent prediction BEFORE the sale" (nowcast):** For each `PortfolioLedgerEntry` with `soldAt = S`, attach the prediction row with the largest `timestamp` satisfying `timestamp < S` for that `(holdingId, userId)`. This is the "nowcast" — the surfaced price the user saw most recently *before* selling. If no prediction exists for this sale's `(holdingId, userId)` before `soldAt`, the sale is dropped from the §4.2 MAPE sample (reported as coverage gap, not zeroed).
+
+**Why nowcast (not at-acquisition, not all-predictions-in-window):**
+- *Not at-acquisition*: the prediction at time of buying the card is stale by the time of sale; §4.2's claim is that the SURFACED price (the user-facing number near sale time) is forward-accurate, not that the entry-time price was.
+- *Not all-predictions-in-window*: a holding repriced daily produces N predictions before one sale; counting all N over-weights that sale by N. Nowcast charges each sale to exactly one prediction.
+
+**Metric — MAPE:**
+```
+MAPE_4.2 = mean( | surfacedPrice − unitSalePrice | / unitSalePrice )
+           over joined (prediction, sale) pairs where unitSalePrice > 0
+```
+`surfacedPrice` is the corpus row's stored `surfacedPrice` field (the user-facing number, NOT `predictedPrice` alone — captures the `surfacedPriceSource` branch that picked it). Filter `unitSalePrice > 0` per §4.3 outcome-edge rule.
+
+**Stratifications (always reported):**
+- By `source` (per-source — the corpus CF-CALL-CONTEXT enum; portfolio-* sources expected to dominate this cohort)
+- By `fmvMechanism` (`main-pipeline` vs `sibling-pool-weighted-median` vs `unavailable`)
+
+Other §4.3 stratifications (predictedPriceMechanism, trendIQ.coverage, compsUsed bin) apply to the §4.3 hit-rate, not §4.2 MAPE.
+
 ### 4.3 Metrics — direction hit-rate primary; MAPE secondary
 
 Per [[product_actionable_seller_intelligence]], the value prop is **timed action** (sell/hold/list), not exact-price. Direction matters more than magnitude.
 
-**Primary metric: Direction Hit-Rate.**
+#### 4.3.1 Join mechanism — pinned (2026-06-01, CF-CORPUS-ACCURACY-INSTRUMENT)
+
+§4.3 differs from §4.2's nowcast because the claim under test is *forward-direction at a horizon*, not *price at sale-time*. The prediction whose horizon ENDS at the sale is the one whose direction call is graded.
+
+**Cohort:** Same as §4.2 — Source A portfolio cohort only (routedFromHolding=true). Source B blocked per §3.2.
+
+**Windows reported separately, NEVER blended:**
+- `7d` (price-class horizon — compsMomentum + eBay-class signals)
+- `30d` (attention-class horizon — trends, reddit, youtube blended)
+
+A single sale is evaluated INDEPENDENTLY at each window. The 7d hit-rate and the 30d hit-rate are two distinct metrics produced by two distinct joins over the same outcome table.
+
+**Selection rule — "nearest to (soldAt − horizon) within tolerance":** Per window `W ∈ {7d, 30d}` and each `PortfolioLedgerEntry` with `soldAt = S`:
+
+1. Target prediction time: `T_target = S − W`.
+2. Tolerance: `±20% × W`. So `±1.4d` at 7d, `±6d` at 30d. (Tunable default; pinned at 20% pending empirical re-tune.)
+3. Candidate set: prediction rows for this `(holdingId, userId)` with `timestamp ∈ [T_target − 0.20·W, T_target + 0.20·W]`.
+4. From candidates, pick the prediction with `|timestamp − T_target|` minimized (nearest).
+5. If candidate set is empty: sale DROPPED from this window's sample. Reported as coverage gap, NOT as a wrong answer.
+
+**Why nearest-to-(soldAt−horizon) and not nowcast:** §4.3 grades a forward call ("at T, this card was going UP by S=T+W"). The nowcast at sale time has zero forward content — it's looking AT the sale. The prediction made approximately `W` days before the sale is the one whose direction was a forward call; that's the one graded.
+
+**Why ±20% tolerance:** Predictions don't land exactly at `S−W`. At ±20%, a daily-repriced holding will typically have ≥1 prediction in tolerance for both windows; tighter (e.g. ±10%) under-covers, looser (≥±50%) starts grading predictions whose "horizon" arrived materially before/after the sale. ±20% is the initial defensible value; re-tune against measured coverage once the corpus has volume.
+
+**Denominator — closed-window predictions only:** A prediction at time T is eligible for the §4.3 denominator at window W only if `T + W < now` (the horizon has closed). Open-window predictions are excluded from BOTH numerator and denominator at that window. Reporting:
+
+```
+Closed-window predictions (W=7d):  P_7
+  Joined to a sale within tolerance:  J_7  → hit-rate = H_7 / J_7
+  No sale in tolerance window:        P_7 − J_7  → coverage = J_7 / P_7
+```
+
+Coverage gap is reported alongside hit-rate; never silently absorbed into the denominator. A 60% hit-rate on 5% coverage is a different claim than 60% on 90% coverage.
+
+**Reference FMV — the corpus row's stored `fairMarketValue`:** `actual_direction` is computed against the prediction row's STORED `fairMarketValue` field (the FMV as it stood at prediction time T), NOT a recomputed sale-time FMV. The prediction's direction call was made vs that FMV; the outcome must be evaluated vs that same FMV for the comparison to be coherent.
+
+**Same DIRECTION_BAND_PCT on both sides:** `actual_direction` uses the same band as the corpus row's `predictionDirection` (the symmetry condition spelled out below this subsection). No drift between bands.
+
+#### 4.3.2 Primary metric — Direction Hit-Rate (3-class exact match + confusion matrix)
 
 **Direction band — single named constant `DIRECTION_BAND_PCT`:**
 
@@ -510,6 +585,15 @@ For each (prediction, outcome) pair:
 - Hit = `predicted_direction === actual_direction`
 
 Strict `>` and `<` comparisons; ties at the threshold fall into `stable`. Same band applied symmetrically to BOTH prediction direction (corpus derivation) and outcome direction (this metric).
+
+**Hit-rate is reported in two flavors — primary and secondary:**
+
+| Flavor | Definition | When to cite |
+|---|---|---|
+| **PRIMARY — 3-class exact match** | Hit iff `predicted_direction == actual_direction` ∈ {rising, falling, stable}. Reported alongside the 3×3 confusion matrix (rows = predicted, cols = actual). | The headline number for §4.2/§4.3 claims. The confusion matrix exposes WHERE the predictions land — a model that says "stable" for every rising actual is graded honestly. |
+| **SECONDARY — 2-class up/down** | Stable predictions and stable actuals BOTH dropped from sample. Hit iff `sign(predicted - FMV) == sign(actual - FMV)` over the non-stable subset. | Diagnostic for "when we DO make a directional call, how often is the direction right?" Useful when stable share is high enough to dominate the 3-class metric. |
+
+The 3×3 confusion matrix is mandatory alongside the 3-class hit-rate. Reporting just the aggregate hides the failure modes (e.g. "60% hit-rate" can be 90% on the easy stable class + 30% on the directional calls — without the matrix you cannot tell).
 
 **Why ±5% as the starting value (rationale, not finding):**
 
