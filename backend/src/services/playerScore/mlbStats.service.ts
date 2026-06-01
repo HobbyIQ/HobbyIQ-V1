@@ -411,34 +411,251 @@ export async function searchMlbPerson(playerName: string): Promise<any | null> {
   return hit?.person ?? null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-RESOLVER-COVERAGE-GAP (2026-06-01) — roster-scan primitive.
+//
+// Diagnosed cause (docs/phase0 _resolver_gap_diagnosis_2026-06-01.json):
+// /people/search?names=X is a top-K prominence index (~3 results per surname),
+// not a roster query — and the sportId parameter is a no-op on its response
+// shape. Non-prominent prospects fall through structurally. The 2026-06-01
+// orphan-purge dry-run surfaced 6 current-roster prospects missed this way
+// (agustin-acosta, gage-wood, josh-hammond, juan-tomas, justin-lamkin,
+// mason-morris) plus the Justin Lamkin not-indexed-at-all case.
+//
+// Fix: pull the canonical roster via /sports/{sid}/players?season=YYYY
+// (verified unpaginated + uncapped; full roster in one response), build an
+// in-memory normalized-name → entry index, and look up by name.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ROSTER_SPORT_IDS = [1, 11, 12, 13, 14, 16] as const;
+const ROSTER_SEASON_COUNT = 2;                          // current + previous
+const ROSTER_TTL_MS = 12 * 60 * 60 * 1000;              // 12h
+const ROSTER_FETCH_TIMEOUT_MS = 30_000;
+
+interface RosterEntry {
+  id: number;
+  fullName: string;
+  sportId: number;
+  season: number;
+  person: any;
+}
+
+interface RosterIndex {
+  builtAt: number;
+  sportSeasonsCovered: Array<{ sid: number; season: number }>;
+  nameMap: Map<string, RosterEntry[]>;
+  isStale: boolean;
+}
+
+let _rosterIndex: RosterIndex | null = null;
+let _rosterRefreshPromise: Promise<RosterIndex | null> | null = null;
+
+function normalizeNameForResolver(name: string): string {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")  // strip combining marks (accents)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchRosterForSportSeason(sid: number, season: number): Promise<RosterEntry[]> {
+  const url = `${MLB_BASE}/sports/${sid}/players?season=${season}`;
+  const data = await fetchJson(url, ROSTER_FETCH_TIMEOUT_MS);
+  if (!data || !Array.isArray(data.people)) return [];
+  const out: RosterEntry[] = [];
+  for (const p of data.people) {
+    if (!p || typeof p.id !== "number" || typeof p.fullName !== "string") continue;
+    out.push({ id: p.id, fullName: p.fullName, sportId: sid, season, person: p });
+  }
+  return out;
+}
+
+async function buildRosterIndex(): Promise<RosterIndex | null> {
+  const currentYear = new Date().getUTCFullYear();
+  const seasons: number[] = [];
+  for (let i = 0; i < ROSTER_SEASON_COUNT; i++) seasons.push(currentYear - i);
+
+  const nameMap = new Map<string, RosterEntry[]>();
+  const covered: Array<{ sid: number; season: number }> = [];
+  const failed: Array<{ sid: number; season: number }> = [];
+  let totalEntries = 0;
+
+  for (const season of seasons) {
+    for (const sid of ROSTER_SPORT_IDS) {
+      let entries: RosterEntry[];
+      try {
+        entries = await fetchRosterForSportSeason(sid, season);
+      } catch {
+        entries = [];
+      }
+      if (entries.length === 0) {
+        failed.push({ sid, season });
+        continue;
+      }
+      covered.push({ sid, season });
+      totalEntries += entries.length;
+      for (const e of entries) {
+        const key = normalizeNameForResolver(e.fullName);
+        if (!key) continue;
+        let list = nameMap.get(key);
+        if (!list) { list = []; nameMap.set(key, list); }
+        list.push(e);
+      }
+    }
+  }
+
+  if (totalEntries === 0) {
+    console.warn(JSON.stringify({
+      event: "mlb_roster_index_build_failed",
+      source: "mlbStats.service",
+      attempted: seasons.length * ROSTER_SPORT_IDS.length,
+      reason: "all_fetches_returned_empty",
+    }));
+    return null;
+  }
+
+  if (failed.length > 0) {
+    console.warn(JSON.stringify({
+      event: "mlb_roster_partial_index",
+      source: "mlbStats.service",
+      covered: covered.length,
+      failed: failed.length,
+      failedSlots: failed,
+    }));
+  }
+
+  return {
+    builtAt: Date.now(),
+    sportSeasonsCovered: covered,
+    nameMap,
+    isStale: false,
+  };
+}
+
+async function getOrBuildRosterIndex(): Promise<RosterIndex | null> {
+  // Cold start — caller blocks on the synchronous build.
+  if (_rosterIndex === null) {
+    if (_rosterRefreshPromise === null) {
+      _rosterRefreshPromise = (async () => {
+        try {
+          const built = await buildRosterIndex();
+          if (built) _rosterIndex = built;
+          return built;
+        } finally {
+          _rosterRefreshPromise = null;
+        }
+      })();
+    }
+    return await _rosterRefreshPromise;
+  }
+
+  // Warm — return current; kick off async soft-refresh if TTL expired.
+  const age = Date.now() - _rosterIndex.builtAt;
+  if (age >= ROSTER_TTL_MS && _rosterRefreshPromise === null) {
+    _rosterIndex.isStale = true;
+    _rosterRefreshPromise = (async () => {
+      try {
+        const built = await buildRosterIndex();
+        if (built) {
+          _rosterIndex = built;
+        } else {
+          console.warn(JSON.stringify({
+            event: "mlb_roster_refresh_failed",
+            source: "mlbStats.service",
+            staleSinceMs: age,
+          }));
+        }
+        return built;
+      } finally {
+        _rosterRefreshPromise = null;
+      }
+    })();
+    // Do NOT await — return current (now-stale) index immediately.
+  }
+  return _rosterIndex;
+}
+
 /**
- * DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 (2026-05-31): now returns the
- * matched sportId alongside the person payload so callers can derive
- * league + level. `searchMlbPerson` (public) unwraps to preserve its
- * person-only contract for `dailyiq.routes.ts:574` and other consumers
- * that don't need the sportId.
+ * Resolve a player name to {person, sportId} via the in-memory roster index.
+ *
+ * Returns null when:
+ *   - the index can't be built (cold-start failure)
+ *   - no roster entry matches the normalized name
+ *   - multiple roster entries with DIFFERENT ids match (ambiguous — log + null)
+ *
+ * Returns the entry with the most-recent season (ties: lowest sportId wins,
+ * so MLB beats MiLB) when exactly-one player matches across possibly-multiple
+ * (sportId, season) appearances.
  */
 async function searchPlayerPerson(
   playerName: string,
 ): Promise<{ person: any; sportId: number } | null> {
-  // First try MLB roster (sportId=1) — most common case.
-  const mlb = await fetchJson(
-    `${MLB_BASE}/people/search?names=${encodeURIComponent(playerName)}&sportId=1`,
-  );
-  const mlbHit = Array.isArray(mlb?.people) && mlb.people.length > 0 ? mlb.people[0] : null;
-  if (mlbHit) return { person: mlbHit, sportId: 1 };
+  const normalized = normalizeNameForResolver(playerName);
+  if (!normalized) return null;
 
-  // Fall back to MiLB sports — search each level until we hit. The search
-  // endpoint only accepts a single sportId at a time.
-  for (const sid of [11, 12, 13, 14, 16]) {
-    const data = await fetchJson(
-      `${MLB_BASE}/people/search?names=${encodeURIComponent(playerName)}&sportId=${sid}`,
-    );
-    const arr = data?.people;
-    if (Array.isArray(arr) && arr.length > 0) return { person: arr[0], sportId: sid };
+  const index = await getOrBuildRosterIndex();
+  if (!index) {
+    console.warn(JSON.stringify({
+      event: "mlb_roster_cold_start_failed",
+      source: "mlbStats.service",
+      playerName,
+    }));
+    return null;
   }
-  return null;
+
+  const hits = index.nameMap.get(normalized);
+  if (!hits || hits.length === 0) {
+    console.warn(JSON.stringify({
+      event: "mlb_resolver_index_miss",
+      source: "mlbStats.service",
+      playerName,
+      indexAgeMs: Date.now() - index.builtAt,
+    }));
+    return null;
+  }
+
+  const uniqueIds = new Set<number>();
+  for (const h of hits) uniqueIds.add(h.id);
+
+  if (uniqueIds.size > 1) {
+    console.warn(JSON.stringify({
+      event: "mlb_resolver_ambiguous_name",
+      source: "mlbStats.service",
+      playerName,
+      candidateIds: Array.from(uniqueIds),
+      candidates: hits.map(h => ({ id: h.id, fullName: h.fullName, sportId: h.sportId, season: h.season })),
+    }));
+    return null;
+  }
+
+  // Single player, possibly across multiple (sportId, season) appearances.
+  // Pick most-recent season; tie-break to lowest sportId (MLB=1 wins).
+  let best = hits[0];
+  for (const h of hits) {
+    if (h.season > best.season || (h.season === best.season && h.sportId < best.sportId)) {
+      best = h;
+    }
+  }
+  return { person: best.person, sportId: best.sportId };
 }
+
+/**
+ * Test-only internals — used by `mlbStatsResolverGap.test.ts` and other tests
+ * that need to reset the module-scoped roster index between cases. NOT part
+ * of the prod surface.
+ */
+export const __mlbStatsInternals = {
+  resetRosterIndex(): void {
+    _rosterIndex = null;
+    _rosterRefreshPromise = null;
+  },
+  getRosterIndex(): RosterIndex | null {
+    return _rosterIndex;
+  },
+  normalizeNameForResolver,
+};
 
 function buildGroup(
   yearSplits: any[],

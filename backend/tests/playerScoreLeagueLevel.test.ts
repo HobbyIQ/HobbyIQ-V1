@@ -21,6 +21,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import { computePerformanceScore, buildPlayerScore, __playerScoreInternals } from "../src/services/playerScore/playerScore.service";
+import { __mlbStatsInternals } from "../src/services/playerScore/mlbStats.service";
 import type { MarketScore } from "../src/types/playerScore";
 
 const { isValidCosmosId } = __playerScoreInternals;
@@ -71,6 +72,9 @@ function stubFetch(routes: Array<{ match: RegExp; body: unknown; ok?: boolean }>
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-05-31T12:00:00Z"));
+  // CF-RESOLVER-COVERAGE-GAP (2026-06-01): the roster-scan resolver caches a
+  // module-scoped index. Reset between tests so each setup builds fresh.
+  __mlbStatsInternals.resetRosterIndex();
 });
 
 afterEach(() => {
@@ -87,8 +91,11 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MLB player (sportId=1)", 
     const playerName = "Phase1Test MLBStar";
     const fetchStub = stubFetch([
       // sportId=1 resolver hit
+      // CF-RESOLVER-COVERAGE-GAP (2026-06-01): the new resolver pulls rosters
+      // via /sports/{sid}/players?season=YYYY (currentYear + previous). MLB
+      // player lands at sportId=1.
       {
-        match: /people\/search\?names=.+sportId=1$/,
+        match: /\/sports\/1\/players\?season=2026/,
         body: {
           people: [
             {
@@ -140,9 +147,9 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MLB player (sportId=1)", 
     expect(doc!.id).toBe("99001");
     expect(doc!.playerId).toBe("99001");
 
-    // Resolver was called once for sportId=1 and game-log fetched.
+    // Resolver pulled the sportId=1 roster (post-CF mechanism) + game-log.
     const urls = fetchStub.mock.calls.map((c) => c[0] as string);
-    expect(urls.some((u) => u.includes("sportId=1") && u.includes("people/search"))).toBe(true);
+    expect(urls.some((u) => /\/sports\/1\/players\?season=2026/.test(u))).toBe(true);
     expect(urls.some((u) => u.includes("people/99001/stats") && u.includes("group=hitting"))).toBe(true);
   });
 });
@@ -151,13 +158,11 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MiLB player (sportId=12 /
   it("falls through MLB + AAA, resolves at AA, returns league='MiLB' + level='AA' + game logs", async () => {
     const playerName = "Phase1Test AAProspect";
     const fetchStub = stubFetch([
-      // sportId=1 (MLB) — empty
-      { match: /people\/search\?names=.+sportId=1$/, body: { people: [] } },
-      // sportId=11 (AAA) — empty
-      { match: /people\/search\?names=.+sportId=11$/, body: { people: [] } },
-      // sportId=12 (AA) — hit
+      // CF-RESOLVER-COVERAGE-GAP (2026-06-01): roster-scan endpoint. AA
+      // prospect lands at sportId=12 / season=2026 only; other sportId
+      // rosters return empty (catch-all in stubFetch handles them).
       {
-        match: /people\/search\?names=.+sportId=12$/,
+        match: /\/sports\/12\/players\?season=2026/,
         body: {
           people: [
             {
@@ -207,14 +212,15 @@ describe("DAILYIQ-PLAYERSCORE-LEAGUE-LEVEL Phase 1 — MiLB player (sportId=12 /
     expect(doc!.id).toBe("99012");
     expect(doc!.playerId).toBe("99012");
 
-    // Resolver iterated MLB → AAA → AA (three /people/search calls).
-    const searchCalls = fetchStub.mock.calls
+    // CF-RESOLVER-COVERAGE-GAP (2026-06-01): the new resolver scans rosters
+    // once per (sportId, season) rather than iterating /people/search per
+    // sportId. Verify the AA roster GET was made (the prior MLB/AAA fanout
+    // assertion is mechanism-specific to the retired /people/search path and
+    // no longer load-bearing).
+    const rosterCalls = fetchStub.mock.calls
       .map((c) => c[0] as string)
-      .filter((u) => u.includes("/people/search"));
-    expect(searchCalls.length).toBe(3);
-    expect(searchCalls[0]).toContain("sportId=1");
-    expect(searchCalls[1]).toContain("sportId=11");
-    expect(searchCalls[2]).toContain("sportId=12");
+      .filter((u) => /\/sports\/\d+\/players\?season=/.test(u));
+    expect(rosterCalls.some((u) => /\/sports\/12\/players\?season=2026/.test(u))).toBe(true);
   });
 });
 
@@ -232,7 +238,12 @@ describe("DAILYIQ-PLAYERSCORE-SLUG-FALLBACK-RETIRE Part 1 — unresolved player 
     // isValidCosmosId true — is the prior contract this test flipped from.
     const playerName = "PartOneTest Unresolvable";
     stubFetch([
-      // Every sportId returns empty.
+      // CF-RESOLVER-COVERAGE-GAP (2026-06-01): all roster GETs return empty
+      // people arrays — cold-start build produces 0 entries, resolver returns
+      // null (which propagates as mlbPlayerId=null, the contract this test
+      // verifies). Also stub the legacy /people/search path as empty for any
+      // unrelated callers.
+      { match: /\/sports\/\d+\/players\?season=/, body: { people: [] } },
       { match: /people\/search/, body: { people: [] } },
     ]);
 
