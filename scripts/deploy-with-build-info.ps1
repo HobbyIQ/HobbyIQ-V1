@@ -5,8 +5,12 @@
 # AND a downstream endpoint returns 200 (feature-probe proves dist/ +
 # node_modules/ actually loaded). Build metadata surfaces in /api/health.
 #
-# Usage (from repo root, after npm run build + node zip.js):
+# Usage (from repo root, after node zip.js):
 #   .\scripts\deploy-with-build-info.ps1
+#
+# Note: CF-DEPLOY-STAMP-HARDENING (2026-06-01) — node zip.js now owns the
+# build (refuses on a dirty backend/ tree + runs npm run build at package
+# time). Do NOT run `npm run build` separately; that would double-compile.
 #
 # Requires: az CLI logged in, deploy.zip at repo root.
 #
@@ -80,24 +84,57 @@ foreach ($key in $EXPECTED_APP_SETTINGS.Keys) {
     }
 }
 
-# Inspect deploy.zip contents -- list top-level entries
+# Inspect deploy.zip contents -- list top-level entries.
+# CF-DEPLOY-STAMP-HARDENING (2026-06-01): ALSO extract dist/build-info.json
+# from the zip and verify its .sha matches current HEAD. Defense-in-depth
+# against the 5th deploy mode (stale stamp baked into the zip) — catches
+# the case where someone bypassed zip.js's guards (manual zip, hand-edited
+# dist, etc.) BEFORE [1/5] flips App Settings. zip.js is the primary guard;
+# this is the belt-and-suspenders layer.
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zipPath = (Resolve-Path "deploy.zip").Path
 $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+$zipBuildInfoSha = ""
 try {
     $entryNames = $zip.Entries | ForEach-Object { $_.FullName }
     $hasNodeModules = ($entryNames | Where-Object { $_ -match '^node_modules[/\\]' }).Count -gt 0
     $hasDist        = ($entryNames | Where-Object { $_ -match '^dist[/\\]' }).Count -gt 0
     $hasSrc         = ($entryNames | Where-Object { $_ -match '^src[/\\]' }).Count -gt 0
     $hasPackageJson = ($entryNames | Where-Object { $_ -eq 'package.json' }).Count -gt 0
+
+    # Pull dist/build-info.json content (read it via the zip entry stream
+    # rather than extracting to disk).
+    $biEntry = $zip.Entries | Where-Object { $_.FullName -eq 'dist/build-info.json' } | Select-Object -First 1
+    if ($biEntry) {
+        $reader = New-Object System.IO.StreamReader($biEntry.Open())
+        try {
+            $biJson = $reader.ReadToEnd()
+            $bi = $biJson | ConvertFrom-Json
+            $zipBuildInfoSha = [string]$bi.sha
+        } finally {
+            $reader.Close()
+        }
+    }
 } finally {
     $zip.Dispose()
 }
 
 Write-Host "    Zip contents: node_modules/=$hasNodeModules dist/=$hasDist src/=$hasSrc package.json=$hasPackageJson"
+Write-Host "    Zip dist/build-info.json sha=$zipBuildInfoSha (current HEAD=$sha)"
 
 if (-not $hasPackageJson) {
     $invariantErrors += "    Zip missing package.json (invalid deploy artifact)"
+}
+
+# CF-DEPLOY-STAMP-HARDENING [0/5] check: zip's stamped sha must match
+# current git HEAD. Mismatch = the zip was packaged with a stale
+# build-info.json (the 5th deploy mode); aborting here keeps prod
+# untouched. Empty $zipBuildInfoSha means dist/build-info.json was
+# missing from the zip — also a fail.
+if (-not $zipBuildInfoSha) {
+    $invariantErrors += "    Zip missing dist/build-info.json (zip.js did not stamp; cannot verify SHA)"
+} elseif ($zipBuildInfoSha -ne $sha) {
+    $invariantErrors += "    Zip dist/build-info.json sha=$zipBuildInfoSha does NOT match current HEAD=$sha (5th deploy mode: stale stamp baked into immutable zip). Re-run node zip.js from a clean tree."
 }
 
 # The two valid deploy modes (per audit section 4):
