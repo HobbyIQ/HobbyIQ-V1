@@ -486,7 +486,7 @@ async function _resolveCardId(
 
   // Step B: single candidate? Done. Skip pricing probe.
   if (candidates.length === 1) {
-    const single = applyAutoPrefixGuard(candidates[0], [], input, warnings, query);
+    const single = await applyAutoPrefixGuard(candidates[0], [], input, warnings, query);
     return resolveParallelOnCandidate(
       single.chosen,
       input,
@@ -522,7 +522,7 @@ async function _resolveCardId(
       `${topK.length} top candidates all had zero pricing data — using top-ranked.`,
     );
     const fallbackPool = scored.map((s) => ({ candidate: s.candidate, records: s.records }));
-    const empty = applyAutoPrefixGuard(candidates[0], fallbackPool, input, warnings, query);
+    const empty = await applyAutoPrefixGuard(candidates[0], fallbackPool, input, warnings, query);
     return resolveParallelOnCandidate(
       empty.chosen,
       input,
@@ -545,7 +545,7 @@ async function _resolveCardId(
     );
   }
 
-  const guarded = applyAutoPrefixGuard(scored[0].candidate, scored, input, warnings, query);
+  const guarded = await applyAutoPrefixGuard(scored[0].candidate, scored, input, warnings, query);
   return resolveParallelOnCandidate(
     guarded.chosen,
     input,
@@ -575,29 +575,112 @@ async function _resolveCardId(
  *      we've actually verified.
  *
  * When input.isAuto is undefined (legacy callers), this is a no-op.
+ *
+ * CF-CARDSIGHT-CATALOG-NUMBER-PROBE (2026-06-01): Cardsight's
+ * /catalog/search returns "lite" records for some catalog entries
+ * where the SKU number is empty string at the search level — the
+ * authoritative SKU only materializes after getCardDetail or
+ * getPricing. Without the probe, `isAutoPrefix("")` returns false,
+ * matches `input.isAuto=false`, the mismatch is silently undetected,
+ * and the loose matcher binds on the wrong-auto-side card (the
+ * Bonemer Gold class — production-observed 2026-06-01 03:22Z).
+ *
+ * The probe runs ONLY when: input.isAuto signal is present, the
+ * chosen candidate's number is empty/null, AND a swap is even
+ * possible (pool.length > 1). On any of those false, the fast path
+ * holds — no probe. When the probe fires:
+ *   - Detail returned with populated number → run guard on it.
+ *   - Detail returned with empty number → defensive
+ *     allowLooseParallelMatch=false (we can't verify auto-ness; safer
+ *     than no-op).
+ *   - Detail notFound / network error → same defensive default.
+ *
+ * Pool candidates' numbers are NOT probed individually — too costly.
+ * Instead, pool members with empty/null numbers are EXCLUDED from
+ * the "corrected" search (we can't reliably know their auto-side).
+ * This is defensive narrowing: better to miss a potential correction
+ * than to swap to a candidate whose auto-ness is unverified.
  */
-function applyAutoPrefixGuard(
+async function applyAutoPrefixGuard(
   chosen: CardsightCatalogResult,
   pool: Array<{ candidate: CardsightCatalogResult; records: number }>,
   input: CompIQQueryInput,
   warnings: string[],
   query: string,
-): { chosen: CardsightCatalogResult; allowLooseParallelMatch: boolean } {
+): Promise<{ chosen: CardsightCatalogResult; allowLooseParallelMatch: boolean }> {
   if (input.isAuto === undefined) {
     return { chosen, allowLooseParallelMatch: true };
   }
-  const chosenIsAuto = isAutoPrefix(chosen.number);
+
+  let chosenNumber: string = chosen.number ?? "";
+
+  // CF-CARDSIGHT-CATALOG-NUMBER-PROBE: gated detail probe to populate
+  // the SKU when searchCatalog returned a lite record. Detail responses
+  // are cache-wrapped (DETAIL_TTL_SEC=24h via cardsight.client) so
+  // repeat traffic on the same cardId pays the cost once per day.
+  if (chosenNumber === "" && pool.length > 1) {
+    try {
+      const detail = await getCardDetail(chosen.id);
+      if (detail.notFound) {
+        log.warn("auto_prefix_probe_notfound", {
+          query,
+          chosenCardId: chosen.id,
+          endpoint: "resolveCardId",
+        });
+        // Defensive: can't verify auto-ness → treat as uncorrectable
+        // mismatch. allowLoose=false propagates to strict-only match.
+        return { chosen, allowLooseParallelMatch: false };
+      }
+      const probedNumber = (detail.number ?? "").trim();
+      if (probedNumber === "") {
+        log.warn("auto_prefix_probe_empty", {
+          query,
+          chosenCardId: chosen.id,
+          endpoint: "resolveCardId",
+        });
+        // detail returned ALSO with no SKU — same defensive default.
+        // Locks the degraded-but-safe path.
+        return { chosen, allowLooseParallelMatch: false };
+      }
+      chosenNumber = probedNumber;
+      log.info("auto_prefix_probe_success", {
+        query,
+        chosenCardId: chosen.id,
+        probedNumber,
+        endpoint: "resolveCardId",
+      });
+    } catch (err) {
+      log.warn("auto_prefix_probe_threw", {
+        query,
+        chosenCardId: chosen.id,
+        error: (err as Error)?.message ?? String(err),
+        endpoint: "resolveCardId",
+      });
+      return { chosen, allowLooseParallelMatch: false };
+    }
+  }
+
+  const chosenIsAuto = isAutoPrefix(chosenNumber);
   if (chosenIsAuto === input.isAuto) {
     return { chosen, allowLooseParallelMatch: true };
   }
+  // Pool corrected-search: explicitly require populated number on the
+  // candidate so we never swap to a card whose auto-ness we can't verify.
+  // Empty/null numbers in the pool are EXCLUDED — better to miss a
+  // potential correction (caller falls back to strict-only on the
+  // wrong-prefix chosen) than to swap to an unknown card.
   const corrected = pool.find(
-    (s) => s.records > 0 && isAutoPrefix(s.candidate.number) === input.isAuto,
+    (s) =>
+      s.records > 0 &&
+      s.candidate.number != null &&
+      s.candidate.number !== "" &&
+      isAutoPrefix(s.candidate.number) === input.isAuto,
   );
   if (corrected) {
     log.info("auto_prefix_reresolve_success", {
       query,
       fromCardId: chosen.id,
-      fromNumber: chosen.number,
+      fromNumber: chosenNumber,
       toCardId: corrected.candidate.id,
       toNumber: corrected.candidate.number,
       toRecords: corrected.records,
@@ -605,14 +688,14 @@ function applyAutoPrefixGuard(
       endpoint: "resolveCardId",
     });
     warnings.push(
-      `Re-resolved from "${chosen.number}" to "${corrected.candidate.number}" (auto-prefix corrected for ${input.isAuto ? "auto" : "base"} request).`,
+      `Re-resolved from "${chosenNumber}" to "${corrected.candidate.number}" (auto-prefix corrected for ${input.isAuto ? "auto" : "base"} request).`,
     );
     return { chosen: corrected.candidate, allowLooseParallelMatch: true };
   }
   log.warn("auto_prefix_reresolve_failed", {
     query,
     chosenCardId: chosen.id,
-    chosenNumber: chosen.number,
+    chosenNumber,
     chosenIsAuto,
     userIsAuto: input.isAuto,
     candidatePoolSize: pool.length,

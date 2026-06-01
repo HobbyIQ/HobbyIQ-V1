@@ -53,6 +53,25 @@ function catalogEntry(
   return { id, name: "x", number, releaseName, setName, year };
 }
 
+/**
+ * CF-CARDSIGHT-CATALOG-NUMBER-PROBE (2026-06-01): models the production
+ * lite-record condition where Cardsight's /catalog/search returns
+ * candidates with empty `number` (SKU only materializes after
+ * getCardDetail or getPricing). The Bonemer Gold class that escaped
+ * the prior CF's tests — production-observed 2026-06-01 03:22Z where
+ * `applyAutoPrefixGuard` silently no-op'd because chosen.number=""
+ * → isAutoPrefix("")=false → matched user's isAuto=false → guard
+ * skipped → loose matcher bound Gold Refractor on the wrong-auto card.
+ */
+function catalogEntryLite(
+  id: string,
+  releaseName: string,
+  setName = "Base Set",
+  year = 2024,
+): Catalog {
+  return { id, name: "x", number: "", releaseName, setName, year };
+}
+
 function detailWithParallels(
   id: string,
   number: string,
@@ -473,5 +492,267 @@ describe("SAFETY — no false matches + sales-sparsity unaffected", () => {
     // resolveCardId — this CF doesn't touch sales-sparsity behavior.
     expect(r.warnings.some((w) => w.includes("auto-prefix"))).toBe(false);
     expect(r.warnings.some((w) => w.includes("returning cardId only"))).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// CF-CARDSIGHT-CATALOG-NUMBER-PROBE — the lite-record condition that
+// escaped the prior CF (Bonemer Gold class observed in production
+// 2026-06-01 03:22Z: searchCatalog returns chosen.number="",
+// isAutoPrefix("")=false, matched user.isAuto=false, guard silently
+// no-op'd, loose matcher bound on wrong-auto card).
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCatalog results", () => {
+  it("Bonemer-class repro: searchCatalog number='' + getCardDetail populates 'CPA-CBO' → probe fires → mismatch detected → no pool correction → allowLoose=false → parallelId null", async () => {
+    // 2 candidates, BOTH returned as lite records (number="") from
+    // searchCatalog. Both have pricing data → pool.length>1 → probe
+    // condition satisfied. Detail probe populates SKU for chosen only;
+    // the OTHER pool candidate stays lite (number="") and is therefore
+    // EXCLUDED from the corrected-search per the defensive narrowing.
+    // Net effect: guard correctly detects auto-prefix-mismatch via the
+    // probed SKU, finds no corrected candidate, sets allowLoose=false.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntryLite("cpa-cbo-id", "Bowman Draft", "Chrome Prospect Autographs"),
+      catalogEntryLite("cpa-cbo-alt", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const records = { "cpa-cbo-id": 78, "cpa-cbo-alt": 56 }[id] ?? 0;
+      return Promise.resolve(pricing(records));
+    });
+    (cs.getCardDetail as any).mockImplementation((id: string) => {
+      if (id === "cpa-cbo-id") {
+        // Probe call: returns CPA-CBO (auto SKU). detail.parallels[]
+        // also populated here for the later resolveParallelOnCandidate
+        // call (single source — both consumers read the same detail).
+        return Promise.resolve(
+          detailWithParallels("cpa-cbo-id", "CPA-CBO", [
+            "Refractor",
+            "Gold Refractor",
+            "Blue Refractor",
+          ]),
+        );
+      }
+      return Promise.resolve(detailWithParallels(id, "", []));
+    });
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      isAuto: false,
+    });
+
+    // Card stays at the wrong-auto chosen (no corrected in pool);
+    // parallelId NOT bound to CPA-CBO's "Gold Refractor" because the
+    // probe-then-guard sets allowLoose=false.
+    expect(r.cardId).toBe("cpa-cbo-id");
+    expect(r.parallelId).toBeNull();
+    expect(r.warnings.some((w) =>
+      w.includes("returning cardId only") && w.includes("Gold")
+    )).toBe(true);
+    expect(r.warnings.some((w) => w.includes("auto-prefix corrected"))).toBe(false);
+
+    // Load-bearing diagnostic: probe MUST have fired. getCardDetail is
+    // called both for the probe AND for resolveParallelOnCandidate's
+    // parallels lookup → expect ≥1 call. The probe + parallels call
+    // can share the same cache entry (DETAIL_TTL_SEC=24h), so this is
+    // a lower-bound assertion not an exact count.
+    expect((cs.getCardDetail as any).mock.calls.length).toBeGreaterThanOrEqual(1);
+    // Verify the probe targeted the chosen cardId specifically.
+    const probedIds = (cs.getCardDetail as any).mock.calls.map((c: unknown[]) => c[0]);
+    expect(probedIds).toContain("cpa-cbo-id");
+  });
+
+  it("probe-skip when chosen.number already populated: guard runs synchronously on the search-time SKU; no extra getCardDetail call for the probe", async () => {
+    // Single candidate with SKU populated from searchCatalog — the fast
+    // path. The probe gate (chosen.number==="") is NOT met → no probe.
+    // resolveParallelOnCandidate will call getCardDetail ONCE for the
+    // parallels lookup; that's the only detail call expected.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntry("cpa-cbo-id", "CPA-CBO", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getCardDetail as any).mockResolvedValue(
+      detailWithParallels("cpa-cbo-id", "CPA-CBO", [
+        "Refractor",
+        "Gold Refractor",
+      ]),
+    );
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      isAuto: true,
+    });
+
+    // SKU match → guard no-ops → loose match binds Gold Refractor.
+    expect(r.cardId).toBe("cpa-cbo-id");
+    expect(r.parallelId).toBe("cpa-cbo-id-parallel-1-gold-refractor");
+    // Exactly ONE getCardDetail call (the resolveParallelOnCandidate
+    // parallels lookup). NOT TWO — the probe did NOT fire because
+    // chosen.number was already populated.
+    expect((cs.getCardDetail as any).mock.calls.length).toBe(1);
+  });
+
+  it("probe-skip when input.isAuto is undefined: guard short-circuits at the input check, no probe even on lite record", async () => {
+    // Legacy caller (no isAuto signal) → guard returns immediately at
+    // the input.isAuto===undefined gate → no probe, regardless of
+    // chosen.number being empty.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntryLite("cpa-cbo-id", "Bowman Draft", "Chrome Prospect Autographs"),
+      catalogEntryLite("cpa-cbo-alt", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const records = { "cpa-cbo-id": 78, "cpa-cbo-alt": 56 }[id] ?? 0;
+      return Promise.resolve(pricing(records));
+    });
+    (cs.getCardDetail as any).mockResolvedValue(
+      detailWithParallels("cpa-cbo-id", "CPA-CBO", [
+        "Refractor",
+        "Gold Refractor",
+      ]),
+    );
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      // NO isAuto field.
+    });
+
+    // Loose match still fires (guard skipped, allowLoose stays true).
+    expect(r.cardId).toBe("cpa-cbo-id");
+    expect(r.parallelId).toBe("cpa-cbo-id-parallel-1-gold-refractor");
+    // getCardDetail called for parallels lookup ONLY (1 call total).
+    // The probe didn't fire because input.isAuto was undefined.
+    expect((cs.getCardDetail as any).mock.calls.length).toBe(1);
+  });
+
+  it("probe-skip when pool.length === 1: probe gate requires pool.length > 1 (swap is impossible with one candidate)", async () => {
+    // Single-candidate path (Step B). pool=[] at the guard call site.
+    // Probe gate `pool.length > 1` not met → no probe. allowLoose
+    // depends on isAutoPrefix(""), which is false. input.isAuto=false
+    // matches chosenIsAuto=false → guard no-ops → allowLoose=true.
+    // Loose matcher binds Gold Refractor.
+    // (This is the established behavior for single-candidate lite
+    // records — documented limitation, NOT a regression. The pool-depth
+    // CF would address it by widening the candidate pool before the
+    // single-candidate fast path fires.)
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntryLite("only-id", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getCardDetail as any).mockResolvedValue(
+      detailWithParallels("only-id", "CPA-XYZ", [
+        "Refractor",
+        "Gold Refractor",
+      ]),
+    );
+
+    const r = await resolveCardId({
+      playerName: "Some Player",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      isAuto: false,
+    });
+
+    // Guard no-op'd (probe skipped + no isAutoPrefix mismatch detected
+    // because chosenNumber stays ""). Loose match binds. Documented
+    // limitation — single-candidate path doesn't trigger probe.
+    expect(r.cardId).toBe("only-id");
+    expect(r.parallelId).toBe("only-id-parallel-1-gold-refractor");
+    expect((cs.getCardDetail as any).mock.calls.length).toBe(1);
+  });
+
+  it("probe failure (notFound): defensive allowLoose=false fallback locks the safe path", async () => {
+    // Probe fires but Cardsight detail returns notFound (e.g. cardId
+    // exists in catalog index but detail endpoint 404s). We can't
+    // verify auto-ness → treat as uncorrectable mismatch.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntryLite("cpa-cbo-id", "Bowman Draft", "Chrome Prospect Autographs"),
+      catalogEntryLite("cpa-cbo-alt", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const records = { "cpa-cbo-id": 78, "cpa-cbo-alt": 56 }[id] ?? 0;
+      return Promise.resolve(pricing(records));
+    });
+    (cs.getCardDetail as any).mockResolvedValue({
+      id: "cpa-cbo-id",
+      name: "",
+      number: "",
+      releaseName: "",
+      setName: "",
+      year: 0,
+      parallels: [],
+      attributes: [],
+      notFound: true,
+    });
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      isAuto: false,
+    });
+
+    // Probe failed → guard set allowLoose=false → no loose match → no
+    // strict match either (detail.parallels[] is empty in notFound
+    // detail) → parallelId null.
+    expect(r.parallelId).toBeNull();
+  });
+
+  it("probe returns ALSO-empty number: defensive allowLoose=false (degraded-but-safe path)", async () => {
+    // Cardsight detail endpoint exists for this cardId but returns
+    // a record where the `number` field is also empty (Cardsight has
+    // catalog records that are not fully populated). Probe can't get
+    // the SKU from detail either → defensive default.
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalogEntryLite("cpa-cbo-id", "Bowman Draft", "Chrome Prospect Autographs"),
+      catalogEntryLite("cpa-cbo-alt", "Bowman Draft", "Chrome Prospect Autographs"),
+    ]);
+    (cs.getPricing as any).mockImplementation((id: string) => {
+      const records = { "cpa-cbo-id": 78, "cpa-cbo-alt": 56 }[id] ?? 0;
+      return Promise.resolve(pricing(records));
+    });
+    (cs.getCardDetail as any).mockImplementation((id: string) => {
+      if (id === "cpa-cbo-id") {
+        // Detail exists (not notFound) but number is empty.
+        return Promise.resolve({
+          id: "cpa-cbo-id",
+          name: "Caleb Bonemer",
+          number: "",          // ← THE FAILURE MODE
+          releaseName: "Bowman Draft",
+          setName: "Chrome Prospect Autographs",
+          year: 2024,
+          parallels: [
+            { id: "p1", name: "Refractor" },
+            { id: "p2", name: "Gold Refractor" },
+          ],
+          attributes: [],
+        });
+      }
+      return Promise.resolve(detailWithParallels(id, "", []));
+    });
+
+    const r = await resolveCardId({
+      playerName: "Caleb Bonemer",
+      cardYear: 2024,
+      product: "Bowman Draft",
+      parallel: "Gold",
+      isAuto: false,
+    });
+
+    // Probe succeeded structurally but couldn't recover the SKU →
+    // allowLoose=false → strict-only match on Gold (length 1) misses
+    // Gold Refractor (length 2) → parallelId null + warning emitted.
+    expect(r.parallelId).toBeNull();
+    expect(r.warnings.some((w) =>
+      w.includes("returning cardId only") && w.includes("Gold")
+    )).toBe(true);
   });
 });
