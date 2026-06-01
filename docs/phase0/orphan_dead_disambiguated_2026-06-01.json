@@ -1,0 +1,410 @@
+{
+  "ran_at_utc": "2026-06-01T13:51:05.159974+00:00",
+  "scan_coverage_summary": {
+    "sportId=1 season=1994": 991,
+    "sportId=11 season=1994": 1104,
+    "sportId=12 season=1994": 1056,
+    "sportId=13 season=1994": 1258,
+    "sportId=14 season=1994": 1042,
+    "sportId=16 season=1994": 1336,
+    "sportId=1 season=1995": 1133,
+    "sportId=11 season=1995": 1426,
+    "sportId=12 season=1995": 1242,
+    "sportId=13 season=1995": 1337,
+    "sportId=14 season=1995": 1119,
+    "sportId=16 season=1995": 1298,
+    "sportId=1 season=2010": 1249,
+    "sportId=11 season=2010": 2234,
+    "sportId=12 season=2010": 1459,
+    "sportId=13 season=2010": 1610,
+    "sportId=14 season=2010": 1361,
+    "sportId=16 season=2010": 3444,
+    "sportId=1 season=2015": 1348,
+    "sportId=11 season=2015": 2364,
+    "sportId=12 season=2015": 1576,
+    "sportId=13 season=2015": 1645,
+    "sportId=14 season=2015": 1474,
+    "sportId=16 season=2015": 3613,
+    "sportId=1 season=2020": 1289,
+    "sportId=11 season=2020": 0,
+    "sportId=12 season=2020": 0,
+    "sportId=13 season=2020": 0,
+    "sportId=14 season=2020": 0,
+    "sportId=16 season=2020": 0,
+    "sportId=1 season=2022": 1495,
+    "sportId=11 season=2022": 2185,
+    "sportId=12 season=2022": 1754,
+    "sportId=13 season=2022": 1741,
+    "sportId=14 season=2022": 2100,
+    "sportId=16 season=2022": 4033,
+    "sportId=1 season=2023": 1457,
+    "sportId=11 season=2023": 2093,
+    "sportId=12 season=2023": 1767,
+    "sportId=13 season=2023": 1746,
+    "sportId=14 season=2023": 2026,
+    "sportId=16 season=2023": 3993,
+    "sportId=1 season=2024": 1454,
+    "sportId=11 season=2024": 2032,
+    "sportId=12 season=2024": 1669,
+    "sportId=13 season=2024": 1719,
+    "sportId=14 season=2024": 2037,
+    "sportId=16 season=2024": 3455,
+    "sportId=1 season=2025": 1470,
+    "sportId=11 season=2025": 2088,
+    "sportId=12 season=2025": 1742,
+    "sportId=13 season=2025": 1766,
+    "sportId=14 season=2025": 2079,
+    "sportId=16 season=2025": 3436,
+    "sportId=1 season=2026": 1162,
+    "sportId=11 season=2026": 1417,
+    "sportId=12 season=2026": 1183,
+    "sportId=13 season=2026": 1213,
+    "sportId=14 season=2026": 1324,
+    "sportId=16 season=2026": 2908
+  },
+  "global_roster_unique_fullnames": 33540,
+  "promote_unchanged": [
+    {
+      "slug": "cal-raleigh",
+      "playerName": "Cal Raleigh",
+      "playerNameNormalized": "cal raleigh",
+      "resolved_numericId": 663728,
+      "resolved_fullName": "Cal Raleigh",
+      "bucket": "PROMOTE",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "cal-raleigh"
+      ],
+      "history_row_ids": [
+        "cal-raleigh_1778639242445"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "charlie-condon",
+      "playerName": "Charlie Condon",
+      "playerNameNormalized": "charlie condon",
+      "resolved_numericId": 809707,
+      "resolved_fullName": "Charlie Condon",
+      "bucket": "PROMOTE",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "charlie-condon"
+      ],
+      "history_row_ids": [
+        "charlie-condon_1778799945084"
+      ],
+      "history_row_count_full": 1
+    }
+  ],
+  "dead_disambiguated": [
+    {
+      "slug": "agustin-acosta",
+      "playerName": "Agustin Acosta",
+      "found_mlb_id": 802528,
+      "found_fullName": "Agustin Acosta",
+      "found_sport_season": "Rookie 2022",
+      "miss_reason": "in CURRENT-season roster ([2025, 2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 802528,
+          "fullName": "Agustin Acosta",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2022,
+          "position": "CF"
+        },
+        {
+          "id": 802528,
+          "fullName": "Agustin Acosta",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2023,
+          "position": "CF"
+        },
+        {
+          "id": 802528,
+          "fullName": "Agustin Acosta",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2024,
+          "position": "CF"
+        },
+        {
+          "id": 802528,
+          "fullName": "Agustin Acosta",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2025,
+          "position": "CF"
+        },
+        {
+          "id": 802528,
+          "fullName": "Agustin Acosta",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2026,
+          "position": "CF"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "history_row_ids": [
+        "agustin-acosta_1778617965903"
+      ],
+      "trend_row_ids": [
+        "agustin-acosta"
+      ]
+    },
+    {
+      "slug": "gage-wood",
+      "playerName": "Gage Wood",
+      "found_mlb_id": 805906,
+      "found_fullName": "Gage Wood",
+      "found_sport_season": "A 2025",
+      "miss_reason": "in CURRENT-season roster ([2025, 2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 805906,
+          "fullName": "Gage Wood",
+          "sid": 14,
+          "sport": "A",
+          "season": 2025,
+          "position": "P"
+        },
+        {
+          "id": 805906,
+          "fullName": "Gage Wood",
+          "sid": 12,
+          "sport": "AA",
+          "season": 2026,
+          "position": "P"
+        },
+        {
+          "id": 805906,
+          "fullName": "Gage Wood",
+          "sid": 14,
+          "sport": "A",
+          "season": 2026,
+          "position": "P"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 61,
+      "history_row_ids": [
+        "gage-wood_1778613436268",
+        "gage-wood_1778679907308",
+        "gage-wood_1778679907432",
+        "gage-wood_1778679907563",
+        "gage-wood_1778679908180",
+        "gage-wood_1778679910465",
+        "gage-wood_1778679924942",
+        "gage-wood_1778679925017",
+        "gage-wood_1778682716085",
+        "gage-wood_1778682716286"
+      ],
+      "trend_row_ids": [
+        "gage-wood"
+      ]
+    },
+    {
+      "slug": "josh-hammond",
+      "playerName": "Josh Hammond",
+      "found_mlb_id": 815843,
+      "found_fullName": "Josh Hammond",
+      "found_sport_season": "A 2026",
+      "miss_reason": "in CURRENT-season roster ([2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 815843,
+          "fullName": "Josh Hammond",
+          "sid": 14,
+          "sport": "A",
+          "season": 2026,
+          "position": "SS"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 71,
+      "history_row_ids": [
+        "josh-hammond_1778860681364",
+        "josh-hammond_1778869934556",
+        "josh-hammond_1778891434888",
+        "josh-hammond_1778894227282",
+        "josh-hammond_1778940550923",
+        "josh-hammond_1778943050998",
+        "josh-hammond_1778945855726",
+        "josh-hammond_1778953653170",
+        "josh-hammond_1778955481778",
+        "josh-hammond_1778958057968"
+      ],
+      "trend_row_ids": [
+        "josh-hammond"
+      ]
+    },
+    {
+      "slug": "juan-tomas",
+      "playerName": "Juan Tomas",
+      "found_mlb_id": 829823,
+      "found_fullName": "Juan Tomas",
+      "found_sport_season": "Rookie 2025",
+      "miss_reason": "in CURRENT-season roster ([2025, 2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 829823,
+          "fullName": "Juan Tomas",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2025,
+          "position": "SS"
+        },
+        {
+          "id": 829823,
+          "fullName": "Juan Tomas",
+          "sid": 16,
+          "sport": "Rookie",
+          "season": 2026,
+          "position": "SS"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 2,
+      "history_row_ids": [
+        "juan-tomas_1778602653003",
+        "juan-tomas_1778602662351"
+      ],
+      "trend_row_ids": [
+        "juan-tomas"
+      ]
+    },
+    {
+      "slug": "justin-herbert",
+      "playerName": "Justin Herbert",
+      "found_mlb_id": null,
+      "found_fullName": null,
+      "found_sport_season": null,
+      "miss_reason": "no MLB-Stats person matches across the broader (sportId \u00d7 season) scan",
+      "all_hits": [],
+      "final_fate": "DELETE",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "history_row_ids": [
+        "justin-herbert_1778860660763"
+      ],
+      "trend_row_ids": [
+        "justin-herbert"
+      ]
+    },
+    {
+      "slug": "justin-lamkin",
+      "playerName": "Justin Lamkin",
+      "found_mlb_id": 703610,
+      "found_fullName": "Justin Lamkin",
+      "found_sport_season": "AA 2026",
+      "miss_reason": "in CURRENT-season roster ([2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 703610,
+          "fullName": "Justin Lamkin",
+          "sid": 12,
+          "sport": "AA",
+          "season": 2026,
+          "position": "P"
+        },
+        {
+          "id": 703610,
+          "fullName": "Justin Lamkin",
+          "sid": 13,
+          "sport": "A+",
+          "season": 2026,
+          "position": "P"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "history_row_ids": [
+        "justin-lamkin_1779419194265"
+      ],
+      "trend_row_ids": [
+        "justin-lamkin"
+      ]
+    },
+    {
+      "slug": "mason-morris",
+      "playerName": "Mason Morris",
+      "found_mlb_id": 702568,
+      "found_fullName": "Mason Morris",
+      "found_sport_season": "A 2025",
+      "miss_reason": "in CURRENT-season roster ([2025, 2026]) but resolver still missed \u2014 possible name-match issue or sportId-targeting gap",
+      "all_hits": [
+        {
+          "id": 702568,
+          "fullName": "Mason Morris",
+          "sid": 14,
+          "sport": "A",
+          "season": 2025,
+          "position": "P"
+        },
+        {
+          "id": 702568,
+          "fullName": "Mason Morris",
+          "sid": 14,
+          "sport": "A",
+          "season": 2026,
+          "position": "P"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "history_row_ids": [
+        "mason-morris_1779419400769"
+      ],
+      "trend_row_ids": [
+        "mason-morris"
+      ]
+    },
+    {
+      "slug": "michael-jordan",
+      "playerName": "Michael Jordan",
+      "found_mlb_id": 470052,
+      "found_fullName": "Michael Jordan",
+      "found_sport_season": "AA 1994",
+      "miss_reason": "historical-only \u2014 last roster appearance season 1994",
+      "all_hits": [
+        {
+          "id": 470052,
+          "fullName": "Michael Jordan",
+          "sid": 12,
+          "sport": "AA",
+          "season": 1994,
+          "position": "OF"
+        }
+      ],
+      "final_fate": "HOLD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 9,
+      "history_row_ids": [
+        "michael-jordan_1778799631646",
+        "michael-jordan_1778850144334",
+        "michael-jordan_1778853302272",
+        "michael-jordan_1778855634803",
+        "michael-jordan_1778860431850",
+        "michael-jordan_1778860653702",
+        "michael-jordan_1778863853326",
+        "michael-jordan_1778865927917",
+        "michael-jordan_1778867666214"
+      ],
+      "trend_row_ids": [
+        "michael-jordan"
+      ]
+    }
+  ]
+}

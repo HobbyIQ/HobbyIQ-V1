@@ -1,0 +1,224 @@
+{
+  "ran_at_utc": "2026-06-01T13:39:18.065282+00:00",
+  "step": "1+2 dry-run, read-only inventory + bucket",
+  "predicates": {
+    "player_trends": "id NOT RegexMatch(^[0-9]+$)",
+    "player_trend_history": "id NOT RegexMatch(^[0-9]+_[0-9]+$)"
+  },
+  "counts": {
+    "player_trends_slug_rows": 10,
+    "player_trend_history_slug_rows": 149,
+    "unique_slug_players": 10,
+    "bucket_totals": {
+      "DEAD": 8,
+      "PROMOTE": 2
+    },
+    "trends_rows_by_bucket": {
+      "DEAD": 8,
+      "PROMOTE": 2
+    },
+    "history_rows_by_bucket": {
+      "DEAD": 147,
+      "PROMOTE": 2
+    }
+  },
+  "table": [
+    {
+      "slug": "agustin-acosta",
+      "playerName": "Agustin Acosta",
+      "playerNameNormalized": "agustin acosta",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "agustin-acosta"
+      ],
+      "history_row_ids": [
+        "agustin-acosta_1778617965903"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "cal-raleigh",
+      "playerName": "Cal Raleigh",
+      "playerNameNormalized": "cal raleigh",
+      "resolved_numericId": 663728,
+      "resolved_fullName": "Cal Raleigh",
+      "bucket": "PROMOTE",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "cal-raleigh"
+      ],
+      "history_row_ids": [
+        "cal-raleigh_1778639242445"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "charlie-condon",
+      "playerName": "Charlie Condon",
+      "playerNameNormalized": "charlie condon",
+      "resolved_numericId": 809707,
+      "resolved_fullName": "Charlie Condon",
+      "bucket": "PROMOTE",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "charlie-condon"
+      ],
+      "history_row_ids": [
+        "charlie-condon_1778799945084"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "gage-wood",
+      "playerName": "Gage Wood",
+      "playerNameNormalized": "gage wood",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 61,
+      "trend_row_ids": [
+        "gage-wood"
+      ],
+      "history_row_ids": [
+        "gage-wood_1778613436268",
+        "gage-wood_1778679907308",
+        "gage-wood_1778679907432",
+        "gage-wood_1778679907563",
+        "gage-wood_1778679908180",
+        "gage-wood_1778679910465",
+        "gage-wood_1778679924942",
+        "gage-wood_1778679925017",
+        "gage-wood_1778682716085",
+        "gage-wood_1778682716286"
+      ],
+      "history_row_count_full": 61
+    },
+    {
+      "slug": "josh-hammond",
+      "playerName": "Josh Hammond",
+      "playerNameNormalized": "josh hammond",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 71,
+      "trend_row_ids": [
+        "josh-hammond"
+      ],
+      "history_row_ids": [
+        "josh-hammond_1778860681364",
+        "josh-hammond_1778869934556",
+        "josh-hammond_1778891434888",
+        "josh-hammond_1778894227282",
+        "josh-hammond_1778940550923",
+        "josh-hammond_1778943050998",
+        "josh-hammond_1778945855726",
+        "josh-hammond_1778953653170",
+        "josh-hammond_1778955481778",
+        "josh-hammond_1778958057968"
+      ],
+      "history_row_count_full": 71
+    },
+    {
+      "slug": "juan-tomas",
+      "playerName": "Juan Tomas",
+      "playerNameNormalized": "juan tomas",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 2,
+      "trend_row_ids": [
+        "juan-tomas"
+      ],
+      "history_row_ids": [
+        "juan-tomas_1778602653003",
+        "juan-tomas_1778602662351"
+      ],
+      "history_row_count_full": 2
+    },
+    {
+      "slug": "justin-herbert",
+      "playerName": "Justin Herbert",
+      "playerNameNormalized": "justin herbert",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "justin-herbert"
+      ],
+      "history_row_ids": [
+        "justin-herbert_1778860660763"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "justin-lamkin",
+      "playerName": "Justin Lamkin",
+      "playerNameNormalized": "justin lamkin",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "justin-lamkin"
+      ],
+      "history_row_ids": [
+        "justin-lamkin_1779419194265"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "mason-morris",
+      "playerName": "Mason Morris",
+      "playerNameNormalized": "mason morris",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 1,
+      "trend_row_ids": [
+        "mason-morris"
+      ],
+      "history_row_ids": [
+        "mason-morris_1779419400769"
+      ],
+      "history_row_count_full": 1
+    },
+    {
+      "slug": "michael-jordan",
+      "playerName": "Michael Jordan",
+      "playerNameNormalized": "michael jordan",
+      "resolved_numericId": null,
+      "resolved_fullName": null,
+      "bucket": "DEAD",
+      "trends_rows_affected": 1,
+      "history_rows_affected": 9,
+      "trend_row_ids": [
+        "michael-jordan"
+      ],
+      "history_row_ids": [
+        "michael-jordan_1778799631646",
+        "michael-jordan_1778850144334",
+        "michael-jordan_1778853302272",
+        "michael-jordan_1778855634803",
+        "michael-jordan_1778860431850",
+        "michael-jordan_1778860653702",
+        "michael-jordan_1778863853326",
+        "michael-jordan_1778865927917",
+        "michael-jordan_1778867666214"
+      ],
+      "history_row_count_full": 9
+    }
+  ]
+}
