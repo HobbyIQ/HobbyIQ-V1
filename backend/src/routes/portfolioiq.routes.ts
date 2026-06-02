@@ -5,6 +5,7 @@ import { getConnectionStatus } from "../services/ebay/ebayAuth.service.js";
 import { buildListingPreview, createListing, HoldingListingInput } from "../services/ebay/ebayListing.service.js";
 import {
   identifyCardByBlobUrl,
+  identifyCardWithCertExtraction,
   IdentifyBlobDownloadError,
   CardsightApiError,
   CardsightTimeoutError,
@@ -113,7 +114,11 @@ router.post("/identify", async (req, res) => {
     return;
   }
 
-  const body = (req.body ?? {}) as { blobUrl?: unknown; blobName?: unknown };
+  const body = (req.body ?? {}) as {
+    blobUrl?: unknown;
+    blobName?: unknown;
+    extractCert?: unknown;
+  };
   const blobUrl = typeof body.blobUrl === "string" ? body.blobUrl.trim() : "";
   const blobName = typeof body.blobName === "string" ? body.blobName.trim() : undefined;
   if (!blobUrl) {
@@ -121,7 +126,22 @@ router.post("/identify", async (req, res) => {
     return;
   }
 
+  // CF-GRADED-SCAN-B1+B2 (2026-06-02): opt-in cert-number OCR extraction.
+  // Default (false / absent) preserves the legacy verbatim response shape
+  // — callers that don't opt in see no contract change. Opt-in via either
+  // body.extractCert:true OR query ?withCertExtraction=true returns the
+  // wrapped shape { cardsight, certCandidate? }.
+  const extractCert =
+    body.extractCert === true ||
+    String(req.query.withCertExtraction ?? "").toLowerCase() === "true";
+
   try {
+    if (extractCert) {
+      // Wrapped shape: { cardsight, certCandidate? }
+      const wrapped = await identifyCardWithCertExtraction(blobUrl, blobName);
+      res.status(200).json(wrapped);
+      return;
+    }
     const result = await identifyCardByBlobUrl(blobUrl, blobName);
     res.status(200).json(result);
   } catch (err: unknown) {
