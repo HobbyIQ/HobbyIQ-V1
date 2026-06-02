@@ -145,6 +145,23 @@ prerequisite picker migration is now where the real work lives.
 
 ### Phase 4b — Signal integration (Week 7: Jul 3-9)
 
+**VERDICT 2026-06-02 (PHASE-4B-SLICE-1-PROOF): SIGNALS FIRE.** The wired-in-code path is end-to-end live and producing non-neutral multipliers in production. 12 fresh predictions across active MLB stars produced:
+- 9/12 non-null composites; ALL 9 differ from 1.0; range **0.741 → 1.370 in both directions**
+- 5 of 12 fetched a real Layer-1 multiplier (ok_non_neutral, 200): Trout 1.068, Skenes 1.068, Witt 1.082, Ohtani 1.067, Judge 1.026
+- 4 of 12 got Layer-1 404 → coverage degraded to `card_only` → composites still non-neutral via Layer 2 (Langford 1.047, Holliday 1.28, Strider 1.205, Skubal 0.741)
+- 0 timeouts / 0 fetch_errors / 0 aggregator_unavailable — the aggregator is reachable + responsive
+- Aggregator freshness confirmed: `lastUpdated=2026-06-02T02:50:00Z`, ~1h before the proof window
+
+**Critical layer-decomposition finding (drives slice 3 design):** **composite movement is dominated by `cardTrajectory` (comp velocity, 0.40-1.00 weight), not by `playerMomentum` (signal-driven, 0.20-0.30 weight in `full`/`no_segment` coverage).** Sample math from PROOF:
+- Skenes composite 1.188 with `coverage=no_segment` (weights 0.30 player / 0.70 card): playerMomentum 1.068 × 0.30 + cardTrajectory ~1.24 × 0.70 → ~1.19. The player nudge contributes ~+0.020 of the +0.188 swing. The other ~+0.168 is comp velocity.
+- Skubal composite 0.741 with `coverage=card_only` (weight 1.00 card): driven 100% by `cardTrajectory`, ZERO signal contribution.
+- Holliday 1.28 with `coverage=card_only`: same story — Layer 2 doing all the work.
+
+**Implication for slice 3 (recalibration):** must decompose accuracy **BY LAYER, class-matched horizon — NOT composite-on/off**. Aggregating "signal-on vs signal-off" at the composite level would attribute Layer 2 wins to Layer 1 and vice versa. Per `Signal classes: attention vs price` memory — Layer 1 single-digit nudges (1.026-1.082) are price-class-flavored (<7d horizon); Layer 2 cardTrajectory swings are also <30d sales-velocity. Slice 3 must:
+1. Separate accuracy attribution: `cardTrajectory_only_predictions` vs `playerMomentum_present_predictions` vs `full_coverage_predictions`
+2. Class-matched outcome horizons per layer
+3. Measure whether playerMomentum's 0.20-0.30 weight EARNS the prediction-accuracy delta its presence claims
+
 **REFRAMED 2026-06-01 after PHASE-4B-RECON:** the framing "build the blender + wire signals into predictions" is wrong. The blender exists at `backend/src/services/compiq/trendIQ.compute.ts` (8-row weight matrix, 0.70-1.50 clamp) and is wired through `compiqEstimate.service.ts:2662` (`fetchPlayerSignals` HTTP call to `fn-serve-signals`) into `forwardProjectionFactor` and finally `predictedPrice`. So signals are NOT dead-output relative to live pricing — the code path is end-to-end live.
 
 What was actually missing was OBSERVABILITY: whether the wired-in-code path actually fires under production volume, whether the multipliers reaching predictions are non-neutral, and whether the upstream `fn-*-signals` blob writers are producing fresh data. Phase 4b becomes "measure + harden + recalibrate + repair," not "build."
@@ -159,29 +176,38 @@ What was actually missing was OBSERVABILITY: whether the wired-in-code path actu
 - **No behavior change** — same multipliers, same composites, same predicted prices. The slice produces the data necessary to answer "do non-neutral composites actually reach predictions?" without touching any prediction math.
 - **Pulled from slice 1 (originally planned for it):** the `fetchPlayerSignals` cache wrap (Workstream D from Phase 4a). It's a behavior change (15-min freshness becomes deterministic vs per-request fetch) that would contaminate the firing-rate baseline measurement. Defer until after slice 1's measurement lands.
 
-**Slice 2 — Per-source `fn-*-signals` blob liveness (decider for slices 3-5):**
-- One-time Storage Blob Data Reader RBAC grant against `stcompiqfnotgm2`. Enumerate per-source blob freshness (`lastModified` per `fn-comps-momentum/*`, `fn-reddit-signals/*`, etc.). Per the SIGNAL inventory directive: bucket each LIVE / dead / stale / never-built.
-- Cross-reference against the documented schema: is each `fn-*` writing what's expected, or did one silently rot?
-- **Decision point** — which sources are reliable enough to USE in the playerMomentum aggregation; which need fixing; which to retire. Determines slice 3's scope.
+**ROSTER MEASUREMENT 2026-06-02 (PHASE-4B-PROOF-CLOSE, free — no RBAC needed):**
+- **fn-compiq aggregator roster: 10 players.** Defined by `COMPIQ_TRACKED_PLAYERS` env var on `fn-compiq`, falling back to a 5-player default in `compiq-functions/shared/__init__.py:_DEFAULT_PLAYERS`. Current value: Trout, Ohtani, Judge, Acuña Jr, Soto, Bellinger, Gleyber Torres, Witt Jr, Skenes, Bonemer. These 5-of-10 exactly match the PROOF's `ok_non_neutral` set; the 404s map exactly to the players NOT in the env var.
+- **Backend `player_trends` Cosmos container: 75 players.** Partition `/playerId` (MLBAM numeric IDs + a few name-slug fallbacks). One page, 4.5 RU, no cross-partition hang — `SELECT VALUE c.playerId` is the partition-key-safe projection.
+- **Relevant universe:** active MLB 26-team rosters (~676) + 40-man (~1200) + top-200 prospects = **low thousands at the OUTER edge** but **tens-to-low-hundreds** for the cards HobbyIQ actually predicts on at current volume. Carded-retired population (Maddux, Griffey Jr. that showed in the 404s from background jobs) is an additional ~thousands but irrelevant to live-signal play.
+- **Coverage gap verdict: TENS.** Roster broadening from 10 → ~100 active-relevance players is a single env-var edit + per-player signal-source warm-up (one fn-* timer cycle = ~2h). NOT thousands. Roster broadening is mechanically trivial; the question gating it is whether playerMomentum EARNS its 0.20-0.30 weight at any roster size (slice 3 answer).
 
-**Slice 3 — Calibration of the EXISTING blender against measured A/B (slice-1 corpus matures ~2 weeks; slice-2 inventory known):**
-- Once `trendIQ_composite` accumulates: measure signal-on (`composite != 1.0`) vs signal-off (`composite == 1.0` or `playerMomentum_multiplier == null`) prediction accuracy. Per `Signal classes: attention vs price` memory — backtest horizon MUST match class: attention-class signals (trends/reddit/youtube) need 3-10 week outcomes; price-class signals (compsMomentum/news) need <7d. Wrong-horizon backtests trained AWAY from cascade-tier attention value before; do not repeat.
-- If signal-on beats signal-off, the blender is calibrated correctly. If not: re-tune weights OR retire sources.
-- **NOT a new blender build.** Recalibration of the existing one against real data.
+**Slice 2 — Per-source `fn-*-signals` blob liveness (DEFERRED — gated on slice 3 outcome):**
+- Original plan: Storage Blob Data Reader RBAC grant against `stcompiqfnotgm2` to enumerate per-source blob freshness.
+- **New ordering:** slice 3 first. If slice 3 shows playerMomentum's contribution does NOT improve accuracy at horizon, then RBAC + per-source liveness is wasted work (we'd retire the source-signal pipeline regardless of whether individual `fn-*-signals` are alive). If slice 3 shows playerMomentum DOES earn its keep, slice 2 becomes the maintenance-mode workstream (keep the live ones alive; the dead ones explain why their players show neutral).
 
-**Slice 4 — Per-signal cap + per-source fallback-to-1.0 hardening (only if slice 3 surfaces a destructive signal):**
+**Slice 3 — Layer-decomposed calibration (PRIORITY after slice-1 corpus matures ~2 weeks):**
+- Decompose accuracy attribution **BY LAYER, NOT by composite-on/off**. The PROOF showed Layer 2 (cardTrajectory) does most of the composite work; aggregating composite-on/off would mis-attribute Layer 2 wins to Layer 1.
+- Three accuracy buckets:
+  - `cardTrajectory_only`: rows with `coverage=card_only` (Layer 1 absent; Layer 2 drives composite at weight 1.0)
+  - `playerMomentum_present`: rows with `playerMomentum_multiplier != null` (Layer 1 firing at weight 0.20-1.00 depending on coverage)
+  - `full_coverage`: rows with `coverage=full` (all three layers at canonical 0.20/0.40/0.40)
+- Horizon discipline per `Signal classes: attention vs price` memory: Layer 1 single-digit nudges (1.026-1.082 observed) are price-class-flavored → <7d outcomes. Layer 2 cardTrajectory <30d sales-velocity → <30d outcomes. Wrong-horizon backtests trained AWAY from cascade-tier attention value before; do not repeat.
+- **Decision** at slice 3: does `playerMomentum_present` accuracy beat `cardTrajectory_only` accuracy at matched horizon by enough to justify the Layer 1 weight + the operational cost of fn-* pipeline maintenance? If yes → slice 2 + 5 (broaden + maintain). If no → reweight Layer 1 to ~0.05 or retire entirely.
+
+**Slice 4 — Per-signal cap + per-source fallback-to-1.0 hardening (ONLY if slice 3 surfaces a destructive signal):**
 - Cap individual signals' contribution before they enter playerMomentum aggregation (e.g. cap any single source's deviation from 1.0 at ±30%).
 - Per-source `NEUTRAL_SIGNAL` fallback already exists in `fetchPlayerSignals`; verify it activates correctly on the stale-source case.
 
-**Slice 5 — Recover or retire individual `fn-*-signals` sources (if slice 2 surfaced dead ones):**
-- For each dead/stale source identified in slice 2: decide repair (fix the timer + code), repurpose (fold into another signal), or retire (remove from `fn-signal-aggregator`'s input set).
-- The only slice that might touch `fn-compiq` code itself.
+**Slice 5 — Roster broaden + recover/retire individual `fn-*-signals` sources (GATED on slice 3 verdict + slice 2 inventory):**
+- Roster broaden: env-var edit on `fn-compiq` to expand `COMPIQ_TRACKED_PLAYERS` from 10 → ~100 active-relevance players (active MLB 26-roster regulars + top-200 prospects). Each new player kicks off a signal-source warm-up cycle (~2h per timer tick × 7 sources = next-day coverage). Trivial mechanically; gated on slice 3 showing the cost-benefit ratio is positive.
+- Per-source repair/retire: for any dead/stale source identified in slice 2 (when slice 2 fires): decide repair, repurpose, or retire.
 
-**4b success criteria (REFRAMED):**
-- Slice 1: backend `traces` table answers "is fetchPlayerSignals actually called and how often does it get a non-neutral multiplier?" definitively. `trendIQ_composite != 1.0` queryable on the corpus.
-- Slice 2: every `fn-*-signals` source bucketed LIVE / dead / stale / never-built.
-- Slice 3: signal-on vs signal-off A/B run with horizon-matched outcomes; calibration decision made.
-- Slices 4-5: only if slices 1-3 surface a problem requiring them.
+**4b success criteria (REFRAMED 2026-06-02 post-PROOF):**
+- ~~Slice 1: backend `traces` table answers "is fetchPlayerSignals actually called and how often does it get a non-neutral multiplier?"~~ **ANSWERED 2026-06-02: yes, 8 ok_non_neutral fetches; aggregator reachable + responsive; composites range 0.741-1.37.**
+- Slice 3: layer-decomposed accuracy comparison run with horizon-matched outcomes; verdict on whether playerMomentum earns its 0.20-0.30 weight at matched horizon.
+- Slice 5 (post-slice-3): roster broadened OR signal pipeline retired, based on slice 3 verdict.
+- Slices 2 / 4: only if slice 3 verdict is "keep + maintain."
 
 ### Phase 4c — ML training pipeline (Weeks 8-9: Jul 10-23)
 
