@@ -35,6 +35,51 @@ import {
   buildUpstreamTimeoutBulkItemData,
 } from "../services/compiq/upstreamTimeout.helpers.js";
 
+// CF-LAUNCH-HARDENING (2026-06-02): centralized thin-data + approximate
+// helpers used by /search, /price, /price-by-id, /bulk happy-path response
+// builders. Two distinct iOS signals:
+//   - isThinFromEst: FMV is null OR genuinely unavailable; iOS hides
+//     pricing tiers + shows the "no recent comps / not in catalog / out
+//     of scope" empty state.
+//   - approximateFromEst: FMV is a number, but the number is uncertain
+//     (sibling-pool rescue, variant-mismatch, low-confidence-live);
+//     iOS shows the number with an "approximate" badge so users don't
+//     over-trust thin estimates.
+const THIN_SOURCES: ReadonlySet<string> = new Set([
+  "no-recent-comps",
+  "out-of-scope",
+  "catalog-miss",
+  "upstream-timeout",
+  // unsupported_sport already short-circuits BEFORE the happy-path branch
+  // runs; left out here so the legacy `source === "unsupported_sport"`
+  // check at the branch entry stays the only gate for that path.
+]);
+const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
+  "sibling-pool",
+  "variant-mismatch",
+]);
+const LOW_CONFIDENCE_THRESHOLD = 0.5;
+
+function isThinFromEst(est: Record<string, unknown>): boolean {
+  const source = typeof est.source === "string" ? est.source : null;
+  return source !== null && THIN_SOURCES.has(source);
+}
+
+function approximateFromEst(est: Record<string, unknown>): boolean {
+  const source = typeof est.source === "string" ? est.source : null;
+  if (source !== null && APPROXIMATE_SOURCES.has(source)) return true;
+  // Low-confidence live: FMV is from the main pipeline but the pricing
+  // confidence signal flags thin data.
+  if (source === "live" || source === undefined) {
+    const conf = (est.confidence as { pricingConfidence?: number } | null)
+      ?.pricingConfidence;
+    if (typeof conf === "number" && conf < LOW_CONFIDENCE_THRESHOLD * 100) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Issue #25 Phase 1 â€” read-only regime fields. Prefers the estimate's
 // embedded `regimeClassification` (computed inside computeEstimate against
 // the FULL 90-day comp pool). Falls back to classifying whatever
@@ -51,6 +96,13 @@ const NON_LIVE_SOURCES_FOR_REGIME: ReadonlySet<string> = new Set([
   "no-recent-comps",
   "unsupported_sport",
   "variant-mismatch",
+  // CF-LAUNCH-HARDENING (2026-06-02): new short-circuit sources from
+  // computeEstimate. Treat them the same as the existing non-live sources
+  // for regime classification — the embedded recentComps pool doesn't
+  // characterize the queried card.
+  "out-of-scope",
+  "catalog-miss",
+  "upstream-timeout",
 ]);
 
 function regimeFieldsFromEstimate(est: Record<string, unknown>): {
@@ -444,7 +496,9 @@ router.post("/search", async (req, res, next) => {
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
-      const isThin = source === "no-recent-comps";
+      // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
+      const isThin = isThinFromEst(est);
+      const approximate = approximateFromEst(est);
       const variantWarning: string[] = (est as any).variantWarning ?? [];
       const hasWarn = variantWarning.length > 0;
       const baseSummary = est.verdict ?? "Estimate based on available market data.";
@@ -517,6 +571,15 @@ router.post("/search", async (req, res, next) => {
         trendIQ: (est as any).trendIQ ?? null,
         signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence: finalConfidence,
+        // CF-LAUNCH-HARDENING (2026-06-02): top-level taxonomy fields iOS
+        // uses to render uniformly:
+        //   - approximate: true when FMV is a number but uncertain
+        //     (sibling-pool / variant-mismatch / low-confidence-live).
+        //   - outOfScopeReason: surfaces "pre-modern" or
+        //     "unsupported-sport" when the card is intentionally outside
+        //     CompIQ's launch scope (distinct from "we couldn't find data").
+        approximate,
+        outOfScopeReason: (est as any).outOfScopeReason ?? null,
         source,
         trendAnalysis: {
           market_direction: direction,
@@ -675,7 +738,9 @@ router.post("/price", async (req, res, next) => {
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
-      const isThin = source === "no-recent-comps";
+      // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
+      const isThin = isThinFromEst(est);
+      const approximate = approximateFromEst(est);
       const variantWarning: string[] = (est as any).variantWarning ?? [];
       const hasWarn = variantWarning.length > 0;
       const baseSummary = est.verdict ?? "Estimate based on available market data.";
@@ -710,6 +775,15 @@ router.post("/price", async (req, res, next) => {
         trendIQ: (est as any).trendIQ ?? null,
         signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence: finalConfidence,
+        // CF-LAUNCH-HARDENING (2026-06-02): top-level taxonomy fields iOS
+        // uses to render uniformly:
+        //   - approximate: true when FMV is a number but uncertain
+        //     (sibling-pool / variant-mismatch / low-confidence-live).
+        //   - outOfScopeReason: surfaces "pre-modern" or
+        //     "unsupported-sport" when the card is intentionally outside
+        //     CompIQ's launch scope (distinct from "we couldn't find data").
+        approximate,
+        outOfScopeReason: (est as any).outOfScopeReason ?? null,
         source,
         trendAnalysis: {
           market_direction: direction,
@@ -878,7 +952,9 @@ router.post("/price-by-id", async (req, res, next) => {
       const confidence = Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100);
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
-      const isThin = source === "no-recent-comps";
+      // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
+      const isThin = isThinFromEst(est);
+      const approximate = approximateFromEst(est);
 
       return {
         ...buildEngineMeta(),
@@ -907,6 +983,9 @@ router.post("/price-by-id", async (req, res, next) => {
         trendIQ: (est as any).trendIQ ?? null,
         signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
         confidence,
+        // CF-LAUNCH-HARDENING (2026-06-02): see /search for field rationale.
+        approximate: approximateFromEst(est as Record<string, unknown>),
+        outOfScopeReason: (est as any).outOfScopeReason ?? null,
         source,
         trendAnalysis: {
           market_direction: direction,
@@ -1102,6 +1181,9 @@ router.post("/bulk", async (req, res, next) => {
           trendIQ: (est as any).trendIQ ?? null,
           signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
           confidence: Math.min(1, ((est.confidence as any)?.pricingConfidence ?? 60) / 100),
+          // CF-LAUNCH-HARDENING (2026-06-02): see /search for field rationale.
+          approximate: approximateFromEst(est as Record<string, unknown>),
+          outOfScopeReason: (est as any).outOfScopeReason ?? null,
           trendAnalysis: {
             market_direction: trendRaw === "up" ? "up" : trendRaw === "down" ? "down" : "flat",
           },

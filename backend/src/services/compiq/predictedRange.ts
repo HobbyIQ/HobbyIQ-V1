@@ -112,6 +112,12 @@ const NON_LIVE_SOURCES: ReadonlySet<string> = new Set([
   "no-recent-comps",
   "unsupported_sport",
   "variant-mismatch",
+  // CF-LAUNCH-HARDENING (2026-06-02): new short-circuit sources from
+  // computeEstimate's pre-modern + catalog-miss + upstream-timeout paths.
+  // None carry a usable comp pool for range computation.
+  "out-of-scope",
+  "catalog-miss",
+  "upstream-timeout",
 ]);
 const MIN_COMPS_FOR_RANGE = 8;
 

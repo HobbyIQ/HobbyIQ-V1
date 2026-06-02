@@ -213,7 +213,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
   });
 
   describe("source-level lock — every FMV-returning path emits via the helper exactly once", () => {
-    it("computeEstimate has 5 emitPredictionToCorpus call sites (1 main + 4 fallback)", async () => {
+    it("computeEstimate has 7 emitPredictionToCorpus call sites (1 main + 6 fallback)", async () => {
       const text = await fs.readFile(
         new URL(
           "../src/services/compiq/compiqEstimate.service.ts",
@@ -221,9 +221,11 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         ),
         "utf8",
       );
-      // 1 helper definition + 5 callsites = 6 hits total.
+      // 1 helper definition + 7 callsites = 8 hits total.
+      // CF-LAUNCH-HARDENING (2026-06-02) added 2 new short-circuit emits:
+      // pre-modern (out-of-scope) + catalog-miss.
       const matches = text.match(/emitPredictionToCorpus\s*[({]/g);
-      expect(matches?.length ?? 0).toBe(6);
+      expect(matches?.length ?? 0).toBe(8);
     });
 
     it("each fallback path tags fmvMechanism appropriately", async () => {
@@ -255,6 +257,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       // immediately above its own `return { ... }`. The control-flow
       // structure (early return at each fallback) guarantees exactly one
       // helper invocation per request:
+      //   pre-modern:        emit -> return (function exit)  [NEW 2026-06-02]
+      //   catalog-miss:      emit -> return (function exit)  [NEW 2026-06-02]
       //   unsupported_sport: emit -> return (function exit)
       //   variant-mismatch:  emit -> return (function exit)
       //   sibling-pool:      emit -> return (function exit)
@@ -271,8 +275,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         "utf8",
       );
       const emitCalls = (text.match(/emitPredictionToCorpus\({/g) ?? []).length;
-      // 5 call sites; declaration uses different syntax.
-      expect(emitCalls).toBe(5);
+      // 7 call sites; declaration uses different syntax (parens, not brace).
+      expect(emitCalls).toBe(7);
     });
   });
 

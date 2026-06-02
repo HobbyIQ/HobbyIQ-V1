@@ -1789,7 +1789,118 @@ export async function computeEstimate(
     isAuto: effectiveIsAuto,
   };
 
+  // ── Pre-modern guard ─────────────────────────────────────────────────────
+  // CF-LAUNCH-HARDENING (2026-06-02): pre-1980 cards are out-of-scope for
+  // CompIQ at launch. Cardsight catalog has thin pre-modern coverage (2024
+  // Topps Chrome IS catalogued; 1969 Topps Bobby Cox IS NOT) and pre-modern
+  // pricing dynamics (vintage grading premiums, condition-sensitivity,
+  // small-pop pricing) require domain handling we don't ship today. Return
+  // an explicit source="out-of-scope" with outOfScopeReason="pre-modern"
+  // BEFORE fetchComps fires — saves a Cardsight call AND surfaces a clean
+  // iOS-renderable "not in scope" shape (NOT the same as "we couldn't
+  // find data"). Threshold 1980 is the conventional "modern era" cutoff
+  // for sports cards; revisit if/when CompIQ adds vintage handling.
+  const PRE_MODERN_YEAR_CUTOFF = 1980;
+  const requestedYear =
+    typeof body.cardYear === "number" && Number.isFinite(body.cardYear)
+      ? body.cardYear
+      : null;
+  if (requestedYear !== null && requestedYear < PRE_MODERN_YEAR_CUTOFF) {
+    console.log(
+      `[compiq.computeEstimate] pre-modern out-of-scope short-circuit: query="${cardTitle}" year=${requestedYear}`,
+    );
+    emitPredictionToCorpus({
+      cardIdentity: null,
+      body,
+      fairMarketValue: null,
+      fmvMechanism: "unavailable",
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceMechanism: "unavailable",
+      callContext,
+    });
+    return {
+      source: "out-of-scope",
+      // Unified flag for the iOS taxonomy: "this card is intentionally
+      // outside CompIQ's launch scope" — distinct from "we couldn't
+      // resolve / find data". Same flag fires on unsupported_sport (set
+      // below) so iOS only needs one branch.
+      outOfScopeReason: "pre-modern" as const,
+      outOfScopeNote: `Pre-${PRE_MODERN_YEAR_CUTOFF} cards (vintage era) are out-of-scope at launch.`,
+      cardIdentity: null,
+      fairMarketValue: null,
+      fairMarketValueLow: null,
+      fairMarketValueHigh: null,
+      marketValue: null,
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceAttribution: null,
+      quickSaleValue: null,
+      premiumValue: null,
+      compsUsed: 0,
+      compsAvailable: 0,
+      recentComps: [],
+      variantWarning: [],
+      confidence: { pricingConfidence: 0 },
+      verdict: `Pre-${PRE_MODERN_YEAR_CUTOFF} cards are not priced at launch. CompIQ currently supports modern-era cards.`,
+      gradeUsed: cardHedgeGrade,
+      marketDNA: { trend: "flat", speed: "Normal" },
+    } as Record<string, unknown>;
+  }
+
   let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardsightCardId, queryContext);
+
+  // ── Catalog-miss guard ───────────────────────────────────────────────────
+  // CF-LAUNCH-HARDENING (2026-06-02): when the free-text path's Cardsight
+  // catalog search yields ZERO candidates (fetched.card === null AND no
+  // comps), distinguish "Cardsight doesn't catalog this card" from
+  // "Cardsight has the card but no recent sales" (the existing
+  // no-recent-comps source). Both look the same in the corpus today
+  // (fmvMechanism="unavailable") but they're different product states:
+  //   - catalog-miss: pricing genuinely unavailable; suggest user verify
+  //     query OR file as catalog gap
+  //   - no-recent-comps: pricing might appear once a sale lands; OK to
+  //     refresh later
+  // Skip on the pinned cardsightCardId path — that path already resolved
+  // a catalog entry by id; if no comps, it's definitionally no-recent-comps
+  // not a catalog miss.
+  if (!body.cardsightCardId && fetched.card === null && fetched.comps.length === 0) {
+    console.log(
+      `[compiq.computeEstimate] catalog-miss short-circuit: query="${cardTitle}"`,
+    );
+    emitPredictionToCorpus({
+      cardIdentity: null,
+      body,
+      fairMarketValue: null,
+      fmvMechanism: "unavailable",
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceMechanism: "unavailable",
+      callContext,
+    });
+    return {
+      source: "catalog-miss",
+      cardIdentity: null,
+      fairMarketValue: null,
+      fairMarketValueLow: null,
+      fairMarketValueHigh: null,
+      marketValue: null,
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceAttribution: null,
+      quickSaleValue: null,
+      premiumValue: null,
+      compsUsed: 0,
+      compsAvailable: 0,
+      recentComps: [],
+      variantWarning: [],
+      confidence: { pricingConfidence: 0 },
+      verdict:
+        "We couldn't find this card in our catalog. Try simplifying the query (drop set parallel or grade) or check the spelling.",
+      gradeUsed: cardHedgeGrade,
+      marketDNA: { trend: "flat", speed: "Normal" },
+    } as Record<string, unknown>;
+  }
 
   // ── Sport-scope guard ────────────────────────────────────────────────────
   // CompIQ currently supports baseball only (issue #7). If Card Hedge's AI
@@ -1831,6 +1942,12 @@ export async function computeEstimate(
     });
     return {
       source: "unsupported_sport",
+      // CF-LAUNCH-HARDENING (2026-06-02): unified iOS taxonomy flag —
+      // identical semantics to the pre-modern out-of-scope branch above
+      // so iOS only needs to check outOfScopeReason != null to detect
+      // either flavor. unsupported_sport stays as the source string for
+      // backward compat with the 10+ test files that pin it.
+      outOfScopeReason: "unsupported-sport" as const,
       unsupportedSportReason: unsupportedReason,
       detectedSport: detectedCategory,
       cardIdentity: fetched.card
