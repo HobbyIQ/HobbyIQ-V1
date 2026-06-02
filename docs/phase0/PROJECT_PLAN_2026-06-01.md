@@ -44,11 +44,16 @@ A large body of work landed this session that the original roadmap did not antic
 | **2.3** | Original p95-drop success criterion retired/re-baselined. Real success criteria: (i) hit-rate measurable per prefix [✅ Workstream C]; (ii) Cardsight outage → serve stale not empty [✅ Workstream A unit test]; (iii) `cache_hit` propagates to `prediction_log` so latency aggregates can filter by it [✅ Workstream B]. p95 reduction target re-baselined against post-launch traffic. | ✅ MET (criteria 1-3); p95 target re-baselined |
 | **2.4** | Sign off Phase 4a complete. Phase 4b kickoff (signal integration) ungated. | ✅ COMPLETE |
 
-**Deferred (not v1; named so the next session inherits clear scope):**
+**Closed in 2.2-FIX (2026-06-02; same-day correction after the 2.2-CONFIRM read):**
+- **`cache_hit` semantic** corrected to null-if-no-cache-calls (case B: ctx active but zero hits + zero misses now returns null instead of false). Truth-table test added covering A null / B null / C true / D false / E mixed→false / F stale-counts-as-miss→false.
+- **`served_stale: boolean | null`** added to PredictionLogDocument as a corpus-side companion to cache_hit. Mirrors null-if-no-cache-calls semantics. Set at the cacheWrap boundary via a new `staleServes` counter on `CacheStats`; tallyStats increments BOTH `misses` AND `staleServes` on the stale-serve outcome so cache_hit semantics are preserved while served_stale becomes its own signal. Test: stale-served comp → served_stale=true; clean path → false; no cache calls → null.
+
+**Deferred (named carry-forward):**
 - **D — Signal-driven invalidation.** Phase-4b-gated. Needs the signal aggregator wired before signal-driven `cs:pricing` invalidation has a producer.
 - **E — Pre-warm / nightly refresh for top-K cards.** Gated on C's measured hit-rate. If telemetry shows cold-cache misses dominate user perception, build it. If hits already dominate (likely at single-user volume with 6h TTL), skip until post-launch.
+- **cache-staleness API-output marker / iOS "approximate" badge — DEFERRED, iOS-gated.** The server-side stale-serve fallback works (returns the cached value with `freshness: "stale"` on the `CardsightPricingResponse` object) and the corpus now records `served_stale` for post-hoc analysis. What's missing is plumbing the staleness signal through the response chain to the iOS client so the UI can render an "approximate — Cardsight unavailable" badge. **Why one-line is not enough:** the symbol `freshness` is already in use on `computeEstimate`'s response object with a DIFFERENT schema (`{status: "Live"|"Stale"|"Needs refresh", lastUpdated}` — market-data recency, not cache-staleness). Name collision means a new field (e.g. `cacheFreshness?: "stale"` or `sourceFreshness:"stale-cache"`) must be threaded through 5 getPricing call sites + cardsight.router result types + ~5 computeEstimate return shapes. ~10-30 lines of careful plumbing. Drew's call when this lands; gated on iOS surface readiness (otherwise the signal lands server-side with no consumer).
 
-**Track 2 success criterion:** A+B+C shipped, all three success-criteria met. Risk #2 mitigated. **DONE.**
+**Track 2 success criterion:** A+B+C shipped + 2.2-FIX corpus served_stale closed. Risk #2 server-side mitigated; user-facing badge plumbing deferred to iOS-gated follow-up. **v1 CLOSED.**
 
 ---
 
