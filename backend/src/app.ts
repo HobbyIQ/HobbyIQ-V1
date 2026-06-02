@@ -15,7 +15,11 @@ import ebayWebhookRoutes from "./routes/ebayWebhook.routes.js";
 import uploadsRoutes from "./routes/uploads.routes.js";
 import ocrRoutes from "./routes/ocr.routes.js";
 import psaRoutes from "./routes/psa.routes.js";
-import watchlistRoutes from "./routes/watchlist.routes.js";
+// CF-WATCHLIST-UNIFY (2026-06-02): /api/watchlist (basic system) retired.
+// /api/dailyiq/watchlist is the canonical system; mount preserved below.
+// Requests to /api/watchlist will 404 (handled by the catch-all notFound
+// middleware). iOS rewire from /api/watchlist -> /api/dailyiq/watchlist
+// is blocking after this CF deploys.
 import devicesRoutes from "./routes/devices.routes.js";
 import alertsRoutes from "./routes/alerts.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
@@ -57,7 +61,8 @@ app.use("/api/ebay", ebayRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/internal/ocr", ocrRoutes);
 app.use("/api/psa", psaRoutes);
-app.use("/api/watchlist", watchlistRoutes);
+// CF-WATCHLIST-UNIFY: /api/watchlist mount removed; route returns 404 via
+// the notFound handler. /api/dailyiq/watchlist is canonical.
 app.use("/api/devices", devicesRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
