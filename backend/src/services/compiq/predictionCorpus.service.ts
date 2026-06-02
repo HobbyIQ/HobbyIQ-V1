@@ -55,6 +55,10 @@ import type { PredictionCorpusSource } from "../../types/compiq.types.js";
 // ACCURACY-DASHBOARD) imports them without coupling to this write-path
 // service. Per methodology §4.3 single-source-of-truth invariant.
 import { derivePredictionDirection } from "./predictionConstants.js";
+// PHASE-4A-2.2 (2026-06-02): read per-prediction cache stats at write time
+// so PredictionLogDocument.cache_hit reflects whether the prediction
+// served entirely from the cache.
+import { cacheStatsContext } from "../shared/cache.service.js";
 // STEP 3: write-completeness health counter. Per methodology §2.6 we
 // record each attempt + success/failure resolution into a Cosmos doc
 // per-replica per-day. The counter calls are fire-and-forget and
@@ -267,6 +271,16 @@ interface PredictionLogDocument {
   userId: string | null;
   holdingId: string | null;
   routedFromHolding: boolean;
+  // PHASE-4A-2.2 (2026-06-02): purely additive — whether this prediction
+  // served entirely from cache. Set at the cacheWrap boundary via the
+  // AsyncLocalStorage `cacheStatsContext` scope opened by computeEstimate.
+  // null = the prediction ran outside the cache-stats scope (e.g. a
+  // non-prediction code path that still wrote to the corpus, or pre-2.2
+  // legacy emit). true = all underlying Cardsight calls hit fresh cache;
+  // false = at least one miss or stale-serve. Does NOT change which
+  // predictions get logged; the §4.2/§4.3 accuracy instrument tolerates
+  // the new field (optional add, no existing field changed).
+  cache_hit: boolean | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -356,6 +370,17 @@ function buildDocument(
     userId: input.userId,
     holdingId: input.holdingId,
     routedFromHolding: input.routedFromHolding,
+    // PHASE-4A-2.2 (2026-06-02): cache_hit at the cacheWrap boundary.
+    // computeEstimate opens an AsyncLocalStorage scope around its body;
+    // every cacheWrap underneath tallies into ctx.{hits,misses}. true =
+    // every Cardsight call served fresh from cache (no underlying API
+    // call). false = at least one miss or stale-serve. null = ctx was
+    // not active (the prediction ran outside the cache-stats scope).
+    cache_hit: (() => {
+      const ctx = cacheStatsContext.getStore();
+      if (!ctx) return null;
+      return ctx.hits > 0 && ctx.misses === 0;
+    })(),
   };
 }
 

@@ -21,5 +21,11 @@ export default defineConfig({
     env: {
       NODE_ENV: "test",
     },
+    // PHASE-4A-2.2 (2026-06-02): bumped from default 10s. Integration-style
+    // tests that `await import("../src/app")` in beforeAll trigger a cold
+    // module-graph transform whose cost grew past 10s after compiq surface
+    // additions (cache hardening + ebay poll + corpus + resolver work).
+    // Module evaluation itself is fast; the cost is one-time SWC transform.
+    hookTimeout: 30000,
   },
 });

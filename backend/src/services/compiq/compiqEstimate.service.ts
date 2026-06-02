@@ -5,6 +5,13 @@ import { normalizeGradeCompany, normalizeParallel } from "./normalizationDiction
 import { normalizePlayerName } from "./cardsight.mapper.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext, type RoutedCard } from "./cardsight.router.js";
 import { getPricing, type CardsightSaleRecord } from "./cardsight.client.js";
+// PHASE-4A-2.2 (2026-06-02): per-prediction cache-stats scope. The
+// `cacheStatsContext.run` wrap around the body lets every cacheWrap call
+// underneath tally hits/misses into a per-prediction bucket, which the
+// predictionCorpus emit reads at write time to set `cache_hit` on the
+// PredictionLogDocument. Single boundary, no signature churn at the 9
+// call sites.
+import { cacheStatsContext } from "../shared/cache.service.js";
 import {
   parseCardQuery,
   getCompVariantMismatchReasons,
@@ -1645,6 +1652,11 @@ export async function computeEstimate(
   callContext: PredictionCallContext,
   options: ComputeEstimateOptions = {},
 ): Promise<Record<string, unknown>> {
+  // PHASE-4A-2.2 (2026-06-02): wrap the body in a fresh cache-stats scope
+  // so every `cacheWrap` call inside getPricing / searchCatalog / etc.
+  // tallies into a per-prediction bucket. The predictionCorpus emit reads
+  // the bucket at write time to populate `cache_hit` on the persisted doc.
+  return cacheStatsContext.run({ hits: 0, misses: 0 }, async () => {
   // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): callContext is the
   // attribution axis for every emitPredictionToCorpus call below. The
   // 5 emit sites (unsupported_sport, variant-mismatch, sibling-pool,
@@ -3229,6 +3241,7 @@ export async function computeEstimate(
     parallelMatchFilteredCount: fetched.parallelMatchFilteredCount ?? null,
     parallelMatchUnifiedCount: fetched.parallelMatchUnifiedCount ?? null,
   };
+  });  // close cacheStatsContext.run callback (PHASE-4A-2.2)
 }
 
 export async function simulateWhatIf(body: {

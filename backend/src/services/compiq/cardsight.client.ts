@@ -31,6 +31,12 @@ const log = {
 const CATALOG_TTL_SEC = 6 * 3600;  // 6h
 const DETAIL_TTL_SEC  = 24 * 3600; // 24h
 const PRICING_TTL_SEC = 6 * 3600;  // 6h
+// PHASE-4A-2.2 (2026-06-02): stale-serve window. Past the fresh TTL but
+// inside this window, a stale entry is returned with freshness:"stale" if
+// Cardsight fails. Pricing is the load-bearing surface for Risk #2 (a
+// Cardsight outage = full prediction outage without this); apply to pricing
+// at minimum. Catalog/detail can opt in later if outage patterns warrant.
+const PRICING_STALE_SERVE_TTL_SEC = 24 * 3600;  // 24h
 
 // ─── Exported Types ──────────────────────────────────────────────────────────
 
@@ -108,6 +114,15 @@ export interface CardsightPricingResponse {
    * (i.e. the caller didn't pass parallelId).
    */
   __parallelIdFilterFellBack?: boolean;
+  /**
+   * PHASE-4A-2.2 (2026-06-02): stale-serve marker. Absent or "fresh" means
+   * the response was returned from a fresh fetch or a fresh-TTL cache hit.
+   * "stale" means cacheWrap fell back to a stale-but-within-window entry
+   * because the underlying Cardsight call failed (Risk #2 mitigation:
+   * Cardsight outage → serve stale, never empty). Downstream UI can render
+   * an "approximate — Cardsight unavailable" badge when this is "stale".
+   */
+  freshness?: "fresh" | "stale";
 }
 
 // ─── Error Types ─────────────────────────────────────────────────────────────
@@ -388,7 +403,10 @@ export async function getPricing(
   return cacheWrap(
     cKey("cs:pricing", cardId, opts.parallelId ?? ""),
     () => _getPricing(cardId, opts),
-    PRICING_TTL_SEC,
+    {
+      freshTtlSeconds: PRICING_TTL_SEC,
+      staleServeTtlSeconds: PRICING_STALE_SERVE_TTL_SEC,
+    },
   );
 }
 
