@@ -231,6 +231,23 @@ function extractSaleConfirmedAt(env: EbayNotificationEnvelope): string {
 /**
  * Handle an ITEM_SOLD notification from eBay's Sell Notification API.
  *
+ * EBAY-POLL-INGESTION-C1 (2026-06-01) — DORMANT IN PROD. Sale ingestion
+ * is now poll-based via `pollEbayOrdersForUser` (1h cadence, scheduled
+ * job at jobs/ebayOrderPoll.job.ts). This handler is no longer the
+ * primary signal; the eBay developer portal subscription for ITEM_SOLD
+ * is not active. It remains wired as:
+ *   - Belt-and-suspenders for accidental ITEM_SOLD POSTs (race-safe with
+ *     the poll path because markHoldingSoldFromEbay is idempotent on
+ *     (holdingId, ebayOrderId) — whichever path arrives second returns
+ *     marked-sold-deduped).
+ *   - Reference for the documented data shape (the envelope schema below
+ *     mirrors what getOrders line items expose, modulo the offerId
+ *     difference — see ebayOrderPoll.service.ts join-key comment).
+ *
+ * The MARKETPLACE_ACCOUNT_DELETION handler in this file is unchanged
+ * and remains compliance-required regardless of which ingestion path is
+ * primary.
+ *
  * Flow (capture-before-process is performed by the caller):
  *   1. Extract ebayOfferId from envelope.
  *   2. Cross-user lookup of the holding linked to that offerId.

@@ -12,6 +12,14 @@ export interface EbayTokenRecord {
   refreshTokenExpiresAt: number;
   scopes: string[];
   connectedAt: string;
+  /**
+   * EBAY-POLL-INGESTION-C1 (2026-06-01): cursor for `pollEbayOrdersForUser`.
+   * MONOTONIC — never written back below its prior value, so an empty poll
+   * (or a fetch failure mid-pagination) leaves the cursor unchanged and the
+   * next poll re-walks the same window. First poll uses `connectedAt` as
+   * the implicit starting point when this field is null/absent.
+   */
+  lastPolledAt?: string | null;
 }
 
 interface EbayTokenDoc {
@@ -127,6 +135,34 @@ export async function writeTokenRecord(record: EbayTokenRecord): Promise<void> {
     updatedAt: new Date().toISOString(),
   };
   await container.items.upsert(doc);
+}
+
+/**
+ * EBAY-POLL-INGESTION-C1 (2026-06-01): list every userId with an eBay
+ * connection. Used by the scheduled order-poll job to iterate connected
+ * users. Returns the union of FILE_STORE keys + Cosmos doc userIds
+ * (dedup'd). Cheap at current scale (one doc per connected user); revisit
+ * if the connected-user count grows past ~10k.
+ */
+export async function listConnectedUserIds(): Promise<string[]> {
+  const ids = new Set<string>(Object.keys(FILE_STORE));
+  const container = await getContainer();
+  if (container) {
+    try {
+      const { resources } = await container.items
+        .query<{ userId: string }>({ query: "SELECT c.userId FROM c" })
+        .fetchAll();
+      for (const row of resources ?? []) {
+        if (row?.userId) ids.add(row.userId);
+      }
+    } catch (err: any) {
+      console.error(
+        "[ebayTokenStore] listConnectedUserIds Cosmos query failed:",
+        err?.message ?? String(err),
+      );
+    }
+  }
+  return Array.from(ids);
 }
 
 export async function deleteTokenRecord(userId: string): Promise<void> {

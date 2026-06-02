@@ -1772,6 +1772,86 @@ export async function findHoldingByEbayOfferIdAcrossUsers(
   return matches[0];
 }
 
+/**
+ * Cross-user lookup of a holding by eBay listingId. EBAY-POLL-INGESTION-C1
+ * (2026-06-01): the Sell Fulfillment getOrders response does NOT carry an
+ * `offerId` on line items (only `legacyItemId` + `lineItemId`). The poll
+ * path matches against the holding's `ebayListingId` field instead, which
+ * is persisted at publish time by `linkEbayListing`.
+ *
+ * Mirrors `findHoldingByEbayOfferIdAcrossUsers` exactly — same cross-
+ * partition Cosmos scan, same multi-match deterministic ordering, same
+ * never-throw contract (failing the poll would just retry forever; never
+ * lose a sale).
+ *
+ * INVARIANT: an eBay listingId (the public marketplace item id) is unique
+ * per seller and a HobbyIQ user is a single eBay seller, so at most ONE
+ * holding should match. Multi-match logs CRITICAL and picks deterministically.
+ *
+ * Returns null when no match is found or when the backing store is
+ * unavailable.
+ */
+export async function findHoldingByEbayListingIdAcrossUsers(
+  listingId: string,
+): Promise<{ userId: string; holdingId: string; holding: PortfolioHolding } | null> {
+  if (!listingId) return null;
+
+  type Match = { userId: string; holdingId: string; holding: PortfolioHolding };
+  const matches: Match[] = [];
+
+  const container = await getContainer();
+  if (!container && isTestMode) {
+    for (const [userId, doc] of testMemStore.entries()) {
+      for (const [holdingId, holding] of Object.entries(doc.holdings)) {
+        if (holding?.ebayListingId === listingId) {
+          matches.push({ userId, holdingId, holding });
+        }
+      }
+    }
+  } else if (container) {
+    try {
+      const { resources } = await container.items
+        .query<{ userId: string; holdings: Record<string, PortfolioHolding> }>({
+          query: "SELECT c.userId, c.holdings FROM c",
+        })
+        .fetchAll();
+      for (const row of resources ?? []) {
+        if (!row?.holdings) continue;
+        for (const [holdingId, holding] of Object.entries(row.holdings)) {
+          if (holding?.ebayListingId === listingId) {
+            matches.push({ userId: row.userId, holdingId, holding });
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error(
+        "[portfolio] findHoldingByEbayListingIdAcrossUsers query failed:",
+        err?.message ?? String(err),
+      );
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  if (matches.length === 0) return null;
+
+  if (matches.length > 1) {
+    matches.sort((a, b) =>
+      a.userId === b.userId
+        ? a.holdingId.localeCompare(b.holdingId)
+        : a.userId.localeCompare(b.userId),
+    );
+    console.error(
+      `[portfolio] CRITICAL: ebayListingId=${listingId} matched ${matches.length} holdings across users — INVARIANT VIOLATED (eBay listingIds are unique per seller). Matches: ${matches
+        .map((m) => `userId=${m.userId} holdingId=${m.holdingId}`)
+        .join(", ")}. Picking first deterministically: userId=${matches[0].userId} holdingId=${matches[0].holdingId}`,
+    );
+  }
+
+  return matches[0];
+}
+
 export async function sellHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;

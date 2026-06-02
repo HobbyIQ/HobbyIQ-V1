@@ -5,6 +5,7 @@ import app from "./app.js";
 import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
+import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
 
@@ -57,6 +58,11 @@ app.listen(port, "0.0.0.0", () => {
     startPriceAlertEvaluatorJob();
   } catch (err: any) {
     console.error("[server] startPriceAlertEvaluatorJob failed:", err?.message ?? err);
+  }
+  try {
+    startEbayOrderPollJob();
+  } catch (err: any) {
+    console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
   }
   // Phase 1 CH-removal-v2 fix (commit 8d6d769): prime the resolveCardId LRU
   // cache for popular cards so the first iOS request after a container
