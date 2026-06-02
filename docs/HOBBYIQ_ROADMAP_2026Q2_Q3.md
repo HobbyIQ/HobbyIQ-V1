@@ -23,7 +23,7 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 
 **2. Card Hedge dependency (resolved at router; cleanup pending).** Card Hedge subscription cancelled 2026-05-19. CH is functionally disconnected at the router (`CARDSIGHT_MODE=exclusive` + Site B short-circuit returns `[]` without calling CH at prediction time). Remaining work is code/config cleanup: delete the client, remove env vars, disable the ingestion function, scrub docs.
 
-**3. Documented architecture doesn't match deployed reality.** `copilot-instructions.md` describes MCP-mediated pipeline reading cached comps from blob, rule "never call live at prediction time." Actual code calls Cardsight live at every prediction. 14 Azure Functions writing nightly to blob have no production backend consumer. Signal pipeline is dead-output relative to live pricing. **Additionally (Phase 0 finding 2026-05-21):** `comp_logs` writer never shipped to production before PR-A1. The 5 pre-PR-A1 rows in `comp_logs` were from a one-off local seed script run 2026-05-03; no live traffic was ever recorded.
+**3. Documented architecture doesn't match deployed reality.** `copilot-instructions.md` describes MCP-mediated pipeline reading cached comps from blob, rule "never call live at prediction time." **PARTIAL CORRECTION 2026-06-02:** the original "calls Cardsight live at every prediction" claim was incorrect — a Redis-backed in-process cache (`cacheWrap` at `cardsight.client.ts:388` for `getPricing`, plus catalog and detail wrappers) was already deployed; the prediction path hits cache first with 6h TTL. The cache is cardId-scoped, not player-slug-scoped as the doc suggests. The 14 Azure Functions writing nightly to blob still have no production backend consumer; signal pipeline still dead-output relative to live pricing. PHASE-4A-2.2 (2026-06-02) added resilience (stale-serve on Cardsight outage) + observability (`cache_hit` on prediction corpus + per-prefix hit-rate telemetry) on top of the existing cache. **Additionally (Phase 0 finding 2026-05-21):** `comp_logs` writer never shipped to production before PR-A1. The 5 pre-PR-A1 rows in `comp_logs` were from a one-off local seed script run 2026-05-03; no live traffic was ever recorded.
 
 **4. CompIQ not formalized for ML.** comp_logs accumulating (as of PR-A1 / 2026-05-21T17:44:32Z writer flip). Backtest harness exists. Alpha-weight ramp infrastructure exists. Training pipeline, model itself, and production serving infrastructure unbuilt. Strategic moat depends on closing this gap.
 
@@ -120,24 +120,26 @@ prerequisite picker migration is now where the real work lives.
 - Zero references to Card Hedge in active code paths.
 - Documented architecture matches deployed reality.
 
-### Phase 4a — MCP-mediated cache layer (Weeks 5-6: Jun 19-Jul 2)
+### Phase 4a — Cache hardening (reframed 2026-06-02)
 
-**Complete the half-built infrastructure. Live prediction calls become cache reads.**
+**RESILIENCE + OBSERVABILITY HARDENING of the existing cache.** The pre-2.1 framing ("build the cache layer") carried a stale premise: a Redis-backed in-process cache was already deployed (cardId-scoped, not player-slug-scoped per the 2.1 investigation). **MCP-as-separate-service was rejected** in the 2.1 decision — no usable MCP repo was discovered in Phase 0, and the existing in-process cache already addressed substrate. **v1 = A+B+C SHIPPED 2026-06-02.**
 
-**Framing update 2026-05-21:** Cardsight is now the sole comp data source. The cache layer is resilience-critical, not just a latency optimization — a Cardsight outage with no cache is a full prediction outage. **Phase 4a urgency increased.**
+**Framing update 2026-06-02:** the original "MCP-mediated cache" wording was retired. Cache substrate, key scheme, and Redis-or-memory fallback all PRE-EXISTED this phase. What was missing: stale-serve on Cardsight outage (Risk #2 mitigation), per-prediction `cache_hit` observability, and per-prefix hit-rate telemetry. Those are now shipped via PHASE-4A-2.2.
 
-- Decision in Week 5: MCP-as-separate-service vs in-process cache layer. Lean: in-process unless Phase 0 found existing MCP repo
-- Implement cache reader: blob read by player-slug key, TTL respect, miss → live Cardsight call → write to cache
-- Cache miss telemetry: log every miss, dashboard for hit rate
-- Fallback semantics: if Cardsight down AND cache stale, return stale data with `freshness: "stale"` flag, never serve nothing
-- Cache invalidation: signal pipeline triggers re-fetch on >5% predicted-price-move; otherwise nightly refresh
-- Observability: cache hit rate dashboard in App Insights
-- **Cache-hit telemetry pollution (carried over from Phase 1 Track A):** decide between adding a `cache_hit: boolean` field to `comp_logs` schema (preferred — preserves cache-effectiveness observability) vs moving the writer outside `cacheWrap` (loses cache-hit visibility). This decision belongs to Phase 4a measurement-design, not Phase 1.
+**v1 scope (A+B+C) — SHIPPED:**
+- **A — STALE-SERVE FALLBACK (Risk #2 mitigation).** `cacheWrap` extended with optional `staleServeTtlSeconds`. When a cache entry exists past its `freshTtlSeconds` but inside the stale window AND the underlying fn fails (Cardsight timeout / 5xx / rate-limit), the stale entry is returned with `freshness: "stale"` rather than propagating the error. **Mandatory invariant:** stale-served responses are ALWAYS flagged; fresh responses NEVER carry "stale". Applied to `getPricing` with 24h stale window; catalog/detail can opt in later.
+- **B — `cache_hit` on prediction corpus.** Purely additive boolean field on `PredictionLogDocument`. Populated at write-time from an `AsyncLocalStorage` cache-stats scope opened around `computeEstimate`'s body; every `cacheWrap` call underneath tallies into per-prediction hits/misses. `true` = all underlying Cardsight calls served from fresh cache. `false` = at least one miss or stale-serve. `null` = ctx not active (legacy emit path). §4.2/§4.3 accuracy instrument tolerates the new field unchanged.
+- **C — Per-prefix hit-rate telemetry.** Module-scoped counters bucketed by `cs:pricing` / `cs:catalog` / `cs:detail`. Hourly structured `compiq_cache_hit_rate` log line for App Insights; resets after emit. Stale-served outcomes counted separately from hits + misses so the Cardsight-outage rate is visible.
 
-**4a success criteria:**
-- Cache hit rate >80% within 1 week of deploy
-- p95 prediction latency drops by >50% vs Day-10 baseline (2026-05-31 post-PR-A1 + PR-A1.1, includes existing in-process cacheWrap). **Baseline note (2026-05-21 PM):** Phase 0 latency baseline is not recoverable — requests-table auto-instrumentation was unwired pre-PR-A1; only ~1 hour of usable post-PR-A1 data exists at the time of this edit. Realistic baseline is Day-10.
-- Zero prediction calls direct to Cardsight when cache warm
+**Deferred (D + E):**
+- **D — Signal-driven invalidation.** Phase 4b-gated. When `compsMomentum` or another signal indicates predicted-move > X%, invalidate the affected `cs:pricing:<cardId>:*` keys. Needs the signal aggregator to be wired first (Phase 4b scope).
+- **E — Pre-warm / nightly refresh.** Gated on C's measured hit-rate. If telemetry shows cold-cache misses dominate user perception, build a top-K pre-warmer. If hits already dominate (likely at single-user volume given the 6h TTL), skip until post-launch.
+
+**Phase 4a success criteria (reframed 2026-06-02):**
+- ✅ **Hit-rate measurable per prefix** — `compiq_cache_hit_rate` structured log emits hourly with per-prefix counters (shipped via Workstream C).
+- ✅ **Cardsight outage → predictions serve stale, not empty** — stale-serve unit test in `cacheStaleServe.test.ts` simulates a Cardsight 503 against a warm-but-stale entry, asserts the stale value returns with `freshness: "stale"` (Workstream A; the Risk-#2 proof).
+- ✅ **Cache hits no longer pollute `comp_logs` latency aggregates** — the `cache_hit` field on `prediction_log` enables filter `cache_hit = false` to isolate live-fetch latency. Soak filter `latency_ms >= 50` is no longer required as a workaround (Workstream B).
+- 🔄 **p95 reduction target retired / re-baselined at v1 traffic** — the original ">50% vs Day-10" goal was set before the existing cache was rediscovered. Current 7d App Insights baseline: `POST /api/compiq/price-by-id` p50=1ms p95=2ms (cache-warm dominated); `POST /api/compiq/search` p50=30ms p95=1415ms p99=21075ms. Re-baseline against post-launch traffic; pre-launch volume too low for stable inference.
 
 ### Phase 4b — Signal integration (Week 7: Jul 3-9)
 

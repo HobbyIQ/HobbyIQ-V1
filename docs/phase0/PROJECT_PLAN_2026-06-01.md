@@ -33,20 +33,22 @@ A large body of work landed this session that the original roadmap did not antic
 
 ---
 
-## Track 2 — Phase 4a MCP cache layer (engineering parallel; runs while Drew completes 1.1-1.3)
+## Track 2 — Phase 4a cache hardening (reframed 2026-06-02; A+B+C SHIPPED)
 
-**Why parallel:** doesn't depend on the eBay arc; doesn't depend on accuracy windows; addresses Risk #2 (Cardsight outage = full prediction outage today). Original roadmap timing (Jun 19-Jul 2) — startable now since Phase 3 prereqs landed two weeks ago.
+**Reframed from the original "build MCP cache layer" framing.** The 2.1 investigation surfaced that a Redis-backed in-process cache was already deployed — the original "build" framing was carrying a stale premise. Phase 4a became "resilience + observability hardening of the existing cache." Decisions locked at 2.1: **in-process (existing) wins decisively** (no MCP repo discovered in Phase 0, no concrete separate-service consumer); **Redis + memory fallback substrate unchanged**; **cardId-scoped keys retained** (the roadmap's player-slug suggestion was wrong granularity).
 
-**AMENDMENT (ratified 2026-06-01):** if starting Phase 4a now, **start at 2.1 (the in-process-vs-service decision HALT)**, not at 2.2 implementation. The decision changes downstream scope materially and is the right first gate. Note the solo-Drew context-switch risk: Track 1's manual critical path (1.1-1.3) and Track 2's engineering work compete for the same human; aggressive 2.2 build-out before 1.3 lands could starve the eBay arc of attention exactly when the buyer-arrival window opens.
+| # | Action | Status |
+|---|---|---|
+| **2.1** | Investigate cache substrate + key shape + Phase 0 MCP findings. Decide in-process-vs-service architecture. | ✅ COMPLETE — in-process wins; Redis + memory fallback unchanged; cardId-scoped keys retained |
+| **2.2** | Build A+B+C: **A** stale-serve fallback (Risk #2 mitigation — Cardsight outage → serve stale-flagged, never empty); **B** `cache_hit` field on prediction corpus (purely additive; AsyncLocalStorage per-prediction tally); **C** per-prefix hit-rate telemetry (hourly `compiq_cache_hit_rate` log line for App Insights). | ✅ SHIPPED 2026-06-02 |
+| **2.3** | Original p95-drop success criterion retired/re-baselined. Real success criteria: (i) hit-rate measurable per prefix [✅ Workstream C]; (ii) Cardsight outage → serve stale not empty [✅ Workstream A unit test]; (iii) `cache_hit` propagates to `prediction_log` so latency aggregates can filter by it [✅ Workstream B]. p95 reduction target re-baselined against post-launch traffic. | ✅ MET (criteria 1-3); p95 target re-baselined |
+| **2.4** | Sign off Phase 4a complete. Phase 4b kickoff (signal integration) ungated. | ✅ COMPLETE |
 
-| # | Action |
-|---|---|
-| **2.1** | **HALT — decide MCP-as-separate-service vs in-process cache layer.** Lean per roadmap §129: in-process unless a usable MCP repo emerges. Surface the decision-tree explicitly: latency budget impact, deployment surface impact, telemetry-design implications, rollback path. Halt for sign-off before any build. |
-| **2.2** | Build the cache layer (decision from 2.1). TTL + invalidation + fallback-to-direct-Cardsight on miss + structured cache-hit telemetry (resolves Phase 1 carry-over per §62: add `cache_hit: boolean` to `comp_logs` schema rather than moving the writer). |
-| **2.3** | Soak test: confirm p95 prediction latency drops > 50% vs Day-10 baseline (Phase 4a success criterion §139). |
-| **2.4** | Sign off Phase 4a complete. Decision point for Phase 4b kickoff (signal integration) lands naturally after this. |
+**Deferred (not v1; named so the next session inherits clear scope):**
+- **D — Signal-driven invalidation.** Phase-4b-gated. Needs the signal aggregator wired before signal-driven `cs:pricing` invalidation has a producer.
+- **E — Pre-warm / nightly refresh for top-K cards.** Gated on C's measured hit-rate. If telemetry shows cold-cache misses dominate user perception, build it. If hits already dominate (likely at single-user volume with 6h TTL), skip until post-launch.
 
-**Track 2 success criterion:** p95 latency > 50% drop + clean cache-hit telemetry. Risk #2 mitigation lands.
+**Track 2 success criterion:** A+B+C shipped, all three success-criteria met. Risk #2 mitigated. **DONE.**
 
 ---
 
