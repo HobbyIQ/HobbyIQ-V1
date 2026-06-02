@@ -2448,6 +2448,47 @@ export async function computeEstimate(
 
           const siblingVerdict = "Estimated from similar cards — variant unverified";
 
+          // CF-PREDICTION-PATH-FMV-FALLBACK (PREDICTION-ROBUSTNESS-RECON
+          // 2026-06-02; Option C from the recon HALT). Pre-fix corpus
+          // measurement: 27/27 (100%) of sibling-pool predictions had
+          // predictedPrice=null because trendIQ was not computed on this
+          // path. Fix: wire Layer 2 (cardTrajectory) + Layer 3
+          // (segmentTrajectory) from the data the rescue already gathered;
+          // skip Layer 1 (playerMomentum) — the signal fetch happens
+          // LATER in the main path. The composite uses whatever layers
+          // populate; coverage="insufficient" gracefully degrades to
+          // predictedPrice=fmv (factor 1.0) per computePredictedPrice's
+          // documented contract.
+          //
+          // Coverage expectations on this path:
+          //   - L2 (cardTrajectory) needs ≥2 in 0-14d + ≥2 in 15-45d on
+          //     fetched.comps. Often null on the sibling-pool path because
+          //     direct comps are by definition thin here.
+          //   - L3 (segmentTrajectory) needs ≥2 pre-anchor + ≥2 post-anchor
+          //     in siblingPool.sales, anchored on newestTs (this card's
+          //     last direct sale). Often the load-bearing layer; the
+          //     sibling pool is exactly what L3 was designed to consume.
+          //   - coverage="insufficient" when newestTs=0 OR pool is sparse
+          //     → predictedPrice gracefully = fmv (factor 1.0), no
+          //     fabrication.
+          const cardTrajectory = computeCardTrajectory(
+            fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+          );
+          const segmentTrajectory = computeSegmentTrajectory(siblingPool, newestTs);
+          const trendIQ = computeTrendIQ({
+            playerMomentum: null,
+            cardTrajectory,
+            segmentTrajectory,
+          });
+          console.log(formatTrendIQLogLine(trendIQ));
+
+          // Same predicted-price helper the main path uses (L3085).
+          // Insufficient coverage → factor 1.0 → predictedPrice = fmv
+          // (round2). Sufficient → bounded projection within [0.80, 1.30]
+          // × fmv. Never null when fmv is a finite number, which is the
+          // invariant of the sibling-pool rescue branch.
+          const __siblingPredicted = computePredictedPrice(fmv, trendIQ);
+
           console.log(
             `[compiq.computeEstimate] sibling-pool rescue SUCCESS: direct=${directSales.length} ` +
               `sibling=${siblingPool.sales.length} combined=${combinedCount} ` +
@@ -2456,21 +2497,21 @@ export async function computeEstimate(
           );
 
           // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: emit on sibling-pool
-          // rescue success. fmvMechanism="sibling-pool-weighted-median"
-          // (Ship 1 of CF-FMV-NOWCAST routed combinedSales through the
-          // velocity-weighted median). trendIQ is not computed on this
-          // path — the helper substitutes a zero-coverage stub.
+          // rescue success. fmvMechanism="sibling-pool-weighted-median".
+          // CF-PREDICTION-PATH-FMV-FALLBACK: trendIQ + predictedPrice now
+          // populated via the L2+L3-from-rescue-data wiring above; this
+          // closes the 27/27 null-predicted gap measured in the
+          // PREDICTION-ROBUSTNESS-RECON corpus query.
           emitPredictionToCorpus({
             cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
             body,
             fairMarketValue: fmv,
             fmvMechanism: "sibling-pool-weighted-median",
-            predictedPrice: mechanism1.predictedPrice,
-            predictedPriceRange: mechanism1.predictedPriceRange,
-            predictedPriceMechanism:
-              mechanism1.predictedPrice !== null
-                ? mechanism1.predictedPriceAttribution.mechanism
-                : "unavailable",
+            predictedPrice: __siblingPredicted.predictedPrice,
+            predictedPriceRange: __siblingPredicted.predictedPriceRange,
+            predictedPriceMechanism: __siblingPredicted.predictedPriceAttribution.mechanism,
+            forwardProjectionFactor: __siblingPredicted.forwardProjectionFactor,
+            trendIQ,
             compsUsed: combinedCount,
             callContext,
           });
@@ -2487,9 +2528,16 @@ export async function computeEstimate(
             marketValue: fmv,
             premiumValue,
             suggestedListPrice,
-            predictedPrice: mechanism1.predictedPrice,
-            predictedPriceRange: mechanism1.predictedPriceRange,
-            predictedPriceAttribution: mechanism1.predictedPriceAttribution,
+            predictedPrice: __siblingPredicted.predictedPrice,
+            predictedPriceRange: __siblingPredicted.predictedPriceRange,
+            predictedPriceAttribution: __siblingPredicted.predictedPriceAttribution,
+            // CF-PREDICTION-PATH-FMV-FALLBACK: trendIQ now lifted into
+            // the sibling-pool response. signalsLastUpdated mirrors the
+            // main path's pattern (composite.lastUpdated which is L1's
+            // last-write timestamp; null on this path because L1 isn't
+            // fetched here).
+            trendIQ,
+            signalsLastUpdated: trendIQ.lastUpdated,
             explanation: [siblingVerdict],
             marketDNA: {
               demand: "Mixed",

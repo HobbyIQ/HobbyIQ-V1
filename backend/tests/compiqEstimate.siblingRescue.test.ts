@@ -132,4 +132,96 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
     expect(res.body.dataSufficiency.sufficient).toBe(true);
     expect(res.body.dataSufficiency.level).toBe("low");
   });
+
+  // CF-PREDICTION-PATH-FMV-FALLBACK (PREDICTION-ROBUSTNESS-RECON Option C,
+  // 2026-06-02) — lock the new TrendIQ + predictedPrice wiring on the
+  // sibling-pool rescue path. Before this CF: predictedPrice was structurally
+  // null on this path (corpus measured 27/27 = 100% null over 14d). After:
+  // computePredictedPrice runs against the L2+L3 composite computed from the
+  // data the rescue already gathered. predictedPrice is non-null on every
+  // success; coverage flag reflects which layers populated.
+  describe("CF-PREDICTION-PATH-FMV-FALLBACK — TrendIQ + predictedPrice wiring", () => {
+    it("emits non-null trendIQ + non-null predictedPrice (closes the 27/27 corpus gap)", async () => {
+      const res = await request(app).post("/api/compiq/estimate").send({
+        playerName: "Caleb Bonemer",
+        cardYear: 2024,
+        product: "Bowman Draft Chrome",
+        parallel: "Chrome Prospect Autograph",
+        isAuto: true,
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.source).toBe("sibling-pool");
+
+      // Non-regression: FMV value preserved unchanged on this path.
+      // (The directive said "Leave the existing FMV computation untouched";
+      // the helper above already asserts fmv > 0, this re-locks the same.)
+      expect(typeof res.body.fairMarketValue).toBe("number");
+      expect(res.body.fairMarketValue).toBeGreaterThan(0);
+
+      // NEW: trendIQ field is now lifted into the sibling-pool response
+      // (was absent before this CF — iOS got `trendIQ: null` here).
+      expect(res.body.trendIQ).toBeDefined();
+      expect(res.body.trendIQ).not.toBeNull();
+      expect(typeof res.body.trendIQ.composite).toBe("number");
+      expect(res.body.trendIQ.composite).toBeGreaterThanOrEqual(0.70);
+      expect(res.body.trendIQ.composite).toBeLessThanOrEqual(1.50);
+      expect(["up", "flat", "down"]).toContain(res.body.trendIQ.direction);
+      // Coverage may be any of the 8-row matrix values; the test mocks
+      // 0 direct comps + 12 sibling sales with no anchor (newestTs=0),
+      // so segmentTrajectory returns null with reason="no_anchor" and
+      // cardTrajectory returns null with insufficient direct pool. Both
+      // layers absent → composite=1.0, direction="flat", coverage="insufficient".
+      expect(res.body.trendIQ.coverage).toBe("insufficient");
+      expect(res.body.trendIQ.components.playerMomentum).toBeNull();
+      expect(res.body.trendIQ.components.cardTrajectory).toBeNull();
+      expect(res.body.trendIQ.components.segmentTrajectory).toBeNull();
+
+      // NEW: predictedPrice is non-null. With coverage=insufficient and
+      // a finite FMV, computePredictedPrice gracefully sets factor=1.0
+      // and returns predictedPrice = round2(fmv * 1.0). This is the
+      // "no movement signal — estimated current value" semantic the
+      // recon HALT documented as Option C's worst case.
+      expect(typeof res.body.predictedPrice).toBe("number");
+      expect(res.body.predictedPrice).not.toBeNull();
+      expect(res.body.predictedPrice).toBe(res.body.fairMarketValue);
+
+      // Predicted range echoes the no-movement-signal case: ±8% around
+      // the predictedPrice (which equals fmv here).
+      expect(res.body.predictedPriceRange).not.toBeNull();
+      expect(res.body.predictedPriceRange.low).toBeLessThan(res.body.predictedPrice);
+      expect(res.body.predictedPriceRange.high).toBeGreaterThan(res.body.predictedPrice);
+
+      // NEW: mechanism = trendiq-projection (replaced mechanism1's
+      // multiplier-anchored which used to fail with
+      // "uncurated-subject-parallel" on this path).
+      expect(res.body.predictedPriceAttribution.mechanism).toBe("trendiq-projection");
+      expect(typeof res.body.predictedPriceAttribution.forwardProjectionFactor).toBe("number");
+      expect(res.body.predictedPriceAttribution.forwardProjectionFactor).toBe(1.0);
+      expect(res.body.predictedPriceAttribution.trendIQComposite).toBe(1.0);
+      expect(res.body.predictedPriceAttribution.trendIQCoverage).toBe("insufficient");
+
+      // signalsLastUpdated mirrors trendIQ.lastUpdated. L1 not fetched
+      // on this path → null is the correct value.
+      expect(res.body.signalsLastUpdated).toBeNull();
+    });
+
+    it("non-regression: existing source/verdict/confidence assertions still hold with trendIQ wired", async () => {
+      const res = await request(app).post("/api/compiq/estimate").send({
+        playerName: "Caleb Bonemer",
+        cardYear: 2024,
+        product: "Bowman Draft Chrome",
+        parallel: "Chrome Prospect Autograph",
+        isAuto: true,
+      });
+      // These four assertions are the original sibling-pool contract.
+      // Locked here a second time to catch any future drift introduced
+      // by trendIQ + predictedPrice work — if any of these regress, the
+      // bigger contract is broken regardless of what trendIQ does.
+      expect(res.body.source).toBe("sibling-pool");
+      expect(res.body.verdict).toBe("Estimated from similar cards — variant unverified");
+      expect(res.body.confidence.pricingConfidence).toBeLessThanOrEqual(65);
+      expect(res.body.fairMarketValue).toBeGreaterThan(0);
+    });
+  });
 });
