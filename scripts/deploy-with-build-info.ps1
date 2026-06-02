@@ -193,11 +193,37 @@ Start-Sleep -Seconds 30
 
 # ===== [2/5] Enqueue async deploy =====
 Write-Host ""
-Write-Host "[2/5] Enqueueing deploy (--restart false, --async true)..."
+Write-Host "[2/5] Enqueueing deploy (--restart false, --async true, --track-status false)..."
 # Carry-forward #8 fix: az webapp deploy writes "WARNING: Initiating deployment..."
 # to stderr on success, which under EAP=Stop terminates the script. Scope EAP
 # to Continue around just this call; Kudu poll downstream is the authoritative
 # success signal.
+#
+# DEPLOY-NOISY-ORACLE-FIX (2026-06-02): --track-status false disables the
+# Linux-specific "wait for site to start" probe that previously ran for ~630s
+# and produced the false "Deployment failed because the site failed to start
+# within 10 mins" error -- while Kudu was already status=4 complete at ~15s
+# and the dist was loading correctly. This was the 2nd of 4 catalogued deploy
+# failure modes ("noisy oracle"). Per `az webapp deploy --help` (CLI 2.85.0):
+#   --track-status : If true, web app startup status during deployment will
+#                    be tracked for linux web apps. Default: True.
+# Setting it false makes az return promptly after the artifact is pushed to
+# Kudu. The [4/5] Kudu poll + [5/5] shaFromCode + feature-probe gates remain
+# the authoritative readiness checks -- they are faster (15s vs ~630s) and
+# verify CODE-baked state (the new dist actually loaded into the running
+# container), not just "the site started per az's view."
+#
+# DOCUMENTED FALLBACK (not implemented; escalation path if the flag ever
+# misbehaves on a future az CLI version): switch this call to a direct
+# Kudu /api/zipdeploy POST, bypassing the az oracle entirely. The script's
+# [4/5] Kudu polling logic would carry over unchanged -- it already hits
+# the same Kudu API. See deploy_infra_audit.md.
+#
+# Validation criterion: on the first deploy after this change, [5/5]
+# shaFromCode MUST match on attempt 1 with no retry. If a retry is needed
+# that was not before, the flag introduced an early-return race between az
+# enqueue and Kudu accept; mitigation is a short post-enqueue settle delay
+# (e.g., 5-10s) before [4/5].
 $prevEAP = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 try {
@@ -208,6 +234,7 @@ try {
         --type zip `
         --restart false `
         --async true `
+        --track-status false `
         --output none
     $deployExit = $LASTEXITCODE
 } finally {
