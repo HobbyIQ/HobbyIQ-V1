@@ -11,12 +11,25 @@ import {
   upsertWatchlistEntry,
   type WatchlistEntry,
 } from "../services/dailyiq/watchlistStore.service.js";
+// CF-DAILYIQ-BRIEFS-UNIFY (2026-06-02): briefStore retired. Repository is
+// the sole writer + reader for dailyiq_briefs. Local-dev disk fallback is
+// gone — when Cosmos is unconfigured locally, the route's in-memory cache
+// (getBriefCache/setBriefCache) holds today's brief for the process
+// lifetime; restart triggers a fresh build via buildAndPersistBriefPayload.
+//
+// PersistedBriefPayload is now a local-only type for the read-path adapter
+// between repository.getTopPlayers and hydrateBriefCache.
+interface PersistedBriefPayload<TPlayer = unknown> {
+  date: string;
+  generatedAt: string;
+  mlb: TPlayer[];
+  milb: TPlayer[];
+}
 import {
-  getPersistedBriefByDate,
-  upsertPersistedBrief,
-  type PersistedBriefPayload,
-} from "../services/dailyiq/briefStore.service.js";
-import { getTopPlayers as cosmosGetTopPlayers } from "../repositories/dailyiq.repository.js";
+  getTopPlayers as cosmosGetTopPlayers,
+  saveTopPlayers,
+  type RankedPlayerLike,
+} from "../repositories/dailyiq.repository.js";
 import { getPlayerScoreByName } from "../services/playerScore/playerScore.service.js";
 import { computeFantasyPoints } from "../services/dailyiq/fantasyScoring.service.js";
 import {
@@ -333,15 +346,6 @@ async function buildBriefPayload(date: string): Promise<BriefCache> {
   };
 }
 
-function toPersistedPayload(payload: BriefCache): PersistedBriefPayload<BasePlayerResponse> {
-  return {
-    date: payload.date,
-    generatedAt: payload.generatedAt,
-    mlb: payload.mlb,
-    milb: payload.milb,
-  };
-}
-
 function hydrateBriefCache(payload: PersistedBriefPayload<BasePlayerResponse>): BriefCache {
   return {
     ...payload,
@@ -352,10 +356,19 @@ function hydrateBriefCache(payload: PersistedBriefPayload<BasePlayerResponse>): 
 
 async function buildAndPersistBriefPayload(date: string): Promise<BriefCache> {
   const payload = await buildBriefPayload(date);
+  // CF-DAILYIQ-BRIEFS-UNIFY: single-writer path. Repository (saveTopPlayers)
+  // is the sole persistence call — it owns notifiedAt / updatedAt + dedup
+  // by id=date. Cast through RankedPlayerLike because BasePlayerResponse
+  // is the route's richer projection (rank, dailyScore, etc.); repository
+  // doesn't care about field shape beyond what it serializes. The whole-doc
+  // upsert preserves everything BasePlayerResponse carries.
   try {
-    await upsertPersistedBrief(toPersistedPayload(payload));
+    await saveTopPlayers(date, {
+      mlb: payload.mlb as unknown as RankedPlayerLike[],
+      milb: payload.milb as unknown as RankedPlayerLike[],
+    });
   } catch (err: any) {
-    console.warn("[dailyiq.routes] upsertPersistedBrief failed:", err?.message ?? err);
+    console.warn("[dailyiq.routes] saveTopPlayers failed:", err?.message ?? err);
   }
   return payload;
 }
@@ -374,6 +387,12 @@ async function ensureBriefForDate(date: string): Promise<BriefCache> {
   const cached = getBriefCache(date);
   if (cached) return cached;
 
+  // CF-DAILYIQ-BRIEFS-UNIFY: cosmos is the sole persistent read; the
+  // file-store fallback is retired with briefStore.service.ts. When Cosmos
+  // is unconfigured (local dev), cosmosGetTopPlayers returns null and we
+  // fall through to building fresh — process-lifetime in-memory cache
+  // (getBriefCache/setBriefCache around this call) handles the local
+  // hot-path; restart triggers a fresh build.
   let persisted: PersistedBriefPayload<BasePlayerResponse> | null = null;
   try {
     const cosmosBrief = await cosmosGetTopPlayers(date);
@@ -386,14 +405,7 @@ async function ensureBriefForDate(date: string): Promise<BriefCache> {
       };
     }
   } catch (err: any) {
-    console.warn("[dailyiq.routes] cosmos brief read failed; falling back to file:", err?.message ?? err);
-  }
-  if (!persisted) {
-    try {
-      persisted = await getPersistedBriefByDate<BasePlayerResponse>(date);
-    } catch (err: any) {
-      console.warn("[dailyiq.routes] file brief read failed:", err?.message ?? err);
-    }
+    console.warn("[dailyiq.routes] cosmos brief read failed:", err?.message ?? err);
   }
   if (persisted && (persisted.mlb.length > 0 || persisted.milb.length > 0)) {
     const hydrated = hydrateBriefCache(persisted);
@@ -890,6 +902,7 @@ const handleBriefRequest = async (req: Request, res: Response) => {
         meta.cacheStatus = "hit";
       }
     } else {
+      // CF-DAILYIQ-BRIEFS-UNIFY: cosmos sole read; no file fallback.
       let persisted: PersistedBriefPayload<BasePlayerResponse> | null = null;
       try {
         const cosmosBrief = await cosmosGetTopPlayers(date);
@@ -902,10 +915,7 @@ const handleBriefRequest = async (req: Request, res: Response) => {
           };
         }
       } catch (err: any) {
-        console.warn("[dailyiq.routes] cosmos brief read failed; falling back to file:", err?.message ?? err);
-      }
-      if (!persisted) {
-        persisted = await getPersistedBriefByDate<BasePlayerResponse>(date);
+        console.warn("[dailyiq.routes] cosmos brief read failed:", err?.message ?? err);
       }
       if (persisted) {
         meta.cacheStatus = "persisted-hit";
