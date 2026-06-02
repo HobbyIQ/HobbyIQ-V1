@@ -23,6 +23,17 @@ import {
   writeTelemetryEntries,
   extractTelemetryCohortFromResult,
 } from "../services/corpus/writeTelemetryEntries.js";
+// PREDICTION-ROBUSTNESS-RECON #1 (2026-06-02): graceful CardsightTimeoutError
+// handling. Each prediction-path route catches the timeout and emits a
+// shape-stable 200 response per buildUpstreamTimeout*Response so iOS clients
+// render uniformly. See upstreamTimeout.helpers.ts header for the contract.
+import {
+  isCardsightTimeoutError,
+  buildUpstreamTimeoutPriceResponse,
+  buildUpstreamTimeoutPriceByIdResponse,
+  buildUpstreamTimeoutCardSearchResponse,
+  buildUpstreamTimeoutBulkItemData,
+} from "../services/compiq/upstreamTimeout.helpers.js";
 
 // Issue #25 Phase 1 â€” read-only regime fields. Prefers the estimate's
 // embedded `regimeClassification` (computed inside computeEstimate against
@@ -315,6 +326,21 @@ router.post("/cardsearch", async (req, res, next) => {
     const response = await dispatchSearch(query, hintParam);
     res.json(response);
   } catch (err) {
+    // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
+    // 200 with empty candidates + structured warning, NOT 500.
+    if (isCardsightTimeoutError(err)) {
+      const { query: rawQuery, hint } = req.body || {};
+      const detectedMode: "cert" | "freetext" =
+        hint === "cert" ? "cert" : "freetext";
+      return res
+        .status(200)
+        .json(
+          buildUpstreamTimeoutCardSearchResponse(
+            typeof rawQuery === "string" ? rawQuery : "",
+            detectedMode,
+          ),
+        );
+    }
     next(err);
   }
 });
@@ -542,6 +568,15 @@ router.post("/search", async (req, res, next) => {
       ...extractTelemetryCohortFromResult(result, query.trim()),
     });
   } catch (err) {
+    // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
+    // 200 with shape-stable null pricing payload, NOT 500.
+    if (isCardsightTimeoutError(err)) {
+      const { query: rawQuery } = req.body || {};
+      const q = typeof rawQuery === "string" ? rawQuery : "";
+      return res
+        .status(200)
+        .json({ ...buildEngineMeta(), ...buildUpstreamTimeoutPriceResponse(q) });
+    }
     next(err);
   }
 });
@@ -722,6 +757,15 @@ router.post("/price", async (req, res, next) => {
       ...extractTelemetryCohortFromResult(result, query.trim()),
     });
   } catch (err) {
+    // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
+    // 200 with shape-stable null pricing payload, NOT 500.
+    if (isCardsightTimeoutError(err)) {
+      const { query: rawQuery } = req.body || {};
+      const q = typeof rawQuery === "string" ? rawQuery : "";
+      return res
+        .status(200)
+        .json({ ...buildEngineMeta(), ...buildUpstreamTimeoutPriceResponse(q) });
+    }
     next(err);
   }
 });
@@ -908,6 +952,15 @@ router.post("/price-by-id", async (req, res, next) => {
       });
     }
   } catch (err) {
+    // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
+    // 200 with pinned cardsightCardId exposed.
+    if (isCardsightTimeoutError(err)) {
+      const { cardsightCardId } = req.body || {};
+      const pinnedId = typeof cardsightCardId === "string" ? cardsightCardId : "";
+      return res
+        .status(200)
+        .json({ ...buildEngineMeta(), ...buildUpstreamTimeoutPriceByIdResponse(pinnedId) });
+    }
     next(err);
   }
 });
@@ -945,12 +998,39 @@ router.post("/bulk", async (req, res, next) => {
         const body: CompIQEstimateRequest = requestFromParsed(parsed);
         // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/bulk
         // per-query — same source for every item in a single bulk request.
-        const est = await computeEstimate(body, {
-          source: "compiq-bulk-freetext",
-          userId: null,
-          holdingId: null,
-          routedFromHolding: false,
-        });
+        // PREDICTION-ROBUSTNESS-RECON #1: a Cardsight timeout on ONE item
+        // gets the graceful shape so the whole bulk doesn't half-fail.
+        let est: Awaited<ReturnType<typeof computeEstimate>>;
+        try {
+          est = await computeEstimate(body, {
+            source: "compiq-bulk-freetext",
+            userId: null,
+            holdingId: null,
+            routedFromHolding: false,
+          });
+        } catch (err) {
+          if (isCardsightTimeoutError(err)) {
+            const data = {
+              ...buildEngineMeta(),
+              ...buildUpstreamTimeoutBulkItemData(query),
+            };
+            writeTelemetryEntries({
+              query,
+              querySource: "free_text",
+              endpoint: "/api/compiq/bulk",
+              durationMs: Date.now() - handlerStart,
+              result: data,
+              ...extractTelemetryCohortFromResult(data, query),
+            });
+            return {
+              query,
+              status: "ok" as const,
+              data,
+              error: null,
+            };
+          }
+          throw err;
+        }
 
         // Unsupported-sport short-circuit â€” per-item. Bulk responses can
         // include a mix of baseball + non-baseball queries; each item gets
