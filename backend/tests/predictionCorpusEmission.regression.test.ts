@@ -124,6 +124,11 @@ const EXPECTED_TRENDIQ_KEYS = [
   "direction",
   "coverage",
   "components",
+  // PHASE-4B-SLICE-1 (2026-06-01): TrendIQResult.weights now passes
+  // through the emit shape so the buildDocument layer can hoist
+  // trendIQ_weights to a flat corpus field for query-axis clarity.
+  // The nested struct still carries the full weight matrix.
+  "weights",
   "lastUpdated",
 ] as const;
 

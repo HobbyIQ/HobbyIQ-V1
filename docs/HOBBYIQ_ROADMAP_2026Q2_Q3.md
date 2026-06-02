@@ -145,19 +145,43 @@ prerequisite picker migration is now where the real work lives.
 
 ### Phase 4b — Signal integration (Week 7: Jul 3-9)
 
-**Signals being collected start influencing predictions. "Predictive pricing" actually becomes predictive.**
+**REFRAMED 2026-06-01 after PHASE-4B-RECON:** the framing "build the blender + wire signals into predictions" is wrong. The blender exists at `backend/src/services/compiq/trendIQ.compute.ts` (8-row weight matrix, 0.70-1.50 clamp) and is wired through `compiqEstimate.service.ts:2662` (`fetchPlayerSignals` HTTP call to `fn-serve-signals`) into `forwardProjectionFactor` and finally `predictedPrice`. So signals are NOT dead-output relative to live pricing — the code path is end-to-end live.
 
-- Build signal reader for each: Reddit, Google Trends, News, YouTube, MLB Stats, Odds, eBay-signals
-- Implement weighted blender. CH weight already gone post Phase 3 cleanup; redistribute its former 0.20 across remaining signals (lean: Cardsight comps absorb, since CH was the sold-data peer): Reddit 0.15, Trends 0.15, Odds 0.15, Stats 0.10, News 0.05, eBay 0.20, Cardsight comps 0.20
-- Per-signal fallback to 1.0 multiplier on read failure (partial > none)
-- Combined multiplier capped 0.70-1.50 per existing rule
-- Backtest: last 30 days historical predictions with signals on vs off; measure prediction-vs-actual delta
-- A/B in production: 50% traffic gets signals, 50% doesn't; compare 7-day prediction accuracy
+What was actually missing was OBSERVABILITY: whether the wired-in-code path actually fires under production volume, whether the multipliers reaching predictions are non-neutral, and whether the upstream `fn-*-signals` blob writers are producing fresh data. Phase 4b becomes "measure + harden + recalibrate + repair," not "build."
 
-**4b success criteria:**
-- All 7 signal sources read by live prediction path
-- Backtest shows signal-on predictions ≥ signal-off predictions on accuracy
-- A/B test runs cleanly for 7 days with no production issues
+**The two findings from PHASE-4B-RECON (read-only) that drove the reframe:**
+1. **App Insights workspace divergence (load-bearing).** `fn-compiq` emits telemetry to its own App Insights component named `fn-compiq` (eastus-8 region; key `f7eebd2c-...`). The backend `HobbyIQ3` emits to `hobbyiq-insights` (centralus-2 region; key `02dca1c0-...`). Our 7d query "any fn-* role under hobbyiq-insights" returned 0 rows because the data lives in a different sink, NOT because the functions aren't running. This eliminates the panic interpretation. Function-side liveness still needs to be confirmed via the `fn-compiq` AI workspace OR via blob-write timestamps directly.
+2. **The backend `signal_service` dependency-table 0-rows.** Could be either (a) `trackHttpDependency` auto-instrumentation gap (per Risk #8 / CF-APPINSIGHTS-FETCH-INSTRUMENTATION), or (b) `fetchPlayerSignals` actually not being called at production volume. Slice 1's `compiq_signal_fetch_observed` log resolves this without depending on the OTel pathway.
+
+**Slice 1 — Signal observability + safe corpus capture (THIS slice, 2026-06-01, no behavior change):**
+- `compiq_signal_fetch_observed` structured log at every `fetchPlayerSignals` outcome (`not_configured` | `no_player` | `ok_neutral` | `ok_non_neutral` | `aggregator_unavailable` | `non_ok_status` | `timeout` | `fetch_error`). Resolves the dependency-0-rows mystery via a path that doesn't depend on auto-instrumentation. Query in hobbyiq-insights `traces` table.
+- Additive corpus capture: `trendIQ_composite`, `playerMomentum_multiplier`, `trendIQ_weights` (nullable) hoisted to flat `PredictionLogDocument` fields. Mirrors the `cache_hit` / `served_stale` precedent. §4.2 / §4.3 accuracy instrument unchanged.
+- **No behavior change** — same multipliers, same composites, same predicted prices. The slice produces the data necessary to answer "do non-neutral composites actually reach predictions?" without touching any prediction math.
+- **Pulled from slice 1 (originally planned for it):** the `fetchPlayerSignals` cache wrap (Workstream D from Phase 4a). It's a behavior change (15-min freshness becomes deterministic vs per-request fetch) that would contaminate the firing-rate baseline measurement. Defer until after slice 1's measurement lands.
+
+**Slice 2 — Per-source `fn-*-signals` blob liveness (decider for slices 3-5):**
+- One-time Storage Blob Data Reader RBAC grant against `stcompiqfnotgm2`. Enumerate per-source blob freshness (`lastModified` per `fn-comps-momentum/*`, `fn-reddit-signals/*`, etc.). Per the SIGNAL inventory directive: bucket each LIVE / dead / stale / never-built.
+- Cross-reference against the documented schema: is each `fn-*` writing what's expected, or did one silently rot?
+- **Decision point** — which sources are reliable enough to USE in the playerMomentum aggregation; which need fixing; which to retire. Determines slice 3's scope.
+
+**Slice 3 — Calibration of the EXISTING blender against measured A/B (slice-1 corpus matures ~2 weeks; slice-2 inventory known):**
+- Once `trendIQ_composite` accumulates: measure signal-on (`composite != 1.0`) vs signal-off (`composite == 1.0` or `playerMomentum_multiplier == null`) prediction accuracy. Per `Signal classes: attention vs price` memory — backtest horizon MUST match class: attention-class signals (trends/reddit/youtube) need 3-10 week outcomes; price-class signals (compsMomentum/news) need <7d. Wrong-horizon backtests trained AWAY from cascade-tier attention value before; do not repeat.
+- If signal-on beats signal-off, the blender is calibrated correctly. If not: re-tune weights OR retire sources.
+- **NOT a new blender build.** Recalibration of the existing one against real data.
+
+**Slice 4 — Per-signal cap + per-source fallback-to-1.0 hardening (only if slice 3 surfaces a destructive signal):**
+- Cap individual signals' contribution before they enter playerMomentum aggregation (e.g. cap any single source's deviation from 1.0 at ±30%).
+- Per-source `NEUTRAL_SIGNAL` fallback already exists in `fetchPlayerSignals`; verify it activates correctly on the stale-source case.
+
+**Slice 5 — Recover or retire individual `fn-*-signals` sources (if slice 2 surfaced dead ones):**
+- For each dead/stale source identified in slice 2: decide repair (fix the timer + code), repurpose (fold into another signal), or retire (remove from `fn-signal-aggregator`'s input set).
+- The only slice that might touch `fn-compiq` code itself.
+
+**4b success criteria (REFRAMED):**
+- Slice 1: backend `traces` table answers "is fetchPlayerSignals actually called and how often does it get a non-neutral multiplier?" definitively. `trendIQ_composite != 1.0` queryable on the corpus.
+- Slice 2: every `fn-*-signals` source bucketed LIVE / dead / stale / never-built.
+- Slice 3: signal-on vs signal-off A/B run with horizon-matched outcomes; calibration decision made.
+- Slices 4-5: only if slices 1-3 surface a problem requiring them.
 
 ### Phase 4c — ML training pipeline (Weeks 8-9: Jul 10-23)
 

@@ -48,7 +48,11 @@ import { DefaultAzureCredential } from "@azure/identity";
 // can't drift from the emission site's actual shape. (Earlier rev hand-rolled
 // a subset of TrendIQCoverage and a wrong-vocabulary TrendIQDirection;
 // fixed by importing the source of truth here.)
-import type { TrendIQDirection, TrendIQCoverage } from "./trendIQ.types.js";
+import type {
+  TrendIQDirection,
+  TrendIQCoverage,
+  TrendIQWeights,
+} from "./trendIQ.types.js";
 import type { PredictionCorpusSource } from "../../types/compiq.types.js";
 // DIRECTION_BAND_PCT + derivePredictionDirection live in the neutral
 // predictionConstants module so the future read path (CF-PREDICTION-
@@ -193,6 +197,10 @@ export interface PredictionEmitInput {
       cardTrajectory: number | null;
       segmentTrajectory: number | null;
     };
+    // PHASE-4B-SLICE-1 (2026-06-01): TrendIQResult.weights pass-through so
+    // the buildDocument layer can hoist trendIQ_weights to a flat field for
+    // query-axis clarity. Nullable on the stub branch (no trendIQ computed).
+    weights: TrendIQWeights | null;
     lastUpdated: string | null;       // nullable: aggregator may have no
                                       // last-write timestamp (e.g. all signals
                                       // unavailable → composite 1.0 with no
@@ -296,6 +304,38 @@ interface PredictionLogDocument {
   // by Cardsight outages" without needing the API-output marker (still
   // deferred, iOS-gated).
   served_stale: boolean | null;
+  // PHASE-4B-SLICE-1 (2026-06-01): flat top-level fields hoisted from
+  // input.trendIQ for query-axis clarity. The nested trendIQ field above
+  // retains its full structure (composite/direction/coverage/components/
+  // weights/lastUpdated) for downstream consumers that need the whole
+  // shape; these flat fields let accuracy queries answer the PROOF
+  // question without traversing the nested struct:
+  //
+  //   Q: do non-neutral composites reach predictions?
+  //     SELECT VALUE COUNT(1) FROM c
+  //     WHERE c.trendIQ_composite != 1.0
+  //
+  //   Q: which predictions used a non-neutral PLAYER signal specifically?
+  //     SELECT VALUE COUNT(1) FROM c
+  //     WHERE c.playerMomentum_multiplier != 1.0
+  //
+  //   Q: what weight did Layer 1 actually carry when present?
+  //     SELECT c.trendIQ_weights.playerMomentum FROM c
+  //     WHERE c.trendIQ_weights != null
+  //
+  // Tri-state per the cache_hit precedent:
+  //   trendIQ_composite      null when input.trendIQ absent (rare; stub
+  //                          path emits composite=1.0, not null)
+  //   playerMomentum_multiplier
+  //                          null when Layer 1 absent (signal fetch
+  //                          returned null OR aggregator unavailable)
+  //   trendIQ_weights        null when coverage=insufficient OR stub
+  //
+  // §4.2/§4.3 accuracy instrument unchanged — these are additive
+  // discriminators on top of the existing prediction-vs-outcome join.
+  trendIQ_composite: number | null;
+  playerMomentum_multiplier: number | null;
+  trendIQ_weights: TrendIQWeights | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -407,6 +447,14 @@ function buildDocument(
       if (ctx.hits + ctx.misses === 0) return null;
       return (ctx.staleServes ?? 0) > 0;
     })(),
+    // PHASE-4B-SLICE-1 (2026-06-01): flat hoist of the three load-bearing
+    // signal fields for the PROOF query. Sourced verbatim from
+    // input.trendIQ (no transformation); nulls preserve the "absent" vs
+    // "1.0 stub" distinction at the row level. The nested trendIQ field
+    // above stays the source of truth; these fields are a query index.
+    trendIQ_composite: input.trendIQ.composite ?? null,
+    playerMomentum_multiplier: input.trendIQ.components.playerMomentum,
+    trendIQ_weights: input.trendIQ.weights,
   };
 }
 

@@ -1434,6 +1434,11 @@ export function emitPredictionToCorpus(params: {
             cardTrajectory: params.trendIQ.components.cardTrajectory?.multiplier ?? null,
             segmentTrajectory: params.trendIQ.components.segmentTrajectory?.multiplier ?? null,
           },
+          // PHASE-4B-SLICE-1 (2026-06-01): pass-through TrendIQResult.weights
+          // so the corpus's flat `trendIQ_weights` field can answer
+          // "what weight did Layer 1 actually carry?" without traversing
+          // the full nested trendIQ object.
+          weights: params.trendIQ.weights,
           lastUpdated: params.trendIQ.lastUpdated,
         }
       : {
@@ -1449,6 +1454,12 @@ export function emitPredictionToCorpus(params: {
             cardTrajectory: null,
             segmentTrajectory: null,
           },
+          // PHASE-4B-SLICE-1: weights=null on the stub preserves the
+          // "no Layer 1 weight assigned" distinction from a true
+          // coverage="insufficient" computeTrendIQ result (which has
+          // weights={0,0,0}, not null). Stub means "no trendIQ attempt
+          // happened at all" — null is the right tri-state.
+          weights: null,
           lastUpdated: null,
         };
 
