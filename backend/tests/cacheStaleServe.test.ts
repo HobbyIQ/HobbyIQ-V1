@@ -286,6 +286,103 @@ describe("per-prefix counters — capacity-planning telemetry", () => {
   });
 });
 
+// ─── PHASE-4A-2.2-FIX: cache_hit + served_stale derivation rules ───────────
+//
+// The collapse rules mirror what buildDocument in predictionCorpus.service
+// applies. Keeping the rule expressed AS A FUNCTION here (not just on the
+// real buildDocument) so it's testable without invoking the full Cosmos
+// emit path.
+
+import type { CacheStats } from "../src/services/shared/cache.service.js";
+
+function deriveCacheHit(ctx: CacheStats | undefined): boolean | null {
+  if (!ctx) return null;
+  if (ctx.hits + ctx.misses === 0) return null;
+  return ctx.misses === 0;
+}
+
+function deriveServedStale(ctx: CacheStats | undefined): boolean | null {
+  if (!ctx) return null;
+  if (ctx.hits + ctx.misses === 0) return null;
+  return (ctx.staleServes ?? 0) > 0;
+}
+
+describe("PHASE-4A-2.2-FIX — cache_hit truth table", () => {
+  it("case A: ctx absent → null", () => {
+    expect(deriveCacheHit(undefined)).toBeNull();
+  });
+  it("case B: ctx active but 0 cache calls → null (the FIX — was false pre-fix)", () => {
+    expect(deriveCacheHit({ hits: 0, misses: 0 })).toBeNull();
+  });
+  it("case C: all hits → true", () => {
+    expect(deriveCacheHit({ hits: 3, misses: 0 })).toBe(true);
+  });
+  it("case D: all misses → false", () => {
+    expect(deriveCacheHit({ hits: 0, misses: 2 })).toBe(false);
+  });
+  it("case E: MIXED (some hits AND some misses) → false", () => {
+    expect(deriveCacheHit({ hits: 2, misses: 1 })).toBe(false);
+  });
+  it("case F: stale-serve counts as miss → still false", () => {
+    // tallyStats increments BOTH misses AND staleServes on stale outcome.
+    expect(deriveCacheHit({ hits: 3, misses: 1, staleServes: 1 })).toBe(false);
+  });
+});
+
+describe("PHASE-4A-2.2-FIX — served_stale truth table", () => {
+  it("ctx absent → null", () => {
+    expect(deriveServedStale(undefined)).toBeNull();
+  });
+  it("ctx active but 0 cache calls → null", () => {
+    expect(deriveServedStale({ hits: 0, misses: 0 })).toBeNull();
+  });
+  it("clean all-hit path → false (no stale)", () => {
+    expect(deriveServedStale({ hits: 5, misses: 0 })).toBe(false);
+  });
+  it("normal miss path → false (miss not stale-serve)", () => {
+    expect(deriveServedStale({ hits: 0, misses: 2 })).toBe(false);
+  });
+  it("stale-served comp → true", () => {
+    // Stale outcome increments BOTH counters per tallyStats.
+    expect(deriveServedStale({ hits: 1, misses: 1, staleServes: 1 })).toBe(true);
+  });
+  it("multiple stale-serves → still true", () => {
+    expect(deriveServedStale({ hits: 0, misses: 3, staleServes: 3 })).toBe(true);
+  });
+});
+
+describe("PHASE-4A-2.2-FIX — tallyStats increments BOTH misses and staleServes on stale", () => {
+  it("end-to-end through cacheWrap: stale-serve path bumps ctx.staleServes AND ctx.misses", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-02T00:00:00Z"));
+
+    const key = "cs:pricing:tally-stale";
+    // Prime fresh.
+    await cacheWrap(key, async () => ({ ok: true }), {
+      freshTtlSeconds: 60, staleServeTtlSeconds: 600,
+    });
+
+    // Age past fresh.
+    vi.setSystemTime(new Date("2026-06-02T00:02:00Z"));
+
+    const stats: CacheStats = { hits: 0, misses: 0, staleServes: 0 };
+    await cacheStatsContext.run(stats, async () => {
+      await cacheWrap(key, async () => { throw new Error("503"); }, {
+        freshTtlSeconds: 60, staleServeTtlSeconds: 600,
+      });
+    });
+
+    // Stale outcome: both counters incremented; staleServes specifically 1.
+    expect(stats.misses).toBe(1);
+    expect(stats.staleServes).toBe(1);
+    expect(stats.hits).toBe(0);
+
+    // Derivation rules at the boundary:
+    expect(deriveCacheHit(stats)).toBe(false);   // any miss → false
+    expect(deriveServedStale(stats)).toBe(true); // staleServes > 0 → true
+  });
+});
+
 // ─── Hit-rate scheduler (env-disable + idempotent start) ───────────────────
 
 describe("startCacheHitRateEmit — scheduler", () => {

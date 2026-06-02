@@ -102,7 +102,20 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number): 
 // `getStore()` if a context is active; the absence of a context (e.g. a
 // non-prediction code path) is a silent no-op.
 
-export interface CacheStats { hits: number; misses: number; }
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  /**
+   * PHASE-4A-2.2-FIX (2026-06-02): separate stale-serve counter so the
+   * corpus can carry `served_stale` independently of cache_hit. Stale
+   * outcomes increment BOTH `staleServes` AND `misses` — so the existing
+   * cache_hit derivation (`misses === 0`) continues to treat stale as
+   * "not all-cache-fresh", while served_stale derivation can read
+   * `staleServes > 0` directly. Optional so existing run() initializers
+   * that pass `{hits:0, misses:0}` remain valid.
+   */
+  staleServes?: number;
+}
 export const cacheStatsContext = new AsyncLocalStorage<CacheStats>();
 
 // ─── PHASE-4A-2.2: per-prefix hit-rate telemetry ────────────────────────────
@@ -217,13 +230,19 @@ function parseEntry<T>(raw: string): ParsedEntry<T> | null {
 
 function tallyStats(outcome: "hit" | "miss" | "stale"): void {
   const ctx = cacheStatsContext.getStore();
-  if (ctx) {
-    if (outcome === "hit") ctx.hits++;
-    else if (outcome === "miss") ctx.misses++;
-    // stale is tallied as miss for the per-prediction cache_hit boolean —
-    // a stale-served prediction did NOT serve from a fresh cache. The
-    // prefix counters separate stale out for capacity analysis.
-    else ctx.misses++;
+  if (!ctx) return;
+  if (outcome === "hit") {
+    ctx.hits++;
+  } else if (outcome === "miss") {
+    ctx.misses++;
+  } else {
+    // PHASE-4A-2.2-FIX (2026-06-02): stale-serve tallied in BOTH counters.
+    // - ctx.misses++ so the existing cache_hit derivation (`misses === 0`)
+    //   continues to register stale-served as "not all-cache-fresh".
+    // - ctx.staleServes++ so the new served_stale derivation can read it
+    //   directly without conflating with genuine misses.
+    ctx.misses++;
+    ctx.staleServes = (ctx.staleServes ?? 0) + 1;
   }
 }
 

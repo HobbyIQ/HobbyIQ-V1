@@ -271,16 +271,31 @@ interface PredictionLogDocument {
   userId: string | null;
   holdingId: string | null;
   routedFromHolding: boolean;
-  // PHASE-4A-2.2 (2026-06-02): purely additive — whether this prediction
-  // served entirely from cache. Set at the cacheWrap boundary via the
-  // AsyncLocalStorage `cacheStatsContext` scope opened by computeEstimate.
-  // null = the prediction ran outside the cache-stats scope (e.g. a
-  // non-prediction code path that still wrote to the corpus, or pre-2.2
-  // legacy emit). true = all underlying Cardsight calls hit fresh cache;
-  // false = at least one miss or stale-serve. Does NOT change which
-  // predictions get logged; the §4.2/§4.3 accuracy instrument tolerates
-  // the new field (optional add, no existing field changed).
+  // PHASE-4A-2.2 (2026-06-02; semantic correction 2026-06-02 -FIX):
+  // whether this prediction served entirely from cache. Set at the
+  // cacheWrap boundary via the AsyncLocalStorage `cacheStatsContext`
+  // scope opened by computeEstimate. Tri-state:
+  //   null  = no cache calls happened (ctx absent OR ctx active but
+  //           total hits+misses === 0; e.g. early-return prediction
+  //           paths that emit before any pricing call)
+  //   true  = at least one cache call AND zero misses (= all-cache-fresh)
+  //   false = at least one miss (or stale-serve, which counts as miss)
+  // Does NOT change which predictions get logged; the §4.2/§4.3 accuracy
+  // instrument tolerates the new field (optional add, no existing field
+  // changed).
   cache_hit: boolean | null;
+  // PHASE-4A-2.2-FIX (2026-06-02): companion signal to cache_hit. Tri-state
+  // mirroring cache_hit's null-if-no-cache-calls semantics:
+  //   null  = no cache calls happened
+  //   true  = at least one cacheWrap call served stale (Cardsight outage
+  //           was observed during this prediction; the response carries
+  //           a fallback value from a stale-but-within-window cache entry)
+  //   false = no stale-serves in this prediction
+  // The corpus-side counterpart to the deferred iOS-facing "approximate"
+  // badge. Allows post-hoc analysis of "which predictions were affected
+  // by Cardsight outages" without needing the API-output marker (still
+  // deferred, iOS-gated).
+  served_stale: boolean | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -370,16 +385,27 @@ function buildDocument(
     userId: input.userId,
     holdingId: input.holdingId,
     routedFromHolding: input.routedFromHolding,
-    // PHASE-4A-2.2 (2026-06-02): cache_hit at the cacheWrap boundary.
-    // computeEstimate opens an AsyncLocalStorage scope around its body;
-    // every cacheWrap underneath tallies into ctx.{hits,misses}. true =
-    // every Cardsight call served fresh from cache (no underlying API
-    // call). false = at least one miss or stale-serve. null = ctx was
-    // not active (the prediction ran outside the cache-stats scope).
+    // PHASE-4A-2.2 (2026-06-02) + FIX (2026-06-02): cache_hit at the
+    // cacheWrap boundary. computeEstimate opens an AsyncLocalStorage
+    // scope around its body; every cacheWrap underneath tallies into
+    // ctx.{hits,misses,staleServes}.
+    //   null  = ctx absent OR ctx.hits + ctx.misses === 0 (no cache calls)
+    //   true  = at least one cache call AND misses === 0
+    //   false = any miss (stale-serves are tallied as misses too)
     cache_hit: (() => {
       const ctx = cacheStatsContext.getStore();
       if (!ctx) return null;
-      return ctx.hits > 0 && ctx.misses === 0;
+      if (ctx.hits + ctx.misses === 0) return null;
+      return ctx.misses === 0;
+    })(),
+    // PHASE-4A-2.2-FIX (2026-06-02): served_stale companion. Mirrors
+    // cache_hit's null-if-no-cache-calls semantics; reads the staleServes
+    // counter that tallyStats increments on the stale-serve outcome.
+    served_stale: (() => {
+      const ctx = cacheStatsContext.getStore();
+      if (!ctx) return null;
+      if (ctx.hits + ctx.misses === 0) return null;
+      return (ctx.staleServes ?? 0) > 0;
     })(),
   };
 }
