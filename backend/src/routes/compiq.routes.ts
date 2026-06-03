@@ -1640,6 +1640,211 @@ router.post(
   },
 );
 
+// ─── CF-MARKET-TREND-INDEXES (2026-06-03) ──────────────────────────────────
+//
+// marketDelta is computed per-player from Cosmos `comp_logs` and consumed
+// internally by DailyIQ brief assembly. This block exposes it as a gated
+// surface (investor+ via `marketTrendIndexes`). 3 routes:
+//   GET  /api/compiq/market-trend?playerName=<name>      — single player
+//   GET  /api/compiq/market-trend/batch?playerNames=a,b,c — ≤ 20 players
+//   GET  /api/compiq/market-trend/top-movers?window=1d|7d|30d&limit=20
+//
+// Cap decision: NONE. marketDelta hits Cosmos `comp_logs` only (10-min
+// in-process cache); no Cardsight/upstream cost per call. Charging
+// `priceChecksPerDay` would create false negatives for users browsing
+// their watchlist.
+//
+// pct30d field: marketDelta documents this as a 7d-vs-30d MOMENTUM
+// approximation, NOT a true 30d-vs-prior-30d delta. The response carries
+// the label so iOS rendering can show "vs prior window (approx)" instead
+// of falsely labeling it "30-day change". True 30d-vs-prior-30d + by-sport
+// / by-set aggregations are explicitly deferred to a Phase 2 CF.
+import {
+  getMarketDelta,
+  getMarketDeltasForPlayers,
+  type MarketDelta,
+} from "../services/dailyiq/marketDelta.service.js";
+import { getLatestBrief } from "../repositories/dailyiq.repository.js";
+
+type MarketTrendConfidence = "high" | "low" | "none";
+
+function deriveConfidence(delta: MarketDelta | null): MarketTrendConfidence {
+  if (!delta) return "none";
+  if (delta.sampleCount < 5) return "low";
+  return "high";
+}
+
+const PCT30D_WINDOW_LABEL =
+  "pct30d is 7d-vs-30d momentum (approximation); true 30d-vs-prior-30d arrives in Phase 2";
+
+type MarketTrendSelectedWindow = "1d" | "7d" | "30d";
+
+/**
+ * Shared response-shape contract across all 3 market-trend routes so iOS
+ * can decode `window` into a single `MarketTrendWindow` Codable. Always an
+ * object; never a bare string. `selected` is present only on top-movers
+ * (where the user picks the ranking window); per-player + batch responses
+ * carry no `selected` field because all three windows are returned at once.
+ */
+interface MarketTrendWindow {
+  selected?: MarketTrendSelectedWindow;
+  pct30dLabel: string;
+}
+
+function buildWindow(selected?: MarketTrendSelectedWindow): MarketTrendWindow {
+  return selected
+    ? { selected, pct30dLabel: PCT30D_WINDOW_LABEL }
+    : { pct30dLabel: PCT30D_WINDOW_LABEL };
+}
+
+function shapeDelta(delta: MarketDelta | null): {
+  delta: MarketDelta | null;
+  confidence: MarketTrendConfidence;
+  window: MarketTrendWindow;
+} {
+  return {
+    delta,
+    confidence: deriveConfidence(delta),
+    window: buildWindow(),
+  };
+}
+
+router.get(
+  "/market-trend",
+  requireSession,
+  requireEntitlement("marketTrendIndexes"),
+  async (req, res, next) => {
+    try {
+      const playerName =
+        typeof req.query.playerName === "string"
+          ? req.query.playerName.trim()
+          : "";
+      if (!playerName) {
+        return res
+          .status(400)
+          .json({ success: false, error: "playerName query param is required" });
+      }
+      const delta = await getMarketDelta(playerName);
+      res.json({
+        success: true,
+        playerName,
+        ...shapeDelta(delta),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  "/market-trend/batch",
+  requireSession,
+  requireEntitlement("marketTrendIndexes"),
+  async (req, res, next) => {
+    try {
+      const raw =
+        typeof req.query.playerNames === "string" ? req.query.playerNames : "";
+      const names = raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (names.length === 0) {
+        return res
+          .status(400)
+          .json({ success: false, error: "playerNames query param is required (comma-separated)" });
+      }
+      const safe = names.slice(0, 20);
+      const map = await getMarketDeltasForPlayers(safe);
+      const deltas: Record<
+        string,
+        { delta: MarketDelta | null; confidence: MarketTrendConfidence }
+      > = {};
+      for (const name of safe) {
+        const d = map.get(name) ?? null;
+        deltas[name] = { delta: d, confidence: deriveConfidence(d) };
+      }
+      res.json({
+        success: true,
+        deltas,
+        window: buildWindow(),
+        truncated: names.length > safe.length ? { requested: names.length, served: safe.length } : null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const TOP_MOVERS_VALID_WINDOWS = new Set(["1d", "7d", "30d"]);
+
+router.get(
+  "/market-trend/top-movers",
+  requireSession,
+  requireEntitlement("marketTrendIndexes"),
+  async (req, res, next) => {
+    try {
+      const windowRaw =
+        typeof req.query.window === "string" ? req.query.window.trim() : "";
+      if (!TOP_MOVERS_VALID_WINDOWS.has(windowRaw)) {
+        return res.status(400).json({
+          success: false,
+          error: "window must be one of: 1d, 7d, 30d",
+        });
+      }
+      const selected = windowRaw as MarketTrendSelectedWindow;
+      const limitRaw = Number(req.query.limit ?? 20);
+      const limit =
+        Number.isFinite(limitRaw) && limitRaw >= 1 && limitRaw <= 50
+          ? Math.floor(limitRaw)
+          : 20;
+
+      // Candidate pool: latest cached DailyIQ brief (MLB + MiLB top players).
+      // Reuses the 10-min marketDelta cache; no new Cardsight calls.
+      const brief = await getLatestBrief();
+      const pool: string[] = brief
+        ? [
+            ...(brief.mlb ?? []).map((p) => p.playerName),
+            ...(brief.milb ?? []).map((p) => p.playerName),
+          ].filter((n): n is string => typeof n === "string" && n.length > 0)
+        : [];
+      if (pool.length === 0) {
+        return res.json({
+          success: true,
+          window: buildWindow(selected),
+          limit,
+          movers: [],
+          poolSize: 0,
+        });
+      }
+      const map = await getMarketDeltasForPlayers(pool);
+      const field: keyof MarketDelta =
+        selected === "1d" ? "pct1d" : selected === "7d" ? "pct7d" : "pct30d";
+      const ranked = Array.from(map.entries())
+        .map(([playerName, delta]) => ({ playerName, delta }))
+        .filter(
+          (row): row is { playerName: string; delta: MarketDelta } =>
+            row.delta !== null,
+        )
+        .sort((a, b) => Math.abs(b.delta[field]) - Math.abs(a.delta[field]))
+        .slice(0, limit)
+        .map((row) => ({
+          playerName: row.playerName,
+          delta: row.delta,
+          confidence: deriveConfidence(row.delta),
+        }));
+      res.json({
+        success: true,
+        window: buildWindow(selected),
+        limit,
+        movers: ranked,
+        poolSize: pool.length,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
 export const __testing__ = { regimeFieldsFromEstimate, predictedRangeFieldsFromEstimate };
