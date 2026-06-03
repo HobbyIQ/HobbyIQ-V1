@@ -19,6 +19,7 @@ import {
 } from "../repositories/priceAlerts.repository.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireCapacity } from "../middleware/requireCapacity.js";
+import { countCombinedActiveAlerts } from "./alerts.advanced.routes.js";
 
 const router = Router();
 
@@ -104,10 +105,10 @@ router.get("/", async (req: Request, res: Response) => {
 //           currentPrice?, cardSnapshot? }
 router.post(
   "/",
-  requireCapacity("priceAlerts", async (userId) => {
-    const existing = await listAlertsForUser(userId);
-    return existing.length;
-  }),
+  // CF-ADVANCED-ALERTS (2026-06-03): shared `priceAlerts` cap. Basic alerts
+  // and advanced rules sum into one user-facing budget. Same helper is used
+  // by POST /api/alerts/advanced so both creates honor the combined count.
+  requireCapacity("priceAlerts", countCombinedActiveAlerts),
   async (req: Request, res: Response) => {
     const userId = userIdFrom(req);
     const body = (req.body ?? {}) as Record<string, unknown>;

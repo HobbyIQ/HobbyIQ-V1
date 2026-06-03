@@ -241,6 +241,7 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
       `unchanged=${unchanged} pricingErrors=${pricingErrors} pushSent=${pushSent} ` +
       `pushFailed=${pushFailed} durationMs=${summary.durationMs}`,
   );
+
   return summary;
 }
 

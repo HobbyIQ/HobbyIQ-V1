@@ -22,6 +22,7 @@ import psaRoutes from "./routes/psa.routes.js";
 // is blocking after this CF deploys.
 import devicesRoutes from "./routes/devices.routes.js";
 import alertsRoutes from "./routes/alerts.routes.js";
+import alertsAdvancedRoutes from "./routes/alerts.advanced.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
@@ -73,6 +74,11 @@ app.use("/api/psa", psaRoutes);
 // CF-WATCHLIST-UNIFY: /api/watchlist mount removed; route returns 404 via
 // the notFound handler. /api/dailyiq/watchlist is canonical.
 app.use("/api/devices", devicesRoutes);
+// Order matters: /api/alerts/advanced MUST mount BEFORE /api/alerts so the
+// advanced subrouter's path tree is reachable. Express matches in mount
+// order; mounting /api/alerts first would let alertsRoutes consume
+// /api/alerts/advanced before it ever reaches alertsAdvancedRoutes.
+app.use("/api/alerts/advanced", alertsAdvancedRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);

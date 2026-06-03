@@ -172,6 +172,35 @@ export async function sendPriceAlertNotification(
   });
 }
 
+/**
+ * CF-ADVANCED-ALERTS (2026-06-03): distinct push taxon for advanced-rule
+ * fires. `data.type = "advanced_alert"` so iOS push-routing can land on
+ * the rule-detail screen instead of the basic price-alert detail.
+ */
+export async function sendAdvancedAlertNotification(
+  userId: string,
+  payload: {
+    title: string;
+    body: string;
+    ruleId: string;
+    cardsightCardId?: string | null;
+    scopeType: "card" | "player" | "watchlist" | "holdings";
+  },
+): Promise<SendResult> {
+  const records = await getTokensForUser(userId);
+  if (records.length === 0) return { sent: 0, failed: 0, removedTokens: 0 };
+  return sendToTokens(records, {
+    title: payload.title,
+    body: payload.body,
+    data: {
+      type: "advanced_alert",
+      ruleId: payload.ruleId,
+      cardsightCardId: payload.cardsightCardId ?? null,
+      scopeType: payload.scopeType,
+    },
+  });
+}
+
 export async function broadcastToUsers(
   userIds: string[],
   payload: { title: string; body: string; data?: Record<string, unknown> },

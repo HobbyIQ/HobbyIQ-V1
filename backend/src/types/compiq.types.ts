@@ -74,7 +74,12 @@ export type PredictionCorpusSource =
   | "portfolio-reprice"
   /** runPriceAlertEvaluator background job — no holdingId; PriceAlert
    *  schema has only cardId+userId, no holding linkage. */
-  | "price-alert-evaluator";
+  | "price-alert-evaluator"
+  /** runAdvancedAlertsEvaluator background job — investor+ rule engine
+   *  invokes computeEstimate per scope target (card / player /
+   *  watchlist / holdings). holdingId may be set when scope=holdings;
+   *  routedFromHolding follows that. */
+  | "advanced-alert-evaluator";
 
 /**
  * CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): attribution context

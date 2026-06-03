@@ -5,6 +5,7 @@ import app from "./app.js";
 import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
+import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
@@ -62,6 +63,18 @@ app.listen(port, "0.0.0.0", () => {
     startPriceAlertEvaluatorJob();
   } catch (err: any) {
     console.error("[server] startPriceAlertEvaluatorJob failed:", err?.message ?? err);
+  }
+  // CF-ADVANCED-ALERTS (2026-06-03): separate timer at default 4h cadence.
+  // Decoupled from the 30-min basic-alert cycle so the advanced-rule fan-out
+  // doesn't burn the getPricing budget. Same APNs no-op semantics; same
+  // ADVANCED_ALERTS_EVALUATOR_DISABLE kill switch.
+  try {
+    startAdvancedAlertsEvaluatorJob();
+  } catch (err: any) {
+    console.error(
+      "[server] startAdvancedAlertsEvaluatorJob failed:",
+      err?.message ?? err,
+    );
   }
   try {
     startEbayOrderPollJob();
