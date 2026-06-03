@@ -8,6 +8,7 @@ import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
+import { startPredictionOutcomesCaptureJob } from "./jobs/predictionOutcomesCapture.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
@@ -82,6 +83,15 @@ app.listen(port, "0.0.0.0", () => {
     startSubscriptionsSafetyNetJob();
   } catch (err: any) {
     console.error("[server] startSubscriptionsSafetyNetJob failed:", err?.message ?? err);
+  }
+  // CF-ML-MOAT-OUTCOMES (2026-06-03): daily prediction-outcome capture.
+  // Re-queries Cardsight for post-prediction sales, producing
+  // (features, predicted, actual) training tuples. Defaults to 05:45 PT —
+  // after safety-net (05:15), before DailyIQ (06:00).
+  try {
+    startPredictionOutcomesCaptureJob();
+  } catch (err: any) {
+    console.error("[server] startPredictionOutcomesCaptureJob failed:", err?.message ?? err);
   }
   try {
     startCacheHitRateEmit();
