@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import healthRoutes from "./routes/health.routes.js";
 import compiqRoutes from "./routes/compiq.routes.js";
 import portfolioiqRoutes from "./routes/portfolioiq.routes.js";
+import portfolioErpRoutes from "./routes/portfolioiq.erp.routes.js";
 import dailyiqRoutes from "./routes/dailyiq.routes.js";
 import playeriqRoutes from "./routes/playeriq.routes.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -61,6 +62,10 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/compiq", compiqRoutes);
 app.use("/api/portfolioiq", portfolioiqRoutes);
+// CF-ERP-RECONCILIATION (2026-06-03): /api/portfolio/erp MUST mount BEFORE
+// /api/portfolio so the ERP sub-router's path tree is reachable. Same
+// mount-order pattern as /api/alerts/advanced.
+app.use("/api/portfolio/erp", portfolioErpRoutes);
 app.use("/api/portfolio", portfolioiqRoutes);
 app.use("/api/dailyiq", dailyiqRoutes);
 app.use("/api/dailyIQ", dailyiqRoutes);
