@@ -104,6 +104,30 @@ export interface TrendIQResult {
   coverage: TrendIQCoverage;
 }
 
+/**
+ * CF-TRENDIQ-SURFACES (2026-06-03): Layer-3 raw-data extension surfaced by
+ * /api/compiq/trendiq/full (pro_seller). Composite math + the
+ * `SegmentTrajectoryComponent` returned in `TrendIQResult` are UNCHANGED;
+ * this is a separate, additive object built from the same in-flight data.
+ *
+ * Cardsight TOS hedge — `preAnchorSales` / `postAnchorSales` are gated by
+ * env `TRENDIQ_FULL_RAW_SALES_DISABLED` at the route layer (single
+ * togglable block, not scattered guards). When stripped, the response
+ * still carries siblingCardIds + counts + perWindow percentiles.
+ */
+export interface SegmentTrajectoryFull {
+  siblingCardIds: ReadonlyArray<string>;
+  reanchorApplied: boolean;
+  effectiveAnchorDate: string;
+  originalAnchorDate: string | null;
+  preAnchorSales: ReadonlyArray<{ price: number; ts: number }>;
+  postAnchorSales: ReadonlyArray<{ price: number; ts: number }>;
+  perWindow: {
+    pre: { mean: number; p25: number; p75: number };
+    post: { mean: number; p25: number; p75: number };
+  };
+}
+
 /** Neutral fallback used when computation cannot proceed at all. */
 export const NEUTRAL_TRENDIQ: TrendIQResult = {
   composite: 1.0,

@@ -46,10 +46,11 @@ import {
 } from "../services/dailyiq/dynamicIngestion.service.js";
 // CF-PAYMENTS-A: requireSession + requireEntitlement gates for watchlist
 // routes (watchlist feature is collector+). DailyIQ brief routes (/brief,
-// /players/top/*, /dashboard/player-stats) intentionally stay session-
-// optional via getOptionalUserId in Phase A — see HALT for the
-// dailyIQBriefs / marketTrendIndexes / trendIQComposite gates that are
-// declared in the matrix but lack a current endpoint to attach to.
+// /players/top/*, /dashboard/player-stats) were gated by CF-FINALIZE
+// (dailyIQBriefs, investor+). trendIQComposite + trendIQLayer3Full now
+// attached at POST /api/compiq/trendiq + /trendiq/full (CF-TRENDIQ-
+// SURFACES). marketTrendIndexes remains declared in the matrix without
+// a current endpoint to attach to.
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 

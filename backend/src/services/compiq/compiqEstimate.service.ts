@@ -53,6 +53,7 @@ import {
   buildPlayerMomentumComponent,
   computeCardTrajectory,
   computeSegmentTrajectory,
+  computeSegmentTrajectoryAndFull,
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "./trendIQ.compute.js";
@@ -1656,6 +1657,17 @@ export function runVariantTierLadder<C extends { title: string }>(
 // request only. See `compiqEstimate` route handler for the auth gate.
 export interface ComputeEstimateOptions {
   tierLadderDisabledByHeader?: boolean;
+  /**
+   * CF-TRENDIQ-SURFACES (2026-06-03): optional capture hook for the
+   * raw Layer-3 data (sibling card IDs + pre/post sale rows + per-window
+   * percentiles). Populated by `computeSegmentTrajectoryAndFull` alongside
+   * the byte-identical SegmentTrajectoryComponent the composite math
+   * reads. Only the /api/compiq/trendiq/full route opts in; every other
+   * caller leaves this undefined and incurs zero behavior change.
+   */
+  captureSegmentTrajectoryFull?: (
+    full: import("./trendIQ.types.js").SegmentTrajectoryFull | null,
+  ) => void;
 }
 
 export async function computeEstimate(
@@ -2591,7 +2603,12 @@ export async function computeEstimate(
           const cardTrajectory = computeCardTrajectory(
             fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
           );
-          const segmentTrajectory = computeSegmentTrajectory(siblingPool, newestTs);
+          // CF-TRENDIQ-SURFACES (2026-06-03): same windowing, byte-identical
+          // component; .full is consumed only when caller opted into the
+          // /trendiq/full capture hook.
+          const segR = computeSegmentTrajectoryAndFull(siblingPool, newestTs);
+          const segmentTrajectory = segR.component;
+          options.captureSegmentTrajectoryFull?.(segR.full);
           const trendIQ = computeTrendIQ({
             playerMomentum: null,
             cardTrajectory,
@@ -3234,7 +3251,12 @@ export async function computeEstimate(
   const cardTrajectory = computeCardTrajectory(
     fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
   );
-  const segmentTrajectory = computeSegmentTrajectory(siblingPool, newestTs);
+  // CF-TRENDIQ-SURFACES (2026-06-03): same windowing, byte-identical
+  // component for composite math; .full is consumed only when caller
+  // opted into the /trendiq/full capture hook.
+  const segMain = computeSegmentTrajectoryAndFull(siblingPool, newestTs);
+  const segmentTrajectory = segMain.component;
+  options.captureSegmentTrajectoryFull?.(segMain.full);
   const trendIQ = computeTrendIQ({
     playerMomentum,
     cardTrajectory,

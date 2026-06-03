@@ -52,6 +52,10 @@ export type PredictionCorpusSource =
   | "compiq-price-freetext"
   /** POST /api/compiq/price-by-id — cardsightCardId-pinned price */
   | "compiq-price-by-id"
+  /** POST /api/compiq/trendiq — investor+ TrendIQ composite surface */
+  | "compiq-trendiq"
+  /** POST /api/compiq/trendiq/full — pro_seller TrendIQ L3-full surface */
+  | "compiq-trendiq-full"
   /** POST /api/compiq/bulk — per-query in the bulk array */
   | "compiq-bulk-freetext"
   /** POST /api/compiq/grade-premium — fires twice (raw + PSA10) */

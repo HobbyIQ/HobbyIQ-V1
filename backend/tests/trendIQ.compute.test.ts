@@ -11,6 +11,7 @@ import {
   buildPlayerMomentumComponent,
   computeCardTrajectory,
   computeSegmentTrajectory,
+  computeSegmentTrajectoryAndFull,
   computeTrendIQ,
   formatTrendIQLogLine,
   type SegmentPoolInput,
@@ -763,6 +764,132 @@ describe("computeSegmentTrajectory — Layer 3 segment trajectory", () => {
     const expected =
       0.2 * 1.05 + 0.4 * cardTraj!.multiplier + 0.4 * segment!.multiplier;
     expect(r.composite).toBeCloseTo(expected, 2);
+  });
+});
+
+// ─── CF-TRENDIQ-SURFACES (2026-06-03) GUARDRAIL ────────────────────────────
+//
+// The /trendiq/full surface added `computeSegmentTrajectoryAndFull`. The
+// original `computeSegmentTrajectory` was refactored to delegate to it.
+// This guardrail pins that the refactor is PURELY ADDITIVE — the
+// SegmentTrajectoryComponent (what composite math reads) is byte-identical
+// to the pre-refactor return for every meaningful input class.
+
+describe("CF-TRENDIQ-SURFACES — computeSegmentTrajectory composite-unchanged pin", () => {
+  // Build a deterministic pool where pre-anchor sits in [eff-30d, eff] and
+  // post-anchor sits in (eff, now]. Effective anchor = newestTs (no
+  // re-anchor because anchor is 14 days old, well under the 180d threshold).
+  const NOW = Date.parse("2026-06-03T00:00:00.000Z");
+  const DAY = 24 * 60 * 60 * 1000;
+  const newestTs = NOW - 14 * DAY; // anchor = 2026-05-20
+
+  const pool: SegmentPoolInput = {
+    siblingCardIds: ["sib-A", "sib-B", "sib-C"],
+    sales: [
+      // pre-anchor (within 30d before anchor)
+      { price: 90, ts: newestTs - 25 * DAY },
+      { price: 100, ts: newestTs - 20 * DAY },
+      { price: 105, ts: newestTs - 10 * DAY },
+      // post-anchor (between anchor and now)
+      { price: 115, ts: newestTs + 3 * DAY },
+      { price: 120, ts: newestTs + 7 * DAY },
+      { price: 125, ts: newestTs + 12 * DAY },
+    ],
+  };
+
+  it("computeSegmentTrajectory output is byte-identical to AndFull().component", () => {
+    const legacy = computeSegmentTrajectory(pool, newestTs, NOW);
+    const rich = computeSegmentTrajectoryAndFull(pool, newestTs, NOW);
+    expect(legacy).toEqual(rich.component);
+  });
+
+  it("composite TrendIQResult is unchanged whether segmentTrajectory is sourced from legacy or rich helper", () => {
+    const legacy = computeSegmentTrajectory(pool, newestTs, NOW);
+    const rich = computeSegmentTrajectoryAndFull(pool, newestTs, NOW);
+    const cardTraj = {
+      multiplier: 1.1,
+      pctChange: 10,
+      recentMedian: 110,
+      olderMedian: 100,
+      recentCount: 5,
+      olderCount: 6,
+      windowRecentDays: 14,
+      windowOlderDays: 30,
+    };
+    const fromLegacy = computeTrendIQ({
+      playerMomentum: null,
+      cardTrajectory: cardTraj,
+      segmentTrajectory: legacy,
+    });
+    const fromRich = computeTrendIQ({
+      playerMomentum: null,
+      cardTrajectory: cardTraj,
+      segmentTrajectory: rich.component,
+    });
+    expect(fromLegacy).toEqual(fromRich);
+  });
+
+  it("null-component cases also stay byte-identical (no_anchor + sparse_pool + anchor_too_recent)", () => {
+    // no_anchor (newestTs = 0)
+    expect(computeSegmentTrajectory(pool, 0, NOW)).toBeNull();
+    expect(computeSegmentTrajectoryAndFull(pool, 0, NOW).component).toBeNull();
+    expect(computeSegmentTrajectoryAndFull(pool, 0, NOW).full).toBeNull();
+
+    // anchor_too_recent (anchor 3 days ago — under POST_WINDOW_MIN_AGE_DAYS=7)
+    const recentAnchor = NOW - 3 * DAY;
+    expect(computeSegmentTrajectory(pool, recentAnchor, NOW)).toBeNull();
+    expect(
+      computeSegmentTrajectoryAndFull(pool, recentAnchor, NOW).component,
+    ).toBeNull();
+
+    // sparse_pool — same anchor but pool too thin
+    const sparsePool: SegmentPoolInput = {
+      siblingCardIds: ["only"],
+      sales: [{ price: 100, ts: newestTs - 5 * DAY }],
+    };
+    expect(computeSegmentTrajectory(sparsePool, newestTs, NOW)).toBeNull();
+    expect(
+      computeSegmentTrajectoryAndFull(sparsePool, newestTs, NOW).component,
+    ).toBeNull();
+  });
+
+  it("rich .full carries raw pre/post sales rows, siblingCardIds, reanchor flag, perWindow stats", () => {
+    const rich = computeSegmentTrajectoryAndFull(pool, newestTs, NOW);
+    expect(rich.full).not.toBeNull();
+    expect(rich.full!.siblingCardIds).toEqual(["sib-A", "sib-B", "sib-C"]);
+    expect(rich.full!.reanchorApplied).toBe(false);
+    expect(rich.full!.preAnchorSales.length).toBe(3);
+    expect(rich.full!.postAnchorSales.length).toBe(3);
+    // Rows sorted oldest -> newest.
+    expect(rich.full!.preAnchorSales[0].price).toBe(90);
+    expect(rich.full!.postAnchorSales[2].price).toBe(125);
+    // perWindow mean check (pre 90/100/105 = 98.33; post 115/120/125 = 120).
+    expect(rich.full!.perWindow.pre.mean).toBeCloseTo(98.33, 1);
+    expect(rich.full!.perWindow.post.mean).toBe(120);
+    expect(rich.full!.perWindow.pre.p75).toBeGreaterThanOrEqual(
+      rich.full!.perWindow.pre.p25,
+    );
+  });
+
+  it("reanchorApplied=true when anchor is older than 180d", () => {
+    const veryOldAnchor = NOW - 250 * DAY;
+    // Build a pool with sales straddling the re-anchored window
+    // (effective anchor = now - 90d).
+    const effAnchor = NOW - 90 * DAY;
+    const oldPool: SegmentPoolInput = {
+      siblingCardIds: ["a", "b"],
+      sales: [
+        { price: 80, ts: effAnchor - 20 * DAY },
+        { price: 82, ts: effAnchor - 10 * DAY },
+        { price: 95, ts: effAnchor + 10 * DAY },
+        { price: 98, ts: effAnchor + 20 * DAY },
+      ],
+    };
+    const rich = computeSegmentTrajectoryAndFull(oldPool, veryOldAnchor, NOW);
+    expect(rich.full).not.toBeNull();
+    expect(rich.full!.reanchorApplied).toBe(true);
+    expect(rich.full!.originalAnchorDate).toBe(new Date(veryOldAnchor).toISOString());
+    expect(rich.full!.effectiveAnchorDate).toBe(new Date(effAnchor).toISOString());
   });
 });
 

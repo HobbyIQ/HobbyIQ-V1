@@ -1424,6 +1424,222 @@ router.post("/sell-window", requireSession, requireEntitlement("predictions"), a
   }
 });
 
+// ─── CF-TRENDIQ-SURFACES (2026-06-03) ───────────────────────────────────────
+//
+// Standalone TrendIQ surfaces, piggybacking computeEstimate (Option A from
+// HALT GATE 1). The Cardsight + signals upstream fetches are deduped at the
+// Cardsight client's lower-layer cacheWrap, so back-to-back /price-by-id
+// and /trendiq for the same cardId issue no double network fetch.
+//
+// Two endpoints:
+//   POST /api/compiq/trendiq       — investor+ composite
+//   POST /api/compiq/trendiq/full  — pro_seller composite + raw L3 detail
+//
+// Gates: requireSession → requireEntitlement(<flag>) → requireRateLimited
+// ("priceChecksPerDay"). Cap is defense-in-depth: only investor / pro_seller
+// can pass entitlement, and both have unlimited priceChecksPerDay, so the
+// cap never bites in practice — but it stays consistent with the FMV
+// endpoints and protects against future matrix changes.
+//
+// Cardsight TOS hedge: `TRENDIQ_FULL_RAW_SALES_DISABLED=1` strips the raw
+// preAnchorSales / postAnchorSales rows from the /full response in ONE
+// place (the projection helper below). siblingCardIds + counts + perWindow
+// percentiles are preserved.
+
+import type { SegmentTrajectoryFull } from "../services/compiq/trendIQ.types.js";
+
+const TRENDIQ_FULL_RAW_SALES_DISABLED = () =>
+  ["1", "true", "TRUE", "yes"].includes(
+    String(process.env.TRENDIQ_FULL_RAW_SALES_DISABLED ?? "").trim(),
+  );
+
+function projectSegmentTrajectoryFull(
+  full: SegmentTrajectoryFull | null,
+): SegmentTrajectoryFull | (Omit<SegmentTrajectoryFull, "preAnchorSales" | "postAnchorSales"> & { rawSalesOmitted: true }) | null {
+  if (!full) return null;
+  if (TRENDIQ_FULL_RAW_SALES_DISABLED()) {
+    const {
+      siblingCardIds,
+      reanchorApplied,
+      effectiveAnchorDate,
+      originalAnchorDate,
+      perWindow,
+    } = full;
+    return {
+      siblingCardIds,
+      reanchorApplied,
+      effectiveAnchorDate,
+      originalAnchorDate,
+      perWindow,
+      rawSalesOmitted: true,
+    };
+  }
+  return full;
+}
+
+function parseTrendIQBody(req: import("express").Request) {
+  const body = (req.body ?? {}) as {
+    cardsightCardId?: unknown;
+    query?: unknown;
+    gradeCompany?: unknown;
+    gradeValue?: unknown;
+  };
+  const resolvedCardId =
+    typeof body.cardsightCardId === "string" && body.cardsightCardId.length > 0
+      ? body.cardsightCardId
+      : null;
+  if (!resolvedCardId) {
+    return { error: 'Missing "cardsightCardId" field' as const };
+  }
+  return {
+    resolvedCardId,
+    query: typeof body.query === "string" ? body.query : undefined,
+    gradeCompany:
+      typeof body.gradeCompany === "string" && body.gradeCompany.length > 0
+        ? body.gradeCompany
+        : undefined,
+    gradeValue:
+      typeof body.gradeValue === "number" ? body.gradeValue : undefined,
+  };
+}
+
+router.post(
+  "/trendiq",
+  requireSession,
+  requireEntitlement("trendIQComposite"),
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const parsed = parseTrendIQBody(req);
+      if ("error" in parsed) {
+        return res.status(400).json({ success: false, error: parsed.error });
+      }
+      const { resolvedCardId, query, gradeCompany, gradeValue } = parsed;
+      const cacheKey = normalizeCacheKey(
+        "compiq:trendiq:v1",
+        `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`,
+      );
+      const result = await cacheWrap(
+        cacheKey,
+        async () => {
+          const body: CompIQEstimateRequest = {
+            playerName: typeof query === "string" ? query.trim() : resolvedCardId,
+            cardsightCardId: resolvedCardId,
+            gradeCompany,
+            gradeValue,
+          };
+          const est = await computeEstimate(body, {
+            source: "compiq-trendiq",
+            userId: null,
+            holdingId: null,
+            routedFromHolding: false,
+          });
+          return {
+            success: true,
+            cardsightCardId: resolvedCardId,
+            trendIQ: (est as any).trendIQ ?? null,
+            signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
+            cardIdentity: (est as any).cardIdentity ?? null,
+            gradeUsed: (est as any).gradeUsed ?? null,
+          };
+        },
+        CACHE_TTL_SECONDS,
+      );
+      res.json(result);
+    } catch (err) {
+      if (isCardsightTimeoutError(err)) {
+        return res.status(200).json({
+          success: true,
+          cardsightCardId:
+            typeof (req.body ?? {}).cardsightCardId === "string"
+              ? (req.body as any).cardsightCardId
+              : "",
+          trendIQ: null,
+          signalsLastUpdated: null,
+          cardIdentity: null,
+          gradeUsed: null,
+          warning: "upstream-timeout",
+        });
+      }
+      next(err);
+    }
+  },
+);
+
+router.post(
+  "/trendiq/full",
+  requireSession,
+  requireEntitlement("trendIQLayer3Full"),
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const parsed = parseTrendIQBody(req);
+      if ("error" in parsed) {
+        return res.status(400).json({ success: false, error: parsed.error });
+      }
+      const { resolvedCardId, query, gradeCompany, gradeValue } = parsed;
+      const cacheKey = normalizeCacheKey(
+        "compiq:trendiq-full:v1",
+        `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`,
+      );
+      const result = await cacheWrap(
+        cacheKey,
+        async () => {
+          let captured: SegmentTrajectoryFull | null = null;
+          const body: CompIQEstimateRequest = {
+            playerName: typeof query === "string" ? query.trim() : resolvedCardId,
+            cardsightCardId: resolvedCardId,
+            gradeCompany,
+            gradeValue,
+          };
+          const est = await computeEstimate(
+            body,
+            {
+              source: "compiq-trendiq-full",
+              userId: null,
+              holdingId: null,
+              routedFromHolding: false,
+            },
+            {
+              captureSegmentTrajectoryFull: (full) => {
+                captured = full;
+              },
+            },
+          );
+          return {
+            success: true,
+            cardsightCardId: resolvedCardId,
+            trendIQ: (est as any).trendIQ ?? null,
+            signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
+            cardIdentity: (est as any).cardIdentity ?? null,
+            gradeUsed: (est as any).gradeUsed ?? null,
+            segmentTrajectoryFull: projectSegmentTrajectoryFull(captured),
+          };
+        },
+        CACHE_TTL_SECONDS,
+      );
+      res.json(result);
+    } catch (err) {
+      if (isCardsightTimeoutError(err)) {
+        return res.status(200).json({
+          success: true,
+          cardsightCardId:
+            typeof (req.body ?? {}).cardsightCardId === "string"
+              ? (req.body as any).cardsightCardId
+              : "",
+          trendIQ: null,
+          signalsLastUpdated: null,
+          cardIdentity: null,
+          gradeUsed: null,
+          segmentTrajectoryFull: null,
+          warning: "upstream-timeout",
+        });
+      }
+      next(err);
+    }
+  },
+);
+
 // Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
 export const __testing__ = { regimeFieldsFromEstimate, predictedRangeFieldsFromEstimate };

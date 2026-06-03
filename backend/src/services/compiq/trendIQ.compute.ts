@@ -11,6 +11,7 @@ import {
   type CardTrajectoryComponent,
   type PlayerMomentumComponent,
   type SegmentTrajectoryComponent,
+  type SegmentTrajectoryFull,
   type TrendIQComponents,
   type TrendIQCoverage,
   type TrendIQDirection,
@@ -190,11 +191,33 @@ const POST_WINDOW_MIN_AGE_DAYS = 7;
 const REANCHOR_AGE_THRESHOLD_DAYS = 180;
 const REANCHOR_TARGET_AGE_DAYS = 90;
 
+/**
+ * CF-TRENDIQ-SURFACES (2026-06-03): preserve the original signature exactly
+ * — composite math reads only this return — and delegate to the richer
+ * `computeSegmentTrajectoryAndFull` so /full reuses the same windowing math
+ * with no risk of drift. Anything that fails to yield a `component` (sparse
+ * pool, anchor too recent, no anchor) returns null here unchanged.
+ */
 export function computeSegmentTrajectory(
   pool: SegmentPoolInput,
   newestTs: number,
   nowMs: number = Date.now(),
 ): SegmentTrajectoryComponent | null {
+  return computeSegmentTrajectoryAndFull(pool, newestTs, nowMs).component;
+}
+
+/**
+ * CF-TRENDIQ-SURFACES (2026-06-03): same windowing as
+ * `computeSegmentTrajectory`, but ALSO returns the raw pre/post sales rows
+ * + per-window percentiles + reanchor flag for /api/compiq/trendiq/full.
+ * Composite math NEVER reads `.full`; it reads `.component`, which is
+ * byte-identical to the prior `computeSegmentTrajectory` output.
+ */
+export function computeSegmentTrajectoryAndFull(
+  pool: SegmentPoolInput,
+  newestTs: number,
+  nowMs: number = Date.now(),
+): { component: SegmentTrajectoryComponent | null; full: SegmentTrajectoryFull | null } {
   // Temporary diagnostic for B.4.c.3 live smoke — emits null reason + pool
   // sizes per call so we can verify which gate fires in production paths.
   // TODO: remove this `nullDiag` block once Layer 3 behavior is verified
@@ -213,11 +236,13 @@ export function computeSegmentTrajectory(
     );
   };
 
+  const NULL_BOTH = { component: null, full: null } as const;
+
   // No anchor — card has never sold (or no usable timestamp). Layer 3 needs
   // a pivot point; no anchor means no trajectory.
   if (!Number.isFinite(newestTs) || newestTs <= 0) {
     nullDiag("no_anchor");
-    return null;
+    return NULL_BOTH;
   }
 
   const originalAnchorDate = new Date(newestTs).toISOString();
@@ -227,7 +252,7 @@ export function computeSegmentTrajectory(
   // post-anchor median.
   if (anchorAgeDays < POST_WINDOW_MIN_AGE_DAYS) {
     nullDiag("anchor_too_recent", { anchorAgeDays: anchorAgeDays.toFixed(1) });
-    return null;
+    return NULL_BOTH;
   }
 
   // Re-anchor very-old anchors to keep Layer 3 useful for stale-last-sale
@@ -248,13 +273,20 @@ export function computeSegmentTrajectory(
 
   const preAnchor: number[] = [];
   const postAnchor: number[] = [];
+  // CF-TRENDIQ-SURFACES: retain (price, ts) rows so /full can return raw
+  // pre/post sales without re-walking the pool. Composite math reads only
+  // the median of preAnchor/postAnchor[]; the row arrays are extra.
+  const preAnchorRows: Array<{ price: number; ts: number }> = [];
+  const postAnchorRows: Array<{ price: number; ts: number }> = [];
   for (const s of pool.sales) {
     if (!Number.isFinite(s.price) || s.price <= 0) continue;
     if (!Number.isFinite(s.ts)) continue;
     if (s.ts > effectiveAnchorTs && s.ts <= nowMs) {
       postAnchor.push(s.price);
+      postAnchorRows.push({ price: s.price, ts: s.ts });
     } else if (s.ts <= effectiveAnchorTs && s.ts >= preWindowStart) {
       preAnchor.push(s.price);
+      preAnchorRows.push({ price: s.price, ts: s.ts });
     }
   }
 
@@ -265,7 +297,7 @@ export function computeSegmentTrajectory(
       post: postAnchor.length,
       reanchored: isReanchored,
     });
-    return null;
+    return NULL_BOTH;
   }
 
   const preAnchorMedian = simpleMedian(preAnchor);
@@ -275,14 +307,14 @@ export function computeSegmentTrajectory(
     postAnchorMedian === null ||
     preAnchorMedian <= 0
   ) {
-    return null;
+    return NULL_BOTH;
   }
 
   const rawPct = ((postAnchorMedian - preAnchorMedian) / preAnchorMedian) * 100;
   const pctChange = clamp(rawPct, -50, 50);
   const multiplier = clamp(1 + pctChange / 100, 0.70, 1.50);
 
-  return {
+  const component: SegmentTrajectoryComponent = {
     multiplier: Math.round(multiplier * 1000) / 1000,
     pctChange: Math.round(pctChange * 10) / 10,
     effectiveAnchorDate,
@@ -294,6 +326,50 @@ export function computeSegmentTrajectory(
     postAnchorCount: postAnchor.length,
     siblingsScanned: pool.siblingCardIds.length,
     totalSamples: pool.sales.length,
+  };
+
+  // Sort the row arrays oldest→newest so the UI shows a coherent timeline.
+  preAnchorRows.sort((a, b) => a.ts - b.ts);
+  postAnchorRows.sort((a, b) => a.ts - b.ts);
+
+  const full: SegmentTrajectoryFull = {
+    siblingCardIds: pool.siblingCardIds.slice(),
+    reanchorApplied: isReanchored,
+    effectiveAnchorDate,
+    originalAnchorDate,
+    preAnchorSales: preAnchorRows,
+    postAnchorSales: postAnchorRows,
+    perWindow: {
+      pre: percentilesAndMean(preAnchor),
+      post: percentilesAndMean(postAnchor),
+    },
+  };
+
+  return { component, full };
+}
+
+function percentilesAndMean(values: ReadonlyArray<number>): {
+  mean: number;
+  p25: number;
+  p75: number;
+} {
+  if (values.length === 0) return { mean: 0, p25: 0, p75: 0 };
+  const sorted = values.slice().sort((a, b) => a - b);
+  const sum = sorted.reduce((acc, v) => acc + v, 0);
+  const mean = sum / sorted.length;
+  const pickPct = (p: number): number => {
+    if (sorted.length === 1) return sorted[0];
+    const idx = (sorted.length - 1) * p;
+    const lo = Math.floor(idx);
+    const hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    const frac = idx - lo;
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * frac;
+  };
+  return {
+    mean: Math.round(mean * 100) / 100,
+    p25: Math.round(pickPct(0.25) * 100) / 100,
+    p75: Math.round(pickPct(0.75) * 100) / 100,
   };
 }
 
