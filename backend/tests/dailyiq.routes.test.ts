@@ -94,8 +94,19 @@ async function signIn(username: string, password: string): Promise<string> {
 }
 
 describe("DailyIQ routes", () => {
+  // CF-FINALIZE (2026-06-03): /players/top/* are now session-required +
+  // requireEntitlement("dailyIQBriefs") (investor+). Seeded admin
+  // "HobbyIQ" has plan="pro_seller" (post legacy-normalization) and
+  // therefore passes the gate.
+  let adminSession = "";
+  beforeEach(async () => {
+    adminSession = await signIn("HobbyIQ", "Baseball25");
+  });
+
   it("returns only MLB players for the MLB top endpoint", async () => {
-    const response = await request(app).get("/api/dailyiq/players/top/mlb");
+    const response = await request(app)
+      .get("/api/dailyiq/players/top/mlb")
+      .set("x-session-id", adminSession);
 
     expect(response.status).toBe(200);
     expect(response.body.limit).toBe(50);
@@ -107,7 +118,9 @@ describe("DailyIQ routes", () => {
   });
 
   it("returns only MiLB players for the MiLB top endpoint", async () => {
-    const response = await request(app).get("/api/dailyiq/players/top/milb");
+    const response = await request(app)
+      .get("/api/dailyiq/players/top/milb")
+      .set("x-session-id", adminSession);
 
     expect(response.status).toBe(200);
     expect(response.body.players.length).toBeGreaterThan(0);

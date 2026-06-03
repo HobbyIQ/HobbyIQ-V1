@@ -110,28 +110,46 @@ export async function identifyCardByBlobUrl(
 }
 
 /**
- * CF-GRADED-SCAN-B1+B2 (2026-06-02): opt-in variant that runs Cardsight
- * identify AND Azure Vision OCR in parallel against the SAME image bytes
- * (single blob download), then attempts to extract a cert-number
- * candidate from the OCR text.
+ * CF-GRADED-SCAN-B1+B2 (2026-06-02; refined CF-FINALIZE 2026-06-03):
+ * opt-in variant that runs Cardsight identify and — ONLY when Cardsight
+ * detects a PSA slab — additionally runs Azure Vision OCR to extract a
+ * cert-number candidate.
+ *
+ * Coherence rule (CF-FINALIZE): Cardsight's native grading{} is the
+ * source of truth for grade/company/value across ALL graders (PSA / BGS
+ * / SGC / CGC). The cert OCR layer adds value for PSA ONLY because
+ * Cardsight's response doesn't carry the PSA cert NUMBER (only the
+ * grade). For BGS/SGC/CGC, Cardsight's grading{} is already complete —
+ * adding OCR-derived cert digits would conflate two different graders'
+ * cert formats and risk emitting a "cert candidate" for a slab whose
+ * cert NUMBER format we haven't validated.
  *
  * Returns a WRAPPED response:
  *   { cardsight: <verbatim CardsightIdentifyResponse>,
- *     certCandidate?: { graderId, certNumber, ocrConfidence } }
+ *     certCandidate?: { graderId: "psa", certNumber, ocrConfidence } }
  *
- * certCandidate is OMITTED (not null) when:
- *   - OCR is disabled (AZURE_VISION_* env vars unset)
- *   - OCR fails / times out (best-effort; cert extraction never blocks
- *     the cardsight result)
- *   - No 6-12 digit run found in any OCR line above the confidence floor
+ * certCandidate is OMITTED when:
+ *   - Cardsight detected a non-PSA grader (BGS / SGC / CGC) OR no grader
+ *   - Cardsight detected PSA but OCR is disabled (AZURE_VISION_* unset)
+ *   - PSA + OCR succeeded but no 6-12 digit run above confidence floor
+ *   - PSA + OCR failed / timed out (best-effort; never blocks)
  *
  * Error model is IDENTICAL to identifyCardByBlobUrl — Cardsight errors
- * propagate unchanged. OCR errors NEVER throw (visionOcr.client returns
- * null on failure, certCandidate is omitted).
+ * propagate unchanged. OCR errors NEVER throw.
  */
 export interface IdentifyWithCertExtractionResult {
   cardsight: CardsightIdentifyResponse;
   certCandidate?: CertCandidate;
+}
+
+/**
+ * True when Cardsight's first detection has grading{} with
+ * company.name = "PSA" (case-insensitive). Used to gate the OCR call.
+ */
+function isPsaDetection(resp: CardsightIdentifyResponse): boolean {
+  const first = resp.detections?.[0];
+  const companyName = first?.grading?.company?.name;
+  return typeof companyName === "string" && companyName.toUpperCase() === "PSA";
 }
 
 export async function identifyCardWithCertExtraction(
@@ -152,22 +170,22 @@ export async function identifyCardWithCertExtraction(
   const filename = filenameFromBlobName(blobName);
   const mimeType = mimeTypeFromFilename(filename);
 
-  // Run Cardsight + OCR in parallel against the SAME bytes. Cardsight
-  // is the load-bearing call — its errors propagate verbatim. OCR is
-  // wrapped in Promise.allSettled so an OCR failure doesn't take down
-  // the call.
-  const [cardsightSettled, ocrResult] = await Promise.all([
-    cardsightIdentify(bytes, filename, mimeType).catch((err) => {
-      // Re-throw immediately — caller (route) maps these to HTTP codes.
-      throw err;
-    }),
-    extractTextFromImage(bytes), // returns null on failure; never throws
-  ]);
+  // Cardsight first — its grading.company.name decides whether OCR runs.
+  // Serial (not parallel as in B1+B2) so we don't pay the Azure Vision
+  // API cost for non-PSA slabs. Latency cost: ~500-1500ms extra on PSA
+  // scans only; non-PSA scans are now FASTER (skip OCR).
+  const cardsight = await cardsightIdentify(bytes, filename, mimeType);
 
-  // cardsightIdentify either resolved or threw above (and we never reach
-  // here on a throw). cardsightSettled is the resolved value.
-  const cardsight = cardsightSettled;
+  if (!isPsaDetection(cardsight)) {
+    // Non-PSA slab (BGS/SGC/CGC) or no detected grader — Cardsight's
+    // grading{} is the complete truth. No certCandidate.
+    return { cardsight };
+  }
 
+  // PSA detected — attempt OCR + cert extraction. OCR client never
+  // throws (returns null on failure); cert extractor returns null when
+  // no digit run passes the confidence floor.
+  const ocrResult = await extractTextFromImage(bytes);
   const certCandidate = ocrResult
     ? extractCertCandidate(ocrResult.lines) ?? undefined
     : undefined;

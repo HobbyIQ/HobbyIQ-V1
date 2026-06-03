@@ -36,12 +36,25 @@ vi.mock("../src/services/compiq/cardsight.client.js", async () => {
   );
   return {
     ...actual,
+    // CF-FINALIZE (2026-06-03): default identify return now includes a PSA
+    // grading{} so opt-in cert-extraction tests still trigger the OCR
+    // path. Per the coherence rule, OCR only runs when grading.company.name
+    // is "PSA". Tests covering non-PSA graders use mockResolvedValueOnce
+    // to override.
     identify: vi.fn(async () => ({
       success: true,
       requestId: "test-req-id",
       processingTime: 42,
       detections: [
-        { card_id: "test-uuid", title: "Test Card", confidence: 0.92 },
+        {
+          confidence: "0.92",
+          card: { card_id: "test-uuid", title: "Test Card" },
+          grading: {
+            confidence: "0.91",
+            company: { id: "psa", name: "PSA" },
+            grade: { id: "10", value: "10", condition: "GEM MINT" },
+          },
+        },
       ],
       messages: [],
     })),
@@ -108,14 +121,17 @@ describe("CF-GRADED-SCAN — /api/portfolio/identify opt-in cert extraction", ()
         .send({ blobUrl: "https://test.blob.core.windows.net/uploads/c.jpg" });
 
       expect(r.status).toBe(200);
-      // Verbatim Cardsight shape — no `cardsight` wrap key, no certCandidate.
+      // CF-FINALIZE: BYTE-IDENTICAL opt-out contract — response IS the
+      // verbatim Cardsight payload (which now carries native grading{}
+      // for graded slabs across ALL graders). No wrap key, no
+      // certCandidate. iOS readers that don't know about cert OCR see
+      // exactly the same shape they've always seen.
       expect(r.body.success).toBe(true);
       expect(r.body.requestId).toBe("test-req-id");
-      expect(r.body.detections).toEqual([
-        { card_id: "test-uuid", title: "Test Card", confidence: 0.92 },
-      ]);
-      expect(r.body.cardsight).toBeUndefined();
-      expect(r.body.certCandidate).toBeUndefined();
+      expect(r.body.detections[0].card.card_id).toBe("test-uuid");
+      expect(r.body.detections[0].grading.company.name).toBe("PSA");
+      expect(r.body.cardsight).toBeUndefined();      // no opt-in wrap
+      expect(r.body.certCandidate).toBeUndefined();  // no cert OCR result
       // OCR client MUST NOT have been called on opt-out path.
       expect(visionMod.extractTextFromImage).not.toHaveBeenCalled();
     });
@@ -296,6 +312,7 @@ describe("CF-GRADED-SCAN — /api/portfolio/identify opt-in cert extraction", ()
       expect(visionMod.extractTextFromImage).not.toHaveBeenCalled();
     });
   });
+
 });
 
 // ─────────────────────────────────────────────────────────────────────

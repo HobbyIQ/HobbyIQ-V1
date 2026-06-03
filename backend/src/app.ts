@@ -42,8 +42,14 @@ app.use("/api/", rateLimit({
 }));
 
 app.use(express.json({ limit: "12mb" }));
+// CF-FINALIZE (2026-06-03): config.CORS_ALLOWED_ORIGINS is now pre-parsed
+// to boolean | "*" | string[]. The `|| "*"` fallback was the source of
+// the malformed `Access-Control-Allow-Origin: false` echo when the env
+// var was set to the literal string "false". cors() with `origin: false`
+// emits NO ACAO header — cross-origin browser requests are rejected
+// silently; iOS-native (no Origin header) is unaffected.
 app.use(cors({
-  origin: config.CORS_ALLOWED_ORIGINS || "*",
+  origin: config.CORS_ALLOWED_ORIGINS,
 }));
 app.use(requestLogger);
 

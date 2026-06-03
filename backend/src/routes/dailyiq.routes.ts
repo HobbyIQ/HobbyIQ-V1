@@ -773,13 +773,27 @@ async function respondWithTopPlayers(req: Request, res: Response, league: League
   });
 }
 
-router.get("/players/top/mlb", async (req, res) => {
-  await respondWithTopPlayers(req, res, "MLB");
-});
+// CF-FINALIZE (2026-06-03): dailyIQBriefs hard-gate (investor+).
+// /players/top/* serve slices of the brief — same data, different shape —
+// so they get the same gate as /brief. Previously session-optional via
+// getOptionalUserId; now session-required + entitlement-required.
+router.get(
+  "/players/top/mlb",
+  requireSession,
+  requireEntitlement("dailyIQBriefs"),
+  async (req, res) => {
+    await respondWithTopPlayers(req, res, "MLB");
+  },
+);
 
-router.get("/players/top/milb", async (req, res) => {
-  await respondWithTopPlayers(req, res, "MiLB");
-});
+router.get(
+  "/players/top/milb",
+  requireSession,
+  requireEntitlement("dailyIQBriefs"),
+  async (req, res) => {
+    await respondWithTopPlayers(req, res, "MiLB");
+  },
+);
 
 /**
  * Lookup helper for watchlist enrichment: find a player in today's brief
@@ -838,7 +852,9 @@ function buildOffDayResponse(profile: PlayerProfile, date: string, lastUpdated: 
   };
 }
 
-router.get("/dashboard/player-stats", async (req, res) => {
+// CF-FINALIZE: dashboard/player-stats returns the brief sliced for the
+// dashboard layout — same gate as /brief.
+router.get("/dashboard/player-stats", requireSession, requireEntitlement("dailyIQBriefs"), async (req, res) => {
   const date = normalizeDate(req.query.date);
   const userId = await getOptionalUserId(req);
   const watchlistSet = userId ? await getWatchlistSet(userId) : new Set<string>();
@@ -1016,8 +1032,10 @@ const handleBriefRequest = async (req: Request, res: Response) => {
   }
 };
 
-router.get("/", handleBriefRequest);
-router.get("/brief", handleBriefRequest);
+// CF-FINALIZE: composite brief (the canonical dailyIQBriefs surface).
+// "/" is the iOS-visible alias. Both gated.
+router.get("/", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
+router.get("/brief", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
 
 router.get("/watchlist", requireSession, requireEntitlement("watchlist"), async (req, res) => {
   const userId = req.user!.userId;
