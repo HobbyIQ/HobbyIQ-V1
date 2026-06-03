@@ -25,6 +25,7 @@ import alertsRoutes from "./routes/alerts.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
+import internalCardsightInventoryRoutes from "./routes/internalCardsightInventory.routes.js";
 import rateLimit from "express-rate-limit";
 
 const config = getConfig();
@@ -69,6 +70,7 @@ app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
+app.use("/api/internal/cardsight-inventory", internalCardsightInventoryRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

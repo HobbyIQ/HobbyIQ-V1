@@ -14,6 +14,14 @@ import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireCapacity } from "../middleware/requireCapacity.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
+// CF-SCANNING-B5a + B5b (2026-06-03): pre-scan helper endpoints. Read
+// directly from the daily-refreshed snapshot (in-process 5-min cache +
+// single Cosmos doc fallback). Live Cardsight fallback only fires on a
+// pre-snapshot deploy when the cache is genuinely empty.
+import {
+  getIdentifiableSets,
+  isSetIdentifiable,
+} from "../services/cardsight/identifiableSetCache.service.js";
 
 const router = Router();
 
@@ -116,6 +124,70 @@ router.post(
 
 // CF-PAYMENTS-A: batch reprice is a prediction-class operation (collector+).
 router.post("/reprice/batch", requireEntitlement("predictions"), portfolio.runBatchReprice);
+
+// CF-SCANNING-B5b (2026-06-03): GET /api/portfolio/identifiable-sets
+//
+// Returns the cached Cardsight identifiable-set inventory. Ungated read
+// utility (requireSession only — no entitlement, no cap) so iOS can show
+// the user the supported-set list at any tier BEFORE they waste a scan.
+//
+// Query params:
+//   segment   optional — filter to a single Cardsight segment
+//             (e.g. "Baseball" / "Football" / "Pokemon"). Case-insensitive.
+//   skip      optional, default 0
+//   take      optional, default 100, max 500
+//
+// Response: { success, refreshedAt, totalCount, segmentCount, skip, take, sets[] }
+//   refreshedAt   ISO timestamp of the last successful refresh (null if
+//                 the daily job hasn't fired yet on this deploy).
+//   totalCount    total sets across ALL segments in the snapshot.
+//   segmentCount  count within the requested segment filter (or = totalCount
+//                 when no filter applied).
+router.get("/identifiable-sets", async (req, res) => {
+  const segment = typeof req.query.segment === "string" ? req.query.segment : undefined;
+  const skipRaw = req.query.skip;
+  const takeRaw = req.query.take;
+  const skip = typeof skipRaw === "string" ? Math.max(0, Number.parseInt(skipRaw, 10) || 0) : 0;
+  const take = typeof takeRaw === "string" ? Math.max(1, Number.parseInt(takeRaw, 10) || 100) : 100;
+
+  try {
+    const result = await getIdentifiableSets({ segment, skip, take });
+    res.json({ success: true, ...result });
+  } catch (err: unknown) {
+    console.error("[portfolioiq.identifiable-sets] unexpected error:", err);
+    res.status(500).json({ success: false, error: "Failed to read identifiable-set cache" });
+  }
+});
+
+// CF-SCANNING-B5a (2026-06-03): GET /api/portfolio/identify/set-supported
+//
+// Pre-flight check used by iOS BEFORE issuing a scan against a specific
+// set. Ungated (requireSession only). Cache hit returns in O(1); cache
+// miss falls back to a live Cardsight check (rare — only when the daily
+// snapshot is pre-first-run on a fresh deploy).
+//
+// Query params:
+//   setId   required — Cardsight set UUID
+//
+// Response: { success, setId, supported: boolean, source: "cache" | "live" | "unknown" }
+//   source="cache"   answered from the daily snapshot (authoritative)
+//   source="live"    answered by a live Cardsight call (cache pre-warm state)
+//   source="unknown" live call failed or API key missing — supported=false
+//                    (deny-by-default; iOS treats this as "best to try").
+router.get("/identify/set-supported", async (req, res) => {
+  const setId = typeof req.query.setId === "string" ? req.query.setId.trim() : "";
+  if (!setId) {
+    res.status(400).json({ success: false, error: "setId is required" });
+    return;
+  }
+  try {
+    const result = await isSetIdentifiable(setId);
+    res.json({ success: true, ...result });
+  } catch (err: unknown) {
+    console.error("[portfolioiq.set-supported] unexpected error:", err);
+    res.status(500).json({ success: false, error: "Pre-flight check failed" });
+  }
+});
 
 // CF-CARDSIGHT-IDENTIFY-INTEGRATION: POST /api/portfolio/identify
 //

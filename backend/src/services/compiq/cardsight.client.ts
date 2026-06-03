@@ -689,3 +689,110 @@ export async function identify(
   });
   return body;
 }
+
+// ─── CF-SCANNING-B5 (2026-06-03): identifiable-set inventory endpoints ──────
+//
+// Two read-only endpoints used by the B5b daily refresh job (paginates
+// list/sets into a Cosmos snapshot) and the B5a pre-flight live-fallback
+// (when the snapshot doesn't have the set yet). Both use the same
+// fetchWithRetry / authHeaders / timeout/error model as identify/getPricing.
+//
+// Endpoint shapes verified empirically 2026-05-29 against the live API:
+//   GET /v1/identify/list/sets?skip=0&take=50
+//     { sets: [{year, release_name, segment_name, set_name, set_id}],
+//       total_count, skip, take }
+//   GET /v1/identify/check/set/{setId}
+//     { set_id, is_identifiable: boolean }
+// Pagination cap empirically observed: take > 50 returns HTTP 400.
+
+export interface CardsightIdentifiableSet {
+  year: string;
+  release_name: string;
+  segment_name: string;
+  set_name: string;
+  set_id: string;
+}
+
+export interface CardsightIdentifiableSetsPage {
+  sets: CardsightIdentifiableSet[];
+  total_count: number;
+  skip: number;
+  take: number;
+}
+
+export interface CardsightSetSupportedResponse {
+  set_id: string;
+  is_identifiable: boolean;
+}
+
+/**
+ * GET /v1/identify/list/sets — one page of the identify-capable set
+ * inventory. Throws CardsightApiError on non-2xx, CardsightTimeoutError on
+ * timeout. Empty result returned as { sets: [], total_count: 0 ... } when
+ * the API key is missing (consistent with searchCatalog's null-key
+ * behavior).
+ */
+export async function listIdentifiableSets(
+  opts: { skip?: number; take?: number } = {},
+): Promise<CardsightIdentifiableSetsPage> {
+  const empty: CardsightIdentifiableSetsPage = {
+    sets: [],
+    total_count: 0,
+    skip: opts.skip ?? 0,
+    take: opts.take ?? 50,
+  };
+  if (!apiKey()) {
+    log.warn("api_key_missing", { endpoint: "listIdentifiableSets" });
+    return empty;
+  }
+  const skip = opts.skip ?? 0;
+  const take = opts.take ?? 50;
+  const url = `${BASE_URL}/identify/list/sets?skip=${skip}&take=${take}`;
+  const start = Date.now();
+  const res = await fetchWithRetry(url);
+  const body = (await res.json()) as Partial<CardsightIdentifiableSetsPage>;
+  log.info("identifiable_sets_page", {
+    endpoint: "listIdentifiableSets",
+    skip,
+    take,
+    returned: body.sets?.length ?? 0,
+    total_count: body.total_count ?? 0,
+    elapsed_ms: Date.now() - start,
+  });
+  return {
+    sets: Array.isArray(body.sets) ? body.sets : [],
+    total_count: typeof body.total_count === "number" ? body.total_count : 0,
+    skip: typeof body.skip === "number" ? body.skip : skip,
+    take: typeof body.take === "number" ? body.take : take,
+  };
+}
+
+/**
+ * GET /v1/identify/check/set/{setId} — live pre-flight check used as the
+ * cache-miss fallback. Throws CardsightApiError on non-2xx. Returns null
+ * when the API key is missing — caller treats null as "unknown, deny by
+ * default" so a misconfigured backend doesn't falsely advertise support.
+ */
+export async function checkSetIdentifiable(
+  setId: string,
+): Promise<CardsightSetSupportedResponse | null> {
+  if (!apiKey()) {
+    log.warn("api_key_missing", { endpoint: "checkSetIdentifiable", set_id: setId });
+    return null;
+  }
+  const safe = encodeURIComponent(setId);
+  const url = `${BASE_URL}/identify/check/set/${safe}`;
+  const start = Date.now();
+  const res = await fetchWithRetry(url);
+  const body = (await res.json()) as Partial<CardsightSetSupportedResponse>;
+  log.info("check_set_identifiable", {
+    endpoint: "checkSetIdentifiable",
+    set_id: setId,
+    is_identifiable: body.is_identifiable === true,
+    elapsed_ms: Date.now() - start,
+  });
+  return {
+    set_id: typeof body.set_id === "string" ? body.set_id : setId,
+    is_identifiable: body.is_identifiable === true,
+  };
+}

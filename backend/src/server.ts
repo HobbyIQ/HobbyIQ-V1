@@ -6,6 +6,7 @@ import { startDailyJobs } from "./jobs/dailyiq.job.js";
 import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
+import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
@@ -64,6 +65,13 @@ app.listen(port, "0.0.0.0", () => {
     startEbayOrderPollJob();
   } catch (err: any) {
     console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
+  }
+  // CF-SCANNING-B5b (2026-06-03): daily Cardsight identifiable-set snapshot
+  // refresh. Defaults to 04:30 PT — fires before any user traffic spikes.
+  try {
+    startInventoryRefreshJob();
+  } catch (err: any) {
+    console.error("[server] startInventoryRefreshJob failed:", err?.message ?? err);
   }
   try {
     startCacheHitRateEmit();
