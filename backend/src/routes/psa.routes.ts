@@ -1,29 +1,16 @@
+// Routes: /api/psa/cert/:certNumber
+// CF-PAYMENTS-A: requireSession enforced; no entitlement gate (cert lookups
+// remain available on all plans so users can identify a slab they already
+// have in front of them).
+
 import { Request, Response, Router } from "express";
-import { getUserBySession } from "../services/authService.js";
 import { lookupPsaCertByNumber, PsaApiError } from "../services/psa/psaCert.service.js";
+import { requireSession } from "../middleware/requireSession.js";
 
 const router = Router();
-
-async function requireSessionUser(req: Request, res: Response): Promise<boolean> {
-  const sessionId = String(req.headers["x-session-id"] ?? "").trim();
-  if (!sessionId) {
-    res.status(401).json({ success: false, error: "Missing x-session-id" });
-    return false;
-  }
-
-  const user = await getUserBySession(sessionId);
-  if (!user) {
-    res.status(401).json({ success: false, error: "Invalid session" });
-    return false;
-  }
-
-  return true;
-}
+router.use(requireSession);
 
 router.get("/cert/:certNumber", async (req: Request, res: Response) => {
-  const isAuthenticated = await requireSessionUser(req, res);
-  if (!isAuthenticated) return;
-
   const certNumber = String(req.params.certNumber ?? "").trim();
   if (!certNumber) {
     return res.status(400).json({ success: false, error: "certNumber is required" });

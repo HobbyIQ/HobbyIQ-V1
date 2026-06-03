@@ -943,6 +943,14 @@ function buildWeeklyNarrative(doc: UserDoc) {
 }
 
 async function requireUser(req: Request, res: Response): Promise<{ userId: string } | null> {
+  // CF-PAYMENTS-A: prefer the middleware-attached user (set by
+  // requireSession) so the request doesn't double-hit Cosmos for the
+  // session lookup. Fall back to legacy header-parsing path for any
+  // caller that didn't go through requireSession (none today, but kept
+  // as a safety net so this helper stays self-contained).
+  const attached = req.user;
+  if (attached?.userId) return { userId: attached.userId };
+
   const sessionId = String(req.headers["x-session-id"] ?? "").trim();
   if (!sessionId) {
     res.status(401).json({ error: "Missing x-session-id" });
@@ -954,6 +962,17 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
     return null;
   }
   return { userId: user.userId };
+}
+
+/**
+ * CF-PAYMENTS-A: count helper exposed for the requireCapacity middleware.
+ * Reads UserDoc and returns the current number of holdings keys; used to
+ * enforce holdingsCap on POST /api/portfolio/holdings before the new row
+ * is created.
+ */
+export async function countHoldingsForUser(userId: string): Promise<number> {
+  const doc = await readUserDoc(userId);
+  return Object.keys(doc.holdings ?? {}).length;
 }
 
 export async function getHoldings(req: Request, res: Response) {

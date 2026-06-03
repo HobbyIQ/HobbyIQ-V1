@@ -1,30 +1,18 @@
 // Routes: /api/devices/* — register & remove APNs device tokens for the
-// currently-signed-in user. Requires `x-session-id` header.
+// currently-signed-in user. Requires `x-session-id` via requireSession.
+// Available on all plans (free included) so users can receive auth /
+// system notifications regardless of subscription state.
 
 import { Router, Request, Response } from "express";
-import { getUserBySession } from "../services/authService.js";
 import { registerToken, removeToken } from "../repositories/deviceToken.repository.js";
+import { requireSession } from "../middleware/requireSession.js";
 
 const router = Router();
-
-async function requireUserId(req: Request, res: Response): Promise<string | null> {
-  const sessionId = String(req.headers["x-session-id"] ?? "").trim();
-  if (!sessionId) {
-    res.status(401).json({ success: false, error: "Missing x-session-id" });
-    return null;
-  }
-  const user = await getUserBySession(sessionId);
-  if (!user) {
-    res.status(401).json({ success: false, error: "Invalid session" });
-    return null;
-  }
-  return user.userId;
-}
+router.use(requireSession);
 
 // POST /api/devices/token  body: { token, platform?, bundleId? }
 router.post("/token", async (req: Request, res: Response) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+  const userId = req.user!.userId;
 
   const token = String(req.body?.token ?? req.body?.deviceToken ?? "").trim();
   const platformRaw = String(req.body?.platform ?? "ios").trim().toLowerCase();
@@ -47,8 +35,7 @@ router.post("/token", async (req: Request, res: Response) => {
 
 // DELETE /api/devices/token  body: { token }
 router.delete("/token", async (req: Request, res: Response) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+  const userId = req.user!.userId;
   const token = String(req.body?.token ?? req.body?.deviceToken ?? "").trim();
   if (!token) {
     res.status(400).json({ success: false, error: "Missing token" });

@@ -44,6 +44,14 @@ import {
   type IngestedPlayerRecord,
   type IngestionResult,
 } from "../services/dailyiq/dynamicIngestion.service.js";
+// CF-PAYMENTS-A: requireSession + requireEntitlement gates for watchlist
+// routes (watchlist feature is collector+). DailyIQ brief routes (/brief,
+// /players/top/*, /dashboard/player-stats) intentionally stay session-
+// optional via getOptionalUserId in Phase A — see HALT for the
+// dailyIQBriefs / marketTrendIndexes / trendIQComposite gates that are
+// declared in the matrix but lack a current endpoint to attach to.
+import { requireSession } from "../middleware/requireSession.js";
+import { requireEntitlement } from "../middleware/requireEntitlement.js";
 
 type PlayerIQEnrichment = {
   playerIQScore: number | null;
@@ -622,7 +630,13 @@ async function getOptionalUserId(req: Request): Promise<string | null> {
   return user?.userId ?? null;
 }
 
+// CF-PAYMENTS-A: requireUserId retained for backwards compatibility with
+// route handlers that haven't yet been updated to read req.user directly.
+// When requireSession middleware has run upstream, this returns the
+// attached userId without a fresh Cosmos read. Otherwise it falls back to
+// the legacy session-header path.
 async function requireUserId(req: Request, res: Response): Promise<string | null> {
+  if (req.user?.userId) return req.user.userId;
   const sessionId = String(req.headers["x-session-id"] ?? "").trim();
   if (!sessionId) {
     res.status(401).json({ error: "Missing x-session-id" });
@@ -1005,9 +1019,8 @@ const handleBriefRequest = async (req: Request, res: Response) => {
 router.get("/", handleBriefRequest);
 router.get("/brief", handleBriefRequest);
 
-router.get("/watchlist", async (req, res) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+router.get("/watchlist", requireSession, requireEntitlement("watchlist"), async (req, res) => {
+  const userId = req.user!.userId;
   const date = normalizeDate(req.query.date);
   const watchlistEntries = await getWatchlistEntries(userId);
   const watchlistSet = await getWatchlistSet(userId);
@@ -1082,9 +1095,8 @@ router.get("/watchlist", async (req, res) => {
   res.json({ userId, date, count: sorted.length, watchlist: sorted });
 });
 
-router.post("/watchlist", async (req, res) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+router.post("/watchlist", requireSession, requireEntitlement("watchlist"), async (req, res) => {
+  const userId = req.user!.userId;
   const requestedPlayerId = String(req.body?.playerId ?? "").trim();
   const requestedPlayerName = String(req.body?.playerName ?? "").trim();
   const requestedLeague = typeof req.body?.league === "string" && ["MLB", "MiLB"].includes(req.body.league)
@@ -1216,9 +1228,8 @@ router.get("/watchlist/suggest", (req, res) => {
   res.json({ query, suggestions });
 });
 
-router.post("/watchlist/search", async (req, res) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+router.post("/watchlist/search", requireSession, requireEntitlement("watchlist"), async (req, res) => {
+  const userId = req.user!.userId;
   const query = String(req.body?.query ?? "").trim();
   if (!query) {
     return res.status(400).json({ error: "query is required" });
@@ -1257,9 +1268,8 @@ router.post("/watchlist/search", async (req, res) => {
   });
 });
 
-router.delete("/watchlist/:playerId", async (req, res) => {
-  const userId = await requireUserId(req, res);
-  if (!userId) return;
+router.delete("/watchlist/:playerId", requireSession, requireEntitlement("watchlist"), async (req, res) => {
+  const userId = req.user!.userId;
   const playerId = String(req.params.playerId ?? "").trim();
   const removed = await removeWatchlistEntry(userId, playerId);
   if (!removed) {

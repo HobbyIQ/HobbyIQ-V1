@@ -4,7 +4,28 @@ import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { verifyAppleIdentityToken } from "./appleAuth.js";
 
-type SubscriptionPlan = "free" | "pro" | "all-star";
+// CF-PAYMENTS-A (2026-06-02): plan enum rev. Was "free" | "pro" | "all-star".
+// New tiers per the entitlements matrix in config/entitlements.ts. Legacy
+// stored values in Cosmos ("pro", "all-star") are normalized at read time
+// via normalizeLegacyPlan() below — no migration script required for this
+// CF (no deploy).
+export type SubscriptionPlan = "free" | "collector" | "investor" | "pro_seller";
+
+/**
+ * Read-time normalizer for any legacy plan strings still present in Cosmos
+ * docs that haven't been re-written since the rename. Maps:
+ *   "all-star" -> "pro_seller"  (highest legacy tier -> new top tier)
+ *   "pro"      -> "collector"   (legacy mid-tier -> new entry paid tier)
+ * Any unknown value falls back to "free".
+ */
+function normalizeLegacyPlan(raw: unknown): SubscriptionPlan {
+  if (raw === "free" || raw === "collector" || raw === "investor" || raw === "pro_seller") {
+    return raw;
+  }
+  if (raw === "all-star") return "pro_seller";
+  if (raw === "pro") return "collector";
+  return "free";
+}
 
 interface AuthUserRecord {
   id: string;             // Cosmos id (== userId)
@@ -101,14 +122,14 @@ const SEEDED_USERS = [
     email: "drew@justtheboysandcards.com",
     aliases: ["HobbyIQ"],
     password: "Baseball25",
-    plan: "all-star" as SubscriptionPlan,
+    plan: "pro_seller" as SubscriptionPlan,
   },
   {
     userId: "personal-justtheboysandcards",
     email: "justtheboysandcards@justtheboysandcards.com",
     aliases: ["JusttheBoysandCards"],
     password: "Carolina23",
-    plan: "all-star" as SubscriptionPlan,
+    plan: "pro_seller" as SubscriptionPlan,
   },
 ];
 
@@ -256,7 +277,9 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     email: user.email,
     username: user.aliases?.[0] ?? null,
     fullName: user.fullName ?? null,
-    plan: user.plan,
+    // CF-PAYMENTS-A: normalize legacy "pro" / "all-star" values to the new
+    // enum so requireEntitlement sees a valid plan even for un-migrated rows.
+    plan: normalizeLegacyPlan(user.plan),
     createdAt: user.createdAt,
   };
 }

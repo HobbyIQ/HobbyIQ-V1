@@ -59,7 +59,10 @@ describe("POST /api/search/cards — auth", () => {
       .set("x-session-id", "bad-session")
       .send({ input: "any" });
     expect(res.status).toBe(401);
-    expect(res.body.error).toMatch(/Invalid session/);
+    // CF-PAYMENTS-A unified the missing/invalid-session error string in
+    // requireSession middleware. Was: "Invalid session". Now: the
+    // canonical x-session-id message used across all session-gated routes.
+    expect(res.body.error).toMatch(/x-session-id/i);
   });
 
   it("does not call dispatcher when auth fails", async () => {

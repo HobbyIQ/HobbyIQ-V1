@@ -1,8 +1,16 @@
-import { Router, Request, Response } from "express";
+// Routes: /api/internal/ocr/*
+//
+// CF-PAYMENTS-A retrofit: requireSession added after the existing internal-
+// key + feature-flag gate. This is internal tooling for training-data
+// collection; no user-facing entitlement gate (the internal-key gate is
+// the operative auth surface). Sequence: feature-flag -> internal-key ->
+// session.
+
+import { Router, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
-import { getUserBySession } from "../services/authService.js";
 import { extractCardCandidate } from "../services/ocr/cardOcr.service.js";
+import { requireSession } from "../middleware/requireSession.js";
 
 const router = Router();
 
@@ -17,21 +25,7 @@ function hasInternalAccess(req: Request): boolean {
   return provided.length > 0 && provided === key;
 }
 
-async function resolveUser(req: Request, res: Response): Promise<{ userId: string } | null> {
-  const sessionId = String(req.headers["x-session-id"] ?? "").trim();
-  if (!sessionId) {
-    res.status(401).json({ success: false, error: "Missing x-session-id header" });
-    return null;
-  }
-  const user = await getUserBySession(sessionId);
-  if (!user) {
-    res.status(401).json({ success: false, error: "Invalid or expired session" });
-    return null;
-  }
-  return { userId: user.userId };
-}
-
-router.use((req: Request, res: Response, next) => {
+router.use((req: Request, res: Response, next: NextFunction) => {
   if (!isEnabled()) {
     res.status(404).json({ success: false, error: "Not found" });
     return;
@@ -43,10 +37,11 @@ router.use((req: Request, res: Response, next) => {
   next();
 });
 
-router.post("/extract", async (req: Request, res: Response) => {
-  const ctx = await resolveUser(req, res);
-  if (!ctx) return;
+// Session is required AFTER the internal-key gate so a leaked key alone
+// still can't masquerade as a user when writing training examples.
+router.use(requireSession);
 
+router.post("/extract", async (req: Request, res: Response) => {
   const frontText = String(req.body?.frontText ?? "");
   const backText = String(req.body?.backText ?? "");
 
@@ -65,11 +60,10 @@ router.post("/extract", async (req: Request, res: Response) => {
 });
 
 router.post("/training-example", async (req: Request, res: Response) => {
-  const ctx = await resolveUser(req, res);
-  if (!ctx) return;
+  const userId = req.user!.userId;
 
   const payload = {
-    userId: ctx.userId,
+    userId,
     createdAt: new Date().toISOString(),
     source: {
       frontImageUrl: req.body?.frontImageUrl ?? null,
@@ -84,7 +78,7 @@ router.post("/training-example", async (req: Request, res: Response) => {
 
   const dir = path.join(process.cwd(), ".data", "ocr-training");
   fs.mkdirSync(dir, { recursive: true });
-  const filePath = path.join(dir, `${ctx.userId}.jsonl`);
+  const filePath = path.join(dir, `${userId}.jsonl`);
   fs.appendFileSync(filePath, `${JSON.stringify(payload)}\n`, "utf8");
 
   res.json({ success: true, saved: true });

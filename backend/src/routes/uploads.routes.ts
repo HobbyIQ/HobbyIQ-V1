@@ -1,24 +1,18 @@
+// Routes: /api/uploads/card-photo
+//
+// CF-PAYMENTS-A: requireSession enforced; no entitlement gate at this layer.
+// Scan-rate caps (scansPerMonth) attach to the downstream
+// /api/portfolio/identify endpoint that actually consumes a scan, not to the
+// blob upload which is also reused for benign holding-photo uploads.
+
 import { Router, Request, Response } from "express";
-import { getUserBySession } from "../services/authService.js";
 import { issueSasUploadUrl } from "../services/photoStorage/photoStorage.service.js";
+import { requireSession } from "../middleware/requireSession.js";
 
 const router = Router();
+router.use(requireSession);
 
 const ALLOWED_EXT = new Set(["jpg", "jpeg", "png", "webp"]);
-
-async function resolveUser(req: Request, res: Response): Promise<{ userId: string } | null> {
-  const sessionId = String(req.headers["x-session-id"] ?? "").trim();
-  if (!sessionId) {
-    res.status(401).json({ success: false, error: "Missing x-session-id header" });
-    return null;
-  }
-  const user = await getUserBySession(sessionId);
-  if (!user) {
-    res.status(401).json({ success: false, error: "Invalid or expired session" });
-    return null;
-  }
-  return { userId: user.userId };
-}
 
 /**
  * POST /api/uploads/card-photo
@@ -33,8 +27,7 @@ async function resolveUser(req: Request, res: Response): Promise<{ userId: strin
  *            contentType, maxSizeBytes, expiresAt }
  */
 router.post("/card-photo", async (req: Request, res: Response) => {
-  const ctx = await resolveUser(req, res);
-  if (!ctx) return;
+  const userId = req.user!.userId;
 
   const clientId = typeof req.body?.clientId === "string" ? req.body.clientId.trim() : undefined;
   const rawExt = typeof req.body?.fileExtension === "string" ? req.body.fileExtension.trim() : "jpg";
@@ -50,7 +43,7 @@ router.post("/card-photo", async (req: Request, res: Response) => {
 
   try {
     const sas = await issueSasUploadUrl({
-      userId: ctx.userId,
+      userId,
       clientId,
       fileExtension: ext,
     });

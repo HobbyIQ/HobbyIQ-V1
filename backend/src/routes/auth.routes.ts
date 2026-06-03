@@ -1,12 +1,14 @@
 import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import {
-  getUserBySession,
   signIn,
   signOut,
   registerUser,
   setUsernameForSession,
 } from "../services/authService.js";
+// CF-PAYMENTS-A: requireSession used on /session + /username; signin/signout/
+// register stay PRE-auth.
+import { requireSession } from "../middleware/requireSession.js";
 
 const router = Router();
 
@@ -49,18 +51,10 @@ router.post("/signout", async (req: Request, res: Response) => {
   return res.json(result);
 });
 
-router.get("/session", async (req: Request, res: Response) => {
-  const sessionId = String(req.headers["x-session-id"] ?? "");
-  if (!sessionId) {
-    return res.status(401).json({ success: false, error: "Missing sessionId" });
-  }
-
-  const user = await getUserBySession(sessionId);
-  if (!user) {
-    return res.status(401).json({ success: false, error: "Invalid session" });
-  }
-
-  return res.json({ success: true, user });
+router.get("/session", requireSession, async (req: Request, res: Response) => {
+  // requireSession attached req.user. Echo the same shape the previous
+  // hand-rolled gate produced.
+  return res.json({ success: true, user: req.user });
 });
 
 // Registration: supports Apple Sign-In (identityToken) or email + password.
@@ -94,11 +88,13 @@ const usernameLimiter = rateLimit({
   message: { success: false, error: "Too many attempts, try again later" },
 });
 
-router.post("/username", usernameLimiter, async (req: Request, res: Response) => {
+// CF-PAYMENTS-A: /username retains the explicit sessionId path because
+// setUsernameForSession() takes the raw sessionId (not just the userId).
+// requireSession still runs to attach req.user (consistency with other
+// session-gated routes) — the function call below uses the same header
+// value that requireSession already validated.
+router.post("/username", requireSession, usernameLimiter, async (req: Request, res: Response) => {
   const sessionId = String(req.headers["x-session-id"] ?? req.body?.sessionId ?? "");
-  if (!sessionId) {
-    return res.status(401).json({ success: false, error: "Missing sessionId" });
-  }
   const username = String(req.body?.username ?? "");
   const result = await setUsernameForSession(sessionId, username);
   if (!result.success) {

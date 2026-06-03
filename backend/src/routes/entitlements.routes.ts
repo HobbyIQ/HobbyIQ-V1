@@ -1,0 +1,21 @@
+// CF-PAYMENTS-A (2026-06-02): GET /api/entitlements/me.
+//
+// Returns the caller's plan + the full resolved entitlement matrix (features
+// + caps) so iOS can drive proactive UI gating (greyed-out buttons, "Pro
+// only" badges) without polling per-feature endpoints. The backend ALWAYS
+// re-checks via requireEntitlement / requireCapacity middleware on every
+// gated route — this endpoint is presentation hints only.
+
+import { Router, type Request, type Response } from "express";
+import { requireSession } from "../middleware/requireSession.js";
+import { resolveEntitlementsFor } from "../config/entitlements.js";
+
+const router = Router();
+
+router.get("/me", requireSession, (req: Request, res: Response) => {
+  // requireSession guarantees req.user is present.
+  const resolved = resolveEntitlementsFor(req.user!.plan);
+  res.json({ success: true, ...resolved });
+});
+
+export default router;
