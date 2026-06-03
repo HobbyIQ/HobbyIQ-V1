@@ -7,6 +7,7 @@ import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.js";
+import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
@@ -72,6 +73,15 @@ app.listen(port, "0.0.0.0", () => {
     startInventoryRefreshJob();
   } catch (err: any) {
     console.error("[server] startInventoryRefreshJob failed:", err?.message ?? err);
+  }
+  // CF-PAYMENTS-APPLE-2 (2026-06-03): nightly subscription safety-net.
+  // Catches App Store Server Notifications V2 events Apple failed to
+  // deliver. Defaults to 05:15 PT — after the inventory refresh, before
+  // DailyIQ at 06:00.
+  try {
+    startSubscriptionsSafetyNetJob();
+  } catch (err: any) {
+    console.error("[server] startSubscriptionsSafetyNetJob failed:", err?.message ?? err);
   }
   try {
     startCacheHitRateEmit();

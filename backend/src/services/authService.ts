@@ -43,6 +43,27 @@ export interface UsageWindow {
 
 export type UsageCounters = Partial<Record<UsageCap, UsageWindow>>;
 
+// CF-PAYMENTS-APPLE-1 (2026-06-03): persisted subscription state from the
+// Apple App Store Server API verifier. Cached on the user record so
+// requireEntitlement + product UX don't re-hit Apple per request. Apple
+// remains the source of truth; this cache is refreshed by /api/subscriptions/verify
+// and (Phase 2) by the V2 notifications webhook + nightly safety-net job.
+export interface AppleSubscriptionState {
+  // Apple's stable identifier for the subscription across renewals.
+  // Idempotency key for /api/subscriptions/verify.
+  originalTransactionId: string;
+  // ISO timestamp; null when the live API status is EXPIRED/REVOKED and
+  // we couldn't read an expiry (rare).
+  expiresAt: string | null;
+  // ISO timestamp of the last successful verify/refresh.
+  lastEventAt: string;
+  // "Sandbox" | "Production" — Apple's enum value at verify time.
+  environment: string;
+  // The Apple productId that mapped to the current plan, for audit / future
+  // grader-style adapters when we add more SKUs.
+  productId: string;
+}
+
 interface AuthUserRecord {
   id: string;             // Cosmos id (== userId)
   userId: string;
@@ -59,6 +80,10 @@ interface AuthUserRecord {
   docType: "user";
   // CF-PAYMENTS-B1: time-windowed usage counters (optional on legacy rows).
   usage?: UsageCounters;
+  // CF-PAYMENTS-APPLE-1: cached Apple subscription state. Absent on rows
+  // that never went through /api/subscriptions/verify (free users + every
+  // pre-Payments-Apple-1 record).
+  appleSubscription?: AppleSubscriptionState;
 }
 
 export interface AuthUser {
@@ -71,6 +96,10 @@ export interface AuthUser {
   // CF-PAYMENTS-B1: surfaced so requireRateLimited can read counts without
   // a second Cosmos round-trip (requireSession already loaded the doc).
   usage?: UsageCounters;
+  // CF-PAYMENTS-APPLE-1: same passthrough rationale — surfaced so iOS can
+  // read it via /api/auth/session for paywall "current subscription"
+  // display, no extra round-trip needed.
+  appleSubscription?: AppleSubscriptionState;
 }
 
 export interface AuthResult {
@@ -196,6 +225,18 @@ function seedMemStore() {
 }
 seedMemStore();
 
+/**
+ * Test-only: wipe the in-memory user store and re-seed the admin rows.
+ * Lets test files that exercise full-suite-scanning behavior (the
+ * subscriptions safety-net job is the first such case) isolate seeded
+ * users from earlier tests' rows. Not exposed by name in production
+ * since memStore is only used when Cosmos is unconfigured.
+ */
+export function _resetMemStoreForTests(): void {
+  memStore.clear();
+  seedMemStore();
+}
+
 // ─── Session helpers ─────────────────────────────────────────────────────────
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
@@ -305,6 +346,8 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     // CF-PAYMENTS-B1: passthrough the usage counter doc so requireRateLimited
     // can read counts without a second Cosmos read.
     usage: user.usage,
+    // CF-PAYMENTS-APPLE-1: passthrough cached Apple subscription state.
+    appleSubscription: user.appleSubscription,
   };
 }
 
@@ -333,6 +376,30 @@ export async function setUserUsageCounter(
   if (!user) return;
   user.usage = { ...(user.usage ?? {}), [cap]: payload };
   await writeUser(user);
+}
+
+// ─── CF-PAYMENTS-APPLE-1: Apple subscription state writer ───────────────────
+//
+// Single primitive used by the subscriptions.service after a successful
+// JWS verify + status check. Idempotency on originalTransactionId is the
+// CALLER's responsibility (subscriptions.service compares
+// incoming.originalTransactionId vs user.appleSubscription?.originalTransactionId
+// and the stored plan before deciding what to write). This function just
+// upserts the doc atomically.
+//
+// Returns the updated AuthUser projection so the caller can echo it back
+// in the /verify response without an extra read.
+export async function setUserSubscriptionState(
+  userId: string,
+  newPlan: SubscriptionPlan,
+  apple: AppleSubscriptionState,
+): Promise<AuthUser | null> {
+  const user = await readUser(userId);
+  if (!user) return null;
+  user.plan = newPlan;
+  user.appleSubscription = apple;
+  await writeUser(user);
+  return toAuthUser(user);
 }
 
 // ─── Storage helpers ─────────────────────────────────────────────────────────
@@ -378,6 +445,95 @@ async function findUserByAppleSub(
     })
     .fetchAll();
   return resources[0];
+}
+
+// CF-PAYMENTS-APPLE-2 (2026-06-03): originalTransactionId lookup. The /verify
+// flow established the link (appleSubscription.originalTransactionId) so
+// the notifications webhook can find the HobbyIQ user given just the
+// Apple transaction. Returns undefined if no user has this txnId.
+export async function findUserByOriginalTransactionId(
+  originalTransactionId: string,
+): Promise<AuthUser | undefined> {
+  const container = await getContainer();
+  if (!container) {
+    const hit = Array.from(memStore.values()).find(
+      (u) => u.appleSubscription?.originalTransactionId === originalTransactionId,
+    );
+    return hit ? toAuthUser(hit) : undefined;
+  }
+  const { resources } = await container.items
+    .query<AuthUserRecord>({
+      query:
+        'SELECT TOP 1 * FROM c WHERE c.docType = "user" AND c.appleSubscription.originalTransactionId = @txnId',
+      parameters: [{ name: "@txnId", value: originalTransactionId }],
+    })
+    .fetchAll();
+  return resources[0] ? toAuthUser(resources[0]) : undefined;
+}
+
+// CF-PAYMENTS-APPLE-2: nightly safety-net source. Returns every user
+// whose plan != free so the job can reconcile each against Apple. Reads
+// only the fields the job needs (userId, plan, appleSubscription) — a
+// full-row scan via container.items.readAll() would be wasteful and
+// would also include the password hash. Implementation note: at single-
+// user backend scale this is N=1; the SELECT is shaped to be ~free even
+// when paid-user count grows.
+export async function findAllPaidUsers(): Promise<AuthUser[]> {
+  const container = await getContainer();
+  if (!container) {
+    return Array.from(memStore.values())
+      .filter((u) => u.plan && u.plan !== "free")
+      .map(toAuthUser);
+  }
+  const { resources } = await container.items
+    .query<AuthUserRecord>({
+      query:
+        'SELECT * FROM c WHERE c.docType = "user" AND c.plan != "free"',
+    })
+    .fetchAll();
+  return resources.map(toAuthUser);
+}
+
+// CF-PAYMENTS-APPLE-2-FIX (2026-06-03): bidirectional safety-net source.
+// Returns users whose appleSubscription is set AND either currently paid
+// OR lapsed within `lookbackDays` (default 40). The lapsed-bucket fix
+// lets the nightly RESTORE a free user whose subscription Apple
+// reactivated (refund reversal, grace-period restore, etc.) — the prior
+// "paid only" predicate missed these.
+//
+// Bounded by `lookbackDays` so a long-churned subscription doesn't stay
+// on every nightly scan forever. 40 days covers:
+//   - Apple's standard subscription billing cycles + grace + retry
+//   - The window where a refund reversal can still happen
+// Past 40 days the user has effectively churned; if they resubscribe
+// the /verify call from the app on Transaction.updates re-establishes
+// the link and they're back in the scan set.
+export async function findReconcilableUsers(
+  lookbackDays = 40,
+): Promise<AuthUser[]> {
+  const cutoffIso = new Date(Date.now() - lookbackDays * 86_400_000).toISOString();
+  const container = await getContainer();
+  if (!container) {
+    return Array.from(memStore.values())
+      .filter((u) => Boolean(u.appleSubscription?.originalTransactionId))
+      .filter(
+        (u) =>
+          (u.plan && u.plan !== "free") ||
+          (typeof u.appleSubscription?.expiresAt === "string" &&
+            u.appleSubscription.expiresAt > cutoffIso),
+      )
+      .map(toAuthUser);
+  }
+  const { resources } = await container.items
+    .query<AuthUserRecord>({
+      query:
+        'SELECT * FROM c WHERE c.docType = "user" ' +
+        'AND IS_DEFINED(c.appleSubscription.originalTransactionId) ' +
+        'AND (c.plan != "free" OR c.appleSubscription.expiresAt > @cutoff)',
+      parameters: [{ name: "@cutoff", value: cutoffIso }],
+    })
+    .fetchAll();
+  return resources.map(toAuthUser);
 }
 
 async function readUser(userId: string): Promise<AuthUserRecord | undefined> {
