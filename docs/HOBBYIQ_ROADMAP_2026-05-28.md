@@ -326,3 +326,44 @@ Cardsight publishes 12 collection-management tools (`create_collection` / `add_c
 W3's dispatcher uses `searchCatalog` (`/catalog/search`) which returns cards-only with the field-shape limitation that drove the W4 deferral. Cardsight also publishes `catalog.search` (global cross-entity fuzzy search across cards / sets / releases / parallels with relevance scores) which W3 doesn't currently use. **Question:** is the cross-entity search surface useful for HobbyIQ's picker UX (e.g. "Topps Chrome" finding both releases AND specific cards), or is the cards-only narrower endpoint cleaner for our use case? Worth re-evaluating during W5-iOS picker rebuild — depending on the picker information architecture, cross-entity discovery could change the search UX meaningfully. Captured separately as `CF-CATALOG-SEARCH-UPGRADE` (MEDIUM backlog).
 
 Each of Q1-Q4 is dropped into the active Option B sequence at the appropriate point. Q1 lands in step 4-5 above. Q2 lands as a re-evaluation gate when v2 design phase approaches. Q3 lands in step 2 above (InventoryIQ design). Q4 lands during W5-iOS or later iOS-polish work.
+
+---
+
+## Plan evolution — 2026-06-03 status pass
+
+**State: backend feature-complete.** The 2026-05-28 plan + Option B sequence executed through 2026-06-03; what shipped extends beyond the original phase scope (entitlement stack, gated feature surfaces, ERP expansion, trade transactions, ML outcome-capture). Recorded here as what landed — NOT new forward scope. Future-scope sections unchanged.
+
+### Workstream status
+
+| Workstream | State | SHA | Date |
+|---|---|---|---|
+| W2 cert-grader registry (PSA adapter) | COMPLETE | `dd7ec17` | 2026-05-29 |
+| W5-Windows Cardsight `/cardsearch` | COMPLETE | `06b585d` | 2026-05-29 |
+| CF-CARDHEDGE-HARD-CUTOVER | COMPLETE | `10ad39d` | 2026-05-29 |
+| CF-LAUNCH-READINESS-100 (Cosmos autoscale + 6 alerts) | COMPLETE | (Azure config) | 2026-05-29 |
+| CF-CARDSIGHT-IDENTIFY-INTEGRATION (`POST /api/portfolio/identify`) | COMPLETE | (see handoff 2026-05-30 entry) | 2026-05-30 |
+| CF-PAYMENTS-A entitlements matrix + middleware | COMPLETE | chain ending `05e5ed8` | 2026-06-02 → 06-03 |
+| CF-PAYMENTS-B1 time-windowed counters + FMV cap sweep | COMPLETE | `038fecd` | 2026-06-02 |
+| CF-SCANNING-B5a + B5b identifiable-set cache | COMPLETE | `64f3681` | 2026-06-02 |
+| CF-PAYMENTS-APPLE-1 + APPLE-2 (`/verify` + webhook + nightly safety-net) | COMPLETE — INERT until App Settings populated | `85fe5a2` | 2026-06-03 |
+| CF-FINALIZE (entitlement-gate sweep, graded-card coherence, CORS) | COMPLETE | `05e5ed8` | 2026-06-03 |
+| CF-PREDICTION-OUTCOMES-CAPTURE (daily 05:45 PT; first eligible ~2026-06-09) | COMPLETE | `69ac554` | 2026-06-03 |
+| CF-TRENDIQ-SURFACES (`/trendiq` investor+, `/trendiq/full` pro_seller + TOS hedge) | COMPLETE | `392a179` | 2026-06-03 |
+| CF-ADVANCED-ALERTS (multi-condition rule engine, standalone 4h cadence) | COMPLETE | `13661a1` | 2026-06-03 |
+| CF-MARKET-TREND-INDEXES (per-player + batch + top-movers, investor+) | COMPLETE | `a510a02` | 2026-06-03 |
+| CF-ERP-RECONCILIATION (`/erp/unreconciled`, `/erp/pnl`, `/erp/tax-export`) | COMPLETE | `0c30e30` | 2026-06-03 |
+| CF-ERP-EXPANSION (sales-tracking + analytics + valuation + 1099-K + accounting export + expenses + aging/override + trades) | COMPLETE | `70e6110` | 2026-06-03 |
+
+### What shipped that wasn't in the original phase scope
+
+The 2026-05-28 plan + Option B framed phases around observability + Cardsight migration + signal recalibration; phases 5-6 the integrated product surface. Shipped over and above:
+
+- **Entitlement + payment stack.** Tier matrix (free / collector / investor / pro_seller), `requireSession` / `requireEntitlement` / `requireRateLimited` / `requireCapacity` middleware, Apple `/verify` endpoint + App Store Server Notifications V2 webhook + nightly bidirectional safety-net. **Inert until App Settings populated** — code complete, six `APP_STORE_*` + five `APNS_*` env vars pending (handoff activation checklist).
+- **Gated feature surfaces** wiring every flag in the entitlements matrix to a live endpoint: TrendIQ standalone (investor+ composite + pro_seller L3-full with TOS hedge), advanced multi-condition alert rules (investor+; separate 4h scheduler), marketTrendIndexes (investor+; per-player + batch + top-movers; pct30d-momentum honest label flows through), erpReconciliation (pro_seller; the entire `/api/portfolio/erp/*` surface).
+- **ERP expansion** on top of CF-ERP-RECONCILIATION: orthogonal `salesChannel / paymentMethod / saleLocation` ledger axes (provenance `source` unchanged); seller-grade analytics (margin% / ROI% / avgDaysToSale / sellThrough + monthly/quarterly timeseries); inventory valuation reading the existing 6h `portfolioReprice` snapshot (zero live `getPricing` in the read path); per-rail 1099-K reconciliation (ebay/paypal/venmo joined on `effectivePaymentMethod`); QuickBooks/Xero-mapped accounting export (4 rows per sale, `ledger_entry_id` join key, trade-disposal memo tags `tradeId`); expense ledger (incl. `travel` + `meals` categories) + `/pnl?includeExpenses=true` opt-in trueNet; aging buckets + refetch + manual fee override with **append-only `feeAdjustments[]` audit trail** (prior + new values + `reconciledVia` transitions; second override appends, never overwrites).
+- **Trade transactions.** Modeled as taxable FMV disposition + acquisition (NOT §1031 like-kind, no basis carryover). Atomic write: N disposals + N holding removals + M new holdings (incoming basis = its FMV) + 1 trade record in one `writeUserDoc`. `paymentMethod="trade"` correctly excludes card legs from 1099-K rails. FMV-share proceeds allocation with last-leg residual rounding so Σ per-card P&L ≡ realizedGainLoss exactly. CPA-verified worked example pinned in tests: $40-basis / $100-FMV card for a $90-FMV card + $10 cash → $60 realized gain, $90 new-holding basis.
+- **ML outcome-capture foundation.** Daily 05:45 PT job re-queries Cardsight prices for past predictions, populates `prediction_outcomes` with terminal state (`cardsight_graded_window`, `cardsight_raw_window`, or `no_sales_in_window`). First eligible records ~2026-06-09; training-vs-outcome accuracy harness gated on density. Aligns with Answer B (ML as post-launch optimization, not launch-time differentiator).
+
+### Strategic frame, unchanged
+
+Answer B holds: backend launch readiness is the moat; ML is the post-launch optimization layer (Phase 4c-4e remain Q4-2026 → Q1-2027). The strategic-reshape Q1-Q4 (grader scope vs `grades.companies.*`, v2 scan vs `identify.card`, `PortfolioHolding` vs Cardsight collections, W3 vs `catalog.search`) carry forward as written — none resolved by this batch.
