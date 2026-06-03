@@ -429,6 +429,8 @@ These are NOT in the current roadmap. Captured here as questions for future-Drew
 - **Live event integration.** The National, card shows. Geo-fenced features?
 - **Vault / consignment services.** Users send cards to HobbyIQ-affiliated grading/storage?
 - **Insurance integration.** Portfolio valuation feeds collectibles insurance providers.
+- **DealFinderIQ** *(appended 2026-06-02).* Detect undervalued live listings vs fair/predicted value. Feasible on existing stack — CompIQ FMV + Cardsight identify + eBay Browse API for active listings already deployed. **Differentiator**: scores deals against PREDICTED price, not just current comps — the same "head-start window" cascade signals that drive Phase 5 actionable-seller-intelligence apply on the buy side. Post-launch; **Investor+ tier** per the entitlements matrix shipped 2026-06-02 (`d0f59e4`).
+- **GradingIQ** *(appended 2026-06-02).* Should-I-grade EV estimate: `(grade-aware value × gem-rate probability) − grading cost`. Feasible — grade-aware CompIQ pricing already shipped (CF-BACKTEST-COSMOS-GRADE-FLOW, `b55f1ec`), Cardsight `autoGrade` returns on every identify response (confirmed in CF-CARDSIGHT-SCANNING-RECON), PSA pop data is queryable, fee tables are public. Output bounded by gem-rate estimate; present as EV with confidence band, not a point recommendation. Post-launch; **Investor / Pro Seller tier**.
 
 These are questions, not commitments. Drew decides which (if any) enter a future roadmap.
 
