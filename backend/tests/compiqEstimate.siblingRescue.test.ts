@@ -78,6 +78,22 @@ vi.mock("../src/services/compiq/compsByPlayer.service.js", () => ({
   }),
 }));
 
+// CF-PAYMENTS-B1: /api/compiq/estimate now session-gated.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 import app from "../src/app";
 
 describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch", () => {
@@ -86,7 +102,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
   });
 
   it("rescues thin-data card via sibling pool with capped confidence + tagged source", async () => {
-    const res = await request(app).post("/api/compiq/estimate").send({
+    const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
       playerName: "Caleb Bonemer",
       cardYear: 2024,
       product: "Bowman Draft Chrome",
@@ -142,7 +158,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
   // success; coverage flag reflects which layers populated.
   describe("CF-PREDICTION-PATH-FMV-FALLBACK — TrendIQ + predictedPrice wiring", () => {
     it("emits non-null trendIQ + non-null predictedPrice (closes the 27/27 corpus gap)", async () => {
-      const res = await request(app).post("/api/compiq/estimate").send({
+      const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
         playerName: "Caleb Bonemer",
         cardYear: 2024,
         product: "Bowman Draft Chrome",
@@ -207,7 +223,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
     });
 
     it("non-regression: existing source/verdict/confidence assertions still hold with trendIQ wired", async () => {
-      const res = await request(app).post("/api/compiq/estimate").send({
+      const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
         playerName: "Caleb Bonemer",
         cardYear: 2024,
         product: "Bowman Draft Chrome",

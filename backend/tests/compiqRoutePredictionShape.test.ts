@@ -65,6 +65,22 @@ vi.mock("../src/services/compiq/compiqEstimate.service.js", async () => {
   };
 });
 
+// CF-PAYMENTS-B1: /price + /price-by-id are now session-gated.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 let app: any;
 
 beforeAll(async () => {
@@ -106,6 +122,7 @@ describe("CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — response shape parity",
   it("/api/compiq/search propagates predictedPrice + trendIQ + signalsLastUpdated", async () => {
     const res = await request(app)
       .post("/api/compiq/search")
+      .set("x-session-id", "test-sess")
       .send({ query: "2021 Topps Chrome Mike Trout" });
     expect(res.status).toBe(200);
     expectPredictionFieldsPropagated(res.body);
@@ -114,6 +131,7 @@ describe("CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — response shape parity",
   it("/api/compiq/price propagates predictedPrice + trendIQ + signalsLastUpdated", async () => {
     const res = await request(app)
       .post("/api/compiq/price")
+      .set("x-session-id", "test-sess")
       .send({ query: "2021 Topps Chrome Mike Trout" });
     expect(res.status).toBe(200);
     expectPredictionFieldsPropagated(res.body);
@@ -122,6 +140,7 @@ describe("CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — response shape parity",
   it("/api/compiq/price-by-id propagates predictedPrice + trendIQ + signalsLastUpdated", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
       .send({ cardsightCardId: "fixture-card-id" });
     expect(res.status).toBe(200);
     expectPredictionFieldsPropagated(res.body);
@@ -130,6 +149,7 @@ describe("CF-PREDICTION-LAYER-CONSISTENCY-COMPLETION — response shape parity",
   it("/api/compiq/bulk propagates predictedPrice + trendIQ + signalsLastUpdated per item", async () => {
     const res = await request(app)
       .post("/api/compiq/bulk")
+      .set("x-session-id", "test-sess")
       .send({ queries: ["2021 Topps Chrome Mike Trout"] });
     expect(res.status).toBe(200);
     expect(res.body.results).toHaveLength(1);

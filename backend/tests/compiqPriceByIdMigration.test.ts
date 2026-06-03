@@ -13,8 +13,25 @@
 //      destructure, no dual-accept) — request lacking cardsightCardId
 //      returns 400 regardless of whether legacy field is present.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import request from "supertest";
+
+// CF-PAYMENTS-B1: /api/compiq/price-by-id is now session-gated.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 import app from "../src/app";
 import {
   selectSalesByGrade,
@@ -100,12 +117,13 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
   it("accepts the cardsightCardId wire key", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
       .send({ cardsightCardId: "fixture-card-id" });
     expect(res.status).toBe(200);
   });
 
   it("400 when cardsightCardId is missing, error names the field", async () => {
-    const res = await request(app).post("/api/compiq/price-by-id").send({});
+    const res = await request(app).post("/api/compiq/price-by-id").set("x-session-id", "test-sess").send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       success: false,
@@ -116,6 +134,7 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
   it("400 when only the legacy cardHedgeCardId wire key is sent (no dual-accept; field ignored)", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
       .send({ cardHedgeCardId: "legacy-card-id" });
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
@@ -127,6 +146,7 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
   it("cardsightCardId is used when both keys are sent (legacy silently ignored)", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
       .send({
         cardsightCardId: "fixture-card-id",
         cardHedgeCardId: "legacy-card-id",

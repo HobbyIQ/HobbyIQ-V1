@@ -34,6 +34,24 @@ import {
   buildUpstreamTimeoutCardSearchResponse,
   buildUpstreamTimeoutBulkItemData,
 } from "../services/compiq/upstreamTimeout.helpers.js";
+// CF-PAYMENTS-B1 (2026-06-02): per-route session gate + rate limit on the
+// FMV-bearing user-initiated endpoints. Two cap classes:
+//   - requireRateLimited("priceChecksPerDay") on: /price, /estimate,
+//     /price-by-id, /search (alias of /price; closes the bypass loophole
+//     where a free user could route around /price by calling /search),
+//     and /what-if (hypothetical FMV is also a user-initiated check).
+//   - requireEntitlement("predictions") on: /bulk (power-user batch up
+//     to 20 queries; per-item caps would be restrictive and per-call
+//     would defeat the cap purpose — bulk is a paid power feature),
+//     /sell-window (seasonal sell recommendation), /grade-premium (PSA-10
+//     vs raw value delta + worth-grading verdict).
+// /cardsearch + /comps-by-player + /parse + /normalization-dictionary +
+// /health remain anonymous. /comps-by-player is a future paid-gate
+// candidate (collector+ via "predictions") — deferred pending iOS usage
+// signal.
+import { requireSession } from "../middleware/requireSession.js";
+import { requireEntitlement } from "../middleware/requireEntitlement.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 
 // CF-LAUNCH-HARDENING (2026-06-02): centralized thin-data + approximate
 // helpers used by /search, /price, /price-by-id, /bulk happy-path response
@@ -244,7 +262,12 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.post("/estimate", (req, res, next) => compiqEstimate(req, res).catch(next));
+router.post(
+  "/estimate",
+  requireSession,
+  requireRateLimited("priceChecksPerDay"),
+  (req, res, next) => compiqEstimate(req, res).catch(next),
+);
 
 router.get("/normalization-dictionary", (req, res) => {
   res.json({ success: true, dictionary: getNormalizationDictionary() });
@@ -276,7 +299,7 @@ router.get("/parse", (req, res) => {
   });
 });
 
-router.post("/what-if", async (req, res, next) => {
+router.post("/what-if", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { playerName } = req.body || {};
     if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
@@ -399,7 +422,10 @@ router.post("/cardsearch", async (req, res, next) => {
 
 // POST /api/compiq/search
 // Accepts { query: string } â€” used by DashboardView free-text search
-router.post("/search", async (req, res, next) => {
+// CF-PAYMENTS-B1 tweak: /search is the original endpoint; /price was an
+// alias added later. The alias bypass would let a free user route around
+// the /price cap by calling /search with the same body. Same gate stack.
+router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
     const { query } = req.body || {};
@@ -645,7 +671,8 @@ router.post("/search", async (req, res, next) => {
 });
 
 // POST /api/compiq/price  (alias for /search â€” same contract)
-router.post("/price", async (req, res, next) => {
+// CF-PAYMENTS-B1: standalone FMV user-initiated check.
+router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
     const { query } = req.body || {};
@@ -865,7 +892,8 @@ router.post("/price", async (req, res, next) => {
 // against UnifiedSearchResponse.
 // ---------------------------------------------------------------------------
 
-router.post("/price-by-id", async (req, res, next) => {
+// CF-PAYMENTS-B1: standalone FMV user-initiated check.
+router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
     const { cardsightCardId, query, gradeCompany, gradeValue } = req.body || {};
@@ -1062,7 +1090,12 @@ router.post("/price-by-id", async (req, res, next) => {
 // 567-568) already use. Preventive ship: no current consumer (App Insights 7d
 // + iOS Swift source confirm), but next time someone wires this endpoint
 // up, the guard won't wipe set-bearing queries.
-router.post("/bulk", async (req, res, next) => {
+// CF-PAYMENTS-B1 tweak: /bulk is a power-user batch (up to 20 queries per
+// call; iOS does not currently use it per the precursor comment above).
+// Gating as "predictions" (collector+) rather than per-item rate-limit
+// because per-item would restrict free users to bulks of size ≤ remaining
+// daily quota and per-call would defeat the cap entirely.
+router.post("/bulk", requireSession, requireEntitlement("predictions"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
     const { queries } = req.body || {};
@@ -1234,7 +1267,9 @@ router.post("/bulk", async (req, res, next) => {
 // Returns the estimated value premium for PSA 10 vs raw for a given card.
 // Body: { playerName, cardYear?, product?, parallel?, isAuto? }
 // ---------------------------------------------------------------------------
-router.post("/grade-premium", async (req, res, next) => {
+// CF-PAYMENTS-B1 tweak: /grade-premium returns PSA10-vs-raw FMV delta +
+// "worth grading" verdict — prediction-class analytical surface.
+router.post("/grade-premium", requireSession, requireEntitlement("predictions"), async (req, res, next) => {
   try {
     const { playerName } = req.body || {};
     if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
@@ -1289,7 +1324,9 @@ router.post("/grade-premium", async (req, res, next) => {
 // Returns a seasonal sell-window recommendation for a card/player.
 // Body: { playerName, cardYear?, isRookie?, sport? }
 // ---------------------------------------------------------------------------
-router.post("/sell-window", async (req, res, next) => {
+// CF-PAYMENTS-B1 tweak: /sell-window returns a seasonal sell recommendation
+// — prediction-class.
+router.post("/sell-window", requireSession, requireEntitlement("predictions"), async (req, res, next) => {
   try {
     const { playerName, isRookie, cardYear, sport } = req.body || {};
     if (!playerName || typeof playerName !== "string" || !playerName.trim()) {

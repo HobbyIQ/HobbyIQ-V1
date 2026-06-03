@@ -13,6 +13,7 @@ import {
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireCapacity } from "../middleware/requireCapacity.js";
+import { requireRateLimited } from "../middleware/requireRateLimited.js";
 
 const router = Router();
 
@@ -57,7 +58,9 @@ router.put("/holdings/:id", portfolio.updateHolding);
 router.patch("/holdings/:id", portfolio.updateHolding);
 router.delete("/holdings/:id", portfolio.deleteHolding);
 router.post("/holdings/:id/sell", portfolio.sellHolding);
-router.post("/holdings/:id/refresh", portfolio.refreshHolding);
+// CF-PAYMENTS-B1: per-holding price refresh is a user-initiated FMV check
+// (consumes 1 priceChecksPerDay slot; free=5/day, paid tiers unlimited).
+router.post("/holdings/:id/refresh", requireRateLimited("priceChecksPerDay"), portfolio.refreshHolding);
 
 // CF-PAYMENTS-A: per-holding eBay surfaces — investor+ via ebayIntegration.
 router.post(
@@ -116,12 +119,14 @@ router.post("/reprice/batch", requireEntitlement("predictions"), portfolio.runBa
 
 // CF-CARDSIGHT-IDENTIFY-INTEGRATION: POST /api/portfolio/identify
 //
-// CF-PAYMENTS-A note: scansPerMonth cap is NOT enforced here yet — that's a
-// time-windowed counter deferred to Phase B (see HALT usage-counter
-// proposal). Phase A only attaches requireSession; the per-scan cap will
-// land via requireCapacity("scansPerMonth", countScansThisMonthForUser)
-// once the storage model is approved.
-router.post("/identify", async (req, res) => {
+// CF-PAYMENTS-B1 (2026-06-02): scansPerMonth cap is now enforced via the
+// requireRateLimited middleware. Free=10/month, paid tiers unlimited.
+// Increment happens on res.on("finish") after a 2xx — Cardsight upstream
+// failures (502/504) do NOT count against the user's monthly quota.
+// Internal cascades (this handler calling Azure OCR + Cardsight in
+// parallel) are still ONE scan, not three — the cap attaches at the
+// route boundary, not at the downstream service calls.
+router.post("/identify", requireRateLimited("scansPerMonth"), async (req, res) => {
   const userId = req.user!.userId;
 
   const body = (req.body ?? {}) as {

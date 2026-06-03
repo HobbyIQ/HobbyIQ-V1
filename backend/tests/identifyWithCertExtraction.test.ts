@@ -64,7 +64,18 @@ vi.mock("../src/services/authService.js", async () => {
   );
   return {
     ...actual,
-    getUserBySession: vi.fn(async () => ({ userId: "test-user", email: "t@t" })),
+    // CF-PAYMENTS-B1: plan field added so requireRateLimited("scansPerMonth")
+    // on /api/portfolio/identify can read user.plan; "pro_seller" makes
+    // requireRateLimited short-circuit (unlimited cap) since these tests
+    // assert response shape, not rate-limit behavior.
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
   };
 });
 
@@ -78,6 +89,10 @@ beforeEach(async () => {
   (authMod.getUserBySession as any).mockResolvedValue({
     userId: "test-user",
     email: "t@t",
+    username: null,
+    fullName: null,
+    plan: "pro_seller",
+    createdAt: "2026-01-01T00:00:00Z",
   });
   if (!app) {
     app = (await import("../src/app")).default;

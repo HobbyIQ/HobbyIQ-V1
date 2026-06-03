@@ -33,6 +33,14 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
 import app from "../src/app";
 import * as cardHedge from "../src/services/compiq/cardsight.router.js";
 
+// CF-PAYMENTS-B1: /api/compiq/estimate now requires a session. Seeded
+// admin + non-admin sessions used below — admin for tests that don't
+// care about user context, non-admin for the legacy "no session"
+// test (the no-auth state is no longer reachable; semantic preserved
+// by using a user whose restriction context excludes header overrides).
+let adminSession = "";
+let nonAdminSession = "";
+
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network disabled in tests")));
 });
@@ -86,11 +94,19 @@ const DRAKE_BODY = {
 };
 
 describe("CF-VARIANT-FILTER-BACKTEST — env flag (VARIANT_TIER_LADDER_ENABLED)", () => {
+  beforeAll(async () => {
+    adminSession = await signIn("HobbyIQ", "Baseball25");
+    nonAdminSession = await signIn("JusttheBoysandCards", "Carolina23");
+  });
+
   it("env unset → tier ladder enabled (default behavior, T1 promotion)", async () => {
     process.env.CARD_HEDGE_API_KEY = "test-key";
     mockDrakeBaldwinT1Fixture();
 
-    const res = await request(app).post("/api/compiq/estimate").send(DRAKE_BODY);
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send(DRAKE_BODY);
 
     expect(res.status).toBe(200);
     expect(res.body.source).toBe("live");
@@ -103,7 +119,10 @@ describe("CF-VARIANT-FILTER-BACKTEST — env flag (VARIANT_TIER_LADDER_ENABLED)"
     vi.stubEnv("VARIANT_TIER_LADDER_ENABLED", "false");
     mockDrakeBaldwinT1Fixture();
 
-    const res = await request(app).post("/api/compiq/estimate").send(DRAKE_BODY);
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send(DRAKE_BODY);
 
     expect(res.status).toBe(200);
     expect(res.body.source).toBe("variant-mismatch");
@@ -119,7 +138,10 @@ describe("CF-VARIANT-FILTER-BACKTEST — env flag (VARIANT_TIER_LADDER_ENABLED)"
     vi.stubEnv("VARIANT_TIER_LADDER_ENABLED", "true");
     mockDrakeBaldwinT1Fixture();
 
-    const res = await request(app).post("/api/compiq/estimate").send(DRAKE_BODY);
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send(DRAKE_BODY);
     expect(res.body.source).toBe("live");
     expect(res.body.compQuality?.variantStrictness).toBe("T1");
   });
@@ -131,9 +153,13 @@ describe("CF-VARIANT-FILTER-BACKTEST — restricted header override", () => {
     vi.stubEnv("NODE_ENV", "production");
     mockDrakeBaldwinT1Fixture();
 
+    // CF-PAYMENTS-B1: "no session" is no longer reachable post-requireSession.
+    // Semantic preserved by using a non-admin session — restriction context
+    // excludes the header override the same way "no session" originally did.
     const res = await request(app)
       .post("/api/compiq/estimate")
       .set("x-variant-tier-ladder", "disabled")
+      .set("x-session-id", nonAdminSession)
       .send(DRAKE_BODY);
 
     // Header silently ignored; ladder still enabled; T1 rescue fires.
@@ -150,6 +176,7 @@ describe("CF-VARIANT-FILTER-BACKTEST — restricted header override", () => {
     const res = await request(app)
       .post("/api/compiq/estimate")
       .set("x-variant-tier-ladder", "disabled")
+      .set("x-session-id", adminSession)
       .send(DRAKE_BODY);
 
     expect(res.body.source).toBe("variant-mismatch");
@@ -195,6 +222,7 @@ describe("CF-VARIANT-FILTER-BACKTEST — restricted header override", () => {
     const res = await request(app)
       .post("/api/compiq/estimate")
       .set("x-variant-tier-ladder", "enabled") // not the magic value
+      .set("x-session-id", adminSession)
       .send(DRAKE_BODY);
 
     expect(res.body.source).toBe("live");
@@ -210,6 +238,7 @@ describe("CF-VARIANT-FILTER-BACKTEST — restricted header override", () => {
     const res = await request(app)
       .post("/api/compiq/estimate")
       .set("x-variant-tier-ladder", "disabled")
+      .set("x-session-id", adminSession)
       .send(DRAKE_BODY);
 
     expect(res.body.source).toBe("variant-mismatch");

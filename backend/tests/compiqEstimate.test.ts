@@ -90,6 +90,24 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
   };
 });
 
+// CF-PAYMENTS-B1: /api/compiq/estimate now requires a session. Mock
+// getUserBySession so the existing route-shape assertions still run; use
+// pro_seller plan so requireRateLimited short-circuits (unlimited cap).
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 import app from "../src/app";
 describe("/api/compiq/estimate", () => {
   beforeAll(() => {
@@ -97,7 +115,7 @@ describe("/api/compiq/estimate", () => {
   });
 
   it("returns required fields", async () => {
-    const res = await request(app).post("/api/compiq/estimate").send({
+    const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
       playerName: "Blake Burke",
       cardYear: 2024,
       product: "Bowman Chrome",
@@ -126,7 +144,7 @@ describe("/api/compiq/estimate", () => {
   });
 
   it("returns valid fallback for sparse payload", async () => {
-    const res = await request(app).post("/api/compiq/estimate").send({});
+    const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({});
     expect(res.status).toBe(200);
     expect(res.body.cardTitle).toBeDefined();
     // Sparse payload should hit the sufficiency gate and return null FMV
@@ -140,7 +158,7 @@ describe("/api/compiq/estimate", () => {
   });
 
   it("does not false-fire mechanism 1 for explicit Base parallel", async () => {
-    const res = await request(app).post("/api/compiq/estimate").send({
+    const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
       playerName: "Shohei Ohtani",
       cardYear: 2018,
       product: "Topps Chrome",

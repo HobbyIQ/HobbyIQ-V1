@@ -27,6 +27,22 @@ function normalizeLegacyPlan(raw: unknown): SubscriptionPlan {
   return "free";
 }
 
+// CF-PAYMENTS-B1 (2026-06-02): time-windowed usage counters live on the
+// user doc per the approved Option A storage model. windowKey resets at
+// READ time in usageCounter.service.ts; this file owns the storage
+// surface only. UsageCap mirrors the time-windowed entries in
+// config/entitlements.ts GatedCap; we do not include write-counted caps
+// here (those are counted from their own resources, not from the user
+// doc).
+export type UsageCap = "priceChecks" | "scans";
+
+export interface UsageWindow {
+  windowKey: string;   // "YYYY-MM-DD" for priceChecks, "YYYY-MM" for scans
+  count: number;
+}
+
+export type UsageCounters = Partial<Record<UsageCap, UsageWindow>>;
+
 interface AuthUserRecord {
   id: string;             // Cosmos id (== userId)
   userId: string;
@@ -41,6 +57,8 @@ interface AuthUserRecord {
   fullName?: string | null;
   appleSub?: string | null;
   docType: "user";
+  // CF-PAYMENTS-B1: time-windowed usage counters (optional on legacy rows).
+  usage?: UsageCounters;
 }
 
 export interface AuthUser {
@@ -50,6 +68,9 @@ export interface AuthUser {
   fullName?: string | null;
   plan: SubscriptionPlan;
   createdAt: string;
+  // CF-PAYMENTS-B1: surfaced so requireRateLimited can read counts without
+  // a second Cosmos round-trip (requireSession already loaded the doc).
+  usage?: UsageCounters;
 }
 
 export interface AuthResult {
@@ -281,7 +302,37 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     // enum so requireEntitlement sees a valid plan even for un-migrated rows.
     plan: normalizeLegacyPlan(user.plan),
     createdAt: user.createdAt,
+    // CF-PAYMENTS-B1: passthrough the usage counter doc so requireRateLimited
+    // can read counts without a second Cosmos read.
+    usage: user.usage,
   };
+}
+
+// ─── CF-PAYMENTS-B1: usage counter writer ───────────────────────────────────
+//
+// Atomicity note: read-modify-write is acceptable at single-user-backend
+// scale. Two concurrent requests for the same user *could* undercount by 1
+// (each reads count=N, both write N+1). For Drew's solo backend this is
+// non-issue. Migrate to Cosmos patch.add({path:"/usage/<cap>/count", value:1})
+// once multi-tenant scaling matters.
+
+/**
+ * Set or overwrite the usage counter for a single cap on a user's record.
+ * Caller (usageCounter.service.ts) owns the window-key + reset logic; this
+ * function is a thin storage primitive. Silently no-ops if the user
+ * doesn't exist (caller has already auth'd via requireSession, so this is
+ * a defensive path only for tests that exercise the function directly
+ * without a corresponding registered user).
+ */
+export async function setUserUsageCounter(
+  userId: string,
+  cap: UsageCap,
+  payload: UsageWindow,
+): Promise<void> {
+  const user = await readUser(userId);
+  if (!user) return;
+  user.usage = { ...(user.usage ?? {}), [cap]: payload };
+  await writeUser(user);
 }
 
 // ─── Storage helpers ─────────────────────────────────────────────────────────

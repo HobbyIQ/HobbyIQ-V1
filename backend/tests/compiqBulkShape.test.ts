@@ -47,6 +47,24 @@ vi.mock("../src/services/compiq/compiqEstimate.service.js", async () => {
   };
 });
 
+// CF-PAYMENTS-B1-TWEAK: /api/compiq/bulk is now predictions-gated
+// (collector+ via requireEntitlement). Test user must carry a plan that
+// has the entitlement.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 let app: any;
 
 beforeAll(async () => {
@@ -63,6 +81,7 @@ describe("/api/compiq/bulk — per-item shape contract", () => {
   it("emits fairMarketValueLive, compsUsed, and compsAvailable on every per-item data block", async () => {
     const res = await request(app)
       .post("/api/compiq/bulk")
+      .set("x-session-id", "test-sess")
       .send({ queries: ["Card A", "Card B", "Card C"] });
 
     expect(res.status).toBe(200);
@@ -98,6 +117,7 @@ describe("/api/compiq/bulk — per-item shape contract", () => {
 
     await request(app)
       .post("/api/compiq/bulk")
+      .set("x-session-id", "test-sess")
       .send({ queries: ["Mike Trout 2011 Topps Update US175"] });
 
     expect(mockFn).toHaveBeenCalledTimes(1);
@@ -128,6 +148,7 @@ describe("/api/compiq/bulk — per-item shape contract", () => {
 
     const res = await request(app)
       .post("/api/compiq/bulk")
+      .set("x-session-id", "test-sess")
       .send({ queries: ["Empty Market Card"] });
 
     expect(res.status).toBe(200);

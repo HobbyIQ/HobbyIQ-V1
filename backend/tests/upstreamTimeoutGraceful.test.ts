@@ -42,6 +42,24 @@ const compiqEstimateMod = await import(
 );
 const dispatcherMod = await import("../src/services/unifiedSearch/dispatcher.js");
 
+// CF-PAYMENTS-B1: /price + /price-by-id are now session-gated.
+// /search, /cardsearch, /bulk remain anonymous, so only the calls into
+// the two gated routes need the session header below.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 let app: any;
 
 beforeAll(async () => {
@@ -89,6 +107,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/price")
+        .set("x-session-id", "test-sess")
         .send({ query: "Elly De La Cruz 2024 Topps Chrome" });
       expect(r.status).toBe(200);
       expect(r.body.source).toBe("upstream-timeout");
@@ -114,6 +133,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/price")
+        .set("x-session-id", "test-sess")
         .send({ query: "Mike Trout 2023 Topps" });
       expect(r.status).toBe(200);
       expect(r.body.source).toBe("live");
@@ -130,6 +150,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/search")
+        .set("x-session-id", "test-sess")
         .send({ query: "Elly De La Cruz 2024 Topps Chrome" });
       expect(r.status).toBe(200);
       expect(r.body.source).toBe("upstream-timeout");
@@ -147,6 +168,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/price-by-id")
+        .set("x-session-id", "test-sess")
         .send({ cardsightCardId: "test-card-uuid-abc", query: "Test card" });
       expect(r.status).toBe(200);
       expect(r.body.source).toBe("upstream-timeout");
@@ -196,6 +218,7 @@ describe("upstream-timeout graceful handling", () => {
         });
       const r = await request(app)
         .post("/api/compiq/bulk")
+        .set("x-session-id", "test-sess")
         .send({
           queries: [
             "Mike Trout 2023 Topps",
@@ -226,6 +249,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/bulk")
+        .set("x-session-id", "test-sess")
         .send({ queries: ["Mike Trout 2023 Topps"] });
       expect(r.status).toBe(200);
       expect(r.body.results[0].status).toBe("error");
@@ -242,6 +266,7 @@ describe("upstream-timeout graceful handling", () => {
       );
       const r = await request(app)
         .post("/api/compiq/price")
+        .set("x-session-id", "test-sess")
         .send({ query: "x" });
       // The default Express handler emits 500 for an unhandled throw —
       // CardsightTimeoutError is the ONLY error we soft-handle.

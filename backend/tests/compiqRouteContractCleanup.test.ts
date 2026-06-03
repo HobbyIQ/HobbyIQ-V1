@@ -29,6 +29,22 @@ vi.mock("../src/services/compiq/compiqEstimate.service.js", async () => {
   };
 });
 
+// CF-PAYMENTS-B1-TWEAK: /api/compiq/search now session-gated.
+vi.mock("../src/services/authService.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getUserBySession: vi.fn(async () => ({
+      userId: "test-user",
+      email: "t@t",
+      username: null,
+      fullName: null,
+      plan: "pro_seller",
+      createdAt: "2026-01-01T00:00:00Z",
+    })),
+  };
+});
+
 let app: any;
 
 beforeAll(async () => {
@@ -43,6 +59,7 @@ describe("/api/compiq/search contract cleanup", () => {
   it("emits predictedPriceRange and omits neighborSynthesisDebug", async () => {
     const res = await request(app)
       .post("/api/compiq/search")
+      .set("x-session-id", "test-sess")
       .send({ query: "2024 Bowman Chrome Paul Skenes" });
 
     expect(res.status).toBe(200);
