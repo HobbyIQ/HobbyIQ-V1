@@ -26,6 +26,13 @@
 // with `holding_period_days` already in the column set.
 
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import type {
+  LedgerFeeAdjustment,
+  PaymentMethod,
+  ReconciledVia,
+  SaleLocation,
+  SalesChannel,
+} from "./portfolioStore.service.js";
 
 // Local mirror of the PortfolioLedgerEntry surface this module reads — the
 // portfolioStore.service does not export the type. Kept structurally
@@ -63,6 +70,40 @@ export interface LedgerEntryForErp {
   needsReconciliation?: boolean;
   dismissedAt?: string | null;
   dismissedReason?: string | null;
+
+  // CF-ERP-EXPANSION-#1 sales-tracking
+  salesChannel?: SalesChannel;
+  channelNote?: string;
+  paymentMethod?: PaymentMethod;
+  paymentNote?: string;
+  saleLocation?: SaleLocation;
+
+  // CF-ERP-EXPANSION-#6 audit + reconciliation provenance
+  reconciledVia?: ReconciledVia;
+  feeAdjustments?: LedgerFeeAdjustment[];
+  refetchRequestedAt?: string | null;
+
+  // CF-ERP-EXPANSION-#7 trade attribution
+  tradeId?: string;
+
+  // Backfill / read-side helper: derived from source when descriptive
+  // field is absent (eBay webhook entries pre-#1 deploy).
+}
+
+// CF-ERP-EXPANSION-#1 default-on-read backfill helpers — pure functions
+// called by every reporting aggregator so legacy entries (where the
+// salesChannel / paymentMethod fields didn't exist) still bucket cleanly.
+
+export function effectiveSalesChannel(e: LedgerEntryForErp): SalesChannel | "unknown" {
+  if (e.salesChannel) return e.salesChannel;
+  if (e.source === "ebay") return "ebay";
+  return "unknown";
+}
+
+export function effectivePaymentMethod(e: LedgerEntryForErp): PaymentMethod | "unknown" {
+  if (e.paymentMethod) return e.paymentMethod;
+  if (e.source === "ebay") return "ebay_managed";
+  return "unknown";
 }
 
 export type HoldingsById = Record<string, PortfolioHolding | undefined>;
@@ -141,7 +182,14 @@ export function listUnreconciled(entries: ReadonlyArray<LedgerEntryForErp>): Unr
 
 // ─── P&L aggregation ────────────────────────────────────────────────────────
 
-export type PnlGroupBy = "month" | "player" | "set" | "grade" | "source";
+export type PnlGroupBy =
+  | "month"
+  | "player"
+  | "set"
+  | "grade"
+  | "source"
+  | "salesChannel"
+  | "paymentMethod";
 
 export const VALID_GROUP_BY: ReadonlyArray<PnlGroupBy> = [
   "month",
@@ -149,6 +197,8 @@ export const VALID_GROUP_BY: ReadonlyArray<PnlGroupBy> = [
   "set",
   "grade",
   "source",
+  "salesChannel",
+  "paymentMethod",
 ];
 
 export interface PnlTotals {
@@ -265,6 +315,14 @@ function groupKeyFor(
     case "source": {
       const s = e.source ?? "manual";
       return { key: s, label: s === "ebay" ? "eBay" : "Manual" };
+    }
+    case "salesChannel": {
+      const c = effectiveSalesChannel(e);
+      return { key: c, label: c === "unknown" ? "(unknown)" : c };
+    }
+    case "paymentMethod": {
+      const p = effectivePaymentMethod(e);
+      return { key: p, label: p === "unknown" ? "(unknown)" : p };
     }
   }
 }

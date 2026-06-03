@@ -83,6 +83,54 @@ interface UserDoc {
   priceHistoryByHolding: Record<string, PortfolioPricePoint[]>;
   alerts: PortfolioAlert[];
   recommendationFeedback: RecommendationFeedback[];
+  // CF-ERP-EXPANSION-#7: trade history. Atomic with ledger + holdings
+  // mutations on POST /erp/trades.
+  trades?: TradeTransaction[];
+}
+
+// ── CF-ERP-EXPANSION-#7 trade transaction shape ─────────────────────────────
+
+export interface TradeTransaction {
+  id: string;
+  userId: string;
+  tradeDate: string;          // ISO timestamp
+  counterparty?: string;
+  salesChannel?: SalesChannel;
+  saleLocation?: SaleLocation;
+  cashToMe: number;           // signed; + received, − paid
+  cashPaymentMethod?: PaymentMethod;
+  note?: string;
+  outgoing: TradeOutgoingRecord[];
+  incoming: TradeIncomingRecord[];
+  totals: {
+    fmvOut: number;
+    fmvIn: number;
+    cashToMe: number;
+    amountRealized: number;
+    basisGivenUp: number;
+    realizedGainLoss: number;
+    balanceCheck: number;
+  };
+  createdAt: string;
+}
+
+export interface TradeOutgoingRecord {
+  holdingId: string;
+  fmvAtTrade: number;
+  fmvSource: "compiq" | "manual";
+  costBasis: number;
+  proceeds: number;
+  realizedGainLoss: number;
+  ledgerEntryId: string;
+}
+
+export interface TradeIncomingRecord {
+  holdingId: string;          // new holding id
+  cardsightCardId?: string;
+  cardTitle: string;
+  grade?: string;
+  fmvAtTrade: number;
+  fmvSource: "compiq" | "manual";
 }
 
 interface PortfolioPricePoint {
@@ -178,7 +226,7 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
   }
 }
 
-async function writeUserDoc(userId: string, doc: UserDoc): Promise<void> {
+export async function writeUserDoc(userId: string, doc: UserDoc): Promise<void> {
   invalidateCache(userId);
   const container = await getContainer();
   
@@ -252,6 +300,205 @@ interface PortfolioLedgerEntry {
   // the receipt", "doesn't matter for this entry", etc.).
   dismissedAt?: string | null;
   dismissedReason?: string | null;
+
+  // ----- CF-ERP-EXPANSION-#1 sales-tracking (2026-06-03) ---------------------
+  // Orthogonal axes — do NOT overload `source`. Manual sales collect from
+  // user; eBay webhook auto-populates salesChannel=ebay / paymentMethod=
+  // ebay_managed. Legacy entries default-on-read via `source` mapping; no
+  // destructive backfill.
+  salesChannel?: SalesChannel;
+  channelNote?: string;        // required when salesChannel === "other"
+  paymentMethod?: PaymentMethod;
+  paymentNote?: string;        // required when paymentMethod === "other"
+  saleLocation?: SaleLocation;
+
+  // ----- CF-ERP-EXPANSION-#6 manual fee override audit -----------------------
+  // reconciledVia identifies HOW the granular fees were established. CPAs
+  // need to know which figures are processor-confirmed vs hand-entered.
+  reconciledVia?: ReconciledVia;
+  // Append-only audit trail of manual fee overrides. Never overwritten —
+  // each /unreconciled/:id/override push appends a row. Full prior-state
+  // history reconstructable from this array.
+  feeAdjustments?: LedgerFeeAdjustment[];
+  // Annotation set by POST /unreconciled/:id/refetch — background poller
+  // picks up + clears on next sweep. Read-only signal for the iOS queue.
+  refetchRequestedAt?: string | null;
+
+  // ----- CF-ERP-EXPANSION-#7 trade attribution -------------------------------
+  // Set on a disposal-leg entry created by POST /erp/trades. The atomic
+  // trade write creates N such ledger entries (one per outgoing card),
+  // each carrying the parent TradeTransaction.id. paymentMethod is forced
+  // to "trade" so 1099-K rail joins correctly EXCLUDE the card legs.
+  tradeId?: string;
+}
+
+// ── CF-ERP-EXPANSION-#1 enums + structured location ─────────────────────────
+//
+// Closed enums on the wire; "other" is the escape hatch with mandatory
+// short note (validated server-side). Free-text on the enum would let
+// malformed strings into reporting groupings.
+
+export type SalesChannel =
+  | "ebay"
+  | "whatnot"
+  | "comc"
+  | "myslabs"
+  | "goldin"
+  | "pwcc"
+  | "instagram"
+  | "facebook"
+  | "card_show"
+  | "in_person"
+  | "other";
+
+export type PaymentMethod =
+  | "ebay_managed"
+  | "paypal"
+  | "venmo"
+  | "zelle"
+  | "cash"
+  | "check"
+  | "cashapp"
+  | "trade"
+  | "other";
+
+export interface SaleLocation {
+  venue?: string;   // ≤80 chars  — "National 2026", "Acme Card Shop"
+  city?: string;    // ≤60 chars
+  state?: string;   // ≤2 chars (US 2-letter, uppercase)
+}
+
+// ── CF-ERP-EXPANSION-#6 ─────────────────────────────────────────────────────
+
+export type ReconciledVia =
+  | "ebay_finances"     // populated by the eBay Finances API enrichment path
+  | "manual_override"   // user supplied via POST /unreconciled/:id/override
+  | "manual_entry";     // user supplied at sale time (sellHolding manual path)
+
+export interface LedgerFeeAdjustment {
+  adjustmentId: string;
+  adjustedAt: string;     // ISO timestamp
+  adjustedBy: string;     // userId
+  reason: string;         // required, ≤500 chars
+  priorValues: {
+    finalValueFee: number | null;
+    paymentProcessingFee: number | null;
+    promotedListingFee: number | null;
+    adFee: number | null;
+    otherFees: number | null;
+    netPayout: number | null;
+    actualShippingCost: number | null;
+    needsReconciliation: boolean;
+    reconciledVia: ReconciledVia | undefined;
+  };
+  newValues: {
+    finalValueFee: number | null;
+    paymentProcessingFee: number | null;
+    promotedListingFee: number | null;
+    adFee: number | null;
+    otherFees: number | null;
+    netPayout: number | null;
+    actualShippingCost: number | null;
+    needsReconciliation: boolean;
+    reconciledVia: ReconciledVia;
+  };
+}
+
+const VALID_SALES_CHANNELS: ReadonlySet<SalesChannel> = new Set<SalesChannel>([
+  "ebay", "whatnot", "comc", "myslabs", "goldin", "pwcc",
+  "instagram", "facebook", "card_show", "in_person", "other",
+]);
+const VALID_PAYMENT_METHODS: ReadonlySet<PaymentMethod> = new Set<PaymentMethod>([
+  "ebay_managed", "paypal", "venmo", "zelle", "cash", "check",
+  "cashapp", "trade", "other",
+]);
+
+function trimOrUndefined(v: unknown, max: number): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  if (!t) return undefined;
+  return t.slice(0, max);
+}
+
+export interface SalesTrackingFieldsInput {
+  salesChannel?: unknown;
+  channelNote?: unknown;
+  paymentMethod?: unknown;
+  paymentNote?: unknown;
+  saleLocation?: unknown;
+}
+
+export interface SalesTrackingFieldsParsed {
+  salesChannel?: SalesChannel;
+  channelNote?: string;
+  paymentMethod?: PaymentMethod;
+  paymentNote?: string;
+  saleLocation?: SaleLocation;
+}
+
+/**
+ * Pure validator shared between sellHolding (POST) and validateLedgerPatch
+ * (PATCH). Returns either the parsed shape or a 400-class error message.
+ */
+export function parseSalesTrackingFields(
+  input: SalesTrackingFieldsInput,
+): { ok: SalesTrackingFieldsParsed } | { error: string } {
+  const out: SalesTrackingFieldsParsed = {};
+
+  if (input.salesChannel !== undefined && input.salesChannel !== null) {
+    if (typeof input.salesChannel !== "string"
+        || !VALID_SALES_CHANNELS.has(input.salesChannel as SalesChannel)) {
+      return { error: `salesChannel must be one of: ${Array.from(VALID_SALES_CHANNELS).join(", ")}` };
+    }
+    out.salesChannel = input.salesChannel as SalesChannel;
+  }
+  if (input.channelNote !== undefined && input.channelNote !== null) {
+    const t = trimOrUndefined(input.channelNote, 100);
+    if (t) out.channelNote = t;
+  }
+  if (out.salesChannel === "other" && !out.channelNote) {
+    return { error: 'channelNote is required when salesChannel === "other"' };
+  }
+
+  if (input.paymentMethod !== undefined && input.paymentMethod !== null) {
+    if (typeof input.paymentMethod !== "string"
+        || !VALID_PAYMENT_METHODS.has(input.paymentMethod as PaymentMethod)) {
+      return { error: `paymentMethod must be one of: ${Array.from(VALID_PAYMENT_METHODS).join(", ")}` };
+    }
+    out.paymentMethod = input.paymentMethod as PaymentMethod;
+  }
+  if (input.paymentNote !== undefined && input.paymentNote !== null) {
+    const t = trimOrUndefined(input.paymentNote, 100);
+    if (t) out.paymentNote = t;
+  }
+  if (out.paymentMethod === "other" && !out.paymentNote) {
+    return { error: 'paymentNote is required when paymentMethod === "other"' };
+  }
+
+  if (input.saleLocation !== undefined && input.saleLocation !== null) {
+    if (typeof input.saleLocation !== "object") {
+      return { error: "saleLocation must be an object" };
+    }
+    const raw = input.saleLocation as Record<string, unknown>;
+    const venue = trimOrUndefined(raw.venue, 80);
+    const city = trimOrUndefined(raw.city, 60);
+    let state: string | undefined;
+    if (raw.state !== undefined && raw.state !== null) {
+      if (typeof raw.state !== "string") {
+        return { error: "saleLocation.state must be a string" };
+      }
+      const t = raw.state.trim().toUpperCase();
+      if (t.length > 2) return { error: "saleLocation.state must be ≤ 2 chars (US 2-letter)" };
+      if (t.length > 0) state = t;
+    }
+    const loc: SaleLocation = {};
+    if (venue) loc.venue = venue;
+    if (city) loc.city = city;
+    if (state) loc.state = state;
+    if (venue || city || state) out.saleLocation = loc;
+  }
+
+  return { ok: out };
 }
 
 // ── CF-PR-E-P&L-COST-RECOMPUTE: shared ledger financials helper ──────────────
@@ -1170,6 +1417,13 @@ const LEDGER_PATCH_WHITELIST = new Set([
   "suppliesCost",
   "dismissedAt",
   "dismissedReason",
+  // CF-ERP-EXPANSION-#1 sales-tracking descriptive fields. NOT
+  // financials — same whitelist semantics as `notes`.
+  "salesChannel",
+  "channelNote",
+  "paymentMethod",
+  "paymentNote",
+  "saleLocation",
 ]);
 
 const MAX_DISMISSED_REASON_LENGTH = 500;
@@ -1270,6 +1524,31 @@ function validateLedgerPatch(
         },
       };
     }
+  }
+
+  // CF-ERP-EXPANSION-#1 sales-tracking fields. Routed through the shared
+  // parser so POST /sell and PATCH /ledger/:id stay in lockstep.
+  const stKeys = ["salesChannel", "channelNote", "paymentMethod", "paymentNote", "saleLocation"] as const;
+  const hasSt = stKeys.some((k) => k in body);
+  if (hasSt) {
+    const parsed = parseSalesTrackingFields({
+      salesChannel: body.salesChannel,
+      channelNote: body.channelNote,
+      paymentMethod: body.paymentMethod,
+      paymentNote: body.paymentNote,
+      saleLocation: body.saleLocation,
+    });
+    if ("error" in parsed) {
+      return {
+        ok: false,
+        error: { message: parsed.error, code: "INVALID_VALUE" },
+      };
+    }
+    if (parsed.ok.salesChannel !== undefined) patch.salesChannel = parsed.ok.salesChannel;
+    if (parsed.ok.channelNote !== undefined) patch.channelNote = parsed.ok.channelNote;
+    if (parsed.ok.paymentMethod !== undefined) patch.paymentMethod = parsed.ok.paymentMethod;
+    if (parsed.ok.paymentNote !== undefined) patch.paymentNote = parsed.ok.paymentNote;
+    if (parsed.ok.saleLocation !== undefined) patch.saleLocation = parsed.ok.saleLocation;
   }
 
   return { ok: true, patch };
@@ -1921,6 +2200,18 @@ export async function sellHolding(req: Request, res: Response) {
     costBasisSold,
   });
 
+  // CF-ERP-EXPANSION-#1 sales-tracking from manual-sale body.
+  const stParsed = parseSalesTrackingFields({
+    salesChannel: req.body?.salesChannel,
+    channelNote: req.body?.channelNote,
+    paymentMethod: req.body?.paymentMethod,
+    paymentNote: req.body?.paymentNote,
+    saleLocation: req.body?.saleLocation,
+  });
+  if ("error" in stParsed) {
+    return res.status(400).json({ error: { message: stParsed.error, code: "INVALID_SALES_TRACKING" } });
+  }
+
   const ledgerEntry: PortfolioLedgerEntry = {
     id: randomUUID(),
     userId: auth.userId,
@@ -1941,6 +2232,10 @@ export async function sellHolding(req: Request, res: Response) {
     notes: notes && notes.length ? notes : undefined,
     gradingCost,
     suppliesCost,
+    // CF-ERP-EXPANSION-#1 + #6: manual entries are reconciled-by-definition.
+    // The user IS the authoritative source for their own manual sale.
+    reconciledVia: "manual_entry",
+    ...stParsed.ok,
   };
 
   const remainingQty = quantityOwned - quantitySold;
@@ -2147,6 +2442,15 @@ export async function markHoldingSoldFromEbay(
     suppliesCost: data.suppliesCost ?? null,
     gradingCost: data.gradingCost ?? null,
     needsReconciliation,
+    // CF-ERP-EXPANSION-#1 + #6: eBay webhook auto-populates the
+    // sales-tracking axes. reconciledVia is "ebay_finances" only when the
+    // Finances API has actually delivered the granular fees (i.e.
+    // !needsReconciliation); otherwise left undefined and a downstream
+    // POST /unreconciled/:id/override or the reconcile-on-enrich path
+    // sets it.
+    salesChannel: "ebay",
+    paymentMethod: "ebay_managed",
+    reconciledVia: needsReconciliation ? undefined : "ebay_finances",
   };
 
   // 6. Mutate holding state (mirrors sellHolding).
@@ -2176,6 +2480,241 @@ export async function markHoldingSoldFromEbay(
     holdingRemoved: remainingQty <= 0,
     remainingQuantity: Math.max(0, remainingQty),
   };
+}
+
+// ─── CF-ERP-EXPANSION-#7 atomic trade write ────────────────────────────────
+
+import { allocateTradeProceeds } from "./erpTrades.service.js";
+
+export interface RecordTradeInput {
+  userId: string;
+  tradeDate: string;          // ISO
+  counterparty?: string;
+  salesChannel?: SalesChannel;
+  saleLocation?: SaleLocation;
+  cashToMe: number;
+  cashPaymentMethod?: PaymentMethod;
+  note?: string;
+  outgoing: Array<{
+    holdingId: string;
+    fmvAtTrade: number;
+    fmvSource: "compiq" | "manual";
+  }>;
+  incoming: Array<{
+    cardsightCardId?: string;
+    cardTitle: string;
+    grade?: string;
+    fmvAtTrade: number;
+    fmvSource: "compiq" | "manual";
+    // Optional metadata to enrich the new holding shape
+    playerName?: string;
+    cardYear?: number;
+    setName?: string;
+    parallel?: string;
+    gradeCompany?: string;
+    gradeValue?: number;
+  }>;
+}
+
+export interface RecordTradeResult {
+  trade: TradeTransaction;
+  outgoingHoldingsRemoved: string[];
+  incomingHoldingsCreated: string[];
+}
+
+/**
+ * Record a trade as an ATOMIC user-doc mutation: N disposal ledger entries
+ * + N source-holding removals + M new holdings + 1 TradeTransaction record.
+ * All in a single writeUserDoc call.
+ *
+ * Throws on any validation failure (caller catches + maps to HTTP code).
+ */
+export async function recordTradeTransaction(
+  input: RecordTradeInput,
+): Promise<RecordTradeResult> {
+  const doc = await readUserDoc(input.userId);
+
+  if (input.outgoing.length === 0 && input.incoming.length === 0) {
+    throw new Error("trade must have at least one outgoing or incoming card");
+  }
+  if (input.outgoing.length === 0) {
+    throw new Error("trade requires at least one outgoing card (basis must be relinquished)");
+  }
+  if (input.incoming.length === 0 && input.cashToMe <= 0) {
+    throw new Error("trade with no incoming cards must have positive cashToMe");
+  }
+
+  // Resolve outgoing holdings and gather cost basis.
+  const outgoingResolved: Array<{
+    holding: PortfolioHolding;
+    fmv: number;
+    fmvSource: "compiq" | "manual";
+    costBasis: number;
+  }> = [];
+  for (const leg of input.outgoing) {
+    const h = doc.holdings[leg.holdingId];
+    if (!h) throw new Error(`outgoing holding not found: ${leg.holdingId}`);
+    if (!Number.isFinite(leg.fmvAtTrade) || leg.fmvAtTrade < 0) {
+      throw new Error(`outgoing fmvAtTrade must be >= 0 for holding ${leg.holdingId}`);
+    }
+    const qty = Math.max(1, toNumber(h.quantity, 1));
+    const totalCost = toNumber(h.totalCostBasis, toNumber(h.purchasePrice, 0) * qty);
+    // Whole-holding disposal in Phase 1 — partial-quantity trades = Phase 2.
+    outgoingResolved.push({
+      holding: h,
+      fmv: leg.fmvAtTrade,
+      fmvSource: leg.fmvSource,
+      costBasis: totalCost,
+    });
+  }
+
+  // Run the pure allocation.
+  const allocation = allocateTradeProceeds({
+    outgoingFmvs: outgoingResolved.map((o) => o.fmv),
+    outgoingCostBases: outgoingResolved.map((o) => o.costBasis),
+    incomingFmvs: input.incoming.map((i) => i.fmvAtTrade),
+    cashToMe: input.cashToMe,
+  });
+
+  const now = new Date().toISOString();
+  const tradeId = randomUUID();
+
+  // Build disposal ledger entries.
+  const outgoingRecords: TradeOutgoingRecord[] = [];
+  const ledgerEntries: PortfolioLedgerEntry[] = [];
+  for (let i = 0; i < outgoingResolved.length; i += 1) {
+    const o = outgoingResolved[i];
+    const alloc = allocation.perOutgoing[i];
+    const ledgerEntryId = randomUUID();
+    const qty = Math.max(1, toNumber(o.holding.quantity, 1));
+
+    const entry: PortfolioLedgerEntry = {
+      id: ledgerEntryId,
+      userId: input.userId,
+      holdingId: o.holding.id,
+      playerName: String(o.holding.playerName ?? ""),
+      cardTitle: shimmedCardTitle(o.holding),
+      quantitySold: qty,
+      unitSalePrice: qty > 0 ? alloc.proceeds / qty : alloc.proceeds,
+      grossProceeds: alloc.proceeds,
+      fees: 0,
+      tax: 0,
+      shipping: 0,
+      netProceeds: alloc.proceeds,
+      costBasisSold: o.costBasis,
+      realizedProfitLoss: alloc.realizedGainLoss,
+      realizedProfitLossPct: o.costBasis > 0
+        ? (alloc.realizedGainLoss / o.costBasis) * 100
+        : 0,
+      soldAt: input.tradeDate,
+      // CF-ERP-EXPANSION-#7: disposal-by-trade attribution
+      source: "manual",
+      salesChannel: input.salesChannel ?? "in_person",
+      paymentMethod: "trade",
+      saleLocation: input.saleLocation,
+      reconciledVia: "manual_entry",
+      needsReconciliation: false,
+      tradeId,
+    };
+    ledgerEntries.push(entry);
+    outgoingRecords.push({
+      holdingId: o.holding.id,
+      fmvAtTrade: o.fmv,
+      fmvSource: o.fmvSource,
+      costBasis: o.costBasis,
+      proceeds: alloc.proceeds,
+      realizedGainLoss: alloc.realizedGainLoss,
+      ledgerEntryId,
+    });
+  }
+
+  // Build incoming holdings.
+  const incomingRecords: TradeIncomingRecord[] = [];
+  const newHoldings: PortfolioHolding[] = [];
+  for (const inc of input.incoming) {
+    if (!Number.isFinite(inc.fmvAtTrade) || inc.fmvAtTrade < 0) {
+      throw new Error(`incoming fmvAtTrade must be >= 0 for "${inc.cardTitle}"`);
+    }
+    const holdingId = randomUUID();
+    const acquired = input.tradeDate.slice(0, 10);
+    const newH: PortfolioHolding = {
+      id: holdingId,
+      playerName: inc.playerName,
+      cardTitle: inc.cardTitle,
+      cardYear: inc.cardYear,
+      setName: inc.setName,
+      parallel: inc.parallel,
+      gradeCompany: inc.gradeCompany,
+      gradeValue: inc.gradeValue,
+      quantity: 1,
+      // Basis of an incoming-via-trade card = its FMV at trade.
+      purchasePrice: inc.fmvAtTrade,
+      totalCostBasis: inc.fmvAtTrade,
+      purchaseDate: acquired,
+      purchaseSource: "trade",
+      lastUpdated: now,
+    } as PortfolioHolding;
+    if (inc.cardsightCardId) {
+      (newH as any).cardsightCardId = inc.cardsightCardId;
+    }
+    (newH as any).tradeId = tradeId;
+    newHoldings.push(newH);
+    incomingRecords.push({
+      holdingId,
+      cardsightCardId: inc.cardsightCardId,
+      cardTitle: inc.cardTitle,
+      grade: inc.grade,
+      fmvAtTrade: inc.fmvAtTrade,
+      fmvSource: inc.fmvSource,
+    });
+  }
+
+  // Mutate doc atomically.
+  for (const o of outgoingResolved) {
+    delete doc.holdings[o.holding.id];
+  }
+  for (const h of newHoldings) {
+    doc.holdings[h.id] = h;
+  }
+  for (const e of ledgerEntries) {
+    doc.ledger.push(e);
+  }
+
+  const trade: TradeTransaction = {
+    id: tradeId,
+    userId: input.userId,
+    tradeDate: input.tradeDate,
+    counterparty: input.counterparty,
+    salesChannel: input.salesChannel,
+    saleLocation: input.saleLocation,
+    cashToMe: input.cashToMe,
+    cashPaymentMethod: input.cashPaymentMethod,
+    note: input.note,
+    outgoing: outgoingRecords,
+    incoming: incomingRecords,
+    totals: allocation.totals,
+    createdAt: now,
+  };
+  if (!doc.trades) doc.trades = [];
+  doc.trades.push(trade);
+
+  await writeUserDoc(input.userId, doc);
+
+  return {
+    trade,
+    outgoingHoldingsRemoved: outgoingResolved.map((o) => o.holding.id),
+    incomingHoldingsCreated: newHoldings.map((h) => h.id),
+  };
+}
+
+export async function listTradesForUser(userId: string): Promise<TradeTransaction[]> {
+  const doc = await readUserDoc(userId);
+  return [...(doc.trades ?? [])].sort((a, b) => b.tradeDate.localeCompare(a.tradeDate));
+}
+
+export async function getTradeForUser(userId: string, tradeId: string): Promise<TradeTransaction | null> {
+  const doc = await readUserDoc(userId);
+  return doc.trades?.find((t) => t.id === tradeId) ?? null;
 }
 
 export async function refreshHolding(req: Request, res: Response) {

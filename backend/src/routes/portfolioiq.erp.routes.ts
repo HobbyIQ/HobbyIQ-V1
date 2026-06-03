@@ -1,17 +1,45 @@
-// CF-ERP-RECONCILIATION (2026-06-03): pro_seller ERP layer routes.
+// CF-ERP-RECONCILIATION + CF-ERP-EXPANSION (2026-06-03): pro_seller ERP
+// layer routes. Surface owns the entire /api/portfolio/erp/* path tree.
 //
-//   GET  /api/portfolio/erp/unreconciled
-//   GET  /api/portfolio/erp/pnl?from=&to=&groupBy=month|player|set|grade|source
-//   GET  /api/portfolio/erp/tax-export?from=&to=&format=csv|json
+//   GET  /erp/unreconciled                           (CF-ERP)
+//   GET  /erp/unreconciled/aging                     (#6a)
+//   POST /erp/unreconciled/:id/refetch               (#6b)
+//   POST /erp/unreconciled/:id/override              (#6c, audit-trail append)
+//   GET  /erp/pnl?from=&to=&groupBy=&includeExpenses (CF-ERP + #5 opt-in)
+//   GET  /erp/tax-export?from=&to=&format=csv|json   (CF-ERP)
+//   GET  /erp/analytics?from=&to=&groupBy=           (#2)
+//   GET  /erp/analytics/timeseries?from=&to=&bucket= (#2)
+//   GET  /erp/valuation                              (#3 — reads reprice snapshot)
+//   GET  /erp/tax/filings/:year                      (#4a)
+//   PUT  /erp/tax/filings/:year                      (#4a)
+//   GET  /erp/accounting-export?from=&to=&format=    (#4b)
+//   GET  /erp/expenses?from=&to=&category=           (#5)
+//   POST /erp/expenses                               (#5)
+//   PATCH/DELETE /erp/expenses/:id                   (#5)
+//   GET  /erp/expenses/report?from=&to=&groupBy=     (#5)
+//   POST /erp/trades                                 (#7 atomic)
+//   GET  /erp/trades?from=&to=                       (#7)
+//   GET  /erp/trades/:id                             (#7)
 //
 // All routes: requireSession → requireEntitlement("erpReconciliation").
-// NO cap. Reads only the user's own ledger via readUserDoc — no upstream,
-// no Cardsight.
+// NO cap. Reads come from the user's own Cosmos doc; #7 makes a few live
+// computeEstimate calls when the caller defers FMV resolution to the
+// server (user-initiated low-volume action — see #7 design).
 
 import { Router, Request, Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
-import { readUserDoc } from "../services/portfolioiq/portfolioStore.service.js";
+import {
+  getTradeForUser,
+  listTradesForUser,
+  parseSalesTrackingFields,
+  readUserDoc,
+  recordTradeTransaction,
+  writeUserDoc,
+  type PaymentMethod,
+  type SaleLocation,
+  type SalesChannel,
+} from "../services/portfolioiq/portfolioStore.service.js";
 import {
   aggregatePnl,
   buildTaxExport,
@@ -20,6 +48,41 @@ import {
   type LedgerEntryForErp,
   type PnlGroupBy,
 } from "../services/portfolioiq/erpReconciliation.service.js";
+import {
+  aggregateAnalytics,
+  aggregateTimeseries,
+  VALID_ANALYTICS_GROUP_BY,
+  type AnalyticsGroupBy,
+  type TimeseriesBucket,
+} from "../services/portfolioiq/erpAnalytics.service.js";
+import { buildValuation } from "../services/portfolioiq/erpValuation.service.js";
+import {
+  getTaxFiling,
+  upsertTaxFiling,
+  TAX_FILING_RAILS,
+  type TaxFilingRail,
+} from "../repositories/taxFilings.repository.js";
+import {
+  buildAccountingExport,
+  buildTaxFilingReport,
+} from "../services/portfolioiq/erpTaxAccounting.service.js";
+import {
+  createExpense,
+  deleteExpense,
+  listExpensesForUser,
+  totalExpensesInWindow,
+  updateExpense,
+  VALID_EXPENSE_CATEGORIES,
+  aggregateExpenses,
+  type ExpenseCategory,
+  type ExpenseGroupBy,
+} from "../repositories/portfolioExpenses.repository.js";
+import {
+  applyFeeOverride,
+  buildAging,
+  validateFeeOverride,
+} from "../services/portfolioiq/erpAgingOverride.service.js";
+import { computeLedgerFinancials } from "../services/portfolioiq/portfolioStore.service.js";
 
 const router = Router();
 
@@ -57,15 +120,547 @@ router.get("/pnl", async (req: Request, res: Response) => {
     const groupBy = groupByRaw as PnlGroupBy;
     const from = typeof req.query.from === "string" ? req.query.from : undefined;
     const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const includeExpenses =
+      typeof req.query.includeExpenses === "string" &&
+      ["1", "true", "yes"].includes(req.query.includeExpenses.toLowerCase());
 
     const doc = await readUserDoc(userId);
     const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
     const holdingsById = doc.holdings ?? {};
     const result = aggregatePnl(entries, holdingsById, { from, to, groupBy });
+
+    // CF-ERP-EXPANSION-#5: optional operating-expense roll-up. Default off
+    // so existing iOS bindings keep their shape.
+    if (includeExpenses) {
+      const expenses = await listExpensesForUser(userId, { from, to });
+      const { total: operatingExpenses } = totalExpensesInWindow(expenses, { from, to });
+      const trueNet = Math.round((result.totals.realizedProfitLoss - operatingExpenses) * 100) / 100;
+      return res.json({
+        success: true,
+        ...result,
+        operatingExpenses,
+        trueNet,
+      });
+    }
+
     res.json({ success: true, ...result });
   } catch (err: any) {
     console.error("[portfolio.erp] /pnl failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to aggregate P&L" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#2 Analytics ─────────────────────────────────────────
+
+router.get("/analytics", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const groupByRaw = typeof req.query.groupBy === "string" ? req.query.groupBy.trim() : "";
+    if (!(VALID_ANALYTICS_GROUP_BY as readonly string[]).includes(groupByRaw)) {
+      return res.status(400).json({
+        success: false,
+        error: `groupBy must be one of: ${VALID_ANALYTICS_GROUP_BY.join(", ")}`,
+      });
+    }
+    const groupBy = groupByRaw as AnalyticsGroupBy;
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const result = aggregateAnalytics(entries, doc.holdings ?? {}, { from, to, groupBy });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /analytics failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to aggregate analytics" });
+  }
+});
+
+router.get("/analytics/timeseries", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const bucketRaw = typeof req.query.bucket === "string" ? req.query.bucket.trim() : "month";
+    if (bucketRaw !== "month" && bucketRaw !== "quarter") {
+      return res.status(400).json({ success: false, error: "bucket must be 'month' or 'quarter'" });
+    }
+    const bucket = bucketRaw as TimeseriesBucket;
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const result = aggregateTimeseries(entries, { from, to, bucket });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /analytics/timeseries failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to build timeseries" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#3 Valuation ─────────────────────────────────────────
+
+router.get("/valuation", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const result = buildValuation(
+      Object.values(doc.holdings ?? {}),
+      entries,
+      doc.holdings ?? {},
+      Date.now(),
+    );
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /valuation failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compute valuation" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#4 Tax filings + accounting export ──────────────────
+
+router.get("/tax/filings/:year", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const year = Number(req.params.year);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({ success: false, error: "year must be a 4-digit year" });
+    }
+    const filing = await getTaxFiling(userId, year);
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const report = buildTaxFilingReport(entries, filing, year);
+    res.json({ success: true, ...report });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /tax/filings GET failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to read tax filing" });
+  }
+});
+
+router.put("/tax/filings/:year", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const year = Number(req.params.year);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({ success: false, error: "year must be a 4-digit year" });
+    }
+    const body = (req.body ?? {}) as { rails?: Record<string, { reportedGross1099K?: unknown; note?: unknown }> };
+    if (!body.rails || typeof body.rails !== "object") {
+      return res.status(400).json({ success: false, error: "body.rails object is required" });
+    }
+    const parsed: Partial<Record<TaxFilingRail, { reportedGross1099K: number; note?: string }>> = {};
+    for (const [k, v] of Object.entries(body.rails)) {
+      if (!(TAX_FILING_RAILS as readonly string[]).includes(k)) {
+        return res.status(400).json({
+          success: false,
+          error: `unknown rail "${k}". Valid: ${TAX_FILING_RAILS.join(", ")}`,
+        });
+      }
+      const reported = Number(v?.reportedGross1099K);
+      if (!Number.isFinite(reported) || reported < 0 || reported > 10_000_000) {
+        return res.status(400).json({
+          success: false,
+          error: `rails.${k}.reportedGross1099K must be a number 0..10000000`,
+        });
+      }
+      const note = typeof v?.note === "string" ? v.note.slice(0, 500) : undefined;
+      parsed[k as TaxFilingRail] = { reportedGross1099K: reported, ...(note ? { note } : {}) };
+    }
+    const filing = await upsertTaxFiling(userId, year, parsed);
+    if (!filing) {
+      return res.status(500).json({ success: false, error: "Tax-filing store unavailable" });
+    }
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const report = buildTaxFilingReport(entries, filing, year);
+    res.json({ success: true, ...report });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /tax/filings PUT failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to upsert tax filing" });
+  }
+});
+
+router.get("/accounting-export", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const format =
+      typeof req.query.format === "string" && req.query.format.toLowerCase() === "json"
+        ? "json"
+        : "csv";
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const result = buildAccountingExport(entries, doc.holdings ?? {}, { from, to });
+    res.setHeader("X-Unreconciled-Excluded", String(result.json.excluded.count));
+    if (format === "json") {
+      return res.json({ success: true, ...result.json });
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    const filenameWindow = [result.json.window.from, result.json.window.to].filter(Boolean).join("_to_");
+    const filename = `hobbyiq-accounting${filenameWindow ? "_" + filenameWindow : ""}.csv`;
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(result.csv);
+  } catch (err: any) {
+    console.error("[portfolio.erp] /accounting-export failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to build accounting export" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#5 Expenses CRUD + report ────────────────────────────
+
+router.get("/expenses/report", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const groupByRaw = typeof req.query.groupBy === "string" ? req.query.groupBy : "category";
+    if (groupByRaw !== "category" && groupByRaw !== "month") {
+      return res.status(400).json({ success: false, error: "groupBy must be 'category' or 'month'" });
+    }
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const entries = await listExpensesForUser(userId, { from, to });
+    const report = aggregateExpenses(entries, { from, to, groupBy: groupByRaw as ExpenseGroupBy });
+    res.json({ success: true, ...report });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /expenses/report failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to aggregate expenses" });
+  }
+});
+
+router.get("/expenses", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const categoryRaw = typeof req.query.category === "string" ? req.query.category : undefined;
+    if (categoryRaw && !(VALID_EXPENSE_CATEGORIES as readonly string[]).includes(categoryRaw)) {
+      return res.status(400).json({
+        success: false,
+        error: `category must be one of: ${VALID_EXPENSE_CATEGORIES.join(", ")}`,
+      });
+    }
+    const entries = await listExpensesForUser(userId, {
+      from,
+      to,
+      category: categoryRaw as ExpenseCategory | undefined,
+    });
+    res.json({ success: true, entries });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /expenses list failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to list expenses" });
+  }
+});
+
+router.post("/expenses", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const category = body.category;
+    if (typeof category !== "string" || !(VALID_EXPENSE_CATEGORIES as readonly string[]).includes(category)) {
+      return res.status(400).json({
+        success: false,
+        error: `category must be one of: ${VALID_EXPENSE_CATEGORIES.join(", ")}`,
+      });
+    }
+    const amountRaw = Number(body.amount);
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0 || amountRaw > 10_000_000) {
+      return res.status(400).json({ success: false, error: "amount must be a positive number ≤ 10000000" });
+    }
+    const date = typeof body.date === "string" ? body.date : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: "date must be YYYY-MM-DD" });
+    }
+    const categoryNote = typeof body.categoryNote === "string" ? body.categoryNote.trim().slice(0, 100) : undefined;
+    if (category === "other" && !categoryNote) {
+      return res.status(400).json({ success: false, error: 'categoryNote is required when category === "other"' });
+    }
+    const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : undefined;
+    const receiptRef = typeof body.receiptRef === "string" ? body.receiptRef.trim().slice(0, 500) : undefined;
+    const created = await createExpense({
+      userId,
+      category: category as ExpenseCategory,
+      categoryNote,
+      amount: amountRaw,
+      date,
+      note,
+      receiptRef,
+    });
+    if (!created) {
+      return res.status(500).json({ success: false, error: "Expense store unavailable" });
+    }
+    res.status(201).json({ success: true, expense: created });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /expenses create failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to create expense" });
+  }
+});
+
+router.patch("/expenses/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const patch: any = {};
+    if (body.category !== undefined) {
+      if (typeof body.category !== "string"
+          || !(VALID_EXPENSE_CATEGORIES as readonly string[]).includes(body.category)) {
+        return res.status(400).json({
+          success: false,
+          error: `category must be one of: ${VALID_EXPENSE_CATEGORIES.join(", ")}`,
+        });
+      }
+      patch.category = body.category;
+    }
+    if (body.amount !== undefined) {
+      const a = Number(body.amount);
+      if (!Number.isFinite(a) || a <= 0 || a > 10_000_000) {
+        return res.status(400).json({ success: false, error: "amount must be a positive number ≤ 10000000" });
+      }
+      patch.amount = a;
+    }
+    if (body.date !== undefined) {
+      if (typeof body.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+        return res.status(400).json({ success: false, error: "date must be YYYY-MM-DD" });
+      }
+      patch.date = body.date;
+    }
+    if ("categoryNote" in body) patch.categoryNote = body.categoryNote === null ? null : String(body.categoryNote).slice(0, 100);
+    if ("note" in body) patch.note = body.note === null ? null : String(body.note).slice(0, 500);
+    if ("receiptRef" in body) patch.receiptRef = body.receiptRef === null ? null : String(body.receiptRef).slice(0, 500);
+    const updated = await updateExpense(userId, id, patch);
+    if (!updated) return res.status(404).json({ success: false, error: "Expense not found" });
+    res.json({ success: true, expense: updated });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /expenses patch failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to update expense" });
+  }
+});
+
+router.delete("/expenses/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+    const ok = await deleteExpense(userId, id);
+    if (!ok) return res.status(404).json({ success: false, error: "Expense not found" });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /expenses delete failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to delete expense" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#6 Aging + refetch + override ────────────────────────
+
+router.get("/unreconciled/aging", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const aging = buildAging(entries, Date.now());
+    res.json({ success: true, ...aging });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/aging failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compute aging" });
+  }
+});
+
+router.post("/unreconciled/:id/refetch", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+    // Annotate the entry; the existing eBay reconciliation pass picks it up
+    // on its next sweep. Fire-and-forget from the user's POV — returns 202
+    // immediately rather than blocking on a synchronous Finances API call.
+    const doc = await readUserDoc(userId);
+    const idx = doc.ledger.findIndex((e) => e.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Entry not found" });
+    doc.ledger[idx] = { ...doc.ledger[idx], refetchRequestedAt: new Date().toISOString() };
+    await writeUserDoc(userId, doc);
+    res.status(202).json({
+      success: true,
+      message: "Refetch queued; next reconciliation pass will pick it up",
+      entryId: id,
+      refetchRequestedAt: doc.ledger[idx].refetchRequestedAt,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/:id/refetch failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to queue refetch" });
+  }
+});
+
+router.post("/unreconciled/:id/override", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+
+    const validated = validateFeeOverride(req.body);
+    if ("error" in validated) {
+      return res.status(400).json({ success: false, error: validated.error });
+    }
+
+    const doc = await readUserDoc(userId);
+    const idx = doc.ledger.findIndex((e) => e.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Entry not found" });
+
+    const before = doc.ledger[idx] as unknown as LedgerEntryForErp;
+    const { entry: afterFees, adjustment } = applyFeeOverride(before, validated.ok, userId);
+
+    // Recompute derived financials (eBay path: granular fees + actualShipping subtract on top).
+    const granularSum =
+      (afterFees.finalValueFee ?? 0)
+      + (afterFees.paymentProcessingFee ?? 0)
+      + (afterFees.promotedListingFee ?? 0)
+      + (afterFees.adFee ?? 0)
+      + (afterFees.otherFees ?? 0);
+    const financials = computeLedgerFinancials({
+      grossProceeds: afterFees.grossProceeds,
+      feesTotal: granularSum,
+      tax: afterFees.source === "ebay" ? 0 : afterFees.tax,
+      shipping: afterFees.source === "ebay" ? 0 : afterFees.shipping,
+      gradingCost: afterFees.gradingCost ?? null,
+      suppliesCost: afterFees.suppliesCost ?? null,
+      costBasisSold: afterFees.costBasisSold,
+      netPayoutOverride: afterFees.netPayout ?? null,
+    });
+
+    const finalEntry = {
+      ...afterFees,
+      netProceeds: financials.netProceeds,
+      realizedProfitLoss: financials.realizedProfitLoss,
+      realizedProfitLossPct: financials.realizedProfitLossPct,
+    };
+    doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
+    await writeUserDoc(userId, doc);
+
+    res.json({ success: true, entry: finalEntry, adjustment });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/:id/override failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to apply override" });
+  }
+});
+
+// ─── CF-ERP-EXPANSION-#7 Trades ────────────────────────────────────────────
+
+router.post("/trades", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const tradeDateRaw = typeof body.tradeDate === "string" && body.tradeDate.trim()
+      ? body.tradeDate.trim()
+      : new Date().toISOString();
+    const tradeDate = new Date(tradeDateRaw);
+    if (Number.isNaN(tradeDate.getTime())) {
+      return res.status(400).json({ success: false, error: "tradeDate must be a valid ISO timestamp" });
+    }
+    const cashRaw = body.cashToMe;
+    const cashToMe = typeof cashRaw === "number" && Number.isFinite(cashRaw) ? cashRaw : 0;
+    const outgoingRaw = Array.isArray(body.outgoing) ? body.outgoing : null;
+    if (!outgoingRaw || outgoingRaw.length === 0) {
+      return res.status(400).json({ success: false, error: "outgoing[] is required (at least 1 card)" });
+    }
+    const incomingRaw = Array.isArray(body.incoming) ? body.incoming : [];
+
+    const VALID_FMV_SOURCE: ReadonlySet<string> = new Set(["compiq", "manual"]);
+
+    const outgoing = outgoingRaw.map((o: any) => {
+      const fmvSource = String(o?.fmvSource ?? "");
+      if (!VALID_FMV_SOURCE.has(fmvSource)) {
+        throw new Error('outgoing.fmvSource must be "compiq" or "manual"');
+      }
+      return {
+        holdingId: String(o.holdingId ?? ""),
+        fmvAtTrade: Number(o.fmvAtTrade),
+        fmvSource: fmvSource as "compiq" | "manual",
+      };
+    });
+    const incoming = incomingRaw.map((i: any) => {
+      const fmvSource = String(i?.fmvSource ?? "");
+      if (!VALID_FMV_SOURCE.has(fmvSource)) {
+        throw new Error('incoming.fmvSource must be "compiq" or "manual"');
+      }
+      return {
+        cardsightCardId: typeof i.cardsightCardId === "string" ? i.cardsightCardId : undefined,
+        cardTitle: String(i.cardTitle ?? "").trim(),
+        grade: typeof i.grade === "string" ? i.grade : undefined,
+        fmvAtTrade: Number(i.fmvAtTrade),
+        fmvSource: fmvSource as "compiq" | "manual",
+        playerName: typeof i.playerName === "string" ? i.playerName : undefined,
+        cardYear: typeof i.cardYear === "number" ? i.cardYear : undefined,
+        setName: typeof i.setName === "string" ? i.setName : undefined,
+        parallel: typeof i.parallel === "string" ? i.parallel : undefined,
+        gradeCompany: typeof i.gradeCompany === "string" ? i.gradeCompany : undefined,
+        gradeValue: typeof i.gradeValue === "number" ? i.gradeValue : undefined,
+      };
+    });
+
+    // Reuse sales-tracking validator for the trade-level optional channel +
+    // location fields so iOS can post them with the same shape as a sale.
+    const stParsed = parseSalesTrackingFields({
+      salesChannel: body.salesChannel,
+      saleLocation: body.saleLocation,
+      paymentMethod: body.cashPaymentMethod,
+    });
+    if ("error" in stParsed) {
+      return res.status(400).json({ success: false, error: stParsed.error });
+    }
+
+    const counterparty = typeof body.counterparty === "string" ? body.counterparty.trim().slice(0, 100) : undefined;
+    const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : undefined;
+
+    const result = await recordTradeTransaction({
+      userId,
+      tradeDate: tradeDate.toISOString(),
+      counterparty: counterparty || undefined,
+      salesChannel: stParsed.ok.salesChannel as SalesChannel | undefined,
+      saleLocation: stParsed.ok.saleLocation as SaleLocation | undefined,
+      cashToMe,
+      cashPaymentMethod: stParsed.ok.paymentMethod as PaymentMethod | undefined,
+      note: note || undefined,
+      outgoing,
+      incoming,
+    });
+
+    res.status(201).json({
+      success: true,
+      trade: result.trade,
+      outgoingHoldingsRemoved: result.outgoingHoldingsRemoved,
+      incomingHoldingsCreated: result.incomingHoldingsCreated,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /trades create failed:", err?.message ?? err);
+    res.status(400).json({ success: false, error: err?.message ?? "Failed to record trade" });
+  }
+});
+
+router.get("/trades", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const trades = await listTradesForUser(userId);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    let filtered = trades;
+    if (from) filtered = filtered.filter((t) => t.tradeDate.slice(0, 10) >= from);
+    if (to) filtered = filtered.filter((t) => t.tradeDate.slice(0, 10) <= to);
+    res.json({ success: true, trades: filtered, count: filtered.length });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /trades list failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to list trades" });
+  }
+});
+
+router.get("/trades/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const tradeId = String(req.params.id ?? "").trim();
+    if (!tradeId) return res.status(400).json({ success: false, error: "id is required" });
+    const trade = await getTradeForUser(userId, tradeId);
+    if (!trade) return res.status(404).json({ success: false, error: "Trade not found" });
+    res.json({ success: true, trade });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /trades/:id failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to load trade" });
   }
 });
 
