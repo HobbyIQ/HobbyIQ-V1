@@ -2,6 +2,68 @@
 
 ---
 
+## 2026-06-04 — iOS full surface built (Phases 1.1-10)
+
+**Commit:** `af350ba` on `main`. Build clean (0 errors). 36 files changed, +10,023 / −622 lines.
+
+### Built
+
+**StoreKit2 subscription spine.** Purchase flow → POST /api/subscriptions/verify → GET /api/entitlements/me as the single source of truth. SubscriptionManager replaces SubscriptionService + SubscriptionStore (both deleted). Configuration.storekit for local sandbox testing with the 3 product IDs (com.hobbyiq.{collector,investor,proseller}.monthly).
+
+**Entitlement gating + caps.** TierMatrix mirrors backend entitlements.ts — GatedFeature static constants (watchlist, dailyIQBriefs, advancedAlerts, erpReconciliation, ebayIntegration) + GatedCap shared budgets (priceAlerts). `.lockedOverlay(feature:subscriptionManager:upgradeAction:)` modifier across all gated surfaces. PaywallView with tier picker (takes sessionViewModel, NOT EnvironmentObject).
+
+**Account deletion (5.1.1(v)).** DELETE /api/account with two-step confirmation alert. Satisfies Apple Guideline 5.1.1(v) for App Store review.
+
+**CompIQ expansion.** TrendIQ composite + full endpoints; market-trend indexes (single player, batch, top-movers); what-if/grade-premium/sell-window/bulk/comps-by-player surfaces; variant picker; priced card detail view; MarketTrendView with movers list.
+
+**Portfolio expansion.** Health score, calibration report, weekly brief, holding history, single-holding refresh, batch reprice. Card scan via SAS upload flow (requestCardPhotoSAS → uploadImageToSAS → blobUrl → identify).
+
+**ERP suite.** Manual reconciliation as primary workflow (auto reads "coming" since Finances is in shadow). P&L, analytics, timeseries, valuation surfaces. Expenses CRUD with categories. Trade transactions. 1099-K per-rail + accounting export + tax export. Aging buckets. Fee overrides. Gated erpReconciliation (pro_seller).
+
+**DailyIQ.** Full brief (gated investor+), dashboard player stats, search. Watchlist CRUD (add/remove/search/top/suggest). Brief tab with risers/fallers/breakouts sections.
+
+**Alerts.** Price alerts CRUD with cap enforcement per tier. Advanced rules CRUD with 5 accepted condition types (predicted_direction, predicted_pct_move, trendiq_composite, trendiq_coverage_min, confidence_min). Crossing-conditions (price_crosses, predicted_price_crosses) **omitted by design** — backend rejects them. 3-tab layout (Inbox, Price Alerts, Advanced Rules).
+
+**eBay listing management.** GET /api/ebay/policies → seller policies selector (payment/fulfillment/return pickers, auto-selects defaults) integrated into EbayListingDraftView. GET /api/ebay/connect/restart → reconnect button in EbayConnectView (opens fresh OAuth URL). New EbayListingManageView for listing lifecycle — GET status, PUT revise (re-opens draft), POST end (destructive confirmation). PortfolioEbayListingRequest extended with policyId fields.
+
+**SAS photo migration.** All 4 callers of old base64 uploadCardPhoto migrated to SAS flow: PortfolioIQViewModel.uploadCardPhoto, CompatibilityShims AddPortfolioCardViewModel.uploadPhoto, EbayListingDraftView (via ViewModel), PortfolioDetailPhotosCard (via ViewModel). Old APIService.uploadCardPhoto method + CardPhotoUploadRequest struct **deleted** (0 callers remain).
+
+**Unified card search.** POST /api/search/cards → new CardSearchView with candidate cards (image, title, grade badges, confidence, source, detected mode). Integrated into CompIQView as "Card Database Search" tool button.
+
+**Username change.** POST /api/auth/username → UsernameChangeSheet in AccountView. Text field with 3-char min validation, error display for 400 (invalid format) / 409 (taken).
+
+**PlayerIQ top + history.** GET /api/playeriq/top → top players section in PlayerIQView (loads on appear, tap-to-search). GET /api/playeriq/{name}/history → score history section with sparkline chart + last 10 data points. POST /api/playeriq/refresh **skipped** (admin-only, x-admin-key header).
+
+### Deleted
+
+- `SubscriptionService.swift` — replaced by SubscriptionManager
+- `SubscriptionStore.swift` — replaced by SubscriptionManager
+- `APIService.uploadCardPhoto(imageData:mimeType:side:sessionId:)` — old base64 method, all callers migrated to SAS
+- `CardPhotoUploadRequest` struct — no longer needed
+
+### GO-LIVE CHECKLIST (not code)
+
+1. **Sandbox purchase test.** Sandbox Apple ID + the 3 products LIVE in App Store Connect (com.hobbyiq.{collector,investor,proseller}.monthly). Local .storekit can't validate against Apple root certs; the real purchase → verify → entitlement chain only proves out in sandbox.
+2. **APNs round-trip on a real device.** Sandbox-side APNs token flow has not exercised the production p8.
+3. **Graded-card scan verification** against a real slab (scanner UI now exists).
+4. **Production ASSN webhook URL** = .../api/subscriptions/notifications (only Sandbox set today).
+5. **Apple review submission** (account deletion satisfies 5.1.1(v)).
+
+### POST-LAUNCH (on data)
+
+- **Finances shadow flip** on first real sale (verify mapping → set `EBAY_FINANCES_ENRICHMENT_SHADOW=false`).
+- **ML Phase B** when outcome tuples accumulate (~1k matured predictions).
+
+### iOS NOTES
+
+- TierMatrix is a local mirror of entitlements.ts — keep in sync on any backend tier change.
+- Sign-out doesn't invalidate server-side session (backend carry-forward).
+- Auto-reconcile UI reads "coming" (Finances enrichment in shadow mode).
+- Advanced-alert crossing-conditions omitted by design (backend rejects them).
+- CardPhotoUploadResponse extended with `init(sasUrl:)` for synthetic construction in SAS flow.
+
+---
+
 ## 2026-06-04 — Backend feature-complete + hardened; ready for iOS phase
 
 **Deployed SHA:** `fe50127` on `HobbyIQ3` (App Service). Pushed to `origin/main`. `tsc` + `vitest` green at 2046 tests.
