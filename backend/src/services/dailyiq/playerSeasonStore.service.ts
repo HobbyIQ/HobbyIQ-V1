@@ -127,7 +127,7 @@ async function getContainer(): Promise<Container | null> {
       return container;
     } catch (err: any) {
       console.error(
-        "[dailyiq.playerSeason] Cosmos init failed; falling back to disk store:",
+        "[cosmos][dailyiq.playerSeason] Cosmos init failed; falling back to disk store:",
         err?.message ?? err,
       );
       _cosmosDisabled = true;

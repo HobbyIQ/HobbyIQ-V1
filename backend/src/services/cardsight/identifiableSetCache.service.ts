@@ -102,7 +102,7 @@ async function getContainer(): Promise<Container | null> {
       console.log("[identifiableSetCache] Cosmos cardsight_inventory ready");
       return container;
     } catch (err: any) {
-      console.error(`[identifiableSetCache] Cosmos init failed: ${err.message}`);
+      console.error(`[cosmos][identifiableSetCache] Cosmos init failed: ${err.message}`);
       return null;
     }
   })();

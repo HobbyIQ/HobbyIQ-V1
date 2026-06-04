@@ -97,7 +97,7 @@ async function getContainer(): Promise<Container | null> {
       console.log("[webhookEvents] Cosmos connected, container=", containerId);
       return container;
     } catch (err: any) {
-      console.error("[webhookEvents] Cosmos init failed:", err?.message ?? String(err));
+      console.error("[cosmos][ebay][webhookEvents] Cosmos init failed:", err?.message ?? String(err));
       return null;
     }
   })();
@@ -130,7 +130,7 @@ export async function eventExists(notificationId: string): Promise<boolean> {
   } catch (err: any) {
     if (err?.code === 404) return false;
     console.error(
-      "[webhookEvents] eventExists read failed:",
+      "[ebay][webhookEvents] eventExists read failed:",
       err?.message ?? String(err),
     );
     return false;
@@ -188,7 +188,7 @@ export async function captureEvent(input: {
       return { duplicate: true, captured: false };
     }
     console.error(
-      "[webhookEvents] captureEvent write failed:",
+      "[ebay][webhookEvents] captureEvent write failed:",
       err?.message ?? String(err),
     );
     return { duplicate: false, captured: false };
@@ -233,7 +233,7 @@ export async function markEventProcessed(
     await container.items.upsert(updated);
   } catch (err: any) {
     console.error(
-      "[webhookEvents] markEventProcessed failed:",
+      "[ebay][webhookEvents] markEventProcessed failed:",
       err?.message ?? String(err),
     );
   }
@@ -275,7 +275,7 @@ export async function markEventError(
     await container.items.upsert(updated);
   } catch (err: any) {
     console.error(
-      "[webhookEvents] markEventError failed:",
+      "[ebay][webhookEvents] markEventError failed:",
       err?.message ?? String(err),
     );
   }
@@ -305,7 +305,7 @@ export async function readEvent(
   } catch (err: any) {
     if (err?.code === 404) return null;
     console.error(
-      "[webhookEvents] readEvent failed:",
+      "[ebay][webhookEvents] readEvent failed:",
       err?.message ?? String(err),
     );
     return null;

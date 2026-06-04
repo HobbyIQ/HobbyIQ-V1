@@ -52,7 +52,7 @@ function saveFileStore(): void {
     fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
     fs.writeFileSync(STORE_PATH, JSON.stringify(FILE_STORE, null, 2), "utf8");
   } catch (err) {
-    console.error("[ebayTokenStore] Failed to persist file store:", err);
+    console.error("[ebay][ebayTokenStore] Failed to persist file store:", err);
   }
 }
 
@@ -69,7 +69,7 @@ async function getContainer(): Promise<Container | null> {
       const containerId = process.env.COSMOS_EBAY_TOKENS_CONTAINER ?? "ebay_connections";
 
       if (!endpoint && !connStr) {
-        console.warn("[ebayTokenStore] No Cosmos config, using file fallback");
+        console.warn("[ebay][ebayTokenStore] No Cosmos config, using file fallback");
         return null;
       }
 
@@ -92,7 +92,7 @@ async function getContainer(): Promise<Container | null> {
       console.log("[ebayTokenStore] Cosmos connected");
       return container;
     } catch (err: any) {
-      console.error("[ebayTokenStore] Cosmos init failed:", err?.message ?? String(err));
+      console.error("[cosmos][ebay][ebayTokenStore] Cosmos init failed:", err?.message ?? String(err));
       return null;
     }
   })();
@@ -157,7 +157,7 @@ export async function listConnectedUserIds(): Promise<string[]> {
       }
     } catch (err: any) {
       console.error(
-        "[ebayTokenStore] listConnectedUserIds Cosmos query failed:",
+        "[cosmos][ebay][ebayTokenStore] listConnectedUserIds Cosmos query failed:",
         err?.message ?? String(err),
       );
     }
@@ -219,7 +219,7 @@ export async function findUserIdByEbayUserId(
     return resources[0]?.userId ?? null;
   } catch (err: any) {
     console.error(
-      "[ebayTokenStore] findUserIdByEbayUserId query failed:",
+      "[cosmos][ebay][ebayTokenStore] findUserIdByEbayUserId query failed:",
       err?.message ?? String(err),
     );
     return null;

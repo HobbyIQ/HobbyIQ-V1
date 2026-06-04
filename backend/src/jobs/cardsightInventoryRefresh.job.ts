@@ -66,8 +66,11 @@ function msUntilNextRun(hour: number, minute: number, tz: string): number {
 export async function runInventoryRefreshJob(): Promise<RefreshResult> {
   console.log("[cardsightInventoryRefresh.job] starting refresh");
   const result = await refreshIdentifiableSetInventory();
+  // CF-OPS-HARDENING-1b (2026-06-04): consistent `[<jobName>] done` heartbeat
+  // line on success, so the per-job log-search alert can pattern-match a
+  // single keyword across all 8 schedulers.
   console.log(
-    `[cardsightInventoryRefresh.job] refresh complete total=${result.totalCount} ` +
+    `[cardsightInventoryRefresh.job] done total=${result.totalCount} ` +
     `pages=${result.pagesFetched} durationMs=${result.durationMs}`,
   );
   return result;

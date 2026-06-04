@@ -11,6 +11,7 @@ import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.j
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
 import { startPredictionOutcomesCaptureJob } from "./jobs/predictionOutcomesCapture.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
+import { startGetPricingBudgetEmit } from "./services/compiq/cardsight.client.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
 
@@ -110,6 +111,14 @@ app.listen(port, "0.0.0.0", () => {
     startCacheHitRateEmit();
   } catch (err: any) {
     console.error("[server] startCacheHitRateEmit failed:", err?.message ?? err);
+  }
+  // CF-OPS-HARDENING-1a (2026-06-04): hourly Cardsight getPricing budget
+  // delta emit. Feeds Azure Monitor log-search alerts at 75/90/100% of
+  // the 100k/mo soft quota.
+  try {
+    startGetPricingBudgetEmit();
+  } catch (err: any) {
+    console.error("[server] startGetPricingBudgetEmit failed:", err?.message ?? err);
   }
   // Phase 1 CH-removal-v2 fix (commit 8d6d769): prime the resolveCardId LRU
   // cache for popular cards so the first iOS request after a container

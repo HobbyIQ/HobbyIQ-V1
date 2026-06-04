@@ -48,7 +48,7 @@ async function getDb(): Promise<Database | null> {
     _db = client.database(dbName);
     return _db;
   } catch (err: any) {
-    console.warn("[ops.report] cosmos init failed:", err?.message ?? err);
+    console.warn("[cosmos][ops.report] cosmos init failed:", err?.message ?? err);
     return null;
   }
 }

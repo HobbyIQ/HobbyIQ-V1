@@ -19,13 +19,16 @@ const DEFAULT_TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 3;
 
 // Lightweight structured logger (matches old createLogger("cardsight.client") shape).
+// CF-OPS-HARDENING-1c (2026-06-04): every emitted line carries
+// `subsystem: "cardsight"` so the Azure Monitor error-spike alert query can
+// pivot on a single dimension regardless of source file.
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.client", ...fields })),
+    console.log(JSON.stringify({ event, source: "cardsight.client", subsystem: "cardsight", ...fields })),
   warn: (event: string, fields: Record<string, unknown> = {}) =>
-    console.warn(JSON.stringify({ event, source: "cardsight.client", ...fields })),
+    console.warn(JSON.stringify({ event, source: "cardsight.client", subsystem: "cardsight", ...fields })),
   debug: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.client", level: "debug", ...fields })),
+    console.log(JSON.stringify({ event, source: "cardsight.client", subsystem: "cardsight", level: "debug", ...fields })),
 };
 
 const CATALOG_TTL_SEC = 6 * 3600;  // 6h
@@ -460,6 +463,14 @@ async function _getPricingRaw(
   cardId: string,
   parallelId: string | null,
 ): Promise<CardsightPricingResponse> {
+  // CF-OPS-HARDENING-1a (2026-06-04): every LIVE getPricing call against
+  // Cardsight increments the budget counter. Cache hits never reach here
+  // (cacheWrap short-circuits in getPricing()), so this counts exactly
+  // the calls that draw from the 100k/mo quota. The parallel-fallback
+  // path in _getPricing() invokes _getPricingRaw a second time on its
+  // own — that second HTTP call counts separately, which is correct
+  // (Cardsight bills it separately).
+  incrementGetPricingLiveCall();
   try {
     const params = new URLSearchParams();
     if (parallelId) params.set("parallel_id", parallelId);
@@ -795,4 +806,87 @@ export async function checkSetIdentifiable(
     set_id: typeof body.set_id === "string" ? body.set_id : setId,
     is_identifiable: body.is_identifiable === true,
   };
+}
+
+// ─── CF-OPS-HARDENING-1a: getPricing budget tracker ─────────────────────────
+//
+// Cardsight's pricing endpoint sits behind a 100k/mo soft quota. Budget
+// alerts need accurate month-to-date totals, so we count only LIVE calls
+// (cache hits never reach _getPricingRaw).
+//
+// Choice: hourly-delta structured log emit (NOT per-call traces, NOT App
+// Insights customMetric). Why:
+//
+//   - Per-call traces are subject to App Insights ingestion sampling at
+//     elevated volumes; cumulative MTD sums become unreliable, which is
+//     unacceptable for a budget signal.
+//   - One structured log line per instance per hour sits far below any
+//     sampling threshold and reliably ingests. The Azure Monitor alert
+//     query SUMs `live_calls` across all hourly emits across all
+//     instances for the current month.
+//   - Restart loss is bounded to one hour of one instance's traffic;
+//     budget thresholds (75/90/100%) tolerate this — at worst the alert
+//     fires one hour later than reality.
+//   - customMetric was considered but is SDK-config-dependent and harder
+//     to verify sampling-off than a single log line that matches the
+//     established `compiq_cache_hit_rate` precedent.
+
+const _getPricingBudget = {
+  liveCalls: 0,
+  timer: null as NodeJS.Timeout | null,
+};
+
+function incrementGetPricingLiveCall(): void {
+  _getPricingBudget.liveCalls += 1;
+}
+
+function currentBudgetMonth(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function emitGetPricingBudgetHourly(): void {
+  const live = _getPricingBudget.liveCalls;
+  _getPricingBudget.liveCalls = 0;
+  console.log(JSON.stringify({
+    event: "cardsight_getpricing_budget",
+    source: "cardsight.client",
+    intervalSec: 3600,
+    month: currentBudgetMonth(),
+    live_calls: live,
+    instance: process.env.WEBSITE_INSTANCE_ID ?? "local",
+  }));
+}
+
+export function startGetPricingBudgetEmit(): void {
+  if (process.env.GETPRICING_BUDGET_EMIT_DISABLED === "true") {
+    console.log("[cardsight] getPricing budget emit disabled via GETPRICING_BUDGET_EMIT_DISABLED");
+    return;
+  }
+  if (_getPricingBudget.timer) return;
+  _getPricingBudget.timer = setInterval(emitGetPricingBudgetHourly, 60 * 60 * 1000);
+  console.log("[cardsight] getPricing budget emit scheduled hourly");
+}
+
+export function stopGetPricingBudgetEmit(): void {
+  if (_getPricingBudget.timer) {
+    clearInterval(_getPricingBudget.timer);
+    _getPricingBudget.timer = null;
+  }
+}
+
+// Test-only accessors so unit tests can assert counter behavior without
+// waiting for the hourly emit.
+export function __getPricingLiveCallCountForTests(): number {
+  return _getPricingBudget.liveCalls;
+}
+export function __resetGetPricingBudgetForTests(): void {
+  _getPricingBudget.liveCalls = 0;
+  if (_getPricingBudget.timer) {
+    clearInterval(_getPricingBudget.timer);
+    _getPricingBudget.timer = null;
+  }
+}
+export function __emitGetPricingBudgetForTests(): void {
+  emitGetPricingBudgetHourly();
 }
