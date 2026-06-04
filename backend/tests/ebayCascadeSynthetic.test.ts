@@ -187,17 +187,26 @@ describe("eBay ITEM_SOLD → ledger → manual-override reconcile (synthetic end
     expect(recon.feeAdjustments[0].newValues.needsReconciliation).toBe(false);
     expect(recon.feeAdjustments[0].newValues.reconciledVia).toBe("manual_override");
 
-    // Recompute check: netProceeds = grossProceeds - granular platform fees.
-    // The override path's `granularSum` SUMS platform fees only (finalValue +
-    // paymentProcessing + promoted + ad + other) and treats actualShippingCost
-    // as a separate accounting field NOT subtracted from netProceeds here.
-    // = 250 - (32 + 8 + 0 + 0 + 0) = 210
-    // (whether actualShippingCost SHOULD reduce netProceeds on the manual-
-    // override path is a Group D follow-up — it didn't surface on the
-    // ebay-Finances enrichment path because that path uses netPayout as the
-    // authoritative basis instead.)
-    expect(recon.netProceeds).toBe(210);
-    // realizedProfitLoss = netProceeds - costBasis = 210 - 80 = 130
-    expect(recon.realizedProfitLoss).toBe(130);
+    // CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): net-basis fix.
+    // The override path now INCLUDES actualShippingCost in the granular-fee
+    // deduction (was a Group A follow-up). Aligns the manual-override
+    // formula with the Finances enrichment formula:
+    //   manual fallback: gross - (FVF + PP + promoted + ad + other +
+    //                             actualShippingCost) - gradingCost - suppliesCost
+    //   Finances/netPayout: netPayout - gradingCost - suppliesCost
+    // Both produce identical netProceeds given identical inputs (operator
+    // can also supply netPayout directly to skip the fallback derivation).
+    //
+    // = 250 - (32 + 8 + 0 + 0 + 0 + 5) = 205
+    //
+    // For calculated/buyer-pays-shipping listings where the buyer's shipping
+    // payment approximately offsets the seller's label cost (and that buyer
+    // shipping is NOT in our grossProceeds), the operator should supply
+    // netPayout directly OR set actualShippingCost: 0 — keeps the derivation
+    // honest. For free-shipping listings (this test's implicit case), the
+    // actualShippingCost is a real reduction in seller net.
+    expect(recon.netProceeds).toBe(205);
+    // realizedProfitLoss = netProceeds - costBasis = 205 - 80 = 125
+    expect(recon.realizedProfitLoss).toBe(125);
   });
 });

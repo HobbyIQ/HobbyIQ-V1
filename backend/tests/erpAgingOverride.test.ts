@@ -39,14 +39,15 @@ function unrec(daysOld: number, over: Partial<LedgerEntryForErp> = {}): LedgerEn
   };
 }
 
-describe("buildAging — buckets 0-7 / 8-30 / >30", () => {
-  it("buckets unreconciled entries correctly", () => {
-    const ledger = [unrec(3), unrec(15), unrec(45), unrec(60)];
+describe("buildAging — buckets 0-7 / 8-30 / 31-60 / >60", () => {
+  it("buckets unreconciled entries correctly (CF-EBAY-FINANCES-ENRICHMENT Group D)", () => {
+    const ledger = [unrec(3), unrec(15), unrec(45), unrec(75)];
     const a = buildAging(ledger, NOW);
     const byBucket = Object.fromEntries(a.buckets.map((b) => [b.bucket, b.count]));
     expect(byBucket["0-7d"]).toBe(1);
     expect(byBucket["8-30d"]).toBe(1);
-    expect(byBucket[">30d"]).toBe(2);
+    expect(byBucket["31-60d"]).toBe(1);
+    expect(byBucket[">60d"]).toBe(1);
     expect(a.totalUnreconciled).toBe(4);
   });
 

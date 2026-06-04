@@ -12,6 +12,7 @@ import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.jo
 import { startPredictionOutcomesCaptureJob } from "./jobs/predictionOutcomesCapture.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { startGetPricingBudgetEmit } from "./services/compiq/cardsight.client.js";
+import { startEbayFinancesEnrichmentJob } from "./jobs/ebayFinancesEnrichment.job.js";
 import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
 
@@ -119,6 +120,15 @@ app.listen(port, "0.0.0.0", () => {
     startGetPricingBudgetEmit();
   } catch (err: any) {
     console.error("[server] startGetPricingBudgetEmit failed:", err?.message ?? err);
+  }
+  // CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): 6h cadence; shadow
+  // mode default ON. Switches to active when EBAY_FINANCES_ENRICHMENT_SHADOW=
+  // false (deploy-time env var change; no code change). First run +120s
+  // post-boot — keeps it out of the cold-start critical path.
+  try {
+    startEbayFinancesEnrichmentJob();
+  } catch (err: any) {
+    console.error("[server] startEbayFinancesEnrichmentJob failed:", err?.message ?? err);
   }
   // Phase 1 CH-removal-v2 fix (commit 8d6d769): prime the resolveCardId LRU
   // cache for popular cards so the first iOS request after a container

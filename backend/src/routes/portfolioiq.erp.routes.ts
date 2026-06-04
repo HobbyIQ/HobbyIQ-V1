@@ -507,13 +507,29 @@ router.post("/unreconciled/:id/override", async (req: Request, res: Response) =>
     const before = doc.ledger[idx] as unknown as LedgerEntryForErp;
     const { entry: afterFees, adjustment } = applyFeeOverride(before, validated.ok, userId);
 
-    // Recompute derived financials (eBay path: granular fees + actualShipping subtract on top).
+    // CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): net-basis fix.
+    //
+    // PREFERRED: if the operator supplied netPayout, computeLedgerFinancials
+    // uses the eBay-authoritative formula `netPayout - gradingCost -
+    // suppliesCost` (the netPayoutOverride branch). Aligns the manual path
+    // with the Finances enrichment path bit-for-bit.
+    //
+    // FALLBACK: when netPayout is null, derive from gross minus granular
+    // fees. INCLUDES actualShippingCost in the deduction — the long-
+    // standing route comment already declared this intent ("granular fees
+    // + actualShipping subtract on top"); the missing addition was a bug
+    // that under-counted seller costs on free-shipping listings. For
+    // calculated/buyer-pays-shipping listings where the seller's label
+    // cost is approximately offset by the buyer's shipping payment (not
+    // in our `grossProceeds`), the operator should supply `netPayout`
+    // directly OR set `actualShippingCost: 0`.
     const granularSum =
       (afterFees.finalValueFee ?? 0)
       + (afterFees.paymentProcessingFee ?? 0)
       + (afterFees.promotedListingFee ?? 0)
       + (afterFees.adFee ?? 0)
-      + (afterFees.otherFees ?? 0);
+      + (afterFees.otherFees ?? 0)
+      + (afterFees.actualShippingCost ?? 0);
     const financials = computeLedgerFinancials({
       grossProceeds: afterFees.grossProceeds,
       feesTotal: granularSum,

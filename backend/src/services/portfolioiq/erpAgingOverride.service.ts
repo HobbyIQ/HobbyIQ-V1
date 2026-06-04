@@ -15,11 +15,24 @@ import type { LedgerFeeAdjustment, ReconciledVia } from "./portfolioStore.servic
 
 // ─── Aging ─────────────────────────────────────────────────────────────────
 
-export type AgingBucket = "0-7d" | "8-30d" | ">30d";
+// CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): added 31-60d + >60d
+// buckets. >60d carries cutoffWarning=true — the eBay Finances API
+// restricts lookups to the last 90 days, so an unreconciled eBay entry
+// past day 60 is approaching the auto-enrichment cutoff. iOS surfaces
+// this with a "ACT NOW: 90-day cutoff approaching" banner. Past day 90
+// only manual override works; the Finances job filters those out.
+export type AgingBucket = "0-7d" | "8-30d" | "31-60d" | ">60d";
+
+export interface AgingBucketRow {
+  bucket: AgingBucket;
+  count: number;
+  entryIds: string[];
+  cutoffWarning?: true;
+}
 
 export interface AgingResponse {
   asOf: string;
-  buckets: Array<{ bucket: AgingBucket; count: number; entryIds: string[] }>;
+  buckets: AgingBucketRow[];
   totalUnreconciled: number;
 }
 
@@ -30,21 +43,24 @@ export function buildAging(
   const unreconciled = ledger.filter((e) => !isReconciled(e));
   const b0_7: string[] = [];
   const b8_30: string[] = [];
-  const b30: string[] = [];
+  const b31_60: string[] = [];
+  const b60: string[] = [];
   for (const e of unreconciled) {
     const t = Date.parse(e.soldAt);
-    if (!Number.isFinite(t)) { b30.push(e.id); continue; }
+    if (!Number.isFinite(t)) { b60.push(e.id); continue; }
     const days = Math.floor((nowMs - t) / (24 * 60 * 60 * 1000));
     if (days <= 7) b0_7.push(e.id);
     else if (days <= 30) b8_30.push(e.id);
-    else b30.push(e.id);
+    else if (days <= 60) b31_60.push(e.id);
+    else b60.push(e.id);
   }
   return {
     asOf: new Date(nowMs).toISOString(),
     buckets: [
       { bucket: "0-7d", count: b0_7.length, entryIds: b0_7 },
       { bucket: "8-30d", count: b8_30.length, entryIds: b8_30 },
-      { bucket: ">30d", count: b30.length, entryIds: b30 },
+      { bucket: "31-60d", count: b31_60.length, entryIds: b31_60 },
+      { bucket: ">60d", count: b60.length, entryIds: b60, cutoffWarning: true },
     ],
     totalUnreconciled: unreconciled.length,
   };
@@ -164,6 +180,105 @@ export function applyFeeOverride(
     adjustedAt: nowIso,
     adjustedBy: userId,
     reason: override.reason,
+    priorValues: prior,
+    newValues,
+  };
+
+  merged.feeAdjustments = [...(entry.feeAdjustments ?? []), adjustment];
+
+  return { entry: merged, adjustment };
+}
+
+// ─── CF-EBAY-FINANCES-ENRICHMENT (Group D) ─────────────────────────────────
+//
+// applyFeeEnrichment mirrors applyFeeOverride but takes a pre-mapped
+// Finances result as the fee source instead of operator-supplied values,
+// and sets reconciledVia="ebay_finances" with adjustedBy="system:
+// ebay_finances".
+//
+// Net-basis: when netPayout is provided (Finances always provides it for
+// settled orders), the authoritative formula fires in computeLedgerFinancials:
+//   netProceeds = netPayout - gradingCost - suppliesCost
+// gradingCost + suppliesCost are NOT in the Finances response (they're
+// pre-sale + supply costs eBay never sees); they stay sourced from the
+// holding's existing values.
+//
+// Idempotency: a re-run with the same Finances input appends a SECOND
+// adjustment row (the audit array is append-only by design). The job
+// layer is responsible for filtering already-reconciled entries OUT of
+// the candidate set; this helper trusts its inputs.
+
+export interface FeeEnrichmentInput {
+  finalValueFee: number | null;
+  paymentProcessingFee: number | null;
+  promotedListingFee: number | null;
+  adFee: number | null;
+  otherFees: number | null;
+  netPayout: number | null;
+  actualShippingCost: number | null;
+}
+
+export interface AppliedEnrichment {
+  entry: LedgerEntryForErp;
+  adjustment: LedgerFeeAdjustment;
+}
+
+const ENRICHMENT_ADJUSTED_BY = "system:ebay_finances";
+const ENRICHMENT_REASON = "Auto-enriched from eBay Finances API";
+
+/**
+ * Apply a Finances-derived fee enrichment to an entry. Snapshots prior
+ * values into feeAdjustments[] (append-only) and returns the mutated
+ * entry + the adjustment record. CALLER is responsible for re-running
+ * computeLedgerFinancials and persisting (mirrors applyFeeOverride).
+ */
+export function applyFeeEnrichment(
+  entry: LedgerEntryForErp,
+  enrichment: FeeEnrichmentInput,
+  nowIso: string = new Date().toISOString(),
+): AppliedEnrichment {
+  const prior: LedgerFeeAdjustment["priorValues"] = {
+    finalValueFee: entry.finalValueFee ?? null,
+    paymentProcessingFee: entry.paymentProcessingFee ?? null,
+    promotedListingFee: entry.promotedListingFee ?? null,
+    adFee: entry.adFee ?? null,
+    otherFees: entry.otherFees ?? null,
+    netPayout: entry.netPayout ?? null,
+    actualShippingCost: entry.actualShippingCost ?? null,
+    needsReconciliation: entry.needsReconciliation === true,
+    reconciledVia: entry.reconciledVia,
+  };
+
+  const merged: LedgerEntryForErp = {
+    ...entry,
+    finalValueFee: enrichment.finalValueFee,
+    paymentProcessingFee: enrichment.paymentProcessingFee,
+    promotedListingFee: enrichment.promotedListingFee,
+    adFee: enrichment.adFee,
+    otherFees: enrichment.otherFees,
+    netPayout: enrichment.netPayout,
+    actualShippingCost: enrichment.actualShippingCost,
+    needsReconciliation: false,
+    reconciledVia: "ebay_finances" as ReconciledVia,
+  };
+
+  const newValues: LedgerFeeAdjustment["newValues"] = {
+    finalValueFee: merged.finalValueFee ?? null,
+    paymentProcessingFee: merged.paymentProcessingFee ?? null,
+    promotedListingFee: merged.promotedListingFee ?? null,
+    adFee: merged.adFee ?? null,
+    otherFees: merged.otherFees ?? null,
+    netPayout: merged.netPayout ?? null,
+    actualShippingCost: merged.actualShippingCost ?? null,
+    needsReconciliation: false,
+    reconciledVia: "ebay_finances",
+  };
+
+  const adjustment: LedgerFeeAdjustment = {
+    adjustmentId: randomUUID(),
+    adjustedAt: nowIso,
+    adjustedBy: ENRICHMENT_ADJUSTED_BY,
+    reason: ENRICHMENT_REASON,
     priorValues: prior,
     newValues,
   };
