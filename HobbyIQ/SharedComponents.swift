@@ -11,9 +11,9 @@ struct SearchBarView: View {
     var onSubmit: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.small) {
+        HStack(spacing: HobbyIQTheme.Spacing.small) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
             TextField(placeholder, text: $text)
                 .textInputAutocapitalization(.words)
@@ -25,7 +25,7 @@ struct SearchBarView: View {
                     text = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
                 .buttonStyle(.plain)
             }
@@ -46,7 +46,7 @@ struct SectionCardView<Content: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.small) {
+        VStack(spacing: HobbyIQTheme.Spacing.small) {
             HStack(spacing: 10) {
                 Rectangle()
                     .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
@@ -66,7 +66,7 @@ struct SectionCardView<Content: View>: View {
             if let subtitle, subtitle.isEmpty == false {
                 Text(subtitle)
                     .font(.subheadline)
-                    .secondaryTextStyle()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
 
@@ -74,28 +74,29 @@ struct SectionCardView<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity)
-        .cardStyle()
+        .padding(HobbyIQTheme.Spacing.medium)
+        .hiqCardStyle()
     }
 }
 
 struct MetricPillView: View {
     let title: String
     let value: String
-    var accent: Color = Theme.Colors.textPrimary
+    var accent: Color = HobbyIQTheme.Colors.pureWhite
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             Text(value)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(accent)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Theme.Colors.background.opacity(0.72))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous))
+        .background(HobbyIQTheme.Colors.appBackground.opacity(0.72))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
     }
 }
 
@@ -115,11 +116,11 @@ struct ActionBadgeView: View {
     private var foregroundColor: Color {
         switch action {
         case .buy:
-            return Theme.Colors.accent
+            return HobbyIQTheme.Colors.electricBlue
         case .hold, .watch:
-            return Theme.Colors.caution
+            return HobbyIQTheme.Colors.warning
         case .trim, .sell:
-            return Theme.Colors.negative
+            return HobbyIQTheme.Colors.danger
         }
     }
 
@@ -132,15 +133,15 @@ struct ConfidenceMetaRow: View {
     let refreshMeta: RefreshMeta
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.small) {
+        HStack(spacing: HobbyIQTheme.Spacing.small) {
             Label(refreshMeta.relativeTimestamp, systemImage: "clock.arrow.circlepath")
                 .font(.caption)
-                .foregroundStyle(Theme.Colors.textSecondary)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
             if let confidence = refreshMeta.confidence {
                 Label("\(confidence)% confidence", systemImage: "gauge.with.dots.needle.50percent")
                     .font(.caption)
-                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
 
             Spacer()
@@ -158,7 +159,7 @@ struct RefreshMetaView: View {
             if let note = refreshMeta.note, note.isEmpty == false {
                 Text(note)
                     .font(.caption)
-                    .secondaryTextStyle()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,19 +174,19 @@ struct EmptyStateView: View {
     var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.medium) {
+        VStack(spacing: HobbyIQTheme.Spacing.medium) {
             Image(systemName: systemImage)
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Theme.Colors.accent)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
 
-            VStack(spacing: Theme.Spacing.xSmall) {
+            VStack(spacing: HobbyIQTheme.Spacing.xSmall) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Text(message)
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .secondaryTextStyle()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
 
             if let actionTitle, let action {
@@ -194,7 +195,8 @@ struct EmptyStateView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .cardStyle()
+        .padding(HobbyIQTheme.Spacing.medium)
+        .hiqCardStyle()
     }
 }
 
@@ -205,19 +207,19 @@ struct ErrorStateView: View {
     var retry: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.medium) {
+        VStack(spacing: HobbyIQTheme.Spacing.medium) {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Theme.Colors.negative)
+                .foregroundStyle(HobbyIQTheme.Colors.danger)
 
-            VStack(spacing: Theme.Spacing.xSmall) {
+            VStack(spacing: HobbyIQTheme.Spacing.xSmall) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Text(message)
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .secondaryTextStyle()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
 
             if let retry {
@@ -226,7 +228,8 @@ struct ErrorStateView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .cardStyle()
+        .padding(HobbyIQTheme.Spacing.medium)
+        .hiqCardStyle()
     }
 }
 
@@ -235,27 +238,28 @@ struct LoadingCardView: View {
     let message: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.medium) {
+        HStack(spacing: HobbyIQTheme.Spacing.medium) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: Theme.Colors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: HobbyIQTheme.Colors.electricBlue))
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Text(message)
                     .font(.subheadline)
-                    .secondaryTextStyle()
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
             Spacer()
         }
-        .cardStyle()
+        .padding(HobbyIQTheme.Spacing.medium)
+        .hiqCardStyle()
     }
 }
 
 struct ActivityIndicatorView: View {
     var body: some View {
         ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: Theme.Colors.accent))
+            .progressViewStyle(CircularProgressViewStyle(tint: HobbyIQTheme.Colors.electricBlue))
     }
 }
 
@@ -275,10 +279,10 @@ struct PortfolioInsightCardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(playerName)
                         .font(.headline)
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Text(cardName)
                         .font(.subheadline)
-                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
 
                 Spacer()
@@ -290,17 +294,17 @@ struct PortfolioInsightCardView: View {
 
             HStack {
                 Text("Value")
-                    .foregroundStyle(Theme.Colors.textMuted)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 Spacer()
                 Text(valueText)
-                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .fontWeight(.semibold)
             }
 
             if let listText {
                 HStack {
                     Text("List")
-                        .foregroundStyle(Theme.Colors.textMuted)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     Spacer()
                     Text(listText)
                         .foregroundStyle(accent)
@@ -315,19 +319,19 @@ struct PortfolioInsightCardView: View {
                             Text("•")
                                 .foregroundStyle(accent)
                             Text(line)
-                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             Spacer()
                         }
                         .font(.footnote)
                     }
                 }
                 .padding(12)
-                .background(Theme.Colors.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(HobbyIQTheme.Colors.steelGray)
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
             }
         }
         .padding(14)
-        .background(Theme.Colors.surface)
+        .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
                 .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)

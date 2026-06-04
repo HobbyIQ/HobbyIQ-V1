@@ -13,12 +13,12 @@ struct AccountHeaderView: View {
             VStack(alignment: .trailing, spacing: 1) {
                 Text(session.profileName)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .lineLimit(1)
 
                 Text(session.accountNumber)
                     .font(.caption2)
-                    .foregroundStyle(AppColors.textMuted)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .lineLimit(1)
             }
 
@@ -27,16 +27,16 @@ struct AccountHeaderView: View {
             } label: {
                 Text("Sign Out")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppColors.danger)
+                    .foregroundStyle(HobbyIQTheme.Colors.danger)
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(AppColors.surfaceElevated)
+        .background(HobbyIQTheme.Colors.steelGray)
         .overlay(
             Capsule(style: .continuous)
-                .stroke(AppColors.border, lineWidth: 1.6)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1.6)
         )
         .clipShape(Capsule(style: .continuous))
     }

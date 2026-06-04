@@ -14,10 +14,10 @@ struct ProfitListView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ProfitIQ")
                         .font(.title2.weight(.bold))
-                        .foregroundStyle(AppColors.textPrimary)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Text("Simple next steps for cards in your portfolio.")
                         .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
 
                 if viewModel.isLoading && viewModel.cards.isEmpty {
@@ -47,7 +47,7 @@ struct ProfitListView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(group.title)
                                 .font(.headline)
-                                .foregroundStyle(AppColors.textPrimary)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                             ForEach(group.cards) { card in
                                 NavigationLink {
@@ -57,15 +57,15 @@ struct ProfitListView: View {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(card.playerName)
                                                 .font(.subheadline.weight(.semibold))
-                                                .foregroundStyle(AppColors.textPrimary)
+                                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                                             Text(card.cardName)
                                                 .font(.caption)
-                                                .foregroundStyle(AppColors.textSecondary)
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                                             HStack(spacing: 6) {
                                                 signalBadge(title: card.signal.displayTitle, color: signalColor(for: card.signal))
                                                 Text(card.roi.portfolioPercentString)
                                                     .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(AppColors.textMuted)
+                                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                                             }
                                         }
 
@@ -77,14 +77,14 @@ struct ProfitListView: View {
                                                 .foregroundStyle(profitColor(for: card.profitLoss))
                                             Text(card.listPrice.portfolioCurrencyString)
                                                 .font(.caption.weight(.semibold))
-                                                .foregroundStyle(AppColors.textMuted)
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                                         }
                                     }
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
-                        .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.large)
+                        .appCardStyle(background: HobbyIQTheme.Colors.steelGray, radius: HobbyIQTheme.Radius.large)
                     }
                 }
             }
@@ -122,17 +122,17 @@ struct ProfitListView: View {
     private func signalColor(for signal: SellSignal) -> Color {
         switch signal {
         case .sellNow, .compIQ:
-            return AppColors.danger
+            return HobbyIQTheme.Colors.danger
         case .watch:
             return .orange
         case .hold:
-            return AppColors.accent
+            return HobbyIQTheme.Colors.electricBlue
         }
     }
 
     private func profitColor(for value: Double) -> Color {
-        if value > 0 { return AppColors.accent }
+        if value > 0 { return HobbyIQTheme.Colors.electricBlue }
         if value < 0 { return .red }
-        return AppColors.textMuted
+        return HobbyIQTheme.Colors.mutedText
     }
 }

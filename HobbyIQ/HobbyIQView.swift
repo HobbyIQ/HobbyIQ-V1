@@ -20,7 +20,7 @@ struct HobbyIQView: View {
             HobbyIQBackground()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: AppSpacing.xxLarge) {
+                VStack(spacing: HobbyIQTheme.Spacing.xxLarge) {
                     Spacer(minLength: 24)
                     topSection
                     searchSection
@@ -28,7 +28,7 @@ struct HobbyIQView: View {
                     featuredBriefCard
                     searchResultsSection
                 }
-                .padding(.horizontal, AppSpacing.screenPadding)
+                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
                 .padding(.bottom, HobbyIQTheme.Spacing.xxLarge)
                 .frame(maxWidth: .infinity)
             }
@@ -56,7 +56,7 @@ struct HobbyIQView: View {
     private var backgroundGlow: some View {
         ZStack {
             Circle()
-                .fill(AppColors.accentGlow)
+                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.24))
                 .frame(width: 240, height: 240)
                 .blur(radius: 80)
                 .offset(x: 120, y: -280)
@@ -71,18 +71,18 @@ struct HobbyIQView: View {
     }
 
     private var topSection: some View {
-        VStack(spacing: AppSpacing.large) {
+        VStack(spacing: HobbyIQTheme.Spacing.large) {
             LogoBadge()
 
-            VStack(spacing: AppSpacing.small) {
+            VStack(spacing: HobbyIQTheme.Spacing.small) {
                 Text("Welcome to HobbyIQ")
                     .font(HobbyIQTheme.Typography.hero)
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .multilineTextAlignment(.center)
 
                 Text("Search players, cards, comps, DailyIQ, and market trends.")
                     .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 420)
             }
@@ -92,17 +92,17 @@ struct HobbyIQView: View {
     }
 
     private var searchSection: some View {
-        VStack(spacing: AppSpacing.small) {
-            HStack(spacing: AppSpacing.small) {
+        VStack(spacing: HobbyIQTheme.Spacing.small) {
+            HStack(spacing: HobbyIQTheme.Spacing.small) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(AppColors.textMuted)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
                 TextField("Search cards, players, DailyIQ, comps...", text: $vm.searchText)
                     .focused($isSearchFocused)
                     .textInputAutocapitalization(.words)
                     .disableAutocorrection(true)
                     .submitLabel(.search)
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .onSubmit {
                         submitSearch()
                     }
@@ -112,11 +112,11 @@ struct HobbyIQView: View {
                 } label: {
                     Image(systemName: speechRecognizer.isRecording ? "mic.fill" : "mic")
                         .font(.headline)
-                        .foregroundStyle(speechRecognizer.isRecording ? AppColors.background : AppColors.accent)
+                        .foregroundStyle(speechRecognizer.isRecording ? HobbyIQTheme.Colors.appBackground : HobbyIQTheme.Colors.electricBlue)
                         .frame(width: 36, height: 36)
                         .background(
                             Circle()
-                                .fill(speechRecognizer.isRecording ? AppColors.accent : AppColors.accentSoft)
+                                .fill(speechRecognizer.isRecording ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.electricBlue.opacity(0.16))
                         )
                 }
                 .buttonStyle(.plain)
@@ -127,31 +127,31 @@ struct HobbyIQView: View {
                         vm.errorMessage = nil
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(AppColors.textMuted)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, AppSpacing.medium)
+            .padding(.horizontal, HobbyIQTheme.Spacing.medium)
             .padding(.vertical, 18)
-            .background(AppColors.surfaceElevated)
+            .background(HobbyIQTheme.Colors.steelGray)
             .overlay(
-                RoundedRectangle(cornerRadius: AppCardRadius.large, style: .continuous)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
                     .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: AppCardRadius.large, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             .frame(maxWidth: 660)
 
             Text("Try a player name, card type, or grade")
                 .font(.footnote)
-                .foregroundStyle(AppColors.textSecondary)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
     }
 
     private var quickAccessSection: some View {
-        VStack(spacing: AppSpacing.medium) {
+        VStack(spacing: HobbyIQTheme.Spacing.medium) {
             HomeQuickCard(
                 title: "CompIQ",
                 subtitle: "What's this card worth?"
@@ -183,28 +183,28 @@ struct HobbyIQView: View {
     }
 
     private var featuredBriefCard: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
             Text("Featured")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(AppColors.textMuted)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .textCase(.uppercase)
                 .tracking(1.2)
 
-            VStack(alignment: .leading, spacing: AppSpacing.medium) {
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
                 Text("MLB Daily Brief")
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                 Text("Yesterday's top MLB performers")
                     .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
                 Button("Open Brief") {
                     showMLBDailyBrief = true
                 }
                 .buttonStyle(.appPrimary)
             }
-            .appGlassCardStyle(radius: AppCardRadius.large)
+            .appGlassCardStyle(radius: HobbyIQTheme.Radius.large)
             .onTapGesture {
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) {
                     showMLBDailyBrief = true
@@ -218,13 +218,13 @@ struct HobbyIQView: View {
         if vm.isLoading {
             SearchStateCard(title: "Checking your search", message: "Getting a quick answer now.")
         } else if let errorMessage = vm.errorMessage {
-            SearchStateCard(title: "Search update", message: errorMessage, accent: AppColors.warning)
+            SearchStateCard(title: "Search update", message: errorMessage, accent: HobbyIQTheme.Colors.warning)
         } else if vm.compResult != nil || vm.playerResult != nil {
-            VStack(alignment: .leading, spacing: AppSpacing.large) {
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
                 if let resultSummaryText {
                     Text(resultSummaryText)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                 }
 
                 if let compResult = vm.compResult {
@@ -289,12 +289,12 @@ struct HobbyIQView: View {
 private struct LogoBadge: View {
     var body: some View {
         RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-            .fill(AppColors.accentSoft)
+            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.16))
             .frame(width: 76, height: 76)
             .overlay {
                 Text("HIQ")
                     .font(HobbyIQTheme.Typography.sectionTitle)
-                    .foregroundStyle(AppColors.accent)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
     }
 }
@@ -306,18 +306,18 @@ private struct HomeQuickCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .multilineTextAlignment(.leading)
             }
             .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-            .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.large)
+            .appCardStyle(background: HobbyIQTheme.Colors.steelGray, radius: HobbyIQTheme.Radius.large)
         }
         .buttonStyle(.plain)
     }
@@ -326,10 +326,10 @@ private struct HomeQuickCard: View {
 private struct SearchStateCard: View {
     let title: String
     let message: String
-    var accent: Color = AppColors.accent
+    var accent: Color = HobbyIQTheme.Colors.electricBlue
 
     var body: some View {
-        HStack(alignment: .top, spacing: AppSpacing.medium) {
+        HStack(alignment: .top, spacing: HobbyIQTheme.Spacing.medium) {
             Circle()
                 .fill(accent.opacity(0.22))
                 .frame(width: 40, height: 40)
@@ -339,18 +339,18 @@ private struct SearchStateCard: View {
                         .frame(width: 10, height: 10)
                 }
 
-            VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(AppColors.textPrimary)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                 Text(message)
                     .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.large)
+        .appCardStyle(background: HobbyIQTheme.Colors.steelGray, radius: HobbyIQTheme.Radius.large)
     }
 }
 
@@ -359,14 +359,14 @@ private struct HomeCompResultCard: View {
     @State private var showMore = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.large) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
             Text("CompIQ")
                 .font(.headline)
-                .foregroundStyle(AppColors.accent)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
 
             Text(result.summaryLine)
                 .font(HobbyIQTheme.Typography.title)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .fixedSize(horizontal: false, vertical: true)
 
             LabeledGroup(title: "Price Range", items: result.priceLanes)
@@ -380,24 +380,24 @@ private struct HomeCompResultCard: View {
             .buttonStyle(.appSecondary)
 
             if showMore {
-                VStack(alignment: .leading, spacing: AppSpacing.large) {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
                     BulletGroup(title: "What we know", items: result.whatWeKnow)
                     BulletGroup(title: "How we comped it", items: result.compBreakdown)
 
                     if let supply = result.supply {
-                        VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
                             Text(supply.title ?? "Supply")
                                 .font(.headline)
-                                .foregroundStyle(AppColors.textPrimary)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                             if let value = supply.value {
                                 Text(value)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(AppColors.accent)
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                             }
                             if let note = supply.note {
                                 Text(note)
                                     .font(.subheadline)
-                                    .foregroundStyle(AppColors.textSecondary)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                             }
                         }
                     }
@@ -405,7 +405,7 @@ private struct HomeCompResultCard: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .appGlassCardStyle(radius: AppCardRadius.large)
+        .appGlassCardStyle(radius: HobbyIQTheme.Radius.large)
     }
 }
 
@@ -414,14 +414,14 @@ private struct HomePlayerResultCard: View {
     @State private var showMore = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.large) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
             Text("PlayerIQ")
                 .font(.headline)
-                .foregroundStyle(AppColors.accent)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
 
             Text(result.playerName)
                 .font(HobbyIQTheme.Typography.title)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
             LabeledGroup(title: "Player Profile", items: result.playerProfile)
             LabeledGroup(title: "Best cards to buy", items: result.investmentStrategy.filter { $0.label == "Buy" || $0.label == "Hold" })
@@ -434,25 +434,25 @@ private struct HomePlayerResultCard: View {
             .buttonStyle(.appSecondary)
 
             if showMore {
-                VStack(alignment: .leading, spacing: AppSpacing.large) {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.large) {
                     LabeledGroup(title: "Talent Snapshot", items: result.talentBreakdown)
                     LabeledGroup(title: "Card Market", items: result.cardMarket)
                     LabeledGroup(title: "Risk Level", items: result.riskFactors)
                     LabeledGroup(title: "Player Score", items: result.playerIQScore)
 
-                    VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                    VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
                         Text("Final Take")
                             .font(.headline)
-                            .foregroundStyle(AppColors.textPrimary)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         Text(result.finalTake)
                             .font(.subheadline)
-                            .foregroundStyle(AppColors.textSecondary)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
                 }
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .appGlassCardStyle(radius: AppCardRadius.large)
+        .appGlassCardStyle(radius: HobbyIQTheme.Radius.large)
     }
 }
 
@@ -461,21 +461,21 @@ private struct LabeledGroup: View {
     let items: [HobbyIQLabeledValue]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.small) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-            VStack(spacing: AppSpacing.xSmall) {
+            VStack(spacing: HobbyIQTheme.Spacing.xSmall) {
                 ForEach(items) { item in
-                    HStack(alignment: .top, spacing: AppSpacing.small) {
+                    HStack(alignment: .top, spacing: HobbyIQTheme.Spacing.small) {
                         Text(item.label)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textSecondary)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         Spacer(minLength: 12)
                         Text(item.value)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textPrimary)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                             .multilineTextAlignment(.trailing)
                     }
                 }
@@ -489,21 +489,21 @@ private struct BulletGroup: View {
     let items: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.small) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
             ForEach(items, id: \.self) { item in
-                HStack(alignment: .top, spacing: AppSpacing.small) {
+                HStack(alignment: .top, spacing: HobbyIQTheme.Spacing.small) {
                     Circle()
-                        .fill(AppColors.accent)
+                        .fill(HobbyIQTheme.Colors.electricBlue)
                         .frame(width: 6, height: 6)
                         .padding(.top, 7)
 
                     Text(item)
                         .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -518,15 +518,15 @@ private struct MLBDailyBriefView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: AppSpacing.large) {
-                VStack(alignment: .leading, spacing: AppSpacing.small) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
                     Text("MLB Daily Brief")
                         .font(HobbyIQTheme.Typography.statNumber)
-                        .foregroundStyle(AppColors.textPrimary)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
                     Text("Top MLB performances from yesterday")
                         .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -534,7 +534,7 @@ private struct MLBDailyBriefView: View {
                 BriefSection(title: "Top Pitchers", items: pitchers)
                 BriefSection(title: "Hobby Movers", items: movers)
             }
-            .padding(AppSpacing.screenPadding)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
             .padding(.bottom, HobbyIQTheme.Spacing.xxLarge)
         }
         .background { HobbyIQBackground() }
@@ -547,10 +547,10 @@ private struct BriefSection: View {
     let items: [MLBBriefEntry]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
             Text(title)
                 .font(.headline)
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
             ForEach(items) { item in
                 ExpandableBriefCard(item: item)
@@ -564,39 +564,39 @@ private struct ExpandableBriefCard: View {
     @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.medium) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isExpanded.toggle()
                 }
             } label: {
-                VStack(alignment: .leading, spacing: AppSpacing.small) {
+                VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
                     HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: AppSpacing.xSmall) {
+                        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.xSmall) {
                             Text(item.name)
                                 .font(.headline)
-                                .foregroundStyle(AppColors.textPrimary)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                             Text(item.teamLine)
                                 .font(.subheadline)
-                                .foregroundStyle(AppColors.textSecondary)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         }
                         Spacer()
                         Text("See More")
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(AppColors.accent)
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                     }
 
                     Text(item.statLine)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
 
                     Text(item.note)
                         .font(.subheadline)
-                        .foregroundStyle(AppColors.textSecondary)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
                     Text("Why it matters: \(item.whyItMatters)")
                         .font(.footnote)
-                        .foregroundStyle(AppColors.textMuted)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -605,11 +605,11 @@ private struct ExpandableBriefCard: View {
             if isExpanded {
                 Text(item.detail)
                     .font(.subheadline)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .appCardStyle(background: AppColors.backgroundElevated, radius: AppCardRadius.large)
+        .appCardStyle(background: HobbyIQTheme.Colors.steelGray, radius: HobbyIQTheme.Radius.large)
     }
 }
 

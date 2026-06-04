@@ -40,18 +40,18 @@ struct PerformanceView: View {
             Group {
                 if viewModel.isLoading && viewModel.snapshot == nil {
                     LoadingCardView(title: "Loading performance", message: "Charting portfolio outcomes and benchmark context.")
-                        .padding(Theme.Spacing.medium)
+                        .padding(HobbyIQTheme.Spacing.medium)
                 } else if let errorMessage = viewModel.errorMessage, viewModel.snapshot == nil {
                     ErrorStateView(title: "Performance unavailable", message: errorMessage, retry: { Task { await viewModel.load() } })
-                        .padding(Theme.Spacing.medium)
+                        .padding(HobbyIQTheme.Spacing.medium)
                 } else if let snapshot = viewModel.snapshot {
                     ScrollView {
-                        VStack(spacing: Theme.Spacing.medium) {
+                        VStack(spacing: HobbyIQTheme.Spacing.medium) {
                             SectionCardView(title: "Performance Summary") {
-                                HStack(spacing: Theme.Spacing.small) {
-                                    MetricPillView(title: Labels.portfolio, value: PercentFormatters.percent(snapshot.totalReturnPercent), accent: Theme.Colors.accent)
-                                    MetricPillView(title: "Benchmark", value: snapshot.benchmarkReturnPercent.map(PercentFormatters.percent) ?? "N/A", accent: Theme.Colors.caution)
-                                    MetricPillView(title: "Accuracy", value: snapshot.recommendationAccuracyPercent.map(PercentFormatters.percent) ?? "N/A", accent: Theme.Colors.textPrimary)
+                                HStack(spacing: HobbyIQTheme.Spacing.small) {
+                                    MetricPillView(title: Labels.portfolio, value: PercentFormatters.percent(snapshot.totalReturnPercent), accent: HobbyIQTheme.Colors.electricBlue)
+                                    MetricPillView(title: "Benchmark", value: snapshot.benchmarkReturnPercent.map(PercentFormatters.percent) ?? "N/A", accent: HobbyIQTheme.Colors.warning)
+                                    MetricPillView(title: "Accuracy", value: snapshot.recommendationAccuracyPercent.map(PercentFormatters.percent) ?? "N/A", accent: HobbyIQTheme.Colors.pureWhite)
                                 }
 
                                 RefreshMetaView(refreshMeta: snapshot.refreshMeta)
@@ -61,12 +61,12 @@ struct PerformanceView: View {
                                 PositionPerformanceChartView(points: snapshot.series)
                             }
                         }
-                        .padding(Theme.Spacing.medium)
-                        .padding(.bottom, Theme.Spacing.large)
+                        .padding(HobbyIQTheme.Spacing.medium)
+                        .padding(.bottom, HobbyIQTheme.Spacing.large)
                     }
                 } else {
                     EmptyStateView(title: "No performance history yet", message: "Performance charts will fill in as positions and sync runs accumulate.", systemImage: "chart.xyaxis.line")
-                        .padding(Theme.Spacing.medium)
+                        .padding(HobbyIQTheme.Spacing.medium)
                 }
             }
             .background { HobbyIQBackground() }
@@ -104,10 +104,10 @@ struct PositionPerformanceChartView: View {
                     }
                 }
             }
-            .stroke(Theme.Colors.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+            .stroke(HobbyIQTheme.Colors.electricBlue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
             .background(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: Theme.Radius.medium, style: .continuous)
-                    .fill(Theme.Colors.background)
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                    .fill(HobbyIQTheme.Colors.appBackground)
             }
         }
         .frame(height: 180)

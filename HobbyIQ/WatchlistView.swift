@@ -47,14 +47,14 @@ struct WatchlistView: View {
                         title: "Loading watchlist",
                         message: "Pulling your monitored names, action states, and freshness metadata."
                     )
-                    .padding(Theme.Spacing.medium)
+                    .padding(HobbyIQTheme.Spacing.medium)
                 } else if let errorMessage = viewModel.errorMessage, viewModel.items.isEmpty {
                     ErrorStateView(
                         title: "Watchlist unavailable",
                         message: errorMessage,
                         retry: { Task { await viewModel.load() } }
                     )
-                    .padding(Theme.Spacing.medium)
+                    .padding(HobbyIQTheme.Spacing.medium)
                 } else if viewModel.items.isEmpty {
                     EmptyStateView(
                         title: "No watched names yet",
@@ -64,7 +64,7 @@ struct WatchlistView: View {
                     ) {
                         Task { await viewModel.load() }
                     }
-                    .padding(Theme.Spacing.medium)
+                    .padding(HobbyIQTheme.Spacing.medium)
                 } else {
                     List {
                         ForEach(viewModel.items) { item in
@@ -73,7 +73,7 @@ struct WatchlistView: View {
                             } label: {
                                 WatchlistRow(item: item)
                             }
-                            .listRowBackground(Theme.Colors.card)
+                            .listRowBackground(HobbyIQTheme.Colors.cardNavy)
                         }
                         .onDelete { offsets in
                             offsets.map { viewModel.items[$0] }.forEach(viewModel.remove)
@@ -89,7 +89,7 @@ struct WatchlistView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 EditButton()
-                    .foregroundStyle(Theme.Colors.accent)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
             .themedNavigationSurface()
             .task {
@@ -107,15 +107,15 @@ struct WatchlistRow: View {
     let item: WatchlistItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.small) {
+        VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.small) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
                         .font(.headline)
-                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Text(item.subtitle)
                         .font(.subheadline)
-                        .secondaryTextStyle()
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
 
                 Spacer()
@@ -123,7 +123,7 @@ struct WatchlistRow: View {
                 ActionBadgeView(action: item.action)
             }
 
-            HStack(spacing: Theme.Spacing.small) {
+            HStack(spacing: HobbyIQTheme.Spacing.small) {
                 MetricPillView(title: "Type", value: item.type.rawValue)
                 MetricPillView(title: "Alerts", value: "\(item.alertCount)")
             }
@@ -139,7 +139,7 @@ private struct WatchlistDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: Theme.Spacing.medium) {
+            VStack(spacing: HobbyIQTheme.Spacing.medium) {
                 SectionCardView(title: item.name, subtitle: item.subtitle) {
                     HStack {
                         ActionBadgeView(action: item.action)
@@ -153,11 +153,11 @@ private struct WatchlistDetailView: View {
                 SectionCardView(title: "Why It Matters") {
                     Text("This name is being monitored because it is active enough to produce meaningful alerts, but selective enough that timing still matters.")
                         .font(.subheadline)
-                        .secondaryTextStyle()
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
             }
-            .padding(Theme.Spacing.medium)
-            .padding(.bottom, Theme.Spacing.large)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .padding(.bottom, HobbyIQTheme.Spacing.large)
         }
         .background { HobbyIQBackground() }
         .navigationTitle(item.type.rawValue)
