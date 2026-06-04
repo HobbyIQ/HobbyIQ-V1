@@ -216,6 +216,17 @@ export function pickEnvironmentClients(env: string): {
  * validation. A tampered JWS that lies about `environment` would route
  * to the wrong verifier and fail verification there.
  *
+ * CF-PAYMENTS-APPLE-PEEK-ENV-FIX (2026-06-04): ASSN V2 puts `environment`
+ * INSIDE `data` (e.g. `payload.data.environment === "Sandbox"`), not at
+ * top level. The original implementation only read top-level → returned
+ * "Production" by default on every real V2 notification → routed sandbox
+ * traffic to the production verifier → verification failed silently with
+ * a 401 → Apple recorded `UNSUCCESSFUL_HTTP_RESPONSE_CODE` and retried.
+ * Bug surfaced via end-to-end test (Drew, 2026-06-04 01:25Z): local verify
+ * with explicit Environment.SANDBOX succeeded on the same JWS the route
+ * rejected. Fix: read `data.environment` first, fall back to top-level
+ * for any V1-shaped payload.
+ *
  * Returns "Production" on any decode failure (safer default — prod
  * verifier strictly checks bundleId + appAppleId).
  */
@@ -227,8 +238,12 @@ export function peekJwsEnvironment(jws: string): "Sandbox" | "Production" {
     const padded = payloadB64.replace(/-/g, "+").replace(/_/g, "/") +
       "=".repeat((4 - (payloadB64.length % 4)) % 4);
     const decoded = Buffer.from(padded, "base64").toString("utf8");
-    const obj = JSON.parse(decoded) as { environment?: string };
-    return obj.environment === "Sandbox" ? "Sandbox" : "Production";
+    const obj = JSON.parse(decoded) as {
+      environment?: string;
+      data?: { environment?: string };
+    };
+    const env = obj.data?.environment ?? obj.environment;
+    return env === "Sandbox" ? "Sandbox" : "Production";
   } catch {
     return "Production";
   }
