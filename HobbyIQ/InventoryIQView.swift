@@ -7,6 +7,8 @@ import SwiftUI
 
 struct InventoryIQView: View {
     @ObservedObject var vm: PortfolioIQViewModel
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
+    @State private var showUpgradePaywall = false
 
     @State private var inventoryQuery = ""
     @State private var inventoryFilter: PortfolioInventoryFilter = .all
@@ -37,6 +39,14 @@ struct InventoryIQView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 12) {
                             header
+
+                            CapLimitBanner(
+                                cap: .holdingsCap,
+                                used: vm.inventoryCards.count,
+                                subscriptionManager: sessionViewModel.subscriptionManager
+                            ) {
+                                showUpgradePaywall = true
+                            }
 
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
@@ -73,6 +83,12 @@ struct InventoryIQView: View {
                 AddPortfolioCardView(viewModel: AddPortfolioCardViewModel()) {
                     Task { await vm.refresh() }
                 }
+            }
+            .sheet(isPresented: $showUpgradePaywall) {
+                PaywallView(
+                    sessionViewModel: sessionViewModel,
+                    suggestedTier: GatedCap.holdingsCap.upgradeTier(from: sessionViewModel.subscriptionManager.currentTier)
+                )
             }
             .onAppear {
                 if vm.summary == nil {
@@ -148,13 +164,17 @@ struct InventoryIQView: View {
                 Spacer()
 
                 Button {
-                    isAddingCard = true
+                    if sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) {
+                        isAddingCard = true
+                    } else {
+                        showUpgradePaywall = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         .frame(width: 44, height: 44)
-                        .background(HobbyIQTheme.Colors.electricBlue)
+                        .background(sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -310,7 +330,11 @@ struct InventoryIQView: View {
                 Spacer()
 
                 Button {
-                    isAddingCard = true
+                    if sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) {
+                        isAddingCard = true
+                    } else {
+                        showUpgradePaywall = true
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
@@ -321,7 +345,7 @@ struct InventoryIQView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(HobbyIQTheme.Colors.successGreen)
+                    .background(sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.mutedText)
                     .clipShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -616,4 +640,5 @@ struct InventoryIQView: View {
 #Preview {
     InventoryIQView(vm: PortfolioIQViewModel())
         .environmentObject(AppState())
+        .environmentObject(AppSessionViewModel())
 }

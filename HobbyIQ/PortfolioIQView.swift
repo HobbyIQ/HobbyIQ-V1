@@ -10,10 +10,16 @@ struct PortfolioIQView: View {
     @ObservedObject var vm: PortfolioIQViewModel
     let onSwitchToInventory: (PortfolioInventoryFilter) -> Void
 
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @State private var selectedCard: InventoryCard?
     @State private var showingLedger = false
     @State private var showingMovementDetail = false
     @State private var selectedPeriod: PerformancePeriod = .month
+    @State private var showCalibration = false
+    @State private var showWeeklyBrief = false
+    @State private var showBatchReprice = false
+    @State private var showCardIdentify = false
+    @State private var showERPHub = false
 
     var body: some View {
         NavigationView {
@@ -36,6 +42,10 @@ struct PortfolioIQView: View {
                             if vm.hasMovementSignals {
                                 movementPulseCard
                             }
+
+                            PortfolioHealthCard()
+
+                            portfolioToolsRow
 
                             topMoversSection
                             priorityActionsSection
@@ -72,6 +82,26 @@ struct PortfolioIQView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showCalibration) {
+                CalibrationView()
+                    .environmentObject(sessionViewModel)
+            }
+            .sheet(isPresented: $showWeeklyBrief) {
+                WeeklyBriefView()
+                    .environmentObject(sessionViewModel)
+            }
+            .sheet(isPresented: $showBatchReprice) {
+                BatchRepriceView()
+                    .environmentObject(sessionViewModel)
+            }
+            .sheet(isPresented: $showCardIdentify) {
+                CardIdentifyView()
+                    .environmentObject(sessionViewModel)
+            }
+            .sheet(isPresented: $showERPHub) {
+                ERPHubView()
+                    .environmentObject(sessionViewModel)
+            }
             .onAppear {
                 if vm.summary == nil {
                     Task { await vm.load() }
@@ -79,6 +109,45 @@ struct PortfolioIQView: View {
             }
         }
         .navigationViewStyle(.stack)
+    }
+
+    private var portfolioToolsRow: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                portfolioToolButton(title: "Weekly Brief", icon: "newspaper", action: { showWeeklyBrief = true })
+                portfolioToolButton(title: "Calibration", icon: "scope", action: { showCalibration = true })
+            }
+            HStack(spacing: 8) {
+                portfolioToolButton(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
+                portfolioToolButton(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
+            }
+            HStack(spacing: 8) {
+                portfolioToolButton(title: "Business / ERP", icon: "building.2", action: { showERPHub = true })
+                Spacer()
+            }
+        }
+    }
+
+    private func portfolioToolButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Spacer()
+            }
+            .padding(12)
+            .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private var background: some View {

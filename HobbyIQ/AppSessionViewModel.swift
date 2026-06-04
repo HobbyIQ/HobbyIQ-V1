@@ -11,30 +11,39 @@ import os
 final class AppSessionViewModel: ObservableObject {
     @Published private(set) var launchState: AppLaunchState = .launching
     @Published private(set) var currentUser: AppUser?
-    @Published private(set) var activeTier: SubscriptionTier?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var authStatusMessage: String?
-    @Published var devScenario: AppSessionScenario = .ready
 
     private let authService: AuthServicing
-    private let subscriptionService: SubscriptionServicing
+    let subscriptionManager: SubscriptionManager
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "session")
+    private var tierObservation: AnyCancellable?
 
     init(
         authService: AuthServicing? = nil,
-        subscriptionService: SubscriptionServicing? = nil
+        subscriptionManager: SubscriptionManager? = nil
     ) {
         self.authService = authService ?? AuthService.shared
-        self.subscriptionService = subscriptionService ?? SubscriptionService.shared
+        self.subscriptionManager = subscriptionManager ?? SubscriptionManager.shared
+
+        tierObservation = self.subscriptionManager.$currentTier
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
     }
 
     var isAuthenticated: Bool {
         currentUser != nil
     }
 
+    var activeTier: AppAccessTier {
+        subscriptionManager.currentTier
+    }
+
     var hasEntitlement: Bool {
-        activeTier != nil
+        activeTier != .none
     }
 
     func checkSessionOnLaunch() async {
@@ -47,22 +56,18 @@ final class AppSessionViewModel: ObservableObject {
             let user = try await authService.restoreSession(for: .signedOut)
             currentUser = user
 
-            guard let user else {
-                activeTier = nil
+            guard user != nil else {
                 launchState = .signedOut
                 authStatusMessage = nil
                 isLoading = false
                 return
             }
 
-            _ = user
             authStatusMessage = nil
-            let tier = try await subscriptionService.currentTier(for: .ready)
-            activeTier = tier
-            launchState = tier == nil ? .paywall : .ready
+            await subscriptionManager.prepare()
+            launchState = activeTier == .none ? .paywall : .ready
         } catch {
             currentUser = nil
-            activeTier = nil
             launchState = .signedOut
             authStatusMessage = "Sign in to continue."
         }
@@ -78,12 +83,12 @@ final class AppSessionViewModel: ObservableObject {
         do {
             currentUser = try await authService.signInWithApple(identityToken: identityToken, email: email, fullName: fullName, username: username)
             authStatusMessage = nil
-            await refreshEntitlements()
+            await subscriptionManager.prepare()
+            launchState = activeTier == .none ? .paywall : .ready
             await PushNotificationManager.shared.requestPermissionAndRegister()
         } catch {
             errorMessage = error.localizedDescription
             currentUser = nil
-            activeTier = nil
             launchState = .signedOut
             authStatusMessage = error.localizedDescription
         }
@@ -99,12 +104,12 @@ final class AppSessionViewModel: ObservableObject {
         do {
             currentUser = try await authService.signInWithEmail(email: email, password: password)
             authStatusMessage = nil
-            await refreshEntitlements()
+            await subscriptionManager.prepare()
+            launchState = activeTier == .none ? .paywall : .ready
             await PushNotificationManager.shared.requestPermissionAndRegister()
         } catch {
             errorMessage = error.localizedDescription
             currentUser = nil
-            activeTier = nil
             launchState = .signedOut
             authStatusMessage = "Sign in failed. Check your credentials and try again."
         }
@@ -120,7 +125,8 @@ final class AppSessionViewModel: ObservableObject {
         do {
             currentUser = try await authService.signUpWithEmail(email: email, password: password, username: username)
             authStatusMessage = nil
-            await refreshEntitlements()
+            await subscriptionManager.prepare()
+            launchState = activeTier == .none ? .paywall : .ready
             await PushNotificationManager.shared.requestPermissionAndRegister()
         } catch {
             let message: String
@@ -136,7 +142,6 @@ final class AppSessionViewModel: ObservableObject {
             }
             errorMessage = message
             currentUser = nil
-            activeTier = nil
             launchState = .signedOut
             authStatusMessage = "Account creation failed. Check your details and try again."
         }
@@ -149,45 +154,21 @@ final class AppSessionViewModel: ObservableObject {
         await PushNotificationManager.shared.unregisterTokenFromBackend()
         await authService.signOut()
         currentUser = nil
-        activeTier = nil
+        subscriptionManager.presentPaywall()
         launchState = .signedOut
         authStatusMessage = nil
         isLoading = false
     }
 
-    func refreshEntitlements() async {
-        guard currentUser != nil else {
-            activeTier = nil
-            launchState = .signedOut
-            return
-        }
-
-        do {
-            let tier = try await subscriptionService.currentTier(for: devScenario)
-            activeTier = tier
-            launchState = tier == nil ? .paywall : .ready
-        } catch {
-            let message = "Access could not be refreshed."
-            errorMessage = message
-            authStatusMessage = message
-            logger.error("Entitlement refresh failed: \(error.localizedDescription, privacy: .public)")
-            launchState = currentUser == nil ? .signedOut : (activeTier == nil ? .paywall : .ready)
-        }
-    }
-
-    func purchase(_ tier: SubscriptionTier) async {
+    func purchase(_ tier: AppAccessTier) async {
         isLoading = true
         errorMessage = nil
 
-        do {
-            activeTier = try await subscriptionService.purchase(tier)
-            launchState = .ready
-        } catch {
-            let message = "Purchase could not be completed."
-            errorMessage = message
-            authStatusMessage = message
-            logger.error("Purchase failed for tier \(tier.rawValue, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            launchState = activeTier == nil ? .paywall : .ready
+        await subscriptionManager.purchase(tier)
+        launchState = activeTier == .none ? .paywall : .ready
+
+        if let msg = subscriptionManager.statusMessage, msg.contains("failed") || msg.contains("not available") {
+            errorMessage = msg
         }
 
         isLoading = false
@@ -197,32 +178,45 @@ final class AppSessionViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
+        await subscriptionManager.restorePurchases()
+        launchState = activeTier == .none ? .paywall : .ready
+
+        if let msg = subscriptionManager.statusMessage, msg.contains("could not") {
+            errorMessage = msg
+        }
+
+        isLoading = false
+    }
+
+    func deleteAccount() async {
+        isLoading = true
+        errorMessage = nil
+
         do {
-            activeTier = try await subscriptionService.restorePurchases(for: devScenario)
-            launchState = activeTier == nil ? .paywall : .ready
+            _ = try await APIService.shared.deleteAccount()
+            await authService.signOut()
+            currentUser = nil
+            subscriptionManager.presentPaywall()
+            launchState = .signedOut
+            authStatusMessage = nil
         } catch {
-            let message = "Restore could not be completed."
-            errorMessage = message
-            authStatusMessage = message
-            logger.error("Restore failed: \(error.localizedDescription, privacy: .public)")
-            launchState = activeTier == nil ? .paywall : .ready
+            errorMessage = APIService.errorMessage(from: error)
         }
 
         isLoading = false
     }
 
     func unlockAccessForTesting() {
-        activeTier = .pro
         launchState = .ready
     }
 
     func revokeAccessForTesting() {
-        activeTier = nil
+        subscriptionManager.presentPaywall()
         launchState = .paywall
     }
 
     func continueFreeForTesting() {
-        activeTier = .free
+        subscriptionManager.continueFree()
         launchState = .ready
     }
 
@@ -232,8 +226,6 @@ final class AppSessionViewModel: ObservableObject {
 
     func resetError() {
         errorMessage = nil
-        launchState = currentUser == nil ? .signedOut : (activeTier == nil ? .paywall : .ready)
+        launchState = currentUser == nil ? .signedOut : (activeTier == .none ? .paywall : .ready)
     }
 }
-
-

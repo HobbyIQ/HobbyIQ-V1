@@ -240,7 +240,7 @@ final class AccountViewModel: ObservableObject {
             profileName: identifier,
             accountNumber: sessionViewModel.currentUser?.id ?? "",
             email: sessionViewModel.currentUser?.email,
-            planName: sessionViewModel.activeTier?.title ?? "No Access"
+            planName: sessionViewModel.activeTier.title
         )
     }
 
@@ -2022,11 +2022,6 @@ final class AddPortfolioCardViewModel: ObservableObject {
     }
 
     func uploadPhoto(_ image: UIImage, side: CardPhotoSide) async {
-        guard let sessionId = currentSessionId() else {
-            errorMessage = "Sign in to upload card photos."
-            return
-        }
-
         guard let payload = CardPhotoFormat.payload(for: image) else {
             errorMessage = "Could not process that photo."
             return
@@ -2047,26 +2042,25 @@ final class AddPortfolioCardViewModel: ObservableObject {
         }
 
         do {
-            let response = try await APIService.shared.uploadCardPhoto(
+            let sasResponse = try await APIService.shared.requestCardPhotoSAS(fileExtension: "jpg")
+            guard let uploadUrl = sasResponse.uploadUrl, let blobUrl = sasResponse.blobUrl else {
+                errorMessage = "Server did not return upload URLs."
+                return
+            }
+            try await APIService.shared.uploadImageToSAS(
+                uploadUrl: uploadUrl,
                 imageData: payload.data,
-                mimeType: payload.mimeType,
-                side: side,
-                sessionId: sessionId
+                contentType: sasResponse.contentType ?? "image/jpeg"
             )
 
-            let resolvedURL = response.resolvedURL
             switch side {
             case .front:
-                frontPhotoUrl = resolvedURL
+                frontPhotoUrl = blobUrl
             case .back:
-                backPhotoUrl = resolvedURL
+                backPhotoUrl = blobUrl
             }
 
-            if let message = response.message, message.isEmpty == false {
-                photoMessage = message
-            } else {
-                photoMessage = "\(side.displayName) photo uploaded."
-            }
+            photoMessage = "\(side.displayName) photo uploaded."
         } catch {
             errorMessage = portfolioUserFacingMessage(for: error, fallback: "Could not upload that photo right now.")
         }

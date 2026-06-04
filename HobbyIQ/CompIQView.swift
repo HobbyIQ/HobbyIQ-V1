@@ -7,11 +7,15 @@ import SwiftUI
 
 struct CompIQView: View {
     @StateObject private var viewModel: CompIQViewModel
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var initialQuery: String?
     @State private var searchText = ""
     @State private var didApplyInitialQuery = false
     @State private var navigateToVariants = false
+    @State private var navigateToMarketTrends = false
+    @State private var navigateToCardSearch = false
+    @State private var showBulkEstimate = false
 
     @MainActor
     init(initialQuery: String? = nil, viewModel: CompIQViewModel? = nil) {
@@ -23,6 +27,7 @@ struct CompIQView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: HobbyIQTheme.Spacing.large) {
                 heroCard
+                toolsCard
                 searchCard
                 readyCard
                 resultSection
@@ -53,6 +58,16 @@ struct CompIQView: View {
         .navigationDestination(isPresented: $navigateToVariants) {
             CompIQVariantPickerView(initialQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines))
         }
+        .navigationDestination(isPresented: $navigateToMarketTrends) {
+            MarketTrendView()
+        }
+        .navigationDestination(isPresented: $navigateToCardSearch) {
+            CardSearchView()
+        }
+        .sheet(isPresented: $showBulkEstimate) {
+            BulkEstimateView()
+                .environmentObject(sessionViewModel)
+        }
         .onAppear { applyInitialQueryIfNeeded() }
         .onChange(of: initialQuery) { _, _ in
             didApplyInitialQuery = false
@@ -79,6 +94,52 @@ struct CompIQView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
+    }
+
+    private var toolsCard: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                Button {
+                    navigateToMarketTrends = true
+                } label: {
+                    toolButton(icon: "chart.line.uptrend.xyaxis", title: "Market Trends")
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showBulkEstimate = true
+                } label: {
+                    toolButton(icon: "square.stack.3d.up", title: "Bulk Estimate")
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                navigateToCardSearch = true
+            } label: {
+                toolButton(icon: "rectangle.stack.badge.magnifyingglass", title: "Card Database Search")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func toolButton(icon: String, title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private var searchCard: some View {
@@ -723,6 +784,7 @@ struct CompIQView: View {
         NavigationStack {
             CompIQView()
         }
+        .environmentObject(AppSessionViewModel())
         .preferredColorScheme(.dark)
     }
 }

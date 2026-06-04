@@ -60,6 +60,7 @@ private struct AppTabShellView: View {
                 .animation(.easeInOut(duration: 0.25), value: isKeyboardVisible)
         }
         .preferredColorScheme(.dark)
+        .environmentObject(sessionViewModel)
         .task(id: session.id) {
             selectedTab = .dashboard
             applyPendingOAuthCallbackIfNeeded()

@@ -906,3 +906,98 @@ enum UrgencyColor {
         }
     }
 }
+
+// MARK: - Player Search Result (shared by watchlist/search and dailyiq/search)
+
+struct PlayerSearchResult: Codable, Identifiable, Hashable {
+    var id: String { "\(mlbPersonId)_\(playerName)" }
+    let mlbPersonId: Int
+    let playerName: String
+    let position: String?
+    let positionName: String?
+    let teamId: Int?
+    let teamName: String?
+    let jersey: String?
+    let active: Bool?
+}
+
+// MARK: - Watchlist Search / Top / Suggest
+
+struct WatchlistSearchResponse: Codable {
+    let query: String?
+    let count: Int?
+    let results: [PlayerSearchResult]?
+}
+
+struct WatchlistTopResponse: Codable {
+    let entries: [WatchPlayerResult]?
+    let count: Int?
+}
+
+struct WatchlistSuggestion: Codable, Identifiable, Hashable {
+    var id: String { "\(mlbPersonId)_\(playerName)" }
+    let mlbPersonId: Int
+    let playerName: String
+    let reason: String?
+    let score: Double?
+}
+
+struct WatchlistSuggestResponse: Codable {
+    let suggestions: [WatchlistSuggestion]?
+}
+
+// MARK: - DailyIQ Search
+
+struct DailyIQSearchResponse: Codable {
+    let query: String?
+    let count: Int?
+    let results: [PlayerSearchResult]?
+}
+
+// MARK: - Dashboard Player Stats (gated dailyIQBriefs / investor+)
+
+struct DashboardPlayerStatsResponse: Codable {
+    let dashboardDate: String?
+    let lastUpdated: String?
+    let mlbTopPlayers: [DailyPlayerStat]?
+    let milbTopPlayers: [DailyPlayerStat]?
+    let watchlistPlayers: [DailyPlayerStat]?
+}
+
+// MARK: - Full Brief (gated dailyIQBriefs / investor+)
+
+struct DailyBriefMeta: Codable, Hashable {
+    let generatedAt: String?
+    let dataFreshness: String?
+    let coverageNote: String?
+}
+
+struct DailyBriefMover: Codable, Identifiable, Hashable {
+    var id: String { "\(playerName)_\(direction ?? "")_\(team ?? "")" }
+    let playerName: String
+    let team: String?
+    let level: String?
+    let direction: String?
+    let pctChange: Double?
+    let reason: String?
+}
+
+struct DailyIQFullBriefResponse: Codable {
+    let date: String?
+    let portfolioHighlights: [PortfolioHighlight]?
+    let buyTargets: [BuyTarget]?
+    let topMLB: [DailyPlayerStat]?
+    let topMiLB: [DailyPlayerStat]?
+    let hotPlayers: [String]?
+    let risers: [DailyBriefMover]?
+    let fallers: [DailyBriefMover]?
+    let breakouts: [DailyBriefMover]?
+    let watchlist: [WatchPlayerResult]?
+    let meta: DailyBriefMeta?
+
+    enum CodingKeys: String, CodingKey {
+        case date, portfolioHighlights, buyTargets, topMLB, topMiLB, hotPlayers
+        case risers, fallers, breakouts, watchlist
+        case meta = "_meta"
+    }
+}

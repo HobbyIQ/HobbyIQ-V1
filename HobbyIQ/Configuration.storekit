@@ -1,0 +1,162 @@
+{
+  "identifier" : "4B8F1A2E-D3C7-4E5A-9F1B-8C2D3E4F5A6B",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1",
+    "_developerTeamID" : "HOBBYIQ_DEV",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "hobbyiq_plans",
+      "localizations" : [
+
+      ],
+      "name" : "HobbyIQ Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "collector_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Best for active collectors tracking cards and comps.",
+              "displayName" : "Collector",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hobbyiq.collector.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Collector Monthly",
+          "subscriptionGroupID" : "hobbyiq_plans",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "investor_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access to trends, alerts, DailyIQ, and eBay.",
+              "displayName" : "Investor",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hobbyiq.investor.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Investor Monthly",
+          "subscriptionGroupID" : "hobbyiq_plans",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "29.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "proseller_monthly_001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything plus ERP reconciliation and unlimited alerts.",
+              "displayName" : "Pro Seller",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.hobbyiq.proseller.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Seller Monthly",
+          "subscriptionGroupID" : "hobbyiq_plans",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

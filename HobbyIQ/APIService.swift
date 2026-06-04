@@ -26,6 +26,8 @@ enum APIServiceError: LocalizedError {
             switch statusCode {
             case 401:
                 return APIService.joinMessages("Your session expired. Please sign in again.", backendMessage)
+            case 402:
+                return backendMessage.isEmpty ? "You've reached your plan limit. Upgrade for more." : backendMessage
             case 403:
                 return APIService.joinMessages("eBay account not connected. Connect eBay first.", backendMessage)
             case 404:
@@ -113,6 +115,265 @@ struct APIService {
         return try await post(path: "/api/compiq/price-by-id", body: body, responseType: CompIQPriceByIdResponse.self)
     }
 
+    // MARK: - CompIQ Advanced Endpoints
+
+    func fetchTrendIQ(request: TrendIQRequest) async throws -> TrendIQDedicatedResponse {
+        try await post(path: "/api/compiq/trendiq", body: request, responseType: TrendIQDedicatedResponse.self)
+    }
+
+    func fetchTrendIQFull(request: TrendIQRequest) async throws -> TrendIQFullResponse {
+        try await post(path: "/api/compiq/trendiq/full", body: request, responseType: TrendIQFullResponse.self)
+    }
+
+    func fetchMarketTrend(playerName: String) async throws -> MarketTrendResponse {
+        try await get(
+            path: "/api/compiq/market-trend",
+            queryItems: [URLQueryItem(name: "playerName", value: playerName)],
+            responseType: MarketTrendResponse.self
+        )
+    }
+
+    func fetchMarketTrendBatch(playerNames: [String]) async throws -> MarketTrendBatchResponse {
+        try await get(
+            path: "/api/compiq/market-trend/batch",
+            queryItems: [URLQueryItem(name: "playerNames", value: playerNames.joined(separator: ","))],
+            responseType: MarketTrendBatchResponse.self
+        )
+    }
+
+    func fetchTopMovers(window: String = "7d", limit: Int = 20) async throws -> TopMoversResponse {
+        try await get(
+            path: "/api/compiq/market-trend/top-movers",
+            queryItems: [
+                URLQueryItem(name: "window", value: window),
+                URLQueryItem(name: "limit", value: String(limit)),
+            ],
+            responseType: TopMoversResponse.self
+        )
+    }
+
+    func whatIfEstimate(request: WhatIfRequest) async throws -> CardEstimateResponse {
+        try await post(path: "/api/compiq/what-if", body: request, responseType: CardEstimateResponse.self)
+    }
+
+    func fetchGradePremium(request: GradePremiumRequest) async throws -> GradePremiumResponse {
+        try await post(path: "/api/compiq/grade-premium", body: request, responseType: GradePremiumResponse.self)
+    }
+
+    func fetchSellWindow(request: SellWindowRequest) async throws -> SellWindowResponse {
+        try await post(path: "/api/compiq/sell-window", body: request, responseType: SellWindowResponse.self)
+    }
+
+    func bulkEstimateAdvanced(request: AdvancedBulkEstimateRequest) async throws -> AdvancedBulkEstimateResponse {
+        try await post(path: "/api/compiq/bulk", body: request, responseType: AdvancedBulkEstimateResponse.self)
+    }
+
+    func fetchCompsByPlayer(playerName: String, product: String? = nil, cardYear: Int? = nil) async throws -> CompsByPlayerResponse {
+        var queryItems = [URLQueryItem(name: "playerName", value: playerName)]
+        if let product { queryItems.append(URLQueryItem(name: "product", value: product)) }
+        if let cardYear { queryItems.append(URLQueryItem(name: "cardYear", value: String(cardYear))) }
+        return try await get(
+            path: "/api/compiq/comps-by-player",
+            queryItems: queryItems,
+            responseType: CompsByPlayerResponse.self
+        )
+    }
+
+    // MARK: - Portfolio Advanced Endpoints
+
+    func fetchPortfolioHealth() async throws -> PortfolioHealthResponse {
+        try await get(path: "/api/portfolio/health/score", responseType: PortfolioHealthResponse.self)
+    }
+
+    func fetchCalibration() async throws -> CalibrationReportResponse {
+        try await get(path: "/api/portfolio/analytics/calibration", responseType: CalibrationReportResponse.self)
+    }
+
+    func fetchWeeklyBrief() async throws -> WeeklyBriefResponse {
+        try await get(path: "/api/portfolio/insights/weekly-brief", responseType: WeeklyBriefResponse.self)
+    }
+
+    func submitRecommendationFeedback(request: RecommendationFeedbackRequest) async throws -> RecommendationFeedbackResponse {
+        try await post(path: "/api/portfolio/feedback/recommendation", body: request, responseType: RecommendationFeedbackResponse.self)
+    }
+
+    func fetchHoldingHistory(holdingId: String) async throws -> HoldingPriceHistoryResponse {
+        try await get(path: "/api/portfolio/holdings/\(holdingId)/history", responseType: HoldingPriceHistoryResponse.self)
+    }
+
+    func refreshHolding(holdingId: String) async throws -> RefreshHoldingResponse {
+        try await post(path: "/api/portfolio/holdings/\(holdingId)/refresh", body: EmptyBody(), responseType: RefreshHoldingResponse.self)
+    }
+
+    func runBatchReprice() async throws -> BatchRepriceResponse {
+        try await post(path: "/api/portfolio/reprice/batch", body: EmptyBody(), responseType: BatchRepriceResponse.self)
+    }
+
+    func requestCardPhotoSAS(fileExtension: String = "jpg") async throws -> SASUploadResponse {
+        try await post(path: "/api/uploads/card-photo", body: SASUploadRequest(clientId: nil, fileExtension: fileExtension), responseType: SASUploadResponse.self)
+    }
+
+    func uploadImageToSAS(uploadUrl: String, imageData: Data, contentType: String) async throws {
+        guard let url = URL(string: uploadUrl) else {
+            throw APIServiceError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        request.setValue("BlockBlob", forHTTPHeaderField: "x-ms-blob-type")
+        request.httpBody = imageData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw APIServiceError.httpError(statusCode: code, body: String(data: data, encoding: .utf8) ?? "")
+        }
+    }
+
+    func identifyCard(request: CardIdentifyRequest) async throws -> CardIdentifyResponse {
+        try await post(path: "/api/portfolio/identify", body: request, responseType: CardIdentifyResponse.self)
+    }
+
+    func fetchIdentifiableSets(segment: String? = nil, skip: Int = 0, take: Int = 100) async throws -> IdentifiableSetsResponse {
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "skip", value: String(skip)),
+            URLQueryItem(name: "take", value: String(take)),
+        ]
+        if let segment { queryItems.append(URLQueryItem(name: "segment", value: segment)) }
+        return try await get(path: "/api/portfolio/identifiable-sets", queryItems: queryItems, responseType: IdentifiableSetsResponse.self)
+    }
+
+    func checkSetSupported(setId: String) async throws -> SetSupportedResponse {
+        try await get(
+            path: "/api/portfolio/identify/set-supported",
+            queryItems: [URLQueryItem(name: "setId", value: setId)],
+            responseType: SetSupportedResponse.self
+        )
+    }
+
+    // MARK: - ERP Endpoints
+
+    func fetchUnreconciled() async throws -> UnreconciledListResponse {
+        try await get(path: "/api/portfolio/erp/unreconciled", responseType: UnreconciledListResponse.self)
+    }
+
+    func fetchAgingBuckets() async throws -> AgingBucketsResponse {
+        try await get(path: "/api/portfolio/erp/aging", responseType: AgingBucketsResponse.self)
+    }
+
+    func submitOverride(entryId: String, request: ERPOverrideRequest) async throws -> ERPOverrideResponse {
+        try await post(path: "/api/portfolio/erp/override/\(entryId)", body: request, responseType: ERPOverrideResponse.self)
+    }
+
+    func refetchFinances() async throws -> ERPRefetchResponse {
+        try await post(path: "/api/portfolio/erp/refetch", body: EmptyBody(), responseType: ERPRefetchResponse.self)
+    }
+
+    func fetchErpPnl(groupBy: String = "month", includeExpenses: Bool = false) async throws -> ERPPnlResponse {
+        try await get(
+            path: "/api/portfolio/erp/pnl",
+            queryItems: [
+                URLQueryItem(name: "groupBy", value: groupBy),
+                URLQueryItem(name: "includeExpenses", value: includeExpenses ? "true" : "false"),
+            ],
+            responseType: ERPPnlResponse.self
+        )
+    }
+
+    func fetchErpAnalytics(groupBy: String = "month") async throws -> ERPAnalyticsResponse {
+        try await get(
+            path: "/api/portfolio/erp/analytics",
+            queryItems: [URLQueryItem(name: "groupBy", value: groupBy)],
+            responseType: ERPAnalyticsResponse.self
+        )
+    }
+
+    func fetchErpTimeseries(granularity: String = "month") async throws -> ERPTimeseriesResponse {
+        try await get(
+            path: "/api/portfolio/erp/timeseries",
+            queryItems: [URLQueryItem(name: "granularity", value: granularity)],
+            responseType: ERPTimeseriesResponse.self
+        )
+    }
+
+    func fetchErpValuation() async throws -> ERPValuationResponse {
+        try await get(path: "/api/portfolio/erp/valuation", responseType: ERPValuationResponse.self)
+    }
+
+    func fetchExpenses() async throws -> ERPExpenseListResponse {
+        try await get(path: "/api/portfolio/erp/expenses", responseType: ERPExpenseListResponse.self)
+    }
+
+    func createExpense(request: ERPExpenseCreateRequest) async throws -> ERPExpenseResponse {
+        try await post(path: "/api/portfolio/erp/expenses", body: request, responseType: ERPExpenseResponse.self)
+    }
+
+    func updateExpense(expenseId: String, request: ERPExpenseUpdateRequest) async throws -> ERPExpenseResponse {
+        try await patch(path: "/api/portfolio/erp/expenses/\(expenseId)", body: request, responseType: ERPExpenseResponse.self)
+    }
+
+    func deleteExpense(expenseId: String) async throws -> ERPExpenseDeleteResponse {
+        try await delete(path: "/api/portfolio/erp/expenses/\(expenseId)", responseType: ERPExpenseDeleteResponse.self)
+    }
+
+    func fetchExpenseReport(groupBy: String = "category") async throws -> ERPExpenseReportResponse {
+        try await get(
+            path: "/api/portfolio/erp/expenses/report",
+            queryItems: [URLQueryItem(name: "groupBy", value: groupBy)],
+            responseType: ERPExpenseReportResponse.self
+        )
+    }
+
+    func recordTrade(request: ERPTradeRecordRequest) async throws -> ERPTradeRecordResponse {
+        try await post(path: "/api/portfolio/erp/trades", body: request, responseType: ERPTradeRecordResponse.self)
+    }
+
+    func fetchTrades() async throws -> ERPTradeListResponse {
+        try await get(path: "/api/portfolio/erp/trades", responseType: ERPTradeListResponse.self)
+    }
+
+    func fetchTradeDetail(tradeId: String) async throws -> ERPTradeRecordResponse {
+        try await get(path: "/api/portfolio/erp/trades/\(tradeId)", responseType: ERPTradeRecordResponse.self)
+    }
+
+    func fetchTaxFilings(year: Int) async throws -> ERPTaxFilingsResponse {
+        try await get(
+            path: "/api/portfolio/erp/tax/filings",
+            queryItems: [URLQueryItem(name: "year", value: String(year))],
+            responseType: ERPTaxFilingsResponse.self
+        )
+    }
+
+    func updateTaxFiling(year: Int, rail: String, request: ERPTaxFilingUpdateRequest) async throws -> ERPTaxFilingUpdateResponse {
+        try await put(
+            path: "/api/portfolio/erp/tax/filings/\(year)/\(rail)",
+            body: request,
+            responseType: ERPTaxFilingUpdateResponse.self
+        )
+    }
+
+    func fetchAccountingExport(year: Int, format: String = "json") async throws -> ERPAccountingExportResponse {
+        try await get(
+            path: "/api/portfolio/erp/accounting-export",
+            queryItems: [
+                URLQueryItem(name: "year", value: String(year)),
+                URLQueryItem(name: "format", value: format),
+            ],
+            responseType: ERPAccountingExportResponse.self
+        )
+    }
+
+    func fetchTaxExport(year: Int, format: String = "json") async throws -> ERPTaxExportResponse {
+        try await get(
+            path: "/api/portfolio/erp/tax-export",
+            queryItems: [
+                URLQueryItem(name: "year", value: String(year)),
+                URLQueryItem(name: "format", value: format),
+            ],
+            responseType: ERPTaxExportResponse.self
+        )
+    }
+
     func healthCheck() async throws -> HealthStatusResponse {
         try await get(path: "/api/health", responseType: HealthStatusResponse.self)
     }
@@ -188,7 +449,7 @@ struct APIService {
 
     func fetchDailyWatchlist(date: String? = nil) async throws -> [WatchPlayerResult] {
         let queryItems = date.map { [URLQueryItem(name: "date", value: $0)] } ?? []
-        let data = try await fetchData(path: "/api/watchlist", queryItems: queryItems)
+        let data = try await fetchData(path: "/api/dailyiq/watchlist", queryItems: queryItems)
 
         if let backend = try? decoder.decode(DailyIQBackendWatchlistEnvelope.self, from: data) {
             return backend.watchlist.map(Self.makeWatchlistResult(from:))
@@ -207,20 +468,11 @@ struct APIService {
         position: String? = nil,
         date: String? = nil
     ) async throws -> [WatchPlayerResult] {
-        let request = DailyIQWatchlistMutationRequest(
-            userId: userId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : userId,
-            playerId: playerId,
-            playerName: playerName,
-            team: team.nonEmptyTrimmed,
-            level: level.nonEmptyTrimmed,
-            position: position.nonEmptyTrimmed,
-            date: date,
-            action: "add"
-        )
-        _ = try await sendData(
-            path: "/api/watchlist",
-            method: "POST",
-            bodyData: try encoder.encode(request)
+        let body = DailyIQWatchlistAddRequest(playerId: playerId, playerName: playerName)
+        _ = try await post(
+            path: "/api/dailyiq/watchlist",
+            body: body,
+            responseType: DailyIQWatchlistAddResponse.self
         )
         return try await fetchDailyWatchlist(date: date)
     }
@@ -234,22 +486,52 @@ struct APIService {
         position: String? = nil,
         date: String? = nil
     ) async throws -> [WatchPlayerResult] {
-        let request = DailyIQWatchlistMutationRequest(
-            userId: userId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : userId,
-            playerId: playerId,
-            playerName: playerName,
-            team: team.nonEmptyTrimmed,
-            level: level.nonEmptyTrimmed,
-            position: position.nonEmptyTrimmed,
-            date: date,
-            action: "remove"
-        )
-        _ = try await sendData(
-            path: "/api/watchlist",
-            method: "DELETE",
-            bodyData: try encoder.encode(request)
+        let encoded = playerId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? playerId
+        _ = try await delete(
+            path: "/api/dailyiq/watchlist/\(encoded)",
+            responseType: DailyIQWatchlistRemoveResponse.self
         )
         return try await fetchDailyWatchlist(date: date)
+    }
+
+    // MARK: - DailyIQ Watchlist Search / Top / Suggest
+
+    func watchlistSearch(query: String) async throws -> WatchlistSearchResponse {
+        let body = DailyIQWatchlistSearchRequest(query: query)
+        return try await post(path: "/api/dailyiq/watchlist/search", body: body, responseType: WatchlistSearchResponse.self)
+    }
+
+    func watchlistTop() async throws -> WatchlistTopResponse {
+        try await get(path: "/api/dailyiq/watchlist/top", responseType: WatchlistTopResponse.self)
+    }
+
+    func watchlistSuggest() async throws -> WatchlistSuggestResponse {
+        try await get(path: "/api/dailyiq/watchlist/suggest", responseType: WatchlistSuggestResponse.self)
+    }
+
+    // MARK: - DailyIQ Search (ungated)
+
+    func dailyiqSearch(query: String, limit: Int = 10) async throws -> DailyIQSearchResponse {
+        try await get(
+            path: "/api/dailyiq/search",
+            queryItems: [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: String(limit)),
+            ],
+            responseType: DailyIQSearchResponse.self
+        )
+    }
+
+    // MARK: - DailyIQ Full Brief (gated dailyIQBriefs / investor+)
+
+    func fetchFullBrief() async throws -> DailyIQFullBriefResponse {
+        try await get(path: "/api/dailyiq/brief", responseType: DailyIQFullBriefResponse.self)
+    }
+
+    // MARK: - Dashboard Player Stats (gated dailyIQBriefs)
+
+    func fetchDashboardPlayerStats() async throws -> DashboardPlayerStatsResponse {
+        try await get(path: "/api/dailyiq/dashboard/player-stats", responseType: DashboardPlayerStatsResponse.self)
     }
 
     func fetchPortfolioIQSummary(userId: String = "") async throws -> PortfolioIQBackendSummaryResponse {
@@ -345,6 +627,56 @@ struct APIService {
         )
     }
 
+    func ebayReconnect(sessionId: String? = nil) async throws -> EBayReconnectResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        return try await get(
+            path: "/api/ebay/connect/restart",
+            responseType: EBayReconnectResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
+    func ebayPolicies(sessionId: String? = nil) async throws -> EbayPoliciesResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        return try await get(
+            path: "/api/ebay/policies",
+            responseType: EbayPoliciesResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
+    func ebayListingStatus(offerId: String, sessionId: String? = nil) async throws -> EbayListingStatusResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        let encoded = offerId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? offerId
+        return try await get(
+            path: "/api/ebay/listings/\(encoded)/status",
+            responseType: EbayListingStatusResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
+    func ebayReviseListing(offerId: String, body: PortfolioEbayListingRequest, sessionId: String? = nil) async throws -> EbayReviseResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        let encoded = offerId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? offerId
+        return try await put(
+            path: "/api/ebay/listings/\(encoded)/revise",
+            body: body,
+            responseType: EbayReviseResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
+    func ebayEndListing(offerId: String, sessionId: String? = nil) async throws -> EbayEndListingResponse {
+        let resolvedSessionId = try requireSessionId(sessionId)
+        let encoded = offerId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? offerId
+        return try await post(
+            path: "/api/ebay/listings/\(encoded)/end",
+            body: EmptyBody(),
+            responseType: EbayEndListingResponse.self,
+            sessionId: resolvedSessionId
+        )
+    }
+
     func fetchPSACertLookup(certNumber: String, sessionId: String? = nil) async throws -> PSACertLookupResponse {
         let resolvedSessionId = try requireSessionId(sessionId)
         let encoded = certNumber.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? certNumber
@@ -390,22 +722,6 @@ struct APIService {
             codingPath: [],
             debugDescription: "PSA cert response format not recognized. Raw: \(raw.prefix(500))"
         )))
-    }
-
-    func uploadCardPhoto(imageData: Data, mimeType: String, side: CardPhotoSide, sessionId: String? = nil) async throws -> CardPhotoUploadResponse {
-        let resolvedSessionId = try requireSessionId(sessionId)
-        let request = CardPhotoUploadRequest(
-            imageBase64: imageData.base64EncodedString(),
-            mimeType: mimeType,
-            side: side.rawValue
-        )
-
-        return try await post(
-            path: "/api/uploads/card-photo",
-            body: request,
-            responseType: CardPhotoUploadResponse.self,
-            sessionId: resolvedSessionId
-        )
     }
 
     func portfolioEbayDraft(holdingId: String, body: PortfolioEbayListingRequest, sessionId: String? = nil) async throws -> PortfolioEbayListingResponse {
@@ -490,19 +806,39 @@ struct APIService {
     }
 
     func createAlert(_ alert: CreateAlertRequest) async throws -> AlertsAPIResponse {
-        // Alert creation not yet available on backend — return a synthetic success
-        // so the UI can show confirmation without failing
-        return AlertsAPIResponse(success: true, alerts: nil, message: "Alert saved locally.")
+        try await post(path: "/api/alerts/", body: alert, responseType: AlertsAPIResponse.self)
     }
 
     func deleteAlert(alertId: String) async throws -> AlertsAPIResponse {
-        // Alert deletion not yet available on backend
-        return AlertsAPIResponse(success: true, alerts: nil, message: "Alert removed.")
+        try await delete(path: "/api/alerts/\(alertId)", responseType: AlertsAPIResponse.self)
     }
 
-    func triggerAlert(alertId: String) async throws -> AlertsAPIResponse {
-        // Alert trigger not yet available on backend
-        return AlertsAPIResponse(success: true, alerts: nil, message: "Alert triggered.")
+    // MARK: - Price Alerts CRUD
+
+    func fetchPriceAlerts() async throws -> PriceAlertListResponse {
+        try await get(path: "/api/alerts/", responseType: PriceAlertListResponse.self)
+    }
+
+    func deletePriceAlert(alertId: String) async throws -> PriceAlertDeleteResponse {
+        try await delete(path: "/api/alerts/\(alertId)", responseType: PriceAlertDeleteResponse.self)
+    }
+
+    // MARK: - Advanced Alert Rules CRUD (gated advancedAlerts / investor+)
+
+    func fetchAdvancedRules() async throws -> AdvancedAlertListResponse {
+        try await get(path: "/api/alerts/advanced/", responseType: AdvancedAlertListResponse.self)
+    }
+
+    func createAdvancedRule(_ request: AdvancedAlertCreateRequest) async throws -> AdvancedAlertResponse {
+        try await post(path: "/api/alerts/advanced/", body: request, responseType: AdvancedAlertResponse.self)
+    }
+
+    func updateAdvancedRule(ruleId: String, request: AdvancedAlertUpdateRequest) async throws -> AdvancedAlertResponse {
+        try await patch(path: "/api/alerts/advanced/\(ruleId)", body: request, responseType: AdvancedAlertResponse.self)
+    }
+
+    func deleteAdvancedRule(ruleId: String) async throws -> AdvancedAlertDeleteResponse {
+        try await delete(path: "/api/alerts/advanced/\(ruleId)", responseType: AdvancedAlertDeleteResponse.self)
     }
 
     // MARK: - Device Token
@@ -527,6 +863,68 @@ struct APIService {
 
     func updateNotificationPreferences(_ prefs: NotificationPreferencesRequest) async throws -> NotificationPreferencesResponse {
         try await put(path: "/api/alerts/preferences", body: prefs, responseType: NotificationPreferencesResponse.self)
+    }
+
+    // MARK: - Auth Session
+
+    func signOutSession() async throws -> AuthSignOutResponse {
+        try await post(path: "/api/auth/signout", body: EmptyBody(), responseType: AuthSignOutResponse.self)
+    }
+
+    func fetchSession() async throws -> AuthSessionResponse {
+        try await get(path: "/api/auth/session", responseType: AuthSessionResponse.self)
+    }
+
+    // MARK: - Unified Card Search
+
+    func searchCards(input: String, hint: String? = nil) async throws -> UnifiedSearchResponse {
+        let body = UnifiedSearchRequest(input: input, hint: hint)
+        return try await post(path: "/api/search/cards", body: body, responseType: UnifiedSearchResponse.self)
+    }
+
+    // MARK: - Username Change
+
+    func changeUsername(username: String) async throws -> UsernameChangeResponse {
+        let body = UsernameChangeRequest(username: username)
+        return try await post(path: "/api/auth/username", body: body, responseType: UsernameChangeResponse.self)
+    }
+
+    // MARK: - PlayerIQ Top / History
+
+    func fetchPlayerIQTop(limit: Int = 20, direction: String? = nil) async throws -> PlayerIQTopResponse {
+        var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let direction { queryItems.append(URLQueryItem(name: "direction", value: direction)) }
+        return try await get(path: "/api/playeriq/top", queryItems: queryItems, responseType: PlayerIQTopResponse.self)
+    }
+
+    func fetchPlayerIQHistory(name: String, limit: Int = 30) async throws -> PlayerIQHistoryResponse {
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+        return try await get(
+            path: "/api/playeriq/\(encoded)/history",
+            queryItems: [URLQueryItem(name: "limit", value: String(limit))],
+            responseType: PlayerIQHistoryResponse.self
+        )
+    }
+
+    // MARK: - Account
+
+    func deleteAccount() async throws -> AccountDeletionResponse {
+        let body = AccountDeletionRequest(confirm: "DELETE_MY_ACCOUNT")
+        let bodyData = try encoder.encode(body)
+        let request = try makeRequest(path: "/api/account", method: "DELETE", bodyData: bodyData)
+        return try await perform(request, responseType: AccountDeletionResponse.self)
+    }
+
+    // MARK: - Subscriptions
+
+    func verifySubscription(jws: String) async throws -> VerifySubscriptionResponse {
+        try await post(path: "/api/subscriptions/verify", body: VerifySubscriptionRequest(jwsRepresentation: jws), responseType: VerifySubscriptionResponse.self)
+    }
+
+    // MARK: - Entitlements
+
+    func fetchEntitlements() async throws -> EntitlementResponse {
+        try await get(path: "/api/entitlements/me", responseType: EntitlementResponse.self)
     }
 
     // MARK: - Health
@@ -726,7 +1124,7 @@ struct APIService {
         return message.isEmpty ? "Something went wrong." : message
     }
 
-    fileprivate static func backendMessage(from body: String) -> String {
+    static func backendMessage(from body: String) -> String {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else { return "" }
 
@@ -1422,15 +1820,25 @@ private struct DailyIQBackendWatchlistEnvelope: Decodable {
     }
 }
 
-private struct DailyIQWatchlistMutationRequest: Codable {
-    let userId: String?
-    let playerId: String
-    let playerName: String
-    let team: String?
-    let level: String?
-    let position: String?
-    let date: String?
-    let action: String
+private struct DailyIQWatchlistSearchRequest: Encodable {
+    let query: String
+}
+
+private struct DailyIQWatchlistAddRequest: Encodable {
+    let playerId: String?
+    let playerName: String?
+}
+
+private struct DailyIQWatchlistAddResponse: Decodable {
+    let message: String?
+    let watchlistItemId: String?
+    let playerId: String?
+    let playerName: String?
+}
+
+private struct DailyIQWatchlistRemoveResponse: Decodable {
+    let message: String?
+    let playerId: String?
 }
 
 private struct DailyIQBackendPlayerResponse: Decodable {
@@ -1641,12 +2049,34 @@ struct PortfolioEbayListingRequest: Codable {
     let isAuto: Bool?
     let listingFormat: String?
     let auctionStartDate: String?
-}
+    let paymentPolicyId: String?
+    let fulfillmentPolicyId: String?
+    let returnPolicyId: String?
 
-private struct CardPhotoUploadRequest: Codable {
-    let imageBase64: String
-    let mimeType: String
-    let side: String
+    init(
+        title: String, description: String, askingPrice: Double, quantity: Int,
+        ebayUser: String?, cardId: String, playerName: String, cardName: String,
+        year: String, setName: String, parallel: String, grade: String,
+        condition: String? = nil, brand: String? = nil, cardNumber: String? = nil,
+        imageFrontUrl: String? = nil, imageBackUrl: String? = nil,
+        purchasePrice: Double, purchasePlatform: String? = nil, purchaseDate: String? = nil,
+        notes: String? = nil, summary: String? = nil, isAuto: Bool? = nil,
+        listingFormat: String? = nil, auctionStartDate: String? = nil,
+        paymentPolicyId: String? = nil, fulfillmentPolicyId: String? = nil, returnPolicyId: String? = nil
+    ) {
+        self.title = title; self.description = description; self.askingPrice = askingPrice
+        self.quantity = quantity; self.ebayUser = ebayUser; self.cardId = cardId
+        self.playerName = playerName; self.cardName = cardName; self.year = year
+        self.setName = setName; self.parallel = parallel; self.grade = grade
+        self.condition = condition; self.brand = brand; self.cardNumber = cardNumber
+        self.imageFrontUrl = imageFrontUrl; self.imageBackUrl = imageBackUrl
+        self.purchasePrice = purchasePrice; self.purchasePlatform = purchasePlatform
+        self.purchaseDate = purchaseDate; self.notes = notes; self.summary = summary
+        self.isAuto = isAuto; self.listingFormat = listingFormat
+        self.auctionStartDate = auctionStartDate
+        self.paymentPolicyId = paymentPolicyId; self.fulfillmentPolicyId = fulfillmentPolicyId
+        self.returnPolicyId = returnPolicyId
+    }
 }
 
 private struct AuthAppleSignInRequest: Codable {}
@@ -1751,6 +2181,55 @@ struct EBayDisconnectResponse: Decodable {
     let message: String?
 }
 
+struct EBayReconnectResponse: Decodable {
+    let success: Bool?
+    let authUrl: String?
+    let reconnected: Bool?
+}
+
+struct EbayPolicy: Decodable, Identifiable {
+    let policyId: String
+    let name: String?
+    let isDefault: Bool?
+    var id: String { policyId }
+}
+
+struct EbayPoliciesResponse: Decodable {
+    let success: Bool?
+    let paymentPolicies: [EbayPolicy]?
+    let fulfillmentPolicies: [EbayPolicy]?
+    let returnPolicies: [EbayPolicy]?
+}
+
+struct EbayListingStatusResponse: Decodable {
+    let success: Bool?
+    let offerId: String?
+    let status: String?
+    let listingId: String?
+    let listingUrl: String?
+    let price: Double?
+    let quantity: Int?
+    let categoryId: String?
+    let marketplaceId: String?
+}
+
+struct EbayMissingPolicy: Decodable {
+    let policyType: String?
+    let reason: String?
+}
+
+struct EbayReviseResponse: Decodable {
+    let success: Bool?
+    let offerId: String?
+    let inventoryItemKey: String?
+    let error: String?
+    let missingPolicy: EbayMissingPolicy?
+}
+
+struct EbayEndListingResponse: Decodable {
+    let success: Bool?
+}
+
 struct CardPhotoUploadResponse: Decodable {
     let success: Bool?
     let url: String?
@@ -1761,6 +2240,17 @@ struct CardPhotoUploadResponse: Decodable {
 
     var resolvedURL: String? {
         url ?? path
+    }
+}
+
+extension CardPhotoUploadResponse {
+    init(sasUrl: String) {
+        self.success = true
+        self.url = sasUrl
+        self.path = nil
+        self.mimeType = "image/jpeg"
+        self.size = nil
+        self.message = nil
     }
 }
 
@@ -1775,6 +2265,119 @@ struct EbayListingResponse: Decodable {
 }
 
 typealias PortfolioEbayListingResponse = EbayListingResponse
+
+// MARK: - Unified Card Search Models
+
+private struct UnifiedSearchRequest: Encodable {
+    let input: String
+    let hint: String?
+}
+
+struct UnifiedSearchInput: Decodable {
+    let raw: String?
+    let detectedMode: String?
+    let recognizingGraders: [String]?
+}
+
+struct SearchCandidate: Decodable, Hashable {
+    let candidateId: String?
+    let source: String?
+    let attribution: String?
+    let confidence: Double?
+    let player: String?
+    let year: String?
+    let brand: String?
+    let setName: String?
+    let cardNumber: String?
+    let parallel: String?
+    let variation: String?
+    let isAuto: Bool?
+    let serialNumber: String?
+    let grade: String?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let certNumber: String?
+    let totalPopulation: Int?
+    let populationHigher: Int?
+    let title: String?
+    let imageUrl: String?
+    let raw: String?
+
+    var stableId: String { candidateId ?? title ?? UUID().uuidString }
+}
+
+struct UnifiedSearchResponse: Decodable {
+    let input: UnifiedSearchInput?
+    let candidates: [SearchCandidate]?
+    let warnings: [String]?
+}
+
+// MARK: - Username Change Models
+
+private struct UsernameChangeRequest: Encodable {
+    let username: String
+}
+
+struct UsernameChangeResponse: Decodable {
+    let success: Bool?
+    let user: BackendAuthUser?
+    let sessionId: String?
+    let error: String?
+}
+
+// MARK: - PlayerIQ Top / History Models
+
+struct PlayerIQTopEntry: Decodable, Hashable {
+    let entryId: String?
+    let playerId: String?
+    let playerName: String?
+    let mlbPlayerId: Int?
+    let team: String?
+    let position: String?
+    let league: String?
+    let level: String?
+    let market: PlayerIQMarket?
+    let performance: PlayerIQPerformance?
+    let playerIQScore: Int?
+    let playerIQLabel: String?
+    let playerIQDirection: String?
+    let updatedAt: String?
+    let dataSource: String?
+    let confidence: String?
+
+    var stableId: String { entryId ?? playerId ?? playerName ?? UUID().uuidString }
+
+    enum CodingKeys: String, CodingKey {
+        case entryId = "id"
+        case playerId, playerName, mlbPlayerId, team, position, league, level
+        case market, performance
+        case playerIQScore, playerIQLabel, playerIQDirection
+        case updatedAt, dataSource, confidence
+    }
+}
+
+struct PlayerIQTopResponse: Decodable {
+    let players: [PlayerIQTopEntry]?
+    let count: Int?
+    let generatedAt: String?
+}
+
+struct PlayerIQHistoryPoint: Decodable, Hashable {
+    let playerIQScore: Int?
+    let playerIQDirection: String?
+    let playerIQLabel: String?
+    let marketScore: Int?
+    let performanceScore: Int?
+    let updatedAt: String?
+    let dataSource: String?
+}
+
+struct PlayerIQHistoryResponse: Decodable {
+    let playerName: String?
+    let playerId: String?
+    let points: [PlayerIQHistoryPoint]?
+    let count: Int?
+}
 
 private struct MultipartFormPart {
     let name: String
@@ -1811,6 +2414,82 @@ struct NotificationPreferencesRequest: Encodable {
     var priceAlerts: Bool?
     var portfolioMovementAlerts: Bool?
     var portfolioMovementMinValue: Double?
+}
+
+// MARK: - Subscription / Entitlement Models
+
+struct VerifySubscriptionRequest: Encodable {
+    let jwsRepresentation: String
+}
+
+struct VerifySubscriptionResponse: Decodable {
+    let success: Bool
+    let plan: String?
+    let expiresAt: String?
+    let error: String?
+}
+
+enum CapValue: Decodable, Equatable {
+    case limited(Int)
+    case unlimited
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let str = try? container.decode(String.self), str == "unlimited" {
+            self = .unlimited
+        } else if let num = try? container.decode(Int.self) {
+            self = .limited(num)
+        } else {
+            self = .limited(0)
+        }
+    }
+}
+
+struct EntitlementCaps: Decodable, Equatable {
+    let priceChecksPerDay: CapValue
+    let holdingsCap: CapValue
+    let scansPerMonth: CapValue
+    let priceAlerts: CapValue
+}
+
+struct EntitlementResponse: Decodable {
+    let success: Bool
+    let plan: String
+    let features: [String]
+    let caps: EntitlementCaps
+}
+
+// MARK: - Auth Session / Account Models
+
+private struct EmptyBody: Encodable {}
+
+struct AuthSignOutResponse: Decodable {
+    let success: Bool
+    let error: String?
+}
+
+struct AuthSessionResponse: Decodable {
+    let success: Bool
+    let user: BackendAuthUser?
+}
+
+private struct AccountDeletionRequest: Encodable {
+    let confirm: String
+}
+
+struct AccountDeletionResponse: Decodable {
+    let success: Bool
+    let userId: String?
+    let deletedAt: String?
+    let failures: [String]?
+    let appleSubscription: AccountDeletionAppleSubscription?
+}
+
+struct AccountDeletionAppleSubscription: Decodable {
+    let wasLinked: Bool?
+    let billingActionRequired: Bool?
+    let message: String?
+    let cancellationInstructionsUrl: String?
 }
 
 private extension Data {

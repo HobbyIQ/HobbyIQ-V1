@@ -18,6 +18,10 @@ struct PlayerIQView: View {
     @State private var didApplyInitialQuery = false
     @State private var didAddToWatchlist = false
     @State private var isAddingToWatchlist = false
+    @State private var topPlayers: [PlayerIQTopEntry] = []
+    @State private var isLoadingTop = false
+    @State private var historyPoints: [PlayerIQHistoryPoint] = []
+    @State private var isLoadingHistory = false
     @FocusState private var isSearchFocused: Bool
 
     /// When presented from another screen (initialQuery != nil), show a back button.
@@ -69,6 +73,10 @@ struct PlayerIQView: View {
                     header
                     searchSection
                     stateSection
+
+                    if !topPlayers.isEmpty && response == nil && !isLoading {
+                        topPlayersSection
+                    }
                 }
                 // 1. Bio card (from stats)
                 if let statsResponse, statsResponse.status == "ok" {
@@ -94,6 +102,13 @@ struct PlayerIQView: View {
                 if let response {
                     reportSection(response)
                 }
+
+                // 4. Score History
+                if !historyPoints.isEmpty {
+                    scoreHistorySection
+                } else if isLoadingHistory {
+                    LoadingCardView(title: "Loading History", message: "Fetching score history.")
+                }
             }
             .padding(HobbyIQTheme.Spacing.screenPadding)
             .padding(.bottom, HobbyIQTheme.Spacing.xxLarge)
@@ -105,6 +120,8 @@ struct PlayerIQView: View {
                 didApplyInitialQuery = true
                 query = initialQuery
                 await submitSearch()
+            } else {
+                await loadTopPlayers()
             }
         }
     }
@@ -408,6 +425,185 @@ struct PlayerIQView: View {
             statsResponse = nil
         }
         isLoadingStats = false
+
+        await loadHistory(for: trimmed)
+    }
+
+    // MARK: - Top Players
+
+    private var topPlayersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Top Players")
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+            ForEach(topPlayers, id: \.stableId) { entry in
+                Button {
+                    query = entry.playerName ?? ""
+                    Task { await submitSearch() }
+                } label: {
+                    topPlayerRow(entry)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.cardPadding)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func topPlayerRow(_ entry: PlayerIQTopEntry) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.playerName ?? "Unknown")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                let details = [entry.team, entry.position, entry.level].compactMap { $0 }.filter { !$0.isEmpty }
+                if !details.isEmpty {
+                    Text(details.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+
+            Spacer()
+
+            if let score = entry.playerIQScore {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(score)")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    if let dir = entry.playerIQDirection {
+                        Text(dir.capitalized)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(directionColor(dir))
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Score History
+
+    private var scoreHistorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Score History")
+                .font(HobbyIQTheme.Typography.cardTitle)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+            if historyPoints.count > 1 {
+                scoreChart
+            }
+
+            ForEach(Array(historyPoints.prefix(10).enumerated()), id: \.offset) { _, point in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let date = point.updatedAt {
+                            Text(date.prefix(10))
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        if let label = point.playerIQLabel {
+                            Text(label)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    Spacer()
+                    if let score = point.playerIQScore {
+                        Text("\(score)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    }
+                    if let dir = point.playerIQDirection {
+                        Image(systemName: directionIcon(dir))
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(directionColor(dir))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.cardPadding)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private var scoreChart: some View {
+        let scores = historyPoints.reversed().compactMap { $0.playerIQScore }
+        let minScore = max((scores.min() ?? 0) - 5, 0)
+        let maxScore = min((scores.max() ?? 100) + 5, 200)
+        let range = Double(max(maxScore - minScore, 1))
+
+        return GeometryReader { geo in
+            let w = geo.size.width
+            let h: CGFloat = 100
+            let step = scores.count > 1 ? w / CGFloat(scores.count - 1) : w
+
+            Path { path in
+                for (i, score) in scores.enumerated() {
+                    let x = CGFloat(i) * step
+                    let y = h - (CGFloat(score - minScore) / CGFloat(range)) * h
+                    if i == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(HobbyIQTheme.Colors.electricBlue, lineWidth: 2)
+        }
+        .frame(height: 100)
+    }
+
+    private func directionColor(_ dir: String) -> Color {
+        switch dir.lowercased() {
+        case "rising": HobbyIQTheme.Colors.hobbyGreen
+        case "falling": HobbyIQTheme.Colors.danger
+        default: HobbyIQTheme.Colors.mutedText
+        }
+    }
+
+    private func directionIcon(_ dir: String) -> String {
+        switch dir.lowercased() {
+        case "rising": "arrow.up.right"
+        case "falling": "arrow.down.right"
+        default: "arrow.right"
+        }
+    }
+
+    private func loadTopPlayers() async {
+        isLoadingTop = true
+        defer { isLoadingTop = false }
+        do {
+            let response = try await APIService.shared.fetchPlayerIQTop(limit: 15)
+            topPlayers = response.players ?? []
+        } catch {
+            // Non-critical — top players section just won't show
+        }
+    }
+
+    private func loadHistory(for playerName: String) async {
+        isLoadingHistory = true
+        historyPoints = []
+        defer { isLoadingHistory = false }
+        do {
+            let response = try await APIService.shared.fetchPlayerIQHistory(name: playerName)
+            historyPoints = response.points ?? []
+        } catch {
+            // Non-critical
+        }
     }
 
     private func addToWatchlist() async {

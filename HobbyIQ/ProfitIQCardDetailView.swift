@@ -12,15 +12,62 @@ struct ProfitIQCardDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingMarkSoldSheet = false
     @State private var showingAlertSheet = false
+    @State private var priceHistory: HoldingPriceHistoryResponse?
+    @State private var isLoadingHistory = false
+    @State private var isRefreshing = false
+    @State private var refreshMessage: String?
+    @State private var historyError: String?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                Button("Mark Sold") {
-                    showingMarkSoldSheet = true
+
+                HStack(spacing: 12) {
+                    Button("Mark Sold") {
+                        showingMarkSoldSheet = true
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+
+                    Button {
+                        Task { await refreshHolding() }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isRefreshing {
+                                ProgressView()
+                                    .tint(HobbyIQTheme.Colors.electricBlue)
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            Text(isRefreshing ? "Refreshing..." : "Reprice")
+                        }
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                                .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.5)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRefreshing)
                 }
-                .buttonStyle(PrimaryButtonStyle())
+
+                if let refreshMessage {
+                    Text(refreshMessage)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(HobbyIQTheme.Colors.successGreen.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
+                priceHistorySection
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
@@ -51,6 +98,121 @@ struct ProfitIQCardDetailView: View {
                 dismiss()
             }
         }
+        .task { await loadHistory() }
+    }
+
+    // MARK: - Price History
+
+    @ViewBuilder
+    private var priceHistorySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("Price History")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                if let count = priceHistory?.count {
+                    Text("\(count) points")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
+
+            if isLoadingHistory {
+                HStack(spacing: 10) {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Loading history...")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Spacer()
+                }
+            }
+
+            if let error = historyError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(AppColors.danger)
+            }
+
+            if let points = priceHistory?.points, !points.isEmpty {
+                ForEach(points) { point in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let at = point.at {
+                                Text(formattedHistoryDate(at))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(AppColors.textPrimary)
+                            }
+                            if let source = point.source {
+                                Text(source)
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(AppColors.textSecondary)
+                            }
+                        }
+                        Spacer()
+                        if let value = point.value {
+                            Text(value.formatted(.currency(code: "USD")))
+                                .font(.subheadline.weight(.bold).monospacedDigit())
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+            } else if !isLoadingHistory && historyError == nil {
+                Text("No price history available yet.")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+        }
+        .padding(14)
+        .background(AppColors.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func loadHistory() async {
+        isLoadingHistory = true
+        historyError = nil
+        defer { isLoadingHistory = false }
+
+        do {
+            priceHistory = try await APIService.shared.fetchHoldingHistory(holdingId: card.cardId)
+        } catch {
+            historyError = APIService.errorMessage(from: error)
+        }
+    }
+
+    private func refreshHolding() async {
+        isRefreshing = true
+        refreshMessage = nil
+        defer { isRefreshing = false }
+
+        do {
+            let response = try await APIService.shared.refreshHolding(holdingId: card.cardId)
+            refreshMessage = response.message ?? "Holding refreshed"
+            await loadHistory()
+        } catch {
+            historyError = APIService.errorMessage(from: error)
+        }
+    }
+
+    private func formattedHistoryDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: isoString) {
+            return date.formatted(date: .abbreviated, time: .shortened)
+        }
+        let fallback = ISO8601DateFormatter()
+        if let date = fallback.date(from: isoString) {
+            return date.formatted(date: .abbreviated, time: .shortened)
+        }
+        return isoString
     }
 
     private var header: some View {

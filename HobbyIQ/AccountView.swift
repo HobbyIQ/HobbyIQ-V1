@@ -12,6 +12,9 @@ struct AccountView: View {
     @StateObject private var profileImageStore = ProfileImageStore.shared
     @State private var selectedAgeTier: AgeTier = AgeTier.current
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showDeleteWarning = false
+    @State private var showFinalDeleteConfirmation = false
+    @State private var showUsernameSheet = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -19,11 +22,13 @@ struct AccountView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     profileCard
+                    usernameRow
                     membershipCard
                     settingsSection
                     integrationsSection
                     appInfoSection
                     signOutSection
+                    deleteAccountSection
 
                     if let statusMessage = viewModel.statusMessage {
                         statusBanner(statusMessage)
@@ -125,6 +130,37 @@ struct AccountView: View {
         .accountCard()
     }
 
+    // MARK: - Username
+
+    private var usernameRow: some View {
+        Button {
+            showUsernameSheet = true
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("USERNAME")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(1.0)
+                    Text(sessionViewModel.currentUser?.displayName ?? "Not set")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                Spacer()
+                Image(systemName: "pencil")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            }
+            .accountCard()
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showUsernameSheet) {
+            UsernameChangeSheet(sessionViewModel: sessionViewModel, onChanged: {
+                viewModel.statusMessage = "Username updated."
+            })
+        }
+    }
+
     // MARK: - Membership Card
 
     private var membershipCard: some View {
@@ -135,7 +171,7 @@ struct AccountView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .tracking(1.0)
 
-                Text(sessionViewModel.activeTier?.title ?? "No Access")
+                Text(sessionViewModel.activeTier.title)
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
@@ -322,6 +358,48 @@ struct AccountView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Delete Account
+
+    private var deleteAccountSection: some View {
+        Button {
+            showDeleteWarning = true
+        } label: {
+            HStack {
+                Image(systemName: "trash.fill")
+                    .font(.subheadline.weight(.semibold))
+                Text("Delete Account")
+                    .font(.subheadline.weight(.bold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.danger)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(HobbyIQTheme.Colors.danger.opacity(0.05))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.danger.opacity(0.2), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(sessionViewModel.isLoading)
+        .alert("Delete Your Account?", isPresented: $showDeleteWarning) {
+            Button("Continue", role: .destructive) {
+                showFinalDeleteConfirmation = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This is permanent and cannot be undone. All your data — portfolio, watchlist, alerts, and preferences — will be deleted.\n\nIf you have an active subscription, you must cancel it separately in iOS Settings → Subscriptions. Deleting your account does not stop billing.")
+        }
+        .alert("Are you sure?", isPresented: $showFinalDeleteConfirmation) {
+            Button("Delete My Account", role: .destructive) {
+                Task { await sessionViewModel.deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be reversed.")
+        }
+    }
+
     // MARK: - Helpers
 
     private func accountSectionHeader(_ title: String) -> some View {
@@ -412,6 +490,96 @@ private extension View {
                     .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+}
+
+// MARK: - Username Change Sheet
+
+struct UsernameChangeSheet: View {
+    @ObservedObject var sessionViewModel: AppSessionViewModel
+    var onChanged: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var newUsername = ""
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Choose a new username")
+                        .font(.headline)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text("Letters, numbers, and underscores only. 3–30 characters.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                TextField("Username", text: $newUsername)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(14)
+                    .background(Color(hex: 0x1A1D24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(.white)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                Button(isSaving ? "Saving…" : "Update Username") {
+                    Task { await saveUsername() }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isSaving || newUsername.trimmingCharacters(in: .whitespacesAndNewlines).count < 3)
+
+                Spacer()
+            }
+            .padding(16)
+            .background(HobbyIQBackground())
+            .navigationTitle("Change Username")
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+        }
+    }
+
+    private func saveUsername() async {
+        let trimmed = newUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else {
+            errorMessage = "Username must be at least 3 characters."
+            return
+        }
+
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
+        do {
+            let response = try await APIService.shared.changeUsername(username: trimmed)
+            if response.success == true {
+                onChanged()
+                dismiss()
+            } else {
+                errorMessage = response.error ?? "Could not update username."
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

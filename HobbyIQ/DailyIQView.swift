@@ -16,6 +16,14 @@ struct DailyIQView: View {
     @State private var watchedPlayerNames: Set<String> = []
     @State private var isSyncingWatchlist = false
     @State private var playerIQName: String?
+    @State private var searchResults: [PlayerSearchResult] = []
+    @State private var isSearching = false
+    @State private var topWatched: [WatchPlayerResult] = []
+    @State private var suggestions: [WatchlistSuggestion] = []
+    @State private var fullBrief: DailyIQFullBriefResponse?
+    @State private var isLoadingBrief = false
+    @State private var showUpgradePaywall = false
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
     init(userId: String = "", service: DailyIQService? = nil) {
@@ -60,6 +68,14 @@ struct DailyIQView: View {
                     )
                 case .watchlist:
                     watchlistCard
+                case .brief:
+                    briefCard
+                        .lockedOverlay(
+                            feature: GatedFeature.dailyIQBriefs,
+                            subscriptionManager: sessionViewModel.subscriptionManager
+                        ) {
+                            showUpgradePaywall = true
+                        }
                 }
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
@@ -70,12 +86,16 @@ struct DailyIQView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             await refreshDailyIQ(for: nil)
+            await loadTopAndSuggest()
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }
         }
         .refreshable {
             await refreshDailyIQ(for: selectedDate)
+        }
+        .sheet(isPresented: $showUpgradePaywall) {
+            PaywallView(sessionViewModel: sessionViewModel)
         }
         .fullScreenCover(isPresented: Binding(
             get: { playerIQName != nil },
@@ -215,12 +235,12 @@ struct DailyIQView: View {
             HStack(spacing: 10) {
                 HobbyIQSearchField(text: $watchlistQuery, placeholder: "Search player and add to watchlist...")
                     .onSubmit {
-                        Task { await addWatchlistEntry(from: watchlistQuery) }
+                        Task { await searchPlayers(query: watchlistQuery) }
                     }
                     .frame(maxWidth: .infinity)
 
                 Button {
-                    Task { await addWatchlistEntry(from: watchlistQuery) }
+                    Task { await searchPlayers(query: watchlistQuery) }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
@@ -243,6 +263,131 @@ struct DailyIQView: View {
                     .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+
+            // Search results (from POST watchlist/search, gated collector+)
+            if isSearching {
+                HStack(spacing: 8) {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Searching…")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                .padding(.vertical, 8)
+            }
+
+            if !searchResults.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(searchResults) { result in
+                        Button {
+                            Task { await addFromSearchResult(result) }
+                        } label: {
+                            HStack(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(result.playerName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    HStack(spacing: 6) {
+                                        if let team = result.teamName {
+                                            Text(team)
+                                                .font(.caption.weight(.medium))
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        }
+                                        if let pos = result.positionName ?? result.position {
+                                            Text(pos)
+                                                .font(.caption.weight(.medium))
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        }
+                                        if result.active == true {
+                                            Text("Active")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(HobbyIQTheme.Colors.hobbyGreen.opacity(0.15))
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(HobbyIQTheme.Colors.cardNavy)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.2), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Top Watched (ungated)
+            if !topWatched.isEmpty {
+                dailySectionHeader("TOP WATCHED")
+                LazyVStack(spacing: 8) {
+                    ForEach(topWatched.prefix(10), id: \.id) { entry in
+                        Button {
+                            playerIQName = entry.playerName
+                        } label: {
+                            DailyWatchlistRow(
+                                entry: DailyWatchlistEntry(result: entry),
+                                onRemove: { Task { await removeWatchlistEntry(DailyWatchlistEntry(result: entry)) } }
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Suggested Players (ungated)
+            if !suggestions.isEmpty {
+                dailySectionHeader("SUGGESTED FOR YOU")
+                LazyVStack(spacing: 6) {
+                    ForEach(suggestions) { sug in
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(sug.playerName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                if let reason = sug.reason {
+                                    Text(reason)
+                                        .font(.caption)
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                }
+                            }
+                            Spacer()
+                            if let score = sug.score {
+                                Text(String(format: "%.0f", score))
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            }
+                            Button {
+                                Task { await addWatchlistEntry(from: sug.playerName) }
+                            } label: {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(HobbyIQTheme.Colors.cardNavy)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                    }
+                }
+            }
 
             // Watchlist entries
             if trackedWatchlist.isEmpty {
@@ -335,6 +480,189 @@ struct DailyIQView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Brief Tab (gated investor+)
+
+    private var briefCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            dailySectionHeader("DAILY BRIEF")
+
+            if isLoadingBrief {
+                HStack(spacing: 10) {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Loading brief…")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                .padding(.vertical, 16)
+            } else if let brief = fullBrief {
+                if let meta = brief.meta {
+                    HStack(spacing: 6) {
+                        if let gen = meta.generatedAt {
+                            Text("Generated: \(gen)")
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        Spacer()
+                        if let freshness = meta.dataFreshness {
+                            Text(freshness)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+
+                briefMoverSection(title: "RISERS", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
+                briefMoverSection(title: "FALLERS", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
+                briefMoverSection(title: "BREAKOUTS", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "newspaper")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("No brief data available yet.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            }
+        }
+        .task { await loadFullBrief() }
+    }
+
+    private func briefMoverSection(title: String, movers: [DailyBriefMover], color: Color, icon: String) -> some View {
+        Group {
+            if !movers.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(color)
+                        Text(title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(1.0)
+                        Spacer()
+                        Text("\(movers.count)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(color)
+                    }
+
+                    ForEach(movers) { mover in
+                        Button {
+                            playerIQName = mover.playerName
+                        } label: {
+                            HStack(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mover.playerName)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    HStack(spacing: 6) {
+                                        if let team = mover.team {
+                                            Text(team)
+                                                .font(.caption2.weight(.medium))
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        }
+                                        if let level = mover.level {
+                                            Text(level)
+                                                .font(.caption2.weight(.medium))
+                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    if let pct = mover.pctChange {
+                                        Text(String(format: "%+.1f%%", pct))
+                                            .font(.subheadline.weight(.bold).monospacedDigit())
+                                            .foregroundStyle(color)
+                                    }
+                                    if let reason = mover.reason {
+                                        Text(reason)
+                                            .font(.caption2)
+                                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(HobbyIQTheme.Colors.cardNavy)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                                    .stroke(color.opacity(0.2), lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Search / Top / Suggest Methods
+
+    private func searchPlayers(query: String) async {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            searchResults = []
+            if !trimmed.isEmpty { await addWatchlistEntry(from: trimmed) }
+            return
+        }
+
+        guard sessionViewModel.subscriptionManager.has(GatedFeature.watchlist) else {
+            service.errorMessage = "Upgrade to Collector+ to search and add players to your watchlist."
+            return
+        }
+
+        isSearching = true
+        searchResults = []
+        defer { isSearching = false }
+
+        do {
+            let response = try await APIService.shared.watchlistSearch(query: trimmed)
+            searchResults = response.results ?? []
+            if searchResults.isEmpty {
+                await addWatchlistEntry(from: trimmed)
+            }
+        } catch {
+            await addWatchlistEntry(from: trimmed)
+        }
+    }
+
+    private func addFromSearchResult(_ result: PlayerSearchResult) async {
+        searchResults = []
+        watchlistQuery = ""
+        await addWatchlistEntry(from: result.playerName)
+    }
+
+    private func loadTopAndSuggest() async {
+        if let response = try? await APIService.shared.watchlistTop() {
+            topWatched = response.entries ?? []
+        }
+        if let response = try? await APIService.shared.watchlistSuggest() {
+            suggestions = response.suggestions ?? []
+        }
+    }
+
+    private func loadFullBrief() async {
+        guard fullBrief == nil else { return }
+        isLoadingBrief = true
+        defer { isLoadingBrief = false }
+
+        do {
+            fullBrief = try await APIService.shared.fetchFullBrief()
+        } catch {
+            fullBrief = nil
         }
     }
 
@@ -584,6 +912,7 @@ private enum DailySegment: String, CaseIterable, Identifiable {
     case milb = "MiLB"
     case mlb = "MLB"
     case watchlist = "Watchlist"
+    case brief = "Brief"
 
     var id: String { rawValue }
     var title: String { rawValue }

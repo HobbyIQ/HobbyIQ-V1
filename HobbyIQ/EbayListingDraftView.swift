@@ -65,6 +65,10 @@ struct EbayListingDraftView: View {
     @State private var isPublishing = false
     @State private var previewResponse: PortfolioEbayListingResponse?
     @State private var publishResponse: PortfolioEbayListingResponse?
+    @State private var policies: EbayPoliciesResponse?
+    @State private var selectedPaymentPolicyId: String?
+    @State private var selectedFulfillmentPolicyId: String?
+    @State private var selectedReturnPolicyId: String?
 
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onCompleted: @escaping (PortfolioEbayListingResponse) -> Void) {
         self.viewModel = viewModel
@@ -110,6 +114,11 @@ struct EbayListingDraftView: View {
                     // Input fields
                     inputSection
 
+                    // Seller policies
+                    if policies != nil {
+                        policiesSection
+                    }
+
                     // Auction scheduling
                     if listingFormat == .auction {
                         auctionScheduleSection
@@ -153,6 +162,7 @@ struct EbayListingDraftView: View {
         }
         .task {
             await ebayStore.refreshConnectionStatus()
+            await loadPolicies()
         }
         .onChange(of: ebayStore.lastErrorMessage) { _, newValue in
             if let newValue {
@@ -642,6 +652,86 @@ struct EbayListingDraftView: View {
             .foregroundStyle(.white)
     }
 
+    // MARK: - Policies Section
+
+    private var policiesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionLabel("Seller Policies")
+
+            if let paymentPolicies = policies?.paymentPolicies, !paymentPolicies.isEmpty {
+                policyPicker(title: "Payment Policy", policies: paymentPolicies, selection: $selectedPaymentPolicyId)
+            }
+
+            if let fulfillmentPolicies = policies?.fulfillmentPolicies, !fulfillmentPolicies.isEmpty {
+                policyPicker(title: "Fulfillment Policy", policies: fulfillmentPolicies, selection: $selectedFulfillmentPolicyId)
+            }
+
+            if let returnPolicies = policies?.returnPolicies, !returnPolicies.isEmpty {
+                policyPicker(title: "Return Policy", policies: returnPolicies, selection: $selectedReturnPolicyId)
+            }
+        }
+        .listingCard()
+    }
+
+    private func policyPicker(title: String, policies: [EbayPolicy], selection: Binding<String?>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            Menu {
+                Button("None") { selection.wrappedValue = nil }
+                ForEach(policies) { policy in
+                    Button(policy.name ?? policy.policyId) {
+                        selection.wrappedValue = policy.policyId
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selectedPolicyName(from: policies, id: selection.wrappedValue))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .padding(14)
+                .background(Color(hex: 0x1A1D24))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+    }
+
+    private func selectedPolicyName(from policies: [EbayPolicy], id: String?) -> String {
+        guard let id else { return "Select…" }
+        return policies.first(where: { $0.policyId == id })?.name ?? id
+    }
+
+    private func loadPolicies() async {
+        do {
+            let response = try await APIService.shared.ebayPolicies()
+            policies = response
+            if selectedPaymentPolicyId == nil {
+                selectedPaymentPolicyId = response.paymentPolicies?.first(where: { $0.isDefault == true })?.policyId
+                    ?? response.paymentPolicies?.first?.policyId
+            }
+            if selectedFulfillmentPolicyId == nil {
+                selectedFulfillmentPolicyId = response.fulfillmentPolicies?.first(where: { $0.isDefault == true })?.policyId
+                    ?? response.fulfillmentPolicies?.first?.policyId
+            }
+            if selectedReturnPolicyId == nil {
+                selectedReturnPolicyId = response.returnPolicies?.first(where: { $0.isDefault == true })?.policyId
+                    ?? response.returnPolicies?.first?.policyId
+            }
+        } catch {
+            // Policies are optional — listing still works without them
+        }
+    }
+
     // MARK: - API
 
     private func generatePreview() async {
@@ -727,7 +817,10 @@ struct EbayListingDraftView: View {
             summary: card.summary,
             isAuto: isAutoToggle ? true : nil,
             listingFormat: formatValue,
-            auctionStartDate: auctionDate
+            auctionStartDate: auctionDate,
+            paymentPolicyId: selectedPaymentPolicyId,
+            fulfillmentPolicyId: selectedFulfillmentPolicyId,
+            returnPolicyId: selectedReturnPolicyId
         )
     }
 

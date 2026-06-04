@@ -33,17 +33,37 @@ final class AuthService: ObservableObject, AuthServicing {
     }
 
     func restoreSession(for scenario: AppSessionScenario) async throws -> AppUser? {
-        try await Task.sleep(for: .milliseconds(450))
-
-        if let storedSession = loadStoredSession() {
-            let user = AppUser(id: storedSession.userId, displayName: storedSession.profileName, email: storedSession.profileName)
-            session = AuthSession(user: user, token: storedSession.token)
-            return user
+        guard let storedSession = loadStoredSession() else {
+            session = nil
+            clearStoredSession()
+            return nil
         }
 
-        session = nil
-        clearStoredSession()
-        return nil
+        let cachedUser = AppUser(id: storedSession.userId, displayName: storedSession.profileName, email: storedSession.profileName)
+        session = AuthSession(user: cachedUser, token: storedSession.token)
+
+        do {
+            let response = try await withTimeout(seconds: 5) {
+                try await APIService.shared.fetchSession()
+            }
+            guard response.success, let backendUser = response.user else {
+                session = nil
+                clearStoredSession()
+                return nil
+            }
+            let user = AppUser(id: backendUser.userId, displayName: backendUser.email, email: backendUser.email)
+            session = AuthSession(user: user, token: storedSession.token)
+            return user
+        } catch let error as APIServiceError {
+            if case .httpError(let code, _) = error, code == 401 {
+                session = nil
+                clearStoredSession()
+                return nil
+            }
+            return cachedUser
+        } catch {
+            return cachedUser
+        }
     }
 
     func signInWithApple(identityToken: String, email: String?, fullName: String?, username: String) async throws -> AppUser {
@@ -82,6 +102,7 @@ final class AuthService: ObservableObject, AuthServicing {
     }
 
     func signOut() async {
+        _ = try? await APIService.shared.signOutSession()
         session = nil
         clearStoredSession()
     }

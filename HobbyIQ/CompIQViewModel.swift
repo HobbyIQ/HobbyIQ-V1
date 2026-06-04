@@ -283,6 +283,11 @@ final class CompIQViewModel: ObservableObject {
     }
 
     private func friendlyError(_ error: Error) -> String {
+        if let apiError = error as? APIServiceError,
+           case .httpError(let code, let body) = apiError, code == 402 {
+            let msg = APIService.backendMessage(from: body)
+            return msg.isEmpty ? "You've reached your daily price check limit. Upgrade for more." : msg
+        }
         if let local = error as? LocalizedError, let description = local.errorDescription {
             return description
         }

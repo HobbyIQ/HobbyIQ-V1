@@ -10,8 +10,9 @@ import StoreKit
 enum AppAccessTier: String, CaseIterable, Identifiable {
     case none
     case free
-    case pro
-    case allStar
+    case collector
+    case investor
+    case proSeller = "pro_seller"
 
     var id: String { rawValue }
 
@@ -21,10 +22,12 @@ enum AppAccessTier: String, CaseIterable, Identifiable {
             return "Locked"
         case .free:
             return "Free"
-        case .pro:
-            return "Pro"
-        case .allStar:
-            return "All-Star"
+        case .collector:
+            return "Collector"
+        case .investor:
+            return "Investor"
+        case .proSeller:
+            return "Pro Seller"
         }
     }
 
@@ -34,11 +37,205 @@ enum AppAccessTier: String, CaseIterable, Identifiable {
             return "lock.fill"
         case .free:
             return "sparkles"
-        case .pro:
+        case .collector:
+            return "rectangle.stack.fill"
+        case .investor:
             return "chart.line.uptrend.xyaxis.circle.fill"
-        case .allStar:
+        case .proSeller:
             return "star.circle.fill"
         }
+    }
+
+    var rank: Int {
+        switch self {
+        case .none: return 0
+        case .free: return 1
+        case .collector: return 2
+        case .investor: return 3
+        case .proSeller: return 4
+        }
+    }
+}
+
+struct EntitlementState: Equatable {
+    let plan: AppAccessTier
+    let features: Set<String>
+    let caps: EntitlementCaps
+
+    static let empty = EntitlementState(
+        plan: .none,
+        features: [],
+        caps: EntitlementCaps(
+            priceChecksPerDay: .limited(0),
+            holdingsCap: .limited(0),
+            scansPerMonth: .limited(0),
+            priceAlerts: .limited(0)
+        )
+    )
+}
+
+// MARK: - Gated Features & Caps (canonical backend mirror)
+
+enum GatedFeature {
+    static let predictions = "predictions"
+    static let watchlist = "watchlist"
+    static let advancedAlerts = "advancedAlerts"
+    static let dailyIQBriefs = "dailyIQBriefs"
+    static let trendIQComposite = "trendIQComposite"
+    static let ebayIntegration = "ebayIntegration"
+    static let marketTrendIndexes = "marketTrendIndexes"
+    static let trendIQLayer3Full = "trendIQLayer3Full"
+    static let erpReconciliation = "erpReconciliation"
+
+    static let all: [String] = [
+        predictions, watchlist, advancedAlerts, dailyIQBriefs,
+        trendIQComposite, ebayIntegration, marketTrendIndexes,
+        trendIQLayer3Full, erpReconciliation,
+    ]
+
+    static func minimumTier(for feature: String) -> AppAccessTier {
+        for tier in [AppAccessTier.collector, .investor, .proSeller] {
+            if TierMatrix.features[tier]?.contains(feature) == true { return tier }
+        }
+        return .proSeller
+    }
+
+    static func displayName(for feature: String) -> String {
+        switch feature {
+        case predictions: return "Predictions"
+        case watchlist: return "Watchlist"
+        case advancedAlerts: return "Advanced Alerts"
+        case dailyIQBriefs: return "DailyIQ Briefs"
+        case trendIQComposite: return "TrendIQ Composite"
+        case ebayIntegration: return "eBay Integration"
+        case marketTrendIndexes: return "Market Trend Indexes"
+        case trendIQLayer3Full: return "TrendIQ Layer 3"
+        case erpReconciliation: return "ERP Reconciliation"
+        default: return feature
+        }
+    }
+}
+
+enum GatedCap: String, CaseIterable {
+    case priceChecksPerDay
+    case holdingsCap
+    case scansPerMonth
+    case priceAlerts
+
+    var displayName: String {
+        switch self {
+        case .priceChecksPerDay: return "Price Checks"
+        case .holdingsCap: return "Holdings"
+        case .scansPerMonth: return "Scans"
+        case .priceAlerts: return "Price Alerts"
+        }
+    }
+
+    func upgradeTier(from currentTier: AppAccessTier) -> AppAccessTier? {
+        switch self {
+        case .priceChecksPerDay, .scansPerMonth:
+            return currentTier.rank < AppAccessTier.collector.rank ? .collector : nil
+        case .holdingsCap:
+            if currentTier.rank < AppAccessTier.collector.rank { return .collector }
+            if currentTier.rank < AppAccessTier.investor.rank { return .investor }
+            return nil
+        case .priceAlerts:
+            if currentTier.rank < AppAccessTier.collector.rank { return .collector }
+            if currentTier.rank < AppAccessTier.investor.rank { return .investor }
+            if currentTier.rank < AppAccessTier.proSeller.rank { return .proSeller }
+            return nil
+        }
+    }
+}
+
+extension CapValue {
+    var displayText: String {
+        switch self {
+        case .limited(let n): return "\(n)"
+        case .unlimited: return "Unlimited"
+        }
+    }
+
+    var isUnlimited: Bool {
+        if case .unlimited = self { return true }
+        return false
+    }
+}
+
+enum TierMatrix {
+    static let features: [AppAccessTier: Set<String>] = [
+        .free: [],
+        .collector: [GatedFeature.predictions, GatedFeature.watchlist],
+        .investor: [GatedFeature.predictions, GatedFeature.watchlist, GatedFeature.advancedAlerts,
+                    GatedFeature.dailyIQBriefs, GatedFeature.trendIQComposite,
+                    GatedFeature.ebayIntegration, GatedFeature.marketTrendIndexes],
+        .proSeller: Set(GatedFeature.all),
+    ]
+
+    static let caps: [AppAccessTier: [GatedCap: CapValue]] = [
+        .free: [.priceChecksPerDay: .limited(5), .holdingsCap: .limited(25),
+                .scansPerMonth: .limited(10), .priceAlerts: .limited(0)],
+        .collector: [.priceChecksPerDay: .unlimited, .holdingsCap: .limited(250),
+                     .scansPerMonth: .unlimited, .priceAlerts: .limited(10)],
+        .investor: [.priceChecksPerDay: .unlimited, .holdingsCap: .unlimited,
+                    .scansPerMonth: .unlimited, .priceAlerts: .limited(30)],
+        .proSeller: [.priceChecksPerDay: .unlimited, .holdingsCap: .unlimited,
+                     .scansPerMonth: .unlimited, .priceAlerts: .unlimited],
+    ]
+
+    static func highlights(for tier: AppAccessTier) -> [String] {
+        guard tier != .none else { return [] }
+
+        var items: [String] = []
+
+        let previousTier: AppAccessTier? = {
+            switch tier {
+            case .collector: return .free
+            case .investor: return .collector
+            case .proSeller: return .investor
+            default: return nil
+            }
+        }()
+
+        if let prev = previousTier, prev.rank >= AppAccessTier.collector.rank {
+            items.append("Everything in \(prev.title)")
+        }
+
+        if tier == .free {
+            items.append("CompIQ card decisions")
+            items.append("PlayerIQ market view")
+        }
+
+        if let tierCaps = caps[tier] {
+            let prevCaps = previousTier.flatMap { caps[$0] }
+            for cap in GatedCap.allCases {
+                guard let value = tierCaps[cap] else { continue }
+                let changed = prevCaps.flatMap { $0[cap] } != value
+                guard changed else { continue }
+                if case .limited(0) = value { continue }
+                items.append(capHighlight(value, cap))
+            }
+        }
+
+        let tierFeatures = features[tier] ?? []
+        let previousFeatures = previousTier.flatMap { features[$0] } ?? []
+        let newFeatures = tierFeatures.subtracting(previousFeatures)
+        for feature in GatedFeature.all where newFeatures.contains(feature) {
+            items.append(GatedFeature.displayName(for: feature))
+        }
+
+        return items
+    }
+
+    private static func capHighlight(_ value: CapValue, _ cap: GatedCap) -> String {
+        let suffix: String = {
+            switch cap {
+            case .priceChecksPerDay: return "/day"
+            case .scansPerMonth: return "/month"
+            default: return ""
+            }
+        }()
+        return "\(value.displayText) \(cap.displayName.lowercased())\(suffix)"
     }
 }
 
@@ -87,6 +284,8 @@ struct SubscriptionPlan: Identifiable {
 
 @MainActor
 final class SubscriptionManager: ObservableObject {
+    static let shared = SubscriptionManager()
+
     enum PurchaseState: Equatable {
         case idle
         case loadingProducts
@@ -95,6 +294,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     @Published private(set) var currentTier: AppAccessTier
+    @Published private(set) var entitlementState: EntitlementState?
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchaseState: PurchaseState = .idle
     @Published private(set) var hasLoadedProducts = false
@@ -108,26 +308,35 @@ final class SubscriptionManager: ObservableObject {
             fallbackPrice: "$0"
         ),
         SubscriptionPlan(
-            tier: .pro,
-            title: "Pro",
-            detail: "Best for active collectors using CompIQ, PlayerIQ, PortfolioIQ, and DailyIQ every day.",
-            fallbackPrice: "$12.99 / month"
+            tier: .collector,
+            title: "Collector",
+            detail: "Best for active collectors tracking cards and comps every day.",
+            fallbackPrice: "$9.99 / month"
         ),
         SubscriptionPlan(
-            tier: .allStar,
-            title: "All-Star",
-            detail: "Extended access for heavier users who want a lower effective monthly cost.",
-            fallbackPrice: "$29.99 / quarter"
-        )
+            tier: .investor,
+            title: "Investor",
+            detail: "Full access to trends, advanced alerts, DailyIQ, and eBay integration.",
+            fallbackPrice: "$19.99 / month"
+        ),
+        SubscriptionPlan(
+            tier: .proSeller,
+            title: "Pro Seller",
+            detail: "Everything in Investor plus ERP reconciliation and unlimited alerts.",
+            fallbackPrice: "$29.99 / month"
+        ),
     ]
 
     private let storageKey = "com.hobbyiq.subscriptionTier"
+
     private let productIDsByTier: [AppAccessTier: String] = [
-        .pro: "com.hobbyiq.pro.monthly",
-        .allStar: "com.hobbyiq.allstar.quarterly"
+        .collector: "com.hobbyiq.collector.monthly",
+        .investor: "com.hobbyiq.investor.monthly",
+        .proSeller: "com.hobbyiq.proseller.monthly",
     ]
 
     private var updatesTask: Task<Void, Never>?
+    private let api = APIService.shared
 
     init() {
         currentTier = UserDefaults.standard.string(forKey: storageKey)
@@ -158,7 +367,7 @@ final class SubscriptionManager: ObservableObject {
 
     func prepare() async {
         await loadProducts()
-        await refreshEntitlements()
+        await refreshEntitlementsFromBackend()
     }
 
     func continueFree() {
@@ -188,12 +397,8 @@ final class SubscriptionManager: ObservableObject {
         do {
             let result = try await product.purchase()
             switch result {
-            case .success(.verified(let transaction)):
-                await transaction.finish()
-                await refreshEntitlements()
-                statusMessage = "\(tier.title) unlocked."
-            case .success(.unverified):
-                statusMessage = "Purchase could not be verified."
+            case .success(let verificationResult):
+                await handlePurchaseResult(verificationResult)
             case .pending:
                 statusMessage = "Purchase is pending approval."
             case .userCancelled:
@@ -213,7 +418,18 @@ final class SubscriptionManager: ObservableObject {
 
         do {
             try await AppStore.sync()
-            await refreshEntitlements()
+
+            // Verify any current entitlements the backend may not know about
+            for await result in Transaction.currentEntitlements {
+                guard case .verified(let transaction) = result else { continue }
+                let jws = result.jwsRepresentation
+                let response = try? await api.verifySubscription(jws: jws)
+                if response?.success == true {
+                    await transaction.finish()
+                }
+            }
+
+            await refreshEntitlementsFromBackend()
 
             if currentTier == .none {
                 statusMessage = "No previous purchases were found."
@@ -227,6 +443,7 @@ final class SubscriptionManager: ObservableObject {
 
     func presentPaywall() {
         setTier(.none)
+        entitlementState = nil
         statusMessage = nil
     }
 
@@ -239,8 +456,104 @@ final class SubscriptionManager: ObservableObject {
         return product.displayPrice
     }
 
+    // MARK: - Entitlement Gating
+
+    func has(_ feature: String) -> Bool {
+        if let state = entitlementState {
+            return state.features.contains(feature)
+        }
+        return TierMatrix.features[currentTier]?.contains(feature) ?? false
+    }
+
+    func cap(for cap: GatedCap) -> CapValue {
+        if let state = entitlementState {
+            switch cap {
+            case .priceChecksPerDay: return state.caps.priceChecksPerDay
+            case .holdingsCap: return state.caps.holdingsCap
+            case .scansPerMonth: return state.caps.scansPerMonth
+            case .priceAlerts: return state.caps.priceAlerts
+            }
+        }
+        return TierMatrix.caps[currentTier]?[cap] ?? .limited(0)
+    }
+
+    func capAllows(_ cap: GatedCap, used: Int) -> Bool {
+        switch self.cap(for: cap) {
+        case .unlimited: return true
+        case .limited(let limit): return used < limit
+        }
+    }
+
+    func capLimit(_ cap: GatedCap) -> Int? {
+        switch self.cap(for: cap) {
+        case .unlimited: return nil
+        case .limited(let limit): return limit
+        }
+    }
+
+    // MARK: - Purchase Verification
+
+    private func handlePurchaseResult(_ verificationResult: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = verificationResult else {
+            statusMessage = "Purchase could not be verified."
+            return
+        }
+
+        let jws = verificationResult.jwsRepresentation
+
+        do {
+            let verifyResponse = try await api.verifySubscription(jws: jws)
+            guard verifyResponse.success else {
+                statusMessage = verifyResponse.error ?? "Subscription verification failed."
+                return
+            }
+
+            await transaction.finish()
+            await refreshEntitlementsFromBackend()
+            statusMessage = "\(currentTier.title) unlocked."
+        } catch {
+            statusMessage = verifyErrorMessage(from: error)
+            // Transaction stays unfinished — Transaction.updates will retry
+        }
+    }
+
+    // MARK: - Backend Entitlements
+
+    private func refreshEntitlementsFromBackend() async {
+        guard AuthService.shared.isLoggedIn else { return }
+
+        do {
+            let response = try await api.fetchEntitlements()
+            let tier = AppAccessTier(rawValue: response.plan) ?? .free
+            entitlementState = EntitlementState(
+                plan: tier,
+                features: Set(response.features),
+                caps: response.caps
+            )
+            setTier(tier)
+        } catch {
+            // Network failure or 401 — keep cached tier, auth flow handles re-auth
+        }
+    }
+
+    private func verifyAndRefreshTransaction(_ verificationResult: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = verificationResult else { return }
+
+        let jws = verificationResult.jwsRepresentation
+        do {
+            let verifyResponse = try await api.verifySubscription(jws: jws)
+            guard verifyResponse.success else { return }
+            await transaction.finish()
+            await refreshEntitlementsFromBackend()
+        } catch {
+            // Transient failure — transaction stays unfinished, will retry via Transaction.updates
+        }
+    }
+
+    // MARK: - Private
+
     private func loadProducts() async {
-        guard hasLoadedProducts == false else { return }
+        guard !hasLoadedProducts else { return }
 
         purchaseState = .loadingProducts
         defer {
@@ -262,37 +575,10 @@ final class SubscriptionManager: ObservableObject {
         hasLoadedProducts = true
     }
 
-    private func refreshEntitlements() async {
-        var resolvedTier: AppAccessTier = .none
-
-        for await result in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = result else { continue }
-
-            if let matchedTier = productIDsByTier.first(where: { $0.value == transaction.productID })?.key {
-                if matchedTier == .allStar {
-                    resolvedTier = .allStar
-                    break
-                }
-
-                if resolvedTier != .allStar {
-                    resolvedTier = matchedTier
-                }
-            }
-        }
-
-        if resolvedTier == .none, currentTier == .free {
-            return
-        }
-
-        setTier(resolvedTier)
-    }
-
     private func observeTransactionUpdates() -> Task<Void, Never> {
         Task {
             for await update in Transaction.updates {
-                guard case .verified(let transaction) = update else { continue }
-                await transaction.finish()
-                await refreshEntitlements()
+                await verifyAndRefreshTransaction(update)
             }
         }
     }
@@ -300,5 +586,20 @@ final class SubscriptionManager: ObservableObject {
     private func setTier(_ tier: AppAccessTier) {
         currentTier = tier
         UserDefaults.standard.set(tier.rawValue, forKey: storageKey)
+    }
+
+    private func verifyErrorMessage(from error: Error) -> String {
+        if let apiError = error as? APIServiceError,
+           case .httpError(let code, _) = apiError {
+            switch code {
+            case 422:
+                return "This subscription could not be recognized. Contact support if this persists."
+            case 502, 503:
+                return "Apple's verification service is temporarily unavailable. Try again shortly."
+            default:
+                return APIService.errorMessage(from: error)
+            }
+        }
+        return "Verification failed. Your purchase is safe — try restoring purchases."
     }
 }

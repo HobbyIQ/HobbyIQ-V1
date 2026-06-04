@@ -487,23 +487,23 @@ final class PortfolioIQViewModel: ObservableObject {
         image: UIImage,
         side: CardPhotoSide
     ) async -> CardPhotoUploadResponse? {
-        guard let sessionId = resolvedSessionId() else {
-            errorMessage = "Sign in to upload card photos."
-            return nil
-        }
-
         guard let payload = CardPhotoFormat.payload(for: image) else {
             errorMessage = "Could not process that photo."
             return nil
         }
 
         do {
-            let response = try await APIService.shared.uploadCardPhoto(
+            let sasResponse = try await APIService.shared.requestCardPhotoSAS(fileExtension: "jpg")
+            guard let uploadUrl = sasResponse.uploadUrl, let blobUrl = sasResponse.blobUrl else {
+                errorMessage = "Server did not return upload URLs."
+                return nil
+            }
+            try await APIService.shared.uploadImageToSAS(
+                uploadUrl: uploadUrl,
                 imageData: payload.data,
-                mimeType: payload.mimeType,
-                side: side,
-                sessionId: sessionId
+                contentType: sasResponse.contentType ?? "image/jpeg"
             )
+            let response = CardPhotoUploadResponse(sasUrl: blobUrl)
 
             let updatedCard = InventoryCard(
                 id: card.id,

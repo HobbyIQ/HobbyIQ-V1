@@ -14,6 +14,14 @@ struct CompIQPricedCardView: View {
     @State private var selectedGrade: GradeOption = .raw
     @State private var fetchTask: Task<Void, Never>?
     @State private var showLayerBreakdown = false
+    @State private var segmentTrajectoryFull: SegmentTrajectoryFull?
+    @State private var isLoadingFullTrendIQ = false
+    @State private var showGradePremium = false
+    @State private var showSellWindow = false
+    @State private var showCompsByPlayer = false
+    @State private var showWhatIf = false
+    @State private var showUpgradePaywall = false
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @Environment(\.dismiss) private var dismiss
     private var skipFetch: Bool = false
 
@@ -86,6 +94,9 @@ struct CompIQPricedCardView: View {
         .task {
             guard !skipFetch else { return }
             await fetchPrice()
+            if sessionViewModel.subscriptionManager.has(GatedFeature.trendIQLayer3Full) {
+                await fetchTrendIQFull()
+            }
         }
         .onChange(of: selectedGrade) { _, _ in
             guard !skipFetch else { return }
@@ -94,12 +105,55 @@ struct CompIQPricedCardView: View {
                 try? await Task.sleep(for: .milliseconds(350))
                 guard !Task.isCancelled else { return }
                 await fetchPrice()
+                if sessionViewModel.subscriptionManager.has(GatedFeature.trendIQLayer3Full) {
+                    await fetchTrendIQFull()
+                }
             }
         }
         .sheet(isPresented: $showLayerBreakdown) {
             if let trendIQ = priceResponse?.trendIQ {
                 TrendIQLayerBreakdownView(trendIQ: trendIQ)
             }
+        }
+        .sheet(isPresented: $showGradePremium) {
+            GradePremiumView(
+                playerName: hit.player ?? "",
+                cardYear: hit.year,
+                product: hit.set,
+                parallel: hit.variant
+            )
+            .environmentObject(sessionViewModel)
+        }
+        .sheet(isPresented: $showSellWindow) {
+            SellWindowView(
+                playerName: hit.player ?? "",
+                cardYear: hit.year,
+                sport: nil
+            )
+            .environmentObject(sessionViewModel)
+        }
+        .sheet(isPresented: $showCompsByPlayer) {
+            CompsByPlayerView(
+                playerName: hit.player ?? "",
+                product: hit.set,
+                cardYear: hit.year
+            )
+        }
+        .sheet(isPresented: $showWhatIf) {
+            WhatIfView(
+                playerName: hit.player ?? "",
+                cardYear: hit.year,
+                product: hit.set,
+                parallel: hit.variant,
+                gradeCompany: selectedGrade.gradeCompany,
+                gradeValue: selectedGrade.gradeValue
+            )
+        }
+        .sheet(isPresented: $showUpgradePaywall) {
+            PaywallView(
+                sessionViewModel: sessionViewModel,
+                suggestedTier: GatedFeature.minimumTier(for: GatedFeature.trendIQComposite)
+            )
         }
     }
 
@@ -188,6 +242,12 @@ struct CompIQPricedCardView: View {
 
                 // TrendIQ (leads when available)
                 trendIQSection(response)
+
+                // Segment Trajectory Full (pro_seller gate)
+                segmentTrajectoryFullSection
+
+                // Advanced pricing tools
+                advancedToolsSection(response)
 
                 // Market Analysis group
                 cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
@@ -568,6 +628,12 @@ struct CompIQPricedCardView: View {
             cardGroup(title: "TrendIQ", icon: "waveform.path.ecg") {
                 trendIQHeadline(trendIQ)
                 trendIQCoverageRow(trendIQ)
+            }
+            .lockedOverlay(
+                feature: GatedFeature.trendIQComposite,
+                subscriptionManager: sessionViewModel.subscriptionManager
+            ) {
+                showUpgradePaywall = true
             }
         }
     }
@@ -1094,6 +1160,170 @@ struct CompIQPricedCardView: View {
         return HobbyIQTheme.Colors.danger
     }
 
+    // MARK: - Segment Trajectory Full
+
+    @ViewBuilder
+    private var segmentTrajectoryFullSection: some View {
+        if let full = segmentTrajectoryFull {
+            cardGroup(title: "Segment Trajectory (Full)", icon: "chart.xyaxis.line") {
+                if let reanchor = full.reanchorApplied {
+                    segmentDataRow(label: "Re-anchor Applied", value: reanchor ? "Yes" : "No")
+                }
+                if let effective = full.effectiveAnchorDate {
+                    segmentDataRow(label: "Effective Anchor", value: effective)
+                }
+                if let original = full.originalAnchorDate {
+                    segmentDataRow(label: "Original Anchor", value: original)
+                }
+
+                if let perWindow = full.perWindow {
+                    HStack(spacing: 12) {
+                        windowStatTile(title: "Pre-Anchor", stat: perWindow.pre)
+                        windowStatTile(title: "Post-Anchor", stat: perWindow.post)
+                    }
+                }
+
+                if let preSales = full.preAnchorSales, !preSales.isEmpty {
+                    anchorSalesSection(title: "Pre-Anchor Sales", sales: preSales)
+                }
+                if let postSales = full.postAnchorSales, !postSales.isEmpty {
+                    anchorSalesSection(title: "Post-Anchor Sales", sales: postSales)
+                }
+
+                if let siblings = full.siblingCardIds, !siblings.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SIBLING CARD IDS")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.8)
+                        Text(siblings.joined(separator: ", "))
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .lockedOverlay(
+                feature: GatedFeature.trendIQLayer3Full,
+                subscriptionManager: sessionViewModel.subscriptionManager
+            ) {
+                showUpgradePaywall = true
+            }
+        } else if isLoadingFullTrendIQ {
+            HStack(spacing: 12) {
+                ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                Text("Loading full trajectory...")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+            }
+            .hiqGroupCard()
+        }
+    }
+
+    private func segmentDataRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+    }
+
+    private func windowStatTile(title: String, stat: SegmentTrajectoryFull.WindowStat) -> some View {
+        VStack(spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.6)
+            Text(stat.mean.formatted(.currency(code: "USD")))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            HStack(spacing: 8) {
+                Text("p25: \(stat.p25.formatted(.currency(code: "USD")))")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Text("p75: \(stat.p75.formatted(.currency(code: "USD")))")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 8)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.2), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private func anchorSalesSection(title: String, sales: [SegmentTrajectoryFull.AnchorSale]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .tracking(0.8)
+            ForEach(sales) { sale in
+                HStack {
+                    Text(anchorSaleDate(sale.ts))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                    Text(sale.price.formatted(.currency(code: "USD")))
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+            }
+        }
+    }
+
+    private func anchorSaleDate(_ ts: Double) -> String {
+        let date = Date(timeIntervalSince1970: ts / 1000)
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Advanced Tools
+
+    private func advancedToolsSection(_ response: CompIQPriceByIdResponse) -> some View {
+        cardGroup(title: "Advanced Tools", icon: "wrench.and.screwdriver") {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                toolButton(title: "What-If", icon: "questionmark.circle", action: { showWhatIf = true })
+                toolButton(title: "Grade Premium", icon: "star.circle", action: { showGradePremium = true })
+                toolButton(title: "Sell Window", icon: "calendar.circle", action: { showSellWindow = true })
+                toolButton(title: "Comps by Player", icon: "person.2.circle", action: { showCompsByPlayer = true })
+            }
+        }
+    }
+
+    private func toolButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Spacer()
+            }
+            .padding(12)
+            .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.3), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Fetch
 
     private func fetchPrice() async {
@@ -1114,6 +1344,24 @@ struct CompIQPricedCardView: View {
         }
 
         isLoading = false
+    }
+
+    private func fetchTrendIQFull() async {
+        isLoadingFullTrendIQ = true
+        defer { isLoadingFullTrendIQ = false }
+
+        do {
+            let request = TrendIQRequest(
+                cardsightCardId: hit.cardsightCardId,
+                query: hit.displayLabel ?? hit.resolvedLabel,
+                gradeCompany: selectedGrade.gradeCompany,
+                gradeValue: selectedGrade.gradeValue
+            )
+            let response = try await APIService.shared.fetchTrendIQFull(request: request)
+            segmentTrajectoryFull = response.segmentTrajectoryFull
+        } catch {
+            logger.error("trendiq-full error: \(error.localizedDescription)")
+        }
     }
 }
 
@@ -1248,6 +1496,7 @@ private extension View {
             previewResponse: CompIQPriceByIdResponse.previewMock
         )
     }
+    .environmentObject(AppSessionViewModel())
     .preferredColorScheme(.dark)
 }
 
