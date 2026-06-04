@@ -109,7 +109,7 @@ async function getContainer(): Promise<Container | null> {
       return container;
     } catch (err: any) {
       console.error(
-        "[dailyiq.watchlist] Cosmos init failed; falling back to disk store:",
+        "[cosmos][dailyiq.watchlist] Cosmos init failed; falling back to disk store:",
         err?.message ?? err,
       );
       _cosmosDisabled = true;
@@ -426,6 +426,24 @@ export async function removeWatchlistEntry(
  * Test-only helper to reset all in-memory state (Cosmos handle + disk cache).
  * Production code should never call this.
  */
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all watchlist entries for a user.
+ * Single-partition list+delete loop.
+ */
+export async function deleteAllWatchlistEntriesForUser(userId: string): Promise<number> {
+  const entries = await getWatchlistEntries(userId);
+  let deleted = 0;
+  for (const e of entries) {
+    try {
+      const ok = await removeWatchlistEntry(userId, e.playerId);
+      if (ok) deleted += 1;
+    } catch (err: any) {
+      console.error("[watchlistStore] deleteAllWatchlistEntriesForUser item failed:", err?.message ?? err);
+    }
+  }
+  return deleted;
+}
+
 export function __resetWatchlistCacheForTests(): void {
   _container = null;
   _initPromise = null;

@@ -157,7 +157,7 @@ async function getContainer(): Promise<Container | null> {
       await seedAdminUsers(container);
       return container;
     } catch (err: any) {
-      console.error(`[auth] Cosmos init failed, using in-memory: ${err.message}`);
+      console.error(`[cosmos][auth] Cosmos init failed, using in-memory: ${err.message}`);
       return null;
     }
   })();
@@ -445,6 +445,30 @@ async function findUserByAppleSub(
     })
     .fetchAll();
   return resources[0];
+}
+
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge the user record. One doc per
+ * user, id == userId, partition == userId. Returns true on success or
+ * 404 (treated as already-purged for idempotency); false on transport
+ * failure. Caller (accountDeletion.service) calls this LAST so the
+ * session-invalidation timing closes only after every other purge has
+ * landed.
+ */
+export async function deleteUserDoc(userId: string): Promise<boolean> {
+  const container = await getContainer();
+  if (!container) {
+    memStore.delete(userId);
+    return true;
+  }
+  try {
+    await container.item(userId, userId).delete();
+    return true;
+  } catch (err: any) {
+    if (err?.code === 404) return true;
+    console.error("[auth] deleteUserDoc failed:", err?.message ?? err);
+    return false;
+  }
 }
 
 // CF-PAYMENTS-APPLE-2 (2026-06-03): originalTransactionId lookup. The /verify

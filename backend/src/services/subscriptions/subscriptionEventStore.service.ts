@@ -91,7 +91,7 @@ async function getContainer(): Promise<Container | null> {
       console.log("[subscriptionEventStore] Cosmos subscription_events ready");
       return container;
     } catch (err: any) {
-      console.error(`[subscriptionEventStore] Cosmos init failed: ${err.message}`);
+      console.error(`[cosmos][apple][subscriptionEventStore] Cosmos init failed: ${err.message}`);
       return null;
     }
   })();
@@ -145,6 +145,54 @@ export async function saveEvent(event: NotificationEvent): Promise<void> {
  * Test-only reset. Clears the in-memory event store + the container
  * handle so the next call re-initializes.
  */
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): anonymize subscription_events rows
+ * tied to the user — null `userId` only. Apple's `originalTransactionId`
+ * stays (partition key + Apple's own identifier, not ours).
+ *
+ * Outcome shape after anonymization is identical to the "no_user" branch
+ * the handler already writes when Apple delivers a notification before
+ * the user has linked via /verify — so downstream readers handle it
+ * transparently.
+ */
+export async function anonymizeSubscriptionEventsForUser(userId: string): Promise<number> {
+  if (!userId || !String(userId).trim()) return 0;
+  const container = await getContainer();
+  if (!container) {
+    let mutated = 0;
+    for (const e of _testMemStore.values()) {
+      if (e.userId === userId) {
+        e.userId = null;
+        mutated += 1;
+      }
+    }
+    return mutated;
+  }
+  let updated = 0;
+  try {
+    const { resources } = await container.items
+      .query<{ id: string; originalTransactionId: string }>({
+        query: "SELECT c.id, c.originalTransactionId FROM c WHERE c.userId = @uid",
+        parameters: [{ name: "@uid", value: userId }],
+      })
+      .fetchAll();
+    for (const row of resources) {
+      try {
+        await container.item(row.id, row.originalTransactionId).patch([
+          { op: "set", path: "/userId", value: null },
+        ]);
+        updated += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[apple][subscriptionEventStore] anonymizeSubscriptionEventsForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[apple][subscriptionEventStore] anonymizeSubscriptionEventsForUser failed:", err?.message ?? err);
+  }
+  return updated;
+}
+
 export function _resetForTests(): void {
   _testMemStore.clear();
   _container = null;

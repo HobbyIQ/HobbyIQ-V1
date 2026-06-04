@@ -160,6 +160,47 @@ export async function deleteBlobByUrl(blobUrl: string): Promise<void> {
   }
 }
 
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): enumerate every blob under a user's
+ * sanitized prefix and delete each. Mirrors `uploadCardPhoto`'s
+ * `${sanitizeSegment(userId)}/...` path scheme — so the same input userId
+ * resolves to the same path-prefix that owned the uploads.
+ *
+ * Returns the count of blobs deleted. Errors on individual blobs are
+ * logged + skipped (so a transient transport failure on one photo doesn't
+ * abort the whole purge). Returns 0 cleanly when the user has no photos
+ * or when storage is unconfigured.
+ */
+export async function deleteAllBlobsForUser(userId: string): Promise<number> {
+  if (!userId || !String(userId).trim()) return 0;
+  let serviceClient;
+  try {
+    serviceClient = getBlobServiceClient();
+  } catch (err: unknown) {
+    console.warn("[photoStorage] deleteAllBlobsForUser: storage unconfigured —", (err as Error)?.message);
+    return 0;
+  }
+  const containerClient = serviceClient.getContainerClient(CONTAINER_NAME);
+  const userPrefix = `${sanitizeSegment(String(userId), "anonymous")}/`;
+
+  let deleted = 0;
+  try {
+    for await (const blob of containerClient.listBlobsFlat({ prefix: userPrefix })) {
+      try {
+        await containerClient.getBlobClient(blob.name).delete();
+        deleted += 1;
+      } catch (err: unknown) {
+        const statusCode = (err as { statusCode?: number } | null)?.statusCode;
+        if (statusCode === 404) continue;
+        console.error("[photoStorage] deleteAllBlobsForUser item failed:", (err as Error)?.message ?? err);
+      }
+    }
+  } catch (err: unknown) {
+    console.error("[photoStorage] deleteAllBlobsForUser listing failed:", (err as Error)?.message ?? err);
+  }
+  return deleted;
+}
+
 // CF-CARDSIGHT-IDENTIFY-INTEGRATION: download a blob's bytes by URL
 // for server-side forwarding to Cardsight identify. Reuses the same
 // URL validation as deleteBlobByUrl so callers can't trick this into

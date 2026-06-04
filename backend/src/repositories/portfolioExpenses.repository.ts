@@ -219,6 +219,30 @@ export async function deleteExpense(userId: string, id: string): Promise<boolean
   }
 }
 
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all expenses for a user.
+ */
+export async function deleteAllExpensesForUser(userId: string): Promise<number> {
+  const container = await getContainer();
+  if (!container) return 0;
+  let deleted = 0;
+  try {
+    const list = await listExpensesForUser(userId);
+    for (const e of list) {
+      try {
+        await container.item(e.id, userId).delete();
+        deleted += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[portfolioExpenses.repository] deleteAllExpensesForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[portfolioExpenses.repository] deleteAllExpensesForUser failed:", err?.message ?? err);
+  }
+  return deleted;
+}
+
 // ─── Pure aggregation (for /expenses/report) ───────────────────────────────
 
 export type ExpenseGroupBy = "category" | "month";

@@ -461,3 +461,126 @@ describe("POST /api/subscriptions/notifications — action table", () => {
     expect(await readUserPlan(userId)).toBe("collector");
   });
 });
+
+// CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): two new types previously
+// falling through to default → log_only.
+
+describe("POST /api/subscriptions/notifications — OFFER_REDEEMED", () => {
+  it("OFFER_REDEEMED on a free user grants the productId's tier", async () => {
+    const userId = await seedUserWithSubscription({
+      label: "offered",
+      plan: "free",
+      originalTransactionId: "tx-offer-014",
+    });
+    stubNotification({
+      notificationUUID: "uuid-offer-014",
+      notificationType: "OFFER_REDEEMED",
+      originalTransactionId: "tx-offer-014",
+      productId: "com.hobbyiq.investor.monthly",
+    });
+    const r = await request(app)
+      .post("/api/subscriptions/notifications")
+      .send({ signedPayload: "p" });
+    expect(r.status).toBe(200);
+    expect(await readUserPlan(userId)).toBe("investor");
+  });
+
+  it("OFFER_REDEEMED on a collector user upgrades to the offered tier", async () => {
+    const userId = await seedUserWithSubscription({
+      label: "offered2",
+      plan: "collector",
+      originalTransactionId: "tx-offer-015",
+    });
+    stubNotification({
+      notificationUUID: "uuid-offer-015",
+      notificationType: "OFFER_REDEEMED",
+      originalTransactionId: "tx-offer-015",
+      productId: "com.hobbyiq.proseller.monthly",
+    });
+    await request(app)
+      .post("/api/subscriptions/notifications")
+      .send({ signedPayload: "p" });
+    expect(await readUserPlan(userId)).toBe("pro_seller");
+  });
+});
+
+describe("POST /api/subscriptions/notifications — REFUND_REVERSED", () => {
+  it("REFUND_REVERSED after REFUND-downgrade re-evaluates via Apple and restores plan from active status", async () => {
+    // Setup: user starts at investor, then a REFUND notification downgrades
+    // to free, then a REFUND_REVERSED arrives — we must re-evaluate via
+    // getAllSubscriptionStatuses, see ACTIVE, and restore the plan.
+    const userId = await seedUserWithSubscription({
+      label: "rev",
+      plan: "investor",
+      originalTransactionId: "tx-rev-016",
+      productId: "com.hobbyiq.investor.monthly",
+    });
+
+    // Step 1: REFUND -> downgrade
+    stubNotification({
+      notificationUUID: "uuid-refund-016",
+      notificationType: "REFUND",
+      originalTransactionId: "tx-rev-016",
+      productId: "com.hobbyiq.investor.monthly",
+    });
+    await request(app).post("/api/subscriptions/notifications").send({ signedPayload: "p" });
+    expect(await readUserPlan(userId)).toBe("free");
+
+    // Step 2: REFUND_REVERSED — Apple's status check returns ACTIVE for
+    // the investor product. Re-evaluate via api should restore investor.
+    stubNotification({
+      notificationUUID: "uuid-refund-rev-016",
+      notificationType: "REFUND_REVERSED",
+      originalTransactionId: "tx-rev-016",
+      productId: "com.hobbyiq.investor.monthly",
+    });
+    // Construct the JWS-shaped signedTransactionInfo whose decoded payload
+    // contains productId. The handler decodes WITHOUT verification at this
+    // step (trust posture: came from a cert-verified HTTPS call to Apple).
+    const innerPayload = Buffer.from(JSON.stringify({
+      productId: "com.hobbyiq.investor.monthly",
+    })).toString("base64url");
+    const dummySig = "abc";
+    const dummyHeader = Buffer.from(JSON.stringify({ alg: "ES256" })).toString("base64url");
+    const fakeJws = `${dummyHeader}.${innerPayload}.${dummySig}`;
+    getAllSubscriptionStatuses.mockResolvedValueOnce({
+      data: [{
+        lastTransactions: [{
+          originalTransactionId: "tx-rev-016",
+          status: 1, // ACTIVE
+          signedTransactionInfo: fakeJws,
+        }],
+      }],
+    });
+
+    const r = await request(app).post("/api/subscriptions/notifications").send({ signedPayload: "p" });
+    expect(r.status).toBe(200);
+    expect(await readUserPlan(userId)).toBe("investor");
+  });
+
+  it("REFUND_REVERSED when Apple shows no active status stays at free (no phantom upgrade)", async () => {
+    const userId = await seedUserWithSubscription({
+      label: "rev2",
+      plan: "free",
+      originalTransactionId: "tx-rev-017",
+    });
+    stubNotification({
+      notificationUUID: "uuid-refund-rev-017",
+      notificationType: "REFUND_REVERSED",
+      originalTransactionId: "tx-rev-017",
+      productId: "com.hobbyiq.investor.monthly",
+    });
+    // Apple returns nothing active (e.g., user let it lapse again after
+    // the reversal). Handler should NOT re-grant.
+    getAllSubscriptionStatuses.mockResolvedValueOnce({
+      data: [{
+        lastTransactions: [{
+          originalTransactionId: "tx-rev-017",
+          status: 2, // EXPIRED
+        }],
+      }],
+    });
+    await request(app).post("/api/subscriptions/notifications").send({ signedPayload: "p" });
+    expect(await readUserPlan(userId)).toBe("free");
+  });
+});

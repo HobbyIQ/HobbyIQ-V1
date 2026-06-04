@@ -229,18 +229,92 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
 export async function writeUserDoc(userId: string, doc: UserDoc): Promise<void> {
   invalidateCache(userId);
   const container = await getContainer();
-  
+
   // Test mode: use in-memory store
   if (!container && isTestMode) {
     testMemStore.set(userId, doc);
     return;
   }
-  
+
   if (!container) {
     throw new Error("[portfolio] Cosmos container is not available and test mode is not enabled");
   }
-  
+
   await container.items.upsert(doc);
+}
+
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge the entire portfolio doc for a
+ * user (holdings + ledger + trades + priceHistoryByHolding + alerts +
+ * recommendationFeedback). One doc per user, id == userId.
+ *
+ * Returns a count summary so the /api/account purge response can report
+ * exactly what was removed: holdingCount + ledgerCount + tradeCount.
+ */
+export interface PortfolioDocDeletionSummary {
+  existed: boolean;
+  holdingCount: number;
+  ledgerCount: number;
+  tradeCount: number;
+  expensesEmbeddedCount: number;
+}
+
+export async function deletePortfolioDocForUser(
+  userId: string,
+): Promise<PortfolioDocDeletionSummary> {
+  invalidateCache(userId);
+  const container = await getContainer();
+
+  // Test mode in-memory store
+  if (!container && isTestMode) {
+    const doc = testMemStore.get(userId);
+    if (!doc) {
+      return { existed: false, holdingCount: 0, ledgerCount: 0, tradeCount: 0, expensesEmbeddedCount: 0 };
+    }
+    const summary: PortfolioDocDeletionSummary = {
+      existed: true,
+      holdingCount: Object.keys(doc.holdings ?? {}).length,
+      ledgerCount: (doc.ledger ?? []).length,
+      tradeCount: (doc.trades ?? []).length,
+      expensesEmbeddedCount: 0,
+    };
+    testMemStore.delete(userId);
+    return summary;
+  }
+
+  if (!container) {
+    return { existed: false, holdingCount: 0, ledgerCount: 0, tradeCount: 0, expensesEmbeddedCount: 0 };
+  }
+
+  // Read once to capture counts, then delete.
+  let summary: PortfolioDocDeletionSummary = {
+    existed: false, holdingCount: 0, ledgerCount: 0, tradeCount: 0, expensesEmbeddedCount: 0,
+  };
+  try {
+    const { resource } = await container.item(userId, userId).read<UserDoc>();
+    if (resource) {
+      summary = {
+        existed: true,
+        holdingCount: Object.keys((resource as any).holdings ?? {}).length,
+        ledgerCount: ((resource as any).ledger ?? []).length,
+        tradeCount: ((resource as any).trades ?? []).length,
+        expensesEmbeddedCount: 0,
+      };
+    }
+  } catch (err: any) {
+    if (err?.code !== 404) {
+      console.error("[portfolio] deletePortfolioDocForUser read failed:", err?.message ?? err);
+    }
+  }
+
+  try {
+    await container.item(userId, userId).delete();
+  } catch (err: any) {
+    if (err?.code === 404) return summary;
+    console.error("[portfolio] deletePortfolioDocForUser delete failed:", err?.message ?? err);
+    return summary;
+  }
+  return summary;
 }
 
 interface PortfolioLedgerEntry {

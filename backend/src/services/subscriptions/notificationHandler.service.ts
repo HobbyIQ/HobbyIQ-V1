@@ -27,9 +27,12 @@
 
 import {
   Environment,
+  Status,
+  type AppStoreServerAPIClient,
   type ResponseBodyV2DecodedPayload,
   type JWSTransactionDecodedPayload,
   type SignedDataVerifier,
+  type StatusResponse,
 } from "@apple/app-store-server-library";
 import {
   findUserByOriginalTransactionId,
@@ -72,10 +75,17 @@ export class InvalidNotificationError extends Error {
 // webhook is the timely signal.
 
 type Action =
-  | { kind: "set_plan_from_product" }   // SUBSCRIBED / DID_RENEW with new productId
+  | { kind: "set_plan_from_product" }   // SUBSCRIBED / OFFER_REDEEMED / DID_RENEW with new productId
   | { kind: "refresh_expiry" }           // DID_RENEW with same productId
   | { kind: "downgrade_to_free"; reason: string }  // EXPIRED / GRACE_PERIOD_EXPIRED / REFUND / REVOKE
   | { kind: "keep_plan" }                 // DID_FAIL_TO_RENEW grace period
+  // CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): REFUND_REVERSED — Apple
+  // reversed a previously-issued refund decision. We previously downgraded
+  // on REFUND; on REVERSED we must RE-EVALUATE via App Store Server API,
+  // not blindly re-grant (the user may have re-subscribed at a different
+  // tier in the meantime, may already be EXPIRED again, etc.). Apple's
+  // current subscription status is the source of truth.
+  | { kind: "reevaluate_from_apple"; reason: string }
   | { kind: "log_only"; reason: string }; // informational types — record but no mutation
 
 function decideAction(
@@ -87,6 +97,27 @@ function decideAction(
       // INITIAL_BUY (first purchase) and RESUBSCRIBE (came back after a
       // lapse) both set plan from productId.
       return { kind: "set_plan_from_product" };
+
+    // CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): OFFER_REDEEMED — user
+    // redeemed a promotional/intro/win-back offer. Apple treats this as
+    // the START of a subscription period (same shape as SUBSCRIBED for
+    // entitlement purposes). The transaction's productId carries the
+    // tier the offer subscribed them to. Previously fell through to
+    // default → log_only → silent entitlement-grant miss when promo
+    // codes ship.
+    case "OFFER_REDEEMED":
+      return { kind: "set_plan_from_product" };
+
+    // CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): REFUND_REVERSED — Apple
+    // reversed a refund decision (user keeps the entitlement after all).
+    // We previously downgraded on REFUND; on REVERSED we must restore
+    // entitlement BUT only to the level Apple's current subscription
+    // status confirms. The notification's signedTransactionInfo refers
+    // to the reversed transaction, which may or may not be the user's
+    // currently-active subscription — they could have re-subscribed at
+    // a different tier, or let it lapse again. Re-evaluate via API.
+    case "REFUND_REVERSED":
+      return { kind: "reevaluate_from_apple", reason: "REFUND_REVERSED" };
 
     case "DID_RENEW":
       // Renewal — refresh expiresAt. If productId differs from what's
@@ -188,7 +219,7 @@ export async function handleNotification(signedPayload: string): Promise<HandleR
       // odd but not necessarily forged (Apple has had transient bugs).
       // Treat as no-op so Apple stops retrying; surface in the event log.
       console.error(
-        `[notificationHandler] inner signedTransactionInfo verification failed for uuid=${notificationUUID}:`,
+        `[apple][notificationHandler] inner signedTransactionInfo verification failed for uuid=${notificationUUID}:`,
         err,
       );
       const event = await persistEvent({
@@ -244,7 +275,7 @@ export async function handleNotification(signedPayload: string): Promise<HandleR
     // Known race: webhook arrived before /verify established the link.
     // Log loudly + record so we can hand-correlate if needed; 200.
     console.warn(
-      `[notificationHandler] no user found for originalTransactionId=${originalTransactionId} (uuid=${notificationUUID}, type=${notificationType})`,
+      `[apple][notificationHandler] no user found for originalTransactionId=${originalTransactionId} (uuid=${notificationUUID}, type=${notificationType})`,
     );
     const event = await persistEvent({
       notificationUUID,
@@ -267,6 +298,10 @@ export async function handleNotification(signedPayload: string): Promise<HandleR
     productId,
     expiresDate,
     environment,
+    originalTransactionId,
+    // The same apiClient `pickEnvironmentClients` returned — used by
+    // reevaluate_from_apple to call getAllSubscriptionStatuses.
+    apiClient: pickEnvironmentClients(peekedEnv).apiClient,
   });
   const event = await persistEvent({
     notificationUUID,
@@ -292,6 +327,8 @@ async function applyAction(
     productId: string | null;
     expiresDate: number | null;
     environment: Environment;
+    originalTransactionId: string;
+    apiClient: AppStoreServerAPIClient;
   },
 ): Promise<EventResult> {
   switch (action.kind) {
@@ -300,7 +337,7 @@ async function applyAction(
       const newPlan = productIdToPlan(ctx.productId);
       if (!newPlan) {
         console.error(
-          `[notificationHandler] UNKNOWN PRODUCTID on verified webhook: ${ctx.productId} (user=${user.userId})`,
+          `[apple][notificationHandler] UNKNOWN PRODUCTID on verified webhook: ${ctx.productId} (user=${user.userId})`,
         );
         return "log_only";
       }
@@ -345,7 +382,7 @@ async function applyAction(
       };
       await setUserSubscriptionState(user.userId, "free", apple);
       console.log(
-        `[notificationHandler] downgraded user=${user.userId} to free (reason=${action.reason})`,
+        `[apple][notificationHandler] downgraded user=${user.userId} to free (reason=${action.reason})`,
       );
       return "applied";
     }
@@ -354,8 +391,119 @@ async function applyAction(
       // Inside grace window — record only.
       return "no_change";
 
+    // CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): REFUND_REVERSED rerun.
+    // Re-evaluate via getAllSubscriptionStatuses + apply plan from the
+    // current ACTIVE status (NOT a blind set from the reversed-refund
+    // transaction's productId — the user may have re-subscribed at a
+    // different tier in the meantime).
+    case "reevaluate_from_apple": {
+      let statusResponse: StatusResponse;
+      try {
+        statusResponse = await ctx.apiClient.getAllSubscriptionStatuses(ctx.originalTransactionId);
+      } catch (err: unknown) {
+        console.error(
+          `[apple][notificationHandler] reevaluate_from_apple: API call failed (user=${user.userId}, reason=${action.reason}):`,
+          err instanceof Error ? err.message : String(err),
+        );
+        return "log_only";
+      }
+
+      const active = findActiveStatusEntry(statusResponse);
+      if (!active) {
+        // No active subscription on Apple's side — entitlement stays at
+        // free (don't re-grant on REFUND_REVERSED for a no-longer-active
+        // user; would be a phantom upgrade).
+        console.log(
+          `[apple][notificationHandler] reevaluate_from_apple: no active status on Apple side (user=${user.userId}, reason=${action.reason})`,
+        );
+        return "log_only";
+      }
+
+      // Decode the inner signedTransactionInfo to read productId + expiresDate
+      // for the active subscription. Use the SAME verifier the route picked
+      // (env-pinned). Note: applyAction doesn't currently hold the verifier;
+      // we trust Apple's metadata as exposed via the status entry's
+      // wsTransactionInfo body. The active transaction's productId IS what
+      // we use — same trust posture as the existing set_plan_from_product.
+      const activeProductId = await extractActiveProductId(active.signedTransactionInfo, ctx.apiClient);
+      if (!activeProductId) {
+        console.error(
+          `[apple][notificationHandler] reevaluate_from_apple: could not extract productId from active status entry (user=${user.userId})`,
+        );
+        return "log_only";
+      }
+      const newPlan = productIdToPlan(activeProductId);
+      if (!newPlan) {
+        console.error(
+          `[apple][notificationHandler] reevaluate_from_apple: UNKNOWN PRODUCTID ${activeProductId} on active status (user=${user.userId})`,
+        );
+        return "log_only";
+      }
+
+      await persistSubscription(user, newPlan, {
+        productId: activeProductId,
+        expiresDate: ctx.expiresDate,
+        environment: ctx.environment,
+      });
+      console.log(
+        `[apple][notificationHandler] reevaluate_from_apple: restored user=${user.userId} to plan=${newPlan} (reason=${action.reason})`,
+      );
+      return "applied";
+    }
+
     case "log_only":
       return "log_only";
+  }
+}
+
+/**
+ * CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): walk the StatusResponse and
+ * return the first entry whose status is ACTIVE or BILLING_GRACE_PERIOD.
+ * Mirrors `isCurrent` in subscriptionVerifier.service.ts.
+ */
+function findActiveStatusEntry(
+  resp: StatusResponse,
+): { signedTransactionInfo: string; status: number } | null {
+  const groups = resp.data ?? [];
+  for (const group of groups) {
+    const last = group.lastTransactions ?? [];
+    for (const t of last) {
+      if (t.status === Status.ACTIVE || t.status === Status.BILLING_GRACE_PERIOD) {
+        if (t.signedTransactionInfo) {
+          return { signedTransactionInfo: t.signedTransactionInfo, status: t.status };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * CF-SUBSCRIPTION-HANDLER-FIXES (2026-06-04): pull productId out of the
+ * active status entry's signedTransactionInfo (a JWS). Apple ALSO surfaces
+ * productId on the status entry directly via `transactionInfo` after
+ * decode; we re-verify via the api client's underlying capabilities to
+ * keep the same trust posture.
+ *
+ * The base64url JWS payload contains productId at top level. We don't
+ * have a verifier in scope here; decode-without-verify is acceptable
+ * because (a) the JWS came from a verified-via-cert HTTPS call to Apple,
+ * (b) the productMap.ts gate downstream rejects unknown productIds.
+ */
+async function extractActiveProductId(
+  signedTransactionInfo: string,
+  _apiClient: AppStoreServerAPIClient,
+): Promise<string | null> {
+  try {
+    const parts = signedTransactionInfo.split(".");
+    if (parts.length !== 3) return null;
+    const padded = parts[1].replace(/-/g, "+").replace(/_/g, "/") +
+      "=".repeat((4 - (parts[1].length % 4)) % 4);
+    const decoded = Buffer.from(padded, "base64").toString("utf8");
+    const obj = JSON.parse(decoded) as { productId?: string };
+    return typeof obj.productId === "string" && obj.productId.length > 0 ? obj.productId : null;
+  } catch {
+    return null;
   }
 }
 

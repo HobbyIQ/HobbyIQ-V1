@@ -475,6 +475,50 @@ function buildDocument(
  * concurrent calls. Rollback on Cosmos init failure so a transient outage
  * doesn't permanently suppress a key's writes.
  */
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): anonymize every prediction_log row for
+ * a user — null `userId`, null `holdingId`, set `routedFromHolding=false`.
+ *
+ * Card-identity fields (cardsightCardId, playerName, cardYear, etc.) are
+ * PUBLIC information and stay intact — they're the ML training signal.
+ * The §4.2/4.3 sale-join trace breaks post-deletion anyway (the user's
+ * holdings/ledger are gone), so nulling these attribution axes is the
+ * correct semantic.
+ *
+ * Returns the count of rows mutated. Idempotent: rerunning finds zero
+ * matches (the WHERE clause filters on the original userId).
+ */
+export async function anonymizePredictionLogForUser(userId: string): Promise<number> {
+  if (!userId || !String(userId).trim()) return 0;
+  const container = await getContainer();
+  if (!container) return 0;
+  let updated = 0;
+  try {
+    const { resources } = await container.items
+      .query<{ id: string; cardsightCardId: string }>({
+        query: "SELECT c.id, c.cardsightCardId FROM c WHERE c.userId = @uid",
+        parameters: [{ name: "@uid", value: userId }],
+      })
+      .fetchAll();
+    for (const row of resources) {
+      try {
+        await container.item(row.id, row.cardsightCardId).patch([
+          { op: "set", path: "/userId", value: null },
+          { op: "set", path: "/holdingId", value: null },
+          { op: "set", path: "/routedFromHolding", value: false },
+        ]);
+        updated += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[predictionCorpus] anonymizePredictionLogForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[predictionCorpus] anonymizePredictionLogForUser failed:", err?.message ?? err);
+  }
+  return updated;
+}
+
 export function writePredictionLog(input: PredictionEmitInput): void {
   const sig = inputSignature(input);
   const sigShort = sig.slice(0, 8);

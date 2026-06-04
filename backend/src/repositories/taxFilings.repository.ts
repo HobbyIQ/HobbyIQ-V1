@@ -146,3 +146,36 @@ export async function upsertTaxFiling(
     return null;
   }
 }
+
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all tax_filings docs for a user.
+ * Single-partition query+delete loop.
+ */
+export async function deleteAllTaxFilingsForUser(userId: string): Promise<number> {
+  const container = await getContainer();
+  if (!container) return 0;
+  let deleted = 0;
+  try {
+    const { resources } = await container.items
+      .query<TaxFilingDocument>(
+        {
+          query: "SELECT c.id, c.taxYear FROM c WHERE c.docType = 'tax_filing' AND c.userId = @uid",
+          parameters: [{ name: "@uid", value: userId }],
+        },
+        { partitionKey: userId },
+      )
+      .fetchAll();
+    for (const row of resources) {
+      try {
+        await container.item(row.id, userId).delete();
+        deleted += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[taxFilings.repository] deleteAllTaxFilingsForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[taxFilings.repository] deleteAllTaxFilingsForUser failed:", err?.message ?? err);
+  }
+  return deleted;
+}

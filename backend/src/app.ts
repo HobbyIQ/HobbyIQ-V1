@@ -24,6 +24,7 @@ import psaRoutes from "./routes/psa.routes.js";
 import devicesRoutes from "./routes/devices.routes.js";
 import alertsRoutes from "./routes/alerts.routes.js";
 import alertsAdvancedRoutes from "./routes/alerts.advanced.routes.js";
+import accountRoutes from "./routes/account.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
@@ -90,6 +91,8 @@ app.use("/api/search", searchRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
 app.use("/api/internal/cardsight-inventory", internalCardsightInventoryRoutes);
+// CF-ACCOUNT-DELETION (2026-06-04): Apple Guideline 5.1.1(v) compliance.
+app.use("/api/account", accountRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

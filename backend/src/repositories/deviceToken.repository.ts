@@ -141,3 +141,27 @@ export async function removeToken(userId: string, token: string): Promise<void> 
     console.error("[deviceToken.repository] removeToken failed:", err?.message ?? err);
   }
 }
+
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all device tokens for a user.
+ */
+export async function deleteAllTokensForUser(userId: string): Promise<number> {
+  const container = await getContainer();
+  if (!container) return 0;
+  let deleted = 0;
+  try {
+    const tokens = await getTokensForUser(userId);
+    for (const t of tokens) {
+      try {
+        await container.item(makeId(userId, t.token), userId).delete();
+        deleted += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[deviceToken.repository] deleteAllTokensForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[deviceToken.repository] deleteAllTokensForUser failed:", err?.message ?? err);
+  }
+  return deleted;
+}

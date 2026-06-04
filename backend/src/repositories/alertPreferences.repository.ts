@@ -123,6 +123,23 @@ export async function setPriceAlert(userId: string, enabled: boolean): Promise<v
   await container.items.upsert(doc, { disableAutomaticIdGeneration: true });
 }
 
+/**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge the user's preference doc.
+ * One doc per user (id == userId).
+ */
+export async function deletePreferenceForUser(userId: string): Promise<boolean> {
+  const container = await getContainer();
+  if (!container) return false;
+  try {
+    await container.item(userId, userId).delete();
+    return true;
+  } catch (err: any) {
+    if (err?.code === 404) return false;
+    console.error("[alertPreferences.repository] deletePreferenceForUser failed:", err?.message ?? err);
+    return false;
+  }
+}
+
 export async function getAllDailyIQAlertPreferences(): Promise<UserAlertPreference[]> {
   const container = await getContainer();
   if (!container) return [];

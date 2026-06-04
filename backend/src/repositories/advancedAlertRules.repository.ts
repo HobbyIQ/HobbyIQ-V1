@@ -286,6 +286,30 @@ export async function deleteRule(userId: string, ruleId: string): Promise<boolea
 }
 
 /**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all advanced rules for a user.
+ */
+export async function deleteAllRulesForUser(userId: string): Promise<number> {
+  const container = await getContainer();
+  if (!container) return 0;
+  let deleted = 0;
+  try {
+    const rules = await listRulesForUser(userId);
+    for (const r of rules) {
+      try {
+        await container.item(r.ruleId, userId).delete();
+        deleted += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[advancedAlertRules.repository] deleteAllRulesForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[advancedAlertRules.repository] deleteAllRulesForUser failed:", err?.message ?? err);
+  }
+  return deleted;
+}
+
+/**
  * Record an evaluator pass. Always bumps `lastEvaluatedAt`; bumps
  * `lastTriggeredAt` + `triggerCount` only when `triggered=true`.
  *

@@ -171,6 +171,32 @@ export async function deleteAlert(userId: string, alertId: string): Promise<bool
 }
 
 /**
+ * CF-ACCOUNT-DELETION (2026-06-04): purge all alerts for a single user.
+ * Single-partition list+delete loop. Returns the deleted count for the
+ * /api/account purge summary.
+ */
+export async function deleteAllAlertsForUser(userId: string): Promise<number> {
+  const container = await getContainer();
+  if (!container) return 0;
+  let deleted = 0;
+  try {
+    const alerts = await listAlertsForUser(userId);
+    for (const a of alerts) {
+      try {
+        await container.item(a.alertId, userId).delete();
+        deleted += 1;
+      } catch (err: any) {
+        if (err?.code === 404) continue;
+        console.error("[priceAlerts.repository] deleteAllAlertsForUser item failed:", err?.message ?? err);
+      }
+    }
+  } catch (err: any) {
+    console.error("[priceAlerts.repository] deleteAllAlertsForUser failed:", err?.message ?? err);
+  }
+  return deleted;
+}
+
+/**
  * Cross-partition scan for every active, not-yet-triggered alert across all
  * users. Used by the priceAlertEvaluator scheduled job.
  */
