@@ -1,5 +1,56 @@
 # HobbyIQ Session Handoff — 2026-05-24
 
+---
+
+## 2026-06-04 — Backend feature-complete + hardened; ready for iOS phase
+
+**Deployed SHA:** `fe50127` on `HobbyIQ3` (App Service). Pushed to `origin/main`. `tsc` + `vitest` green at 2046 tests.
+
+### Shipped + deployed since the last handoff
+
+**ERP expansion.** Sales-tracking fields (`salesChannel`, `paymentMethod`, `saleLocation`); analytics + timeseries surfaces; inventory valuation reuses the portfolioReprice snapshot rather than recomputing; per-rail 1099-K with QuickBooks / Xero accounting export; embedded expense ledger; manual fee-override with append-only `feeAdjustments[]` audit trail + aging endpoint; trade transactions as taxable FMV dispositions (explicitly NOT §1031, per the IRS post-TCJA position).
+
+**Apple payments + push.** 11 App Settings live; subscription webhook verified end-to-end at `/api/subscriptions/notifications` (`peekJwsEnvironment` fix at `2bb244e` resolved the ASSN V2 schema mismatch). `OFFER_REDEEMED` → `set_plan_from_product` and `REFUND_REVERSED` → `reevaluate_from_apple` handlers landed in Group A.
+
+**Account deletion.** `DELETE /api/account` orchestrator across 11 per-user containers + 2 anonymize stores; user doc LAST so the session invalidates only after everything else lands; subsystem-tagged error log on any container purge failure (Group B alerts pick up partial failures); `failures[]` in the route response for ops retry-by-userId. Meets Apple Guideline 5.1.1(v) for App Store review.
+
+**Observability.** Hourly `cardsight_getpricing_budget` structured log emit (hourly delta over per-call traces to dodge App Insights sampling); standardized `[<jobName>] done` heartbeat across all 8 schedulers; per-subsystem umbrella tags (`[cardsight]`/`[cosmos]`/`[apple]`/`[ebay]`) on existing error log lines. **16 az monitor alerts** to action group `hobbyiq-ops-alerts`: 3 getPricing-budget (75% sev3 / 90% sev2 / 100% sev1), 9 per-job heartbeats (interval × 2 + cushion, including the new finances enrichment job), 4 per-subsystem error-spike. **Cosmos autoscale** applied to `comp_logs`, `dailyiq_watchlist`, `prediction_log` at 1000 RU/s max ceiling each.
+
+**ML — Phase A.** Training-dataset join over `prediction_log × prediction_outcomes`; frozen 21-feature schema documented at [`docs/ML_TRAINING_SCHEMA.md`](ML_TRAINING_SCHEMA.md); leakage guard pinned by tests. No model yet — deliverable is a stable, leakage-free row shape Phase B can train on without rediscovery. Live counts at frozen-time: 813 joinable predictions, 0 matured outcomes (capture job's horizons haven't ripened).
+
+**eBay Finances enrichment — Phase A (SHADOW MODE).** New `getTransactionsForOrder(userId, orderId)` client reusing the OAuth token store; pure `mapFinancesToFees(txns)` mapper bucketing fee types into the 7 ledger fee fields; `applyFeeEnrichment(entry, finances, nowIso)` mirroring the manual-override audit shape with `reconciledVia="ebay_finances"` and `adjustedBy="system:ebay_finances"`. Scheduled job at 6h cadence; first run +120s post-boot. Default-ON shadow mode logs the proposed enrichment but DOES NOT persist (verified live: `shadow=true` on the post-deploy heartbeat). Also: aging buckets extended to 4 (`0-7d` / `8-30d` / `31-60d` / `>60d` with `cutoffWarning`) and the long-standing manual-override shipping bug fixed — `granularSum` now includes `actualShippingCost`, aligning the manual fallback with the Finances `netPayout`-authoritative formula.
+
+**Backend status: FEATURE-COMPLETE + HARDENED for launch.**
+
+### CRITICAL carry-forward — Finances shadow flip
+
+The Finances enrichment job runs in shadow mode (`EBAY_FINANCES_ENRICHMENT_SHADOW` env unset → code defaults `true`). The single load-bearing assumption — that `transaction.amount.value` on the `SALE` transactionType equals the seller's `netPayout` for the order, and that the documented `feeType` strings match what eBay actually sends — is **UNVERIFIED against a real eBay Finances payload**. Mocks exercise the documented shape; production correctness rides the first real ITEM_SOLD.
+
+Before flipping to active:
+1. Wait for the first real eBay sale to mature past the 2-day fresh window.
+2. Query App Insights for `traces | where message has "[ebay][ebay.finances.enrichment.job] shadow_enrichment"` — the job logs the full proposal as a structured line.
+3. Compare the proposed `netPayout` + fee buckets against the seller's actual eBay settlement statement (Seller Hub → Payments).
+4. If buckets are wrong, correct the `FEE_PATTERNS` regex list in [`backend/src/services/ebay/ebayFinances.service.ts`](../backend/src/services/ebay/ebayFinances.service.ts) — one-place fix; helper + job + tests pick up transparently. Add a regression test pinning the real `feeType` strings observed.
+5. Once verified, flip active:
+   ```
+   az webapp config appsettings set -g rg-hobbyiq-dev -n HobbyIQ3 \
+     --settings EBAY_FINANCES_ENRICHMENT_SHADOW=false
+   ```
+6. Watch the next `[ebay.finances.enrichment.job] done` heartbeat for `shadow=false` confirmation.
+
+### Other carry-forwards
+
+- **Apple go-live.** Production ASSN V2 Server URL needs to be set to `.../api/subscriptions/notifications` on the App Store Connect Production environment (Sandbox is set + verified today); re-fire the prod test notification to confirm the route lands a `log_only` event. APNs round-trip on a real physical device is the second verification — Sandbox-side APNs token flow has not exercised the production p8.
+- **Legacy Cosmos containers.** `compiq_corpus` (12 rows) and `ch_card_index` (486 rows) have ACTIVE backend writers — not deletable. `compiq_backtest` (33) and `compiq_predictions` (33) are backend-orphan but still referenced by the separate `compiq-mcp` App Service — decommission only after compiq-mcp is retired or its backtest path is confirmed dead.
+- **ML Phase B (LightGBM training).** Gated on ~1k matured outcome tuples. At current single-user emission rate the corpus should cross that threshold around mid-to-late June. The frozen schema means Phase B can start the moment volume lands; no further dataset work needed.
+- **Deferred non-blocking backend.** Advanced-alerts crossing conditions; on-prediction-emit hook; `ebay_offer_index` container; parser-prefix 0.36% bug; load-test execution. None of these block the iOS phase.
+
+### Next phase: iOS (Mac session)
+
+Backend surface area is now wide enough to drive a full iOS portfolio + payments + observability story. Pull the latest `main` on the Mac, work against `HobbyIQ3` directly (App Service is the only live target), surface the shipped endpoints — DELETE /api/account, the ERP analytics + 1099-K + accounting export, trade transactions, TrendIQ, advanced alerts, account deletion, subscription state. iOS is the long pole; backend is no longer the constraint.
+
+---
+
 (updated 2026-05-24 — iOS state assessment appended; PR D batch from Windows session preserved)
 (updated 2026-05-25 — fn-compiq backend investigation findings appended; see [phase0/fn_compiq_investigations.md](phase0/fn_compiq_investigations.md))
 (updated 2026-05-25 PM — YouTube signal credentials restored on fn-compiq; CF-RESTORE-SIGNAL-CREDS partial close)
