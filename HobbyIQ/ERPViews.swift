@@ -1507,10 +1507,14 @@ struct ERPTaxView: View {
         if let rails = filings?.rails, !rails.isEmpty {
             ForEach(rails) { rail in
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Text(rail.rail.capitalized)
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        HIQHelpButton(
+                            title: "Payment Rail",
+                            message: "The payment processor that handled this sale (eBay, PayPal, Stripe, etc.). Each issues its own 1099-K, so we track and reconcile them separately."
+                        )
                         Spacer()
                         Button("Edit") {
                             editingRail = rail

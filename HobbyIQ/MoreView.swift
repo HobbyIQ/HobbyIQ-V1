@@ -60,7 +60,7 @@ struct MoreView: View {
             NavigationLink {
                 MoreDetailView(
                     title: "Privacy",
-                    text: "Privacy details will live here when the final policy is ready."
+                    text: "Coming soon. We're finalizing the privacy policy ahead of launch. In the meantime: HobbyIQ only stores the data needed to run your account and portfolio (login, cards you add, alert preferences), never sells it, and account deletion removes your data."
                 )
             } label: {
                 MoreLinkRow(title: "Privacy", subtitle: "How your data is handled")
@@ -70,7 +70,7 @@ struct MoreView: View {
             NavigationLink {
                 MoreDetailView(
                     title: "Terms",
-                    text: "Terms of service will live here when the final release copy is ready."
+                    text: "Coming soon. Full terms of service are being finalized for launch. By using HobbyIQ today you agree to use the app as intended, follow Apple's App Store guidelines, and accept that subscription pricing and features may evolve before public release."
                 )
             } label: {
                 MoreLinkRow(title: "Terms", subtitle: "App terms and rules")

@@ -864,6 +864,83 @@ struct HIQSectionHeader: View {
     }
 }
 
+/// Small inline "?" button that surfaces a short plain-English explanation
+/// next to an existing inline label/pill where a full HIQMetricLabel VStack
+/// wouldn't fit. Used wherever analyst-jargon terms (Pool Size, Confidence,
+/// "rail", etc.) need an explainer without restructuring the host layout.
+struct HIQHelpButton: View {
+    let title: String
+    let message: String
+
+    @State private var showHelp = false
+
+    var body: some View {
+        Button {
+            showHelp.toggle()
+        } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("What does \(title) mean?")
+        .popover(isPresented: $showHelp, attachmentAnchor: .point(.center), arrowEdge: .top) {
+            Text(message)
+                .font(HobbyIQTheme.Typography.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(12)
+                .frame(maxWidth: 260)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+}
+
+/// Plain-English metric label + value with an optional "?" popover that explains
+/// the metric in user-facing terms. Use anywhere an analyst-leak number or term
+/// appears in the UI (Portfolio Composite, MAPE, Pool Size, Deal Score, etc.).
+struct HIQMetricLabel: View {
+    let title: String
+    let value: String
+    var help: String? = nil
+    var alignment: HorizontalAlignment = .leading
+    var valueColor: Color = HobbyIQTheme.Colors.pureWhite
+    var valueFont: Font = HobbyIQTheme.Typography.bodyEmphasis
+
+    @State private var showHelp = false
+
+    var body: some View {
+        VStack(alignment: alignment, spacing: 4) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(HobbyIQTheme.Typography.captionEmphasis)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                if help != nil {
+                    Button {
+                        showHelp.toggle()
+                    } label: {
+                        Image(systemName: "questionmark.circle")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("What does \(title) mean?")
+                    .popover(isPresented: $showHelp, attachmentAnchor: .point(.center), arrowEdge: .top) {
+                        Text(help ?? "")
+                            .font(HobbyIQTheme.Typography.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .padding(12)
+                            .frame(maxWidth: 260)
+                            .presentationCompactAdaptation(.popover)
+                    }
+                }
+            }
+            Text(value)
+                .font(valueFont)
+                .foregroundStyle(valueColor)
+        }
+    }
+}
+
 #Preview("Avatar Button") {
     ZStack {
         HobbyIQBackground()

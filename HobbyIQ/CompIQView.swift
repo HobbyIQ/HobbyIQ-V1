@@ -266,9 +266,10 @@ struct CompIQView: View {
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
 
+#if DEBUG
         if let parsed = viewModel.parsedCard {
             VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Parsed Card", subtitle: "Fields inferred from your text.")
+                sectionHeader(title: "Parsed Card (debug)", subtitle: "Fields inferred from your text.")
                 Text(parsed.playerName ?? "Unknown player")
                     .font(.headline.bold())
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
@@ -284,6 +285,7 @@ struct CompIQView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
+#endif
     }
 
     private func runSearch() async {
@@ -578,10 +580,14 @@ struct CompIQView: View {
     @ViewBuilder
     private func buyWindowRow(_ result: CompIQEstimateResult) -> some View {
         if let label = result.buyWindowLabel {
-            HStack {
+            HStack(spacing: 6) {
                 Text("Buy Window")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                HIQHelpButton(
+                    title: "Buy Window",
+                    message: "When this card historically trades near its low for the year. A higher score (70+) means right now is a strong stretch to be buying; lower means waiting tends to pay off."
+                )
                 Spacer()
                 Text(label)
                     .font(.caption.weight(.bold))

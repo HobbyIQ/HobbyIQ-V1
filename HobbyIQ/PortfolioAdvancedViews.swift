@@ -176,7 +176,11 @@ struct CalibrationView: View {
                                 portfolioDataRow(label: "Sample Count", value: "\(sample)")
                             }
                             if let mape = r.meanAbsolutePctError {
-                                portfolioDataRow(label: "Mean Absolute % Error", value: String(format: "%.1f%%", mape * 100))
+                                HIQMetricLabel(
+                                    title: "Prediction Accuracy (MAPE)",
+                                    value: String(format: "%.1f%%", mape * 100),
+                                    help: "Mean Absolute % Error — how far off, on average, our price predictions land. Lower is better. Under 10% is strong; 10–20% is typical; over 20% means predictions have been swingy."
+                                )
                             }
                         }
                         .padding(HobbyIQTheme.Spacing.medium)
@@ -359,10 +363,18 @@ struct WeeklyBriefView: View {
                     portfolioDataRow(label: "Critical Alerts", value: "\(critical)")
                 }
                 if let feedback = s.feedbackEvents {
-                    portfolioDataRow(label: "Feedback Events", value: "\(feedback)")
+                    HIQMetricLabel(
+                        title: "Feedback Events",
+                        value: "\(feedback)",
+                        help: "How many of this week's recommendations you acted on (followed or dismissed). Used to tune the recommendation engine to your style over time."
+                    )
                 }
                 if let followRate = s.recommendationFollowRatePct {
-                    portfolioDataRow(label: "Follow Rate", value: String(format: "%.0f%%", followRate))
+                    HIQMetricLabel(
+                        title: "Follow Rate",
+                        value: String(format: "%.0f%%", followRate),
+                        help: "Share of recommendations you've followed instead of dismissed. Higher means the suggestions are matching what you'd already do — lower means we're suggesting moves you tend to skip."
+                    )
                 }
             }
             .padding(HobbyIQTheme.Spacing.medium)

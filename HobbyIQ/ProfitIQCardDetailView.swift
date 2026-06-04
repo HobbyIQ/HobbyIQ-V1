@@ -147,7 +147,7 @@ struct ProfitIQCardDetailView: View {
                                     .foregroundStyle(AppColors.textPrimary)
                             }
                             if let source = point.source {
-                                Text(source)
+                                Text(sourceDisplayName(source))
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(AppColors.textSecondary)
                             }
@@ -212,7 +212,31 @@ struct ProfitIQCardDetailView: View {
         if let date = fallback.date(from: isoString) {
             return date.formatted(date: .abbreviated, time: .shortened)
         }
-        return isoString
+        return "Unknown date"
+    }
+
+    /// Maps backend price-history source identifiers (e.g. "api_auto_pricing",
+    /// "ebay_completed", "manual_entry") to short user-facing labels. Unknown
+    /// values are title-cased as a graceful fallback.
+    private func sourceDisplayName(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "api_auto_pricing", "auto_pricing", "compiq_auto":
+            return "Auto-priced"
+        case "compiq", "compiq_manual":
+            return "CompIQ"
+        case "ebay_completed", "ebay":
+            return "eBay sales"
+        case "manual", "manual_entry":
+            return "Manual entry"
+        case "import", "csv_import":
+            return "Imported"
+        case "reprice", "batch_reprice":
+            return "Reprice run"
+        default:
+            return raw
+                .replacingOccurrences(of: "_", with: " ")
+                .capitalized
+        }
     }
 
     private var header: some View {
@@ -262,7 +286,12 @@ struct ProfitIQCardDetailView: View {
         if let date = formatter.date(from: card.lastSellIQAt) {
             return date.formatted(date: .abbreviated, time: .omitted)
         }
-        return card.lastSellIQAt
+        let withFractional = ISO8601DateFormatter()
+        withFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFractional.date(from: card.lastSellIQAt) {
+            return date.formatted(date: .abbreviated, time: .omitted)
+        }
+        return card.lastSellIQAt.isEmpty ? "—" : "Unknown date"
     }
 }
 

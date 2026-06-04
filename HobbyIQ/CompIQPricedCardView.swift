@@ -922,9 +922,15 @@ struct CompIQPricedCardView: View {
                 Spacer()
                 if let deal = response.dealScore {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("Deal Score")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        HStack(spacing: 4) {
+                            Text("Deal Score")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            HIQHelpButton(
+                                title: "Deal Score",
+                                message: "How attractive this comp looks vs. recent sales, on a 0–100 scale. 70+ is a strong deal, 40–69 is fair, under 40 means it's priced above what comps support."
+                            )
+                        }
                         Text(String(format: "%.0f", deal))
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(dealScoreColor(deal))

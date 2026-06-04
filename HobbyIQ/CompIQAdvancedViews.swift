@@ -341,7 +341,7 @@ struct CompsByPlayerView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Spacer()
                 if let cached = r.cached, cached, let age = r.cacheAge {
-                    Text("Cached \(age)s ago")
+                    Text("Updated \(relativeCacheAge(seconds: age))")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
@@ -429,6 +429,20 @@ struct CompsByPlayerView: View {
                 .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+    }
+
+    private func relativeCacheAge(seconds: Int) -> String {
+        if seconds < 60 { return "less than a minute ago" }
+        if seconds < 3600 {
+            let mins = seconds / 60
+            return mins == 1 ? "1 minute ago" : "\(mins) minutes ago"
+        }
+        let hours = seconds / 3600
+        if hours < 24 {
+            return hours == 1 ? "1 hour ago" : "\(hours) hours ago"
+        }
+        let days = hours / 24
+        return days == 1 ? "1 day ago" : "\(days) days ago"
     }
 
     private func load() async {

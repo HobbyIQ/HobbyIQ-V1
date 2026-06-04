@@ -308,9 +308,14 @@ struct PortfolioIQView: View {
                     }
                 }
 
-                Text(String(format: "Portfolio composite: %.3f", composite))
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                HIQMetricLabel(
+                    title: "Portfolio Composite",
+                    value: String(format: "%.3f", composite),
+                    help: "A blended movement score across your active cards. 1.000 is neutral; above 1.000 means recent price signals lean positive overall, below 1.000 means they lean negative.",
+                    alignment: .center,
+                    valueFont: HobbyIQTheme.Typography.captionEmphasis
+                )
+                .frame(maxWidth: .infinity)
             }
             .frame(maxWidth: .infinity)
             .portfolioSectionShell()

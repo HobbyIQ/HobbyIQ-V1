@@ -145,9 +145,15 @@ struct MarketTrendView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Spacer()
                 if let pool = topMoversResponse?.poolSize {
-                    Text("\(pool) tracked")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    HStack(spacing: 4) {
+                        Text("\(pool) tracked")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        HIQHelpButton(
+                            title: "Pool Size",
+                            message: "How many players we're actively tracking sales data for in this window. A larger pool means the movers list is being chosen from a wider set."
+                        )
+                    }
                 }
             }
 
@@ -194,13 +200,19 @@ struct MarketTrendView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 Spacer()
                 if let conf = mover.confidence {
-                    Text(conf)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
-                        .clipShape(Capsule())
+                    HStack(spacing: 4) {
+                        Text(conf)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
+                            .clipShape(Capsule())
+                        HIQHelpButton(
+                            title: "Confidence",
+                            message: "How much we trust this trend signal based on sample size, recency, and price consistency. \"Very High\" / \"High\" are most reliable; \"Low\" means lighter evidence."
+                        )
+                    }
                 }
             }
 
@@ -305,13 +317,19 @@ struct MarketTrendView: View {
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Spacer()
                     if let conf = trend.confidence {
-                        Text(conf)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
-                            .clipShape(Capsule())
+                        HStack(spacing: 4) {
+                            Text(conf)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
+                                .clipShape(Capsule())
+                            HIQHelpButton(
+                                title: "Confidence",
+                                message: "How much we trust this trend signal based on sample size, recency, and price consistency. \"Very High\" / \"High\" are most reliable; \"Low\" means lighter evidence."
+                            )
+                        }
                     }
                 }
 
