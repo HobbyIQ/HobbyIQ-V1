@@ -17,13 +17,7 @@ struct InventoryIQView: View {
     @State private var isAddingCard = false
     @State private var selectedCard: InventoryCard?
 
-    // Cached stats to avoid recomputing on every render
-    @State private var cachedGainerCount = 0
-    @State private var cachedLoserCount = 0
-    @State private var cachedStaleCount = 0
-    @State private var cachedAvgROI: Double = 0
-    @State private var cachedGainValue: Double = 0
-    @State private var cachedLossValue: Double = 0
+    // Cached filtered list to avoid recomputing on every render.
     @State private var cachedFilteredCards: [InventoryCard] = []
 
     var body: some View {
@@ -51,9 +45,6 @@ struct InventoryIQView: View {
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
                             }
-
-                            inventorySnapshotPills
-                            valueBreakdownBar
 
                             collectionSection
                         }
@@ -95,7 +86,6 @@ struct InventoryIQView: View {
                     Task { await vm.load() }
                 }
                 recomputeFilteredCards()
-                recomputeStats()
             }
             .onChange(of: vm.pendingInventoryFilter) { _, newFilter in
                 if let newFilter {
@@ -103,7 +93,7 @@ struct InventoryIQView: View {
                     vm.pendingInventoryFilter = nil
                 }
             }
-            .onChange(of: vm.inventoryCards) { _, _ in recomputeStats(); recomputeFilteredCards() }
+            .onChange(of: vm.inventoryCards) { _, _ in recomputeFilteredCards() }
             .onChange(of: inventoryQuery) { _, _ in recomputeFilteredCards() }
             .onChange(of: inventoryFilter) { _, _ in recomputeFilteredCards() }
             .onChange(of: inventorySort) { _, _ in recomputeFilteredCards() }
@@ -198,16 +188,6 @@ struct InventoryIQView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             }
-
-            // Cost / P&L / ROI mini stats
-            HStack(spacing: 0) {
-                headerMiniStat(label: "Spent", value: portfolioCurrencyString(hero.costBasis), color: .white)
-                Spacer()
-                headerMiniStat(label: "Profit", value: (hero.unrealizedPnL >= 0 ? "+" : "") + portfolioCurrencyString(hero.unrealizedPnL), color: hero.unrealizedPnL >= 0 ? .green : .red)
-                Spacer()
-                headerMiniStat(label: "Return", value: String(format: "%@%.1f%%", hero.roi >= 0 ? "+" : "", hero.roi), color: hero.roi >= 0 ? .green : .red)
-            }
-            .padding(.top, 2)
         }
         .padding(HobbyIQTheme.Spacing.medium)
         .padding(.vertical, 4)
@@ -218,100 +198,6 @@ struct InventoryIQView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
-    }
-
-    private func headerMiniStat(label: String, value: String, color: Color) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .textCase(.uppercase)
-        }
-    }
-
-    // MARK: - Inventory Snapshot Pills
-
-    private var inventorySnapshotPills: some View {
-        HStack(spacing: 8) {
-            snapshotPill(value: "\(cachedGainerCount)", label: "Up", tint: .green, filter: .gainers)
-            snapshotPill(value: "\(cachedLoserCount)", label: "Down", tint: .red, filter: .losers)
-            snapshotPill(value: "\(cachedStaleCount)", label: "Outdated", tint: .orange, filter: .stale)
-            snapshotPill(value: String(format: "%.1f%%", cachedAvgROI), label: "Return", tint: HobbyIQTheme.Colors.electricBlue, filter: nil)
-        }
-    }
-
-    private func snapshotPill(value: String, label: String, tint: Color, filter: PortfolioInventoryFilter?) -> some View {
-        let isActive = filter != nil && inventoryFilter == filter
-        return Button {
-            if let filter {
-                inventoryFilter = inventoryFilter == filter ? .all : filter
-            }
-        } label: {
-            VStack(spacing: 3) {
-                Text(value)
-                    .font(.system(size: 15, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(tint)
-                Text(label)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(isActive ? tint.opacity(0.12) : HobbyIQTheme.Colors.cardNavy)
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
-                    .stroke(isActive ? tint.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Value Breakdown Bar
-
-    private var valueBreakdownBar: some View {
-        let total = cachedGainValue + cachedLossValue
-
-        return VStack(spacing: 6) {
-            GeometryReader { geo in
-                let gainFraction = total > 0 ? cachedGainValue / total : 0.5
-                HStack(spacing: 1) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.green)
-                        .frame(width: geo.size.width * gainFraction)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.red)
-                }
-            }
-            .frame(height: 6)
-
-            HStack {
-                HStack(spacing: 4) {
-                    Circle().fill(.green).frame(width: 7, height: 7)
-                    Text("\(portfolioCurrencyString(cachedGainValue)) going up")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-                Spacer()
-                HStack(spacing: 4) {
-                    Text("\(portfolioCurrencyString(cachedLossValue)) going down")
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Circle().fill(.red).frame(width: 7, height: 7)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
     }
 
     // MARK: - Collection Section
@@ -550,33 +436,6 @@ struct InventoryIQView: View {
                 .stroke(Color.white.opacity(0.08), lineWidth: 1.4)
         )
         .clipShape(Capsule(style: .continuous))
-    }
-
-    private func recomputeStats() {
-        let cards = vm.inventoryCards
-        var gainers = 0, losers = 0, stale = 0
-        var totalCost = 0.0, totalPL = 0.0
-        var gainVal = 0.0, lossVal = 0.0
-
-        for card in cards {
-            if card.profitLoss >= 0 {
-                gainers += 1
-                gainVal += card.currentValue
-            } else {
-                losers += 1
-                lossVal += card.currentValue
-            }
-            if card.freshnessChipText == "Stale" { stale += 1 }
-            totalCost += card.cost
-            totalPL += card.profitLoss
-        }
-
-        cachedGainerCount = gainers
-        cachedLoserCount = losers
-        cachedStaleCount = stale
-        cachedAvgROI = totalCost > 0 ? (totalPL / totalCost) * 100 : 0
-        cachedGainValue = gainVal
-        cachedLossValue = lossVal
     }
 
     private func recomputeFilteredCards() {
