@@ -35,6 +35,7 @@ private struct AppTabShellView: View {
     @ObservedObject var sessionViewModel: AppSessionViewModel
     @EnvironmentObject private var appState: AppState
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab: MainTab = .dashboard
     /// Tracks which tabs have been visited so we can defer creation of
@@ -93,6 +94,14 @@ private struct AppTabShellView: View {
             visitedTabs.insert(.inventory)
             selectedTab = .inventory
             Task { await portfolioVM.refresh() }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Foreground recovery for entitlements. Resets the retry counter
+            // and re-fetches, so a load that earlier exhausted its 1-2-4s
+            // retry chain gets another chance once the app is active.
+            if newPhase == .active {
+                Task { await sessionViewModel.subscriptionManager.refreshEntitlementsFromForeground() }
+            }
         }
     }
 

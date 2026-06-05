@@ -6,6 +6,7 @@
 import Combine
 import Foundation
 import StoreKit
+import os
 
 enum AppAccessTier: String, CaseIterable, Identifiable {
     case none
@@ -282,6 +283,16 @@ struct SubscriptionPlan: Identifiable {
     }
 }
 
+/// Lifecycle of the backend entitlements fetch. Distinct from the user's
+/// tier so a transient failure can be observed without conflating it with
+/// "user is on the free tier."
+enum EntitlementLoadState: Equatable {
+    case idle           // never attempted (pre-launch / signed-out)
+    case loading        // fetch in flight
+    case loaded         // fetch succeeded; currentTier reflects backend truth
+    case failed(String) // fetch failed; currentTier preserved from cache; gating floors
+}
+
 @MainActor
 final class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
@@ -295,10 +306,16 @@ final class SubscriptionManager: ObservableObject {
 
     @Published private(set) var currentTier: AppAccessTier
     @Published private(set) var entitlementState: EntitlementState?
+    @Published private(set) var entitlementLoadState: EntitlementLoadState = .idle
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchaseState: PurchaseState = .idle
     @Published private(set) var hasLoadedProducts = false
     @Published var statusMessage: String?
+
+    private let logger = Logger(subsystem: "com.hobbyiq.app", category: "entitlements")
+    private var entitlementRetryAttempts = 0
+    private let maxEntitlementRetryAttempts = 3
+    private var entitlementRetryTask: Task<Void, Never>?
 
     let plans: [SubscriptionPlan] = [
         SubscriptionPlan(
@@ -458,11 +475,24 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Entitlement Gating
 
+    /// Tier to use for FEATURE GATING (`has` / `cap` / `.lockedOverlay`) only.
+    /// Never `.none` — floors to `.free` so a transient entitlements-load blip
+    /// cannot deny-all free-available surfaces. Paid features still rely on
+    /// backend 402/403 enforcement, so the floor cannot wrongly UNLOCK
+    /// anything — it only stops wrongly LOCKING free ones.
+    ///
+    /// Do NOT use this for launch / paywall routing — those must continue to
+    /// read `currentTier` so a genuinely-new user with no cache still flows
+    /// through the paywall on first launch.
+    var effectiveGatingTier: AppAccessTier {
+        currentTier == .none ? .free : currentTier
+    }
+
     func has(_ feature: String) -> Bool {
         if let state = entitlementState {
             return state.features.contains(feature)
         }
-        return TierMatrix.features[currentTier]?.contains(feature) ?? false
+        return TierMatrix.features[effectiveGatingTier]?.contains(feature) ?? false
     }
 
     func cap(for cap: GatedCap) -> CapValue {
@@ -474,7 +504,7 @@ final class SubscriptionManager: ObservableObject {
             case .priceAlerts: return state.caps.priceAlerts
             }
         }
-        return TierMatrix.caps[currentTier]?[cap] ?? .limited(0)
+        return TierMatrix.caps[effectiveGatingTier]?[cap] ?? .limited(0)
     }
 
     func capAllows(_ cap: GatedCap, used: Int) -> Bool {
@@ -519,9 +549,21 @@ final class SubscriptionManager: ObservableObject {
 
     // MARK: - Backend Entitlements
 
+    /// Public entry point for "refresh now" recoveries (app foreground,
+    /// pull-to-refresh, etc). Resets the retry counter so a previously
+    /// exhausted retry chain can try again.
+    func refreshEntitlementsFromForeground() async {
+        guard AuthService.shared.isLoggedIn else { return }
+        entitlementRetryAttempts = 0
+        entitlementRetryTask?.cancel()
+        entitlementRetryTask = nil
+        await refreshEntitlementsFromBackend()
+    }
+
     private func refreshEntitlementsFromBackend() async {
         guard AuthService.shared.isLoggedIn else { return }
 
+        entitlementLoadState = .loading
         do {
             let response = try await api.fetchEntitlements()
             let tier = AppAccessTier(rawValue: response.plan) ?? .free
@@ -531,8 +573,38 @@ final class SubscriptionManager: ObservableObject {
                 caps: response.caps
             )
             setTier(tier)
+            entitlementLoadState = .loaded
+            entitlementRetryAttempts = 0
         } catch {
-            // Network failure or 401 — keep cached tier, auth flow handles re-auth
+            // PRESERVATION GUARD: do NOT mutate currentTier here. A transient
+            // failure must never downgrade a known user — currentTier already
+            // holds the cached value restored from UserDefaults at init (or
+            // the last successful setTier). Routing falls back to that cache
+            // (paywall ONLY when truly no cache = brand-new user); gating
+            // falls back via `effectiveGatingTier` (floors .none → .free).
+            let message = (error as NSError).localizedDescription
+            logger.error("entitlement load failed: \(message, privacy: .public)")
+            entitlementLoadState = .failed(message)
+            scheduleEntitlementRetry()
+        }
+    }
+
+    /// Retries the entitlements fetch with 1s, 2s, 4s backoff up to
+    /// `maxEntitlementRetryAttempts`. After the chain exhausts, settles into
+    /// `.failed` and stops — foreground refresh is the recovery path.
+    private func scheduleEntitlementRetry() {
+        guard entitlementRetryAttempts < maxEntitlementRetryAttempts else {
+            logger.error("entitlement retry attempts exhausted; settled into failed state until next foreground")
+            return
+        }
+        let attempt = entitlementRetryAttempts
+        entitlementRetryAttempts += 1
+        let delaySeconds = pow(2.0, Double(attempt))  // 1, 2, 4
+        entitlementRetryTask?.cancel()
+        entitlementRetryTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            await self?.refreshEntitlementsFromBackend()
         }
     }
 

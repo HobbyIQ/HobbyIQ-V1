@@ -42,8 +42,11 @@ final class AppSessionViewModel: ObservableObject {
         subscriptionManager.currentTier
     }
 
+    /// Whether the user has any feature-gating entitlement. Reads the
+    /// gating-floored tier so a transient entitlements-load failure cannot
+    /// silently turn this off and lock free-available surfaces.
     var hasEntitlement: Bool {
-        activeTier != .none
+        subscriptionManager.effectiveGatingTier != .none
     }
 
     func checkSessionOnLaunch() async {
