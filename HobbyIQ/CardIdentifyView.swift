@@ -18,14 +18,13 @@ struct CardIdentifyView: View {
     @State private var error: String?
     @State private var showUpgradePaywall = false
     @State private var selectedDetection: CardIdentifyDetection?
+    @State private var hasAutoLaunchedCamera = false
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: HobbyIQTheme.Spacing.large) {
                     heroCard
-
-                    captureButtons
 
                     if let image = capturedImage {
                         imagePreview(image)
@@ -66,6 +65,22 @@ struct CardIdentifyView: View {
             }
             .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                bottomCameraBar
+            }
+        }
+        .onAppear {
+            // Auto-launch the camera the first time the view appears — only when
+            // no prior work is in flight. Mirrors the iOS Camera app's behavior
+            // of opening straight into the viewfinder.
+            if !hasAutoLaunchedCamera
+                && capturedImage == nil
+                && identifyResponse == nil
+                && !isUploading
+                && !isIdentifying {
+                hasAutoLaunchedCamera = true
+                showCamera = true
+            }
         }
         .sheet(item: $selectedDetection) { detection in
             if let card = detection.card {
@@ -139,41 +154,58 @@ struct CardIdentifyView: View {
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
     }
 
-    // MARK: - Capture Buttons
+    // MARK: - Bottom camera bar
 
-    private var captureButtons: some View {
+    /// Bottom-anchored toolbar styled after the native iOS Camera app:
+    /// the library shortcut sits at the leading edge (replaces the camera
+    /// roll thumbnail), and a prominent re-open-camera shutter button
+    /// occupies the trailing edge for retakes after the auto-launched
+    /// camera is dismissed.
+    private var bottomCameraBar: some View {
         HStack(spacing: 12) {
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                HStack(spacing: 8) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Choose from Library")
+                        .font(.subheadline.weight(.bold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+                )
+                .clipShape(Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .accessibilityLabel("Choose a photo from your library")
+
+            Spacer()
+
             Button {
                 showCamera = true
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "camera.fill")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Camera")
-                        .font(.subheadline.weight(.bold))
-                }
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(HobbyIQTheme.Colors.electricBlue)
-                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+                Image(systemName: "camera.fill")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .frame(width: 56, height: 56)
+                    .background(HobbyIQTheme.Colors.electricBlue)
+                    .clipShape(Circle())
+                    .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(.plain)
-
-            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Library")
-                        .font(.subheadline.weight(.bold))
-                }
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            .accessibilityLabel("Open camera")
+        }
+        .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+        .padding(.vertical, HobbyIQTheme.Spacing.medium)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                .frame(height: 1)
         }
     }
 
