@@ -167,7 +167,6 @@ async function getContainer(): Promise<Container | null> {
       });
       _container = container;
       console.log("[auth] Cosmos DB users container ready");
-      await seedAdminUsers(container);
       return container;
     } catch (err: any) {
       console.error(`[cosmos][auth] Cosmos init failed, using in-memory: ${err.message}`);
@@ -177,50 +176,51 @@ async function getContainer(): Promise<Container | null> {
   return _initPromise;
 }
 
-// ─── Seeded admin/personal users ─────────────────────────────────────────────
+// ─── CF-OWNER-OVERRIDE-CLEANUP (2026-06-05) ─────────────────────────────────
+//
+// REMOVED from production: seedAdminUsers(container) call inside
+// getContainer(). The old seed re-created two hardcoded admin docs
+// against Cosmos on every container init, which made account deletion
+// impossible — a deleted seed user reappeared the instant any auth code
+// path next ran. Owner / comped accounts are now managed via
+// scripts/seedOwnerAccount.ts + setEntitlementOverride() (CF-OWNER-
+// OVERRIDE, 2026-06-05). The seed script does NOT bake credentials into
+// source.
+//
+// KEPT for tests ONLY: the in-memory seed below. It runs only when
+// NODE_ENV === "test" so dozens of existing test files that signIn as
+// the "HobbyIQ" fixture continue to work without modification. The seed
+// values are TEST FIXTURES; they only land in memStore, which is itself
+// only consulted when Cosmos is unconfigured (test mode). Production
+// boots configure Cosmos and never read memStore.
+//
+// Security note: the password strings "Baseball25" and "Carolina23"
+// were on origin/main before this commit; rotate anywhere reused.
 
-const SEEDED_USERS = [
+const SEEDED_USERS: ReadonlyArray<{
+  userId: string;
+  email: string;
+  aliases: string[];
+  password: string;
+  plan: SubscriptionPlan;
+}> = [
   {
     userId: "admin-testing-hobbyiq",
     email: "drew@justtheboysandcards.com",
     aliases: ["HobbyIQ"],
     password: "Baseball25",
-    plan: "pro_seller" as SubscriptionPlan,
+    plan: "pro_seller",
   },
   {
     userId: "personal-justtheboysandcards",
     email: "justtheboysandcards@justtheboysandcards.com",
     aliases: ["JusttheBoysandCards"],
     password: "Carolina23",
-    plan: "pro_seller" as SubscriptionPlan,
+    plan: "pro_seller",
   },
 ];
 
-async function seedAdminUsers(container: Container): Promise<void> {
-  for (const s of SEEDED_USERS) {
-    try {
-      const { resource } = await container.item(s.userId, s.userId).read<AuthUserRecord>();
-      if (resource) continue;
-    } catch {
-      // not found — create below
-    }
-    const record: AuthUserRecord = {
-      id: s.userId,
-      userId: s.userId,
-      email: s.email,
-      emailLower: s.email.toLowerCase(),
-      usernameLower: s.aliases[0]?.toLowerCase() ?? null,
-      aliases: s.aliases,
-      passwordHash: hashPassword(s.password),
-      plan: s.plan,
-      createdAt: new Date().toISOString(),
-      docType: "user",
-    };
-    await container.items.upsert(record);
-  }
-}
-
-function seedMemStore() {
+function seedMemStore(): void {
   for (const s of SEEDED_USERS) {
     memStore.set(s.userId, {
       id: s.userId,
@@ -236,18 +236,22 @@ function seedMemStore() {
     });
   }
 }
-seedMemStore();
+
+// IIFE gated on test mode: production boots never touch this; tests
+// always start with the in-memory fixture present.
+if (isTestMode) {
+  seedMemStore();
+}
 
 /**
- * Test-only: wipe the in-memory user store and re-seed the admin rows.
- * Lets test files that exercise full-suite-scanning behavior (the
- * subscriptions safety-net job is the first such case) isolate seeded
- * users from earlier tests' rows. Not exposed by name in production
- * since memStore is only used when Cosmos is unconfigured.
+ * Test-only: wipe the in-memory user store and re-seed the test
+ * fixtures between tests. The safety-net job scans every paid user in
+ * memStore — without this reset, prior test users still resolve to
+ * "paid" and consume the mocked status queue out of order.
  */
 export function _resetMemStoreForTests(): void {
   memStore.clear();
-  seedMemStore();
+  if (isTestMode) seedMemStore();
 }
 
 // ─── Session helpers ─────────────────────────────────────────────────────────
