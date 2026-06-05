@@ -50,32 +50,30 @@ struct ERPHubView: View {
     @State private var syncToast: String?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    periodSelector
-                    moneyHero
-                    reconcileAttentionCard
-                    tilesGrid
-                    quietSyncAction
-                    if let syncToast {
-                        Text(syncToast)
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                periodSelector
+                moneyHero
+                reconcileAttentionCard
+                tilesGrid
+                quietSyncAction
+                if let syncToast {
+                    Text(syncToast)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
-                .padding(.vertical, 16)
             }
-            .background { HobbyIQBackground() }
-            .refreshable { await loadAll() }
-            .navigationTitle("Financials")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .task { await loadAll() }
-            .onChange(of: selectedPeriod) { _, _ in Task { await loadAll() } }
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.vertical, 16)
         }
+        .background { HobbyIQBackground() }
+        .refreshable { await loadAll() }
+        .navigationTitle("Financials")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
+        .task { await loadAll() }
+        .onChange(of: selectedPeriod) { _, _ in Task { await loadAll() } }
         .lockedOverlay(
             feature: GatedFeature.erpReconciliation,
             subscriptionManager: sessionViewModel.subscriptionManager

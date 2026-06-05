@@ -86,6 +86,14 @@ private struct AppTabShellView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isKeyboardVisible = false
         }
+        .onReceive(NotificationCenter.default.publisher(for: .inventoryHoldingSaved)) { _ in
+            // CardIdentifyView just persisted an identified card. Route the
+            // user straight to Inventory and refresh the shared portfolio VM
+            // so the new holding appears with its photo thumbnail.
+            visitedTabs.insert(.inventory)
+            selectedTab = .inventory
+            Task { await portfolioVM.refresh() }
+        }
     }
 
     private var tabContent: some View {
@@ -138,9 +146,11 @@ private struct AppTabShellView: View {
             }
 
             if visitedTabs.contains(.erp) {
-                ERPHubView()
-                    .opacity(selectedTab == .erp ? 1 : 0)
-                    .allowsHitTesting(selectedTab == .erp)
+                NavigationStack {
+                    ERPHubView()
+                }
+                .opacity(selectedTab == .erp ? 1 : 0)
+                .allowsHitTesting(selectedTab == .erp)
             }
         }
     }
