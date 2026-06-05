@@ -14,10 +14,24 @@ struct CompIQVariantPickerView: View {
     @State private var hasSearched = false
     @Environment(\.dismiss) private var dismiss
 
+    /// Pre-selected grade carried into the pushed CompIQPricedCardView. Set by
+    /// the cert resolve bridge so the comp lands grade-matched even after
+    /// disambiguating multiple variant hits.
+    private let initialGrade: CompIQPricedCardView.GradeOption?
+
     private let logger = Logger(subsystem: "com.compiq.app", category: "CompIQ")
 
-    init(initialQuery: String = "") {
+    init(
+        initialQuery: String = "",
+        initialHits: [CompIQVariantHit]? = nil,
+        initialGrade: CompIQPricedCardView.GradeOption? = nil
+    ) {
         _query = State(initialValue: initialQuery)
+        if let initialHits, initialHits.isEmpty == false {
+            _hits = State(initialValue: initialHits)
+            _hasSearched = State(initialValue: true)
+        }
+        self.initialGrade = initialGrade
     }
 
     var body: some View {
@@ -59,6 +73,7 @@ struct CompIQVariantPickerView: View {
         .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .task {
+            // Skip auto-load when initialHits were injected (cert resolve bridge).
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && hits.isEmpty {
                 await load()
             }
@@ -171,7 +186,7 @@ struct CompIQVariantPickerView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(hits) { hit in
                         NavigationLink {
-                            CompIQPricedCardView(hit: hit)
+                            CompIQPricedCardView(hit: hit, initialGrade: initialGrade)
                         } label: {
                             variantRow(hit)
                         }

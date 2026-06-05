@@ -93,7 +93,13 @@ struct CardSearchView: View {
             }
 
             ForEach(candidates, id: \.stableId) { candidate in
-                candidateCard(candidate)
+                NavigationLink {
+                    CertResolveView(candidate: candidate)
+                } label: {
+                    candidateCard(candidate)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens a comped pricing view for this card")
             }
         }
     }
@@ -157,14 +163,20 @@ struct CardSearchView: View {
             }
 
             Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
                 .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private func detailBadge(_ text: String) -> some View {

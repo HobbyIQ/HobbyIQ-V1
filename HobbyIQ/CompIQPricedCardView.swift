@@ -27,11 +27,28 @@ struct CompIQPricedCardView: View {
 
     private let logger = Logger(subsystem: "com.compiq.app", category: "CompIQ")
 
-    init(hit: CompIQVariantHit, previewResponse: CompIQPriceByIdResponse? = nil) {
+    init(hit: CompIQVariantHit, previewResponse: CompIQPriceByIdResponse? = nil, initialGrade: GradeOption? = nil) {
         self.hit = hit
         if let previewResponse {
             self._priceResponse = State(initialValue: previewResponse)
             self.skipFetch = true
+        }
+        if let initialGrade {
+            self._selectedGrade = State(initialValue: initialGrade)
+        }
+    }
+
+    /// Maps a backend cert candidate's (gradeCompany, gradeValue) pair to the
+    /// matching GradeOption so a comped result lands grade-matched on first
+    /// paint. Returns nil when the grade falls outside the picker's known
+    /// options — caller should leave `selectedGrade` at its default (.raw).
+    static func gradeOption(forCompany company: String?, value: Double?) -> GradeOption? {
+        guard let company = company?.uppercased(), let value else { return nil }
+        switch (company, value) {
+        case ("PSA", 9):    return .psa9
+        case ("PSA", 10):   return .psa10
+        case ("BGS", 9.5):  return .bgs95
+        default:            return nil
         }
     }
 

@@ -13,6 +13,8 @@ struct DashboardView: View {
     @State private var showAccount = false
     @State private var searchQuery = ""
     @State private var navigateToCompIQSearch = false
+    @State private var navigateToCertResolve = false
+    @State private var certResolveInput = ""
     @State private var showCardScanner = false
     @FocusState private var isAskFocused: Bool
 
@@ -134,7 +136,11 @@ struct DashboardView: View {
             onSubmit: {
                 isAskFocused = false
                 let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !query.isEmpty {
+                guard !query.isEmpty else { return }
+                if Self.looksLikeCertNumber(query) {
+                    certResolveInput = query
+                    navigateToCertResolve = true
+                } else {
                     navigateToCompIQSearch = true
                 }
             },
@@ -156,6 +162,19 @@ struct DashboardView: View {
         .navigationDestination(isPresented: $navigateToCompIQSearch) {
             CompIQVariantPickerView(initialQuery: searchQuery.trimmingCharacters(in: .whitespacesAndNewlines))
         }
+        .navigationDestination(isPresented: $navigateToCertResolve) {
+            CertResolveView(input: certResolveInput)
+        }
+    }
+
+    /// 4–10 all-digit input is treated as a cert-like query and routed through
+    /// the unified-search classifier instead of the variant-search text path.
+    /// Tight bounds avoid catching set numbers (e.g. "#199") or partial years.
+    static func looksLikeCertNumber(_ input: String) -> Bool {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let digitCount = trimmed.count
+        guard (4...10).contains(digitCount) else { return false }
+        return trimmed.allSatisfy(\.isNumber)
     }
 
 }
