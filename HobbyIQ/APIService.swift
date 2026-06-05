@@ -258,7 +258,8 @@ struct APIService {
     }
 
     func fetchAgingBuckets() async throws -> AgingBucketsResponse {
-        try await get(path: "/api/portfolio/erp/aging", responseType: AgingBucketsResponse.self)
+        // Backend mounts this under /unreconciled/aging (not /aging).
+        try await get(path: "/api/portfolio/erp/unreconciled/aging", responseType: AgingBucketsResponse.self)
     }
 
     func submitOverride(entryId: String, request: ERPOverrideRequest) async throws -> ERPOverrideResponse {
@@ -288,10 +289,11 @@ struct APIService {
         )
     }
 
-    func fetchErpTimeseries(granularity: String = "month") async throws -> ERPTimeseriesResponse {
+    func fetchErpTimeseries(bucket: String = "month") async throws -> ERPTimeseriesResponse {
+        // Backend mounts this under /analytics/timeseries with `bucket` query (month|quarter).
         try await get(
-            path: "/api/portfolio/erp/timeseries",
-            queryItems: [URLQueryItem(name: "granularity", value: granularity)],
+            path: "/api/portfolio/erp/analytics/timeseries",
+            queryItems: [URLQueryItem(name: "bucket", value: bucket)],
             responseType: ERPTimeseriesResponse.self
         )
     }

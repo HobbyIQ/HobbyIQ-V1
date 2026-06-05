@@ -3,58 +3,78 @@
 //  HobbyIQ
 //
 
+import Charts
 import SwiftUI
 import UIKit
 
 // MARK: - ERP Hub
 
-struct ERPHubView: View {
-    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
-    @State private var showUpgradePaywall = false
-    @State private var selectedTab: ERPTab = .reconciliation
+enum FinancialsPeriod: String, CaseIterable, Identifiable {
+    case thisMonth = "This month"
+    case year = "Year"
+    case all = "All"
 
-    enum ERPTab: String, CaseIterable, Identifiable {
-        case reconciliation = "Reconcile"
-        case pnl = "P&L"
-        case expenses = "Expenses"
-        case trades = "Trades"
-        case tax = "Tax"
+    var id: String { rawValue }
+    var title: String { rawValue }
 
-        var id: String { rawValue }
-        var icon: String {
-            switch self {
-            case .reconciliation: return "checkmark.circle"
-            case .pnl: return "chart.bar"
-            case .expenses: return "creditcard"
-            case .trades: return "arrow.triangle.swap"
-            case .tax: return "doc.text"
-            }
+    /// Maps the hub's period selector to the `groupBy` token accepted by
+    /// `/api/portfolio/erp/pnl`.
+    var pnlGroupBy: String {
+        switch self {
+        case .thisMonth: return "month"
+        case .year: return "year"
+        case .all: return "all"
         }
     }
 
+    /// Maps to the `bucket` accepted by `/api/portfolio/erp/analytics/timeseries`
+    /// (month|quarter only). "All" widens to quarter buckets to keep the chart legible.
+    var trendBucket: String {
+        switch self {
+        case .all: return "quarter"
+        default: return "month"
+        }
+    }
+}
+
+struct ERPHubView: View {
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
+    @State private var showUpgradePaywall = false
+    @State private var selectedPeriod: FinancialsPeriod = .thisMonth
+    @State private var pnl: ERPPnlResponse?
+    @State private var timeseries: ERPTimeseriesResponse?
+    @State private var unreconciledCount: Int = 0
+    @State private var isLoading = false
+    @State private var loadFailed = false
+    @State private var isSyncing = false
+    @State private var syncToast: String?
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                tabBar
-
-                TabView(selection: $selectedTab) {
-                    ERPReconciliationView()
-                        .tag(ERPTab.reconciliation)
-                    ERPPnlView()
-                        .tag(ERPTab.pnl)
-                    ERPExpensesView()
-                        .tag(ERPTab.expenses)
-                    ERPTradesView()
-                        .tag(ERPTab.trades)
-                    ERPTaxView()
-                        .tag(ERPTab.tax)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    periodSelector
+                    moneyHero
+                    reconcileAttentionCard
+                    tilesGrid
+                    quietSyncAction
+                    if let syncToast {
+                        Text(syncToast)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+                .padding(.vertical, 16)
             }
             .background { HobbyIQBackground() }
+            .refreshable { await loadAll() }
             .navigationTitle("Financials")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()
+            .task { await loadAll() }
+            .onChange(of: selectedPeriod) { _, _ in Task { await loadAll() } }
         }
         .lockedOverlay(
             feature: GatedFeature.erpReconciliation,
@@ -70,30 +90,337 @@ struct ERPHubView: View {
         }
     }
 
-    private var tabBar: some View {
+    // MARK: Period selector
+
+    private var periodSelector: some View {
         HStack(spacing: 0) {
-            ForEach(ERPTab.allCases) { tab in
+            ForEach(FinancialsPeriod.allCases) { period in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { selectedTab = tab }
+                    selectedPeriod = period
                 } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(tab.rawValue)
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundStyle(selectedTab == tab ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(selectedTab == tab ? HobbyIQTheme.Colors.electricBlue.opacity(0.12) : Color.clear)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    Text(period.title)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
+                        .clipShape(Capsule(style: .continuous))
+                        .contentShape(Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Show \(period.title) financials")
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(3)
         .background(HobbyIQTheme.Colors.cardNavy)
+        .clipShape(Capsule(style: .continuous))
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    // MARK: Money / trend hero
+
+    private var moneyHero: some View {
+        let totals = pnl?.totals
+        let net = totals?.netPnL ?? totals?.realizedPnL
+        let hasSales = (totals?.count ?? 0) > 0 || trendPoints.contains(where: { ($0.pnl ?? 0) != 0 })
+        let netColor: Color = {
+            guard let value = net else { return HobbyIQTheme.Colors.mutedText }
+            if value == 0 { return HobbyIQTheme.Colors.mutedText }
+            return value > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        }()
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Net profit")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(1.1)
+                    Text(hasSales ? (net ?? 0).portfolioSignedCurrencyText : "—")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(netColor)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(selectedPeriod.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                    .clipShape(Capsule(style: .continuous))
+            }
+
+            heroTrendArea(hasSales: hasSales)
+
+            if hasSales {
+                heroBreakdownRow
+            } else {
+                Text("Record your first sale to start tracking P&L.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .hiqCardStyle()
+    }
+
+    private var trendPoints: [ERPTimeseriesPoint] { timeseries?.points ?? [] }
+
+    @ViewBuilder
+    private func heroTrendArea(hasSales: Bool) -> some View {
+        let nonZero = trendPoints.filter { ($0.pnl ?? 0) != 0 }
+        if hasSales && nonZero.count >= 2 {
+            ERPHubTrendChart(points: trendPoints)
+                .frame(height: 96)
+                .accessibilityLabel("Net profit trend for \(selectedPeriod.title)")
+        } else {
+            VStack(spacing: 6) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                Text(hasSales ? "Building trend history" : "No sales yet")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 96)
+            .background(Color.white.opacity(0.03))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+
+    private var heroBreakdownRow: some View {
+        let totals = pnl?.totals
+        return HStack(spacing: 0) {
+            heroBreakdownCell("Sold", value: totals?.grossProceeds)
+            divider
+            heroBreakdownCell("Fees", value: totals?.totalFees)
+            divider
+            heroBreakdownCell("Expenses", value: totals?.totalExpenses)
+        }
+    }
+
+    private func heroBreakdownCell(_ label: String, value: Double?) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(value?.portfolioCurrencyText ?? "—")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.08))
+            .frame(width: 1, height: 28)
+    }
+
+    // MARK: Reconcile attention card
+
+    private var reconcileAttentionCard: some View {
+        NavigationLink {
+            ERPReconciliationView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: unreconciledCount > 0 ? "exclamationmark.circle.fill" : "checkmark.seal.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(unreconciledCount > 0 ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen)
+                    .frame(width: 38, height: 38)
+                    .background((unreconciledCount > 0 ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen).opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(unreconciledCount > 0
+                         ? "\(unreconciledCount) \(unreconciledCount == 1 ? "sale needs" : "sales need") reconciling"
+                         : "All caught up")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text(unreconciledCount > 0 ? "Tap to review fees and net payouts." : "No sales need reconciling.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+            }
+            .padding(HobbyIQTheme.Spacing.medium)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke((unreconciledCount > 0 ? HobbyIQTheme.Colors.warning : HobbyIQTheme.Colors.successGreen).opacity(0.4), lineWidth: 1.2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(unreconciledCount > 0
+                            ? "\(unreconciledCount) sales need reconciling"
+                            : "All sales caught up")
+    }
+
+    // MARK: 2x2 nav tiles
+
+    private var tilesGrid: some View {
+        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+        return LazyVGrid(columns: columns, spacing: 12) {
+            navTile(title: "P&L", subtitle: pnlTileStatus, icon: "chart.bar.fill") { ERPPnlView() }
+            navTile(title: "Expenses", subtitle: expensesTileStatus, icon: "creditcard.fill") { ERPExpensesView() }
+            navTile(title: "Trades", subtitle: tradesTileStatus, icon: "arrow.triangle.swap") { ERPTradesView() }
+            navTile(title: "Tax & exports", subtitle: taxTileStatus, icon: "doc.text.fill") { ERPTaxView() }
+        }
+    }
+
+    private var pnlTileStatus: String {
+        if loadFailed { return "—" }
+        if let count = pnl?.totals?.count, count > 0 { return "\(count) sale\(count == 1 ? "" : "s")" }
+        return "No sales yet"
+    }
+    private var expensesTileStatus: String { "View & add" }
+    private var tradesTileStatus: String { "Track trades" }
+    private var taxTileStatus: String { "Reports & exports" }
+
+    private func navTile<Destination: View>(
+        title: String,
+        subtitle: String,
+        icon: String,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .frame(width: 34, height: 34)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title). \(subtitle).")
+    }
+
+    // MARK: Quiet sync action
+
+    private var quietSyncAction: some View {
+        Button {
+            Task { await syncFinances() }
+        } label: {
+            HStack(spacing: 6) {
+                if isSyncing {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue).controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.caption.weight(.semibold))
+                }
+                Text(isSyncing ? "Syncing…" : "Sync eBay finances")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .disabled(isSyncing)
+        .accessibilityLabel(isSyncing ? "Syncing eBay finances" : "Sync eBay finances")
+    }
+
+    // MARK: Data
+
+    private func loadAll() async {
+        isLoading = true
+        loadFailed = false
+        defer { isLoading = false }
+        do {
+            async let p = APIService.shared.fetchErpPnl(groupBy: selectedPeriod.pnlGroupBy, includeExpenses: true)
+            async let t = APIService.shared.fetchErpTimeseries(bucket: selectedPeriod.trendBucket)
+            async let u = APIService.shared.fetchUnreconciled()
+            let (pr, tr, ur) = try await (p, t, u)
+            pnl = pr
+            timeseries = tr
+            unreconciledCount = ur.count ?? ur.entries.count
+        } catch {
+            print("[Financials] hub load error: \(APIService.errorMessage(from: error))")
+            loadFailed = true
+        }
+    }
+
+    private func syncFinances() async {
+        isSyncing = true
+        syncToast = nil
+        defer { isSyncing = false }
+        do {
+            let response = try await APIService.shared.refetchFinances()
+            syncToast = response.message ?? "Updated \(response.updated ?? 0) entries"
+            await loadAll()
+        } catch {
+            print("[Financials] sync error: \(APIService.errorMessage(from: error))")
+            syncToast = "Couldn't sync — try again."
+        }
+    }
+}
+
+// MARK: - Hero Trend Chart
+
+private struct ERPHubTrendChart: View {
+    let points: [ERPTimeseriesPoint]
+
+    var body: some View {
+        Chart(points) { point in
+            LineMark(
+                x: .value("Period", point.period),
+                y: .value("Net profit", point.pnl ?? 0)
+            )
+            .foregroundStyle(HobbyIQTheme.Gradients.dashboardStroke)
+            .interpolationMethod(.monotone)
+            .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round))
+
+            AreaMark(
+                x: .value("Period", point.period),
+                y: .value("Net profit", point.pnl ?? 0)
+            )
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [HobbyIQTheme.Colors.electricBlue.opacity(0.22), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .interpolationMethod(.monotone)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartPlotStyle { plot in
+            plot.padding(.vertical, 4)
+        }
     }
 }
 
@@ -223,23 +550,18 @@ struct ERPReconciliationView: View {
                 if isRefetching {
                     ProgressView().tint(HobbyIQTheme.Colors.electricBlue).controlSize(.small)
                 } else {
-                    Image(systemName: "arrow.clockwise")
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.caption.weight(.semibold))
                 }
-                Text(isRefetching ? "Refetching..." : "Refetch eBay Finances")
+                Text(isRefetching ? "Syncing…" : "Sync eBay finances")
+                    .font(.caption.weight(.semibold))
             }
-            .font(.subheadline.weight(.bold))
             .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.5)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.plain)
         .disabled(isRefetching)
+        .accessibilityLabel(isRefetching ? "Syncing eBay finances" : "Sync eBay finances")
     }
 
     private var unreconciledSection: some View {
@@ -477,7 +799,8 @@ private struct ERPOverrideSheet: View {
             onSaved()
             dismiss()
         } catch {
-            localError = APIService.errorMessage(from: error)
+            print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            localError = "Couldn't save — try again."
         }
     }
 }
@@ -493,8 +816,6 @@ struct ERPPnlView: View {
     @State private var analytics: ERPAnalyticsResponse?
     @State private var timeseries: ERPTimeseriesResponse?
     @State private var valuation: ERPValuationResponse?
-    @State private var portfolioSummary: PortfolioSummaryResponse?
-    @State private var selectedPeriod: ERPPerformancePeriod = .month
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -530,10 +851,9 @@ struct ERPPnlView: View {
 
     @ViewBuilder
     private var pnlContent: some View {
-        // Realized-sales summary (relocated from PortfolioIQ). Backend only
-        // populates month/year today; other periods render zeros.
-        performancePeriodCard
-
+        // Period-aware Sold/Fees/Net summary lives on the Financials hub
+        // (single source). This tab is the breakdown view (by month/player/
+        // source/category).
         HStack {
             Picker("Group by", selection: $pnlGroupBy) {
                 ForEach(groupOptions, id: \.self) { Text($0.capitalized).tag($0) }
@@ -555,86 +875,6 @@ struct ERPPnlView: View {
                 erpPnlGroupRow(group)
             }
         }
-    }
-
-    @ViewBuilder
-    private var performancePeriodCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            erpSectionHeader("PERFORMANCE")
-
-            HStack(spacing: 0) {
-                ForEach(ERPPerformancePeriod.allCases) { period in
-                    Button {
-                        selectedPeriod = period
-                    } label: {
-                        Text(period.title)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
-                            .clipShape(Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Show \(period.title) performance")
-                }
-            }
-            .padding(3)
-            .background(HobbyIQTheme.Colors.cardNavy)
-            .clipShape(Capsule(style: .continuous))
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-
-            performanceStatsCard(for: selectedPeriod)
-        }
-    }
-
-    private func performanceStatsCard(for period: ERPPerformancePeriod) -> some View {
-        let stats: PortfolioPeriodStats? = {
-            switch period {
-            case .month: return portfolioSummary?.month
-            case .year: return portfolioSummary?.year
-            default: return nil
-            }
-        }()
-
-        let resolved = stats ?? PortfolioPeriodStats(
-            totalSold: 0,
-            totalProfit: 0,
-            totalExpenses: nil,
-            netProfit: nil,
-            margin: 0
-        )
-        let netProfit = resolved.netProfit ?? resolved.totalProfit
-        let netColor: Color = {
-            if netProfit == 0 { return HobbyIQTheme.Colors.mutedText }
-            return netProfit > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-        }()
-
-        return VStack(spacing: 8) {
-            Text(resolved.netProfitFormatted)
-                .font(.title2.bold())
-                .foregroundStyle(netColor)
-                .minimumScaleFactor(0.7)
-
-            Text(resolved.marginFormatted)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(netColor.opacity(0.8))
-
-            Text("Sold \(resolved.totalSoldFormatted) · Fees \(resolved.totalExpensesFormatted)")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     @ViewBuilder
@@ -772,9 +1012,8 @@ struct ERPPnlView: View {
             async let a = APIService.shared.fetchErpAnalytics(groupBy: analyticsGroupBy)
             async let t = APIService.shared.fetchErpTimeseries()
             async let v = APIService.shared.fetchErpValuation()
-            async let s = APIService.shared.fetchPortfolioSummary()
-            let (pr, ar, tr, vr, sr) = try await (p, a, t, v, s)
-            pnl = pr; analytics = ar; timeseries = tr; valuation = vr; portfolioSummary = sr
+            let (pr, ar, tr, vr) = try await (p, a, t, v)
+            pnl = pr; analytics = ar; timeseries = tr; valuation = vr
         } catch {
             errorMessage = APIService.errorMessage(from: error)
         }
@@ -1127,7 +1366,8 @@ private struct ERPExpenseFormSheet: View {
             onSaved()
             dismiss()
         } catch {
-            localError = APIService.errorMessage(from: error)
+            print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            localError = "Couldn't save — try again."
         }
     }
 
@@ -1139,7 +1379,8 @@ private struct ERPExpenseFormSheet: View {
             onSaved()
             dismiss()
         } catch {
-            localError = APIService.errorMessage(from: error)
+            print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            localError = "Couldn't save — try again."
         }
         isDeleting = false
     }
@@ -1386,7 +1627,8 @@ private struct ERPRecordTradeSheet: View {
             onSaved()
             dismiss()
         } catch {
-            localError = APIService.errorMessage(from: error)
+            print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            localError = "Couldn't save — try again."
         }
     }
 }
@@ -1822,17 +2064,6 @@ struct ERPShareSheet: UIViewControllerRepresentable {
 
 // MARK: - Shared ERP Helpers
 
-enum ERPPerformancePeriod: String, CaseIterable, Identifiable {
-    case today = "Today"
-    case week = "Week"
-    case month = "Month"
-    case year = "Year"
-    case all = "All"
-
-    var id: String { rawValue }
-    var title: String { rawValue }
-}
-
 private func erpSectionHeader(_ title: String) -> some View {
     HStack(spacing: 10) {
         Rectangle()
@@ -1849,17 +2080,36 @@ private func erpSectionHeader(_ title: String) -> some View {
     }
 }
 
-private func erpErrorBanner(_ message: String) -> some View {
-    HStack(spacing: 8) {
-        Image(systemName: "exclamationmark.triangle.fill")
-            .font(.caption)
-            .foregroundStyle(.orange)
-        Text(message)
-            .font(.caption)
+/// Calm fallback for any failed fetch in Financials. Never surfaces raw
+/// route/HTTP strings — `message` is logged to the console only.
+private func erpErrorBanner(_ message: String, onRetry: (() -> Void)? = nil) -> some View {
+    let _ = { print("[Financials] load error: \(message)") }()
+    return HStack(spacing: 10) {
+        Image(systemName: "exclamationmark.circle")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.warning)
+        Text("Couldn't load — retry.")
+            .font(.subheadline.weight(.semibold))
             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        Spacer(minLength: 8)
+        if let onRetry {
+            Button("Retry", action: onRetry)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                .clipShape(Capsule(style: .continuous))
+                .buttonStyle(.plain)
+        }
     }
     .padding(12)
-    .background(HobbyIQTheme.Colors.danger.opacity(0.1))
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(HobbyIQTheme.Colors.warning.opacity(0.08))
+    .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .stroke(HobbyIQTheme.Colors.warning.opacity(0.28), lineWidth: 1)
+    )
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 }
 
