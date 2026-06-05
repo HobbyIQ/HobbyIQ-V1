@@ -181,9 +181,10 @@ struct PSACertEnvelope: Decodable {
 struct CardPhotoPicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     let onImagePicked: (UIImage) -> Void
+    var onCancel: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onImagePicked: onImagePicked)
+        Coordinator(onImagePicked: onImagePicked, onCancel: onCancel)
     }
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
@@ -201,13 +202,16 @@ struct CardPhotoPicker: UIViewControllerRepresentable {
 
     final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
         private let onImagePicked: (UIImage) -> Void
+        private let onCancel: (() -> Void)?
 
-        init(onImagePicked: @escaping (UIImage) -> Void) {
+        init(onImagePicked: @escaping (UIImage) -> Void, onCancel: (() -> Void)? = nil) {
             self.onImagePicked = onImagePicked
+            self.onCancel = onCancel
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             picker.dismiss(animated: true)
+            onCancel?()
         }
 
         func imagePickerController(

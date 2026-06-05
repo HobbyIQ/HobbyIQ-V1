@@ -95,10 +95,7 @@ struct PortfolioIQView: View {
                 BatchRepriceView()
                     .environmentObject(sessionViewModel)
             }
-            .sheet(isPresented: $showCardIdentify) {
-                CardIdentifyView()
-                    .environmentObject(sessionViewModel)
-            }
+            .scanFlow(isPresented: $showCardIdentify, sessionViewModel: sessionViewModel)
             .onAppear {
                 if vm.summary == nil {
                     Task { await vm.load() }

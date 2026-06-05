@@ -91,10 +91,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showAccount) {
             AccountView(sessionViewModel: sessionViewModel)
         }
-        .sheet(isPresented: $showCardScanner) {
-            CardIdentifyView()
-                .environmentObject(sessionViewModel)
-        }
+        .scanFlow(isPresented: $showCardScanner, sessionViewModel: sessionViewModel)
     }
 
     // MARK: - Scan affordance

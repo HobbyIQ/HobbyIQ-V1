@@ -18,13 +18,27 @@ struct CardIdentifyView: View {
     @State private var error: String?
     @State private var showUpgradePaywall = false
     @State private var selectedDetection: CardIdentifyDetection?
-    @State private var hasAutoLaunchedCamera = false
+    @State private var hasUploadedInitialImage = false
+    private let initialImage: UIImage?
+    private let cameraDenied: Bool
+
+    init(initialImage: UIImage? = nil, cameraDenied: Bool = false) {
+        self.initialImage = initialImage
+        self.cameraDenied = cameraDenied
+        if let initialImage {
+            self._capturedImage = State(initialValue: initialImage)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: HobbyIQTheme.Spacing.large) {
                     heroCard
+
+                    if cameraDenied {
+                        cameraDeniedBanner
+                    }
 
                     if let image = capturedImage {
                         imagePreview(image)
@@ -69,18 +83,14 @@ struct CardIdentifyView: View {
                 bottomCameraBar
             }
         }
-        .onAppear {
-            // Auto-launch the camera the first time the view appears — only when
-            // no prior work is in flight. Mirrors the iOS Camera app's behavior
-            // of opening straight into the viewfinder.
-            if !hasAutoLaunchedCamera
-                && capturedImage == nil
-                && identifyResponse == nil
-                && !isUploading
-                && !isIdentifying {
-                hasAutoLaunchedCamera = true
-                showCamera = true
-            }
+        .task(id: initialImage) {
+            // When the caller hands us a pre-captured image (e.g. the dashboard's
+            // direct-camera scan flow), feed it straight into the existing
+            // SAS-upload -> identify pipeline. Camera launch is no longer the
+            // view's responsibility; the ScanFlow coordinator owns that.
+            guard let initialImage, !hasUploadedInitialImage else { return }
+            hasUploadedInitialImage = true
+            await uploadAndIdentify(initialImage)
         }
         .sheet(item: $selectedDetection) { detection in
             if let card = detection.card {
@@ -152,6 +162,50 @@ struct CardIdentifyView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
+    }
+
+    // MARK: - Camera-denied banner
+
+    /// Shown when the ScanFlow coordinator detected that camera permission is
+    /// .denied / .restricted. Steers the user to Settings while leaving the
+    /// library path on the bottom toolbar fully usable.
+    private var cameraDeniedBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lock.shield.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.warning)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Camera access is off")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text("Enable camera in Settings to scan, or pick a card from your library below.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Text("Open Settings")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open the system Settings app to enable camera access")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.warning.opacity(0.15))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.warning.opacity(0.5), lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     // MARK: - Bottom camera bar
