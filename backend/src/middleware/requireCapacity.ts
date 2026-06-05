@@ -17,6 +17,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import {
+  effectivePlanFor,
   getCap,
   minimumTierForCap,
   type GatedCap,
@@ -39,7 +40,9 @@ export function requireCapacity(cap: GatedCap, countFn: CountFn) {
       return;
     }
 
-    const limit = getCap(user.plan, cap);
+    // CF-OWNER-OVERRIDE (2026-06-05): gate on EFFECTIVE plan, not raw plan.
+    const effective = effectivePlanFor(user);
+    const limit = getCap(effective, cap);
     if (limit === "unlimited") {
       next();
       return;
@@ -71,7 +74,7 @@ export function requireCapacity(cap: GatedCap, countFn: CountFn) {
       cap,
       limit,
       current,
-      currentTier: user.plan,
+      currentTier: effective,
       requiredTier: minimumTierForCap(cap, current),
     });
   };

@@ -17,6 +17,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import {
+  effectivePlanFor,
   getCap,
   minimumTierForCap,
   type GatedCap,
@@ -44,7 +45,11 @@ export function requireRateLimited(cap: RateLimitedCap) {
       return;
     }
 
-    const limit = getCap(user.plan, cap);
+    // CF-OWNER-OVERRIDE (2026-06-05): gate on EFFECTIVE plan, not raw plan.
+    // Comped owners hit the same "unlimited" short-circuit as actual paid
+    // tiers — no counter is incremented, no quota is burned.
+    const effective = effectivePlanFor(user);
+    const limit = getCap(effective, cap);
     if (limit === "unlimited") {
       // Paid tiers short-circuit before any read. No counter is incremented;
       // we only track usage for plans that actually have a finite cap.
@@ -60,7 +65,7 @@ export function requireRateLimited(cap: RateLimitedCap) {
         cap,
         limit,
         current,
-        currentTier: user.plan,
+        currentTier: effective,
         requiredTier: minimumTierForCap(cap, current),
       });
       return;

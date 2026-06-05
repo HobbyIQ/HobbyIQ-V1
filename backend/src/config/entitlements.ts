@@ -166,3 +166,29 @@ export function resolveEntitlementsFor(plan: Plan): {
     caps: { ...entry.caps },
   };
 }
+
+// CF-OWNER-OVERRIDE (2026-06-05): single authoritative resolver consumed
+// by EVERY enforcement site (requireEntitlement / requireCapacity /
+// requireRateLimited) AND by /api/entitlements/me. Resolution order:
+//
+//   1. entitlementOverride (server-side comp, set via seedOwnerAccount)
+//   2. plan (Apple-derived; webhooks maintain this)
+//   3. "free" (fall-through if both above are missing/invalid)
+//
+// The override must be a known SubscriptionPlan; an unknown literal
+// (e.g. a stale legacy value persisted by hand) falls through to plan
+// instead of corrupting the gate. Validation via PLAN_RANK membership.
+//
+// Anything that gates on the user's effective tier MUST go through this
+// helper. If you find yourself reading `user.plan` directly in a gate,
+// you've created a bug — comped owners will see the feature in the UI
+// but get 402 on the API call.
+export function effectivePlanFor(
+  user: { plan: Plan; entitlementOverride?: Plan | null | undefined },
+): Plan {
+  const override = user.entitlementOverride;
+  if (override != null && (override as string) in PLAN_RANK) {
+    return override;
+  }
+  return user.plan;
+}

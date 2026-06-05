@@ -8,13 +8,20 @@
 
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
-import { resolveEntitlementsFor } from "../config/entitlements.js";
+import {
+  effectivePlanFor,
+  resolveEntitlementsFor,
+} from "../config/entitlements.js";
 
 const router = Router();
 
 router.get("/me", requireSession, (req: Request, res: Response) => {
   // requireSession guarantees req.user is present.
-  const resolved = resolveEntitlementsFor(req.user!.plan);
+  // CF-OWNER-OVERRIDE (2026-06-05): resolve EFFECTIVE plan so iOS sees
+  // the comped tier in the UI matrix — same helper every enforcement
+  // middleware uses, so display + access can't drift.
+  const effective = effectivePlanFor(req.user!);
+  const resolved = resolveEntitlementsFor(effective);
   res.json({ success: true, ...resolved });
 });
 

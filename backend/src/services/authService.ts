@@ -84,6 +84,15 @@ interface AuthUserRecord {
   // that never went through /api/subscriptions/verify (free users + every
   // pre-Payments-Apple-1 record).
   appleSubscription?: AppleSubscriptionState;
+  // CF-OWNER-OVERRIDE (2026-06-05): server-side comp. Authoritative tier
+  // assignment that overrides BOTH the Apple-derived `plan` field AND the
+  // "free" default. Read-modify-write at setUserSubscriptionState +
+  // writeUser preserves this field naturally (full-doc upsert; no patch
+  // ops on this path), so Apple/subscription webhooks cannot clear it.
+  // Surfaced through toAuthUser → AuthUser.entitlementOverride; consumed
+  // by effectivePlanFor() at every enforcement site (requireEntitlement,
+  // requireCapacity, requireRateLimited) AND at /api/entitlements/me.
+  entitlementOverride?: SubscriptionPlan | null;
 }
 
 export interface AuthUser {
@@ -100,6 +109,10 @@ export interface AuthUser {
   // read it via /api/auth/session for paywall "current subscription"
   // display, no extra round-trip needed.
   appleSubscription?: AppleSubscriptionState;
+  // CF-OWNER-OVERRIDE (2026-06-05): server-side comp override. NULL or
+  // absent → fall through to `plan`. See effectivePlanFor() — the single
+  // shared resolver every gate/route reads through.
+  entitlementOverride?: SubscriptionPlan | null;
 }
 
 export interface AuthResult {
@@ -348,6 +361,9 @@ function toAuthUser(user: AuthUserRecord): AuthUser {
     usage: user.usage,
     // CF-PAYMENTS-APPLE-1: passthrough cached Apple subscription state.
     appleSubscription: user.appleSubscription,
+    // CF-OWNER-OVERRIDE (2026-06-05): server-side comp override. NULL
+    // or undefined → effectivePlanFor falls through to `plan`.
+    entitlementOverride: user.entitlementOverride ?? null,
   };
 }
 
@@ -394,10 +410,74 @@ export async function setUserSubscriptionState(
   newPlan: SubscriptionPlan,
   apple: AppleSubscriptionState,
 ): Promise<AuthUser | null> {
+  // CF-OWNER-OVERRIDE (2026-06-05): readUser + writeUser is a full-doc
+  // round-trip (container.item().read<AuthUserRecord>() + items.upsert()),
+  // so `entitlementOverride` rides through every Apple/webhook update
+  // automatically — we never construct a partial object that could drop
+  // it. Pinned by the webhook-no-clear test in subscriptionsNotifications.
+  // DO NOT refactor this into a Cosmos patch op without re-pinning.
   const user = await readUser(userId);
   if (!user) return null;
   user.plan = newPlan;
   user.appleSubscription = apple;
+  await writeUser(user);
+  return toAuthUser(user);
+}
+
+// ─── CF-OWNER-OVERRIDE (2026-06-05): seed-script-side helpers ──────────────
+//
+// Two exports used by scripts/seedOwnerAccount.ts. Both are read-modify-
+// write on the FULL user record (same mechanism that lets entitlement
+// override survive every Apple webhook). The seed script never touches
+// the password hash on an existing row.
+
+/**
+ * Lookup by email (case-insensitive). Returns null if not found. Wraps
+ * the existing internal findUserByIdentifier path so the seed script
+ * doesn't have to know about emailLower normalization.
+ */
+export async function findUserByEmail(email: string): Promise<AuthUser | null> {
+  const trimmed = (email ?? "").trim();
+  if (!trimmed) return null;
+  const record = await findUserByIdentifier(trimmed);
+  return record ? toAuthUser(record) : null;
+}
+
+/**
+ * Set (or clear) the server-side entitlement override on an existing
+ * user. Optionally claim a username at the same time (one atomic write).
+ * NEVER touches the password hash, the Apple subscription state, or the
+ * email — only the override field + (optionally) the username aliases.
+ * Idempotent: re-running with the same args is a no-op write.
+ *
+ * Returns null when the user doesn't exist (caller should register
+ * first), null also when the supplied username is malformed or conflicts
+ * with another user. Otherwise returns the updated AuthUser projection.
+ */
+export async function setEntitlementOverride(
+  userId: string,
+  override: SubscriptionPlan | null,
+  opts: { username?: string } = {},
+): Promise<AuthUser | null> {
+  const user = await readUser(userId);
+  if (!user) return null;
+
+  if (opts.username !== undefined) {
+    const normalized = opts.username.trim();
+    if (!USERNAME_RE.test(normalized)) return null;
+    const lower = normalized.toLowerCase();
+    if (user.usernameLower !== lower) {
+      const conflict = await findUserByIdentifier(normalized);
+      if (conflict && conflict.userId !== user.userId) return null;
+      user.usernameLower = lower;
+      user.aliases = [
+        normalized,
+        ...(user.aliases ?? []).filter((a) => a.toLowerCase() !== lower),
+      ];
+    }
+  }
+
+  user.entitlementOverride = override;
   await writeUser(user);
   return toAuthUser(user);
 }

@@ -12,6 +12,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import {
+  effectivePlanFor,
   hasEntitlement,
   minimumTierFor,
   type GatedFeature,
@@ -31,7 +32,12 @@ export function requireEntitlement(feature: GatedFeature) {
       });
       return;
     }
-    if (hasEntitlement(user.plan, feature)) {
+    // CF-OWNER-OVERRIDE (2026-06-05): gate on EFFECTIVE plan
+    // (entitlementOverride > plan), not raw plan, so server-side comped
+    // owners get 200 on gated routes — not 402 with UI-unlocked / API-
+    // locked half-state.
+    const effective = effectivePlanFor(user);
+    if (hasEntitlement(effective, feature)) {
       next();
       return;
     }
@@ -39,7 +45,7 @@ export function requireEntitlement(feature: GatedFeature) {
       success: false,
       error: "subscription_required",
       feature,
-      currentTier: user.plan,
+      currentTier: effective,
       requiredTier: minimumTierFor(feature),
     });
   };
