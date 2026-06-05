@@ -19,6 +19,8 @@ struct PortfolioIQView: View {
     @State private var showWeeklyBrief = false
     @State private var showBatchReprice = false
     @State private var showCardIdentify = false
+    @State private var topMoversExpanded = false
+    @State private var priorityActionsExpanded = false
 
     var body: some View {
         NavigationView {
@@ -201,9 +203,9 @@ struct PortfolioIQView: View {
                     showingLedger = true
                 } label: {
                     Image(systemName: "book.closed")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 44, height: 44)
                         .background(HobbyIQTheme.Colors.cardNavy.opacity(0.96))
                         .clipShape(Circle())
                         .overlay(
@@ -212,6 +214,7 @@ struct PortfolioIQView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Open ledger")
             }
 
             // Hero value
@@ -344,12 +347,13 @@ struct PortfolioIQView: View {
                         Text(period.title)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                             .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
                             .clipShape(Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Show \(period.title) performance")
                 }
             }
             .padding(3)
@@ -414,7 +418,14 @@ struct PortfolioIQView: View {
     // MARK: - Priority Actions
 
     private var priorityActionsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let collapseLimit = 3
+        let totalCount = vm.priorityActions.count
+        let visibleActions = priorityActionsExpanded
+            ? vm.priorityActions
+            : Array(vm.priorityActions.prefix(collapseLimit))
+        let canExpand = totalCount > collapseLimit
+
+        return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(Labels.priorityActions)
 
             if vm.priorityActions.isEmpty {
@@ -422,7 +433,7 @@ struct PortfolioIQView: View {
                     .padding(.vertical, 4)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(vm.priorityActions.prefix(3).enumerated()), id: \.element.id) { index, action in
+                    ForEach(Array(visibleActions.enumerated()), id: \.element.id) { index, action in
                         Button {
                             let filter: PortfolioInventoryFilter
                             switch action.kind {
@@ -462,14 +473,27 @@ struct PortfolioIQView: View {
                                     .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
                             }
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 12)
+                            .frame(minHeight: 44)
                         }
                         .buttonStyle(.plain)
 
-                        if index < min(vm.priorityActions.count, 3) - 1 {
+                        if index < visibleActions.count - 1 {
                             Divider()
                                 .overlay(Color.white.opacity(0.06))
                                 .padding(.leading, 56)
+                        }
+                    }
+
+                    if canExpand {
+                        Divider()
+                            .overlay(Color.white.opacity(0.06))
+                        seeAllRow(
+                            isExpanded: priorityActionsExpanded,
+                            hiddenCount: max(0, totalCount - collapseLimit),
+                            totalCount: totalCount,
+                            noun: "actions"
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.22)) { priorityActionsExpanded.toggle() }
                         }
                     }
                 }
@@ -492,6 +516,15 @@ struct PortfolioIQView: View {
         let upColor: Color = hasSignals ? HobbyIQTheme.Colors.successGreen : .green
         let downColor: Color = hasSignals ? HobbyIQTheme.Colors.danger : .red
 
+        let allRising = vm.topMovers.filter { ($0.movementDirection == "up") || (!hasSignals && $0.profitLoss >= 0) }
+        let allFalling = vm.topMovers.filter { ($0.movementDirection == "down") || (!hasSignals && $0.profitLoss < 0) }
+        let collapseLimit = 3
+        let totalCount = allRising.count + allFalling.count
+        let rising = topMoversExpanded ? allRising : Array(allRising.prefix(collapseLimit))
+        let falling = topMoversExpanded ? allFalling : Array(allFalling.prefix(collapseLimit))
+        let canExpand = totalCount > (rising.count + falling.count) || topMoversExpanded
+        let hiddenCount = max(0, totalCount - collapseLimit * 2)
+
         return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(Labels.topMovers)
 
@@ -499,9 +532,6 @@ struct PortfolioIQView: View {
                 portfolioEmptyState
                     .padding(.vertical, 4)
             } else {
-                let rising = Array(vm.topMovers.filter { ($0.movementDirection == "up") || (!hasSignals && $0.profitLoss >= 0) }.prefix(3))
-                let falling = Array(vm.topMovers.filter { ($0.movementDirection == "down") || (!hasSignals && $0.profitLoss < 0) }.prefix(3))
-
                 VStack(spacing: 0) {
                     if !rising.isEmpty {
                         moverSubheader(title: upLabel, icon: "arrow.up.right", color: upColor)
@@ -540,6 +570,19 @@ struct PortfolioIQView: View {
                             }
                         }
                     }
+
+                    if canExpand {
+                        Divider()
+                            .overlay(Color.white.opacity(0.06))
+                        seeAllRow(
+                            isExpanded: topMoversExpanded,
+                            hiddenCount: hiddenCount,
+                            totalCount: totalCount,
+                            noun: "movers"
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.22)) { topMoversExpanded.toggle() }
+                        }
+                    }
                 }
                 .background(HobbyIQTheme.Colors.cardNavy)
                 .overlay(
@@ -549,6 +592,29 @@ struct PortfolioIQView: View {
                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             }
         }
+    }
+
+    // MARK: - See-all footer
+
+    private func seeAllRow(isExpanded: Bool, hiddenCount: Int, totalCount: Int, noun: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(isExpanded
+                     ? "Show less"
+                     : "See all \(totalCount) \(noun)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "Show less" : "See all \(totalCount) \(noun)")
     }
 
     private func moverSubheader(title: String, icon: String, color: Color) -> some View {
@@ -568,7 +634,13 @@ struct PortfolioIQView: View {
     }
 
     private func moverRow(mover: PortfolioMover, hasSignals: Bool = false) -> some View {
-        HStack(spacing: 0) {
+        let isUp: Bool = hasSignals
+            ? (mover.movementDirection == "up")
+            : (mover.profitLoss >= 0)
+        let valueColor: Color = isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        let arrowIcon = isUp ? "arrow.up.right" : "arrow.down.right"
+
+        return HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(mover.playerName)
                     .font(.subheadline.weight(.semibold))
@@ -582,22 +654,32 @@ struct PortfolioIQView: View {
             Spacer(minLength: 12)
 
             if hasSignals, let pct = mover.movementImpliedPct {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(String(format: "%+.1f%%", pct))
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(mover.movementDirection == "up" ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
-                    Text(mover.dollarImpact.portfolioSignedCurrencyText)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                HStack(spacing: 6) {
+                    Image(systemName: arrowIcon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(valueColor)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(String(format: "%+.1f%%", pct))
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(valueColor)
+                        Text(mover.dollarImpact.portfolioSignedCurrencyText)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
                 }
             } else {
-                Text(mover.profitLoss.portfolioSignedCurrencyText)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(mover.profitLoss >= 0 ? .green : .red)
+                HStack(spacing: 6) {
+                    Image(systemName: arrowIcon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(valueColor)
+                    Text(mover.profitLoss.portfolioSignedCurrencyText)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(valueColor)
+                }
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .frame(minHeight: 44)
     }
 
     // MARK: - Helpers
@@ -634,11 +716,18 @@ struct PortfolioIQView: View {
                     .font(.caption)
                     .foregroundStyle(Color(hex: 0xD1D5DB))
 
-                Button("Retry") {
+                Button {
                     Task { await vm.refresh() }
+                } label: {
+                    Text("Retry")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(hex: 0x3B82F6))
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                 }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color(hex: 0x3B82F6))
+                .buttonStyle(.plain)
+                .accessibilityLabel("Retry loading portfolio")
             }
 
             Spacer(minLength: 0)

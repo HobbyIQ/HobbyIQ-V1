@@ -11,52 +11,88 @@ struct PortfolioHealthCard: View {
     @State private var health: PortfolioHealthResponse?
     @State private var isLoading = false
     @State private var error: String?
+    @State private var isExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
+            summaryRow
+
+            if isExpanded {
+                expandedDetail
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        .task { await load() }
+    }
+
+    // MARK: - Always-visible summary
+
+    private var summaryRow: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.22)) { isExpanded.toggle() }
+        } label: {
+            HStack(spacing: 12) {
                 Image(systemName: "heart.text.square")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                Text("Portfolio Health")
+
+                Text("Health")
                     .font(HobbyIQTheme.Typography.cardTitle)
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
                 Spacer()
-            }
 
-            if isLoading {
-                HStack(spacing: 10) {
-                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
-                    Text("Checking health...")
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Spacer()
-                }
-            }
-
-            if let error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.danger)
-            }
-
-            if let h = health {
-                if let score = h.score {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(String(format: "%.0f", score))
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundStyle(healthScoreColor(score))
-                        Text("/ 100")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Spacer()
-                        if let total = h.totalHoldings {
-                            Text("\(total) holdings")
-                                .font(.caption.weight(.medium))
+                if isLoading && health == nil {
+                    ProgressView()
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                        .controlSize(.small)
+                } else if let h = health {
+                    HStack(spacing: 8) {
+                        statusBadge(for: h)
+                        if let score = h.score {
+                            Text(String(format: "%.0f", score))
+                                .font(.title3.weight(.bold).monospacedDigit())
+                                .foregroundStyle(healthScoreColor(score))
+                            Text("/ 100")
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         }
                     }
+                } else if let error {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                        .lineLimit(1)
+                }
 
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.easeInOut(duration: 0.22), value: isExpanded)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "Hide health breakdown" : "Show health breakdown")
+    }
+
+    // MARK: - Expanded detail
+
+    @ViewBuilder
+    private var expandedDetail: some View {
+        if let h = health {
+            VStack(alignment: .leading, spacing: 12) {
+                if let score = h.score {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 6)
@@ -70,39 +106,108 @@ struct PortfolioHealthCard: View {
                     .frame(height: 10)
                 }
 
+                if let total = h.totalHoldings {
+                    Text("\(total) holdings tracked")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+
                 HStack(spacing: 12) {
                     if let concentration = h.concentrationRisk {
-                        riskPill(label: "Concentration", value: concentration)
+                        riskPill(
+                            label: "Concentration",
+                            value: concentration,
+                            help: "How much of your value sits in a small number of cards. Higher % means one bad move on a top holding hurts more — diversifying lowers it."
+                        )
                     }
                     if let stale = h.staleDataRisk {
-                        riskPill(label: "Stale Data", value: stale)
+                        riskPill(
+                            label: "Stale Data",
+                            value: stale,
+                            help: "Share of holdings whose pricing hasn't refreshed lately. Higher % means today's values are based on older comps — running Reprice All brings it down."
+                        )
                     }
                     if let downside = h.downsideRisk {
-                        riskPill(label: "Downside", value: downside)
+                        riskPill(
+                            label: "Downside",
+                            value: downside,
+                            help: "Estimated exposure if the cards trending down keep falling. Higher % means a larger share of your value is in cards with negative momentum."
+                        )
                     }
                 }
             }
+        } else if isLoading {
+            HStack(spacing: 10) {
+                ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                Text("Checking health...")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+            }
+        } else if let error {
+            Text(error)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.danger)
         }
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1.0)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
-        .task { await load() }
     }
 
-    private func riskPill(label: String, value: Double) -> some View {
-        VStack(spacing: 2) {
-            Text(label)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+    // MARK: - Status word
+
+    private func statusBadge(for h: PortfolioHealthResponse) -> some View {
+        let status = statusWord(for: h)
+        return Text(status.label)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(status.color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(status.color.opacity(0.16))
+            .clipShape(Capsule(style: .continuous))
+    }
+
+    private struct HealthStatus {
+        let label: String
+        let color: Color
+    }
+
+    private func statusWord(for h: PortfolioHealthResponse) -> HealthStatus {
+        let concentration = h.concentrationRisk ?? 0
+        let stale = h.staleDataRisk ?? 0
+        let downside = h.downsideRisk ?? 0
+        let score = h.score ?? 0
+
+        if concentration > 0.6 {
+            return HealthStatus(label: "Concentrated", color: HobbyIQTheme.Colors.warning)
+        }
+        if stale > 0.6 {
+            return HealthStatus(label: "Stale", color: HobbyIQTheme.Colors.warning)
+        }
+        if downside > 0.6 {
+            return HealthStatus(label: "At Risk", color: HobbyIQTheme.Colors.danger)
+        }
+        if score >= 70 {
+            return HealthStatus(label: "Healthy", color: HobbyIQTheme.Colors.successGreen)
+        }
+        if score >= 40 {
+            return HealthStatus(label: "Watch", color: HobbyIQTheme.Colors.warning)
+        }
+        return HealthStatus(label: "At Risk", color: HobbyIQTheme.Colors.danger)
+    }
+
+    // MARK: - Risk pill
+
+    private func riskPill(label: String, value: Double, help: String) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                HIQHelpButton(title: label, message: help)
+            }
             Text(String(format: "%.0f%%", value * 100))
                 .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(riskColor(value))
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .padding(.vertical, 10)
         .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
