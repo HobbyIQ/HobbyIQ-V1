@@ -133,7 +133,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "PlayerIQ"
         case .inventory: return "InventoryIQ"
         case .portfolio: return "PortfolioIQ"
-        case .erp: return "Business"
+        case .erp: return "Financials"
         }
     }
 

@@ -52,7 +52,7 @@ struct ERPHubView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
             .background { HobbyIQBackground() }
-            .navigationTitle("Business")
+            .navigationTitle("Financials")
             .navigationBarTitleDisplayMode(.inline)
             .themedNavigationSurface()
         }
