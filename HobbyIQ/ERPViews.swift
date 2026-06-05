@@ -37,6 +37,11 @@ enum FinancialsPeriod: String, CaseIterable, Identifiable {
     }
 }
 
+enum FinancialsDestination: String, Identifiable {
+    case reconcile, pnl, expenses, trades, tax
+    var id: String { rawValue }
+}
+
 struct ERPHubView: View {
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @State private var showUpgradePaywall = false
@@ -48,6 +53,7 @@ struct ERPHubView: View {
     @State private var loadFailed = false
     @State private var isSyncing = false
     @State private var syncToast: String?
+    @State private var presentedDestination: FinancialsDestination?
 
     var body: some View {
         ScrollView {
@@ -85,6 +91,9 @@ struct ERPHubView: View {
                 sessionViewModel: sessionViewModel,
                 suggestedTier: GatedFeature.minimumTier(for: GatedFeature.erpReconciliation)
             )
+        }
+        .fullScreenCover(item: $presentedDestination) { destination in
+            FinancialsDestinationView(destination: destination)
         }
     }
 
@@ -227,8 +236,8 @@ struct ERPHubView: View {
     // MARK: Reconcile attention card
 
     private var reconcileAttentionCard: some View {
-        NavigationLink {
-            ERPReconciliationView()
+        Button {
+            presentedDestination = .reconcile
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: unreconciledCount > 0 ? "exclamationmark.circle.fill" : "checkmark.seal.fill")
@@ -273,10 +282,10 @@ struct ERPHubView: View {
     private var tilesGrid: some View {
         let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
         return LazyVGrid(columns: columns, spacing: 12) {
-            navTile(title: "P&L", subtitle: pnlTileStatus, icon: "chart.bar.fill") { ERPPnlView() }
-            navTile(title: "Expenses", subtitle: expensesTileStatus, icon: "creditcard.fill") { ERPExpensesView() }
-            navTile(title: "Trades", subtitle: tradesTileStatus, icon: "arrow.triangle.swap") { ERPTradesView() }
-            navTile(title: "Tax & exports", subtitle: taxTileStatus, icon: "doc.text.fill") { ERPTaxView() }
+            navTile(title: "P&L", subtitle: pnlTileStatus, icon: "chart.bar.fill", destination: .pnl)
+            navTile(title: "Expenses", subtitle: expensesTileStatus, icon: "creditcard.fill", destination: .expenses)
+            navTile(title: "Trades", subtitle: tradesTileStatus, icon: "arrow.triangle.swap", destination: .trades)
+            navTile(title: "Tax & exports", subtitle: taxTileStatus, icon: "doc.text.fill", destination: .tax)
         }
     }
 
@@ -289,13 +298,15 @@ struct ERPHubView: View {
     private var tradesTileStatus: String { "Track trades" }
     private var taxTileStatus: String { "Reports & exports" }
 
-    private func navTile<Destination: View>(
+    private func navTile(
         title: String,
         subtitle: String,
         icon: String,
-        @ViewBuilder destination: @escaping () -> Destination
+        destination: FinancialsDestination
     ) -> some View {
-        NavigationLink(destination: destination) {
+        Button {
+            presentedDestination = destination
+        } label: {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .semibold))
@@ -382,6 +393,63 @@ struct ERPHubView: View {
         } catch {
             print("[Financials] sync error: \(APIService.errorMessage(from: error))")
             syncToast = "Couldn't sync — try again."
+        }
+    }
+}
+
+// MARK: - Destination Wrapper
+
+/// Hosts a Financials sub-screen in its own NavigationStack inside a
+/// fullScreenCover. Keeps push/back behavior local to the cover so the
+/// shell's per-tab NavigationStack stack doesn't interfere.
+private struct FinancialsDestinationView: View {
+    let destination: FinancialsDestination
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            content
+                .background { HobbyIQBackground() }
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .themedNavigationSurface()
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Financials")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        }
+                        .accessibilityLabel("Back to Financials")
+                    }
+                }
+        }
+    }
+
+    private var title: String {
+        switch destination {
+        case .reconcile: return "Reconcile"
+        case .pnl: return "P&L"
+        case .expenses: return "Expenses"
+        case .trades: return "Trades"
+        case .tax: return "Tax & exports"
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch destination {
+        case .reconcile: ERPReconciliationView()
+        case .pnl: ERPPnlView()
+        case .expenses: ERPExpensesView()
+        case .trades: ERPTradesView()
+        case .tax: ERPTaxView()
         }
     }
 }
