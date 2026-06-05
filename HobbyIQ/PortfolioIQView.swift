@@ -19,7 +19,6 @@ struct PortfolioIQView: View {
     @State private var showWeeklyBrief = false
     @State private var showBatchReprice = false
     @State private var showCardIdentify = false
-    @State private var showERPHub = false
 
     var body: some View {
         NavigationView {
@@ -98,10 +97,6 @@ struct PortfolioIQView: View {
                 CardIdentifyView()
                     .environmentObject(sessionViewModel)
             }
-            .sheet(isPresented: $showERPHub) {
-                ERPHubView()
-                    .environmentObject(sessionViewModel)
-            }
             .onAppear {
                 if vm.summary == nil {
                     Task { await vm.load() }
@@ -120,10 +115,6 @@ struct PortfolioIQView: View {
             HStack(spacing: 8) {
                 portfolioToolButton(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
                 portfolioToolButton(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
-            }
-            HStack(spacing: 8) {
-                portfolioToolButton(title: "Business / ERP", icon: "building.2", action: { showERPHub = true })
-                Spacer()
             }
         }
     }

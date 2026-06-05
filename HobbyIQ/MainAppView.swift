@@ -136,6 +136,12 @@ private struct AppTabShellView: View {
                 .opacity(selectedTab == .portfolio ? 1 : 0)
                 .allowsHitTesting(selectedTab == .portfolio)
             }
+
+            if visitedTabs.contains(.erp) {
+                ERPHubView()
+                    .opacity(selectedTab == .erp ? 1 : 0)
+                    .allowsHitTesting(selectedTab == .erp)
+            }
         }
     }
 
@@ -154,7 +160,7 @@ private struct AppTabShellView: View {
 private struct LegacyTabBar: View {
     @Binding var selectedTab: MainTab
 
-    private let tabs: [MainTab] = [.dashboard, .daily, .inventory, .portfolio]
+    private let tabs: [MainTab] = [.dashboard, .daily, .inventory, .portfolio, .erp]
 
     var body: some View {
         HStack(spacing: 6) {

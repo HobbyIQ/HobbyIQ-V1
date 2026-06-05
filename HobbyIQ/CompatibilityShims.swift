@@ -121,6 +121,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
     case player
     case inventory
     case portfolio
+    case erp
 
     var id: String { rawValue }
 
@@ -132,6 +133,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "PlayerIQ"
         case .inventory: return "InventoryIQ"
         case .portfolio: return "PortfolioIQ"
+        case .erp: return "Business"
         }
     }
 
@@ -143,6 +145,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "person.crop.circle"
         case .inventory: return "archivebox"
         case .portfolio: return "chart.bar.xaxis"
+        case .erp: return "briefcase"
         }
     }
 
@@ -154,6 +157,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .player: return "person.crop.circle.fill"
         case .inventory: return "archivebox.fill"
         case .portfolio: return "chart.bar.xaxis"
+        case .erp: return "briefcase.fill"
         }
     }
 }
@@ -162,7 +166,7 @@ final class TabConfiguration: ObservableObject {
     @Published var visibleTabs: [MainTab]
     @Published var hiddenTabs: [MainTab]
 
-    init(visibleTabs: [MainTab] = [.dashboard, .daily, .comp, .player, .portfolio], hiddenTabs: [MainTab] = []) {
+    init(visibleTabs: [MainTab] = [.dashboard, .daily, .inventory, .portfolio, .erp], hiddenTabs: [MainTab] = []) {
         self.visibleTabs = visibleTabs
         self.hiddenTabs = hiddenTabs
     }
@@ -188,7 +192,7 @@ final class TabConfiguration: ObservableObject {
     }
 
     func resetToDefault() {
-        visibleTabs = [.dashboard, .daily, .comp, .player, .portfolio]
+        visibleTabs = [.dashboard, .daily, .inventory, .portfolio, .erp]
         hiddenTabs = []
     }
 }
