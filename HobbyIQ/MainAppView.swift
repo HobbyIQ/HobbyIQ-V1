@@ -160,7 +160,7 @@ private struct AppTabShellView: View {
 private struct LegacyTabBar: View {
     @Binding var selectedTab: MainTab
 
-    private let tabs: [MainTab] = [.dashboard, .daily, .inventory, .portfolio, .erp]
+    private let tabs: [MainTab] = [.dashboard, .portfolio, .inventory, .daily, .erp]
 
     var body: some View {
         HStack(spacing: 6) {

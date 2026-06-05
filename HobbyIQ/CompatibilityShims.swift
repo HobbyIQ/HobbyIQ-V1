@@ -166,7 +166,7 @@ final class TabConfiguration: ObservableObject {
     @Published var visibleTabs: [MainTab]
     @Published var hiddenTabs: [MainTab]
 
-    init(visibleTabs: [MainTab] = [.dashboard, .daily, .inventory, .portfolio, .erp], hiddenTabs: [MainTab] = []) {
+    init(visibleTabs: [MainTab] = [.dashboard, .portfolio, .inventory, .daily, .erp], hiddenTabs: [MainTab] = []) {
         self.visibleTabs = visibleTabs
         self.hiddenTabs = hiddenTabs
     }
@@ -192,7 +192,7 @@ final class TabConfiguration: ObservableObject {
     }
 
     func resetToDefault() {
-        visibleTabs = [.dashboard, .daily, .inventory, .portfolio, .erp]
+        visibleTabs = [.dashboard, .portfolio, .inventory, .daily, .erp]
         hiddenTabs = []
     }
 }
