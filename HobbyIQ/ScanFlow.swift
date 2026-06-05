@@ -35,9 +35,12 @@ import UIKit
 ///     image already passed in; `task(id:)` kicks the upload/identify
 ///     pipeline immediately. The user never sees CardIdentifyView's
 ///     pre-capture intro.
-///   - Without a captured image (Cancel button) -> CardIdentifyView is
-///     still presented so the library path stays reachable through its
-///     bottom toolbar. Per the CF: "never strand the user".
+///   - Without a captured image (Cancel / X button, or interactive
+///     swipe-down) -> the flow tears down and returns the user to the
+///     host screen (Dashboard / Portfolio). The library remains
+///     reachable through the simulator + permission-denied fallbacks on
+///     the NEXT scan trigger; an explicit Cancel is read as "done", not
+///     "show me the library".
 
 private enum ScanFlowPhase: Equatable {
     case idle
@@ -72,9 +75,13 @@ private struct ScanFlowModifier: ViewModifier {
                         phase = .identifyView
                     },
                     onCancel: {
-                        // Keep the library path reachable: fall through to the
-                        // identify view rather than dropping back to dashboard.
-                        phase = .identifyView
+                        // Cancelling out of the camera (X / Cancel) means the
+                        // user is done with the scan flow — return them to the
+                        // host screen (Dashboard / Portfolio) instead of
+                        // pushing them into CardIdentifyView. The library is
+                        // still reachable on the next scan trigger via the
+                        // simulator / permission-denied fallback paths.
+                        endFlow()
                     }
                 )
                 .ignoresSafeArea()
@@ -113,12 +120,21 @@ private struct ScanFlowModifier: ViewModifier {
             get: { phase == .directCamera },
             set: { newValue in
                 guard !newValue, phase == .directCamera else { return }
-                // System dismissed the camera (e.g. Cancel button without
-                // hitting our onCancel coordinator). Route through to the
-                // identify view so the library remains reachable.
-                phase = .identifyView
+                // System dismissed the camera without our onCancel firing
+                // (e.g. interactive swipe-down on iPad sheet style). Treat
+                // the same as a Cancel tap and return to the host screen.
+                endFlow()
             }
         )
+    }
+
+    /// Tear the flow down and write `false` back to the caller's `isPresented`
+    /// binding so the host's @State stays in sync.
+    private func endFlow() {
+        phase = .idle
+        pendingImage = nil
+        cameraDenied = false
+        isPresented = false
     }
 
     private var identifyBinding: Binding<Bool> {
@@ -127,10 +143,7 @@ private struct ScanFlowModifier: ViewModifier {
             set: { newValue in
                 guard !newValue, phase == .identifyView else { return }
                 // User dismissed CardIdentifyView - flow is over.
-                phase = .idle
-                isPresented = false
-                pendingImage = nil
-                cameraDenied = false
+                endFlow()
             }
         )
     }
