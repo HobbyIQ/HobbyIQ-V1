@@ -493,6 +493,8 @@ struct ERPPnlView: View {
     @State private var analytics: ERPAnalyticsResponse?
     @State private var timeseries: ERPTimeseriesResponse?
     @State private var valuation: ERPValuationResponse?
+    @State private var portfolioSummary: PortfolioSummaryResponse?
+    @State private var selectedPeriod: ERPPerformancePeriod = .month
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -528,6 +530,10 @@ struct ERPPnlView: View {
 
     @ViewBuilder
     private var pnlContent: some View {
+        // Realized-sales summary (relocated from PortfolioIQ). Backend only
+        // populates month/year today; other periods render zeros.
+        performancePeriodCard
+
         HStack {
             Picker("Group by", selection: $pnlGroupBy) {
                 ForEach(groupOptions, id: \.self) { Text($0.capitalized).tag($0) }
@@ -549,6 +555,86 @@ struct ERPPnlView: View {
                 erpPnlGroupRow(group)
             }
         }
+    }
+
+    @ViewBuilder
+    private var performancePeriodCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            erpSectionHeader("PERFORMANCE")
+
+            HStack(spacing: 0) {
+                ForEach(ERPPerformancePeriod.allCases) { period in
+                    Button {
+                        selectedPeriod = period
+                    } label: {
+                        Text(period.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
+                            .clipShape(Capsule(style: .continuous))
+                            .contentShape(Capsule(style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Show \(period.title) performance")
+                }
+            }
+            .padding(3)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .clipShape(Capsule(style: .continuous))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+
+            performanceStatsCard(for: selectedPeriod)
+        }
+    }
+
+    private func performanceStatsCard(for period: ERPPerformancePeriod) -> some View {
+        let stats: PortfolioPeriodStats? = {
+            switch period {
+            case .month: return portfolioSummary?.month
+            case .year: return portfolioSummary?.year
+            default: return nil
+            }
+        }()
+
+        let resolved = stats ?? PortfolioPeriodStats(
+            totalSold: 0,
+            totalProfit: 0,
+            totalExpenses: nil,
+            netProfit: nil,
+            margin: 0
+        )
+        let netProfit = resolved.netProfit ?? resolved.totalProfit
+        let netColor: Color = {
+            if netProfit == 0 { return HobbyIQTheme.Colors.mutedText }
+            return netProfit > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        }()
+
+        return VStack(spacing: 8) {
+            Text(resolved.netProfitFormatted)
+                .font(.title2.bold())
+                .foregroundStyle(netColor)
+                .minimumScaleFactor(0.7)
+
+            Text(resolved.marginFormatted)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(netColor.opacity(0.8))
+
+            Text("Sold \(resolved.totalSoldFormatted) · Fees \(resolved.totalExpensesFormatted)")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     @ViewBuilder
@@ -686,8 +772,9 @@ struct ERPPnlView: View {
             async let a = APIService.shared.fetchErpAnalytics(groupBy: analyticsGroupBy)
             async let t = APIService.shared.fetchErpTimeseries()
             async let v = APIService.shared.fetchErpValuation()
-            let (pr, ar, tr, vr) = try await (p, a, t, v)
-            pnl = pr; analytics = ar; timeseries = tr; valuation = vr
+            async let s = APIService.shared.fetchPortfolioSummary()
+            let (pr, ar, tr, vr, sr) = try await (p, a, t, v, s)
+            pnl = pr; analytics = ar; timeseries = tr; valuation = vr; portfolioSummary = sr
         } catch {
             errorMessage = APIService.errorMessage(from: error)
         }
@@ -1734,6 +1821,17 @@ struct ERPShareSheet: UIViewControllerRepresentable {
 }
 
 // MARK: - Shared ERP Helpers
+
+enum ERPPerformancePeriod: String, CaseIterable, Identifiable {
+    case today = "Today"
+    case week = "Week"
+    case month = "Month"
+    case year = "Year"
+    case all = "All"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+}
 
 private func erpSectionHeader(_ title: String) -> some View {
     HStack(spacing: 10) {

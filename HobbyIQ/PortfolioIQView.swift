@@ -14,7 +14,6 @@ struct PortfolioIQView: View {
     @State private var selectedCard: InventoryCard?
     @State private var showingLedger = false
     @State private var showingMovementDetail = false
-    @State private var selectedPeriod: PerformancePeriod = .month
     @State private var showCalibration = false
     @State private var showWeeklyBrief = false
     @State private var showBatchReprice = false
@@ -49,8 +48,12 @@ struct PortfolioIQView: View {
                             portfolioToolsRow
 
                             topMoversSection
-                            priorityActionsSection
-                            performanceSection
+
+                            if !vm.priorityActions.isEmpty {
+                                priorityActionsSection
+                            }
+
+                            valueTrendSection
                         }
                         .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
                         .padding(.top, 8)
@@ -176,6 +179,7 @@ struct PortfolioIQView: View {
     private var header: some View {
         let summary = vm.heroSummary
         let pnlColor: Color = summary.unrealizedPnL >= 0 ? .green : .red
+        let hasCostBasis = summary.costBasis > 0
 
         return VStack(spacing: 10) {
             HStack(alignment: .top) {
@@ -221,31 +225,59 @@ struct PortfolioIQView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .minimumScaleFactor(0.7)
 
-                HStack(spacing: 4) {
-                    Image(systemName: summary.unrealizedPnL >= 0 ? "arrow.up.right" : "arrow.down.right")
-                        .font(.caption2.weight(.bold))
-                    Text(summary.unrealizedPnL.portfolioSignedCurrencyText)
-                        .font(.subheadline.weight(.semibold))
-                    Text("•")
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Text(summary.roi.portfolioSignedPercentText + " " + Labels.roi)
-                        .font(.subheadline.weight(.semibold))
+                if hasCostBasis {
+                    HStack(spacing: 4) {
+                        Image(systemName: summary.unrealizedPnL >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .font(.caption2.weight(.bold))
+                        Text(summary.unrealizedPnL.portfolioSignedCurrencyText)
+                            .font(.subheadline.weight(.semibold))
+                        Text("•")
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Text(summary.roi.portfolioSignedPercentText + " " + Labels.roi)
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(pnlColor)
                 }
-                .foregroundStyle(pnlColor)
             }
             .frame(maxWidth: .infinity)
 
-            // Quiet supporting line
-            Text("Cost basis \(portfolioCurrencyString(summary.costBasis)) · \(summary.totalCards) cards")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            // Quiet supporting line — when cost basis isn't set, do NOT
+            // render the fabricated +$X / +0.0% ROI line above. Offer a
+            // muted Add cost basis affordance that routes the user to
+            // Inventory so they can edit each card's cost from the row
+            // detail sheet.
+            if hasCostBasis {
+                Text("Cost basis \(portfolioCurrencyString(summary.costBasis)) · \(summary.totalCards) cards")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            } else {
+                HStack(spacing: 8) {
+                    Text("Cost basis not set · \(summary.totalCards) cards")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                    Button {
+                        onSwitchToInventory(.all)
+                    } label: {
+                        Text("Add cost basis")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .padding(.horizontal, 8)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open inventory to add cost basis to your cards")
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
         }
         .padding(HobbyIQTheme.Spacing.medium)
         .padding(.vertical, 4)
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
@@ -266,12 +298,11 @@ struct PortfolioIQView: View {
             VStack(spacing: 12) {
                 HStack(spacing: 6) {
                     Image(systemName: "waveform.path.ecg")
-                        .font(.caption.weight(.bold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Text("MOVEMENT PULSE")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .tracking(1.2)
+                    Text("Movement pulse")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
@@ -300,9 +331,9 @@ struct PortfolioIQView: View {
                 }
 
                 HIQMetricLabel(
-                    title: "Portfolio Composite",
-                    value: String(format: "%.3f", composite),
-                    help: "A blended movement score across your active cards. 1.000 is neutral; above 1.000 means recent price signals lean positive overall, below 1.000 means they lean negative.",
+                    title: "Portfolio trend",
+                    value: portfolioTrendLabel(for: composite),
+                    help: "A plain-English read on how your active cards are moving overall. Tap any individual card for its own trend. Composite score for power users: \(String(format: "%.3f", composite)) (1.000 is neutral, above 1.000 leans positive, below leans negative).",
                     alignment: .center,
                     valueFont: HobbyIQTheme.Typography.captionEmphasis
                 )
@@ -312,6 +343,15 @@ struct PortfolioIQView: View {
             .portfolioSectionShell()
         }
         .buttonStyle(.plain)
+    }
+
+    /// Plain-English read on the portfolio composite — surfaced on the
+    /// Movement Pulse card while the raw numeric value tucks into the ?
+    /// popover for power users.
+    private func portfolioTrendLabel(for composite: Double) -> String {
+        if composite >= 1.03 { return "Trending up" }
+        if composite <= 0.97 { return "Trending down" }
+        return "Holding steady"
     }
 
     private func pulseChip(count: Int, label: String, color: Color) -> some View {
@@ -329,28 +369,26 @@ struct PortfolioIQView: View {
         .clipShape(Capsule(style: .continuous))
     }
 
-    // MARK: - Performance Section
+    // Performance block (realized Sold/Fees/margin with period toggle) now
+    // lives in ERPPnlView. Portfolio shows unrealized value trend below instead.
 
-    private var performanceSection: some View {
+    // MARK: - Value Trend
+    //
+    // TODO(backend): wire to a new /api/erp/valuation/timeseries endpoint
+    // that emits daily {date, totalCurrentValue} snapshots. Until then we
+    // render an honest placeholder rather than synthesizing a line from
+    // current value + realized P&L deltas (would mislead).
+
+    private var valueTrendSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(Labels.performance)
+            sectionHeader("Portfolio value trend")
 
-            // Segmented control
             HStack(spacing: 0) {
-                ForEach(PerformancePeriod.allCases) { period in
-                    Button {
-                        selectedPeriod = period
-                    } label: {
-                        Text(period.title)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(selectedPeriod == period ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(selectedPeriod == period ? HobbyIQTheme.Colors.electricBlue.opacity(0.25) : Color.clear)
-                            .clipShape(Capsule(style: .continuous))
-                            .contentShape(Capsule(style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Show \(period.title) performance")
+                ForEach(ValueTrendRange.allCases) { range in
+                    Text(range.title)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
             }
             .padding(3)
@@ -358,58 +396,34 @@ struct PortfolioIQView: View {
             .clipShape(Capsule(style: .continuous))
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
+            .opacity(0.55)
+            .accessibilityLabel("Portfolio value trend ranges. Disabled while value history is being captured.")
 
-            // Performance card
-            performanceCard(for: selectedPeriod)
-        }
-    }
-
-    private func performanceCard(for period: PerformancePeriod) -> some View {
-        let stats: PortfolioPeriodStats? = {
-            switch period {
-            case .month: return vm.monthStats
-            case .year: return vm.yearStats
-            default: return nil
+            VStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                Text("Building value history")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text("Daily portfolio value snapshots start now. Your trend chart will appear here as history accrues.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 12)
             }
-        }()
-
-        let resolvedStats = stats ?? PortfolioPeriodStats(
-            totalSold: 0,
-            totalProfit: 0,
-            totalExpenses: nil,
-            netProfit: nil,
-            margin: 0
-        )
-        let netProfit = resolvedStats.netProfit ?? resolvedStats.totalProfit
-        let netColor: Color = {
-            if netProfit == 0 { return HobbyIQTheme.Colors.mutedText }
-            return netProfit > 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-        }()
-
-        return VStack(spacing: 8) {
-            Text(resolvedStats.netProfitFormatted)
-                .font(.title2.bold())
-                .foregroundStyle(netColor)
-                .minimumScaleFactor(0.7)
-
-            Text(resolvedStats.marginFormatted)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(netColor.opacity(0.8))
-
-            Text("Sold \(resolvedStats.totalSoldFormatted) · Fees \(resolvedStats.totalExpensesFormatted)")
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 160)
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
-        .frame(maxWidth: .infinity)
-        .padding(HobbyIQTheme.Spacing.medium)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     // MARK: - Priority Actions
@@ -425,82 +439,77 @@ struct PortfolioIQView: View {
         return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(Labels.priorityActions)
 
-            if vm.priorityActions.isEmpty {
-                portfolioEmptyState
-                    .padding(.vertical, 4)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(visibleActions.enumerated()), id: \.element.id) { index, action in
-                        Button {
-                            let filter: PortfolioInventoryFilter
-                            switch action.kind {
-                            case .sellWatch:
-                                filter = .sellWatch
-                            case .highRisk:
-                                filter = .losers
-                            case .stalePricing:
-                                filter = .stale
-                            }
-                            onSwitchToInventory(filter)
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: actionIconName(for: action.kind))
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(actionColor(for: action.kind))
-                                    .frame(width: 32, height: 32)
-                                    .background(actionColor(for: action.kind).opacity(0.15))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-                                Text(action.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                                Spacer()
-
-                                Text("\(action.cardCount)")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color(hex: 0x232937))
-                                    .clipShape(Capsule(style: .continuous))
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
-                            }
-                            .padding(.horizontal, 12)
-                            .frame(minHeight: 44)
+            VStack(spacing: 0) {
+                ForEach(Array(visibleActions.enumerated()), id: \.element.id) { index, action in
+                    Button {
+                        let filter: PortfolioInventoryFilter
+                        switch action.kind {
+                        case .sellWatch:
+                            filter = .sellWatch
+                        case .highRisk:
+                            filter = .losers
+                        case .stalePricing:
+                            filter = .stale
                         }
-                        .buttonStyle(.plain)
+                        onSwitchToInventory(filter)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: actionIconName(for: action.kind))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(actionColor(for: action.kind))
+                                .frame(width: 32, height: 32)
+                                .background(actionColor(for: action.kind).opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                        if index < visibleActions.count - 1 {
-                            Divider()
-                                .overlay(Color.white.opacity(0.06))
-                                .padding(.leading, 56)
+                            Text(action.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                            Spacer()
+
+                            Text("\(action.cardCount)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color(hex: 0x232937))
+                                .clipShape(Capsule(style: .continuous))
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
                         }
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
                     }
+                    .buttonStyle(.plain)
 
-                    if canExpand {
+                    if index < visibleActions.count - 1 {
                         Divider()
                             .overlay(Color.white.opacity(0.06))
-                        seeAllRow(
-                            isExpanded: priorityActionsExpanded,
-                            hiddenCount: max(0, totalCount - collapseLimit),
-                            totalCount: totalCount,
-                            noun: "actions"
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.22)) { priorityActionsExpanded.toggle() }
-                        }
+                            .padding(.leading, 56)
                     }
                 }
-                .background(HobbyIQTheme.Colors.cardNavy)
-                .overlay(
-                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+
+                if canExpand {
+                    Divider()
+                        .overlay(Color.white.opacity(0.06))
+                    seeAllRow(
+                        isExpanded: priorityActionsExpanded,
+                        hiddenCount: max(0, totalCount - collapseLimit),
+                        totalCount: totalCount,
+                        noun: "actions"
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.22)) { priorityActionsExpanded.toggle() }
+                    }
+                }
             }
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
         }
     }
 
@@ -508,8 +517,8 @@ struct PortfolioIQView: View {
 
     private var topMoversSection: some View {
         let hasSignals = vm.hasMovementSignals
-        let upLabel = hasSignals ? "TRENDING UP" : Labels.gainers
-        let downLabel = hasSignals ? "TRENDING DOWN" : Labels.losers
+        let upLabel = hasSignals ? "Trending up" : Labels.gainers
+        let downLabel = hasSignals ? "Trending down" : Labels.losers
         let upColor: Color = hasSignals ? HobbyIQTheme.Colors.successGreen : .green
         let downColor: Color = hasSignals ? HobbyIQTheme.Colors.danger : .red
 
@@ -584,7 +593,7 @@ struct PortfolioIQView: View {
                 .background(HobbyIQTheme.Colors.cardNavy)
                 .overlay(
                     RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             }
@@ -617,12 +626,11 @@ struct PortfolioIQView: View {
     private func moverSubheader(title: String, icon: String, color: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.caption2.weight(.bold))
+                .font(.caption2.weight(.semibold))
                 .foregroundStyle(color)
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
+            Text(title)
+                .font(.caption.weight(.medium))
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
@@ -740,21 +748,14 @@ struct PortfolioIQView: View {
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
-
+        HStack(spacing: 0) {
             Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.2)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .fixedSize()
-
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
+            Spacer()
         }
+        .padding(.horizontal, 4)
     }
 
     private func actionIconName(for kind: PortfolioPriorityActionKind) -> String {
@@ -774,9 +775,9 @@ struct PortfolioIQView: View {
     }
 }
 
-// MARK: - Performance Period
+// MARK: - Value Trend Range
 
-private enum PerformancePeriod: String, CaseIterable, Identifiable {
+private enum ValueTrendRange: String, CaseIterable, Identifiable {
     case today = "Today"
     case week = "Week"
     case month = "Month"

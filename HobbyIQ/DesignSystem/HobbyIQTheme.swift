@@ -62,8 +62,10 @@ enum HobbyIQTheme {
             endPoint: .bottomTrailing
         )
 
+        // Muted blue→green: single shared accent for hero/value cards across screens.
+        // Tune here to restyle every consumer (PortfolioIQ value hero, Movement pulse, DailyIQ header).
         static let dashboardStroke = LinearGradient(
-            colors: [Colors.electricBlue.opacity(0.88), Colors.hobbyGreen.opacity(0.72)],
+            colors: [Color(hex: 0x2A6A9E), Color(hex: 0x2C8F66)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
