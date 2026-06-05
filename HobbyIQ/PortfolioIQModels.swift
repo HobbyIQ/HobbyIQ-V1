@@ -1423,7 +1423,7 @@ struct PortfolioCardGridCard: View {
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
     }
 }

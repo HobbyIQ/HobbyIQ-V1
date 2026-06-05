@@ -182,7 +182,7 @@ struct InventoryIQView: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
@@ -243,7 +243,7 @@ struct InventoryIQView: View {
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
             )
 
             if visibleCards.isEmpty {
@@ -266,6 +266,10 @@ struct InventoryIQView: View {
                     }
                 }
                 .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
             } else {
                 LazyVGrid(columns: [
@@ -326,6 +330,10 @@ struct InventoryIQView: View {
         .frame(maxWidth: .infinity)
         .padding(20)
         .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
