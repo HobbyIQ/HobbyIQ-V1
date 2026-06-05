@@ -100,7 +100,9 @@ struct CardIdentifyView: View {
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(
                 sessionViewModel: sessionViewModel,
-                suggestedTier: GatedFeature.minimumTier(for: GatedFeature.predictions)
+                suggestedTier: GatedCap.scansPerMonth
+                    .upgradeTier(from: sessionViewModel.activeTier)
+                    ?? .collector
             )
         }
         .onChange(of: selectedPhotoItem) { _, newItem in
@@ -443,7 +445,13 @@ struct CardIdentifyView: View {
         } catch {
             isUploading = false
             isIdentifying = false
-            self.error = APIService.errorMessage(from: error)
+            if let apiError = error as? APIServiceError,
+               case .httpError(let code, _) = apiError, code == 402 {
+                self.error = "You've used your monthly scan limit. Upgrade for unlimited scans."
+                showUpgradePaywall = true
+            } else {
+                self.error = APIService.errorMessage(from: error)
+            }
         }
     }
 }
