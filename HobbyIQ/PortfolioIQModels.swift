@@ -1348,68 +1348,34 @@ struct PortfolioCardRow: View {
     let card: InventoryCard
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            cardThumbnail(urlString: card.imageFrontUrl)
+        HStack(alignment: .center, spacing: 12) {
+            inventoryRowThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
 
-            VStack(alignment: .leading, spacing: 4) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Player Name")
-                        .font(.system(size: 9, weight: .semibold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(card.playerName)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                if let details = inventoryCardSubtitle(for: card) {
+                    Text(details)
+                        .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
-                    Text(card.playerName)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.white)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Card Details")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
-                    HStack(spacing: 6) {
-                        Text(card.cardName)
-                            .font(.caption)
-                            .foregroundStyle(Color(hex: 0x9CA3AF))
-                            .lineLimit(1)
-
-                        if card.isAuto {
-                            Text("Auto")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
-                                .clipShape(Capsule(style: .continuous))
-                        }
-                    }
-                }
-
-                PortfolioCompactChips(card: card)
+                inventoryGradePill(text: card.gradeChipText)
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(card.currentValueFormatted)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.white)
-
-                Text(card.profitFormatted)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(card.profitLoss >= 0 ? .green : .red)
-
-                Text(card.roiFormatted)
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
+            inventoryRightColumn(card: card)
         }
-        .padding(10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(minHeight: 64)
     }
 }
 
@@ -1418,106 +1384,235 @@ struct PortfolioCardGridCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Thumbnail
-            gridThumbnail(urlString: card.imageFrontUrl)
+            inventoryGridThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
 
-            // Content
             VStack(alignment: .leading, spacing: 4) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Player Name")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
+                Text(card.playerName)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
 
-                    Text(card.playerName)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Card Details")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-
-                    Text(card.cardName)
+                if let details = inventoryCardSubtitle(for: card) {
+                    Text(details)
                         .font(.caption2)
-                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 4) {
-                    if card.gradeChipText != "Raw" {
-                        Text(card.gradeChipText)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.gray)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.gray.opacity(0.12))
-                            .clipShape(Capsule(style: .continuous))
-                    }
-
-                    if card.isAuto {
-                        Text("Auto")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.15))
-                            .clipShape(Capsule(style: .continuous))
-                    }
-                }
-
-
+                inventoryGradePill(text: card.gradeChipText)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 6)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
 
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
 
-            // Bottom strip
-            HStack {
-                Text(card.currentValueFormatted)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                Spacer()
-                Text(card.profitFormatted)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(card.profitLoss >= 0 ? .green : .red)
+            HStack(alignment: .center, spacing: 4) {
+                Text(inventoryWholeDollarString(card.currentValue))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                inventoryGridMovement(card: card)
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(HobbyIQTheme.Colors.cardNavy)
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
     }
 }
 
-struct PortfolioCompactChips: View {
-    let card: InventoryCard
+// MARK: - Inventory row helpers (private to the inventory rows above)
 
-    var body: some View {
-        HStack(spacing: 6) {
-            PortfolioChip(label: card.gradeChipText, tint: .gray)
-            if let chipText = card.movementChipText {
-                PortfolioChip(
-                    label: chipText,
-                    tint: card.movementChipColor.opacity(card.movementIsStale ? 0.5 : 1.0)
-                )
-            } else {
-                PortfolioChip(label: card.trendChipText, tint: card.profitLoss >= 0 ? .green : .red)
+/// Composes the muted secondary line: "Year · Set". Falls back to the legacy
+/// cardName when neither structured field is present so we never render a
+/// blank line in legacy data.
+private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
+    let parts = [card.year, card.setName]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    if parts.isEmpty {
+        let fallback = card.cardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return fallback.isEmpty ? nil : fallback
+    }
+    return parts.joined(separator: " · ")
+}
+
+/// Single grade pill — sentence-case label, soft surface, neutral by default.
+@ViewBuilder
+private func inventoryGradePill(text: String) -> some View {
+    Text(text)
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+        .clipShape(Capsule(style: .continuous))
+}
+
+/// Row right column — value (no cents) + single movement indicator, OR the
+/// "Set cost" affordance when the user hasn't entered a cost basis yet.
+@ViewBuilder
+private func inventoryRightColumn(card: InventoryCard) -> some View {
+    VStack(alignment: .trailing, spacing: 3) {
+        Text(inventoryWholeDollarString(card.currentValue))
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .monospacedDigit()
+
+        if let (icon, label, color) = inventoryMovementDescriptor(for: card) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.caption2.weight(.medium))
+                Text(label)
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
             }
+            .foregroundStyle(color)
+        } else if card.cost <= 0 {
+            Text("Set cost")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
         }
     }
+}
+
+/// Grid-card movement: same source-of-truth as the row, just compact.
+@ViewBuilder
+private func inventoryGridMovement(card: InventoryCard) -> some View {
+    if let (icon, label, color) = inventoryMovementDescriptor(for: card) {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.medium))
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .monospacedDigit()
+        }
+        .foregroundStyle(color)
+    } else if card.cost <= 0 {
+        Text("Set cost")
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+    }
+}
+
+/// Picks the canonical movement indicator. Returns nil when there's nothing
+/// trustworthy to show (no movement signal AND no cost basis to derive ROI
+/// from) — caller renders the "Set cost" affordance instead of fabricating
+/// "+$X / +0.0%".
+private func inventoryMovementDescriptor(for card: InventoryCard) -> (icon: String, label: String, color: Color)? {
+    if card.shouldShowMovementChip,
+       let pct = card.movementImpliedPct,
+       let direction = card.movementDirection,
+       direction == "up" || direction == "down" {
+        let isUp = direction == "up"
+        let baseColor: Color = isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+        let color = card.movementIsStale ? baseColor.opacity(0.55) : baseColor
+        return (
+            isUp ? "arrow.up.right" : "arrow.down.right",
+            String(format: "%+.1f%%", pct),
+            color
+        )
+    }
+    guard card.cost > 0 else { return nil }
+    let roi = (card.profitLoss / card.cost) * 100
+    let isUp = roi >= 0
+    return (
+        isUp ? "arrow.up.right" : "arrow.down.right",
+        String(format: "%+.1f%%", roi),
+        isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+    )
+}
+
+/// Whole-dollar currency for inventory rows + header ("$5,903" — no cents).
+/// Uses NumberFormatter so locale grouping survives. Internal so the
+/// InventoryIQView header reads its total value through the same helper.
+func inventoryWholeDollarString(_ value: Double) -> String {
+    inventoryWholeDollarFormatter.string(from: NSNumber(value: value)) ?? "$0"
+}
+
+private let inventoryWholeDollarFormatter: NumberFormatter = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .currency
+    formatter.currencyCode = "USD"
+    formatter.maximumFractionDigits = 0
+    formatter.minimumFractionDigits = 0
+    return formatter
+}()
+
+/// Row thumbnail: 42×56 rounded tile. Shows the player's initials on a
+/// slate-gray tile when there is no image OR the AsyncImage fails — never
+/// the legacy "broken photo" SF Symbol.
+private func inventoryRowThumbnail(urlString: String?, playerName: String) -> some View {
+    Group {
+        if let urlString, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .empty, .failure:
+                    inventoryInitialsTile(playerName: playerName, fontSize: 14)
+                @unknown default:
+                    inventoryInitialsTile(playerName: playerName, fontSize: 14)
+                }
+            }
+        } else {
+            inventoryInitialsTile(playerName: playerName, fontSize: 14)
+        }
+    }
+    .frame(width: 42, height: 56)
+    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.small, style: .continuous))
+}
+
+/// Grid thumbnail: full-width × 90pt tile with the same initials fallback.
+private func inventoryGridThumbnail(urlString: String?, playerName: String) -> some View {
+    Group {
+        if let urlString, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .empty, .failure:
+                    inventoryInitialsTile(playerName: playerName, fontSize: 22)
+                @unknown default:
+                    inventoryInitialsTile(playerName: playerName, fontSize: 22)
+                }
+            }
+        } else {
+            inventoryInitialsTile(playerName: playerName, fontSize: 22)
+        }
+    }
+    .frame(maxWidth: .infinity)
+    .frame(height: 90)
+    .clipped()
+}
+
+private func inventoryInitialsTile(playerName: String, fontSize: CGFloat) -> some View {
+    ZStack {
+        Rectangle()
+            .fill(HobbyIQTheme.Colors.slateGray)
+        Text(inventoryInitials(from: playerName))
+            .font(.system(size: fontSize, weight: .medium, design: .rounded))
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            .monospacedDigit()
+    }
+}
+
+/// Up to two initials from the first two whitespace-separated words.
+/// Empty input falls back to "?" so the tile is never blank.
+private func inventoryInitials(from name: String) -> String {
+    let words = name
+        .split(whereSeparator: { $0.isWhitespace })
+        .prefix(2)
+    let letters = words.compactMap { $0.first }
+    if letters.isEmpty { return "?" }
+    return letters.map { String($0).uppercased() }.joined()
 }
 
 // MARK: - Card Thumbnails

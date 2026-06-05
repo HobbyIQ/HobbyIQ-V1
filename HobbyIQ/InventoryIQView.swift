@@ -138,66 +138,53 @@ struct InventoryIQView: View {
 
     private var header: some View {
         let hero = vm.heroSummary
+        let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
 
-        return VStack(spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("InventoryIQ")
-                        .font(HobbyIQTheme.Typography.title)
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                    Text("Your card collection at a glance")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-
-                Spacer()
-
-                Button {
-                    if sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) {
-                        isAddingCard = true
-                    } else {
-                        showUpgradePaywall = true
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        .frame(width: 44, height: 44)
-                        .background(sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add Card")
-            }
-
-            HStack(spacing: 16) {
-                HStack(spacing: 6) {
-                    Image(systemName: "archivebox.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Text("\(hero.totalCards) cards")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-
-                Text("•")
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
-                Text(hero.totalValue.portfolioCurrencyText)
-                    .font(.subheadline.weight(.bold))
+        return HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("InventoryIQ")
+                    .font(HobbyIQTheme.Typography.title)
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                Text("\(hero.totalCards) cards · \(inventoryWholeDollarString(hero.totalValue))")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
+
+            Spacer(minLength: 8)
+
+            Button {
+                if canAdd {
+                    isAddingCard = true
+                } else {
+                    showUpgradePaywall = true
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus")
+                        .font(.caption.weight(.semibold))
+                    Text("Add")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background((canAdd ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.mutedText).opacity(0.12))
+                .clipShape(Capsule(style: .continuous))
+                .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Add a card to your inventory")
         }
-        .padding(HobbyIQTheme.Spacing.medium)
-        .padding(.vertical, 4)
+        .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
-        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     // MARK: - Collection Section
@@ -206,37 +193,6 @@ struct InventoryIQView: View {
         let visibleCards = cachedFilteredCards
 
         return VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("MY COLLECTION")
-
-            HStack {
-                Text("\(visibleCards.count) cards")
-                    .font(.subheadline)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
-                Spacer()
-
-                Button {
-                    if sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) {
-                        isAddingCard = true
-                    } else {
-                        showUpgradePaywall = true
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Add Card")
-                            .font(.caption.weight(.bold))
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count) ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.mutedText)
-                    .clipShape(Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-
             VStack(spacing: 8) {
                 HobbyIQSearchField(text: $inventoryQuery, placeholder: "Search collection")
 
@@ -401,24 +357,6 @@ struct InventoryIQView: View {
         )
         .cornerRadius(14)
         .padding(.horizontal)
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
-
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.2)
-                .fixedSize()
-
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
-        }
     }
 
     private func inventoryChipLabel(title: String, systemName: String) -> some View {
