@@ -6,6 +6,14 @@
 import PhotosUI
 import SwiftUI
 
+extension Notification.Name {
+    /// Posted when a Cardsight detection is saved into inventory via the
+    /// CardIdentifyView "Save to inventory" affordance. MainAppView listens
+    /// and (a) switches to the Inventory tab, (b) refreshes the portfolio
+    /// view model so the new holding appears with its photo thumbnail.
+    static let inventoryHoldingSaved = Notification.Name("hobbyiq.inventory.holdingSaved")
+}
+
 struct CardIdentifyView: View {
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @Environment(\.dismiss) private var dismiss
@@ -19,6 +27,16 @@ struct CardIdentifyView: View {
     @State private var showUpgradePaywall = false
     @State private var selectedDetection: CardIdentifyDetection?
     @State private var hasUploadedInitialImage = false
+    /// Permanent blob URL produced by the identify SAS upload, captured so the
+    /// "Save to inventory" handler can attach the same image to the new holding.
+    @State private var identifyBlobUrl: String?
+    /// Per-detection ID for the in-flight save (or last-saved). Single source of
+    /// truth for the save button's disabled/spinner/success state so a tap can
+    /// only persist one holding per detection. Collectors who want duplicates
+    /// can tap a sibling detection or re-scan — we never block intentional dupes.
+    @State private var savingDetectionId: String?
+    @State private var savedDetectionIds: Set<String> = []
+    @State private var saveErrorMessage: String?
     private let initialImage: UIImage?
     private let cameraDenied: Bool
 
@@ -425,22 +443,35 @@ struct CardIdentifyView: View {
                 }
             }
 
-            Button {
-                selectedDetection = detection
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.caption.weight(.semibold))
-                    Text("Price with CompIQ")
-                        .font(.caption.weight(.bold))
+            HStack(spacing: 8) {
+                saveToInventoryButton(for: detection)
+
+                Button {
+                    selectedDetection = detection
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.caption.weight(.semibold))
+                        Text("Price with CompIQ")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 44)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                    .clipShape(Capsule())
+                    .contentShape(Capsule())
                 }
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                .clipShape(Capsule())
+                .buttonStyle(.plain)
+                .accessibilityLabel("Price this card with CompIQ")
             }
-            .buttonStyle(.plain)
+
+            if let saveErrorMessage, savingDetectionId == nil {
+                Text(saveErrorMessage)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(12)
         .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
@@ -449,6 +480,81 @@ struct CardIdentifyView: View {
                 .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.2), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func saveToInventoryButton(for detection: CardIdentifyDetection) -> some View {
+        let isSaving = savingDetectionId == detection.id
+        let isSaved = savedDetectionIds.contains(detection.id)
+        let canSave = identifyBlobUrl != nil && !isSaving && !isSaved
+
+        Button {
+            Task { await saveDetectionToInventory(detection) }
+        } label: {
+            HStack(spacing: 6) {
+                if isSaving {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                } else if isSaved {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                } else {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.caption.weight(.semibold))
+                }
+                Text(isSaved ? "Saved" : (isSaving ? "Saving…" : "Save to inventory"))
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(isSaved ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.pureWhite)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(
+                isSaved
+                    ? HobbyIQTheme.Colors.successGreen.opacity(0.16)
+                    : HobbyIQTheme.Colors.electricBlue.opacity(canSave ? 0.85 : 0.35)
+            )
+            .clipShape(Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSave)
+        .accessibilityLabel(isSaved ? "Already saved to inventory" : "Save this card to your inventory")
+    }
+
+    /// Persists the detection as a new InventoryCard via the EXISTING
+    /// AddPortfolioCardViewModel.save() path. Seeded from the detection +
+    /// the SAS upload's permanent blob URL so the photo lands on the
+    /// holding as imageFrontUrl. On success: notify the host (MainAppView)
+    /// to switch to the inventory tab + refresh, then dismiss the
+    /// identify sheet. Disables the button while in flight to guard
+    /// double-saves; intentional duplicates are still allowed via a
+    /// sibling detection or a re-scan.
+    private func saveDetectionToInventory(_ detection: CardIdentifyDetection) async {
+        guard let blobUrl = identifyBlobUrl else {
+            saveErrorMessage = "Photo upload didn't complete — try again."
+            return
+        }
+        guard !savedDetectionIds.contains(detection.id) else { return }
+
+        savingDetectionId = detection.id
+        saveErrorMessage = nil
+        defer { savingDetectionId = nil }
+
+        let viewModel = AddPortfolioCardViewModel()
+        viewModel.seed(fromIdentifyDetection: detection, blobUrl: blobUrl)
+        let didSave = await viewModel.save()
+
+        if didSave {
+            savedDetectionIds.insert(detection.id)
+            NotificationCenter.default.post(
+                name: .inventoryHoldingSaved,
+                object: nil
+            )
+            dismiss()
+        } else {
+            saveErrorMessage = viewModel.errorMessage ?? "Could not save right now."
+        }
     }
 
     private func identifyDataRow(label: String, value: String) -> some View {
@@ -498,6 +604,9 @@ struct CardIdentifyView: View {
     private func uploadAndIdentify(_ image: UIImage) async {
         error = nil
         identifyResponse = nil
+        identifyBlobUrl = nil
+        savedDetectionIds = []
+        saveErrorMessage = nil
 
         guard let jpegData = image.jpegData(compressionQuality: 0.85) else {
             error = "Could not encode image."
@@ -519,6 +628,11 @@ struct CardIdentifyView: View {
                 contentType: sasResponse.contentType ?? "image/jpeg"
             )
             isUploading = false
+
+            // Hold on to the permanent blob URL so the per-detection
+            // "Save to inventory" handler can attach the same image to
+            // the new holding without re-uploading.
+            identifyBlobUrl = blobUrl
 
             isIdentifying = true
             let request = CardIdentifyRequest(

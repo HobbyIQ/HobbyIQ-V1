@@ -1595,6 +1595,7 @@ extension InventoryCard {
         case fairMarketValue
         case movementDirection, movementComposite, movementImpliedPct
         case movementCoverage, movementUpdatedAt
+        case cardsightCardId
     }
 
     // snake_case alternatives the backend may return
@@ -1632,6 +1633,7 @@ extension InventoryCard {
         case movementImpliedPct = "movement_implied_pct"
         case movementCoverage = "movement_coverage"
         case movementUpdatedAt = "movement_updated_at"
+        case cardsightCardId = "cardsight_card_id"
     }
 
     // Backend autoPriceHolding() uses different field names for pricing/freshness
@@ -1739,6 +1741,8 @@ extension InventoryCard {
         self.movementUpdatedAt = (try? c.decode(String.self, forKey: .movementUpdatedAt))
             ?? (try? s.decode(String.self, forKey: .movementUpdatedAt))
             ?? (try? b.decode(String.self, forKey: .movementUpdatedAt))
+        self.cardsightCardId = (try? c.decode(String.self, forKey: .cardsightCardId))
+            ?? (try? s.decode(String.self, forKey: .cardsightCardId))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1780,6 +1784,7 @@ extension InventoryCard {
         try container.encodeIfPresent(movementImpliedPct, forKey: .movementImpliedPct)
         try container.encodeIfPresent(movementCoverage, forKey: .movementCoverage)
         try container.encodeIfPresent(movementUpdatedAt, forKey: .movementUpdatedAt)
+        try container.encodeIfPresent(cardsightCardId, forKey: .cardsightCardId)
     }
 }
 
@@ -1974,6 +1979,10 @@ final class AddPortfolioCardViewModel: ObservableObject {
     @Published var frontPhotoUrl: String?
     @Published var backPhotoUrl: String?
     @Published var photoMessage: String?
+    /// Resolved Cardsight catalog id, populated when the add-card flow is
+    /// seeded from an identify detection or a cert lookup. Persisted on save
+    /// so the new holding can be priced without a re-match round-trip.
+    @Published var cardsightCardId: String?
     @Published var isUploadingFrontPhoto = false
     @Published var isUploadingBackPhoto = false
     @Published var isSaving = false
@@ -2005,6 +2014,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
             frontPhotoUrl = existingCard.imageFrontUrl
             backPhotoUrl = existingCard.imageBackUrl
             isAutoCard = existingCard.isAuto
+            cardsightCardId = existingCard.cardsightCardId
             if let purchaseDateString = existingCard.purchaseDate, let parsed = Self.purchaseDateFormatter.date(from: purchaseDateString) {
                 includePurchaseDate = true
                 purchaseDate = parsed
@@ -2154,6 +2164,16 @@ final class AddPortfolioCardViewModel: ObservableObject {
 
         let cost = decimal(from: purchasePrice) ?? 0
         let resolvedCurrentValue = decimal(from: currentValue) ?? cost
+        let trimmedGradeCompany = gradingCompany.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedGradeCompany: String? = (isGraded && !trimmedGradeCompany.isEmpty)
+            ? trimmedGradeCompany
+            : nil
+        let resolvedGradeValue: Double? = isGraded
+            ? Double(gradeValue.trimmingCharacters(in: .whitespacesAndNewlines))
+            : nil
+        let trimmedCardsightId = cardsightCardId?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let resolvedCardsightId: String? = trimmedCardsightId.isEmpty ? nil : trimmedCardsightId
         let request = InventoryCard(
             id: editingCardID ?? UUID(),
             playerName: playerName.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -2165,6 +2185,8 @@ final class AddPortfolioCardViewModel: ObservableObject {
             setName: setName,
             parallel: parallel,
             grade: grade,
+            gradeCompany: resolvedGradeCompany,
+            gradeValue: resolvedGradeValue,
             purchaseDate: includePurchaseDate ? purchaseDate.formatted(date: .abbreviated, time: .omitted) : nil,
             purchasePlatform: purchaseLocation.isEmpty ? nil : purchaseLocation.trimmingCharacters(in: .whitespacesAndNewlines),
             quantity: Double(quantity),
@@ -2176,7 +2198,8 @@ final class AddPortfolioCardViewModel: ObservableObject {
             confidence: estimateResult?.confidenceScore,
             method: estimateResult?.source,
             summary: estimateResult?.explanation?.joined(separator: " "),
-            isAuto: isAutoCard
+            isAuto: isAutoCard,
+            cardsightCardId: resolvedCardsightId
         )
 
         do {
@@ -2201,6 +2224,68 @@ final class AddPortfolioCardViewModel: ObservableObject {
             logger.error("Add/Edit portfolio save failed: \(error.localizedDescription, privacy: .public)")
             return false
         }
+    }
+
+    /// Seeds the add-card view model from a Cardsight identify detection +
+    /// the SAS blob URL produced by the same identify upload. Mirrors the
+    /// existing manual / cert-lookup pre-fill pattern so the rest of the
+    /// save path stays untouched.
+    ///
+    /// - Identity text (player / year / set / number / parallel) maps
+    ///   directly from `detection.card.*`.
+    /// - Grade is taken from `detection.grading` ONLY when present; raw cards
+    ///   keep `isGraded = false` and a blank `grade` string (which renders
+    ///   as "Raw" via `gradeChipText`). No fabricated grade for raw.
+    /// - `cardsightCardId` is the resolved Cardsight catalog UUID so the new
+    ///   holding can be priced without re-matching.
+    /// - The identify upload's permanent `blobUrl` is used as the front
+    ///   photo (same field the manual photo path writes) so the inventory
+    ///   thumbnail renders the captured image.
+    /// - `certNumber` is set when the optional PSA cert extraction came
+    ///   back; otherwise nil.
+    ///
+    /// Cost / current value / purchase fields are intentionally left empty
+    /// — the user can fill them later from the detail sheet ("Set cost"
+    /// affordance is already wired on the inventory row).
+    func seed(fromIdentifyDetection detection: CardIdentifyDetection, blobUrl: String) {
+        let card = detection.card
+        let trimmedPlayerName = card?.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        playerName = trimmedPlayerName
+        year = card?.year?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        setName = card?.setName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        parallel = card?.parallel?.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        // Compose a human-readable cardName from the structured fields so
+        // legacy display surfaces (which read `cardName`) keep working.
+        let cardNameParts = [
+            year,
+            setName,
+            card?.number.map { "#\($0)" },
+            parallel
+        ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+         .filter { !$0.isEmpty }
+        cardTitle = cardNameParts.joined(separator: " ")
+
+        // Grade — only when Cardsight returned a grading block AND it has a
+        // resolvable company + numeric value. Raw stays raw.
+        if let grading = detection.grading,
+           let companyName = grading.company?.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !companyName.isEmpty,
+           let gradeString = grading.grade?.value?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !gradeString.isEmpty {
+            isGraded = true
+            gradingCompany = companyName
+            gradeValue = gradeString
+            grade = "\(companyName) \(gradeString)"
+        } else {
+            isGraded = false
+            grade = ""
+        }
+
+        cardsightCardId = card?.id
+        frontPhotoUrl = blobUrl
+        // Cardsight doesn't return an auto-detection flag today; leave isAuto
+        // alone so the user can flip it in the detail sheet if needed.
     }
 
     private func portfolioUserFacingMessage(for error: Error, fallback: String) -> String {
