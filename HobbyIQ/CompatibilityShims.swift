@@ -1904,11 +1904,22 @@ final class DailyIQService: ObservableObject {
     /// URLSession surfaces this as `URLError.cancelled` (code -999), and
     /// Swift task cancellation as `CancellationError`. Neither should ever
     /// reach the user as a "DailyIQ sync issue" banner.
+    ///
+    /// APIService wraps the underlying URL error in
+    /// `APIServiceError.networkFailed(Error)`, so a cancellation arriving
+    /// from a typical API call looks like
+    /// `APIServiceError.networkFailed(URLError.cancelled)`. Peer inside
+    /// that wrapper so the recursive check catches the wrapped form too.
     private func isCancellation(_ error: Error) -> Bool {
         if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
         let ns = error as NSError
         if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return true }
-        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        if let apiError = error as? APIServiceError,
+           case .networkFailed(let underlying) = apiError,
+           isCancellation(underlying) {
+            return true
+        }
         return false
     }
 
