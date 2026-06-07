@@ -932,14 +932,28 @@ struct WatchlistSearchResponse: Codable {
 struct WatchlistTopResponse: Codable {
     let entries: [WatchPlayerResult]?
     let count: Int?
+
+    // Backend dailyiq.routes.ts `/watchlist/top` emits `players`, not `entries`.
+    private enum CodingKeys: String, CodingKey {
+        case entries = "players"
+        case count
+    }
 }
 
+// Mirrors the backend dailyiq.routes.ts `/watchlist/suggest` item shape
+// (playerId, playerName, league, level, teamName, teamAbbreviation, position).
+// `playerName` is required because every UI surface labels by it; everything
+// else is optional to tolerate partial records.
 struct WatchlistSuggestion: Codable, Identifiable, Hashable {
-    var id: String { "\(mlbPersonId)_\(playerName)" }
-    let mlbPersonId: Int
+    let playerId: String?
     let playerName: String
-    let reason: String?
-    let score: Double?
+    let league: String?
+    let level: String?
+    let teamName: String?
+    let teamAbbreviation: String?
+    let position: String?
+
+    var id: String { playerId ?? playerName }
 }
 
 struct WatchlistSuggestResponse: Codable {

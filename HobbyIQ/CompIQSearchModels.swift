@@ -33,25 +33,39 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        cardsightCardId = try container.decode(String.self, forKey: .cardsightCardId)
+        // Backend (unifiedSearch.dispatcher → CardIdentity) emits `candidateId`
+        // as a SOURCE-PREFIXED id, e.g. "cardsight:<uuid>" or "psa:<cert>".
+        // /api/compiq/price-by-id expects a bare Cardsight UUID, so strip
+        // the "cardsight:" prefix here; preserve other prefixes (cert ids
+        // pass through intact).
+        let rawCandidateId = try container.decode(String.self, forKey: .cardsightCardId)
+        let cardsightPrefix = "cardsight:"
+        cardsightCardId = rawCandidateId.hasPrefix(cardsightPrefix)
+            ? String(rawCandidateId.dropFirst(cardsightPrefix.count))
+            : rawCandidateId
         player = try? container.decodeIfPresent(String.self, forKey: .player)
         set = try? container.decodeIfPresent(String.self, forKey: .set)
         year = try? container.decodeIfPresent(Int.self, forKey: .year)
-        // cardsearch returns "card_number"
         number = try? container.decodeIfPresent(String.self, forKey: .number)
         variant = try? container.decodeIfPresent(String.self, forKey: .variant)
         title = try? container.decodeIfPresent(String.self, forKey: .title)
         displayLabel = try? container.decodeIfPresent(String.self, forKey: .displayLabel)
-        // cardsearch returns "image_url"
         imageUrl = try? container.decodeIfPresent(String.self, forKey: .imageUrl)
     }
 
+    // Backend CardIdentity (cardIdentity.ts) field names:
+    //   candidateId, player, year, setName, cardNumber, parallel, title, imageUrl
+    // There is no displayLabel on the wire; the computed `resolvedLabel`
+    // falls back to title + parts when displayLabel is nil.
     private enum CodingKeys: String, CodingKey {
-        case cardsightCardId = "card_id"
-        case player, set, year
-        case number = "card_number"
-        case variant, title, displayLabel
-        case imageUrl = "image_url"
+        case cardsightCardId = "candidateId"
+        case player, year
+        case set = "setName"
+        case number = "cardNumber"
+        case variant = "parallel"
+        case title
+        case displayLabel
+        case imageUrl
     }
 
     init(
@@ -97,18 +111,19 @@ struct CompIQVariantListResponse: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        // cardsearch returns "ok" instead of "success"
+        // Dispatcher response shape: { input, candidates, warnings }.
+        // No success field is emitted; consumers should tolerate nil
+        // and treat the presence of `candidates` as success.
         success = try? container.decodeIfPresent(Bool.self, forKey: .success)
         query = try? container.decodeIfPresent(String.self, forKey: .query)
         count = try? container.decodeIfPresent(Int.self, forKey: .count)
-        // cardsearch returns "hits" instead of "results"
         results = try? container.decodeIfPresent([CompIQVariantHit].self, forKey: .results)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case success = "ok"
+        case success
         case query, count
-        case results = "hits"
+        case results = "candidates"
     }
 }
 

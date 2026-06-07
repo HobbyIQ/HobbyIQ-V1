@@ -21,8 +21,11 @@ final class CompIQSearchService {
         logger.info("Searching variants for: \(trimmed)")
         let response = try await APIService.shared.searchVariantList(query: trimmed)
 
-        guard response.success == true else {
-            logger.warning("cardsearch returned ok=false")
+        // Dispatcher emits no explicit `success` flag — only `candidates`
+        // (and warnings). Treat nil success as "no signal, trust the
+        // candidates array"; only bail on an explicit success=false.
+        guard response.success != false else {
+            logger.warning("cardsearch returned success=false")
             return []
         }
 

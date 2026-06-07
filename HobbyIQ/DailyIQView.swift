@@ -356,15 +356,16 @@ struct DailyIQView: View {
                                 Text(sug.playerName)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                if let reason = sug.reason {
-                                    Text(reason)
+                                let subtitleParts = [sug.teamName, sug.level].compactMap { $0 }
+                                if subtitleParts.isEmpty == false {
+                                    Text(subtitleParts.joined(separator: " · "))
                                         .font(.caption)
                                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                                 }
                             }
                             Spacer()
-                            if let score = sug.score {
-                                Text(String(format: "%.0f", score))
+                            if let position = sug.position, position.isEmpty == false {
+                                Text(position)
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                             }
