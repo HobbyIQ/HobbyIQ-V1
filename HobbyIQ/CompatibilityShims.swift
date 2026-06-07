@@ -1899,6 +1899,19 @@ final class DailyIQService: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    /// True when the error represents a cancelled request (tab switch,
+    /// view re-render, user-initiated cancel) rather than a real failure.
+    /// URLSession surfaces this as `URLError.cancelled` (code -999), and
+    /// Swift task cancellation as `CancellationError`. Neither should ever
+    /// reach the user as a "DailyIQ sync issue" banner.
+    private func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return false
+    }
+
     func addWatchlistEntry(
         userId: String,
         playerId: String,
@@ -1921,7 +1934,9 @@ final class DailyIQService: ObservableObject {
                 date: reportDate
             )
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
             return nil
         }
     }
@@ -1948,7 +1963,9 @@ final class DailyIQService: ObservableObject {
                 date: reportDate
             )
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
             return nil
         }
     }
@@ -1993,6 +2010,12 @@ final class DailyIQService: ObservableObject {
                 byLevel: briefResponse.byLevel
             )
         } catch {
+            // Cancellation isn't a real failure — tab switches and view
+            // re-renders cancel in-flight URLSession tasks, and that
+            // shouldn't surface as a persistent "DailyIQ sync issue" banner.
+            if isCancellation(error) {
+                return
+            }
             // Brief failed — still show player data if we have any
             if !mlbPlayers.isEmpty || !milbPlayers.isEmpty {
                 brief = DailyIQResponse(
