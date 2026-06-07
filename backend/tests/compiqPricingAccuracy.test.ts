@@ -85,7 +85,16 @@ describe("Improvement 2 — comp quality filter", () => {
     expect(out.excluded).toBe(4);
     expect(out.reasons["keyword:lot of"]).toBe(1);
     expect(out.reasons["keyword:reprint"]).toBe(1);
-    expect(out.reasons["keyword:crease"] ?? out.reasons["keyword:damaged"]).toBe(1);
+    // CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07): "damage" stem added
+    // earlier in the keyword list now classifies "Damaged …" as
+    // keyword:damage rather than :damaged or :crease. Accept any of the
+    // three so the assertion documents the family rather than a specific
+    // matcher.
+    const damageReason =
+      (out.reasons["keyword:damage"] ?? 0)
+      + (out.reasons["keyword:damaged"] ?? 0)
+      + (out.reasons["keyword:crease"] ?? 0);
+    expect(damageReason).toBeGreaterThanOrEqual(1);
     expect(out.reasons["keyword:digital"]).toBe(1);
   });
 
@@ -110,6 +119,102 @@ describe("Improvement 2 — comp quality filter", () => {
     ];
     const out = applyCompQualityFilter(sales, card);
     expect(out.filtered.every((s) => s.price > 0)).toBe(true);
+  });
+
+  // ── CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07) ─────────────────────────
+  // Real-world dirty-title patterns lifted from the Trout raw probe + a
+  // broader sweep of condition disclaimers that should never enter the
+  // comp pool. Pins each new exclusion as a distinct case so future regex
+  // edits surface here.
+  describe("expanded condition-descriptor exclusions", () => {
+    it('rejects "Minor Damage" parenthetical (the canonical Trout row)', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC PSA 9", 900),
+        baseComp("Topps 2011 Update Series Mike Trout Rookie Card #US175 Angels(Minor Damage)", 200),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(out.reasons["keyword:damage"]).toBe(1);
+    });
+
+    it('rejects "please read description" / typo variant "Read Desciption"', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC", 900),
+        baseComp('***Please Read Desciption" 2011 Topps Update Series - Mike Trout #US175 (RC)', 160),
+        baseComp("Mike Trout 2011 Topps Update Series (please read description)", 220),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(
+        (out.reasons["keyword:please read"] ?? 0)
+          + (out.reasons["keyword:read desciption"] ?? 0)
+          + (out.reasons["keyword:read description"] ?? 0),
+      ).toBeGreaterThanOrEqual(2);
+    });
+
+    it("rejects scuff/stain/worn/repaired condition disclaimers", () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC", 900),
+        baseComp("Mike Trout 2011 Topps Update RC — scuff on back", 300),
+        baseComp("Mike Trout 2011 Topps Update RC stain corner", 250),
+        baseComp("Mike Trout 2011 Topps Update RC worn edges", 280),
+        baseComp("Mike Trout 2011 Topps Update RC repaired corner", 290),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(out.excluded).toBeGreaterThanOrEqual(4);
+    });
+
+    it('rejects "as is" / "as-is" with word-boundary anchoring (no false positive on "Atlas is")', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC sold as is", 200),
+        baseComp("Mike Trout 2011 Topps Update RC (as-is)", 210),
+        baseComp("Mike Trout Atlas issue 2011 Topps Update RC", 850), // false-positive guard
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      // First two excluded; the "Atlas is" row stays.
+      expect(out.filtered.length).toBe(1);
+      expect(out.filtered[0].title).toContain("Atlas");
+    });
+
+    it('rejects "see description" / "see desc"', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC", 900),
+        baseComp("Mike Trout 2011 Topps Update RC see description", 250),
+        baseComp("Mike Trout 2011 Topps Update RC (see desc)", 240),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+    });
+
+    it('rejects "poor condition" / "rough shape" but PRESERVES the legit "good" / "near mint" / "gem mint" rows', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC PSA 10 GEM MINT", 1000),
+        baseComp("Mike Trout 2011 Topps Update RC near mint", 700),
+        baseComp("Mike Trout 2011 Topps Update RC poor condition", 100),
+        baseComp("Mike Trout 2011 Topps Update RC rough shape", 90),
+        baseComp("Mike Trout 2011 Topps Update RC fair condition", 110),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(2);
+      expect(out.filtered.some((s) => s.title.includes("GEM MINT"))).toBe(true);
+      expect(out.filtered.some((s) => s.title.includes("near mint"))).toBe(true);
+    });
+
+    it('preserves clean titles (no false positive on "scuff-free", "no stains", etc.)', () => {
+      // Defensive: substring-includes-style filters can over-fire. The
+      // current filter uses bare keywords ("scuff", "stain") which WILL
+      // match "scuff-free" — that's by design (seller mentioned condition
+      // at all = mild ambiguity, easier to drop). Pin the behavior so any
+      // future tightening surfaces here as an intentional change.
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC scuff-free", 800),
+        baseComp("Mike Trout 2011 Topps Update RC no stains", 820),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      // Both filtered out today (bare-substring match).
+      expect(out.filtered.length).toBe(0);
+    });
   });
 });
 

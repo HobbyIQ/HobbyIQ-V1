@@ -270,9 +270,20 @@ const EXCLUSION_KEYWORDS: ReadonlyArray<string> = [
   // Lot sales (specific first)
   "lot of", "lot ", "bundle", "collection", "bulk", "wholesale",
   "3 card", "5 card", "10 card", "set of", "group of",
-  // Damaged / altered
-  "damaged", "creased", "crease", "bent", "water damage", "flaw", "flawed",
-  "trimmed", "altered", "restored", "fake", "reprint",
+  // Damaged / altered (incl. "Minor Damage" / "Major Damage" via the
+  // bare "damage" stem; "damaged" stays for diagnostic clarity in
+  // reasons[]). CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07).
+  "damage", "damaged", "creased", "crease", "bent",
+  "water damage", "flaw", "flawed",
+  "scuff", "stain", "worn", "writing on", "marks on",
+  "trimmed", "altered", "restored", "repaired", "fake", "reprint",
+  "poor condition", "fair condition", "rough condition", "rough shape",
+  // Seller-condition disclaimers — "buyer beware" cues that disqualify
+  // a comp from the math + display pool. Word-anchored where needed
+  // ("as is" with leading space to avoid hitting "Atlas is").
+  "see description", "see desc",
+  "please read", "read description", "read desciption",
+  " as is", " as-is", "(as is)", "(as-is)",
   // Redemption / not actual card
   "redemption", "placeholder", "digital",
   // Test / sample
@@ -3408,6 +3419,14 @@ export async function computeEstimate(
     dataSufficiency,
     estimate: fairMarketValue,
     compsUsed: comps.length,
+    // CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07): surface the
+    // pre-quality-filter Cardsight count as the denominator iOS shows
+    // ("23 of 25 available"). The delta = comps Cardsight had for this
+    // card that the quality filter removed (lot sales, damage/condition
+    // disclaimers, etc.). recencyFilteredComps is the right anchor —
+    // it represents trustworthy comps WITHIN the recency window before
+    // any condition-quality cuts kicked in.
+    compsAvailable: recencyFilteredComps.length,
     cardIdentity,
     recentComps: comps
       .slice()
