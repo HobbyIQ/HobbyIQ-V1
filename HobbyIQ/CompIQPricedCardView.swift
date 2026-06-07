@@ -268,6 +268,7 @@ struct CompIQPricedCardView: View {
 
                 // Market Analysis group
                 cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
+                    predictedPriceContent(response)
                     zonesCard(response)
                     buyWindowContent(response)
                     confidenceContent(response)
@@ -276,7 +277,18 @@ struct CompIQPricedCardView: View {
                 // Trends group
                 cardGroup(title: "Trends", icon: "arrow.triangle.swap") {
                     trendContent(response)
+                    trendIQDetailContent(response)
                     broaderTrendContent(response)
+                }
+
+                // Regime group — CF-COMP-DETAIL-EXPAND (2026-06-07).
+                // Only renders when the backend produced regime
+                // classification output; insufficient_data short-circuits
+                // skip the section so we don't show empty rows.
+                if response.regime != nil || response.regimeDiagnostics != nil {
+                    cardGroup(title: "Regime", icon: "waveform.path.ecg") {
+                        regimeContent(response)
+                    }
                 }
 
                 // Strategy group
@@ -322,7 +334,17 @@ struct CompIQPricedCardView: View {
                         metadataChip(label: "Grade", value: grade)
                     }
                     if let comps = response.compsUsed {
-                        metadataChip(label: "Comps", value: "\(comps)")
+                        // CF-COMP-DETAIL-EXPAND (2026-06-07): show "N of M"
+                        // when compsAvailable is known so the user sees the
+                        // condition-filter delta. Falls back to bare count
+                        // for older responses that don't carry the
+                        // denominator.
+                        metadataChip(
+                            label: "Comps",
+                            value: response.compsAvailable.map { available in
+                                available >= comps ? "\(comps) of \(available)" : "\(comps)"
+                            } ?? "\(comps)"
+                        )
                     }
                 }
                 .padding(.top, 2)
@@ -954,6 +976,231 @@ struct CompIQPricedCardView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Predicted Price (CF-COMP-DETAIL-EXPAND, 2026-06-07)
+
+    @ViewBuilder
+    private func predictedPriceContent(_ response: CompIQPriceByIdResponse) -> some View {
+        if let predicted = response.predictedPrice {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionHeader(title: "Predicted Price")
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(predicted.formatted(.currency(code: "USD")))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Spacer()
+                    if let attribution = response.predictedPriceAttribution,
+                       let mechanism = attribution.mechanism {
+                        Text(mechanism)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.6)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if let range = response.predictedPriceRange,
+                   let low = range.low, let high = range.high {
+                    HStack(spacing: 6) {
+                        Text("Range")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Text("\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                }
+
+                if let factor = response.predictedPriceAttribution?.forwardProjectionFactor {
+                    HStack(spacing: 6) {
+                        Text("Forward Projection Factor")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Spacer()
+                        Text(String(format: "%.4f", factor))
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - TrendIQ Detail (CF-COMP-DETAIL-EXPAND, 2026-06-07)
+
+    @ViewBuilder
+    private func trendIQDetailContent(_ response: CompIQPriceByIdResponse) -> some View {
+        if let trendIQ = response.trendIQ {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionHeader(title: "TrendIQ")
+
+                // Composite + direction + impliedPct + coverage row.
+                HStack(spacing: 12) {
+                    Image(systemName: trendArrow(trendIQ.direction))
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(trendColor(trendIQ.direction))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let composite = trendIQ.composite {
+                            Text(String(format: "Composite %.3f", composite))
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        }
+                        if let pct = trendIQ.impliedPct {
+                            Text(String(format: "%+.1f%%", pct))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(trendColor(trendIQ.direction))
+                        }
+                    }
+
+                    Spacer()
+
+                    if let coverage = trendIQ.coverage {
+                        Text(coverage)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.6)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                // Card Trajectory detail — recent vs older median.
+                if let card = trendIQ.components?.cardTrajectory {
+                    Divider().background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Card Trajectory")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .tracking(0.4)
+
+                        if let recent = card.recentMedian, let older = card.olderMedian {
+                            HStack(spacing: 6) {
+                                Text("Recent median")
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                Spacer()
+                                Text(recent.formatted(.currency(code: "USD")))
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                            HStack(spacing: 6) {
+                                Text("Older median")
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                Spacer()
+                                Text(older.formatted(.currency(code: "USD")))
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                        }
+
+                        if let pctChange = card.pctChange {
+                            HStack(spacing: 6) {
+                                Text("Δ recent vs older")
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                Spacer()
+                                Text(String(format: "%+.1f%%", pctChange))
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(trendColor(trendIQ.direction))
+                            }
+                        }
+
+                        if let rc = card.recentCount, let oc = card.olderCount {
+                            HStack(spacing: 6) {
+                                Text("Sample sizes (recent / older)")
+                                    .font(.caption)
+                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                Spacer()
+                                Text("\(rc) / \(oc)")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Regime (CF-COMP-DETAIL-EXPAND, 2026-06-07)
+
+    @ViewBuilder
+    private func regimeContent(_ response: CompIQPriceByIdResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Headline: regime + confidence chips.
+            HStack(spacing: 10) {
+                if let regime = response.regime {
+                    Text(regime.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                }
+                if let confidence = response.regimeConfidence {
+                    Text(confidence.uppercased() + " CONFIDENCE")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(0.6)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                        .clipShape(Capsule())
+                }
+                Spacer()
+            }
+
+            if let diag = response.regimeDiagnostics {
+                Divider().background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if let slope = diag.slopePctPerMonth {
+                        regimeRow(label: "Slope", value: String(format: "%+.2f%%/mo", slope))
+                    }
+                    if let cov = diag.coefficientOfVariation {
+                        regimeRow(label: "Coefficient of Variation", value: String(format: "%.3f", cov))
+                    }
+                    if let r2 = diag.r2 {
+                        regimeRow(label: "R²", value: String(format: "%.3f", r2))
+                    }
+                    if let recent = diag.recentMeanLast14d {
+                        regimeRow(label: "Recent mean (14d)", value: recent.formatted(.currency(code: "USD")))
+                    }
+                    if let older = diag.olderMean14to90d {
+                        regimeRow(label: "Older mean (14–90d)", value: older.formatted(.currency(code: "USD")))
+                    }
+                    if let pct = diag.pctChangeRecentVsOlder {
+                        regimeRow(label: "Δ recent vs older", value: String(format: "%+.2f%%", pct))
+                    }
+                    if let reason = diag.classificationReason {
+                        Text(reason)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    private func regimeRow(label: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
         }
     }
 

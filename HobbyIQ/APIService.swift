@@ -1574,9 +1574,10 @@ struct CompIQPriceRange: Codable, Hashable {
 }
 
 /// Attribution metadata for a predicted price. Shape varies by engine code path:
-/// - Success: mechanism, anchorProduct, anchorParallel, anchorComps, anchorPrice, multiplierRange, crossProductAnchor, confidence
+/// - multiplier-anchored: mechanism, anchorProduct, anchorParallel, anchorComps, anchorPrice, multiplierRange, crossProductAnchor, confidence
+/// - trendiq-projection: mechanism, forwardProjectionFactor, trendIQComposite, trendIQDirection, trendIQCoverage
 /// - Failure: mechanism, failureReason (e.g. "uncurated-subject-parallel", "insufficient-curated-peer-parallels")
-/// All fields are optional to tolerate both shapes.
+/// All fields are optional to tolerate every shape.
 struct CompIQPredictedPriceAttribution: Codable, Hashable {
     let mechanism: String?
     let anchorProduct: String?
@@ -1587,6 +1588,34 @@ struct CompIQPredictedPriceAttribution: Codable, Hashable {
     let crossProductAnchor: Bool?
     let confidence: Double?
     let failureReason: String?
+    // CF-COMP-DETAIL-EXPAND (2026-06-07): trendiq-projection mechanism
+    // fields. Present when mechanism == "trendiq-projection".
+    let forwardProjectionFactor: Double?
+    let trendIQComposite: Double?
+    let trendIQDirection: String?
+    let trendIQCoverage: String?
+}
+
+// Note: TrendIQ structs (TrendIQResponse + components + weights) already
+// exist in CompIQSearchModels.swift. The comp page reads them via
+// `CompIQPriceByIdResponse.trendIQ` directly — no Swift-side wrapper
+// needed.
+
+// CF-COMP-DETAIL-EXPAND (2026-06-07): regime classifier diagnostics.
+// The regime classifier (stable/volatile/trending) tells the user how
+// noisy the comp set is. The diagnostics surface WHY a regime label
+// landed — slope %/mo, R², CoV — so iOS can show a 1-line summary
+// without re-deriving it.
+struct CompIQRegimeDiagnostics: Codable, Hashable {
+    let compsUsedForClassification: Int?
+    let windowDays: Int?
+    let slopePctPerMonth: Double?
+    let r2: Double?
+    let coefficientOfVariation: Double?
+    let recentMeanLast14d: Double?
+    let olderMean14to90d: Double?
+    let pctChangeRecentVsOlder: Double?
+    let classificationReason: String?
 }
 
 /// Backend `dataSufficiency` changed from a plain string to an object in Phase 3.

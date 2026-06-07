@@ -317,7 +317,18 @@ struct CompIQPriceByIdResponse: Codable {
     let cardIdentity: CompIQPriceCardIdentity?
     let gradeUsed: String?
     let compsUsed: Int?
+    // CF-COMP-DETAIL-EXPAND (2026-06-07): pre-quality-filter Cardsight
+    // count. Lets the iOS comp page render "N of M available" so the
+    // user sees the condition-filter delta (e.g. "20 of 26 — 6 dropped
+    // for damage / read description / lot").
+    let compsAvailable: Int?
     let daysSinceNewestComp: Int?
+    // CF-COMP-DETAIL-EXPAND (2026-06-07): regime classifier outputs.
+    // regime = "stable" / "volatile" / "trending" / "insufficient_data".
+    // regimeConfidence = "high" / "low".
+    let regime: String?
+    let regimeConfidence: String?
+    let regimeDiagnostics: CompIQRegimeDiagnostics?
     let verdict: String?
     let action: String?
     let quickSaleValue: Double?
@@ -396,7 +407,11 @@ struct CompIQPriceByIdResponse: Codable {
         cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
         gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
         compsUsed = try? container.decodeIfPresent(Int.self, forKey: .compsUsed)
+        compsAvailable = try? container.decodeIfPresent(Int.self, forKey: .compsAvailable)
         daysSinceNewestComp = try? container.decodeIfPresent(Int.self, forKey: .daysSinceNewestComp)
+        regime = try? container.decodeIfPresent(String.self, forKey: .regime)
+        regimeConfidence = try? container.decodeIfPresent(String.self, forKey: .regimeConfidence)
+        regimeDiagnostics = try? container.decodeIfPresent(CompIQRegimeDiagnostics.self, forKey: .regimeDiagnostics)
         verdict = try? container.decodeIfPresent(String.self, forKey: .verdict)
         action = try? container.decodeIfPresent(String.self, forKey: .action)
         quickSaleValue = try? container.decodeIfPresent(Double.self, forKey: .quickSaleValue)
@@ -426,10 +441,11 @@ struct CompIQPriceByIdResponse: Codable {
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
         case confidence, source, trendAnalysis, recentComps
-        case cardIdentity, gradeUsed, compsUsed, daysSinceNewestComp
+        case cardIdentity, gradeUsed, compsUsed, compsAvailable, daysSinceNewestComp
         case verdict, action, quickSaleValue, premiumValue, explanation
         case graderPremium, buyWindow, freshness, broaderTrend
         case exitStrategy, dealScore, variantWarning
         case compQuality, dataSufficiency, trendIQ
+        case regime, regimeConfidence, regimeDiagnostics
     }
 }
