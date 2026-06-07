@@ -304,6 +304,34 @@ struct DailyIQView: View {
                 }
             }
 
+            // Watchlist entries — the user's own tracked players come BEFORE
+            // Suggestions so the surface they curated is what they see first.
+            if trackedWatchlist.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "eye")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("Add players to track their daily and season lines here.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                dailySectionHeader("YOUR WATCHLIST")
+                LazyVStack(spacing: 10) {
+                    ForEach(trackedWatchlist) { entry in
+                        Button {
+                            playerIQName = entry.playerName
+                        } label: {
+                            DailyWatchlistRow(entry: entry) { Task { await removeWatchlistEntry(entry) } }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
             // Suggested Players (ungated)
             if !suggestions.isEmpty {
                 dailySectionHeader("SUGGESTED FOR YOU")
@@ -344,32 +372,6 @@ struct DailyIQView: View {
                                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
-                    }
-                }
-            }
-
-            // Watchlist entries
-            if trackedWatchlist.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "eye")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Text("Add players to track their daily and season lines here.")
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 10) {
-                    ForEach(trackedWatchlist) { entry in
-                        Button {
-                            playerIQName = entry.playerName
-                        } label: {
-                            DailyWatchlistRow(entry: entry) { Task { await removeWatchlistEntry(entry) } }
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
             }
