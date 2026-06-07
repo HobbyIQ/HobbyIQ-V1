@@ -117,27 +117,11 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     /// with this as nil and continue to work via text-based matching.
     let cardsightCardId: String?
 
-    // Backend `composeHoldingWireShape` (responseAssembly.ts:203) emits
-    // `purchaseSource`; every other field uses its Swift-synthesized name.
-    // The full enum is required because partial CodingKeys silently drop
-    // unlisted properties from Codable.
-    private enum CodingKeys: String, CodingKey {
-        case id, playerName, cardName, cost, currentValue, status
-        case year, setName, parallel, grade
-        case gradeCompany, gradeValue
-        case purchaseDate
-        case purchasePlatform = "purchaseSource"
-        case quantity, notes
-        case imageFrontUrl, imageBackUrl
-        case lowValue, highValue, confidence, method, summary, isAuto
-        case photos, clientId
-        case predictedPrice, predictedPriceLow, predictedPriceHigh
-        case predictedPriceMechanism, predictedPriceUpdatedAt
-        case fairMarketValue
-        case movementDirection, movementComposite, movementImpliedPct
-        case movementCoverage, movementUpdatedAt
-        case cardsightCardId
-    }
+    // The Codable conformance + CodingKeys for InventoryCard live in the
+    // extension at CompatibilityShims.swift:1584 — that extension defines
+    // its own custom init(from:) which wins over any struct-level synthesized
+    // implementation. Adding CodingKeys here would be dead code (the wire-
+    // shape aliases are applied inside that extension's init).
 
     init(
         id: UUID = UUID(),

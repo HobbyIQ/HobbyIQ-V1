@@ -4,6 +4,7 @@
 //
 
 import Combine
+import CryptoKit
 import Foundation
 import os
 import SwiftUI
@@ -1646,48 +1647,124 @@ extension InventoryCard {
         case movementCoverage, movementUpdatedAt
     }
 
+    // Holdings WIRE shape (composeHoldingWireShape, responseAssembly.ts:104-167).
+    // These keys appear on /api/portfolio's holdings list and DO NOT match
+    // iOS's historical Swift symbol names; the wire renames are decoded
+    // here as fallbacks. Per recipe at responseAssembly.ts:178 + 720,
+    // `currentValue` is TOTAL (FMV × qty or totalCostBasis fallback), so
+    // iOS `cost` must come from `totalCostBasis` (TOTAL) to keep
+    // `profitLoss = currentValue - cost` dimensionally apples-to-apples.
+    // `purchasePrice` is PER-UNIT; combine with quantity only as a last
+    // resort when the totals aren't on the wire.
+    private enum WireKeys: String, CodingKey {
+        case cardTitle, cardYear, product
+        case purchaseSource, purchasePrice, totalCostBasis
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let s = try decoder.container(keyedBy: SnakeKeys.self)
         let b = try decoder.container(keyedBy: BackendKeys.self)
+        let w = try decoder.container(keyedBy: WireKeys.self)
 
+        // Backend holdings list emits a stable string id (e.g. "h_abc123").
+        // Decode-as-UUID would silently fail and regenerate a random UUID
+        // every fetch — ForEach diffing thrashes and sheet/selection state
+        // is lost on refresh. Derive a deterministic UUID from the string
+        // so identity is stable across refreshes.
+        let rawIdString = (try? c.decode(String.self, forKey: .id))
+            ?? (try? s.decode(String.self, forKey: .id))
         self.id = (try? c.decode(UUID.self, forKey: .id))
-            ?? (try? s.decode(UUID.self, forKey: .id)) ?? UUID()
+            ?? (try? s.decode(UUID.self, forKey: .id))
+            ?? rawIdString.map(UUID.deterministic(from:))
+            ?? UUID()
         self.playerName = (try? c.decode(String.self, forKey: .playerName))
             ?? (try? s.decode(String.self, forKey: .playerName)) ?? ""
+        // WIRE: backend emits `cardTitle`, not `cardName`.
         self.cardName = (try? c.decode(String.self, forKey: .cardName))
-            ?? (try? s.decode(String.self, forKey: .cardName)) ?? ""
-        self.cost = (try? c.decode(Double.self, forKey: .cost))
-            ?? (try? s.decode(Double.self, forKey: .cost)) ?? 0
+            ?? (try? s.decode(String.self, forKey: .cardName))
+            ?? (try? w.decode(String.self, forKey: .cardTitle)) ?? ""
+        // WIRE: backend doesn't emit `cost`. currentValue is TOTAL, so
+        // pull cost from totalCostBasis (TOTAL) to keep
+        // profitLoss = currentValue - cost dimensionally apples-to-apples.
+        // Fallback: purchasePrice (per-unit) × quantity when totals are absent.
+        let totalCostBasis = (try? w.decode(Double.self, forKey: .totalCostBasis))
+        let perUnitPurchasePrice = (try? w.decode(Double.self, forKey: .purchasePrice))
+        let decodedCost = (try? c.decode(Double.self, forKey: .cost))
+            ?? (try? s.decode(Double.self, forKey: .cost))
+        let qtyForBasisFallback = max(
+            1.0,
+            (try? c.decode(Double.self, forKey: .quantity))
+                ?? (try? s.decode(Double.self, forKey: .quantity)) ?? 1.0
+        )
+        self.cost = decodedCost
+            ?? totalCostBasis
+            ?? perUnitPurchasePrice.map { $0 * qtyForBasisFallback }
+            ?? 0
         self.currentValue = (try? c.decode(Double.self, forKey: .currentValue))
             ?? (try? s.decode(Double.self, forKey: .currentValue))
             ?? (try? b.decode(Double.self, forKey: .fairMarketValue)) ?? 0
         self.status = (try? c.decode(String.self, forKey: .status))
             ?? (try? s.decode(String.self, forKey: .status)) ?? "active"
+        // WIRE: backend emits `cardYear: number`. Coerce Int → String.
         self.year = (try? c.decode(String.self, forKey: .year))
-            ?? (try? s.decode(String.self, forKey: .year)) ?? ""
+            ?? (try? s.decode(String.self, forKey: .year))
+            ?? (try? w.decode(Int.self, forKey: .cardYear)).map(String.init) ?? ""
+        // WIRE: backend emits `product`, not `setName`.
         self.setName = (try? c.decode(String.self, forKey: .setName))
-            ?? (try? s.decode(String.self, forKey: .setName)) ?? ""
+            ?? (try? s.decode(String.self, forKey: .setName))
+            ?? (try? w.decode(String.self, forKey: .product)) ?? ""
         self.parallel = (try? c.decode(String.self, forKey: .parallel))
             ?? (try? s.decode(String.self, forKey: .parallel)) ?? ""
-        self.grade = (try? c.decode(String.self, forKey: .grade))
-            ?? (try? s.decode(String.self, forKey: .grade)) ?? ""
-        self.gradeCompany = (try? c.decode(String.self, forKey: .gradeCompany))
+        // Backend doesn't emit a composed grade label — the wire carries
+        // gradeCompany + gradeValue separately. Compose "PSA 10" / "BGS 9.5"
+        // when no composed grade is present so the display row isn't blank.
+        let decodedGradeCompany = (try? c.decode(String.self, forKey: .gradeCompany))
             ?? (try? s.decode(String.self, forKey: .gradeCompany))
-        self.gradeValue = (try? c.decode(Double.self, forKey: .gradeValue))
+        let decodedGradeValue = (try? c.decode(Double.self, forKey: .gradeValue))
             ?? (try? s.decode(Double.self, forKey: .gradeValue))
+        let decodedGradeString = (try? c.decode(String.self, forKey: .grade))
+            ?? (try? s.decode(String.self, forKey: .grade))
+        if let g = decodedGradeString, g.isEmpty == false {
+            self.grade = g
+        } else {
+            let valueText = decodedGradeValue.map { String(format: $0.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.1f", $0) }
+            let parts = [decodedGradeCompany, valueText].compactMap { $0?.isEmpty == false ? $0 : nil }
+            self.grade = parts.joined(separator: " ")
+        }
+        self.gradeCompany = decodedGradeCompany
+        self.gradeValue = decodedGradeValue
+        // WIRE: backend can emit purchaseDate as string OR number (ms or s
+        // since epoch). String wins; otherwise coerce the number → ISO 8601.
         self.purchaseDate = (try? c.decode(String.self, forKey: .purchaseDate))
             ?? (try? s.decode(String.self, forKey: .purchaseDate))
+            ?? {
+                let n = (try? c.decode(Double.self, forKey: .purchaseDate))
+                    ?? (try? s.decode(Double.self, forKey: .purchaseDate))
+                guard let n else { return nil }
+                let secs = n > 1e11 ? n / 1000 : n   // > 10^11 → milliseconds
+                return ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: secs))
+            }()
+        // WIRE: backend emits `purchaseSource`, not `purchasePlatform`.
         self.purchasePlatform = (try? c.decode(String.self, forKey: .purchasePlatform))
             ?? (try? s.decode(String.self, forKey: .purchasePlatform))
+            ?? (try? w.decode(String.self, forKey: .purchaseSource))
         self.quantity = (try? c.decode(Double.self, forKey: .quantity))
             ?? (try? s.decode(Double.self, forKey: .quantity))
         self.notes = (try? c.decode(String.self, forKey: .notes))
             ?? (try? s.decode(String.self, forKey: .notes))
+        // Decode photos first so the image URL fallbacks can pull from it.
+        let decodedPhotos = (try? c.decode([String].self, forKey: .photos))
+            ?? (try? s.decode([String].self, forKey: .photos))
+        // WIRE: backend doesn't emit imageFrontUrl / imageBackUrl —
+        // photos[0] / photos[1] are the only image sources on the holdings
+        // list response.
         self.imageFrontUrl = (try? c.decode(String.self, forKey: .imageFrontUrl))
             ?? (try? s.decode(String.self, forKey: .imageFrontUrl))
+            ?? decodedPhotos?.first
         self.imageBackUrl = (try? c.decode(String.self, forKey: .imageBackUrl))
             ?? (try? s.decode(String.self, forKey: .imageBackUrl))
+            ?? decodedPhotos?.dropFirst().first
         self.lowValue = (try? c.decode(Double.self, forKey: .lowValue))
             ?? (try? s.decode(Double.self, forKey: .lowValue))
             ?? (try? b.decode(Double.self, forKey: .quickSaleValue))
@@ -1704,8 +1781,7 @@ extension InventoryCard {
             ?? (try? b.decode(String.self, forKey: .freshnessStatus))
         self.isAuto = (try? c.decode(Bool.self, forKey: .isAuto))
             ?? (try? s.decode(Bool.self, forKey: .isAuto)) ?? false
-        self.photos = (try? c.decode([String].self, forKey: .photos))
-            ?? (try? s.decode([String].self, forKey: .photos))
+        self.photos = decodedPhotos
         self.clientId = (try? c.decode(String.self, forKey: .clientId))
             ?? (try? s.decode(String.self, forKey: .clientId))
         self.predictedPrice = (try? c.decode(Double.self, forKey: .predictedPrice))
@@ -3288,5 +3364,29 @@ extension Double {
     var portfolioSignedCurrencyString: String {
         let amount = currencyString
         return self >= 0 ? "+\(amount)" : "-\(amount)"
+    }
+}
+
+extension UUID {
+    /// Deterministic UUID derived from an arbitrary string. UUID(uuidString:)
+    /// is tried first; otherwise SHA-256 of the UTF-8 bytes produces a stable
+    /// 16-byte UUID with version/variant bits set per RFC 4122 §4.1.3 / §4.1.1.
+    ///
+    /// Used by InventoryCard's decoder so that backend holding ids that are
+    /// not formatted as UUIDs ("h_abc123") still produce stable Swift UUIDs
+    /// across refreshes. Without this, the prior `UUID()` fallback regenerated
+    /// a fresh random UUID on every fetch — ForEach diffing thrashed and
+    /// sheet / selection state was lost after each pull-to-refresh.
+    nonisolated static func deterministic(from string: String) -> UUID {
+        if let parsed = UUID(uuidString: string) { return parsed }
+        var bytes = Array(SHA256.hash(data: Data(string.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x50   // version 5 (name-based)
+        bytes[8] = (bytes[8] & 0x3F) | 0x80   // variant 10
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
