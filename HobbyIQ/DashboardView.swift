@@ -158,9 +158,11 @@ struct DashboardView: View {
         }
         .navigationDestination(isPresented: $navigateToCompIQSearch) {
             CompIQVariantPickerView(initialQuery: searchQuery.trimmingCharacters(in: .whitespacesAndNewlines))
+                .environmentObject(sessionViewModel)
         }
         .navigationDestination(isPresented: $navigateToCertResolve) {
             CertResolveView(input: certResolveInput)
+                .environmentObject(sessionViewModel)
         }
     }
 

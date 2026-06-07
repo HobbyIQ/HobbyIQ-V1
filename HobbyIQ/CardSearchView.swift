@@ -13,6 +13,11 @@ struct CardSearchView: View {
     @State private var detectedMode: String?
     @State private var errorMessage: String?
     @FocusState private var isSearchFocused: Bool
+    /// Held so the EO chain reaches the pushed CertResolveView →
+    /// CompIQPricedCardView destination. The shell's multi-NavigationStack
+    /// ZStack can drop EO propagation under navigationDestination /
+    /// NavigationLink pushes when no intermediate view holds the reference.
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -95,6 +100,7 @@ struct CardSearchView: View {
             ForEach(candidates, id: \.stableId) { candidate in
                 NavigationLink {
                     CertResolveView(candidate: candidate)
+                        .environmentObject(sessionViewModel)
                 } label: {
                     candidateCard(candidate)
                 }

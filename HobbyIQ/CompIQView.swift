@@ -57,12 +57,14 @@ struct CompIQView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .navigationDestination(isPresented: $navigateToVariants) {
             CompIQVariantPickerView(initialQuery: searchText.trimmingCharacters(in: .whitespacesAndNewlines))
+                .environmentObject(sessionViewModel)
         }
         .navigationDestination(isPresented: $navigateToMarketTrends) {
             MarketTrendView()
         }
         .navigationDestination(isPresented: $navigateToCardSearch) {
             CardSearchView()
+                .environmentObject(sessionViewModel)
         }
         .sheet(isPresented: $showBulkEstimate) {
             BulkEstimateView()
