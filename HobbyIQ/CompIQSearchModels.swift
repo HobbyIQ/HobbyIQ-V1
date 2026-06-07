@@ -11,6 +11,15 @@ struct CompIQVariantSearchRequest: Codable {
     let query: String
 }
 
+/// One element of the `parallels[]` array on a Cardsight-source candidate.
+/// Backend `CardsightParallel` shape (services/compiq/cardsight.client.ts):
+///   { id: string, name: string, numberedTo?: number }
+struct CompIQCardsightParallel: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let numberedTo: Int?
+}
+
 struct CompIQVariantHit: Codable, Identifiable, Hashable {
     let cardsightCardId: String
     let player: String?
@@ -22,6 +31,22 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     let displayLabel: String?
     let imageUrl: String?
 
+    // CF-VARIANT-PICKER-RICH (2026-06-07): full CardIdentity disambiguators
+    // so the row can surface every signal the candidate carries.
+    let brand: String?
+    let variation: String?
+    let isAuto: Bool
+    let serialNumber: String?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let grade: String?
+    let certNumber: String?
+    let source: String?
+    let attribution: String?
+    let confidence: Double?
+    let attributes: [String]?
+    let parallels: [CompIQCardsightParallel]?
+
     var id: String { cardsightCardId }
 
     var resolvedLabel: String {
@@ -29,6 +54,48 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         if let title, title.isEmpty == false { return title }
         let parts = [set, player, number, variant].compactMap { $0 }
         return parts.isEmpty ? cardsightCardId : parts.joined(separator: " ")
+    }
+
+    /// Bucketed confidence used by the footnote dot. `attribution == "authoritative"`
+    /// (cert candidates) force High regardless of the numeric value — those
+    /// identities are confirmed by the grader, not relevance-ranked.
+    enum ConfidenceLevel { case high, medium, low }
+
+    var confidenceLevel: ConfidenceLevel? {
+        if attribution?.lowercased() == "authoritative" { return .high }
+        guard let confidence else { return nil }
+        if confidence >= 0.8 { return .high }
+        if confidence >= 0.5 { return .medium }
+        return .low
+    }
+
+    /// Friendly source label for the footnote (`"PSA cert"`, `"Cardsight catalog"`).
+    var sourceLabel: String? {
+        guard let source else { return nil }
+        switch source {
+        case "psa-cert":          return "PSA cert"
+        case "bgs-cert":          return "BGS cert"
+        case "sgc-cert":          return "SGC cert"
+        case "cgc-cert":          return "CGC cert"
+        case "cardsight-catalog": return "Cardsight catalog"
+        default:                  return source
+        }
+    }
+
+    /// Composed display grade label. Prefer the backend's pre-composed `grade`
+    /// string; otherwise compose from `{gradeCompany} {gradeValue}`. Returns
+    /// nil only when there's nothing to show.
+    var gradeDisplay: String? {
+        if let grade, grade.isEmpty == false { return grade }
+        let company = gradeCompany?.trimmingCharacters(in: .whitespaces)
+        let value = gradeValue.map { v -> String in
+            // Drop trailing ".0" so "PSA 10" doesn't render as "PSA 10.0".
+            v.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", v)
+                : String(format: "%.1f", v)
+        }
+        let parts = [company, value].compactMap { $0?.isEmpty == false ? $0 : nil }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     init(from decoder: Decoder) throws {
@@ -51,21 +118,46 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         title = try? container.decodeIfPresent(String.self, forKey: .title)
         displayLabel = try? container.decodeIfPresent(String.self, forKey: .displayLabel)
         imageUrl = try? container.decodeIfPresent(String.self, forKey: .imageUrl)
+        brand = try? container.decodeIfPresent(String.self, forKey: .brand)
+        variation = try? container.decodeIfPresent(String.self, forKey: .variation)
+        // Backend's CardIdentity declares isAuto as required boolean. Default
+        // to false on a missing/null value (legacy / lossy rows).
+        isAuto = (try? container.decodeIfPresent(Bool.self, forKey: .isAuto)) ?? false
+        serialNumber = try? container.decodeIfPresent(String.self, forKey: .serialNumber)
+        gradeCompany = try? container.decodeIfPresent(String.self, forKey: .gradeCompany)
+        gradeValue = try? container.decodeIfPresent(Double.self, forKey: .gradeValue)
+        grade = try? container.decodeIfPresent(String.self, forKey: .grade)
+        certNumber = try? container.decodeIfPresent(String.self, forKey: .certNumber)
+        source = try? container.decodeIfPresent(String.self, forKey: .source)
+        attribution = try? container.decodeIfPresent(String.self, forKey: .attribution)
+        confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
+        attributes = try? container.decodeIfPresent([String].self, forKey: .attributes)
+        parallels = try? container.decodeIfPresent([CompIQCardsightParallel].self, forKey: .parallels)
     }
 
     // Backend CardIdentity (cardIdentity.ts) field names:
-    //   candidateId, player, year, setName, cardNumber, parallel, title, imageUrl
-    // There is no displayLabel on the wire; the computed `resolvedLabel`
+    //   candidateId, source, attribution, confidence,
+    //   player, year, brand, setName, cardNumber, parallel, variation,
+    //   isAuto, serialNumber,
+    //   grade, gradeCompany, gradeValue, certNumber,
+    //   title, imageUrl,
+    //   parallels[], attributes[].
+    // There is no `displayLabel` on the wire; the computed `resolvedLabel`
     // falls back to title + parts when displayLabel is nil.
     private enum CodingKeys: String, CodingKey {
         case cardsightCardId = "candidateId"
-        case player, year
+        case player, year, brand
         case set = "setName"
         case number = "cardNumber"
         case variant = "parallel"
+        case variation
+        case isAuto, serialNumber
+        case grade, gradeCompany, gradeValue, certNumber
+        case source, attribution, confidence
         case title
         case displayLabel
         case imageUrl
+        case attributes, parallels
     }
 
     init(
@@ -77,7 +169,20 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         variant: String? = nil,
         title: String? = nil,
         displayLabel: String? = nil,
-        imageUrl: String? = nil
+        imageUrl: String? = nil,
+        brand: String? = nil,
+        variation: String? = nil,
+        isAuto: Bool = false,
+        serialNumber: String? = nil,
+        gradeCompany: String? = nil,
+        gradeValue: Double? = nil,
+        grade: String? = nil,
+        certNumber: String? = nil,
+        source: String? = nil,
+        attribution: String? = nil,
+        confidence: Double? = nil,
+        attributes: [String]? = nil,
+        parallels: [CompIQCardsightParallel]? = nil
     ) {
         self.cardsightCardId = cardsightCardId
         self.player = player
@@ -88,6 +193,19 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         self.title = title
         self.displayLabel = displayLabel
         self.imageUrl = imageUrl
+        self.brand = brand
+        self.variation = variation
+        self.isAuto = isAuto
+        self.serialNumber = serialNumber
+        self.gradeCompany = gradeCompany
+        self.gradeValue = gradeValue
+        self.grade = grade
+        self.certNumber = certNumber
+        self.source = source
+        self.attribution = attribution
+        self.confidence = confidence
+        self.attributes = attributes
+        self.parallels = parallels
     }
 
     init(from holding: InventoryCard) {
@@ -100,6 +218,19 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         self.title = holding.cardName
         self.displayLabel = holding.cardName
         self.imageUrl = holding.imageFrontUrl
+        self.brand = nil
+        self.variation = nil
+        self.isAuto = holding.isAuto
+        self.serialNumber = nil
+        self.gradeCompany = holding.gradeCompany
+        self.gradeValue = holding.gradeValue
+        self.grade = holding.grade.isEmpty ? nil : holding.grade
+        self.certNumber = nil
+        self.source = nil
+        self.attribution = nil
+        self.confidence = nil
+        self.attributes = nil
+        self.parallels = nil
     }
 }
 

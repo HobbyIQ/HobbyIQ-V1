@@ -1772,11 +1772,32 @@ private extension View {
 
 private extension CompIQVariantHit {
     static var previewHit: CompIQVariantHit {
-        // Wire-shape per b540f53: CompIQVariantHit decodes the dispatcher's
-        // CardIdentity keys (candidateId / setName / cardNumber / parallel /
-        // imageUrl). The init also strips a "cardsight:" prefix from
-        // candidateId to produce the bare UUID used by /price-by-id.
-        let json = #"{"candidateId":"cardsight:preview-1","player":"Caleb Bonemer","setName":"2024 Bowman Draft","cardNumber":"BD-31","parallel":"Sky Blue","displayLabel":"2024 Bowman Draft Baseball Caleb Bonemer BD-31 Sky Blue"}"#
+        // Wire-shape per b540f53 + CF-VARIANT-PICKER-RICH (2026-06-07):
+        // exercise the full disambiguator set so the preview canvas matches
+        // the production row layout (pills + footnote dot + expand details).
+        let json = #"""
+        {
+            "candidateId": "cardsight:preview-1",
+            "source": "cardsight-catalog",
+            "attribution": "ranked",
+            "confidence": 0.86,
+            "player": "Caleb Bonemer",
+            "brand": "Bowman",
+            "setName": "2024 Bowman Draft",
+            "cardNumber": "BD-31",
+            "parallel": "Sky Blue",
+            "variation": "Refractor",
+            "isAuto": true,
+            "serialNumber": "/99",
+            "gradeCompany": "PSA",
+            "gradeValue": 10,
+            "title": "2024 Bowman Draft Caleb Bonemer BD-31 Sky Blue Refractor Auto",
+            "displayLabel": "2024 Bowman Draft Baseball Caleb Bonemer BD-31 Sky Blue",
+            "imageUrl": null,
+            "attributes": ["RC", "PROSPECT"],
+            "parallels": [{ "id": "p1", "name": "Sky Blue", "numberedTo": 99 }]
+        }
+        """#
         return try! JSONDecoder().decode(CompIQVariantHit.self, from: json.data(using: .utf8)!)
     }
 }
