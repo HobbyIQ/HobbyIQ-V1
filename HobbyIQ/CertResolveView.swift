@@ -32,6 +32,12 @@ struct CertResolveView: View {
 
     @State private var status: Status = .loading
     @Environment(\.dismiss) private var dismiss
+    /// Held explicitly so the EO chain doesn't drop when this view renders
+    /// CompIQPricedCardView (or CompIQVariantPickerView, then deeper) inside
+    /// a navigationDestination from DashboardView. In the multi-NavigationStack
+    /// ZStack shell, intermediate views that don't hold the EO can lose the
+    /// chain on push — re-injecting at every render site closes the gap.
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "cert-resolve")
 
@@ -60,8 +66,10 @@ struct CertResolveView: View {
                 loadingView
             case .routedToPriced(let hit, let grade):
                 CompIQPricedCardView(hit: hit, initialGrade: grade)
+                    .environmentObject(sessionViewModel)
             case .routedToPicker(let hits, let grade):
                 CompIQVariantPickerView(initialHits: hits, initialGrade: grade)
+                    .environmentObject(sessionViewModel)
             case .noMatch(let candidate, let query):
                 noMatchView(candidate: candidate, query: query)
             case .error(let message):

@@ -13,6 +13,11 @@ struct CompIQVariantPickerView: View {
     @State private var error: String?
     @State private var hasSearched = false
     @Environment(\.dismiss) private var dismiss
+    /// Held explicitly so the EO chain reaches the pushed CompIQPricedCardView.
+    /// Intermediate views that don't hold the EO can drop it on navigation
+    /// pushes in the shell's multi-NavigationStack ZStack — re-injecting on
+    /// the NavigationLink destination closes the gap.
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     /// Pre-selected grade carried into the pushed CompIQPricedCardView. Set by
     /// the cert resolve bridge so the comp lands grade-matched even after
@@ -187,6 +192,7 @@ struct CompIQVariantPickerView: View {
                     ForEach(hits) { hit in
                         NavigationLink {
                             CompIQPricedCardView(hit: hit, initialGrade: initialGrade)
+                                .environmentObject(sessionViewModel)
                         } label: {
                             variantRow(hit)
                         }
