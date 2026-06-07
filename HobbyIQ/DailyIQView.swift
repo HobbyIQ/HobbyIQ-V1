@@ -109,7 +109,7 @@ struct DailyIQView: View {
     }
 
     private var heroCard: some View {
-        VStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             // Title row with date picker
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -138,58 +138,18 @@ struct DailyIQView: View {
                     .clipShape(Capsule(style: .continuous))
             }
 
-            // Date display
-            HStack(spacing: 12) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-
-                Text(service.brief?.date ?? selectedDate.formatted(date: .abbreviated, time: .omitted))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                Spacer()
-
-                // Stats summary
-                HStack(spacing: 16) {
-                    VStack(spacing: 2) {
-                        Text("\(milbPlayers.count)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        Text("MiLB")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-
-                    VStack(spacing: 2) {
-                        Text("\(mlbPlayers.count)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        Text("MLB")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-
-                    VStack(spacing: 2) {
-                        Text("\(trackedWatchlist.count)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
-                        Text("Watch")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                }
-            }
-            .padding(10)
-            .background(Color.white.opacity(0.03))
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+            // Single calm count line — replaces the bordered sub-card with
+            // big colored zeros AND the redundant second date display.
+            Text("\(milbPlayers.count) MiLB · \(mlbPlayers.count) MLB · \(trackedWatchlist.count) watching")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
         .padding(HobbyIQTheme.Spacing.medium)
         .padding(.vertical, 4)
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
@@ -222,15 +182,13 @@ struct DailyIQView: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             Capsule(style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(Capsule(style: .continuous))
     }
 
     private var watchlistCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            dailySectionHeader("WATCHLIST")
-
             // Search + Add bar
             HStack(spacing: 10) {
                 HobbyIQSearchField(text: $watchlistQuery, placeholder: "Search player and add to watchlist...")
@@ -260,7 +218,7 @@ struct DailyIQView: View {
             .background(HobbyIQTheme.Colors.cardNavy)
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
 
@@ -383,7 +341,7 @@ struct DailyIQView: View {
                         .background(HobbyIQTheme.Colors.cardNavy)
                         .overlay(
                             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
                     }
@@ -418,31 +376,21 @@ struct DailyIQView: View {
         }
     }
 
-    private func dailySectionHeader(_ title: String) -> some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
-
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.2)
-                .fixedSize()
-
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                .frame(height: 1)
-        }
-    }
-
     private func backendPlayersCard(
         title: String,
         subtitle: String,
         players: [DailyPlayerStat]
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            dailySectionHeader(title.uppercased())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if service.isLoading && players.isEmpty {
                 VStack(spacing: 10) {
@@ -488,8 +436,6 @@ struct DailyIQView: View {
 
     private var briefCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            dailySectionHeader("DAILY BRIEF")
-
             if isLoadingBrief {
                 HStack(spacing: 10) {
                     ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
@@ -520,9 +466,9 @@ struct DailyIQView: View {
                     }
                 }
 
-                briefMoverSection(title: "RISERS", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
-                briefMoverSection(title: "FALLERS", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
-                briefMoverSection(title: "BREAKOUTS", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
+                briefMoverSection(title: "Risers", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
+                briefMoverSection(title: "Fallers", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
+                briefMoverSection(title: "Breakouts", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "newspaper")
@@ -548,9 +494,8 @@ struct DailyIQView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(color)
                         Text(title)
-                            .font(.caption.weight(.bold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .tracking(1.0)
                         Spacer()
                         Text("\(movers.count)")
                             .font(.caption2.weight(.bold))
@@ -839,6 +784,22 @@ struct DailyIQView: View {
     }
 }
 
+private func dailySectionHeader(_ title: String) -> some View {
+    HStack(spacing: 10) {
+        Rectangle()
+            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+            .frame(height: 1)
+        Text(title)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .tracking(1.2)
+            .fixedSize()
+        Rectangle()
+            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+            .frame(height: 1)
+    }
+}
+
 private struct DailyPlayerRoleSection: View {
     let title: String
     let players: [DailyPlayerStat]
@@ -988,7 +949,7 @@ private struct DailyPlayerStatRow: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
@@ -1084,7 +1045,7 @@ private struct DailyWatchlistRow: View {
         .background(HobbyIQTheme.Colors.cardNavy)
         .overlay(
             RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }

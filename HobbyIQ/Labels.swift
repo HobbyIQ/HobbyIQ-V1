@@ -76,15 +76,15 @@ enum Labels {
     // MARK: - Section Headers
 
     static var topMovers: String {
-        tier == .young ? "BIGGEST CHANGES" : "TOP MOVERS"
+        tier == .young ? "Biggest changes" : "Top movers"
     }
 
     static var priorityActions: String {
-        tier == .young ? "THINGS TO DO" : "PRIORITY ACTIONS"
+        tier == .young ? "Things to do" : "Priority actions"
     }
 
     static var performance: String {
-        tier == .young ? "HOW YOU'RE DOING" : "PERFORMANCE"
+        tier == .young ? "How you're doing" : "Performance"
     }
 
     // MARK: - Portfolio / Collection
