@@ -1525,7 +1525,11 @@ private extension View {
 
 private extension CompIQVariantHit {
     static var previewHit: CompIQVariantHit {
-        let json = #"{"card_id":"preview-1","player":"Caleb Bonemer","set":"2024 Bowman Draft","card_number":"BD-31","variant":"Sky Blue","displayLabel":"2024 Bowman Draft Baseball Caleb Bonemer BD-31 Sky Blue"}"#
+        // Wire-shape per b540f53: CompIQVariantHit decodes the dispatcher's
+        // CardIdentity keys (candidateId / setName / cardNumber / parallel /
+        // imageUrl). The init also strips a "cardsight:" prefix from
+        // candidateId to produce the bare UUID used by /price-by-id.
+        let json = #"{"candidateId":"cardsight:preview-1","player":"Caleb Bonemer","setName":"2024 Bowman Draft","cardNumber":"BD-31","parallel":"Sky Blue","displayLabel":"2024 Bowman Draft Baseball Caleb Bonemer BD-31 Sky Blue"}"#
         return try! JSONDecoder().decode(CompIQVariantHit.self, from: json.data(using: .utf8)!)
     }
 }
