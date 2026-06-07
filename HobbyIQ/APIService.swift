@@ -426,19 +426,8 @@ struct APIService {
     func fetchDailyBrief(userId _: String, date: String? = nil) async throws -> DailyIQResponse {
         let queryItems = date.map { [URLQueryItem(name: "date", value: $0)] } ?? []
         let data = try await fetchData(path: "/api/dailyiq/", queryItems: queryItems)
-
-        if let backend = try? decoder.decode(DailyIQBackendBriefResponse.self, from: data) {
-            return backend.asAppResponse(dateFallback: date)
-        }
-
-        if let direct = try? decoder.decode(DailyIQResponse.self, from: data) {
-            return direct
-        }
-
-        throw APIServiceError.decodingFailed(DecodingError.dataCorrupted(.init(
-            codingPath: [],
-            debugDescription: "Unexpected DailyIQ brief payload"
-        )))
+        let backend = try decoder.decode(DailyIQBackendBriefResponse.self, from: data)
+        return backend.asAppResponse(dateFallback: date)
     }
 
     func fetchDailyTopMLBPlayers(date: String? = nil) async throws -> [DailyPlayerStat] {
@@ -1184,7 +1173,10 @@ struct APIService {
         let pitchingHitsAllowed = backend.pitchingHitsAllowed ?? daily.pitchingHitsAllowed ?? daily.hitsAllowed
         let pitchingWalksAllowed = backend.pitchingWalksAllowed ?? daily.pitchingWalksAllowed
         let pitchingStrikeouts = backend.pitchingStrikeouts ?? daily.pitchingStrikeouts
-        let resolvedEra = backend.era ?? Double(season.era ?? "") ?? (isPitcher ? Self.derivePitchingEra(inningsPitched: pitchingInningsPitched, earnedRuns: pitchingEarnedRuns) : nil)
+        // Wire-typed era is String ("1.98"); parse to Double, else fall back to season-string-era, else derive from IP+ER.
+        let resolvedEra = backend.era.flatMap(Double.init)
+            ?? Double(season.era ?? "")
+            ?? (isPitcher ? Self.derivePitchingEra(inningsPitched: pitchingInningsPitched, earnedRuns: pitchingEarnedRuns) : nil)
         let statLine = isPitcher
             ? [
                 pitchingInningsPitched.map { "IP \($0)" },
@@ -1265,7 +1257,9 @@ struct APIService {
             isProspect: backend.league.uppercased() == "MILB",
             buySignal: backend.rankingScore >= 80 || backend.rank <= 10,
             isOnWatchlist: backend.isOnWatchlist ?? false,
-            fantasyPoints: backend.fantasyPoints,
+            // Wire-typed fantasyPoints is Double; round to Int for the existing
+            // DailyPlayerStat model contract (UI never reads precision below 1).
+            fantasyPoints: backend.fantasyPoints.map { Int($0.rounded()) },
             dailyScore: backend.dailyScore,
             playerIQScore: backend.playerIQScore,
             playerIQDirection: backend.playerIQDirection,
@@ -1773,6 +1767,69 @@ private struct DailyIQBackendBriefResponse: Decodable {
     let mlb: [DailyIQBackendPlayerResponse]
     let milb: [DailyIQBackendPlayerResponse]
     let byLevel: [String: [DailyIQBackendPlayerResponse]]?
+    let risers: [DailyIQBackendPlayerResponse]?
+    let fallers: [DailyIQBackendPlayerResponse]?
+    let breakouts: [DailyIQBackendPlayerResponse]?
+
+    private enum CodingKeys: String, CodingKey {
+        case date, generatedAt, lastUpdated, mlb, milb, byLevel
+        case risers, fallers, breakouts
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.date = try container.decode(String.self, forKey: .date)
+        self.generatedAt = try? container.decodeIfPresent(String.self, forKey: .generatedAt)
+        self.lastUpdated = try? container.decodeIfPresent(String.self, forKey: .lastUpdated)
+        // LOSSY: a 50+ player live-stats feed will hit messy rows; one bad
+        // row must not blank the whole feed. Decode each element through
+        // LossyArray which skips undecodable entries instead of aborting
+        // the whole array.
+        self.mlb = (try? container.decode(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .mlb).elements) ?? []
+        self.milb = (try? container.decode(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .milb).elements) ?? []
+        self.risers = (try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .risers))?.elements
+        self.fallers = (try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .fallers))?.elements
+        self.breakouts = (try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .breakouts))?.elements
+        if let map = try? container.decodeIfPresent([String: LossyArray<DailyIQBackendPlayerResponse>].self, forKey: .byLevel) {
+            self.byLevel = map.mapValues { $0.elements }
+        } else {
+            self.byLevel = nil
+        }
+    }
+}
+
+/// Decodes a JSON array element-by-element, silently dropping entries that
+/// fail to decode. Used by the DailyIQ brief so a single malformed player
+/// row can't blank the whole feed.
+private struct LossyArray<Element: Decodable>: Decodable {
+    let elements: [Element]
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        var result: [Element] = []
+        result.reserveCapacity(container.count ?? 0)
+        while !container.isAtEnd {
+            do {
+                let element = try container.decode(Element.self)
+                result.append(element)
+            } catch {
+                // The unkeyed container does NOT advance on a thrown decode,
+                // so consume the slot with an always-accepting throwaway so
+                // the iterator moves on. Guard against the throwaway also
+                // failing (e.g. truncated JSON) to avoid an infinite loop.
+                do {
+                    _ = try container.decode(LossySkip.self)
+                } catch {
+                    break
+                }
+            }
+        }
+        self.elements = result
+    }
+
+    private struct LossySkip: Decodable {
+        init(from decoder: Decoder) throws {}
+    }
 }
 
 private struct DailyIQBackendPlayerListEnvelope: Decodable {
@@ -1854,8 +1911,9 @@ private struct DailyIQBackendPlayerResponse: Decodable {
     let teamName: String
     let teamAbbreviation: String
     let position: String
-    // Legacy top-level pitching fields (removed from production, kept optional for cached responses)
-    let era: Double?
+    // Legacy top-level pitching fields (removed from production, kept optional for cached responses).
+    // Wire emits era as a STRING ("1.98"), not a Double — was the prime decode killer on every pitcher row.
+    let era: String?
     let pitchingInningsPitched: String?
     let pitchingEarnedRuns: Int?
     let pitchingHitsAllowed: Int?
@@ -1865,8 +1923,10 @@ private struct DailyIQBackendPlayerResponse: Decodable {
     let seasonStats: DailyIQBackendSeasonStats
     let lastUpdated: String
     let isOnWatchlist: Bool?
-    // New fields from production response
-    let fantasyPoints: Int?
+    // New fields from production response. fantasyPoints is Double on the
+    // wire (37.6 alongside integer rows) — was Int? and threw on every
+    // fractional row.
+    let fantasyPoints: Double?
     let dailyScore: Double?
     let playerIQScore: Int?
     let playerIQDirection: String?
