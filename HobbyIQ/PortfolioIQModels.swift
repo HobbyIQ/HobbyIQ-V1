@@ -435,19 +435,39 @@ extension InventoryCard {
         return !movementIsExpired
     }
 
+    /// Direction label always shown when a direction is set. Adds the
+    /// `(predicted − FMV) / FMV` percent when both are stamped. With
+    /// `movementImpliedPct` pruned from the holdings wire, the wire
+    /// percent is no longer available — but the predicted-vs-FMV gap
+    /// gives the same forward-looking signal from fields we DO have.
+    /// Never returns a blank chip while `shouldShowMovementChip` is true.
     var movementChipText: String? {
-        guard shouldShowMovementChip, let pct = movementImpliedPct else { return nil }
-        let arrow = movementDirection == "up" ? "\u{25B2}" : "\u{25BC}"
-        return "\(arrow) \(String(format: "%+.1f%%", pct))"
+        guard shouldShowMovementChip, let direction = movementDirection else { return nil }
+        let label = direction == "up" ? "Trending up" : "Trending down"
+        if let predicted = predictedPrice, let fmv = fairMarketValue, fmv > 0 {
+            let pct = ((predicted - fmv) / fmv) * 100
+            return "\(label) \(String(format: "%+.1f%%", pct))"
+        }
+        return label
     }
 
     var movementChipColor: Color {
         movementDirection == "up" ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
     }
 
+    /// Movement magnitude used by the top-movers sort. With
+    /// `movementImpliedPct` pruned from the wire, derive the gap
+    /// from `predictedPrice − fairMarketValue` × quantity when both
+    /// are stamped. Fall back to lifetime P&L (`currentValue − cost`)
+    /// so the sort never degenerates to all-zero ties for cards
+    /// without predictions. The primary key remains the forward
+    /// predicted-vs-FMV move; lifetime P&L is the safety net only.
     var dollarImpact: Double {
-        guard let pct = movementImpliedPct else { return 0 }
-        return currentValue * (pct / 100)
+        let qty = max(1.0, quantity ?? 1.0)
+        if let predicted = predictedPrice, let fmv = fairMarketValue {
+            return (predicted - fmv) * qty
+        }
+        return currentValue - cost
     }
 
     var predictedPriceFormatted: String? {

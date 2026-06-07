@@ -102,18 +102,33 @@ final class PortfolioIQViewModel: ObservableObject {
         return (rising, falling, stable)
     }
 
-    var portfolioComposite: Double {
-        let pairs = inventoryCards.compactMap { card -> (Double, Double)? in
-            guard let composite = card.movementComposite else { return nil }
-            return (composite, card.currentValue)
+    /// Portfolio-level forward-movement percentage, value-weighted by FMV.
+    ///
+    ///   portfolioImpliedPct = Σ(predictedPrice − fairMarketValue) / Σ(fairMarketValue) × 100
+    ///
+    /// Reads only wire-available fields (`predictedPrice`, `fairMarketValue`)
+    /// — the prior `movementComposite` read returned nil now that the field
+    /// is pruned from the holdings wire (CF-PORTFOLIOHOLDING-FIELD-PRUNE
+    /// Phase B). When no card has both fields stamped, returns 0 ("Holding
+    /// steady" — honest pre-launch state, not a fake number).
+    var portfolioImpliedPct: Double {
+        let pairs = inventoryCards.compactMap { card -> (gap: Double, fmv: Double)? in
+            guard let predicted = card.predictedPrice,
+                  let fmv = card.fairMarketValue,
+                  fmv > 0 else { return nil }
+            return (predicted - fmv, fmv)
         }
-        let totalValue = pairs.reduce(0) { $0 + $1.1 }
-        guard totalValue > 0 else { return 1.0 }
-        return pairs.reduce(0) { $0 + $1.0 * $1.1 } / totalValue
+        let totalFmv = pairs.reduce(0) { $0 + $1.fmv }
+        guard totalFmv > 0 else { return 0 }
+        let totalGap = pairs.reduce(0) { $0 + $1.gap }
+        return (totalGap / totalFmv) * 100
     }
 
-    var portfolioImpliedPct: Double {
-        (portfolioComposite - 1.0) * 100
+    /// Multiplicative composite derived from `portfolioImpliedPct` so any
+    /// remaining callers that read this property continue to compile.
+    /// `1.0` means flat — matches the prior contract.
+    var portfolioComposite: Double {
+        1.0 + portfolioImpliedPct / 100
     }
 
     private func recomputeCachedProperties() {
@@ -174,7 +189,12 @@ final class PortfolioIQViewModel: ObservableObject {
         if hasMovementSignals {
             let rising = activeCards
                 .filter { $0.movementDirection == "up" && !$0.movementIsExpired }
-                .filter { qualityCoverages.contains($0.movementCoverage ?? "") }
+                // Coverage was pruned from the holdings wire per
+                // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B (composite,
+                // impliedPct, coverage are estimate-only now). Treat nil
+                // / empty coverage as quality-OK so the filter still
+                // works if coverage ever returns to the wire.
+                .filter { hasQualityCoverage($0.movementCoverage, quality: qualityCoverages) }
                 .sorted { $0.dollarImpact > $1.dollarImpact }
                 .prefix(3)
                 .map { card in
@@ -196,7 +216,7 @@ final class PortfolioIQViewModel: ObservableObject {
 
             let falling = activeCards
                 .filter { $0.movementDirection == "down" && !$0.movementIsExpired }
-                .filter { qualityCoverages.contains($0.movementCoverage ?? "") }
+                .filter { hasQualityCoverage($0.movementCoverage, quality: qualityCoverages) }
                 .sorted { $0.dollarImpact < $1.dollarImpact }
                 .prefix(3)
                 .map { card in
@@ -253,7 +273,16 @@ final class PortfolioIQViewModel: ObservableObject {
         }
     }
 
-
+    /// Permissive coverage check used by the top-movers filter. The
+    /// `movementCoverage` field was pruned from the holdings wire
+    /// (CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B) so nil / empty must
+    /// pass through; otherwise the filter rejects every card. If
+    /// coverage ever returns to the wire, the explicit allow-list
+    /// resumes filtering on the documented quality values.
+    private func hasQualityCoverage(_ coverage: String?, quality: Set<String>) -> Bool {
+        guard let coverage, coverage.isEmpty == false else { return true }
+        return quality.contains(coverage)
+    }
 
     var ledgerEntries: [PortfolioLedgerEntry] {
         if let api = apiLedgerEntries { return api }
