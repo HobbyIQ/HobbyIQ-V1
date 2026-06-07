@@ -500,11 +500,26 @@ extension WatchPlayerResult {
     }
 
     var primaryStatsLine: String {
-        roleKind == .pitcher ? pitchingStatsInlineLine : dailyStatsInlineLine
+        if hasNoGameToday { return noGameMessage ?? "No game today" }
+        return roleKind == .pitcher ? pitchingStatsInlineLine : dailyStatsInlineLine
     }
 
     var primaryStatChips: [String] {
-        roleKind == .pitcher ? pitchingStatChips : dailyStatChips
+        if hasNoGameToday { return [] }
+        return roleKind == .pitcher ? pitchingStatChips : dailyStatChips
+    }
+
+    /// True when today's response carries no actual gameplay (off-day, no-game,
+    /// or fresh-add zero-row). Lets the watchlist row show a clean "No game
+    /// today" message instead of a meaningless "AB 0 • R 0 • H 0 • …" string.
+    var hasNoGameToday: Bool {
+        let status = dailyStatsStatus.lowercased()
+        if status.contains("no-game") || status.contains("no game") { return true }
+        if played == false { return true }
+        // All counted stats zero AND opponent missing → backend off-day shape.
+        let countedZero = atBats == 0 && runs == 0 && hits == 0 && homeRuns == 0
+            && rbi == 0 && rbis == 0 && walks == 0 && strikeouts == 0 && stolenBases == 0
+        return countedZero && opponent.isEmpty
     }
 
     var dailyStatsInlineLine: String {

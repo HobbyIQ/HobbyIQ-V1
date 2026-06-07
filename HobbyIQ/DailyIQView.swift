@@ -328,7 +328,7 @@ struct DailyIQView: View {
                                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                             }
                             Button {
-                                Task { await addWatchlistEntry(from: sug.playerName) }
+                                Task { await addWatchlistEntry(from: sug) }
                             } label: {
                                 Image(systemName: "plus.circle")
                                     .font(.system(size: 16))
@@ -693,6 +693,31 @@ struct DailyIQView: View {
             userId: userId,
             playerId: query,
             playerName: query,
+            referenceDate: selectedDate
+        ) else {
+            return
+        }
+
+        syncWatchlistState(from: backendWatchlist)
+        watchlistQuery = ""
+        await refreshDailyIQ(for: selectedDate)
+    }
+
+    /// Add a watchlist entry from a backend-provided suggestion. The suggestion
+    /// carries a real `playerId` from the dispatcher so we pass it through —
+    /// the prior name-only path forced the backend into fuzzy-match-by-name,
+    /// which often failed (404) and made the save silently not stick.
+    private func addWatchlistEntry(from sug: WatchlistSuggestion) async {
+        isSyncingWatchlist = true
+        defer { isSyncingWatchlist = false }
+
+        guard let backendWatchlist = await service.addWatchlistEntry(
+            userId: userId,
+            playerId: sug.playerId ?? sug.playerName,
+            playerName: sug.playerName,
+            team: sug.teamName,
+            level: sug.level,
+            position: sug.position,
             referenceDate: selectedDate
         ) else {
             return
