@@ -12,6 +12,11 @@ struct CompIQVariantPickerView: View {
     @State private var isLoading = false
     @State private var error: String?
     @State private var hasSearched = false
+    /// In-flight search task so the user can cancel from the skeleton state
+    /// when the dispatcher takes longer than their patience (Cardsight
+    /// catalog enrichment can run several seconds for broad queries like
+    /// "Mike Trout"). Each new search supersedes the previous one.
+    @State private var searchTask: Task<Void, Never>?
     @Environment(\.dismiss) private var dismiss
     /// Held explicitly so the EO chain reaches the pushed CompIQPricedCardView.
     /// Intermediate views that don't hold the EO can drop it on navigation
@@ -80,8 +85,13 @@ struct CompIQVariantPickerView: View {
         .task {
             // Skip auto-load when initialHits were injected (cert resolve bridge).
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && hits.isEmpty {
-                await load()
+                startSearch()
             }
+        }
+        .onDisappear {
+            // Cancel any in-flight search so a backgrounded view doesn't keep
+            // chewing on a slow request that the user has already moved past.
+            searchTask?.cancel()
         }
     }
 
@@ -91,7 +101,7 @@ struct CompIQVariantPickerView: View {
         HStack(spacing: 10) {
             HobbyIQSearchField(text: $query, placeholder: "Search a card...")
                 .onSubmit {
-                    Task { await load() }
+                    startSearch()
                 }
 
             Button {
@@ -114,7 +124,7 @@ struct CompIQVariantPickerView: View {
         VStack(alignment: .leading, spacing: 14) {
             HobbyIQSearchField(text: $query, placeholder: "Search a card...")
                 .onSubmit {
-                    Task { await load() }
+                    startSearch()
                 }
 
             HIQPrimaryButton(title: "Search Variants", systemImage: "magnifyingglass") {
@@ -160,6 +170,16 @@ struct CompIQVariantPickerView: View {
                 ForEach(0..<4, id: \.self) { _ in
                     shimmerRow
                 }
+                Button {
+                    searchTask?.cancel()
+                } label: {
+                    Text("Cancel search")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Cancel the search")
             }
             .padding(HobbyIQTheme.Spacing.medium)
             .background(HobbyIQTheme.Colors.cardNavy)
@@ -288,6 +308,14 @@ struct CompIQVariantPickerView: View {
 
     // MARK: - Load
 
+    /// Cancel any in-flight search and start a fresh one. The single
+    /// `searchTask` slot ensures only one request is active at a time so
+    /// the skeleton state can be reliably cancelled from the UI.
+    private func startSearch() {
+        searchTask?.cancel()
+        searchTask = Task { await load() }
+    }
+
     private func load() async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else { return }
@@ -295,21 +323,28 @@ struct CompIQVariantPickerView: View {
         isLoading = true
         error = nil
         hasSearched = true
+        // Belt-and-suspenders: skeleton must clear even if the task is
+        // cancelled mid-flight (CancellationError propagates through
+        // `try await` and skips the trailing `isLoading = false`).
+        defer { isLoading = false }
 
         do {
             let newHits = try await CompIQSearchService.shared.searchVariants(query: trimmed)
+            try Task.checkCancellation()
             if newHits.isEmpty == false {
                 hits = newHits
             } else if hits.isEmpty {
                 hits = []
                 error = "No variants found for \"\(trimmed)\"."
             }
+        } catch is CancellationError {
+            // User cancelled — don't surface a stale network-error string.
+            // hits stays as-is so a prior result list (if any) keeps showing.
+            error = nil
         } catch {
             logger.error("search-list error: \(error.localizedDescription)")
             self.error = APIService.errorMessage(from: error)
         }
-
-        isLoading = false
     }
 }
 
