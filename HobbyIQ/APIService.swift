@@ -1799,8 +1799,13 @@ private struct DailyIQBackendBriefResponse: Decodable {
 }
 
 /// Decodes a JSON array element-by-element, silently dropping entries that
-/// fail to decode. Used by the DailyIQ brief so a single malformed player
-/// row can't blank the whole feed.
+/// fail to decode. Used by the DailyIQ brief / player-list / watchlist
+/// envelopes so a single malformed player row can't blank the whole feed.
+///
+/// In DEBUG builds, per-row failures print the underlying DecodingError
+/// (case + codingPath + details) so we can attribute remaining row
+/// drift without re-instrumenting the call sites. Release builds skip
+/// silently — no extra observability surface.
 private struct LossyArray<Element: Decodable>: Decodable {
     let elements: [Element]
 
@@ -1808,11 +1813,22 @@ private struct LossyArray<Element: Decodable>: Decodable {
         var container = try decoder.unkeyedContainer()
         var result: [Element] = []
         result.reserveCapacity(container.count ?? 0)
+        #if DEBUG
+        var droppedCount = 0
+        let elementName = String(describing: Element.self)
+        let startIndex = container.currentIndex
+        #endif
         while !container.isAtEnd {
             do {
                 let element = try container.decode(Element.self)
                 result.append(element)
             } catch {
+                #if DEBUG
+                let rowIndex = container.currentIndex - startIndex
+                let summary = LossyArray.summarize(error)
+                print("[LossyArray<\(elementName)>] dropped row[\(rowIndex)]: \(summary)")
+                droppedCount += 1
+                #endif
                 // The unkeyed container does NOT advance on a thrown decode,
                 // so consume the slot with an always-accepting throwaway so
                 // the iterator moves on. Guard against the throwaway also
@@ -1824,8 +1840,47 @@ private struct LossyArray<Element: Decodable>: Decodable {
                 }
             }
         }
+        #if DEBUG
+        if droppedCount > 0 {
+            print("[LossyArray<\(elementName)>] kept \(result.count) / dropped \(droppedCount)")
+        }
+        #endif
         self.elements = result
     }
+
+    #if DEBUG
+    private static func summarize(_ error: Error) -> String {
+        guard let decodingError = error as? DecodingError else {
+            return String(describing: error)
+        }
+        switch decodingError {
+        case let .keyNotFound(key, context):
+            return "keyNotFound(\"\(key.stringValue)\") at \(LossyArray.formatPath(context.codingPath + [key])) — \(context.debugDescription)"
+        case let .typeMismatch(type, context):
+            return "typeMismatch(\(type)) at \(LossyArray.formatPath(context.codingPath)) — \(context.debugDescription)"
+        case let .valueNotFound(type, context):
+            return "valueNotFound(\(type)) at \(LossyArray.formatPath(context.codingPath)) — \(context.debugDescription)"
+        case let .dataCorrupted(context):
+            return "dataCorrupted at \(LossyArray.formatPath(context.codingPath)) — \(context.debugDescription)"
+        @unknown default:
+            return String(describing: decodingError)
+        }
+    }
+
+    private static func formatPath(_ path: [CodingKey]) -> String {
+        guard !path.isEmpty else { return "<root>" }
+        var result = ""
+        for key in path {
+            if let i = key.intValue {
+                result += "[\(i)]"
+            } else {
+                if !result.isEmpty { result += "." }
+                result += key.stringValue
+            }
+        }
+        return result
+    }
+    #endif
 
     private struct LossySkip: Decodable {
         init(from decoder: Decoder) throws {}
@@ -1837,16 +1892,18 @@ private struct DailyIQBackendPlayerListEnvelope: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let candidates: [[DailyIQBackendPlayerResponse]?] = [
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .players),
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .items),
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .data),
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .results),
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .topMLB),
-            try container.decodeIfPresent([DailyIQBackendPlayerResponse].self, forKey: .topMiLB)
+        // LOSSY at each key probe: one bad row inside the array must not
+        // blank the whole 50-row feed (was strict-decoding to nil and
+        // falling through to the next key, ending in `players = []`).
+        let candidates: [LossyArray<DailyIQBackendPlayerResponse>?] = [
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .players),
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .items),
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .data),
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .results),
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .topMLB),
+            try? container.decodeIfPresent(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .topMiLB),
         ]
-
-        self.players = candidates.compactMap { $0 }.first ?? []
+        self.players = candidates.compactMap { $0?.elements }.first(where: { !$0.isEmpty }) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1869,10 +1926,12 @@ private struct DailyIQBackendWatchlistEnvelope: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        if let list = try? container.decode([DailyIQBackendPlayerResponse].self, forKey: .watchlist) {
-            self.watchlist = list
-        } else if let list = try? container.decode([DailyIQBackendPlayerResponse].self, forKey: .items) {
-            self.watchlist = list
+        // Lossy per element: one drift-bearing row must not blank the
+        // whole watchlist tab.
+        if let list = try? container.decode(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .watchlist) {
+            self.watchlist = list.elements
+        } else if let list = try? container.decode(LossyArray<DailyIQBackendPlayerResponse>.self, forKey: .items) {
+            self.watchlist = list.elements
         } else {
             self.watchlist = []
         }
