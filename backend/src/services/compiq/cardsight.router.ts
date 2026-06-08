@@ -209,27 +209,34 @@ async function findCompsViaCardsight(
     log.info("identity_source", {
       cardId: mapped.cardId,
       source: detailOk ? "getCardDetail" : (detail === null ? "degraded" : "not_found"),
+      // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): pricing fallback now
+      // reads from the actual wire shape — set.release is the product line
+      // (matches CardsightCardDetail.releaseName semantically). The legacy
+      // `pricing.card?.setName` read returned undefined on every call.
       set: detailOk
         ? detail!.releaseName
-        : (pricing.card?.setName ?? null),
-      year: detailOk ? detail!.year : (pricing.card?.year ?? null),
+        : (pricing.card?.set?.release ?? null),
+      year: detailOk ? detail!.year : (pricing.card?.set?.year ?? null),
     });
 
     const baseCard: RoutedCard = {
       card_id: mapped.cardId,
       title: pricing.card?.name ?? undefined,
-      // Defect #7 fix: Cardsight's pricing.card has no `player` field
-      // (player name lives in `name`). Fallback chain preserved through
-      // CF-CARDHEDGE-HARD-CUTOVER.
-      player: pricing.card?.player ?? pricing.card?.name ?? undefined,
-      // cardIdentity.set carries the PRODUCT LINE; Cardsight's `releaseName`
-      // is the product line; `setName` is the subset within a release.
+      // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): pricing.card has no
+      // `player` field — the player name lives in `.name`. The legacy
+      // `?? pricing.card?.player` read was always undefined. Map directly
+      // from `.name` now.
+      player: pricing.card?.name ?? undefined,
+      // cardIdentity.set carries the PRODUCT LINE. detail.releaseName is
+      // the product line; pricing.card.set.release is its pricing-wire
+      // analog. (set.name is the SUBSET — "Base Set" — which is NOT what
+      // this field carries.)
       set: detailOk
         ? detail!.releaseName
-        : (pricing.card?.setName ?? undefined),
+        : (pricing.card?.set?.release ?? undefined),
       year: detailOk
         ? detail!.year
-        : (pricing.card?.year ?? undefined),
+        : (pricing.card?.set?.year ?? undefined),
       number: pricing.card?.number ?? undefined,
       variant: mapped.parallelId ?? undefined,
     };

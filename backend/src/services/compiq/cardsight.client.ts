@@ -101,8 +101,35 @@ export interface CardsightGradedCompany {
   grades: CardsightGradedEntry[];
 }
 
+// CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): pricing endpoint's
+// embedded `card` object has a DIFFERENT shape than the catalog/detail
+// endpoints. Cardsight returns:
+//   { card_id, name, number, set: { set_id, name, year, release } }
+// — snake-case id, `name` is the player, `set` is a nested object with
+// `name`/`year`/`release`. The catalog/detail shape (CardsightCatalogResult)
+// uses `id`, `setName`, `releaseName`, top-level `year`, and an optional
+// top-level `player`. Conflating the two types caused fetchComps to read
+// fields that don't exist on the wire → null identity on EVERY pinned-id
+// price call. See CF-COMP-PAGE-RECON probe results 2026-06-07.
+//
+// All fields optional because: (a) Cardsight has been known to omit
+// fields on edge rows, and (b) the wire schema may drift again; the
+// consistency guard in fetchComps catches a missing/mismatched card_id
+// before the identity leaks downstream.
+export interface CardsightPricingCard {
+  card_id?: string;
+  name?: string;
+  number?: string;
+  set?: {
+    set_id?: string;
+    name?: string;
+    year?: string;
+    release?: string;
+  };
+}
+
 export interface CardsightPricingResponse {
-  card?: CardsightCatalogResult;
+  card?: CardsightPricingCard;
   raw: { count: number; records: CardsightSaleRecord[] };
   graded: CardsightGradedCompany[];
   meta: { total_records: number; last_sale_date: string | null };

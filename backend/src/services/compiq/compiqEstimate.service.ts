@@ -941,32 +941,79 @@ async function fetchComps(
   if (pinnedCardId && !hasMeaningfulQuery) {
     const pricing = await getPricing(pinnedCardId);
 
-    // Build identity from Cardsight catalog response when present;
-    // fall back to a stub when the cardId wasn't found.
+    // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): map identity from the
+    // pricing-card wire shape (card_id snake-case; name=player; nested
+    // `set.{name,year,release}`). The catalog/detail shape and the pricing
+    // shape are DIFFERENT — conflating them was the long-standing bug that
+    // produced null identity on every pinned-id price call.
+    //
+    // Legacy `.id` fallback retained for defense-in-depth in case Cardsight
+    // ever rolls a response shape variant or rolls back; the consistency
+    // guard below catches actual mismatches regardless.
     const catalogCard = pricing.card;
+    const setYearAsNumber = (raw: string | undefined): number | null => {
+      if (raw === undefined || raw === null || raw === "") return null;
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    };
+    const buildIdentityFromPricingCard = (
+      c: NonNullable<typeof catalogCard>,
+    ) => ({
+      // Fall back to pinnedCardId when both wire id fields are absent.
+      // The consistency guard below catches the mismatch case explicitly;
+      // here we only need a non-null string for the downstream contract.
+      card_id: c.card_id ?? (c as { id?: string }).id ?? pinnedCardId,
+      title: c.name ?? null,
+      player: c.name ?? null,
+      set: c.set?.name ?? null,
+      year: setYearAsNumber(c.set?.year),
+      number: c.number ?? null,
+      variant: null,
+    });
+    const buildStubIdentity = (id: string) => ({
+      card_id: id,
+      title: null,
+      player: null,
+      set: null,
+      year: null,
+      number: null,
+      variant: null,
+    });
     const identity = catalogCard
-      ? {
-          card_id: catalogCard.id,
-          title: catalogCard.name ?? null,
-          player: catalogCard.player ?? null,
-          set: catalogCard.setName ?? null,
-          year: catalogCard.year ?? null,
-          number: catalogCard.number ?? null,
-          variant: null,
-        }
-      : {
-          card_id: pinnedCardId,
-          title: null,
-          player: null,
-          set: null,
-          year: null,
-          number: null,
-          variant: null,
-        };
+      ? buildIdentityFromPricingCard(catalogCard)
+      : buildStubIdentity(pinnedCardId);
 
     if (pricing.notFound) {
       console.warn(`[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not found in catalog`);
       return { comps: [], card: identity, variantWarning: [], aiCategory: null };
+    }
+
+    // CF-CARDSIGHT-PRICING-CONSISTENCY-GUARD (2026-06-07): if Cardsight ever
+    // returns a `pricing.card.card_id` that doesn't match the id we
+    // requested (transient vendor flap, stale cache row, mapped-alias
+    // surprise), treat the response as UNRESOLVED. Wrong-card comps + a
+    // wrong-card identity must NOT leak into the comp page. Returns the
+    // same no-comps + stub-identity shape as `pricing.notFound`, so the
+    // downstream "couldn't price reliably" UI path renders honestly.
+    //
+    // The guard does NOT fall back to free-text — surfacing a different
+    // wrong card would compound the problem.
+    if (catalogCard?.card_id && catalogCard.card_id !== pinnedCardId) {
+      console.error(JSON.stringify({
+        event: "pricing_card_id_mismatch",
+        source: "compiq.fetchComps",
+        subsystem: "cardsight",
+        requestedId: pinnedCardId,
+        returnedCardId: catalogCard.card_id,
+        returnedPlayer: catalogCard.name ?? null,
+        returnedNumber: catalogCard.number ?? null,
+      }));
+      return {
+        comps: [],
+        card: buildStubIdentity(pinnedCardId),
+        variantWarning: [],
+        aiCategory: null,
+      };
     }
 
     // Client-side grade filter. Grade string is "Raw" or "<COMPANY> <VALUE>"
