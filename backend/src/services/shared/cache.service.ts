@@ -95,6 +95,18 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number): 
   try { await client.setex(key, ttlSeconds, value); } catch { memorySet(key, value, ttlSeconds); }
 }
 
+// CF-ROUTE-CACHE-VALIDATION (2026-06-08): delete a single cache entry.
+// Used by the /price-by-id route's read-time validation to bust a poisoned
+// memoized response (cardIdentity.card_id ≠ requested cardsightCardId)
+// before recomputing once. Fails silent — a Redis blip during a bust is
+// non-fatal; the entry will TTL-expire naturally and the validator will
+// catch it again on the next request.
+export async function cacheDel(key: string): Promise<void> {
+  const client = await getClient();
+  if (!client) { _memory.delete(key); return; }
+  try { await client.del(key); } catch { _memory.delete(key); }
+}
+
 // ─── PHASE-4A-2.2: per-prediction cache stats (AsyncLocalStorage) ───────────
 //
 // Allows callers (computeEstimate → predictionCorpus.service emit) to know

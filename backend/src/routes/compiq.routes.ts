@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { compiqEstimate, computeEstimate, simulateWhatIf } from "../services/compiq/compiqEstimate.service.js";
-import { cacheWrap } from "../services/shared/cache.service.js";
+import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
 import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
@@ -909,7 +909,14 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       "compiq:price-by-id:v4",
       `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`
     );
-    const result = await cacheWrap(cacheKey, async () => {
+    // CF-ROUTE-CACHE-VALIDATION (2026-06-08): producer extracted to a
+    // named arrow so the read-time validator can call it DIRECTLY
+    // (bypassing cacheWrap) after busting a poisoned entry. Running
+    // through cacheWrap on the bust-and-recompute path would either
+    // hit the still-bad upstream cache or, worse, re-cache a poisoned
+    // result. The direct-call path produces a guaranteed-fresh response
+    // and the validator decides whether to re-cache it.
+    const producePriceByIdResponse = async () => {
       const body: CompIQEstimateRequest = {
         playerName: typeof query === "string" ? query.trim() : resolvedCardId,
         cardsightCardId: resolvedCardId,
@@ -1031,7 +1038,139 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         broaderTrend: (est as any).broaderTrend ?? null,
       };
-    }, CACHE_TTL_SECONDS);
+    };
+
+    // CF-ROUTE-CACHE-VALIDATION (2026-06-08): read-time consistency
+    // validator. The route-level cacheWrap memoizes the FULL response
+    // (cardIdentity, marketTier, recentComps, etc.) for 15 min. The
+    // upstream consistency guard in fetchComps only fires when
+    // computeEstimate actually runs — i.e. on cache MISS. A poisoned
+    // entry written during a vendor flap (Cardsight returning a wrong
+    // card under a fda530ab request) would replay for the full TTL on
+    // every identical request, never re-validated.
+    //
+    // Fix: after cacheWrap returns, assert that the served response's
+    // cardIdentity.card_id matches the requested cardsightCardId. On
+    // mismatch: bust the poisoned entry, recompute ONCE via the direct
+    // producer (bypassing cacheWrap so we get fresh Cardsight data), and
+    // either cache + return the corrected result OR — if the fresh
+    // recompute is STILL mismatched — return the unresolved shape and
+    // refuse to re-cache. No loop; one bypass attempt per request.
+    //
+    // KNOWN LIMIT: this catches MISMATCH poison only (Frazier's
+    // card_id under Trout's key). It does NOT catch "right-id,
+    // wrong-data" (Cardsight returning wrong content under the
+    // correct id) — that's a rarer corruption requiring a content
+    // check, out of scope here.
+    const buildUnresolvedRouteResponse = (): Record<string, unknown> => ({
+      ...buildEngineMeta(),
+      success: true,
+      cardsightCardId: resolvedCardId,
+      summary: "Couldn't price reliably right now — try again shortly.",
+      marketTier: { value: null, high: null },
+      buyZone: [null, null],
+      holdZone: [null, null],
+      sellZone: [null, null],
+      fairMarketValueLive: null,
+      marketValue: null,
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceAttribution: null,
+      trendIQ: null,
+      signalsLastUpdated: null,
+      confidence: 0,
+      approximate: false,
+      outOfScopeReason: null,
+      source: "unresolved",
+      trendAnalysis: {
+        market_direction: "flat",
+        change_from_older_to_recent: null,
+        liquidity: "Normal",
+        broaderTrend: null,
+      },
+      recentComps: [],
+      cardIdentity: {
+        card_id: resolvedCardId,
+        title: null,
+        player: null,
+        set: null,
+        year: null,
+        number: null,
+        variant: null,
+      },
+      gradeUsed: null,
+      compsUsed: 0,
+      compsAvailable: 0,
+      daysSinceNewestComp: null,
+      broaderTrend: null,
+    });
+
+    // `result` is widened to Record<string, unknown> so the
+    // buildUnresolvedRouteResponse fallback path on the still-mismatched
+    // branch reassigns cleanly without TS narrowing complaints.
+    let result: Record<string, unknown> = await cacheWrap(
+      cacheKey,
+      producePriceByIdResponse,
+      CACHE_TTL_SECONDS,
+    ) as Record<string, unknown>;
+
+    // Validator: pull card_id off cardIdentity. Treat absent identity as
+    // unverifiable but not poisoned (the existing un-pinned fall-through
+    // already legitimately returns null cardIdentity in some unresolved
+    // branches; don't bust those).
+    const servedIdentity = (result as any)?.cardIdentity as
+      | { card_id?: string; player?: string | null; number?: string | null }
+      | null
+      | undefined;
+    const servedCardId = servedIdentity?.card_id;
+    const isMismatch = typeof servedCardId === "string"
+      && servedCardId.length > 0
+      && servedCardId !== resolvedCardId;
+
+    if (isMismatch) {
+      console.error(JSON.stringify({
+        event: "route_cache_card_id_mismatch",
+        source: "compiq.routes",
+        subsystem: "cardsight",
+        routeKey: cacheKey,
+        requestedId: resolvedCardId,
+        cachedCardId: servedCardId,
+        cachedPlayer: servedIdentity?.player ?? null,
+      }));
+      await cacheDel(cacheKey);
+      const recomputed = await producePriceByIdResponse();
+      const recomputedIdentity = (recomputed as any)?.cardIdentity as
+        | { card_id?: string }
+        | null
+        | undefined;
+      const recomputedCardId = recomputedIdentity?.card_id;
+      const stillMismatched = typeof recomputedCardId === "string"
+        && recomputedCardId.length > 0
+        && recomputedCardId !== resolvedCardId;
+      if (stillMismatched) {
+        // Vendor / upstream still returning a wrong-card response.
+        // Do NOT re-cache. Return the unresolved shape so iOS renders
+        // "couldn't price" rather than confidently-wrong wrong-card data.
+        console.error(JSON.stringify({
+          event: "route_cache_recompute_still_mismatched",
+          source: "compiq.routes",
+          subsystem: "cardsight",
+          routeKey: cacheKey,
+          requestedId: resolvedCardId,
+          recomputedCardId,
+        }));
+        result = buildUnresolvedRouteResponse();
+      } else {
+        // Fresh recompute is clean. Cache it under the same key so the
+        // next 15 min of identical requests get the correct response.
+        result = recomputed;
+        await cacheSet(
+          cacheKey,
+          JSON.stringify({ _v: recomputed, _ts: Date.now() }),
+          CACHE_TTL_SECONDS,
+        );
+      }
+    }
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
