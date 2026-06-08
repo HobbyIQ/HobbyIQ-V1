@@ -929,15 +929,30 @@ async function fetchComps(
   // resolveCardId → Cardsight getPricing. The pinned-cardId path below
   // is the fast direct route when we already have the resolved cardId.
   //
-  // The `query !== pinnedCardId` check guards against iOS sending the
-  // opaque cardId as the query (iOS resolvedLabel falls back to cardId
-  // when displayLabel/title are both empty — see
-  // HobbyIQ/CompIQSearchModels.swift).
+  // CF-PRICE-BY-ID-PINNED-GATING (2026-06-08): "meaningful" means the
+  // query carries SUBSTANTIVE text BEYOND the pinned cardId, not just
+  // that the strings differ. The upstream cardTitle builder concatenates
+  // body.playerName (=pinnedCardId on /price-by-id pinned calls) with
+  // grade / parallel suffixes (e.g. "fda530ab-... PSA 10"). Those
+  // suffixes aren't user-typed text — the same fields are already on
+  // body.gradeCompany / body.parallel and reach fetchComps via the
+  // explicit `grade` arg. Pinned branch remains the correct path here;
+  // selectSalesByGrade applies the grade filter to the Cardsight pricing
+  // response. Strict-`!==` against pinnedCardId was the pre-fix
+  // behavior; it bypassed the pinned branch on every graded
+  // /price-by-id call (PSA 10 / PSA 9 / BGS 9.5 silently returned 0
+  // comps + null identity).
+  //
+  // Real iOS free-text override (e.g. "2024 Topps Chrome Skenes") does
+  // NOT start with the pinned cardId UUID → still falls through. The
+  // iOS resolvedLabel-falls-back-to-cardId case still hits the pinned
+  // branch (the query IS the cardId — startsWith trivially true).
   const trimmedQuery = (query ?? "").trim();
+  const trimmedPinned = pinnedCardId?.trim() ?? "";
   const hasMeaningfulQuery =
     trimmedQuery.length > 0 &&
-    pinnedCardId !== undefined &&
-    trimmedQuery !== pinnedCardId.trim();
+    trimmedPinned.length > 0 &&
+    !trimmedQuery.toLowerCase().startsWith(trimmedPinned.toLowerCase());
 
   // ----- Pinned cardsightCardId path ------------------------------------
   // CF-PRICE-BY-ID-MIGRATION (first sub-CF of CF-CARDHEDGE-DECOMMISSION-

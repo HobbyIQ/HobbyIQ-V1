@@ -171,4 +171,99 @@ describe("computeEstimate — pinned cardsightCardId path (CF-PRICE-BY-ID-MIGRAT
     // The pinned-id branch (Cardsight getPricing) must NOT be taken.
     expect(cardSight.getPricing).not.toHaveBeenCalled();
   });
+
+  // CF-PRICE-BY-ID-PINNED-GATING (2026-06-08): graded /price-by-id calls
+  // get a cardTitle of "<pinnedId> <grade>" because computeEstimate
+  // concatenates body.playerName (=pinnedCardId) with grade/parallel
+  // suffixes. Pre-fix: strict-`!==` against the bare pinnedCardId saw
+  // `"<id> PSA 10" !== "<id>"` and bypassed the pinned branch, sending
+  // graded calls to findCompsRouted as a free-text search. The graded
+  // pool silently returned 0 comps + null identity in production.
+  // Post-fix: hasMeaningfulQuery uses .startsWith — queries that begin
+  // with the pinned id stay pinned regardless of trailing decoration.
+  it("CF-PRICE-BY-ID-PINNED-GATING: query '<cardId> PSA 10' stays on pinned branch", async () => {
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeFreshPricingResponse(),
+    );
+
+    const result = (await computeEstimate(
+      {
+        // Real production cardTitle shape on a graded /price-by-id call:
+        // playerName=pinnedCardId followed by the grade suffix.
+        playerName: `${PINNED_ID} PSA 10`,
+        cardsightCardId: PINNED_ID,
+        gradeCompany: "PSA",
+        gradeValue: 10,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    // Pinned branch took the call: getPricing fired, free-text path didn't.
+    expect(cardSight.getPricing).toHaveBeenCalledWith(PINNED_ID);
+    expect(cardsightRouter.findCompsRouted).not.toHaveBeenCalled();
+    expect(cardsightRouter.searchCardsRouted).not.toHaveBeenCalled();
+  });
+
+  it("CF-PRICE-BY-ID-PINNED-GATING: case-insensitive prefix match", async () => {
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeFreshPricingResponse(),
+    );
+
+    // Same UUID with different case — should still be treated as the
+    // pinned id (UUIDs are case-insensitive in practice on most paths;
+    // be defensive).
+    const result = (await computeEstimate(
+      {
+        playerName: `${PINNED_ID.toUpperCase()} BGS 9.5`,
+        cardsightCardId: PINNED_ID,
+        gradeCompany: "BGS",
+        gradeValue: 9.5,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    expect(cardSight.getPricing).toHaveBeenCalledWith(PINNED_ID);
+    expect(cardsightRouter.findCompsRouted).not.toHaveBeenCalled();
+  });
+
+  it("CF-PRICE-BY-ID-PINNED-GATING: genuine free-text query still falls through (iOS override)", async () => {
+    // The intent the gating preserves: when iOS actually overrides the
+    // pinned id with real user text (not a grade suffix), the
+    // fall-through path is correct. "2024 Topps Chrome Skenes" does NOT
+    // start with the UUID → meaningful → routed search fires.
+    const today = new Date();
+    const isoDaysAgo = (n: number) =>
+      new Date(today.getTime() - n * 24 * 60 * 60 * 1000).toISOString();
+    (cardsightRouter.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      card: {
+        card_id: PINNED_ID,
+        title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
+        player: "Paul Skenes",
+        set: "2024 Topps Chrome Update",
+        year: 2024,
+        number: "USC150",
+        variant: "Base",
+      },
+      sales: Array.from({ length: 6 }, (_, i) => ({
+        price: 40 + i,
+        date: isoDaysAgo(i),
+        grade: "Raw",
+        source: "cardsight",
+        sale_type: null,
+        title: "2024 Topps Chrome Update Baseball Paul Skenes #USC150",
+        url: null,
+      })),
+      variantWarning: [],
+      aiCategory: null,
+    });
+
+    await computeEstimate(
+      { playerName: REAL_QUERY, cardsightCardId: PINNED_ID } as any,
+      testCallContext,
+    );
+
+    // Fall-through path fired; pinned didn't.
+    expect(cardsightRouter.findCompsRouted).toHaveBeenCalled();
+    expect(cardSight.getPricing).not.toHaveBeenCalled();
+  });
 });
