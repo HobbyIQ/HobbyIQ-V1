@@ -112,7 +112,17 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
             : rawCandidateId
         player = try? container.decodeIfPresent(String.self, forKey: .player)
         set = try? container.decodeIfPresent(String.self, forKey: .set)
-        year = try? container.decodeIfPresent(Int.self, forKey: .year)
+        // Wire emits `year` as a STRING on Cardsight catalog rows
+        // ("2011") but as an Int on some legacy paths. Accept both so
+        // the detail line never silently drops the year segment.
+        if let intYear = try? container.decodeIfPresent(Int.self, forKey: .year) {
+            year = intYear
+        } else if let strYear = try? container.decodeIfPresent(String.self, forKey: .year),
+                  let parsed = Int(strYear.trimmingCharacters(in: .whitespaces)) {
+            year = parsed
+        } else {
+            year = nil
+        }
         number = try? container.decodeIfPresent(String.self, forKey: .number)
         variant = try? container.decodeIfPresent(String.self, forKey: .variant)
         title = try? container.decodeIfPresent(String.self, forKey: .title)
@@ -330,21 +340,60 @@ struct CompIQPriceRecentComp: Codable, Hashable, Identifiable {
     let price: Double?
     let title: String?
     let soldDate: String?
+    // CF-B (2026-06-08): wire additions on /price-by-id recentComps[].
+    // imageUrl is the eBay 225px thumb (can 404 after ~90d → graceful
+    // placeholder fallback in the view). saleType: "Buy It Now"|"Auction"
+    // (display as chip; omit if nil). belowMarket flags rows whose price
+    // is dimmed and tagged "below market" — calm, never alarming.
+    let imageUrl: String?
+    let saleType: String?
+    let belowMarket: Bool?
 
     var id: String { "\(title ?? "")-\(price ?? 0)-\(soldDate ?? "")" }
 
-    var parsedDate: Date? {
-        guard let soldDate, soldDate.isEmpty == false else { return nil }
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: soldDate) { return date }
-        let standard = ISO8601DateFormatter()
-        standard.formatOptions = [.withInternetDateTime]
-        return standard.date(from: soldDate)
-    }
+    var parsedDate: Date? { CompIQCompDateParser.parse(soldDate) }
 
     var relativeDate: String {
-        guard let date = parsedDate else { return soldDate ?? "Unknown" }
+        CompIQCompDateParser.relative(soldDate)
+    }
+}
+
+/// CF-B (2026-06-08): comp rows the engine kept out of value computation.
+/// Wire key matches backend's `excludedComps[]` on /price-by-id.
+struct CompIQPriceExcludedComp: Codable, Hashable, Identifiable {
+    let price: Double?
+    let title: String?
+    /// Wire key is `date` (NOT `soldDate` like recentComps[]) — preserved
+    /// as-is so the dump shape matches the schema doc.
+    let date: String?
+    let imageUrl: String?
+    /// Engine reason code (e.g. `"damaged"`, `"please_read"`, `"lot"`).
+    let reason: String?
+    /// Short user-facing condition tag (e.g. `"Damaged"`, `"Please read"`).
+    let label: String?
+
+    var id: String { "\(title ?? "")-\(price ?? 0)-\(date ?? "")" }
+
+    var parsedDate: Date? { CompIQCompDateParser.parse(date) }
+    var relativeDate: String { CompIQCompDateParser.relative(date) }
+}
+
+/// Shared ISO8601 parser for recent + excluded comp date fields. Backend
+/// emits either `.withInternetDateTime` or `.withFractionalSeconds` shapes
+/// depending on the data source.
+enum CompIQCompDateParser {
+    static func parse(_ raw: String?) -> Date? {
+        guard let raw, raw.isEmpty == false else { return nil }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: raw) { return date }
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return standard.date(from: raw)
+    }
+
+    static func relative(_ raw: String?) -> String {
+        guard let date = parse(raw) else { return raw ?? "Unknown" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
@@ -445,6 +494,14 @@ struct CompIQPriceByIdResponse: Codable {
     let source: String?
     let trendAnalysis: CompIQPriceTrendAnalysis?
     let recentComps: [CompIQPriceRecentComp]?
+    /// CF-B (2026-06-08): rows the engine dropped from value calc
+    /// (condition/lot/damage). Nil or empty → skip the "Excluded from
+    /// value" section entirely.
+    let excludedComps: [CompIQPriceExcludedComp]?
+    /// CF-B addition (2026-06-08): canonical card photo for the priced-
+    /// card hero slot. Nil → graceful neutral-card placeholder; never
+    /// surface a broken-image glyph.
+    let cardImageUrl: String?
     let cardIdentity: CompIQPriceCardIdentity?
     let gradeUsed: String?
     let compsUsed: Int?
@@ -535,6 +592,8 @@ struct CompIQPriceByIdResponse: Codable {
         source = try? container.decodeIfPresent(String.self, forKey: .source)
         trendAnalysis = try? container.decodeIfPresent(CompIQPriceTrendAnalysis.self, forKey: .trendAnalysis)
         recentComps = try? container.decodeIfPresent([CompIQPriceRecentComp].self, forKey: .recentComps)
+        excludedComps = try? container.decodeIfPresent([CompIQPriceExcludedComp].self, forKey: .excludedComps)
+        cardImageUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageUrl)
         cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
         gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
         compsUsed = try? container.decodeIfPresent(Int.self, forKey: .compsUsed)
@@ -571,7 +630,8 @@ struct CompIQPriceByIdResponse: Codable {
         case success, cardsightCardId, summary, marketTier
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
-        case confidence, source, trendAnalysis, recentComps
+        case confidence, source, trendAnalysis, recentComps, excludedComps
+        case cardImageUrl
         case cardIdentity, gradeUsed, compsUsed, compsAvailable, daysSinceNewestComp
         case verdict, action, quickSaleValue, premiumValue, explanation
         case graderPremium, buyWindow, freshness, broaderTrend

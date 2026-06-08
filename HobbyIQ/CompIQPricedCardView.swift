@@ -248,6 +248,11 @@ struct CompIQPricedCardView: View {
             if response.hasInsufficientComps {
                 insufficientCompsCard
             } else {
+                // Hero image — CF-B addition (2026-06-08). Sits above
+                // the FMV card so the user has a visual anchor for the
+                // card identity before the pricing rolls in.
+                cardHeroImageCard(response)
+
                 // Hero
                 fmvCard(response)
 
@@ -301,6 +306,7 @@ struct CompIQPricedCardView: View {
                 cardGroup(title: "Reference Data", icon: "doc.text.magnifyingglass") {
                     explanationContent(response)
                     compsContent(response)
+                    excludedCompsContent(response)
                 }
             }
         }
@@ -901,42 +907,277 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Recent Comps (inner content)
 
+    /// CF-B (2026-06-08): per-mockup row layout —
+    ///   thumbnail | [ price  saleTypeChip  · below market ]
+    ///             | title · date  (single line, ellipsized)
+    /// Header line: "Recent sales" left, "N of M" right (compsUsed of
+    /// compsAvailable). Belt-and-suspenders: section is hidden entirely
+    /// when there are no comps.
     @ViewBuilder
     private func compsContent(_ response: CompIQPriceByIdResponse) -> some View {
         if let comps = response.recentComps, comps.isEmpty == false {
             VStack(alignment: .leading, spacing: 8) {
-                sectionHeader(title: "Recent Comps")
-
-                ForEach(comps) { comp in
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            if let title = comp.title, title.isEmpty == false {
-                                Text(title)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                    .lineLimit(2)
-                            }
-                            Text(comp.relativeDate)
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        }
-                        Spacer(minLength: 8)
-                        if let price = comp.price {
-                            Text(price.formatted(.currency(code: "USD")))
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
-                                .foregroundStyle(HobbyIQTheme.Colors.successGreen)
-                        }
+                compsHeader(response)
+                VStack(spacing: 0) {
+                    ForEach(Array(comps.enumerated()), id: \.element.id) { index, comp in
+                        recentCompRow(comp, showsTopDivider: index > 0)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(HobbyIQTheme.Colors.steelGray.opacity(0.12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
-                            .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.2), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
                 }
             }
+        }
+    }
+
+    /// "Recent sales" + "N of M" — only emits the ratio when both counts
+    /// are non-nil so a partial response collapses to just the title.
+    private func compsHeader(_ response: CompIQPriceByIdResponse) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Recent sales")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer()
+            if let used = response.compsUsed, let avail = response.compsAvailable {
+                Text("\(used) of \(avail)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    private func recentCompRow(_ comp: CompIQPriceRecentComp, showsTopDivider: Bool) -> some View {
+        let isBelowMarket = comp.belowMarket == true
+        return HStack(alignment: .center, spacing: 11) {
+            compThumbnail(urlString: comp.imageUrl)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 7) {
+                    if let price = comp.price {
+                        Text(price.formatted(.currency(code: "USD")))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                    if let saleType = comp.saleType, saleType.isEmpty == false {
+                        saleTypeChip(saleType)
+                    }
+                    if isBelowMarket {
+                        Text("· below market")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                Text(compTitleWithDate(title: comp.title, dateString: comp.relativeDate))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .opacity(isBelowMarket ? 0.78 : 1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) {
+            if showsTopDivider {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                    .frame(height: 0.5)
+            }
+        }
+    }
+
+    /// CF-B (2026-06-08): "Excluded from value" — comps the engine dropped
+    /// from valuation (damage, lot, please-read). Whole section recedes
+    /// (opacity 0.5); the row keeps the inline mockup layout with a
+    /// struck-through price and a red-tinted condition chip from `.label`.
+    /// Suppressed entirely when `excludedComps` is nil or empty.
+    @ViewBuilder
+    private func excludedCompsContent(_ response: CompIQPriceByIdResponse) -> some View {
+        if let comps = response.excludedComps, comps.isEmpty == false {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Excluded from value")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .padding(.top, 4)
+                VStack(spacing: 0) {
+                    ForEach(Array(comps.enumerated()), id: \.element.id) { _, comp in
+                        excludedCompRow(comp)
+                    }
+                }
+            }
+            .opacity(0.55)
+        }
+    }
+
+    private func excludedCompRow(_ comp: CompIQPriceExcludedComp) -> some View {
+        HStack(alignment: .center, spacing: 11) {
+            compThumbnail(urlString: comp.imageUrl)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 7) {
+                    if let price = comp.price {
+                        Text(price.formatted(.currency(code: "USD")))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .strikethrough(true, color: HobbyIQTheme.Colors.mutedText)
+                    }
+                    if let display = excludedLabelDisplay(comp.label) {
+                        excludedLabelChip(display)
+                    }
+                }
+                Text(compTitleWithDate(title: comp.title, dateString: comp.relativeDate))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 9)
+    }
+
+    // MARK: - Card Hero Image (CF-B addition, 2026-06-08)
+
+    /// Hero image for the priced-card detail. Sized to standard sports-
+    /// card aspect (2.5:3.5) and centered. Reuses the same graceful
+    /// neutral-card placeholder used for the comp rows so a missing or
+    /// 404'd photo never surfaces a broken-image glyph.
+    @ViewBuilder
+    private func cardHeroImageCard(_ response: CompIQPriceByIdResponse) -> some View {
+        HStack {
+            Spacer(minLength: 0)
+            cardHeroImage(urlString: response.cardImageUrl)
+                .frame(width: 180, height: 252) // 2.5:3.5 → 180:252
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 4)
+    }
+
+    private func cardHeroImage(urlString: String?) -> some View {
+        Group {
+            if let urlString, urlString.isEmpty == false, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .empty, .failure:
+                        compThumbnailPlaceholder
+                    @unknown default:
+                        compThumbnailPlaceholder
+                    }
+                }
+            } else {
+                compThumbnailPlaceholder
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.45), lineWidth: 0.5)
+        )
+        .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.12), radius: 14, x: 0, y: 6)
+    }
+
+    // MARK: - Comp Thumbnail (shared by recent + excluded rows)
+
+    /// AsyncImage with a graceful neutral-card placeholder on nil/load
+    /// failure. NEVER shows a broken-image glyph — the eBay 225px thumbs
+    /// can 404 after ~90d and that path needs to be silent.
+    private func compThumbnail(urlString: String?) -> some View {
+        Group {
+            if let urlString, urlString.isEmpty == false, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .empty, .failure:
+                        compThumbnailPlaceholder
+                    @unknown default:
+                        compThumbnailPlaceholder
+                    }
+                }
+            } else {
+                compThumbnailPlaceholder
+            }
+        }
+        .frame(width: 40, height: 55)
+        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.45), lineWidth: 0.5)
+        )
+    }
+
+    private var compThumbnailPlaceholder: some View {
+        Rectangle()
+            .fill(HobbyIQTheme.Colors.steelGray.opacity(0.25))
+    }
+
+    /// "Buy It Now" → blue; "Auction" → amber. Anything else → neutral.
+    /// Mockup pairing — light pastel pill, weight-matched dark text — is
+    /// adapted to the app's dark theme via the same fg/bg.opacity recipe
+    /// used elsewhere (AUTO/grade pills in the variant picker).
+    @ViewBuilder
+    private func saleTypeChip(_ raw: String) -> some View {
+        let lower = raw.lowercased()
+        let isAuction = lower.contains("auction")
+        let isBIN = lower.contains("buy") || lower.contains("now")
+        let (fg, bg): (Color, Color) = {
+            if isAuction {
+                let amber = Color(hex: 0xE5B64A)
+                return (amber, amber.opacity(0.18))
+            }
+            if isBIN {
+                return (HobbyIQTheme.Colors.electricBlue, HobbyIQTheme.Colors.electricBlue.opacity(0.18))
+            }
+            return (HobbyIQTheme.Colors.pureWhite.opacity(0.85), HobbyIQTheme.Colors.steelGray.opacity(0.35))
+        }()
+        Text(raw)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(fg)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(bg)
+            .clipShape(Capsule())
+    }
+
+    /// Normalize the backend-emitted exclusion label to a display string.
+    /// Known engine codes get a tightened user-facing form; anything else
+    /// passes through unchanged so a new label code never disappears.
+    /// nil/empty → nil → the chip is omitted from the row.
+    private func excludedLabelDisplay(_ raw: String?) -> String? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), raw.isEmpty == false else {
+            return nil
+        }
+        switch raw.lowercased() {
+        case "seller-described damage": return "Damaged"
+        case "please read":             return "Please read"
+        default:                        return raw
+        }
+    }
+
+    /// Condition chip on the excluded row — the mockup pairs damage/please-
+    /// read tags with a red-tinted pill so the exclusion reason is clear.
+    @ViewBuilder
+    private func excludedLabelChip(_ raw: String) -> some View {
+        Text(raw)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.danger)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(HobbyIQTheme.Colors.danger.opacity(0.18))
+            .clipShape(Capsule())
+    }
+
+    /// Joins title + relative date with " · " when both present, gracefully
+    /// degrades to whichever exists. Returns "" only when both are missing.
+    private func compTitleWithDate(title: String?, dateString: String) -> String {
+        let cleanTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hasTitle = cleanTitle.isEmpty == false
+        let cleanDate = dateString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasDate = cleanDate.isEmpty == false && cleanDate.lowercased() != "unknown"
+        switch (hasTitle, hasDate) {
+        case (true, true):  return "\(cleanTitle) · \(cleanDate)"
+        case (true, false): return cleanTitle
+        case (false, true): return cleanDate
+        case (false, false): return ""
         }
     }
 
