@@ -12,11 +12,6 @@ struct CompIQVariantPickerView: View {
     @State private var isLoading = false
     @State private var error: String?
     @State private var hasSearched = false
-    /// Per-row "show more" affordance for the optional expand panel
-    /// (attributes / parallels / brand). Holds the candidate id of the
-    /// currently expanded row, or nil. Single-expand at a time keeps
-    /// the list scannable.
-    @State private var expandedHitId: String?
     /// In-flight search task so the user can cancel from the skeleton state
     /// when the dispatcher takes longer than their patience (Cardsight
     /// catalog enrichment can run several seconds for broad queries like
@@ -197,52 +192,58 @@ struct CompIQVariantPickerView: View {
     @ViewBuilder
     private var resultsSection: some View {
         if hits.isEmpty == false {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Rectangle()
-                        .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                        .frame(height: 1)
-                    Text("\(hits.count) VARIANTS")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .tracking(1.2)
-                        .fixedSize()
-                    Rectangle()
-                        .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                        .frame(height: 1)
-                }
-                .padding(.bottom, HobbyIQTheme.Spacing.small)
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
+                // Quiet, left-aligned count label — sentence case, pluralized.
+                // Replaces the centered all-caps "N VARIANTS" divider so the
+                // results card feels calm rather than announced.
+                Text(resultsCountLabel)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .padding(.horizontal, 4)
 
+                // Flat results card — no gradient stroke; reserve the hero
+                // gradient for dashboard cards.
                 LazyVStack(spacing: 0) {
-                    ForEach(hits) { hit in
+                    ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
                         NavigationLink {
                             CompIQPricedCardView(hit: hit, initialGrade: initialGrade)
                                 .environmentObject(sessionViewModel)
                         } label: {
-                            variantRow(hit)
+                            variantRow(hit, isLast: index == hits.count - 1)
                         }
                         .buttonStyle(.plain)
                     }
                 }
+                .padding(HobbyIQTheme.Spacing.medium)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.35), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+
+                // Quiet refine hint so a single-result page feels intentional.
+                Text("Not the exact card? Add the card number or a parallel to your search.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
-            .padding(HobbyIQTheme.Spacing.medium)
-            .background(HobbyIQTheme.Colors.cardNavy)
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         }
+    }
+
+    private var resultsCountLabel: String {
+        hits.count == 1 ? "1 result" : "\(hits.count) results"
     }
 
     // MARK: - Row
 
-    private func variantRow(_ hit: CompIQVariantHit) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func variantRow(_ hit: CompIQVariantHit, isLast: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 variantThumbnail(hit)
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     // Player name primary; resolvedLabel fallback only when
                     // the candidate carries no player.
                     Text(hit.player ?? hit.resolvedLabel)
@@ -251,14 +252,16 @@ struct CompIQVariantPickerView: View {
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // year · brand/setName · #cardNumber
-                    let setPart = [hit.brand, hit.set]
-                        .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
-                        .first(where: { !$0.isEmpty })
+                    // year · setName · #cardNumber — `#cardNumber` segment
+                    // is OMITTED entirely when `hit.number` is null/empty so
+                    // we never render "#null".
                     let details = [
                         hit.year.map(String.init),
-                        setPart,
-                        hit.number.map { "#\($0)" }
+                        hit.set?.trimmingCharacters(in: .whitespaces),
+                        hit.number.flatMap { n -> String? in
+                            let trimmed = n.trimmingCharacters(in: .whitespaces)
+                            return trimmed.isEmpty ? nil : "#\(trimmed)"
+                        }
                     ].compactMap { $0?.trimmingCharacters(in: .whitespaces) }
                      .filter { !$0.isEmpty }
                     if !details.isEmpty {
@@ -279,45 +282,30 @@ struct CompIQVariantPickerView: View {
                 }
 
                 Spacer(minLength: 0)
+            }
 
+            // CTA: every row carries an explicit affordance so the tap
+            // target's purpose is unmistakable. Replaces the bare chevron.
+            HStack(spacing: 4) {
+                Spacer()
+                Text("Tap to see pricing & comps")
+                    .font(.caption.weight(.semibold))
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
-
-            if hasExpandableDetails(hit) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        expandedHitId = (expandedHitId == hit.id) ? nil : hit.id
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: expandedHitId == hit.id ? "chevron.up" : "chevron.down")
-                            .font(.caption2.weight(.semibold))
-                        Text(expandedHitId == hit.id ? "Hide details" : "More details")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
-                    .padding(.leading, 52) // align with text column under the thumbnail
-                    .frame(minHeight: 44, alignment: .leading)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(expandedHitId == hit.id ? "Hide variant details" : "Show full variant details")
-
-                if expandedHitId == hit.id {
-                    variantExpandedDetails(hit)
-                        .padding(.leading, 52)
-                        .padding(.bottom, 6)
-                }
-            }
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 12)
         .padding(.horizontal, 4)
+        // Divider between rows only — suppressed under the last row so we
+        // don't double-up against the card's own border.
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(HobbyIQTheme.Colors.steelGray.opacity(0.5))
-                .frame(height: 1)
+            if !isLast {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                    .frame(height: 1)
+            }
         }
         .contentShape(Rectangle())
     }
@@ -371,32 +359,45 @@ struct CompIQVariantPickerView: View {
 
     // MARK: - Pills
 
-    /// Build the ordered list of pills for a hit per the row spec.
-    /// Skipped entries leave the spot blank; we never emit a blank pill.
+    /// Build the ordered pill set for a row per the redesign spec:
+    /// AUTO (if auto) → Raw/grade → RC (when in attributes) → "+N parallels"
+    /// (when parallels present). Cert-style disambiguators that an
+    /// authoritative row carries (specific parallel name, variation, serial)
+    /// still surface so a cert hit isn't conflated with a catalog hit.
     private func variantPills(for hit: CompIQVariantHit) -> [VariantPill] {
         var pills: [VariantPill] = []
 
-        // parallel + variation — backend separates these on CardIdentity.
+        if hit.isAuto {
+            pills.append(VariantPill(text: "AUTO", kind: .auto))
+        }
+        if let display = hit.gradeDisplay {
+            pills.append(VariantPill(text: display, kind: .grade))
+        } else {
+            pills.append(VariantPill(text: "Raw", kind: .neutral))
+        }
+        // RC sits in the `attributes` array, not as a flag — surface it as a
+        // pill so the rookie-card signal is scannable at row level.
+        if let attrs = hit.attributes,
+           attrs.contains(where: { $0.caseInsensitiveCompare("RC") == .orderedSame }) {
+            pills.append(VariantPill(text: "RC", kind: .accent))
+        }
+        // Specific cert-side disambiguators — emit only when the candidate
+        // actually committed to a specific parallel/variation/serial. The
+        // catalog-side "summary" of "+N parallels" comes after these.
         if let parallel = hit.variant?.trimmingCharacters(in: .whitespaces), !parallel.isEmpty {
             pills.append(VariantPill(text: parallel, kind: .accent))
         }
         if let variation = hit.variation?.trimmingCharacters(in: .whitespaces), !variation.isEmpty {
             pills.append(VariantPill(text: variation, kind: .neutral))
         }
-        // /N serial print run.
         if let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces), !serial.isEmpty {
-            let label = serial.hasPrefix("/") ? serial : "/\(serial)"
-            pills.append(VariantPill(text: label, kind: .neutral))
+            pills.append(VariantPill(text: serial.hasPrefix("/") ? serial : "/\(serial)", kind: .neutral))
         }
-        // AUTO — gold tint.
-        if hit.isAuto {
-            pills.append(VariantPill(text: "AUTO", kind: .auto))
-        }
-        // Grade pill — blue tint when graded; otherwise "Raw" placeholder.
-        if let display = hit.gradeDisplay {
-            pills.append(VariantPill(text: display, kind: .grade))
-        } else {
-            pills.append(VariantPill(text: "Raw", kind: .neutral))
+        // Catalog parallels summary: only show when the candidate didn't
+        // already pin a specific parallel (otherwise it's redundant).
+        if let parallels = hit.parallels, parallels.isEmpty == false,
+           (hit.variant?.trimmingCharacters(in: .whitespaces).isEmpty ?? true) {
+            pills.append(VariantPill(text: "+\(parallels.count) parallels", kind: .neutral))
         }
 
         return pills
@@ -445,104 +446,37 @@ struct CompIQVariantPickerView: View {
         }
     }
 
-    // MARK: - Footnote (source + confidence dot + cert #)
+    // MARK: - Footnote (source + neutral approximate-match hint + cert #)
 
     @ViewBuilder
     private func variantFootnote(_ hit: CompIQVariantHit) -> some View {
         let parts = footnoteParts(hit)
         if parts.isEmpty == false {
-            HStack(spacing: 8) {
-                if let level = hit.confidenceLevel {
-                    confidenceDot(level)
-                }
-                Text(parts.joined(separator: " · "))
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            Text(parts.joined(separator: " · "))
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 
+    /// Footnote text. NEVER color-coded; never red.
+    /// "approximate match" surfaces ONLY when the candidate is genuinely
+    /// low-confidence AND there is more than one candidate to choose from
+    /// (a single-result page can't be ambiguous — calling it "low match"
+    /// just looks like a system failure to the user).
     private func footnoteParts(_ hit: CompIQVariantHit) -> [String] {
         var parts: [String] = []
         if let label = hit.sourceLabel, label.isEmpty == false {
             parts.append(label)
         }
-        if let level = hit.confidenceLevel {
-            let word: String = {
-                switch level {
-                case .high: return "High match"
-                case .medium: return "Medium match"
-                case .low: return "Low match"
-                }
-            }()
-            parts.append(word)
+        if hits.count > 1, hit.confidenceLevel == .low {
+            parts.append("approximate match")
         }
         if let cert = hit.certNumber?.trimmingCharacters(in: .whitespaces), cert.isEmpty == false {
             parts.append("Cert #\(cert)")
         }
         return parts
-    }
-
-    private func confidenceDot(_ level: CompIQVariantHit.ConfidenceLevel) -> some View {
-        let color: Color = {
-            switch level {
-            case .high:   return HobbyIQTheme.Colors.successGreen
-            case .medium: return HobbyIQTheme.Colors.warning
-            case .low:    return HobbyIQTheme.Colors.danger
-            }
-        }()
-        return Circle()
-            .fill(color)
-            .frame(width: 8, height: 8)
-            .accessibilityHidden(true)
-    }
-
-    // MARK: - Expand panel (attributes / parallels / brand)
-
-    private func hasExpandableDetails(_ hit: CompIQVariantHit) -> Bool {
-        if let attrs = hit.attributes, attrs.isEmpty == false { return true }
-        if let parallels = hit.parallels, parallels.isEmpty == false { return true }
-        if let brand = hit.brand, brand.isEmpty == false { return true }
-        return false
-    }
-
-    @ViewBuilder
-    private func variantExpandedDetails(_ hit: CompIQVariantHit) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let brand = hit.brand, brand.isEmpty == false {
-                expandedDetailRow(label: "Brand", value: brand)
-            }
-            if let attrs = hit.attributes, attrs.isEmpty == false {
-                expandedDetailRow(label: "Attributes", value: attrs.joined(separator: " · "))
-            }
-            if let parallels = hit.parallels, parallels.isEmpty == false {
-                expandedDetailRow(
-                    label: "Parallels (\(parallels.count))",
-                    value: parallels.map { p in
-                        if let n = p.numberedTo {
-                            return "\(p.name) /\(n)"
-                        }
-                        return p.name
-                    }.joined(separator: " · ")
-                )
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func expandedDetailRow(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(1.0)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text(value)
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.9))
-                .fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     // MARK: - Shimmer
