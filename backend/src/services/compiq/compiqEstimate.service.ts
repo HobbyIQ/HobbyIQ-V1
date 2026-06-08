@@ -85,6 +85,23 @@ interface RawComp {
   price: number;
   title: string;
   soldDate: string;
+  // CF-RECENTCOMPS-SALETYPE (2026-06-08): Cardsight wire-shape per-comp
+  // listing_type ("fixed" | "auction" | null). Threaded through the
+  // pipeline so the route-level recentComps[] can surface a saleType
+  // chip to iOS. Optional + null-tolerant because the meaningful-query
+  // fall-through path's RoutedResult may not always carry it.
+  listingType?: string | null;
+}
+
+/** CF-RECENTCOMPS-SALETYPE: map Cardsight's wire-shape listing_type to
+ *  the iOS-facing saleType string. Unknown / null → undefined so the
+ *  field is omitted on serialization. */
+function saleTypeFromListingType(
+  lt: string | null | undefined,
+): "Buy It Now" | "Auction" | undefined {
+  if (lt === "fixed") return "Buy It Now";
+  if (lt === "auction") return "Auction";
+  return undefined;
 }
 
 interface RegimeSummary {
@@ -1160,6 +1177,9 @@ async function fetchComps(
             .filter(Boolean)
             .join(" "),
         soldDate: s.date ?? "",
+        // CF-RECENTCOMPS-SALETYPE: preserve Cardsight's per-comp
+        // listing_type so the route can derive saleType for iOS chips.
+        listingType: (s as { listing_type?: string | null }).listing_type ?? null,
       }))
       .filter((c) => c.price > 0);
 
@@ -1225,6 +1245,11 @@ async function fetchComps(
       price: s.price,
       title: s.title || [card.year, card.set, card.player, card.number, card.variant].filter(Boolean).join(" "),
       soldDate: s.date ?? "",
+      // CF-RECENTCOMPS-SALETYPE: preserve listing_type from the
+      // routed-search sale shape when present. Defensive cast — the
+      // RoutedResult sale union doesn't always declare the field but
+      // Cardsight's downstream sales DO carry it.
+      listingType: (s as { listing_type?: string | null }).listing_type ?? null,
     }))
     .filter((c) => c.price > 0);
 
@@ -2556,7 +2581,13 @@ export async function computeEstimate(
       recentComps: fetched.comps
         .slice()
         .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
+        .map((c) => ({
+          price: c.price,
+          title: c.title,
+          soldDate: c.soldDate,
+          grade: formatGradeLabel(c.title),
+          saleType: saleTypeFromListingType(c.listingType),
+        })),
       gradeUsed: cardHedgeGrade,
       source: "variant-mismatch",
       daysSinceNewestComp: null,
@@ -2926,6 +2957,7 @@ export async function computeEstimate(
                 title: c.title,
                 soldDate: c.soldDate,
                 grade: formatGradeLabel(c.title),
+                saleType: saleTypeFromListingType(c.listingType),
               })),
             gradeUsed: cardHedgeGrade,
             source: "sibling-pool",
@@ -3018,7 +3050,13 @@ export async function computeEstimate(
       recentComps: fetched.comps
         .slice()
         .sort((a, b) => (Date.parse(b.soldDate || "") || 0) - (Date.parse(a.soldDate || "") || 0))
-        .map((c) => ({ price: c.price, title: c.title, soldDate: c.soldDate, grade: formatGradeLabel(c.title) })),
+        .map((c) => ({
+          price: c.price,
+          title: c.title,
+          soldDate: c.soldDate,
+          grade: formatGradeLabel(c.title),
+          saleType: saleTypeFromListingType(c.listingType),
+        })),
       gradeUsed: cardHedgeGrade,
       source: "no-recent-comps",
       daysSinceNewestComp: daysSinceNewest,
@@ -3172,6 +3210,10 @@ export async function computeEstimate(
     date: c.soldDate,
     source: "ebay",
     id: `${c.price}-${c.soldDate}`,
+    // CF-RECENTCOMPS-SALETYPE: thread per-comp listingType through the
+    // pipeline-internal comps shape so the route-level recentComps[]
+    // can emit a saleType chip.
+    listingType: c.listingType,
   }));
 
   // Build context for the pipeline
@@ -3646,6 +3688,9 @@ export async function computeEstimate(
         title: c.title,
         soldDate: c.date,
         grade: formatGradeLabel(c.title),
+        // CF-RECENTCOMPS-SALETYPE (2026-06-08): emit "Buy It Now" /
+        // "Auction" / omit, derived from Cardsight's listing_type.
+        saleType: saleTypeFromListingType(c.listingType),
       })),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
