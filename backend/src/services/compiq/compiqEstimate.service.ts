@@ -877,24 +877,39 @@ async function fetchBroaderTrend(
 //   - anything else   → safe fallback to raw records (preserves the prior
 //                       behavior of "no specific grade → broadest pool")
 export function selectSalesByGrade(
-  pricing: { raw?: { records: CardsightSaleRecord[] }; graded: Array<{ company_name: string; grades: Array<{ grade_value: string; records: CardsightSaleRecord[] }> }> },
+  pricing: { raw?: { records: CardsightSaleRecord[] }; graded: Array<{ company_name: string; grades: Array<{ grade_value: string | number; records: CardsightSaleRecord[] }> }> },
   grade: string,
 ): CardsightSaleRecord[] {
   if (!grade || grade === "Raw") {
     return pricing.raw?.records ?? [];
   }
+  // Numeric grades only (e.g. "PSA 10", "BGS 9.5"). Non-numeric labels like
+  // "PSA Authentic" don't match this regex and fall through to raw — out of
+  // scope here, no current consumer requests them.
   const match = grade.match(/^([A-Za-z]+)\s+(\d+(?:\.\d+)?)$/);
   if (!match) {
     return pricing.raw?.records ?? [];
   }
   const company = match[1].toUpperCase();
   const value = match[2];
+  const valueNum = Number(value);
   const companyEntry = pricing.graded.find(
     (c) => c.company_name.toUpperCase() === company,
   );
   if (!companyEntry) return [];
-  const gradeEntry = companyEntry.grades.find((g) => g.grade_value === value);
-  return gradeEntry?.records ?? [];
+  // Numeric equality + duplicate-bucket merge.
+  // - Why numeric: Cardsight's wire shape carries `grade_value` as either a
+  //   string ("10") or a number (10) across companies / cards. Strict ===
+  //   against the regex-captured string would silently miss the numeric form
+  //   (the entire point of CF-GRADED-PRICE-BY-ID-ZERO-COMPS). Coercing both
+  //   sides via Number() normalizes "10", 10, and "10.0" to the same key.
+  // - Why merge: a single getPricing() response can emit the same grade_value
+  //   under more than one entry (observed empirically on fda530ab: PSA 9
+  //   appears twice with 117 + 3 records; BGS 10 twice with 1 + 4). Use
+  //   filter+flatMap to concatenate all matching entries' records instead of
+  //   .find which silently dropped the trailing duplicates.
+  const matching = companyEntry.grades.filter((g) => Number(g.grade_value) === valueNum);
+  return matching.flatMap((g) => g.records ?? []);
 }
 
 async function fetchComps(

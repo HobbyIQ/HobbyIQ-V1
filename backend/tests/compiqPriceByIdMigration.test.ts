@@ -76,19 +76,19 @@ describe("selectSalesByGrade (CF-PRICE-BY-ID-MIGRATION grade filter)", () => {
   });
 
   it('"PSA 10" returns the PSA 10 records', () => {
-    expect(selectSalesByGrade(pricing, "PSA 10")).toBe(psa10);
+    expect(selectSalesByGrade(pricing, "PSA 10")).toEqual(psa10);
   });
 
   it('"PSA 9" returns the PSA 9 records', () => {
-    expect(selectSalesByGrade(pricing, "PSA 9")).toBe(psa9);
+    expect(selectSalesByGrade(pricing, "PSA 9")).toEqual(psa9);
   });
 
   it('"BGS 9.5" returns the BGS 9.5 records (decimal grade values supported)', () => {
-    expect(selectSalesByGrade(pricing, "BGS 9.5")).toBe(bgs95);
+    expect(selectSalesByGrade(pricing, "BGS 9.5")).toEqual(bgs95);
   });
 
   it("case-insensitive on the company name", () => {
-    expect(selectSalesByGrade(pricing, "psa 10")).toBe(psa10);
+    expect(selectSalesByGrade(pricing, "psa 10")).toEqual(psa10);
   });
 
   it("missing company (SGC requested, not in pricing.graded) returns []", () => {
@@ -110,6 +110,94 @@ describe("selectSalesByGrade (CF-PRICE-BY-ID-MIGRATION grade filter)", () => {
   it("pricing with no raw block returns [] for Raw request", () => {
     const noRaw = { graded: pricing.graded };
     expect(selectSalesByGrade(noRaw, "Raw")).toEqual([]);
+  });
+
+  // CF-GRADED-PRICE-BY-ID-ZERO-COMPS (2026-06-08):
+  // - Cardsight's wire shape carries grade_value as string OR number across
+  //   companies / cards. Strict === broke the numeric-typed graded buckets
+  //   (observed in production: fda530ab PSA 10 had 207 records on the wire
+  //   that selectSalesByGrade dropped to 0).
+  // - The same payload can list the same grade_value across multiple
+  //   `grades[]` entries (fda530ab PSA 9 = 117 + 3, BGS 10 = 1 + 4).
+  //   .find returned the first only; .filter + flatMap concatenates.
+  describe("wire-type drift + duplicate-bucket merge (CF-GRADED-ZERO-COMPS)", () => {
+    it('grade_value as number 9 matches "PSA 9" request', () => {
+      const numericPricing = {
+        raw: { records: raw },
+        graded: [
+          {
+            company_name: "PSA",
+            grades: [{ grade_value: 9 as unknown as string, records: psa9 }],
+          },
+        ],
+      };
+      expect(selectSalesByGrade(numericPricing, "PSA 9")).toEqual(psa9);
+    });
+
+    it('grade_value as string "9.0" matches "PSA 9" request', () => {
+      const decimalStringPricing = {
+        raw: { records: raw },
+        graded: [
+          {
+            company_name: "PSA",
+            grades: [{ grade_value: "9.0", records: psa9 }],
+          },
+        ],
+      };
+      expect(selectSalesByGrade(decimalStringPricing, "PSA 9")).toEqual(psa9);
+    });
+
+    it('grade_value as number 9.5 matches "BGS 9.5" request', () => {
+      const numericDecimalPricing = {
+        raw: { records: raw },
+        graded: [
+          {
+            company_name: "BGS",
+            grades: [{ grade_value: 9.5 as unknown as string, records: bgs95 }],
+          },
+        ],
+      };
+      expect(selectSalesByGrade(numericDecimalPricing, "BGS 9.5")).toEqual(bgs95);
+    });
+
+    it("duplicate grade_value buckets merge (PSA 9 split across two entries)", () => {
+      const dupPsa9Extra = [makeRecord(305, "psa9-c"), makeRecord(310, "psa9-d")];
+      const dupPricing = {
+        raw: { records: raw },
+        graded: [
+          {
+            company_name: "PSA",
+            grades: [
+              { grade_value: "9", records: psa9 },
+              { grade_value: "10", records: psa10 },
+              { grade_value: "9", records: dupPsa9Extra },
+            ],
+          },
+        ],
+      };
+      expect(selectSalesByGrade(dupPricing, "PSA 9")).toEqual([...psa9, ...dupPsa9Extra]);
+    });
+
+    it("duplicate grade_value buckets with mixed types both merge", () => {
+      const stringBucket = [makeRecord(500, "psa10-string")];
+      const numberBucket = [makeRecord(520, "psa10-num")];
+      const mixedPricing = {
+        raw: { records: raw },
+        graded: [
+          {
+            company_name: "PSA",
+            grades: [
+              { grade_value: "10", records: stringBucket },
+              { grade_value: 10 as unknown as string, records: numberBucket },
+            ],
+          },
+        ],
+      };
+      expect(selectSalesByGrade(mixedPricing, "PSA 10")).toEqual([
+        ...stringBucket,
+        ...numberBucket,
+      ]);
+    });
   });
 });
 
