@@ -7,6 +7,7 @@ import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // Cardsight wire op. See marketRead.service.ts header for architecture.
 import {
   generateMarketRead,
+  pickCardImageUrl,
   type MarketReadResult,
 } from "../services/compiq/marketRead.service.js";
 import { getPricing as getPricingForMarketRead } from "../services/compiq/cardsight.client.js";
@@ -1009,6 +1010,13 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // with unchanged comp sets reuse the prose without burning LLM
       // tokens (once wired up).
       let marketReadResult: MarketReadResult | null = null;
+      // CF-CARD-HERO-IMAGE (2026-06-08): top-level representative
+      // thumbnail. Picked from the SAME pricing payload the marketRead
+      // uses (cs:pricing cache-hit — zero extra Cardsight ops). The
+      // factPack's binMedian doubles as the below-market benchmark so
+      // the hero biases toward a clean, near-market sale rather than
+      // the cheapest comp.
+      let cardImageUrl: string | undefined;
       try {
         const pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
@@ -1022,12 +1030,18 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             est as Record<string, unknown>,
             resolvedCardId,
           );
+          cardImageUrl = pickCardImageUrl(
+            pricingForMR,
+            gradeKey,
+            marketReadResult?.factPack?.binMedian ?? null,
+          );
         }
       } catch (err) {
         console.warn(
           `[compiq.price-by-id] marketRead build failed (non-fatal): ${(err as Error)?.message ?? err}`,
         );
         marketReadResult = null;
+        cardImageUrl = undefined;
       }
 
       return {
@@ -1091,6 +1105,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // so the prose's "don't value a clean card against them" callout is
         // visible in the comp list.
         excludedComps: marketReadResult?.excludedComps ?? [],
+        // CF-CARD-HERO-IMAGE (2026-06-08): top-level hero thumbnail for
+        // the priced-card view. Field omitted when no usable image was
+        // found in the grade-matched (or raw-fallback) pool. iOS should
+        // render a placeholder when absent.
+        cardImageUrl,
       };
     };
 

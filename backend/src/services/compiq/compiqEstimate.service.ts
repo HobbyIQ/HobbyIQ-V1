@@ -91,6 +91,11 @@ interface RawComp {
   // chip to iOS. Optional + null-tolerant because the meaningful-query
   // fall-through path's RoutedResult may not always carry it.
   listingType?: string | null;
+  // CF-RECENTCOMPS-IMAGEURL (2026-06-08): Cardsight wire-shape per-comp
+  // image_url (typically `i.ebayimg.com/.../s-l225.jpg`). Threaded
+  // alongside listingType so recentComps[] + excludedComps[] can show
+  // a thumbnail. Null when the upstream record lacks it.
+  imageUrl?: string | null;
 }
 
 /** CF-RECENTCOMPS-SALETYPE: map Cardsight's wire-shape listing_type to
@@ -1180,6 +1185,8 @@ async function fetchComps(
         // CF-RECENTCOMPS-SALETYPE: preserve Cardsight's per-comp
         // listing_type so the route can derive saleType for iOS chips.
         listingType: (s as { listing_type?: string | null }).listing_type ?? null,
+        // CF-RECENTCOMPS-IMAGEURL: preserve image_url for the thumbnail.
+        imageUrl: (s as { image_url?: string | null }).image_url ?? null,
       }))
       .filter((c) => c.price > 0);
 
@@ -1250,6 +1257,8 @@ async function fetchComps(
       // RoutedResult sale union doesn't always declare the field but
       // Cardsight's downstream sales DO carry it.
       listingType: (s as { listing_type?: string | null }).listing_type ?? null,
+      // CF-RECENTCOMPS-IMAGEURL: same defensive cast — preserve image_url.
+      imageUrl: (s as { image_url?: string | null }).image_url ?? null,
     }))
     .filter((c) => c.price > 0);
 
@@ -2587,6 +2596,7 @@ export async function computeEstimate(
           soldDate: c.soldDate,
           grade: formatGradeLabel(c.title),
           saleType: saleTypeFromListingType(c.listingType),
+          imageUrl: c.imageUrl ?? undefined,
         })),
       gradeUsed: cardHedgeGrade,
       source: "variant-mismatch",
@@ -2958,6 +2968,7 @@ export async function computeEstimate(
                 soldDate: c.soldDate,
                 grade: formatGradeLabel(c.title),
                 saleType: saleTypeFromListingType(c.listingType),
+                imageUrl: c.imageUrl ?? undefined,
               })),
             gradeUsed: cardHedgeGrade,
             source: "sibling-pool",
@@ -3056,6 +3067,7 @@ export async function computeEstimate(
           soldDate: c.soldDate,
           grade: formatGradeLabel(c.title),
           saleType: saleTypeFromListingType(c.listingType),
+          imageUrl: c.imageUrl ?? undefined,
         })),
       gradeUsed: cardHedgeGrade,
       source: "no-recent-comps",
@@ -3214,6 +3226,8 @@ export async function computeEstimate(
     // pipeline-internal comps shape so the route-level recentComps[]
     // can emit a saleType chip.
     listingType: c.listingType,
+    // CF-RECENTCOMPS-IMAGEURL: same threading for image_url.
+    imageUrl: c.imageUrl,
   }));
 
   // Build context for the pipeline
@@ -3673,25 +3687,68 @@ export async function computeEstimate(
     // any condition-quality cuts kicked in.
     compsAvailable: recencyFilteredComps.length,
     cardIdentity,
-    recentComps: comps
-      .slice()
-      .sort((a, b) => {
-        const ta = Date.parse(a.date || "") || 0;
-        const tb = Date.parse(b.date || "") || 0;
-        return tb - ta;
-      })
-      .slice(0, 10)
-      .map((c) => ({
-        // Display the ORIGINAL Card Hedge sale price (not the post-
-        // normalizeCompToRaw raw-equivalent intermediate). See issue #24.
-        price: c.originalPrice,
-        title: c.title,
-        soldDate: c.date,
-        grade: formatGradeLabel(c.title),
-        // CF-RECENTCOMPS-SALETYPE (2026-06-08): emit "Buy It Now" /
-        // "Auction" / omit, derived from Cardsight's listing_type.
-        saleType: saleTypeFromListingType(c.listingType),
-      })),
+    recentComps: ((): Array<Record<string, unknown>> => {
+      // CF-RECENTCOMPS-BELOWMARKET (2026-06-08): compute a local BIN
+      // median from THIS comp pool so the belowMarket badge reflects
+      // the same $X-ish anchor the marketRead factPack reports. 14d
+      // window mirrors the marketRead window. originalPrice (the user-
+      // facing display price) is the right anchor; normalized `price`
+      // would mix grade-adjusted values into the threshold.
+      //
+      // belowMarket emits ONLY on this live happy-path site. The three
+      // fallback paths (variant-mismatch / no-recent-comps / sibling-
+      // pool) hold too thin a pool to anchor a benchmark — they skip
+      // emission. Field omitted (not false) when the threshold can't
+      // be computed, matching the saleType / imageUrl omit semantics.
+      const cutoff14d = Date.now() - 14 * 24 * 3600 * 1000;
+      const binPrices14d = comps
+        .filter((c) => c.listingType === "fixed")
+        .filter((c) => {
+          const ts = Date.parse(c.date || "");
+          return Number.isFinite(ts) && ts >= cutoff14d;
+        })
+        .map((c) => c.originalPrice)
+        .sort((a, b) => a - b);
+      let binMedianLocal: number | null = null;
+      if (binPrices14d.length >= 2) {
+        const n = binPrices14d.length;
+        binMedianLocal =
+          n % 2 === 0
+            ? (binPrices14d[n / 2 - 1] + binPrices14d[n / 2]) / 2
+            : binPrices14d[Math.floor(n / 2)];
+      }
+      const belowMarketThreshold =
+        binMedianLocal !== null && binMedianLocal > 0 ? binMedianLocal * 0.65 : null;
+
+      return comps
+        .slice()
+        .sort((a, b) => {
+          const ta = Date.parse(a.date || "") || 0;
+          const tb = Date.parse(b.date || "") || 0;
+          return tb - ta;
+        })
+        .slice(0, 10)
+        .map((c) => {
+          const entry: Record<string, unknown> = {
+            // Display the ORIGINAL Card Hedge sale price (not the post-
+            // normalizeCompToRaw raw-equivalent intermediate). See issue #24.
+            price: c.originalPrice,
+            title: c.title,
+            soldDate: c.date,
+            grade: formatGradeLabel(c.title),
+            // CF-RECENTCOMPS-SALETYPE (2026-06-08): emit "Buy It Now" /
+            // "Auction" / omit, derived from Cardsight's listing_type.
+            saleType: saleTypeFromListingType(c.listingType),
+            // CF-RECENTCOMPS-IMAGEURL (2026-06-08): pass-through thumbnail
+            // URL when present; omit when null so iOS uses a placeholder.
+            imageUrl: c.imageUrl ?? undefined,
+          };
+          if (belowMarketThreshold !== null) {
+            entry.belowMarket = c.originalPrice < belowMarketThreshold;
+          }
+          return entry;
+        });
+    })(),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     variantWarning: fetched.variantWarning,

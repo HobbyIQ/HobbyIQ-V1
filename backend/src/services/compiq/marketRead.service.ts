@@ -107,6 +107,10 @@ export interface ExcludedCompEntry {
   reason: string;
   /** Plain-language label, same vocabulary as topExclusionReasons. */
   label: string;
+  /** CF-RECENTCOMPS-IMAGEURL (2026-06-08): Cardsight's per-comp
+   *  image_url (typically i.ebayimg.com/.../s-l225.jpg). Omitted when
+   *  the upstream record lacked it. */
+  imageUrl?: string;
 }
 
 export interface MarketReadResult {
@@ -145,11 +149,80 @@ export function isConditionReason(reason: string): boolean {
   return CONDITION_KEYWORD_STEMS.has(stem);
 }
 
+/** CF-CARD-HERO-IMAGE (2026-06-08): pick a representative thumbnail for
+ *  the priced-card hero. ZERO extra Cardsight ops — reuses the pricing
+ *  payload the route already fetched.
+ *
+ *  Selection chain (per spec):
+ *    1. Pool = records matching the REQUESTED grade
+ *       (raw → pricing.raw.records[]; "PSA 10" → graded[PSA][10].records[]
+ *        via selectSalesByGrade's existing numeric-eq + dup-bucket merge).
+ *    2. Among records with non-null image_url, PREFER the most recent
+ *       whose price is at/above the 0.65 * binMedian benchmark (the same
+ *       below-market line iOS shows on recentComps[].belowMarket). This
+ *       biases the hero toward a clean, near-market sale rather than a
+ *       creased-condition cheap copy.
+ *    3. Fall back to the most recent record with image_url regardless
+ *       of price.
+ *    4. If the grade pool has no image, fall back to the raw pool's
+ *       most recent record with image_url (graded heroes will land on
+ *       a slab photo when slab sales have images; this raw fallback
+ *       only kicks in when graded image data is genuinely missing).
+ *    5. Otherwise undefined → field omitted from the response.
+ *
+ *  The pulled image_url is an `i.ebayimg.com/.../s-l225.jpg` thumb —
+ *  per the CF-C recon, Cardsight has no stable catalog asset, so this
+ *  is the best signal available. It ages out with the source eBay
+ *  listing (~90d) but is regenerated on every cache miss as new comps
+ *  land. */
+export function pickCardImageUrl(
+  pricing: CardsightPricingResponse,
+  grade: string,
+  binMedian: number | null,
+): string | undefined {
+  const threshold = binMedian !== null && binMedian > 0 ? binMedian * 0.65 : null;
+
+  const pickFromPool = (
+    sales: ReadonlyArray<CardsightSaleRecord> | undefined,
+  ): string | undefined => {
+    if (!sales || sales.length === 0) return undefined;
+    const withImage = sales
+      .filter((s) => typeof s.image_url === "string" && (s.image_url as string).length > 0)
+      .slice()
+      .sort((a, b) => {
+        const ta = Date.parse(a.date || "") || 0;
+        const tb = Date.parse(b.date || "") || 0;
+        return tb - ta;
+      });
+    if (withImage.length === 0) return undefined;
+    if (threshold !== null) {
+      const above = withImage.find((s) => s.price >= threshold);
+      if (above && typeof above.image_url === "string") return above.image_url;
+    }
+    return withImage[0].image_url ?? undefined;
+  };
+
+  const gradePool = selectSalesByGrade(
+    pricing as unknown as Parameters<typeof selectSalesByGrade>[0],
+    grade,
+  );
+  const fromGrade = pickFromPool(gradePool);
+  if (fromGrade) return fromGrade;
+
+  // Fall back to raw pool only when the requested grade pool yielded
+  // nothing AND we weren't already on raw.
+  if (grade !== "Raw") {
+    return pickFromPool(pricing.raw?.records);
+  }
+  return undefined;
+}
+
 type EnrichedComp = {
   price: number;
   title: string;
   soldDate: string;
   listingType: string | null;
+  imageUrl: string | null;
 };
 
 function median(values: number[]): number | null {
@@ -206,13 +279,17 @@ function buildExcludedComps(
   excludedDetail: Array<{ comp: EnrichedComp; reason: string }>,
 ): ExcludedCompEntry[] {
   return excludedDetail
-    .map((e) => ({
-      price: round2(e.comp.price),
-      date: e.comp.soldDate,
-      title: e.comp.title,
-      reason: e.reason,
-      label: friendlyExclusionLabel(e.reason),
-    }))
+    .map((e) => {
+      const entry: ExcludedCompEntry = {
+        price: round2(e.comp.price),
+        date: e.comp.soldDate,
+        title: e.comp.title,
+        reason: e.reason,
+        label: friendlyExclusionLabel(e.reason),
+      };
+      if (e.comp.imageUrl) entry.imageUrl = e.comp.imageUrl;
+      return entry;
+    })
     .sort((a, b) => {
       const ta = Date.parse(a.date) || 0;
       const tb = Date.parse(b.date) || 0;
@@ -239,6 +316,7 @@ function buildFactPackAndExcludedInternal(
       title: s.title ?? "",
       soldDate: s.date ?? "",
       listingType: (s as { listing_type?: string | null }).listing_type ?? null,
+      imageUrl: (s as { image_url?: string | null }).image_url ?? null,
     }));
 
   // Window FIRST, then quality-filter. Why this order vs the trend

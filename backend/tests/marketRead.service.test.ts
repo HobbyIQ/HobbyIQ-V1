@@ -11,6 +11,7 @@ import {
   buildLLMPrompt,
   generateMarketRead,
   isConditionReason,
+  pickCardImageUrl,
   type MarketReadFactPack,
 } from "../src/services/compiq/marketRead.service";
 
@@ -620,5 +621,173 @@ describe("generateMarketRead excludedComps[]", () => {
     };
     const result = await generateMarketRead(pricing, "Raw", est, TROUT_ID);
     expect(result.excludedComps).toEqual([]);
+  });
+});
+
+// CF-CARD-HERO-IMAGE (2026-06-08): selection chain.
+describe("pickCardImageUrl", () => {
+  function isoDaysAgo(n: number): string {
+    return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+  }
+  function rec(
+    price: number,
+    daysAgo: number,
+    image_url: string | null,
+    listing_type: "fixed" | "auction" = "fixed",
+  ) {
+    return {
+      title: `comp #${price}`,
+      price,
+      date: isoDaysAgo(daysAgo),
+      source: "ebay" as const,
+      listing_type,
+      url: null,
+      image_url,
+    };
+  }
+
+  it("picks the most recent grade-pool record at/above 0.65 * binMedian", () => {
+    const pricing = {
+      raw: {
+        count: 5,
+        records: [
+          rec(200, 1, "https://img/cheap.jpg"),     // most recent BUT below threshold (273)
+          rec(420, 3, "https://img/anchor.jpg"),    // above threshold; older
+          rec(480, 5, "https://img/older.jpg"),     // above threshold; even older
+        ],
+      },
+      graded: [],
+      meta: { total_records: 5, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "Raw", 420);
+    // Threshold = 273. Most recent comp >= 273 is the $420 from 3d ago.
+    expect(pick).toBe("https://img/anchor.jpg");
+  });
+
+  it("falls back to the most recent comp when none meet the threshold", () => {
+    const pricing = {
+      raw: {
+        count: 3,
+        records: [
+          rec(100, 1, "https://img/recent-cheap.jpg"),  // below threshold
+          rec(150, 5, "https://img/older-cheap.jpg"),   // below threshold
+          rec(180, 10, "https://img/oldest-cheap.jpg"), // below threshold
+        ],
+      },
+      graded: [],
+      meta: { total_records: 3, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "Raw", 420);
+    // Threshold = 273; nothing qualifies. Most recent with image wins.
+    expect(pick).toBe("https://img/recent-cheap.jpg");
+  });
+
+  it("ignores records without an image_url", () => {
+    const pricing = {
+      raw: {
+        count: 3,
+        records: [
+          rec(420, 1, null), // newest, but NO image → must be skipped
+          rec(420, 3, "https://img/with-image.jpg"),
+        ],
+      },
+      graded: [],
+      meta: { total_records: 2, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "Raw", 420);
+    expect(pick).toBe("https://img/with-image.jpg");
+  });
+
+  it("when binMedian is null, returns most recent grade-pool image regardless of price", () => {
+    const pricing = {
+      raw: {
+        count: 2,
+        records: [
+          rec(50, 1, "https://img/anything.jpg"),
+          rec(420, 5, "https://img/older.jpg"),
+        ],
+      },
+      graded: [],
+      meta: { total_records: 2, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "Raw", null);
+    expect(pick).toBe("https://img/anything.jpg");
+  });
+
+  it("PSA 10: pulls from graded[PSA][10] pool, not raw", () => {
+    const pricing = {
+      raw: {
+        count: 1,
+        records: [rec(420, 1, "https://img/raw-card.jpg")],
+      },
+      graded: [
+        {
+          company_name: "PSA",
+          grades: [
+            {
+              grade_value: "10",
+              records: [
+                rec(1200, 1, "https://img/psa10-slab.jpg"),
+                rec(1300, 3, "https://img/psa10-older.jpg"),
+              ],
+            },
+          ],
+        },
+      ],
+      meta: { total_records: 3, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "PSA 10", 1184);
+    // PSA 10 threshold = 1184 * 0.65 = 769.6. Both PSA 10 records qualify;
+    // most recent wins. Raw photo must NOT be picked.
+    expect(pick).toBe("https://img/psa10-slab.jpg");
+    expect(pick).not.toBe("https://img/raw-card.jpg");
+  });
+
+  it("graded fallback: when grade pool has NO image, falls back to raw pool most recent", () => {
+    const pricing = {
+      raw: {
+        count: 2,
+        records: [
+          rec(420, 1, "https://img/raw-newest.jpg"),
+          rec(400, 5, "https://img/raw-older.jpg"),
+        ],
+      },
+      graded: [
+        {
+          company_name: "PSA",
+          grades: [
+            {
+              grade_value: "10",
+              // PSA 10 records exist but have NO image_url
+              records: [rec(1200, 1, null), rec(1300, 3, null)],
+            },
+          ],
+        },
+      ],
+      meta: { total_records: 4, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    const pick = pickCardImageUrl(pricing, "PSA 10", 1184);
+    // Grade pool returned no usable hero → fall back to raw pool.
+    // Threshold here is 1184 * 0.65 = 769.6; raw comps are below that,
+    // so the most-recent raw with image wins.
+    expect(pick).toBe("https://img/raw-newest.jpg");
+  });
+
+  it("returns undefined when both grade pool and raw pool have no images", () => {
+    const pricing = {
+      raw: { count: 1, records: [rec(420, 1, null)] },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: isoDaysAgo(1) },
+    } as any;
+    expect(pickCardImageUrl(pricing, "Raw", 420)).toBeUndefined();
+  });
+
+  it("returns undefined on a missing-grade request when raw is also empty", () => {
+    const pricing = {
+      raw: { count: 0, records: [] },
+      graded: [],
+      meta: { total_records: 0, last_sale_date: null },
+    } as any;
+    expect(pickCardImageUrl(pricing, "PSA 10", 1184)).toBeUndefined();
   });
 });
