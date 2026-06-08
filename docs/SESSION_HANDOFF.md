@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-06-08 — Cardsight /pricing schema fix + returned-id consistency guard (deployed `f7d2f97`)
+
+**What broke.** /api/compiq/price-by-id's pinned-cardId path was returning half-broken cardIdentity on every call — only `title` and `number` populated; `card_id`, `player`, `set`, `year` all null. iOS comp page rendered a $1.00 / 4-of-4 pathology for Mike Trout 2011 Topps Update RC (fda530ab-...) tied to wrong-card Frazier comp data.
+
+**Root cause (probe-confirmed).** Cardsight's `/pricing/<id>` returns an embedded `card` object with a SHAPE that differs from `/catalog/search` and `/catalog/<id>/detail`:
+- pricing: `{ card_id, name, number, set: { set_id, name, year, release } }` — snake-case id, `name` IS the player, `set` is nested with the product line at `release`.
+- catalog/detail: `{ id, name, number, setName, releaseName, year, player? }` — flat, top-level fields.
+
+`CardsightPricingResponse.card` was typed as `CardsightCatalogResult`, so fetchComps read `.id` / `.player` / `.setName` / `.year` — all undefined on the wire. Same wire-mismatch existed in `cardsight.router.ts`'s identity_source fallback.
+
+The wrong-card Frazier comps were a separate vendor flap (Cardsight transiently served `pricing.card.card_id="96dabacb"` under fda530ab requests); now healed upstream, but our cache served the bad rows until TTL.
+
+**Fix (shipped at `f7d2f97`):**
+- New `CardsightPricingCard` interface matching the actual pricing wire; `CardsightPricingResponse.card` retyped to it. Catalog/detail keeps its existing `CardsightCatalogResult` type — two endpoints, two types.
+- `fetchComps` pinned-cardId path maps identity from the real shape (`card_id`, `name`→player, `set?.name`, `set?.year`→Number, `number`). Legacy `.id` fallback retained for defense-in-depth.
+- `cardsight.router.ts` identity_source fallback updated identically: `.setName`→`.set?.release` (preserves product-line semantics declared in the existing comment), `.year`→`.set?.year`, `.player`→`.name`.
+- **Consistency guard** after `getPricing(pinnedCardId)`: if `pricing.card.card_id` doesn't equal the requested id, log a subsystem-tagged `[cardsight]` mismatch event (`event: "pricing_card_id_mismatch"`, picked up by Group B's per-subsystem error-spike alert) and return UNRESOLVED — empty comps + stub identity keyed on the REQUESTED id. Does NOT fall back to free-text search (that would compound the problem with a different wrong card).
+
+**Live verification (post-deploy `f7d2f97`):**
+- `/api/compiq/price-by-id { cardsightCardId: "fda530ab-..." }` → `cardIdentity { card_id: "fda530ab-...", title: "Mike Trout", player: "Mike Trout", set: "Base Set", year: 2011, number: "US175" }`; marketValue $377; compsUsed 20 of 26 available (3 dirty rows + 3 outlier trim).
+- Ohtani isolation `cardsightCardId: "9c33e17d-..."` → full identity `{ card_id, player: "Shohei Ohtani", set: "An International Affair", year: 2018, number: "IA-SO" }`. Fix is general, not Trout-specific.
+- Guard branch present at deployed `dist/services/compiq/compiqEstimate.service.js:756`.
+
+**Forward pattern (carry-forward for every vendor call):**
+> When the response embeds an id alongside data, assert `response.id === requestedId` before propagating any of that data into identity / display / billing. Wrong-id-but-confident-looking data is the worst failure mode — it renders cleanly and silently. The guard pattern in `compiqEstimate.service.ts` (subsystem-tagged log + UNRESOLVED return + stub keyed on requested id, NOT the returned wrong id) is the template. Apply this to any new vendor integration where the response can drift between request id and returned id (Cardsight, eBay, Apple, etc.).
+
+29 new tests pin the Cardsight pricing wire shape verbatim (Trout fixture from the live probe) so the next time Cardsight drifts the schema, `compiqEstimatePricingCardSchema.test.ts` fails loudly and the mapping correction is localized to one file. 4 new tests over the prior 2069 baseline; 2073 passing.
+
+---
+
 ## 2026-06-04 — iOS full surface built (Phases 1.1-10)
 
 **Commit:** `af350ba` on `main`. Build clean (0 errors). 36 files changed, +10,023 / −622 lines.
