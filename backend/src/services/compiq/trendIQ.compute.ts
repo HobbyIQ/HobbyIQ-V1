@@ -67,14 +67,20 @@ function deriveDirection(composite: number): TrendIQDirection {
 // (which decays from 1.0x at 15-21d to 0.1x past 30d) would bias the
 // older median upward toward the recent edge and dampen apparent trend
 // changes. The median is also naturally outlier-robust, so we skip the
-// `applyCompQualityFilter` pre-filter that the pricing path uses.
+// `applyCompQualityFilter` pre-filter — see coupling note below.
 //
-// Coupling note: we intentionally do NOT apply variant / parallel /
-// grade filters here. The caller (computeEstimate) passes its raw
-// `fetched.comps` set — comps for the resolved card_id, all variants.
-// Same-card variants tend to move directionally together (a hot player
-// pulls all his cards), so the trend signal is meaningful without the
-// extra filter. Layer 3 (segment trajectory) and the pricing path
+// Coupling note (CF-TREND-DIRTY-POOL, 2026-06-08): the caller
+// (computeEstimate) now passes a JUNK-EXCLUDED, VARIANTS-RETAINED pool —
+// `applyCompQualityFilter(fetched.comps)` with EXCLUSION_KEYWORDS +
+// outlier trim applied on the FULL-date pool BEFORE any recency narrowing.
+// This is the pool we want here. Junk listings (damaged, lot, (as is),
+// reprint, etc.) and 3.5σ-MAD outliers should never drag the trend
+// medians; the original "raw fetched.comps" coupling let them through.
+//
+// What's still NOT applied (intentional): variant / parallel / serial /
+// grade filters. Same-card variants tend to move directionally together
+// (a hot player pulls all his cards), so the trend signal stays broader
+// than the FMV pool. Layer 3 (segment trajectory) and the pricing path
 // handle finer-grained filtering for their own purposes.
 
 interface CardTrajectoryInput {

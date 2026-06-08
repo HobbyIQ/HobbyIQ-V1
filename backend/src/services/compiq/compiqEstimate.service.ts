@@ -2107,6 +2107,31 @@ export async function computeEstimate(
     }
   }
 
+  // CF-TREND-DIRTY-POOL (2026-06-08): build a junk-excluded full-date pool
+  // for the trend surfaces. The FMV pipeline narrows the pool through
+  // recency → variant → quality stages; the trend surfaces (cardTrajectory,
+  // broaderTrend) previously consumed the FULLY UNFILTERED `fetched.comps`,
+  // so damaged / lot / (as is) listings dragged the trend medians while
+  // the FMV computed on clean comps. Result: phantom-down trajectories on
+  // clean-but-noisily-listed cards (Trout fda530ab: clean recent median
+  // ≈ $420 but reported $250 because dirty listings hit the 14-day window).
+  //
+  // Fix: apply applyCompQualityFilter (EXCLUSION_KEYWORDS + outlier trim)
+  // to the full-date pool BEFORE any recency narrowing. Feed that to
+  // computeCardTrajectory + fetchBroaderTrend.exactComps so they slice
+  // their own recent/older windows out of clean comps.
+  //
+  // Deliberately NOT applied here: variant / parallel / serial / grade
+  // filters. computeCardTrajectory's coupling note (trendIQ.compute.ts:70)
+  // documents that same-card variants move directionally together, so
+  // the trend signal is intentionally broader than FMV. This change
+  // excludes JUNK only; variant breadth is preserved.
+  const trendCleanComps = applyCompQualityFilter(fetched.comps, {
+    player: fetched.card?.player ?? body.playerName ?? null,
+    year: fetched.card?.year ?? body.cardYear ?? null,
+    set: fetched.card?.set ?? body.product ?? null,
+  }).filtered;
+
   const recencyFilteredComps = applyRecencyFilter(fetched.comps);
 
   // ── Variant match filter — tiered loosening (CF-VARIANT-FILTER-LOOSENING) ─
@@ -2664,8 +2689,9 @@ export async function computeEstimate(
           //
           // Coverage expectations on this path:
           //   - L2 (cardTrajectory) needs ≥2 in 0-14d + ≥2 in 15-45d on
-          //     fetched.comps. Often null on the sibling-pool path because
-          //     direct comps are by definition thin here.
+          //     the junk-excluded clean pool (CF-TREND-DIRTY-POOL).
+          //     Often null on the sibling-pool path because direct comps
+          //     are by definition thin here.
           //   - L3 (segmentTrajectory) needs ≥2 pre-anchor + ≥2 post-anchor
           //     in siblingPool.sales, anchored on newestTs (this card's
           //     last direct sale). Often the load-bearing layer; the
@@ -2674,7 +2700,7 @@ export async function computeEstimate(
           //     → predictedPrice gracefully = fmv (factor 1.0), no
           //     fabrication.
           const cardTrajectory = computeCardTrajectory(
-            fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+            trendCleanComps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
           );
           // CF-TRENDIQ-SURFACES (2026-06-03): same windowing, byte-identical
           // component; .full is consumed only when caller opted into the
@@ -2928,8 +2954,13 @@ export async function computeEstimate(
       ? fetchPlayerSignals(playerNameForSignals).catch(() => ({ payload: null, sourceUrl: null }))
       : Promise.resolve({ payload: null, sourceUrl: null }),
   ]);
+  // CF-TREND-DIRTY-POOL (2026-06-08): pass the junk-excluded clean pool
+  // as exactComps (was `fetched.comps`). siblingPool hygiene is unchanged
+  // — sibling junk is a SEPARATE pass (siblings flow through their own
+  // fetch in fetchSiblingSales / fetchCompsByPlayer, with their own
+  // hygiene policy — out of scope here).
   const broaderTrend = cardIdentity
-    ? await fetchBroaderTrend(cardIdentity, cardHedgeGrade, fetched.comps, siblingPool).catch(() => null)
+    ? await fetchBroaderTrend(cardIdentity, cardHedgeGrade, trendCleanComps, siblingPool).catch(() => null)
     : null;
   const playerMomentum = buildPlayerMomentumComponent(playerSignalsResult);
 
@@ -3315,14 +3346,17 @@ export async function computeEstimate(
   }
 
   // ── TrendIQ composite (Phase 1 B.4.a + B.4.b + B.4.c: all 3 layers) ────
-  // Layer 2 reads from fetched.comps (exact-card pool) — see
-  // computeCardTrajectory's coupling note.
+  // Layer 2 reads from `trendCleanComps` — the exact-card pool with
+  // EXCLUSION_KEYWORDS + outlier hits removed (CF-TREND-DIRTY-POOL,
+  // 2026-06-08). Variants / parallels / serials are deliberately retained
+  // — see computeCardTrajectory's coupling note (junk-excluded, variants
+  // retained).
   // Layer 3 reads from siblingPool (sibling-sales only, exact excluded)
   // and uses the exact card's most-recent-sale timestamp (newestTs,
   // computed above) as the anchor. Re-anchor + pre-window resolution
   // documented in computeSegmentTrajectory header.
   const cardTrajectory = computeCardTrajectory(
-    fetched.comps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+    trendCleanComps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
   );
   // CF-TRENDIQ-SURFACES (2026-06-03): same windowing, byte-identical
   // component for composite math; .full is consumed only when caller
