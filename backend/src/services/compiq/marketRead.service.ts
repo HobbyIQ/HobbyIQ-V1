@@ -362,46 +362,76 @@ function joinReasonsDisjunctive(labels: string[]): string {
 
 /** Deterministic prose generator. 2-4 sentences depending on what the
  *  fact pack supports. Used as the fallback whenever the LLM is
- *  unavailable / returns invalid output / token budget is exhausted. */
+ *  unavailable / returns invalid output / token budget is exhausted.
+ *
+ *  CF-MARKET-READ-ADVISOR-VOICE (2026-06-08): S1+S2 merged into a single
+ *  benchmark + selling-counsel sentence (leads with the anchor, weaves
+ *  the bin/auction counts in mid-sentence, gives a route recommendation).
+ *  S3 is trend counsel — pct dropped on flat ("no urgency either
+ *  direction"), kept on up/down with directional advice ("paying up" /
+ *  "if you're selling, sooner may beat later"). S4 unchanged (already
+ *  advisor-toned in CF-MARKET-READ-EXCLUDED-CALLOUT).
+ *
+ *  Hard rules: every numeric token must trace to the fact pack (whole-
+ *  dollar rounded for prose; validator allows both forms); no
+ *  guarantees; counsel matches trendDirection. */
 export function templateMarketRead(fp: MarketReadFactPack): string {
   const out: string[] = [];
   const gradeLabel = fp.grade === "Raw" ? "raw" : fp.grade;
+  // "clean raw copy" reads naturally; for graded, "clean" is implied
+  // by the slab — drop it ("PSA 10 copy", "BGS 9.5 copy").
+  const openingNoun = fp.grade === "Raw" ? "clean raw copy" : `${fp.grade} copy`;
 
-  // Sentence 1 — sample size + window + grade.
-  if (fp.sampleUsed > 0) {
-    out.push(
-      `Based on ${fp.sampleUsed} of ${fp.sampleAvailable} ${gradeLabel} sales over the last ${fp.windowDays} days.`,
-    );
-  } else {
-    out.push(
-      `Too few recent ${gradeLabel} sales in the last ${fp.windowDays} days for a confident read.`,
-    );
-  }
-
-  // Sentence 2 — bin vs auction split. Only when both ≥2 (otherwise the
-  // split would over-promise on n=1 medians). Spread uses BIN-specific
-  // min/max so the sentence about Buy It Now listings doesn't cite an
-  // auction-priced floor.
-  if (fp.binCount >= 2 && fp.auctionCount >= 2 && fp.binMedian !== null && fp.auctionMedian !== null) {
-    out.push(
-      `Buy It Now listings (${fp.binCount} sales) cluster around $${dollar(fp.binMedian)} with most of the spread between $${dollar(fp.binPriceMin)} and $${dollar(fp.binPriceMax)}, while auctions (${fp.auctionCount} sales) tend toward closing prices around $${dollar(fp.auctionMedian)}.`,
-    );
+  // S1+S2 — benchmark + selling counsel.
+  if (fp.sampleUsed === 0) {
+    // Thin-sample fallback — nothing to anchor on yet.
+    out.push(`Too few recent ${gradeLabel} sales to give a confident benchmark right now.`);
+  } else if (
+    fp.binCount >= 2 &&
+    fp.auctionCount >= 2 &&
+    fp.binMedian !== null &&
+    fp.auctionMedian !== null
+  ) {
+    // Both formats represented. Phrasing splits on whether auctions
+    // close lower than fixed-price (typical) or land higher (rare on
+    // liquid cards but does happen).
+    const binSpreadClause =
+      fp.binPriceMin !== null && fp.binPriceMax !== null && fp.binPriceMin !== fp.binPriceMax
+        ? `, mostly $${dollar(fp.binPriceMin)}–$${dollar(fp.binPriceMax)}`
+        : "";
+    if (fp.auctionMedian < fp.binMedian) {
+      out.push(
+        `For a ${openingNoun}, anchor to the fixed-price market — those are settling around $${dollar(fp.binMedian)} (${fp.binCount} sales${binSpreadClause}) — while auctions close lower near $${dollar(fp.auctionMedian)}, so listing it and being patient tends to beat a quick auction.`,
+      );
+    } else {
+      out.push(
+        `For a ${openingNoun}, anchor to the fixed-price market — those are settling around $${dollar(fp.binMedian)} (${fp.binCount} sales${binSpreadClause}) — auctions are landing near $${dollar(fp.auctionMedian)}, so either route can work.`,
+      );
+    }
   } else if (fp.binCount >= 3 && fp.binMedian !== null) {
+    // Bin-only (no/thin auction data).
+    const binSpreadClause =
+      fp.binPriceMin !== null && fp.binPriceMax !== null && fp.binPriceMin !== fp.binPriceMax
+        ? `, mostly $${dollar(fp.binPriceMin)}–$${dollar(fp.binPriceMax)}`
+        : "";
     out.push(
-      `Buy It Now listings (${fp.binCount} sales) cluster around $${dollar(fp.binMedian)} with most of the spread between $${dollar(fp.binPriceMin)} and $${dollar(fp.binPriceMax)}.`,
+      `For a ${openingNoun}, anchor to the fixed-price market — those are settling around $${dollar(fp.binMedian)} (${fp.binCount} sales${binSpreadClause}).`,
     );
   } else if (fp.auctionCount >= 3 && fp.auctionMedian !== null) {
-    out.push(`Recent activity is mostly auctions (${fp.auctionCount} sales) closing around $${dollar(fp.auctionMedian)}.`);
+    // Auction-only (no/thin BIN data) — different counsel.
+    out.push(
+      `Recent activity is mostly auctions (${fp.auctionCount} sales) closing around $${dollar(fp.auctionMedian)} — auction closes typically run below fixed-price, so listing it and being patient may beat a quick auction.`,
+    );
   }
 
-  // Sentence 3 — trend direction.
-  const absPct = Math.abs(fp.trendPct);
+  // S3 — trend counsel. Drop pct on flat; keep on up/down.
   if (fp.trendDirection === "up") {
-    out.push(`Recent vs prior median ticked up about ${fp.trendPct}%.`);
+    out.push(`Momentum's building — buyers are paying up about ${fp.trendPct}%.`);
   } else if (fp.trendDirection === "down") {
-    out.push(`Recent vs prior median is off about ${absPct}%.`);
+    const absPct = Math.abs(fp.trendPct);
+    out.push(`Cooling off about ${absPct}% — if you're selling, sooner may beat later.`);
   } else {
-    out.push(`Recent vs prior median is holding roughly flat at ${fp.trendPct}%.`);
+    out.push(`The market's held steady the past two weeks, so there's no urgency either direction.`);
   }
 
   // Sentence 4 — exclusion advisor.

@@ -187,27 +187,35 @@ describe("templateMarketRead", () => {
     fmv: 368,
   };
 
-  it("emits a 4-sentence summary for the Trout-shaped fact pack", () => {
+  it("emits an advisor-voice 3-sentence summary for the Trout-shaped fact pack", () => {
+    // CF-MARKET-READ-ADVISOR-VOICE (2026-06-08): S1+S2 merged into a
+    // benchmark + selling-counsel sentence; S3 is trend counsel (flat
+    // drops the pct); S4 keeps the damaged/read callout.
     const text = templateMarketRead(baseFp);
-    // Sentence 1: sample size + window
-    expect(text).toContain("22 of 26");
-    expect(text).toContain("14 days");
-    // Sentence 2: bin/auction split, BIN-specific spread, whole dollars
-    expect(text).toContain("Buy It Now");
+    // S1+S2 — advisor-toned benchmark.
+    expect(text).toContain("For a clean raw copy");
+    expect(text).toContain("anchor to the fixed-price market");
+    expect(text).toContain("settling around $420");
     expect(text).toContain("9 sales");
-    expect(text).toContain("$420");
     expect(text).toContain("$200");   // binPriceMin
     expect(text).toContain("$650");   // binPriceMax
-    expect(text).toContain("auctions (3 sales)");
-    expect(text).toContain("$236");   // auctionMedian 235.5 → 236 (whole dollar)
+    expect(text).toContain("auctions close lower near $236");
+    expect(text).toContain("listing it and being patient tends to beat a quick auction");
+    // Sample-size opener is GONE.
+    expect(text).not.toContain("Based on");
+    expect(text).not.toContain("22 of 26");
+    expect(text).not.toContain("14 days");
+    expect(text).not.toContain("Buy It Now");
+    // Whole-dollar rounding intact.
     expect(text).not.toContain("$235.5");
-    // Sentence 3: flat trend
-    expect(text).toContain("holding roughly flat");
-    expect(text).toContain("0%");
-    // Sentence 4 — CF-MARKET-READ-EXCLUDED-CALLOUT damaged/read variant.
+    // S3 — flat trend, no pct.
+    expect(text).toContain("The market's held steady the past two weeks");
+    expect(text).toContain("no urgency either direction");
+    expect(text).not.toContain("holding roughly flat");
+    expect(text).not.toContain("at 0%");
+    // S4 — unchanged damaged/read variant.
     expect(text).toContain("The 4 cheapest sales");
     expect(text).toContain("$158");
-    expect(text).toContain("$200");
     expect(text).toContain("that's why they sold low");
     expect(text).toContain("Don't value a clean card against them");
     expect(text).toContain("seller-described damage");
@@ -318,26 +326,78 @@ describe("templateMarketRead", () => {
     expect(text).not.toContain("price outliers");
   });
 
-  it("suppresses bin/auction sentence when one side is n<2", () => {
+  it("suppresses auction clause when auction side is n<2 (bin-only advisor)", () => {
     const fpOnlyBin = { ...baseFp, auctionCount: 0, auctionMedian: null };
     const text = templateMarketRead(fpOnlyBin);
-    // Should still emit a bin-only sentence (binCount=11>=3) but not
-    // mention auctions.
     expect(text).not.toContain("auctions");
-    expect(text).toContain("Buy It Now");
+    // Still leads with the benchmark + fixed-price anchor; no Buy It
+    // Now naming in advisor voice.
+    expect(text).toContain("anchor to the fixed-price market");
+    expect(text).toContain("settling around $420");
   });
 
-  it("emits up/down trend phrasing when outside the deadband", () => {
+  it("auction-only variant (binCount<3, auctionCount>=3): advisor counsel still names fixed-price as patience option", () => {
+    const fpAuctionOnly = { ...baseFp, binCount: 0, binMedian: null, binPriceMin: null, binPriceMax: null, auctionCount: 5, auctionMedian: 220 };
+    const text = templateMarketRead(fpAuctionOnly);
+    expect(text).toContain("Recent activity is mostly auctions (5 sales)");
+    expect(text).toContain("closing around $220");
+    expect(text).toContain("auction closes typically run below fixed-price");
+    expect(text).toContain("listing it and being patient may beat a quick auction");
+  });
+
+  it("emits up/down trend counsel (advisor voice) with the directional pct", () => {
     const fpUp = { ...baseFp, trendDirection: "up" as const, trendPct: 12.5 };
-    expect(templateMarketRead(fpUp)).toContain("ticked up about 12.5%");
+    const upText = templateMarketRead(fpUp);
+    expect(upText).toContain("Momentum's building");
+    expect(upText).toContain("buyers are paying up about 12.5%");
+    expect(upText).not.toContain("ticked up");
+
     const fpDown = { ...baseFp, trendDirection: "down" as const, trendPct: -15.4 };
-    expect(templateMarketRead(fpDown)).toContain("off about 15.4%");
+    const downText = templateMarketRead(fpDown);
+    expect(downText).toContain("Cooling off about 15.4%");
+    expect(downText).toContain("if you're selling, sooner may beat later");
+    expect(downText).not.toContain("median is off");
   });
 
-  it("emits a thin-sample sentence when sampleUsed is 0", () => {
+  it("flat trend drops the pct from prose entirely", () => {
+    const fpFlat = { ...baseFp, trendDirection: "flat" as const, trendPct: 1.6 };
+    const text = templateMarketRead(fpFlat);
+    expect(text).toContain("The market's held steady the past two weeks");
+    expect(text).toContain("no urgency either direction");
+    // No "1.6%" or "at X%" anywhere in the flat sentence.
+    expect(text).not.toContain("1.6%");
+    expect(text).not.toContain("holding roughly flat");
+  });
+
+  it("graded grade drops 'clean' from openingNoun ('PSA 10 copy' not 'clean PSA 10 copy')", () => {
+    const fpPSA = {
+      ...baseFp,
+      grade: "PSA 10",
+      binMedian: 1200,
+      binPriceMin: 1000,
+      binPriceMax: 1450,
+      auctionMedian: 950,
+    };
+    const text = templateMarketRead(fpPSA);
+    expect(text).toContain("For a PSA 10 copy");
+    expect(text).not.toContain("clean PSA 10");
+  });
+
+  it("auction-median NOT lower than BIN: drops the 'patience' counsel and uses neutral phrasing", () => {
+    const fpEven = { ...baseFp, auctionMedian: 425 }; // > binMedian 420
+    const text = templateMarketRead(fpEven);
+    expect(text).toContain("auctions are landing near $425");
+    expect(text).toContain("either route can work");
+    expect(text).not.toContain("close lower");
+    expect(text).not.toContain("being patient tends to beat");
+  });
+
+  it("emits the advisor thin-sample sentence when sampleUsed is 0", () => {
     const fpThin = { ...baseFp, sampleUsed: 0, binCount: 0, auctionCount: 0, excludedCount: 0 };
     const text = templateMarketRead(fpThin);
-    expect(text).toContain("Too few recent");
+    expect(text).toContain("Too few recent raw sales to give a confident benchmark");
+    // Even thin sample still gets a trend counsel sentence (flat default).
+    expect(text).toContain("The market's held steady");
   });
 });
 
