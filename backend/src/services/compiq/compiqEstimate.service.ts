@@ -362,9 +362,14 @@ function scoreCompQuality(sale: RawComp, _card: CardIdentityLite): CompQualityVe
  * real outliers even on small (n≥4) samples. Threshold uses the standard
  * modified-z-score cutoff: |0.6745·(p − median) / MAD| > 3.5.
  * Skipped when sample size < 4 or when the distribution is degenerate.
+ *
+ * Returns BOTH the kept set and the per-comp removed list so consumers
+ * that need to surface excluded comps (CF-MARKET-READ-EXCLUDED-CALLOUT,
+ * 2026-06-08) can label them individually. Existing applyCompQualityFilter
+ * uses `removedComps.length` for the histogram count.
  */
-function filterPriceOutliers(sales: RawComp[]): { kept: RawComp[]; removed: number } {
-  if (sales.length < 4) return { kept: sales, removed: 0 };
+function filterPriceOutliers(sales: RawComp[]): { kept: RawComp[]; removedComps: RawComp[] } {
+  if (sales.length < 4) return { kept: sales, removedComps: [] };
   const prices = sales.map((s) => s.price).sort((a, b) => a - b);
   const median = prices[Math.floor(prices.length / 2)];
   const absDevs = prices.map((p) => Math.abs(p - median)).sort((a, b) => a - b);
@@ -374,12 +379,22 @@ function filterPriceOutliers(sales: RawComp[]): { kept: RawComp[]; removed: numb
     const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
     const variance = prices.reduce((a, b) => a + (b - mean) ** 2, 0) / prices.length;
     const stdDev = Math.sqrt(variance);
-    if (stdDev <= 0) return { kept: sales, removed: 0 };
-    const kept = sales.filter((s) => Math.abs(s.price - mean) <= stdDev * 2.5);
-    return { kept, removed: sales.length - kept.length };
+    if (stdDev <= 0) return { kept: sales, removedComps: [] };
+    const kept: RawComp[] = [];
+    const removed: RawComp[] = [];
+    for (const s of sales) {
+      if (Math.abs(s.price - mean) <= stdDev * 2.5) kept.push(s);
+      else removed.push(s);
+    }
+    return { kept, removedComps: removed };
   }
-  const kept = sales.filter((s) => Math.abs(0.6745 * (s.price - median) / mad) <= 3.5);
-  return { kept, removed: sales.length - kept.length };
+  const kept: RawComp[] = [];
+  const removed: RawComp[] = [];
+  for (const s of sales) {
+    if (Math.abs(0.6745 * (s.price - median) / mad) <= 3.5) kept.push(s);
+    else removed.push(s);
+  }
+  return { kept, removedComps: removed };
 }
 
 interface CompQualityResult {
@@ -388,8 +403,30 @@ interface CompQualityResult {
   reasons: Record<string, number>;
 }
 
-export function applyCompQualityFilter(sales: RawComp[], card: CardIdentityLite): CompQualityResult {
+/** CF-MARKET-READ-EXCLUDED-CALLOUT (2026-06-08): per-comp exclusion shape
+ *  used by callers that need to surface the dropped comps individually
+ *  (e.g. iOS Recent Sales list — "show greyed sub-section labeled
+ *  Damaged / Read desc."). */
+export interface CompExclusion {
+  comp: RawComp;
+  reason: string;
+}
+
+export interface CompQualityResultDetailed {
+  filtered: RawComp[];
+  excluded: CompExclusion[];
+  reasons: Record<string, number>;
+}
+
+/** Same filter pass as applyCompQualityFilter but ALSO returns each
+ *  excluded comp tagged with the reason that disqualified it. Used by
+ *  marketRead.service to build the response's `excludedComps[]`. */
+export function applyCompQualityFilterDetailed(
+  sales: RawComp[],
+  card: CardIdentityLite,
+): CompQualityResultDetailed {
   const reasons: Record<string, number> = {};
+  const excluded: CompExclusion[] = [];
   const passed: RawComp[] = [];
   for (const s of sales) {
     const verdict = scoreCompQuality(s, card);
@@ -397,14 +434,25 @@ export function applyCompQualityFilter(sales: RawComp[], card: CardIdentityLite)
       passed.push(s);
     } else {
       reasons[verdict.reason] = (reasons[verdict.reason] ?? 0) + 1;
+      excluded.push({ comp: s, reason: verdict.reason });
     }
   }
-  const { kept, removed } = filterPriceOutliers(passed);
-  if (removed > 0) reasons["outlier"] = (reasons["outlier"] ?? 0) + removed;
+  const { kept, removedComps } = filterPriceOutliers(passed);
+  if (removedComps.length > 0) {
+    reasons["outlier"] = (reasons["outlier"] ?? 0) + removedComps.length;
+    for (const r of removedComps) excluded.push({ comp: r, reason: "outlier" });
+  }
+  return { filtered: kept, excluded, reasons };
+}
+
+export function applyCompQualityFilter(sales: RawComp[], card: CardIdentityLite): CompQualityResult {
+  // Delegate to the detailed implementation so the per-comp and
+  // histogram paths can never diverge.
+  const detailed = applyCompQualityFilterDetailed(sales, card);
   return {
-    filtered: kept,
-    excluded: sales.length - kept.length,
-    reasons,
+    filtered: detailed.filtered,
+    excluded: detailed.excluded.length,
+    reasons: detailed.reasons,
   };
 }
 

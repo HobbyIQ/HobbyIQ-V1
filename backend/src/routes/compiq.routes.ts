@@ -2,6 +2,14 @@ import { Router } from "express";
 import { compiqEstimate, computeEstimate, simulateWhatIf } from "../services/compiq/compiqEstimate.service.js";
 import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
+// CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
+// for /price-by-id. Reads from the cs:pricing cached payload — no new
+// Cardsight wire op. See marketRead.service.ts header for architecture.
+import {
+  generateMarketRead,
+  type MarketReadResult,
+} from "../services/compiq/marketRead.service.js";
+import { getPricing as getPricingForMarketRead } from "../services/compiq/cardsight.client.js";
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
 import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
 import {
@@ -991,6 +999,37 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       const isThin = isThinFromEst(est);
       const approximate = approximateFromEst(est);
 
+      // CF-MARKET-READ (2026-06-08): generate the calm-style prose
+      // summary of how the comp pool actually behaves. Reads from the
+      // cs:pricing cached payload (cache-hit — computeEstimate above
+      // already warmed it) so no extra Cardsight wire op. Best-effort:
+      // a thrown fact-pack build does NOT fail the primary response;
+      // marketRead falls to null. Output is cached at the marketRead
+      // layer (24h TTL keyed on fact-pack hash) so repeat requests
+      // with unchanged comp sets reuse the prose without burning LLM
+      // tokens (once wired up).
+      let marketReadResult: MarketReadResult | null = null;
+      try {
+        const pricingForMR = await getPricingForMarketRead(resolvedCardId);
+        if (!pricingForMR.notFound) {
+          const gradeKey =
+            body.gradeCompany && body.gradeValue !== undefined
+              ? `${body.gradeCompany} ${body.gradeValue}`
+              : "Raw";
+          marketReadResult = await generateMarketRead(
+            pricingForMR,
+            gradeKey,
+            est as Record<string, unknown>,
+            resolvedCardId,
+          );
+        }
+      } catch (err) {
+        console.warn(
+          `[compiq.price-by-id] marketRead build failed (non-fatal): ${(err as Error)?.message ?? err}`,
+        );
+        marketReadResult = null;
+      }
+
       return {
         ...buildEngineMeta(),
         success: true,
@@ -1037,6 +1076,21 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
         broaderTrend: (est as any).broaderTrend ?? null,
+        // CF-MARKET-READ (2026-06-08): prose + fact-pack pair. iOS
+        // should render `marketRead` as a calm prose paragraph; the
+        // fact pack is the same set of figures the prose references
+        // (every number in the prose traces to one of these values).
+        // null when the build fails or the card is genuinely thin.
+        marketRead: marketReadResult?.marketRead ?? null,
+        marketReadFactPack: marketReadResult?.factPack ?? null,
+        marketReadSource: marketReadResult?.source ?? null,
+        // CF-MARKET-READ-EXCLUDED-CALLOUT (2026-06-08): in-window comps
+        // dropped by applyCompQualityFilter with per-comp reasons + plain-
+        // language labels. iOS should render these below `recentComps`,
+        // de-emphasized (greyed price + condition tag + "not counted" note)
+        // so the prose's "don't value a clean card against them" callout is
+        // visible in the comp list.
+        excludedComps: marketReadResult?.excludedComps ?? [],
       };
     };
 
