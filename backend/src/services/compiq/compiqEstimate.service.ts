@@ -264,19 +264,44 @@ export function computeWeightedMedian(
 // ---------------------------------------------------------------------------
 // Comp quality filter (Pricing Accuracy — Improvement 2)
 // ---------------------------------------------------------------------------
+// Two-kind exclusion vocabulary (CF-EXCLUSION-WORD-BOUNDARY, 2026-06-08):
+//   - string entries  → substring `title.includes(kw)` match. Used for
+//                       multi-word phrases ("please read", " as is") and
+//                       single-word tokens with no known substring
+//                       conflict ("bundle", "wholesale").
+//   - RegExp entries  → `kw.test(title)` match. Used for substring-prone
+//                       single-word damage tokens. Pattern anchors the
+//                       stem with `\b` on both sides and inflects via a
+//                       trailing `(s|d|ed)?` group so plurals + past
+//                       tense match without absorbing unrelated longer
+//                       words (the canonical fix: `\bflaw(s|ed)?\b`
+//                       matches `flaw / flaws / flawed` but NOT
+//                       `Flawless`).
+//
 // Order matters — more specific phrases must precede their shorter prefixes
 // so e.g. "lot of" matches before "lot ".
-const EXCLUSION_KEYWORDS: ReadonlyArray<string> = [
-  // Lot sales (specific first)
+const EXCLUSION_KEYWORDS: ReadonlyArray<string | RegExp> = [
+  // Lot sales (specific first) — substring
   "lot of", "lot ", "bundle", "collection", "bulk", "wholesale",
   "3 card", "5 card", "10 card", "set of", "group of",
-  // Damaged / altered (incl. "Minor Damage" / "Major Damage" via the
-  // bare "damage" stem; "damaged" stays for diagnostic clarity in
-  // reasons[]). CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07).
-  "damage", "damaged", "creased", "crease", "bent",
-  "water damage", "flaw", "flawed",
-  "scuff", "stain", "worn", "writing on", "marks on",
-  "trimmed", "altered", "restored", "repaired", "fake", "reprint",
+  // Damaged / altered — word-anchored regexes.
+  // Single unified pattern per stem; the inflection group means we
+  // report `keyword:damage` for `damaged`/`damages` AND `damage` (single
+  // reason key per stem makes the histogram cleaner).
+  /\bdamage(d|s)?\b/,
+  /\bcrease(d|s)?\b/,
+  /\bbent\b/,
+  /\bflaw(s|ed)?\b/,                       // ← bug 1 fix: was matching "Flawless"
+  /\bscuff(s|ed)?\b/,
+  /\bstain(s|ed)?\b/,
+  /\bworn\b/,
+  /\btrimmed\b/, /\baltered\b/, /\brestored\b/, /\brepaired\b/,
+  /\bfake\b/, /\breprint(s|ed|ing)?\b/,
+  // Water damage as a phrase stays substring — "damage" alone already
+  // matches via the regex above, but "water damage" gives a more useful
+  // reason key.
+  "water damage",
+  "writing on", "marks on",
   "poor condition", "fair condition", "rough condition", "rough shape",
   // Seller-condition disclaimers — "buyer beware" cues that disqualify
   // a comp from the math + display pool. Word-anchored where needed
@@ -289,6 +314,17 @@ const EXCLUSION_KEYWORDS: ReadonlyArray<string> = [
   // Test / sample
   "prototype", "sample card", "test print",
 ];
+
+function exclusionReasonLabel(kw: string | RegExp): string {
+  if (typeof kw === "string") return kw.trim();
+  // For regex entries, strip `\b` anchors + inflection groups so the
+  // reason histogram reads `keyword:flaw` not `keyword:\\bflaw(s|ed)?\\b`.
+  // We use the source up to the first `(` or end of pattern, then strip
+  // leading/trailing `\b`.
+  const src = kw.source;
+  const stem = src.split("(")[0].replace(/\\b/g, "").trim();
+  return stem;
+}
 
 interface CardIdentityLite {
   player?: string | null;
@@ -307,7 +343,15 @@ function scoreCompQuality(sale: RawComp, _card: CardIdentityLite): CompQualityVe
     return { include: false, reason: "invalid" };
   }
   for (const kw of EXCLUSION_KEYWORDS) {
-    if (title.includes(kw)) return { include: false, reason: `keyword:${kw.trim()}` };
+    if (typeof kw === "string") {
+      if (title.includes(kw)) {
+        return { include: false, reason: `keyword:${exclusionReasonLabel(kw)}` };
+      }
+    } else {
+      if (kw.test(title)) {
+        return { include: false, reason: `keyword:${exclusionReasonLabel(kw)}` };
+      }
+    }
   }
   return { include: true, reason: "ok" };
 }

@@ -207,6 +207,12 @@ describe("Improvement 2 — comp quality filter", () => {
       // match "scuff-free" — that's by design (seller mentioned condition
       // at all = mild ambiguity, easier to drop). Pin the behavior so any
       // future tightening surfaces here as an intentional change.
+      //
+      // CF-EXCLUSION-WORD-BOUNDARY (2026-06-08): tokens are now
+      // `\bscuff(s|ed)?\b` and `\bstain(s|ed)?\b`. Hyphen is a
+      // non-word character so `\b` matches between `scuff` and `-`,
+      // and the inflection group lets `stains` match. Existing
+      // behavior preserved — both still filtered.
       const sales = [
         baseComp("Mike Trout 2011 Topps Update RC scuff-free", 800),
         baseComp("Mike Trout 2011 Topps Update RC no stains", 820),
@@ -214,6 +220,80 @@ describe("Improvement 2 — comp quality filter", () => {
       const out = applyCompQualityFilter(sales, card);
       // Both filtered out today (bare-substring match).
       expect(out.filtered.length).toBe(0);
+    });
+  });
+
+  // CF-EXCLUSION-WORD-BOUNDARY (2026-06-08): substring-prone damage
+  // tokens like "flaw" no longer match "Flawless". Single concrete bug:
+  // a clean $650 Mike Trout sale advertised as "Flawless Mint Condition"
+  // was being silently dropped because the title contained the substring
+  // "flaw". Word boundaries + inflection groups (`\bflaw(s|ed)?\b`)
+  // distinguish damage usage from condition-bragging.
+  describe("CF-EXCLUSION-WORD-BOUNDARY (substring false-positive fix)", () => {
+    it('keeps "Flawless Mint Condition" — the bug-1 canonical sale', () => {
+      const sales = [
+        baseComp("2011 Topps Update Series - Mike Trout #US175 (RC) Flawless Mint Condition", 650),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(out.filtered[0].price).toBe(650);
+    });
+
+    it('still rejects bare "flaw" / "flaws" / "flawed"', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC", 900),       // control
+        baseComp("Mike Trout 2011 Topps Update RC has a flaw", 100),
+        baseComp("Mike Trout 2011 Topps Update RC multiple flaws", 110),
+        baseComp("Mike Trout 2011 Topps Update RC corner is flawed", 120),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(out.filtered[0].price).toBe(900);
+    });
+
+    it('"sworn" does NOT trigger the "worn" rule', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC Sworn-in card", 800),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+    });
+
+    it('still rejects "worn edges"', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC worn edges", 200),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(0);
+    });
+
+    it('still rejects "Corner Damage" and "Damaged"', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC Angels Corner Damage", 158),
+        baseComp("Damaged Mike Trout RC w/ crease", 50),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(0);
+    });
+
+    it('still rejects "Please Read" / "Please Read Desciption" multi-word phrases', () => {
+      const sales = [
+        baseComp("*** Please Read*** 2011 Topps Update Series - Mike Trout #US175 (RC)", 175),
+        baseComp("***Please Read Desciption\" 2011 Topps Update Series - Mike Trout #US175 (RC)", 160),
+        baseComp("Mike Trout 2011 Topps Update RC", 900), // control
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      expect(out.filtered.length).toBe(1);
+      expect(out.filtered[0].price).toBe(900);
+    });
+
+    it('reason key is the stem (e.g. keyword:flaw, not keyword:\\bflaw...)', () => {
+      const sales = [
+        baseComp("Mike Trout 2011 Topps Update RC has a flaw", 100),
+      ];
+      const out = applyCompQualityFilter(sales, card);
+      // Histogram key should read cleanly — no escape sequences leaking.
+      expect(out.reasons["keyword:flaw"]).toBe(1);
     });
   });
 });
