@@ -35,6 +35,7 @@ vi.mock("../src/services/authService.js", async (importActual) => {
 import app from "../src/app";
 import {
   selectSalesByGrade,
+  filterRecordsByParallel,
 } from "../src/services/compiq/compiqEstimate.service";
 import type { CardsightSaleRecord } from "../src/services/compiq/cardsight.client";
 
@@ -241,5 +242,71 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
       });
     expect(res.status).toBe(200);
     expect(res.body.cardsightCardId).toBe("fixture-card-id");
+  });
+
+  // CF-PARALLEL-AWARE-VALUE (2026-06-09): parallelId UUID validation.
+  it("400 when parallelId is not UUID-shaped", async () => {
+    const res = await request(app)
+      .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
+      .send({
+        cardsightCardId: "00000000-0000-0000-0000-000000000000",
+        parallelId: "not-a-uuid",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/parallelId/);
+  });
+
+  it("200 when parallelId is a valid UUID", async () => {
+    const res = await request(app)
+      .post("/api/compiq/price-by-id")
+      .set("x-session-id", "test-sess")
+      .send({
+        cardsightCardId: "00000000-0000-0000-0000-000000000000",
+        parallelId: "b44f73a5-3100-41d5-8235-047636739e6e",
+        parallelName: "Gold",
+      });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("filterRecordsByParallel (CF-PARALLEL-AWARE-VALUE)", () => {
+  const baseA = makeRecord(200, "Base A");
+  const baseB = makeRecord(220, "Base B");
+  const goldA = { ...makeRecord(800, "Gold A"), parallel_id: "GOLD-UUID", parallel_name: "Gold" };
+  const goldB = { ...makeRecord(900, "Gold B"), parallel_id: "GOLD-UUID", parallel_name: "Gold" };
+  const cognac = { ...makeRecord(2400, "Cognac"), parallel_id: "COGNAC-UUID", parallel_name: "Cognac Diamond" };
+  const mixed = [baseA, baseB, goldA, goldB, cognac];
+
+  it("base mode (no parallelId): keeps only records WITHOUT parallel_id", () => {
+    const out = filterRecordsByParallel(mixed, null);
+    expect(out).toEqual([baseA, baseB]);
+  });
+
+  it("base mode (undefined parallelId): same as null", () => {
+    expect(filterRecordsByParallel(mixed, undefined)).toEqual([baseA, baseB]);
+  });
+
+  it("parallel mode (GOLD-UUID): keeps only Gold records, drops base AND other parallels", () => {
+    expect(filterRecordsByParallel(mixed, "GOLD-UUID")).toEqual([goldA, goldB]);
+  });
+
+  it("parallel mode (COGNAC-UUID): isolates Cognac, drops base + Gold", () => {
+    expect(filterRecordsByParallel(mixed, "COGNAC-UUID")).toEqual([cognac]);
+  });
+
+  it("unknown parallelId returns empty (honest no-comps; never falls back to base)", () => {
+    expect(filterRecordsByParallel(mixed, "UNKNOWN-UUID")).toEqual([]);
+  });
+
+  it("empty input returns empty", () => {
+    expect(filterRecordsByParallel([], null)).toEqual([]);
+    expect(filterRecordsByParallel([], "GOLD-UUID")).toEqual([]);
+  });
+
+  it("treats parallel_id=null AS base (matches Cardsight's optional-field semantics)", () => {
+    const withNullPid: any = { ...makeRecord(150, "null-pid"), parallel_id: null };
+    expect(filterRecordsByParallel([withNullPid], null)).toEqual([withNullPid]);
+    expect(filterRecordsByParallel([withNullPid], "GOLD-UUID")).toEqual([]);
   });
 });

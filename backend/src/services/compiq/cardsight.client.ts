@@ -88,6 +88,14 @@ export interface CardsightSaleRecord {
   source: string;
   url: string | null;
   image_url?: string | null;
+  // CF-PARALLEL-AWARE-VALUE (2026-06-09): Cardsight tags sale records
+  // belonging to a parallel printing with parallel_id (UUID) +
+  // parallel_name. Base/unnumbered records OMIT both fields entirely
+  // (not null — absent). Tagged on both raw.records and graded[*]
+  // records — verified on Trout fda530ab: PSA 10 4/209 Gold-tagged,
+  // raw 2/156 Gold-tagged, BGS 9.5 2/55 Gold-tagged.
+  parallel_id?: string | null;
+  parallel_name?: string | null;
 }
 
 export interface CardsightGradedEntry {

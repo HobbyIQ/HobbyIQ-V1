@@ -24,6 +24,25 @@ export interface CompIQEstimateRequest {
    * `cardsightCardId` (CardHedge fully decommissioned at 10ad39d).
    */
   cardsightCardId?: string;
+  /**
+   * CF-PARALLEL-AWARE-VALUE (2026-06-09): pin pricing to a specific
+   * parallel of the parent cardsightCardId. When present:
+   *   - records with parallel_id === parallelId are kept
+   *   - all other records (including base/unnumbered) are dropped
+   * When absent:
+   *   - records WITHOUT parallel_id are kept (base/unnumbered only)
+   *   - parallel-tagged records are dropped (closes the
+   *     Cognac-Diamond-bleeds-into-raw leak)
+   * Authoritative over the legacy `parallel` string above. That string
+   * remains for the downstream parallel keyword post-filter; the new
+   * id is the structural per-record filter.
+   * UUID-shape validated at the route layer.
+   */
+  parallelId?: string;
+  /** Optional plain-English name for the selected parallel ("Gold",
+   *  "Refractor", etc.). Currently informational only — surfaced on
+   *  response identity / labels; not part of any filter decision. */
+  parallelName?: string;
 }
 
 /**

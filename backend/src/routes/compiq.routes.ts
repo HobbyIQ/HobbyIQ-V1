@@ -989,7 +989,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
-    const { cardsightCardId, query, gradeCompany, gradeValue } = req.body || {};
+    const { cardsightCardId, query, gradeCompany, gradeValue, parallelId, parallelName } =
+      req.body || {};
 
     const resolvedCardId =
       typeof cardsightCardId === "string" && cardsightCardId.length > 0
@@ -998,9 +999,29 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     if (!resolvedCardId) {
       return res.status(400).json({ success: false, error: 'Missing "cardsightCardId" field' });
     }
+
+    // CF-PARALLEL-AWARE-VALUE (2026-06-09): UUID-shape validation on
+    // the optional parallelId. Reject malformed ids at the route layer
+    // so downstream code can trust the shape. parallelName is purely
+    // informational; no validation beyond string type.
+    let resolvedParallelId: string | undefined;
+    if (parallelId !== undefined && parallelId !== null) {
+      if (typeof parallelId !== "string" || !CARDSIGHT_CARD_ID_RE.test(parallelId)) {
+        return res
+          .status(400)
+          .json({ success: false, error: 'Invalid "parallelId" — must be UUID-shape' });
+      }
+      resolvedParallelId = parallelId;
+    }
+    const resolvedParallelName =
+      typeof parallelName === "string" && parallelName.length > 0 ? parallelName : undefined;
+
     const cacheKey = normalizeCacheKey(
       "compiq:price-by-id:v4",
-      `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}`
+      // parallelId on the cache key so a Gold parallel and a base sit
+      // at separate entries. Empty string when absent — matches the
+      // "base only" semantics of the filter.
+      `${resolvedCardId}|${gradeCompany ?? ""}${gradeValue ?? ""}|${resolvedParallelId ?? ""}`,
     );
     // CF-ROUTE-CACHE-VALIDATION (2026-06-08): producer extracted to a
     // named arrow so the read-time validator can call it DIRECTLY
@@ -1015,6 +1036,9 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         cardsightCardId: resolvedCardId,
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
+        // CF-PARALLEL-AWARE-VALUE (2026-06-09)
+        parallelId: resolvedParallelId,
+        parallelName: resolvedParallelName,
       };
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price-by-id
       // pins to a Cardsight UUID. Public route, no auth context.

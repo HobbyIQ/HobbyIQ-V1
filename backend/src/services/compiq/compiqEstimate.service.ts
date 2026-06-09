@@ -44,13 +44,18 @@ import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplier
 // function already handles all 8 weight-table rows, so the response
 // shape is stable across the phased rollout — missing layers just
 // shift the weights per the locked matrix.
-import { fetchPlayerSignals } from "../signals/fetchSignals.js";
+// CF-PLAYER-IN-SET-MOMENTUM (2026-06-09): TrendIQ Layer 1 source moved
+// from the deprecated player-wide compsMomentum.json blob
+// (fetchPlayerSignals) to a live per-(player, set) momentum signal.
+// fetchPlayerSignals + the nightly blob job remain running but are no
+// longer the source of truth here. CF-C re-homes the blob job to
+// per-(player, set) tuples; this CF stops READING it.
+import { fetchPlayerInSetMomentum } from "./playerInSetMomentum.service.js";
 // CF-CARDSIGHT-SIBLING-DISCOVERY (2026-05-25 investigation, Approach A) —
 // fetchSiblingSales wraps fetchCompsByPlayer + exact-card-id exclusion.
 // See docs/phase0/cardsight_sibling_discovery_investigation.md.
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 import {
-  buildPlayerMomentumComponent,
   computeCardTrajectory,
   computeSegmentTrajectory,
   computeSegmentTrajectoryAndFull,
@@ -1026,11 +1031,36 @@ export function selectSalesByGrade(
   return matching.flatMap((g) => g.records ?? []);
 }
 
+/** CF-PARALLEL-AWARE-VALUE (2026-06-09): per-record parallel filter.
+ *  Authoritative — applied at the sales[] layer right after grade
+ *  selection so EVERY downstream pool (FMV, marketRead factPack,
+ *  trajectory, recentComps, excludedComps) sees the parallel-scoped
+ *  records only.
+ *    - parallelId provided → keep only records whose parallel_id
+ *      matches that id verbatim
+ *    - parallelId NOT provided → keep only records WITHOUT a
+ *      parallel_id (base/unnumbered only) — closes the parallel-bleed
+ *      where Cognac Diamond / Gold / Blue Border records were
+ *      contaminating raw FMV.
+ *  Cardsight tags both raw + graded records (verified 0a). */
+export function filterRecordsByParallel<T extends { parallel_id?: string | null }>(
+  records: ReadonlyArray<T>,
+  parallelId: string | null | undefined,
+): T[] {
+  if (parallelId) {
+    return records.filter((r) => r.parallel_id === parallelId);
+  }
+  return records.filter(
+    (r) => r.parallel_id === null || r.parallel_id === undefined,
+  );
+}
+
 async function fetchComps(
   query: string,
   grade: string = "Raw",
   pinnedCardId?: string,
-  queryContext?: QueryContext
+  queryContext?: QueryContext,
+  parallelId?: string | null,
 ): Promise<FetchedComps> {
   // CARD_HEDGE_API_KEY gate removed 2026-05-25 — see fetchBroaderTrend
   // comment above. Under CARDSIGHT_MODE=exclusive (production setting),
@@ -1164,11 +1194,16 @@ async function fetchComps(
     // (e.g. "PSA 10", "BGS 9.5"). For Raw, use the ungraded raw.records.
     // For a graded request, find the matching company + grade value in
     // pricing.graded[]; return that grade's records or [] if no match.
-    const sales = selectSalesByGrade(pricing, grade);
+    const salesByGrade = selectSalesByGrade(pricing, grade);
+    // CF-PARALLEL-AWARE-VALUE (2026-06-09): apply the parallel filter
+    // right after the grade pick. Authoritative; affects every
+    // downstream pool. See filterRecordsByParallel header for the
+    // base-vs-parallel semantics.
+    const sales = filterRecordsByParallel(salesByGrade, parallelId ?? null);
 
     if (sales.length === 0) {
       console.warn(
-        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} returned 0 comps`
+        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} returned 0 comps`
       );
       return { comps: [], card: identity, variantWarning: [], aiCategory: null };
     }
@@ -2074,7 +2109,17 @@ export async function computeEstimate(
     } as Record<string, unknown>;
   }
 
-  let fetched = await fetchComps(cardTitle, cardHedgeGrade, body.cardsightCardId, queryContext);
+  // CF-PARALLEL-AWARE-VALUE (2026-06-09): thread parallelId through to
+  // fetchComps so the pinned-id branch can filter records by parallel
+  // (or exclude parallels for base requests). UUID-shape was validated
+  // at the route layer; trust it here.
+  let fetched = await fetchComps(
+    cardTitle,
+    cardHedgeGrade,
+    body.cardsightCardId,
+    queryContext,
+    body.parallelId ?? null,
+  );
 
   // ── Catalog-miss guard ───────────────────────────────────────────────────
   // CF-LAUNCH-HARDENING (2026-06-02): when the free-text path's Cardsight
@@ -3089,15 +3134,25 @@ export async function computeEstimate(
   //              (TrendIQ Layer 3 last-sale-anchored trend). Both run in
   //              parallel with the player-signal fetch since they are
   //              independent network ops.
-  // playerSignalsResult: TrendIQ Layer 1 — aggregator's player multiplier.
+  // CF-PLAYER-IN-SET-MOMENTUM (2026-06-09): TrendIQ Layer 1 is now
+  // computed LIVE from fetchCompsByPlayer (same enumeration as
+  // fetchSiblingSales, but no exact-card exclusion — we want the whole
+  // player-in-set pool, grade-agnostic). The deprecated player-wide
+  // compsMomentum.json blob path (fetchPlayerSignals / fn-comps-
+  // momentum nightly) is left running but is no longer the Layer 1
+  // source. CF-C re-homes the blob job to per-(player, set) tuples;
+  // this CF stops READING the player-wide blob.
   const playerNameForSignals =
     cardIdentity?.player?.trim() || body.playerName?.trim() || "";
-  // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (2026-05-25): parsedQuery
-  // fallback retired. findCompsViaCardsight now augments cardIdentity
-  // from getCardDetail (rich metadata: releaseName, setName, year),
-  // so cardIdentity reliably carries the player/product/year fields
-  // sibling-discovery needs.
-  const [siblingPool, playerSignalsResult] = await Promise.all([
+  const productForSignals =
+    cardIdentity?.set?.trim() || body.product?.trim() || "";
+  const cardYearForSignals: number | undefined =
+    typeof cardIdentity?.year === "number" && cardIdentity.year > 0
+      ? cardIdentity.year
+      : typeof body.cardYear === "number" && body.cardYear > 0
+      ? body.cardYear
+      : undefined;
+  const [siblingPool, playerMomentum] = await Promise.all([
     cardIdentity
       ? fetchSiblingSales(cardIdentity, cardHedgeGrade).catch(() => ({
           siblingCardIds: [] as string[],
@@ -3107,9 +3162,17 @@ export async function computeEstimate(
           siblingCardIds: [] as string[],
           sales: [] as Array<{ price: number; ts: number }>,
         }),
-    playerNameForSignals
-      ? fetchPlayerSignals(playerNameForSignals).catch(() => ({ payload: null, sourceUrl: null }))
-      : Promise.resolve({ payload: null, sourceUrl: null }),
+    // Layer 1 returns PlayerMomentumComponent | null directly — no
+    // separate build step. WEIGHT_TABLE renormalize fires when null.
+    // No fallback to the deprecated player-wide blob: a true miss is
+    // an honest omit, not a substituted coarser signal.
+    playerNameForSignals && productForSignals
+      ? fetchPlayerInSetMomentum({
+          playerName: playerNameForSignals,
+          product: productForSignals,
+          cardYear: cardYearForSignals,
+        }).catch(() => null)
+      : Promise.resolve(null),
   ]);
   // CF-TREND-DIRTY-POOL (2026-06-08): pass the junk-excluded clean pool
   // as exactComps (was `fetched.comps`). siblingPool hygiene is unchanged
@@ -3119,7 +3182,6 @@ export async function computeEstimate(
   const broaderTrend = cardIdentity
     ? await fetchBroaderTrend(cardIdentity, cardHedgeGrade, trendCleanComps, siblingPool).catch(() => null)
     : null;
-  const playerMomentum = buildPlayerMomentumComponent(playerSignalsResult);
 
   // Find the most recent exact-match sale to serve as the anchor.
   const sortedExact = fetched.comps
