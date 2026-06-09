@@ -723,3 +723,149 @@ export async function generateMarketRead(
     MARKET_READ_CACHE_TTL_SECONDS,
   ) as MarketReadResult;
 }
+
+// ─── CF-GRADE-BREAKDOWN (2026-06-09) — lean per-graded-bucket menu ──────────
+//
+// Reads the SAME cached pricing payload the marketRead path already
+// fetched (cs:pricing 6h cache; no extra Cardsight wire op). For each
+// graded bucket with ≥1 surviving sale (after the parallel filter),
+// emits a thin entry { grader, grade, compCount, median, recentDirection? }.
+//
+// Whole-dollar median. No fabricated medians: buckets with zero
+// surviving records are dropped from the breakdown entirely (the
+// "thin grade tier has nothing to say" honest stance).
+//
+// Buckets are deduped by Number(grade_value) within a company —
+// Cardsight occasionally emits the same grade across multiple bucket
+// entries (PSA 9 = 117 + 3, BGS 10 = 1 + 4); we merge the records
+// before computing stats, matching selectSalesByGrade semantics.
+//
+// recentDirection: derived from recent-7 vs prior-7 avg of dated
+// records (sorted desc), same heuristic as fn-comps-momentum's
+// build_comps_payload (thresholds 1.08 / 0.93). Omitted on thin
+// buckets (<6 dated records) — no manufactured direction.
+//
+// Sort: PSA, BGS, SGC, CGC, then alphabetical; within company,
+// numeric grade descending (10 → 9.5 → 9 → ...), non-numeric labels
+// last alphabetically.
+
+export interface GradeBreakdownEntry {
+  /** Cardsight company_name verbatim — "PSA" / "BGS" / "SGC" / "CGC" / etc. */
+  grader: string;
+  /** Cardsight grade_value verbatim — "10" / "9.5" / "Authentic" / etc. */
+  grade: string;
+  compCount: number;
+  /** Whole-dollar median price. */
+  median: number;
+  recentDirection?: "up" | "down" | "flat";
+}
+
+function pricesMedianWholeDollar(prices: ReadonlyArray<number>): number {
+  const sorted = prices.slice().sort((a, b) => a - b);
+  const n = sorted.length;
+  const m =
+    n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+  return Math.round(m);
+}
+
+function recentDirectionFromRecords(
+  records: ReadonlyArray<{ date?: string | null; price: number }>,
+): "up" | "down" | "flat" | undefined {
+  const dated = records
+    .filter((r) => r.date && Number.isFinite(r.price) && r.price > 0)
+    .slice()
+    .sort((a, b) => (Date.parse(b.date as string) || 0) - (Date.parse(a.date as string) || 0));
+  if (dated.length < 6) return undefined;
+  const recent = dated.slice(0, Math.min(7, dated.length)).map((r) => r.price);
+  const prior = dated
+    .slice(recent.length, recent.length + Math.min(7, dated.length - recent.length))
+    .map((r) => r.price);
+  if (recent.length < 3 || prior.length < 3) return undefined;
+  const rAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const pAvg = prior.reduce((a, b) => a + b, 0) / prior.length;
+  if (pAvg <= 0) return undefined;
+  const ratio = rAvg / pAvg;
+  if (ratio > 1.08) return "up";
+  if (ratio < 0.93) return "down";
+  return "flat";
+}
+
+/** Per-record parallel filter mirroring filterRecordsByParallel from
+ *  compiqEstimate.service.ts — duplicated here to avoid a circular
+ *  import (marketRead → compiqEstimate would create one). Same
+ *  semantics: parallelId present → keep matching; absent → keep
+ *  records without a parallel_id. */
+function filterByParallelHere<T extends { parallel_id?: string | null }>(
+  records: ReadonlyArray<T>,
+  parallelId: string | null | undefined,
+): T[] {
+  if (parallelId) return records.filter((r) => r.parallel_id === parallelId);
+  return records.filter((r) => r.parallel_id === null || r.parallel_id === undefined);
+}
+
+export function buildGradeBreakdown(
+  pricing: CardsightPricingResponse,
+  parallelId: string | null | undefined,
+): GradeBreakdownEntry[] {
+  const out: GradeBreakdownEntry[] = [];
+
+  for (const company of pricing.graded ?? []) {
+    // Merge duplicate same-grade buckets within a company by
+    // Number(grade_value). Preserve the FIRST occurrence's grade_value
+    // string (Cardsight is consistent within a duplicate pair so this
+    // is normally a no-op label-wise).
+    const merged = new Map<string, { gradeLabel: string; records: CardsightSaleRecord[] }>();
+    for (const g of company.grades ?? []) {
+      const num = Number(g.grade_value);
+      const key = Number.isFinite(num) ? `n:${num}` : `s:${String(g.grade_value).toLowerCase()}`;
+      const acc = merged.get(key);
+      if (acc) {
+        acc.records = acc.records.concat(g.records ?? []);
+      } else {
+        merged.set(key, {
+          gradeLabel: String(g.grade_value),
+          records: [...(g.records ?? [])],
+        });
+      }
+    }
+
+    for (const { gradeLabel, records } of merged.values()) {
+      const filtered = filterByParallelHere(records, parallelId);
+      const prices = filtered
+        .map((r) => r.price)
+        .filter((p) => Number.isFinite(p) && p > 0);
+      if (prices.length === 0) continue;
+
+      const entry: GradeBreakdownEntry = {
+        grader: company.company_name,
+        grade: gradeLabel,
+        compCount: prices.length,
+        median: pricesMedianWholeDollar(prices),
+      };
+      const dir = recentDirectionFromRecords(filtered);
+      if (dir !== undefined) entry.recentDirection = dir;
+      out.push(entry);
+    }
+  }
+
+  // Sort: PSA, BGS, SGC, CGC, then alphabetical; numeric grade desc
+  // within a company; non-numeric labels last alphabetically.
+  const COMPANY_ORDER = ["PSA", "BGS", "SGC", "CGC"];
+  out.sort((a, b) => {
+    const ao = COMPANY_ORDER.indexOf(a.grader.toUpperCase());
+    const bo = COMPANY_ORDER.indexOf(b.grader.toUpperCase());
+    const ai = ao === -1 ? COMPANY_ORDER.length : ao;
+    const bi = bo === -1 ? COMPANY_ORDER.length : bo;
+    if (ai !== bi) return ai - bi;
+    if (a.grader !== b.grader) return a.grader.localeCompare(b.grader);
+    const an = Number(a.grade);
+    const bn = Number(b.grade);
+    const aIsNum = Number.isFinite(an);
+    const bIsNum = Number.isFinite(bn);
+    if (aIsNum && bIsNum) return bn - an;
+    if (aIsNum) return -1;
+    if (bIsNum) return 1;
+    return String(a.grade).localeCompare(String(b.grade));
+  });
+  return out;
+}

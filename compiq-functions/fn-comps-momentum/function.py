@@ -34,6 +34,7 @@ within rate limits.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -226,3 +227,247 @@ def get_comps_signal(player_name: str) -> dict[str, Any]:
         }
     )
     return payload
+
+
+# ─── CF-PLAYER-IN-SET-HISTORY (2026-06-09) — per-(player, set) extension ────
+#
+# The existing per-player tick (run_for_all_players) writes one signal
+# per tracked player. That's too coarse — Trout 2024 Topps Chrome and
+# Trout 2024 Topps Update share zero driving forces but the blob
+# blended them into one number.
+#
+# This extension walks a usage-seeded queue of (player, set) tuples
+# written by the backend's /price-by-id route (CF-PLAYER-IN-SET-HISTORY
+# PART 1). Coverage scales with what users actually price — not just
+# the 5-player tracked-list default.
+#
+# Path layout (compiq-signals/):
+#   _seed/player-set-queue.json
+#       Append-only list written by the backend. Each entry:
+#         { player, set, year?, seenAt }
+#       seenAt drives the nightly's oldest-first drain.
+#
+#   playerInSet/<player-slug>/<set-slug>.json
+#       Latest snapshot (overwrite each night).
+#
+#   playerInSet/<player-slug>/<set-slug>.history.json
+#       Append-only list of nightly entries. The accrual IS the moat.
+
+from shared import (
+    load_blob_json,
+    save_blob_json,
+    save_signal_with_set,
+    save_signal_history,
+    set_slug,
+)
+from shared.cardsight import get_pricing, search_catalog  # noqa: F811 — already imported above
+
+QUEUE_BLOB_PATH = "_seed/player-set-queue.json"
+
+# Bound per-night work. The backend seed can grow with usage; without
+# a cap a long backlog of unique tuples would push the nightly past
+# its function-execution budget. Process the oldest MAX_PER_NIGHT
+# first; the rest stays in the queue for tomorrow.
+MAX_PER_NIGHT = 50
+
+# How many catalog hits per (player, set) query to fan out for pricing.
+# Mirrors the existing TOP_N for consistency.
+PIS_TOP_N = TOP_N  # 5
+
+
+def _tuple_key(entry: dict[str, Any]) -> tuple[str, str, Any]:
+    return (
+        (entry.get("player") or "").lower().strip(),
+        (entry.get("set") or "").lower().strip(),
+        entry.get("year"),
+    )
+
+
+def _aggregate_sales_for_query(query: str) -> tuple[list[dict[str, Any]], int]:
+    """Search catalog for `query`, fan out pricing across the top-K
+    matches, and return the AGGREGATED raw + graded sales list across
+    all matched cards. Returns (sales, cards_scanned).
+
+    Grade-agnostic by design: flattens raw + every graded tier into one
+    list so the resulting recent-vs-prior split reflects the broad set
+    direction (the brief's framing). Per-card pricing is already cached
+    by the cardsight client at the 6h cs:pricing layer, so the fan-out
+    cost is bounded.
+    """
+    sales: list[dict[str, Any]] = []
+    candidates = search_catalog(query, take=PIS_TOP_N) or []
+    cards_scanned = 0
+    for c in candidates[:PIS_TOP_N]:
+        cid = str(c.get("id") or "")
+        if not cid:
+            continue
+        pricing = get_pricing(cid)
+        if not pricing:
+            continue
+        raw_records = (pricing.get("raw") or {}).get("records") or []
+        sales.extend(raw_records)
+        for co in pricing.get("graded") or []:
+            for g in co.get("grades") or []:
+                grade_records = g.get("records") or []
+                sales.extend(grade_records)
+        cards_scanned += 1
+    return sales, cards_scanned
+
+
+def compute_and_persist_player_in_set(
+    player: str, set_name: str, year: Any = None
+) -> dict[str, Any] | None:
+    """Compute the per-(player, set) momentum snapshot and persist:
+       - Overwrites playerInSet/<player>/<set>.json with the snapshot.
+       - APPENDS a thin entry to playerInSet/<player>/<set>.history.json.
+
+    Returns the snapshot payload, or None when compute couldn't proceed
+    (empty catalog match, no sales). Callers should treat None as a
+    no-op for this tuple — the queue entry has been processed and
+    won't be retried tonight.
+    """
+    query = f"{player} {set_name}"
+    sales, cards_scanned = _aggregate_sales_for_query(query)
+    if not sales:
+        logging.info(
+            "[playerInSet] %s / %s — no sales aggregated (cards_scanned=%d); skipping snapshot",
+            player,
+            set_name,
+            cards_scanned,
+        )
+        return None
+
+    # Reuse build_comps_payload — same recent-7 vs prior-7 ratio,
+    # clamp [0.85, 1.20], thresholds 1.08/0.93 — that mirrors what
+    # backend's live fetchPlayerInSetMomentum computes. Same heuristic,
+    # different surface (history persistence vs live read).
+    payload = build_comps_payload(player, sales)
+    payload.update(
+        {
+            "set": set_name,
+            "year": year,
+            "cards_scanned": cards_scanned,
+            "computed_at": datetime.utcnow().isoformat(),
+        }
+    )
+
+    slug = set_slug(set_name)
+    save_signal_with_set(player, "playerInSet", slug, payload)
+
+    history_entry = {
+        "computed_at": payload["computed_at"],
+        "multiplier": payload.get("multiplier"),
+        "signal": payload.get("signal"),
+        "comp_count": payload.get("comp_count", 0),
+        "median_price": payload.get("median_price", 0.0),
+    }
+    save_signal_history(player, "playerInSet", slug, history_entry)
+
+    logging.info(
+        "[playerInSet] %s / %s -> %.3fx %s (cards_scanned=%d, comps=%d, median=%.2f)",
+        player,
+        set_name,
+        float(payload.get("multiplier", 1.0)),
+        payload.get("signal") or "ok",
+        cards_scanned,
+        payload.get("comp_count", 0),
+        float(payload.get("median_price", 0.0)),
+    )
+    return payload
+
+
+def process_player_set_queue() -> None:
+    """Walk the usage-seeded queue and compute per-(player, set)
+    snapshots + history appends. Oldest-first drain; cap at
+    MAX_PER_NIGHT; carry the rest to tomorrow.
+
+    A throw on a single tuple does NOT halt the run — that tuple stays
+    in the carried-forward queue for retry. Successful tuples are
+    removed from the queue.
+    """
+    raw = load_blob_json(QUEUE_BLOB_PATH, default=[]) or []
+    queue: list[dict[str, Any]] = raw if isinstance(raw, list) else []
+    if not queue:
+        logging.info("[playerInSet] queue is empty — nothing to drain")
+        return
+
+    # Dedupe defensively (the backend uses an in-process Set + an
+    # existing-keys check before append, but a cross-instance race
+    # could leak a dup. Keep the first occurrence's seenAt.)
+    seen_keys: set[tuple[str, str, Any]] = set()
+    deduped: list[dict[str, Any]] = []
+    for entry in queue:
+        k = _tuple_key(entry)
+        if k in seen_keys:
+            continue
+        seen_keys.add(k)
+        deduped.append(entry)
+
+    # Oldest-first drain.
+    deduped.sort(key=lambda x: x.get("seenAt") or "")
+    to_process = deduped[:MAX_PER_NIGHT]
+    carry_forward = deduped[MAX_PER_NIGHT:]
+
+    logging.info(
+        "[playerInSet] queue size=%d processing=%d carrying=%d",
+        len(deduped),
+        len(to_process),
+        len(carry_forward),
+    )
+
+    succeeded_keys: set[tuple[str, str, Any]] = set()
+    for entry in to_process:
+        player = (entry.get("player") or "").strip()
+        set_name = (entry.get("set") or "").strip()
+        year = entry.get("year")
+        if not player or not set_name:
+            # Invalid entry — drop it.
+            succeeded_keys.add(_tuple_key(entry))
+            continue
+        try:
+            compute_and_persist_player_in_set(player, set_name, year)
+            # Even when the compute returns None (no sales), the entry
+            # is considered processed for tonight — no point retrying
+            # the same empty query. The backend's in-process Set keeps
+            # it out of the queue going forward.
+            succeeded_keys.add(_tuple_key(entry))
+        except Exception as exc:  # noqa: BLE001
+            logging.warning(
+                "[playerInSet] compute failed for %s / %s (will retry): %s",
+                player,
+                set_name,
+                exc,
+            )
+            # Leave succeeded_keys without this tuple → carries forward.
+
+    # Build the new queue: anything that wasn't processed-and-succeeded
+    # stays. The original queue (raw, not deduped) is the source of
+    # truth so we don't drop valid entries that were duplicates of
+    # successfully-processed ones.
+    new_queue: list[dict[str, Any]] = []
+    seen_in_new: set[tuple[str, str, Any]] = set()
+    # Add carry_forward first (older first — preserves seenAt order
+    # for tomorrow's drain).
+    for entry in carry_forward:
+        k = _tuple_key(entry)
+        if k in seen_in_new:
+            continue
+        seen_in_new.add(k)
+        new_queue.append(entry)
+    # Add any failed entries from to_process.
+    for entry in to_process:
+        k = _tuple_key(entry)
+        if k in succeeded_keys:
+            continue
+        if k in seen_in_new:
+            continue
+        seen_in_new.add(k)
+        new_queue.append(entry)
+
+    save_blob_json(QUEUE_BLOB_PATH, new_queue)
+    logging.info(
+        "[playerInSet] queue drained — wrote %d entries back (succeeded=%d, carried=%d)",
+        len(new_queue),
+        len(succeeded_keys),
+        len(carry_forward),
+    )

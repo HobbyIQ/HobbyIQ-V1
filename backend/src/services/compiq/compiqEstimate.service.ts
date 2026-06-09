@@ -1282,7 +1282,33 @@ async function fetchComps(
     };
   }
 
-  const mapped: RawComp[] = sales
+  // CF-PARALLEL-AWARE-VALUE serve-time guard (2026-06-09): the pinned
+  // branch already filters at line ~1196; mirror it here so a stray
+  // meaningful-query alongside parallelId can't route around the
+  // structural per-record filter. parallelId present → keep only
+  // records with that parallel_id; absent → keep base only (no
+  // parallel_id). The routed-search sale shape doesn't declare
+  // parallel_id but Cardsight's downstream sales DO carry it; defensive
+  // cast to the generic shape filterRecordsByParallel expects.
+  const salesWithParallel = sales as Array<{ parallel_id?: string | null } & typeof sales[number]>;
+  const salesFiltered = filterRecordsByParallel(salesWithParallel, parallelId ?? null);
+  if (salesFiltered.length === 0) {
+    console.warn(
+      `[compiq.fetchComps] fall-through: 0 comps after parallel filter (parallelId=${parallelId ?? "(base)"}) for card_id=${card.card_id}`
+    );
+    return {
+      comps: [],
+      card: identity,
+      variantWarning,
+      aiCategory,
+      priceSource,
+      priceSourceInternal,
+      parallelMatchFilteredCount,
+      parallelMatchUnifiedCount,
+    };
+  }
+
+  const mapped: RawComp[] = salesFiltered
     .map((s) => ({
       price: s.price,
       title: s.title || [card.year, card.set, card.player, card.number, card.variant].filter(Boolean).join(" "),

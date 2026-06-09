@@ -8,8 +8,14 @@ import { CompIQEstimateRequest } from "../types/compiq.types.js";
 import {
   generateMarketRead,
   pickCardImageUrl,
+  buildGradeBreakdown,
   type MarketReadResult,
+  type GradeBreakdownEntry,
 } from "../services/compiq/marketRead.service.js";
+// CF-PLAYER-IN-SET-HISTORY (2026-06-09): seed (player, set, year) tuples
+// to the nightly compute queue. Fire-and-forget; service swallows
+// errors so a blob hiccup never affects the response.
+import { enqueuePlayerSetTuple } from "../services/compiq/playerSetQueue.service.js";
 import {
   getPricing as getPricingForMarketRead,
   getCardImage,
@@ -113,6 +119,39 @@ const LOW_CONFIDENCE_THRESHOLD = 0.5;
 function isThinFromEst(est: Record<string, unknown>): boolean {
   const source = typeof est.source === "string" ? est.source : null;
   return source !== null && THIN_SOURCES.has(source);
+}
+
+// CF-MARKETVALUE-HONESTY (2026-06-09): explicit guards for the
+// "valid source but pipeline couldn't price" case — e.g. a parallel
+// request with only 2 sales (TrendIQ coverage=no_card, FMV pipeline
+// returns 0 because the trajectory window can't form). The legacy
+// isThin gate only catches sources in THIN_SOURCES; the FMV pipeline
+// can also produce 0 / null / NaN on the LIVE source when the
+// post-filter pool is too thin to anchor.
+//
+// Rule (any one suffices to hide the price tiers):
+//   - isThinFromEst already returns true
+//   - est.fairMarketValue is null / undefined / 0 / negative / NaN
+//   - est.trendIQ.coverage === "no_card" (Layer 2 missing — pipeline
+//     fundamentally can't anchor the card)
+//   - est.compsUsed < 3 (sub-threshold data — the FMV's value is the
+//     same as the median of two prices, which is too brittle to
+//     surface as an FMV)
+//
+// When this returns true, the response builder emits null / [null,
+// null] across marketTier / buyZone / holdZone / sellZone /
+// fairMarketValueLive / marketValue. NEVER emit 0 as a real price.
+// iOS reads any-null as the "no-estimate" state.
+function cannotPriceFromEst(est: Record<string, unknown>): boolean {
+  if (isThinFromEst(est)) return true;
+  const fmv = est.fairMarketValue;
+  if (fmv === null || fmv === undefined) return true;
+  if (typeof fmv !== "number" || !Number.isFinite(fmv) || fmv <= 0) return true;
+  const trendIQ = est.trendIQ as { coverage?: string } | undefined;
+  if (trendIQ?.coverage === "no_card") return true;
+  const compsUsed = est.compsUsed;
+  if (typeof compsUsed === "number" && compsUsed < 3) return true;
+  return false;
 }
 
 function approximateFromEst(est: Record<string, unknown>): boolean {
@@ -616,7 +655,14 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
       // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
-      const isThin = isThinFromEst(est);
+      // CF-MARKETVALUE-HONESTY (2026-06-09): swap from the legacy
+      // isThinFromEst (thin SOURCES only) to cannotPriceFromEst (also
+      // catches the LIVE-source-but-pipeline-couldn't-anchor cases:
+      // FMV ≤ 0, coverage=no_card, compsUsed<3). The variable name is
+      // preserved so downstream reads stay legible — the contract
+      // ("hide price tiers + emit null on this field set") is
+      // unchanged; the predicate is just stricter.
+      const isThin = cannotPriceFromEst(est);
       const approximate = approximateFromEst(est);
       const variantWarning: string[] = (est as any).variantWarning ?? [];
       const hasWarn = variantWarning.length > 0;
@@ -859,7 +905,14 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
       // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
-      const isThin = isThinFromEst(est);
+      // CF-MARKETVALUE-HONESTY (2026-06-09): swap from the legacy
+      // isThinFromEst (thin SOURCES only) to cannotPriceFromEst (also
+      // catches the LIVE-source-but-pipeline-couldn't-anchor cases:
+      // FMV ≤ 0, coverage=no_card, compsUsed<3). The variable name is
+      // preserved so downstream reads stay legible — the contract
+      // ("hide price tiers + emit null on this field set") is
+      // unchanged; the predicate is just stricter.
+      const isThin = cannotPriceFromEst(est);
       const approximate = approximateFromEst(est);
       const variantWarning: string[] = (est as any).variantWarning ?? [];
       const hasWarn = variantWarning.length > 0;
@@ -1105,8 +1158,33 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       const trendDeltaPct = Number(((est as any)?.pricingAnalytics?.anchorModel?.impliedTrendPct ?? 0));
       const source = (est.source as string | undefined) ?? "live";
       // CF-LAUNCH-HARDENING: extended thin-source taxonomy + approximate.
-      const isThin = isThinFromEst(est);
+      // CF-MARKETVALUE-HONESTY (2026-06-09): swap from the legacy
+      // isThinFromEst (thin SOURCES only) to cannotPriceFromEst (also
+      // catches the LIVE-source-but-pipeline-couldn't-anchor cases:
+      // FMV ≤ 0, coverage=no_card, compsUsed<3). The variable name is
+      // preserved so downstream reads stay legible — the contract
+      // ("hide price tiers + emit null on this field set") is
+      // unchanged; the predicate is just stricter.
+      const isThin = cannotPriceFromEst(est);
       const approximate = approximateFromEst(est);
+
+      // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
+      // the (player, set, year) tuple to the nightly compute queue.
+      // The nightly fn-comps-momentum extension walks this queue and
+      // writes per-(player, set) snapshots + appends to a history
+      // file. Every card priced via /price-by-id queues its tuple,
+      // so the history covers any player iOS has actually touched —
+      // not just the 5-player tracked-list default. Best-effort; a
+      // throw is swallowed inside the service.
+      const identityForSeed = (est as any).cardIdentity;
+      if (identityForSeed?.player && identityForSeed?.set) {
+        void enqueuePlayerSetTuple({
+          player: identityForSeed.player,
+          set: identityForSeed.set,
+          year:
+            typeof identityForSeed.year === "number" ? identityForSeed.year : undefined,
+        });
+      }
 
       // CF-MARKET-READ (2026-06-08): generate the calm-style prose
       // summary of how the comp pool actually behaves. Reads from the
@@ -1134,6 +1212,12 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         `/api/compiq/card-image/${resolvedCardId}`,
       );
       let cardImageThumbUrl: string | undefined;
+      // CF-GRADE-BREAKDOWN (2026-06-09): per-graded-bucket menu off the
+      // same cached cs:pricing payload — zero new Cardsight ops.
+      // Filtered through the same parallelId guard so a Gold-parallel
+      // request sees Gold counts/medians per grade tier (not the
+      // base-mixed pool).
+      let gradeBreakdown: GradeBreakdownEntry[] = [];
       try {
         const pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
@@ -1152,6 +1236,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             gradeKey,
             marketReadResult?.factPack?.binMedian ?? null,
           );
+          gradeBreakdown = buildGradeBreakdown(pricingForMR, resolvedParallelId ?? null);
         }
       } catch (err) {
         console.warn(
@@ -1159,6 +1244,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         );
         marketReadResult = null;
         cardImageThumbUrl = undefined;
+        gradeBreakdown = [];
       }
 
       return {
@@ -1232,6 +1318,13 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // wants to show "what the most recent sale looked like."
         // Field omitted when no usable thumb was found.
         cardImageThumbUrl,
+        // CF-GRADE-BREAKDOWN (2026-06-09) — lean per-graded-bucket menu.
+        // iOS uses this to render the grade selector AND fan out
+        // additional /price-by-id calls when the user picks a grade.
+        // Buckets with zero records (or zero records after the
+        // parallel filter) are dropped — honest empty list rather
+        // than fabricated medians on thin pools.
+        gradeBreakdown,
       };
     };
 
@@ -2181,6 +2274,10 @@ router.get(
 
 // Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
-export const __testing__ = { regimeFieldsFromEstimate, predictedRangeFieldsFromEstimate };
+export const __testing__ = {
+  regimeFieldsFromEstimate,
+  predictedRangeFieldsFromEstimate,
+  cannotPriceFromEst,
+};
 
 export default router;
