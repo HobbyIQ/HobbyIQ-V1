@@ -1,23 +1,29 @@
 /**
  * CF-PLAYER-IN-SET-HISTORY (2026-06-09) — backend seed-queue writer.
  *
- * Appends (player, set, year) tuples to a lightweight needs-compute
+ * Appends (player, release, year) tuples to a lightweight needs-compute
  * list in blob storage. The nightly fn-comps-momentum extension reads
- * this list and computes/persists per-(player, set) momentum snapshots
- * + appends to a per-(player, set) history file.
+ * this list and computes/persists per-(player, release, year) momentum
+ * snapshots + appends to a per-(player, release, year) history file.
+ *
+ * CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): the tuple identity is
+ * (player, release, year) — NOT (player, set, year). The literal
+ * pricing.card.set.name from Cardsight is "Base Set" for every release's
+ * main subset, so it collides across products. The release (e.g.
+ * "Bowman Draft", "Topps Update") is the actual unique scope.
  *
  * This is the USAGE SEED — every card you price via /price-by-id queues
- * its (player, set) for the nightly precompute. That's what makes the
- * history cover Griffin and anything else you touch — not just the 5
- * tracked players the legacy fn-comps-momentum knows about.
+ * its (player, release) for the nightly precompute. That's what makes
+ * the history cover Griffin and anything else you touch — not just the
+ * 5 tracked players the legacy fn-comps-momentum knows about.
  *
  * Best-effort: a thrown blob op does NOT propagate up — the seed is
  * fire-and-forget at the caller. Worst-case: a missed nightly window
  * for one tuple, which the next /price-by-id call backfills.
  *
- * In-process dedupe: a Set caches seen (player, set, year) keys within
- * the current process so a hot-card request doesn't read+write the
- * blob on every call. The blob itself is also dedupe-keyed to handle
+ * In-process dedupe: a Set caches seen (player, release, year) keys
+ * within the current process so a hot-card request doesn't read+write
+ * the blob on every call. The blob itself is also dedupe-keyed to handle
  * the cold-start + cross-instance case.
  *
  * Bound on queue growth: this layer does NOT cap. The nightly drains
@@ -38,8 +44,10 @@ const QUEUE_BLOB_PATH = "_seed/player-set-queue.json";
 
 export interface PlayerSetSeedEntry {
   player: string;
-  set: string;
-  year?: number;
+  /** Release / product line — e.g. "Bowman Draft", "Topps Update". The
+   *  unique-per-edition scope key, NOT the Cardsight set.name "Base Set". */
+  release: string;
+  year: number;
   /** ISO timestamp of when the tuple was first seeded — drives the
    *  nightly's oldest-first drain. */
   seenAt: string;
@@ -47,8 +55,8 @@ export interface PlayerSetSeedEntry {
 
 const seenInProcess = new Set<string>();
 
-function tupleKey(t: { player: string; set: string; year?: number }): string {
-  return `${t.player.toLowerCase().trim()}|${t.set.toLowerCase().trim()}|${t.year ?? ""}`;
+function tupleKey(t: { player: string; release: string; year: number }): string {
+  return `${t.player.toLowerCase().trim()}|${t.release.toLowerCase().trim()}|${t.year}`;
 }
 
 let blobClientSingleton: BlobServiceClient | null = null;
@@ -73,21 +81,28 @@ async function streamToBuffer(s: NodeJS.ReadableStream): Promise<Buffer> {
   });
 }
 
-/** Append (player, set, year) to the seed queue if absent.
+/** Append (player, release, year) to the seed queue if absent.
  *  Best-effort; never throws. Resolves quickly when:
- *    - input is invalid (empty player or set)
+ *    - input is invalid (empty player or release, or non-positive year)
  *    - in-process Set already saw the tuple this process lifetime
  *    - AZURE_BLOB_CONNECTION_STRING is unset (local / unconfigured)
- *  Otherwise reads the queue blob, appends if absent, writes back. */
+ *  Otherwise reads the queue blob, appends if absent, writes back.
+ *
+ *  Year is REQUIRED: without it the nightly can't form the unique
+ *  storage key (player + release + year). Callers that don't know
+ *  the year shouldn't enqueue — better to skip than to write a
+ *  malformed entry that the nightly will drop. */
 export async function enqueuePlayerSetTuple(input: {
   player: string;
-  set: string;
-  year?: number;
+  release: string;
+  year: number;
 }): Promise<void> {
   const player = (input.player ?? "").trim();
-  const set = (input.set ?? "").trim();
-  if (!player || !set) return;
-  const key = tupleKey({ player, set, year: input.year });
+  const release = (input.release ?? "").trim();
+  const year = input.year;
+  if (!player || !release) return;
+  if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return;
+  const key = tupleKey({ player, release, year });
   if (seenInProcess.has(key)) return;
   // Optimistic mark — don't re-read blob for this tuple within this
   // process even if the actual blob write fails. A failed write means
@@ -127,7 +142,11 @@ export async function enqueuePlayerSetTuple(input: {
       }
     }
 
-    const existingKeys = new Set(existing.map(tupleKey));
+    const existingKeys = new Set(
+      existing
+        .filter((e) => e && typeof e.release === "string" && typeof e.year === "number")
+        .map((e) => tupleKey({ player: e.player, release: e.release, year: e.year })),
+    );
     if (existingKeys.has(key)) {
       // Already in the queue — in-process Set will short-circuit
       // future calls.
@@ -136,8 +155,8 @@ export async function enqueuePlayerSetTuple(input: {
 
     existing.push({
       player,
-      set,
-      year: input.year,
+      release,
+      year,
       seenAt: new Date().toISOString(),
     });
 

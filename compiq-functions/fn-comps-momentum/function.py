@@ -241,16 +241,23 @@ def get_comps_signal(player_name: str) -> dict[str, Any]:
 # PART 1). Coverage scales with what users actually price — not just
 # the 5-player tracked-list default.
 #
+# CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): tuple identity is
+# (player, release, year). The literal Cardsight subset name "Base Set"
+# collides across products (every release's main subset is "Base Set"),
+# so the prior `<set-slug>` key blended 2024 Bowman Draft + 2024 Topps
+# Series 1 Griffin into one corrupted history. Storage path now keys
+# by `<year>-<release-slug>` which is unique per edition.
+#
 # Path layout (compiq-signals/):
 #   _seed/player-set-queue.json
 #       Append-only list written by the backend. Each entry:
-#         { player, set, year?, seenAt }
+#         { player, release, year, seenAt }
 #       seenAt drives the nightly's oldest-first drain.
 #
-#   playerInSet/<player-slug>/<set-slug>.json
+#   playerInSet/<player-slug>/<year>-<release-slug>.json
 #       Latest snapshot (overwrite each night).
 #
-#   playerInSet/<player-slug>/<set-slug>.history.json
+#   playerInSet/<player-slug>/<year>-<release-slug>.history.json
 #       Append-only list of nightly entries. The accrual IS the moat.
 
 from shared import (
@@ -276,9 +283,14 @@ PIS_TOP_N = TOP_N  # 5
 
 
 def _tuple_key(entry: dict[str, Any]) -> tuple[str, str, Any]:
+    # CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): key on release, not on
+    # the literal subset name. Falls back to legacy `set` only if a
+    # carry-over entry from the prior schema is still in flight; the
+    # backend no longer writes those.
+    release = (entry.get("release") or entry.get("set") or "").lower().strip()
     return (
         (entry.get("player") or "").lower().strip(),
-        (entry.get("set") or "").lower().strip(),
+        release,
         entry.get("year"),
     )
 
@@ -315,24 +327,33 @@ def _aggregate_sales_for_query(query: str) -> tuple[list[dict[str, Any]], int]:
 
 
 def compute_and_persist_player_in_set(
-    player: str, set_name: str, year: Any = None
+    player: str, release: str, year: int
 ) -> dict[str, Any] | None:
-    """Compute the per-(player, set) momentum snapshot and persist:
-       - Overwrites playerInSet/<player>/<set>.json with the snapshot.
-       - APPENDS a thin entry to playerInSet/<player>/<set>.history.json.
+    """Compute the per-(player, release, year) momentum snapshot and persist:
+       - Overwrites playerInSet/<player>/<year>-<release-slug>.json.
+       - APPENDS a thin entry to playerInSet/<player>/<year>-<release-slug>.history.json.
 
     Returns the snapshot payload, or None when compute couldn't proceed
     (empty catalog match, no sales). Callers should treat None as a
     no-op for this tuple — the queue entry has been processed and
     won't be retried tonight.
+
+    CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): the storage key is
+    `<year>-<release-slug>` — release is the product line (e.g.
+    "Bowman Draft", "Topps Update"), NOT the Cardsight subset name
+    "Base Set" which collides across products.
     """
-    query = f"{player} {set_name}"
+    # Query includes year + release so Cardsight catalog search lands
+    # on the right edition. "<player> Base Set" returns garbage;
+    # "2024 Bowman Draft Konnor Griffin" lands on the right cards.
+    query = f"{year} {release} {player}"
     sales, cards_scanned = _aggregate_sales_for_query(query)
     if not sales:
         logging.info(
-            "[playerInSet] %s / %s — no sales aggregated (cards_scanned=%d); skipping snapshot",
+            "[playerInSet] %s / %s %d — no sales aggregated (cards_scanned=%d); skipping snapshot",
             player,
-            set_name,
+            release,
+            year,
             cards_scanned,
         )
         return None
@@ -344,14 +365,14 @@ def compute_and_persist_player_in_set(
     payload = build_comps_payload(player, sales)
     payload.update(
         {
-            "set": set_name,
+            "release": release,
             "year": year,
             "cards_scanned": cards_scanned,
             "computed_at": datetime.utcnow().isoformat(),
         }
     )
 
-    slug = set_slug(set_name)
+    slug = f"{year}-{set_slug(release)}"
     save_signal_with_set(player, "playerInSet", slug, payload)
 
     history_entry = {
@@ -364,9 +385,10 @@ def compute_and_persist_player_in_set(
     save_signal_history(player, "playerInSet", slug, history_entry)
 
     logging.info(
-        "[playerInSet] %s / %s -> %.3fx %s (cards_scanned=%d, comps=%d, median=%.2f)",
+        "[playerInSet] %s / %s %d -> %.3fx %s (cards_scanned=%d, comps=%d, median=%.2f)",
         player,
-        set_name,
+        release,
+        year,
         float(payload.get("multiplier", 1.0)),
         payload.get("signal") or "ok",
         cards_scanned,
@@ -418,24 +440,32 @@ def process_player_set_queue() -> None:
     succeeded_keys: set[tuple[str, str, Any]] = set()
     for entry in to_process:
         player = (entry.get("player") or "").strip()
-        set_name = (entry.get("set") or "").strip()
+        # CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): prefer release;
+        # tolerate the legacy `set` field for carry-over entries written
+        # by the prior schema (the backend no longer writes those).
+        release = (entry.get("release") or entry.get("set") or "").strip()
         year = entry.get("year")
-        if not player or not set_name:
-            # Invalid entry — drop it.
+        # Year is REQUIRED: the storage key is <year>-<release-slug>,
+        # and without year the snapshot/history paths collide across
+        # editions. Drop yearless entries — they are malformed.
+        if not player or not release or not isinstance(year, int) or year <= 0:
+            logging.info(
+                "[playerInSet] dropping malformed queue entry: player=%r release=%r year=%r",
+                player,
+                release,
+                year,
+            )
             succeeded_keys.add(_tuple_key(entry))
             continue
         try:
-            compute_and_persist_player_in_set(player, set_name, year)
-            # Even when the compute returns None (no sales), the entry
-            # is considered processed for tonight — no point retrying
-            # the same empty query. The backend's in-process Set keeps
-            # it out of the queue going forward.
+            compute_and_persist_player_in_set(player, release, year)
             succeeded_keys.add(_tuple_key(entry))
         except Exception as exc:  # noqa: BLE001
             logging.warning(
-                "[playerInSet] compute failed for %s / %s (will retry): %s",
+                "[playerInSet] compute failed for %s / %s %d (will retry): %s",
                 player,
-                set_name,
+                release,
+                year,
                 exc,
             )
             # Leave succeeded_keys without this tuple → carries forward.

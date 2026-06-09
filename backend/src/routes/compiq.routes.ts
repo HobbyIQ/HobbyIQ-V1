@@ -1169,20 +1169,33 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       const approximate = approximateFromEst(est);
 
       // CF-PLAYER-IN-SET-HISTORY (2026-06-09): fire-and-forget seed
-      // the (player, set, year) tuple to the nightly compute queue.
-      // The nightly fn-comps-momentum extension walks this queue and
-      // writes per-(player, set) snapshots + appends to a history
-      // file. Every card priced via /price-by-id queues its tuple,
-      // so the history covers any player iOS has actually touched —
-      // not just the 5-player tracked-list default. Best-effort; a
-      // throw is swallowed inside the service.
+      // the (player, release, year) tuple to the nightly compute
+      // queue. The nightly fn-comps-momentum extension walks this
+      // queue and writes per-(player, release, year) snapshots +
+      // appends to a history file. Every card priced via /price-by-id
+      // queues its tuple, so the history covers any player iOS has
+      // actually touched — not just the 5-player tracked-list
+      // default. Best-effort; a throw is swallowed inside the
+      // service.
+      //
+      // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): the tuple is keyed
+      // by (player, RELEASE, year) — NOT (player, set, year). The
+      // Cardsight subset name "Base Set" collides across products;
+      // the release/product line ("Bowman Draft", "Topps Update") is
+      // the unique scope. Skip the enqueue when release or year is
+      // missing — the nightly can't form a unique storage key
+      // without both, and a malformed entry would be dropped anyway.
       const identityForSeed = (est as any).cardIdentity;
-      if (identityForSeed?.player && identityForSeed?.set) {
+      if (
+        identityForSeed?.player
+        && identityForSeed?.release
+        && typeof identityForSeed.year === "number"
+        && identityForSeed.year > 0
+      ) {
         void enqueuePlayerSetTuple({
           player: identityForSeed.player,
-          set: identityForSeed.set,
-          year:
-            typeof identityForSeed.year === "number" ? identityForSeed.year : undefined,
+          release: identityForSeed.release,
+          year: identityForSeed.year,
         });
       }
 

@@ -202,6 +202,12 @@ interface FetchedComps {
     title: string | null;
     player: string | null;
     set: string | null;
+    // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): release/product line
+    // (e.g. "Bowman Draft", "Topps Update"). Pinned path reads
+    // pricing.card.set.release; routed path passes through the router's
+    // detail.releaseName (which it also writes into `set`). Used by
+    // Layer 1 source selection and the player-set-queue seed.
+    release: string | null;
     year: string | number | null;
     number: string | null;
     variant: string | null;
@@ -357,6 +363,14 @@ interface CardIdentityLite {
   player?: string | null;
   year?: string | number | null;
   set?: string | null;
+  // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): the release/product line
+  // (e.g. "Bowman Draft", "Topps Update"). Distinct from `set`, which is
+  // the literal pricing.card.set.name — Cardsight uses "Base Set" for
+  // every release's main subset, so `set` alone collides across releases.
+  // Player-in-set scoping (Layer 1 source + nightly history key) must
+  // use `release` so 2024 Bowman Draft Griffin and 2025 Topps Series 1
+  // Griffin don't blend into one corrupted history.
+  release?: string | null;
 }
 
 interface CompQualityVerdict {
@@ -1140,6 +1154,14 @@ async function fetchComps(
       title: c.name ?? null,
       player: c.name ?? null,
       set: c.set?.name ?? null,
+      // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): c.set.name is the literal
+      // subset name ("Base Set") and is NOT unique per release. The
+      // release/product line lives on c.set.release. Surface it so the
+      // pinned-id path's identity matches the routed path (which already
+      // carries release name via cardsight.router → CardsightCardDetail
+      // .releaseName), and so the player-in-set scoping / nightly history
+      // key can use release+year as a non-colliding identity.
+      release: c.set?.release ?? null,
       year: setYearAsNumber(c.set?.year),
       number: c.number ?? null,
       variant: null,
@@ -1149,6 +1171,7 @@ async function fetchComps(
       title: null,
       player: null,
       set: null,
+      release: null,
       year: null,
       number: null,
       variant: null,
@@ -1261,6 +1284,13 @@ async function fetchComps(
     title: card.title ?? card.name ?? null,
     player: card.player ?? null,
     set: card.set ?? null,
+    // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): cardsight.router populates
+    // `card.set` with detail.releaseName for this routed-search path (see
+    // cardsight.router.ts:216-217 + 234-235), so it's already the release.
+    // Mirror it onto `release` so callers can scope by release uniformly,
+    // regardless of whether the request came in via the pinned-id path or
+    // the fall-through routed-search path.
+    release: card.set ?? null,
     year: card.year ?? null,
     number: card.number ?? null,
     variant: card.variant ?? null,
@@ -3170,8 +3200,19 @@ export async function computeEstimate(
   // this CF stops READING the player-wide blob.
   const playerNameForSignals =
     cardIdentity?.player?.trim() || body.playerName?.trim() || "";
+  // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): prefer the release/product-
+  // line over the literal subset name. `cardIdentity.set` is the Cardsight
+  // subset name (e.g. "Base Set"), which collides across releases — every
+  // release's main subset is "Base Set". `cardIdentity.release` is the
+  // product line (e.g. "Bowman Draft", "Topps Update"), uniquely scoping
+  // the player-in-set pool. fetchCompsByPlayer takes this as `product` and
+  // searches Cardsight catalog with "<player> <product>" — passing "Base
+  // Set" returns garbage; passing "Bowman Draft" finds the right cards.
   const productForSignals =
-    cardIdentity?.set?.trim() || body.product?.trim() || "";
+    cardIdentity?.release?.trim()
+    || cardIdentity?.set?.trim()
+    || body.product?.trim()
+    || "";
   const cardYearForSignals: number | undefined =
     typeof cardIdentity?.year === "number" && cardIdentity.year > 0
       ? cardIdentity.year
