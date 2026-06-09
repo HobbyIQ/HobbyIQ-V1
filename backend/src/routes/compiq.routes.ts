@@ -10,7 +10,30 @@ import {
   pickCardImageUrl,
   type MarketReadResult,
 } from "../services/compiq/marketRead.service.js";
-import { getPricing as getPricingForMarketRead } from "../services/compiq/cardsight.client.js";
+import {
+  getPricing as getPricingForMarketRead,
+  getCardImage,
+} from "../services/compiq/cardsight.client.js";
+
+// CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
+// `/api/compiq/card-image/:id` proxy route from the request context.
+// Honors x-forwarded-* set by Azure App Service's reverse proxy so the
+// emitted URL is publicly hittable. Falls back to req.protocol + host.
+function absoluteApiUrl(req: import("express").Request, path: string): string {
+  const proto =
+    (req.headers["x-forwarded-proto"] as string | undefined) ?? req.protocol ?? "https";
+  const host =
+    (req.headers["x-forwarded-host"] as string | undefined) ??
+    (req.headers.host as string | undefined) ??
+    "";
+  return `${proto}://${host}${path}`;
+}
+
+// UUID-shape check for the proxy route. Cardsight cardIds are UUIDv4-
+// shaped 32 hex with 4 hyphens. Reject anything else without making a
+// Cardsight call (defense against random-path scrapers).
+const CARDSIGHT_CARD_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
 import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
 import {
@@ -408,6 +431,25 @@ router.post("/cardsearch", async (req, res, next) => {
         .json({ success: false, error: '`hint` must be either "cert" or "freetext" when provided' });
     }
     const response = await dispatchSearch(query, hintParam);
+    // CF-CARD-IMAGE-PROXY (2026-06-08): patch each candidate's imageUrl
+    // to point at our card-image proxy route. The catalog adapter emits
+    // imageUrl: null (Cardsight's catalog/search response carries no
+    // image — confirmed in the CF-C recon); we fill it in with the
+    // proxy URL here so iOS can render thumbnails on each picker row.
+    // Candidates whose `candidateId` is shaped `cardsight:<uuid>` get a
+    // URL; cert-grader rows (different attribution) keep imageUrl null.
+    const candidates: any[] = Array.isArray((response as any)?.candidates)
+      ? (response as any).candidates
+      : [];
+    for (const c of candidates) {
+      const cid: string | undefined =
+        typeof c?.candidateId === "string" ? c.candidateId : undefined;
+      const m = cid?.match(/^cardsight:([0-9a-f-]+)$/i);
+      const csId = m?.[1];
+      if (csId && CARDSIGHT_CARD_ID_RE.test(csId)) {
+        c.imageUrl = absoluteApiUrl(req, `/api/compiq/card-image/${csId}`);
+      }
+    }
     res.json(response);
   } catch (err) {
     // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
@@ -424,6 +466,48 @@ router.post("/cardsearch", async (req, res, next) => {
             detectedMode,
           ),
         );
+    }
+    next(err);
+  }
+});
+
+// GET /api/compiq/card-image/:cardsightCardId
+//
+// CF-CARD-IMAGE-PROXY (2026-06-08): backend proxy for Cardsight's
+// catalog card-image endpoint (/v1/images/cards/<id>). iOS cannot hit
+// Cardsight directly because the upstream needs our X-API-Key header
+// (auth must stay server-side). This route validates the cardId shape,
+// proxies the upstream call, and streams the JPEG bytes back with a
+// Cache-Control header matching Cardsight's max-age=86400 so iOS
+// (URLSession / AsyncImage) caches each card image for 24h.
+//
+// Unauthenticated by design: iOS embeds these as `<img src=...>` /
+// AsyncImage URLs, which use a default URLSession that can't inject
+// session headers. Card photos are non-sensitive (Cardsight serves
+// them on the same API); the proxy's job is hiding our X-API-Key,
+// NOT gating access to the images. If scraping becomes an issue we
+// can tighten with a short-lived signed URL or Referer check later.
+//
+// Returns 404 when Cardsight 404s (parallel ids share the base card
+// image and aren't served directly; the caller is expected to use the
+// base cardId from search / detail). Returns 504 on upstream timeout.
+router.get("/card-image/:cardsightCardId", async (req, res, next) => {
+  try {
+    const cardId = req.params.cardsightCardId;
+    if (!cardId || !CARDSIGHT_CARD_ID_RE.test(cardId)) {
+      return res.status(400).json({ success: false, error: "Invalid cardsightCardId" });
+    }
+    const result = await getCardImage(cardId);
+    if (result.notFound) {
+      return res.status(404).json({ success: false, error: "Image not found" });
+    }
+    res.setHeader("Content-Type", result.contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Content-Length", String(result.bytes.length));
+    return res.status(200).send(result.bytes);
+  } catch (err) {
+    if (isCardsightTimeoutError(err)) {
+      return res.status(504).json({ success: false, error: "Upstream timeout" });
     }
     next(err);
   }
@@ -1011,12 +1095,21 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // tokens (once wired up).
       let marketReadResult: MarketReadResult | null = null;
       // CF-CARD-HERO-IMAGE (2026-06-08): top-level representative
-      // thumbnail. Picked from the SAME pricing payload the marketRead
-      // uses (cs:pricing cache-hit — zero extra Cardsight ops). The
-      // factPack's binMedian doubles as the below-market benchmark so
-      // the hero biases toward a clean, near-market sale rather than
-      // the cheapest comp.
-      let cardImageUrl: string | undefined;
+      // thumbnail. Two URLs surfaced:
+      //   cardImageUrl       → STABLE Cardsight catalog asset via our
+      //                        proxy route (CF-CARD-IMAGE-PROXY). Same
+      //                        URL across sales / time / grade. iOS
+      //                        renders this as the primary hero.
+      //   cardImageThumbUrl  → EPHEMERAL eBay thumb of the most-recent
+      //                        clean comp (existing pickCardImageUrl
+      //                        logic). Useful as a fallback when the
+      //                        catalog asset 404s, or as a "what the
+      //                        most recent sale looked like" secondary.
+      let cardImageUrl: string | undefined = absoluteApiUrl(
+        req,
+        `/api/compiq/card-image/${resolvedCardId}`,
+      );
+      let cardImageThumbUrl: string | undefined;
       try {
         const pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
@@ -1030,7 +1123,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             est as Record<string, unknown>,
             resolvedCardId,
           );
-          cardImageUrl = pickCardImageUrl(
+          cardImageThumbUrl = pickCardImageUrl(
             pricingForMR,
             gradeKey,
             marketReadResult?.factPack?.binMedian ?? null,
@@ -1041,7 +1134,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           `[compiq.price-by-id] marketRead build failed (non-fatal): ${(err as Error)?.message ?? err}`,
         );
         marketReadResult = null;
-        cardImageUrl = undefined;
+        cardImageThumbUrl = undefined;
       }
 
       return {
@@ -1105,11 +1198,16 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // so the prose's "don't value a clean card against them" callout is
         // visible in the comp list.
         excludedComps: marketReadResult?.excludedComps ?? [],
-        // CF-CARD-HERO-IMAGE (2026-06-08): top-level hero thumbnail for
-        // the priced-card view. Field omitted when no usable image was
-        // found in the grade-matched (or raw-fallback) pool. iOS should
-        // render a placeholder when absent.
+        // CF-CARD-HERO-IMAGE (2026-06-08) — STABLE Cardsight catalog
+        // asset, proxied through our backend. Same URL forever for a
+        // given cardId. iOS should render this as the primary hero.
         cardImageUrl,
+        // EPHEMERAL fallback — eBay thumb of the most-recent clean comp
+        // (most recent at/above 0.65 × binMedian). Useful when Cardsight's
+        // catalog asset 404s (parallel ids, edge cases) or when iOS
+        // wants to show "what the most recent sale looked like."
+        // Field omitted when no usable thumb was found.
+        cardImageThumbUrl,
       };
     };
 

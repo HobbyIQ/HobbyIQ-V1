@@ -414,6 +414,61 @@ async function _getCardDetail(cardId: string): Promise<CardsightCardDetail> {
 }
 
 /**
+ * CF-CARD-IMAGE-PROXY (2026-06-08): fetch the catalog-asset card image
+ * for a given Cardsight cardId. Returns the raw JPEG bytes + content
+ * type when the endpoint serves the card; `notFound: true` sentinel
+ * when Cardsight returns 404 (parallel ids share the base card image
+ * and aren't served directly — caller should use the base cardId).
+ *
+ * Endpoint contract (verified 2026-06-08):
+ *   GET /v1/images/cards/<cardId>
+ *   - Auth: X-API-Key required (401 without)
+ *   - 200: image/jpeg binary (Cache-Control: public, max-age=86400)
+ *   - 404: tiny JSON {"error":"Resource not found","code":"NOT_FOUND"}
+ *   - ?size= and ?format= are ignored / rejected respectively
+ */
+export interface CardsightImageResponse {
+  bytes: Buffer;
+  contentType: string;
+  /** Set when the upstream returned 404. */
+  notFound?: boolean;
+}
+
+export async function getCardImage(cardId: string): Promise<CardsightImageResponse> {
+  if (!apiKey()) {
+    log.warn("api_key_missing", { endpoint: "getCardImage", card_id: cardId });
+    return { bytes: Buffer.alloc(0), contentType: "application/json", notFound: true };
+  }
+  try {
+    const res = await fetchWithRetry(
+      `${BASE_URL}/images/cards/${encodeURIComponent(cardId)}`,
+    );
+    if (res.status === 404) {
+      return { bytes: Buffer.alloc(0), contentType: "application/json", notFound: true };
+    }
+    if (!res.ok) {
+      log.warn("api_http_error", {
+        status: res.status,
+        card_id: cardId,
+        endpoint: "getCardImage",
+      });
+      return { bytes: Buffer.alloc(0), contentType: "application/json", notFound: true };
+    }
+    const contentType = res.headers.get("content-type") ?? "image/jpeg";
+    const ab = await res.arrayBuffer();
+    return { bytes: Buffer.from(ab), contentType };
+  } catch (err: any) {
+    if (err instanceof CardsightTimeoutError) throw err;
+    log.warn("api_threw", {
+      card_id: cardId,
+      endpoint: "getCardImage",
+      error: err?.message ?? String(err),
+    });
+    return { bytes: Buffer.alloc(0), contentType: "application/json", notFound: true };
+  }
+}
+
+/**
  * Fetch pricing data (raw + graded sales) for a card.
  * Optionally scoped to a specific parallel via parallelId.
  * Returns { notFound: true } sentinel on 404 — never throws for 404.
