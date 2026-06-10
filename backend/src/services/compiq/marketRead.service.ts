@@ -101,6 +101,13 @@ export interface MarketReadFactPack {
   /** Top 3 exclusion reasons, plain-language. */
   topExclusionReasons: Array<{ reason: string; count: number; label: string }>;
   fmv: number | null;
+  // CF-LASTSALE-SCAFFOLD (2026-06-10): last-sale figures for the
+  // no-value Market Read prose. Same record the route surfaces via
+  // est.lastSale — derived from the unwindowed post-(grade + parallel)
+  // pool. Lets the LLM cite "last sold $X, N ago" with the grounding
+  // validator's allowed set extended to include lastSalePrice.
+  lastSaleDate: string | null;
+  lastSalePrice: number | null;
 }
 
 /** Single comp dropped by applyCompQualityFilter within the 14d window.
@@ -409,6 +416,23 @@ function buildFactPackAndExcludedInternal(
   const sampleAvailable = typeof est?.compsAvailable === "number" ? est.compsAvailable : sales.length;
   const fmv = typeof est?.fairMarketValue === "number" ? est.fairMarketValue : null;
 
+  // CF-LASTSALE-SCAFFOLD (2026-06-10): read est.lastSale (computed in
+  // computeEstimate from the unwindowed post-(grade + parallel) pool).
+  // The prose can cite "last sold $X, N ago" when fmv is null; the
+  // validator's allowed set is extended below to include the
+  // lastSalePrice.
+  const estLastSale = (est?.lastSale ?? null) as
+    | { soldDate?: string; price?: number }
+    | null;
+  const lastSaleDate =
+    estLastSale && typeof estLastSale.soldDate === "string" && estLastSale.soldDate.length > 0
+      ? estLastSale.soldDate
+      : null;
+  const lastSalePrice =
+    estLastSale && typeof estLastSale.price === "number" && Number.isFinite(estLastSale.price)
+      ? estLastSale.price
+      : null;
+
   const factPack: MarketReadFactPack = {
     cardId,
     grade,
@@ -430,6 +454,8 @@ function buildFactPackAndExcludedInternal(
     excludedPriceMax: excludedPriceMax !== null ? round2(excludedPriceMax) : null,
     topExclusionReasons,
     fmv: fmv !== null ? round2(fmv) : null,
+    lastSaleDate,
+    lastSalePrice: lastSalePrice !== null ? round2(lastSalePrice) : null,
   };
 
   const excludedComps = buildExcludedComps(
@@ -647,6 +673,15 @@ export function validateMarketReadNumbers(
   add(fp.excludedPriceMin);
   add(fp.excludedPriceMax);
   add(fp.fmv);
+  // CF-LASTSALE-SCAFFOLD (2026-06-10): the LLM may cite the last-sale
+  // price when fmv is null ("last sold $X, N ago"). Add it to the
+  // allowed set so a grounded citation passes the validator. The
+  // "N ago" days figure isn't pre-computed in the fact pack — the LLM
+  // can spell that as a word ("about a month ago", "the past two
+  // weeks") OR can cite daysSinceNewestComp if we later add it to the
+  // pack. For now: only the price is validator-grounded; the day-count
+  // is left for prose phrasing.
+  add(fp.lastSalePrice);
   // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): GRADE-DIGIT EXEMPTION.
   // The grade designation the request asked for is a legitimate
   // number in the prose ("PSA 10", "BGS 9.5", "SGC 8"). The regex
@@ -694,6 +729,12 @@ export function hashFactPack(fp: MarketReadFactPack): string {
     priceMin: fp.priceMin,
     priceMax: fp.priceMax,
     fmv: fp.fmv,
+    // CF-LASTSALE-SCAFFOLD (2026-06-10): include last-sale figures so a
+    // new sale lands → hash changes → cache misses → LLM regenerates
+    // with the fresh number. Without these in the hash, a recently-
+    // landed sale would be invisible to the prose for up to 24h.
+    lastSaleDate: fp.lastSaleDate,
+    lastSalePrice: fp.lastSalePrice,
   });
   return crypto.createHash("sha256").update(stable).digest("hex").slice(0, 16);
 }

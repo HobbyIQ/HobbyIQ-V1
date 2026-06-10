@@ -696,6 +696,10 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
+          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
+          // post-filter sub-market pool to derive last-sale from.
+          lastSale: null,
+          estimateSource: null,
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -833,6 +837,12 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
+        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
+        // signal the service emits — mirror it onto the response so
+        // iOS can render "last sold $X, N ago" + decide between
+        // "observed" vs "last-sale" vs missing.
+        lastSale: (est as any).lastSale ?? null,
+        estimateSource: (est as any).estimateSource ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
@@ -946,6 +956,10 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
+          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
+          // post-filter sub-market pool to derive last-sale from.
+          lastSale: null,
+          estimateSource: null,
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -1044,6 +1058,12 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
+        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
+        // signal the service emits — mirror it onto the response so
+        // iOS can render "last sold $X, N ago" + decide between
+        // "observed" vs "last-sale" vs missing.
+        lastSale: (est as any).lastSale ?? null,
+        estimateSource: (est as any).estimateSource ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
@@ -1218,6 +1238,10 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
+          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
+          // post-filter sub-market pool to derive last-sale from.
+          lastSale: null,
+          estimateSource: null,
           broaderTrend: null,
         };
       }
@@ -1385,6 +1409,12 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
+        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
+        // signal the service emits — mirror it onto the response so
+        // iOS can render "last sold $X, N ago" + decide between
+        // "observed" vs "last-sale" vs missing.
+        lastSale: (est as any).lastSale ?? null,
+        estimateSource: (est as any).estimateSource ?? null,
         broaderTrend: (est as any).broaderTrend ?? null,
         // CF-MARKET-READ (2026-06-08): prose + fact-pack pair. iOS
         // should render `marketRead` as a calm prose paragraph; the

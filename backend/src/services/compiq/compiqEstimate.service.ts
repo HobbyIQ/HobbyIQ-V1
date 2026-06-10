@@ -1054,6 +1054,46 @@ export function selectSalesByGrade(
 import { filterRecordsByParallel } from "./filters.js";
 export { filterRecordsByParallel };
 
+// CF-LASTSALE-SCAFFOLD (2026-06-10): exported helper that picks the
+// single max-by-date record from a RawComp[] pool (post-(grade +
+// parallel), unwindowed). The lastSale + daysSinceNewest fields on
+// the est shape derive from the SAME picked record so they can't
+// disagree on edge cases. Returns null when no record has a
+// parseable, positive soldDate timestamp.
+//
+// Output shape mirrors what the /price-by-id response surfaces under
+// `lastSale` — iOS reads it as-is for the no-value-screen "last sold
+// $X, N ago" treatment.
+export function pickLastSale(comps: ReadonlyArray<RawComp>): {
+  soldDate: string;
+  price: number;
+  title: string | null;
+  listingType: "fixed" | "auction" | null;
+  imageUrl: string | null;
+} | null {
+  let best: RawComp | null = null;
+  let bestTs = 0;
+  for (const c of comps) {
+    const ts = Date.parse(c.soldDate || "");
+    if (!Number.isFinite(ts) || ts <= 0) continue;
+    if (best === null || ts > bestTs) {
+      best = c;
+      bestTs = ts;
+    }
+  }
+  if (best === null) return null;
+  return {
+    soldDate: best.soldDate || "",
+    price: best.price,
+    title: best.title ?? null,
+    listingType:
+      best.listingType === "fixed" || best.listingType === "auction"
+        ? best.listingType
+        : null,
+    imageUrl: best.imageUrl ?? null,
+  };
+}
+
 async function fetchComps(
   query: string,
   grade: string = "Raw",
@@ -2290,6 +2330,12 @@ export async function computeEstimate(
       verdict: `Unsupported sport (${detectedCategory}). CompIQ currently prices baseball cards only.`,
       gradeUsed: cardHedgeGrade,
       marketDNA: { trend: "flat", speed: "Normal" },
+      // CF-LASTSALE-SCAFFOLD (2026-06-10): unsupported_sport never
+      // derives a last-sale figure — the comps belong to a different
+      // sport CompIQ doesn't price. iOS treats this as not-a-card.
+      daysSinceNewestComp: null,
+      lastSale: null,
+      estimateSource: null,
     } as Record<string, unknown>;
   }
 
@@ -2687,6 +2733,13 @@ export async function computeEstimate(
       gradeUsed: cardHedgeGrade,
       source: "variant-mismatch",
       daysSinceNewestComp: null,
+      // CF-LASTSALE-SCAFFOLD (2026-06-10): variant-mismatch surfaces
+      // fetched.comps as wrong-variant context only — those records are
+      // for a different card, so deriving a "last sale of this card"
+      // from them would be misleading. iOS treats variant-mismatch as
+      // a separate state and shouldn't render last-sale prose here.
+      lastSale: null,
+      estimateSource: null,
       variantWarning: fetched.variantWarning,
       // CF-VARIANT-MISMATCH-PRICESOURCE-PARITY (2026-05-28): propagate
       // the router's parallel-resolution attribution onto the variant-
@@ -2766,11 +2819,14 @@ export async function computeEstimate(
   // Rationale: a low-pop prospect auto may only print 2-4 sales/year; refusing
   // to price it because the most recent sale was 90 days ago is worse than
   // returning a confidence-capped estimate with a `stale_comps` risk flag.
-  const newestTs = fetched.comps
-    .map((c) => Date.parse(c.soldDate || ""))
-    .filter((t) => Number.isFinite(t))
-    .reduce((a, b) => Math.max(a, b), 0);
+  // CF-LASTSALE-SCAFFOLD (2026-06-10): pick the single max-by-date record
+  // from the post-(grade + parallel) UNWINDOWED pool via the exported
+  // helper. lastSale + daysSinceNewest derive from the SAME record so
+  // they can't disagree on edge cases (duplicate timestamps, etc.).
+  const lastSalePick = pickLastSale(fetched.comps);
+  const newestTs = lastSalePick ? Date.parse(lastSalePick.soldDate) || 0 : 0;
   const daysSinceNewest = newestTs > 0 ? Math.floor((Date.now() - newestTs) / (24 * 3600 * 1000)) : null;
+  const lastSale = lastSalePick;
 
   const compCount = fetched.comps.length;
   const insufficient =
@@ -3158,6 +3214,13 @@ export async function computeEstimate(
       gradeUsed: cardHedgeGrade,
       source: "no-recent-comps",
       daysSinceNewestComp: daysSinceNewest,
+      // CF-LASTSALE-SCAFFOLD (2026-06-10): surface the most-recent sale
+      // from the unwindowed post-(grade + parallel) pool. fmv is null on
+      // this branch, so estimateSource is "last-sale" when a lastSale
+      // exists (iOS no-value screen can render "last sold $X, N ago"),
+      // null when fetched.comps has zero parseable-date records.
+      lastSale,
+      estimateSource: lastSale !== null ? ("last-sale" as const) : null,
       variantWarning: fetched.variantWarning,
       crossParallelAnchor: null,
       effectiveFmv: null,
@@ -3865,6 +3928,19 @@ export async function computeEstimate(
     })(),
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
+    // CF-LASTSALE-SCAFFOLD (2026-06-10): mirror the insufficient branch.
+    // daysSinceNewestComp + lastSale derive from the SAME record in the
+    // unwindowed post-(grade + parallel) pool. estimateSource is
+    // "observed" when a numeric marketValue is present, "last-sale" as
+    // a fallback when fmv is null but a lastSale exists.
+    daysSinceNewestComp: daysSinceNewest,
+    lastSale,
+    estimateSource:
+      typeof fairMarketValue === "number"
+        ? ("observed" as const)
+        : lastSale !== null
+        ? ("last-sale" as const)
+        : null,
     variantWarning: fetched.variantWarning,
     // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. iOS
     // reads `priceSource` (3-category: exact / approximate / broad).
