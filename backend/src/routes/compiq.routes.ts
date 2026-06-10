@@ -48,6 +48,7 @@ import {
   type ParsedCardQuery,
 } from "../services/compiq/cardQueryParser.js";
 import { fetchCompsByPlayer } from "../services/compiq/compsByPlayer.service.js";
+import { fetchPlayerInSetMomentum } from "../services/compiq/playerInSetMomentum.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
 import {
   classifyRegime,
@@ -432,6 +433,78 @@ router.get("/comps-by-player", async (req, res, next) => {
       gradeValue,
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): expose the live per-(player,
+// release, year) momentum so MCP /predict can override the player-wide
+// compsMomentum from fn-serve-signals with the release-aware signal.
+//
+// Returns the same per-card median-ratio computation the backend's
+// TrendIQ Layer 1 already uses (CF-PLAYER-IN-SET-PER-CARD-DIRECTION).
+// Single source of truth — MCP doesn't re-implement the algorithm.
+//
+// Shape mirrors the aggregator's `compsMomentum` contract (multiplier +
+// signal direction), plus the full per-card breakdown for the optional
+// advisor-prose use. Null payload when the per-(player, release, year)
+// pool can't form a signal (< MIN_QUALIFYING_CARDS); MCP falls back to
+// the player-wide value in that case.
+//
+// Query params: player (req), release (req), year (req).
+// No auth — same posture as /comps-by-player; MCP is the only caller.
+router.get("/player-in-set-momentum", async (req, res, next) => {
+  try {
+    const player = typeof req.query.player === "string" ? req.query.player.trim() : "";
+    const release = typeof req.query.release === "string" ? req.query.release.trim() : "";
+    const yearRaw = typeof req.query.year === "string" ? req.query.year.trim() : "";
+
+    if (!player) return res.status(400).json({ error: "player query parameter is required" });
+    if (!release) return res.status(400).json({ error: "release query parameter is required" });
+    if (!yearRaw) return res.status(400).json({ error: "year query parameter is required" });
+    const year = Number(yearRaw);
+    if (!Number.isFinite(year) || year < 1900 || year > 2100) {
+      return res.status(400).json({ error: "year must be a 4-digit year between 1900 and 2100" });
+    }
+
+    const component = await fetchPlayerInSetMomentum({
+      playerName: player,
+      product: release,
+      cardYear: year,
+    });
+
+    if (!component) {
+      // Honest null — caller (MCP) falls back to player-wide signal.
+      return res.json({
+        player,
+        release,
+        year,
+        signal: null,
+        multiplier: null,
+        source: "playerInSet",
+      });
+    }
+
+    // Surface compsMomentum-compatible shape so MCP can drop it into the
+    // aggregator's `components.compsMomentum` slot without translation.
+    // `signal` derives from the multiplier-vs-threshold logic baked into
+    // fetchPlayerInSetMomentum's flags array; "rising"/"falling"/"stable".
+    const directionFlag = component.flags.find((f) => f === "rising" || f === "falling" || f === "stable");
+    const signal = directionFlag ?? "stable";
+
+    res.json({
+      player,
+      release,
+      year,
+      signal,
+      multiplier: component.multiplier,
+      source: "playerInSet",
+      // Full per-card breakdown for advisor / debugging.
+      componentSignals: component.componentSignals,
+      flags: component.flags,
+      lastUpdated: component.lastUpdated,
+    });
   } catch (err) {
     next(err);
   }

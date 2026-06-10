@@ -22,6 +22,21 @@ const SIGNAL_KEY = process.env.AZURE_SIGNAL_FUNCTION_KEY ?? "";
 const FLOOR_URL = process.env.AZURE_PRICE_FLOOR_URL ?? "";
 const FLOOR_KEY = process.env.AZURE_PRICE_FLOOR_KEY ?? "";
 
+// CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): backend bridge for
+// per-(player, release, year) momentum. Replaces the player-wide
+// compsMomentum value from fn-serve-signals during /predict so the
+// signal reflects the actual card's release direction, not the
+// blurred player-wide pool.
+//
+// SHADOW PHASE: bridge value is FETCHED + LOGGED but does NOT yet
+// replace signals.components.compsMomentum or signals.final_multiplier.
+// Cutover gated on review of shadow deltas (see /predict shadow log).
+const HOBBYIQ_BACKEND_URL = process.env.HOBBYIQ_BACKEND_URL ?? "";
+// Aggregator's compsMomentum weight — load-bearing constant for the
+// shadow's approximate final_multiplier_new computation. Mirrors
+// compiq-functions/fn-signal-aggregator/function.py:42 WEIGHTS map.
+const COMPS_MOMENTUM_WEIGHT = 0.20;
+
 // Prefer Azure OpenAI when configured (production HobbyIQ uses Azure OpenAI),
 // fall back to the public OpenAI API otherwise.
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT ?? "";
@@ -284,6 +299,138 @@ export async function fetchSignals(
     });
     return { ...NEUTRAL_SIGNAL };
   }
+}
+
+// -------------------------------------------------------------------------
+// CF-MCP-PLAYER-IN-SET-BRIDGE — per-(player, release, year) momentum
+// -------------------------------------------------------------------------
+
+export interface PlayerInSetMomentumBridgeResult {
+  multiplier: number | null;
+  signal: "rising" | "falling" | "stable" | null;
+  source: "playerInSet" | "bridge_unavailable" | "bridge_error" | "bridge_no_data";
+}
+
+const BRIDGE_NEUTRAL: PlayerInSetMomentumBridgeResult = {
+  multiplier: null,
+  signal: null,
+  source: "bridge_unavailable",
+};
+
+/** Call backend /api/compiq/player-in-set-momentum. Best-effort; null-safe
+ *  fallback on any failure. NOT a hard dependency — when the bridge can't
+ *  produce a signal (no qualifying cards, network error, backend down),
+ *  callers fall through to the player-wide aggregator value. */
+export async function fetchPlayerInSetMomentumBridge(
+  player: string,
+  release: string,
+  year: number,
+): Promise<PlayerInSetMomentumBridgeResult> {
+  if (!HOBBYIQ_BACKEND_URL) return BRIDGE_NEUTRAL;
+  if (!player || !release || !Number.isFinite(year) || year <= 0) {
+    return { ...BRIDGE_NEUTRAL, source: "bridge_unavailable" };
+  }
+  const url = new URL(
+    "/api/compiq/player-in-set-momentum",
+    HOBBYIQ_BACKEND_URL,
+  );
+  url.searchParams.set("player", player);
+  url.searchParams.set("release", release);
+  url.searchParams.set("year", String(year));
+  const fullUrl = url.toString();
+  const start = Date.now();
+  try {
+    const resp = await fetch(fullUrl, {
+      // Stay inside /predict's overall budget. /predict already runs
+      // OpenAI + comp fetch + signal fetch concurrently; this is a
+      // 3s budget — same as backend's tighter signal fetch.
+      signal: AbortSignal.timeout(3_000),
+    });
+    trackHttpDependency({
+      name: "playerInSetMomentum_bridge",
+      url: fullUrl,
+      startMs: start,
+      resultCode: resp.status,
+      success: resp.ok,
+    });
+    if (!resp.ok) return { ...BRIDGE_NEUTRAL, source: "bridge_error" };
+    const data = (await resp.json()) as {
+      multiplier: number | null;
+      signal: "rising" | "falling" | "stable" | null;
+    };
+    if (data.multiplier === null || data.multiplier === undefined) {
+      return { ...BRIDGE_NEUTRAL, source: "bridge_no_data" };
+    }
+    return {
+      multiplier: Number(data.multiplier),
+      signal: data.signal ?? "stable",
+      source: "playerInSet",
+    };
+  } catch (err) {
+    trackHttpDependency({
+      name: "playerInSetMomentum_bridge",
+      url: fullUrl,
+      startMs: start,
+      resultCode: 0,
+      success: false,
+      error: err as Error,
+    });
+    return { ...BRIDGE_NEUTRAL, source: "bridge_error" };
+  }
+}
+
+/** SHADOW comparator: given the old (player-wide) compsMomentum from
+ *  fn-serve-signals and the new (per-release) value from the bridge,
+ *  compute the approximate shift the new value WOULD induce on
+ *  signals.final_multiplier, and surface flag-flip booleans.
+ *
+ *  First-order approximation: the aggregator compounds
+ *    final_pre_overlay = Σ w·m   (compsMomentum's weight is 0.20)
+ *  then applies multiplicative overlays (show, pack, playoff, arc) and
+ *  clamps to [0.70, 1.50]. We don't have the overlay product, so
+ *  approximate final_new = final_old + (mult_new - mult_old) * 0.20.
+ *  Overlays are typically near 1.0 → this is correct within ~5% in
+ *  practice. Surfaced as `approximate_final_multiplier_new`. */
+export function computeShadowDelta(args: {
+  oldCompsMomentum: number;
+  oldFlagsIncludes: { rising: boolean; falling: boolean; noData: boolean };
+  oldFinalMultiplier: number;
+  bridge: PlayerInSetMomentumBridgeResult;
+}): {
+  newCompsMomentum: number | null;
+  newSignal: string | null;
+  multDelta: number | null;
+  approximateFinalMultiplierNew: number | null;
+  flagWouldFlip: boolean;
+  bridgeSource: PlayerInSetMomentumBridgeResult["source"];
+} {
+  if (args.bridge.multiplier === null) {
+    return {
+      newCompsMomentum: null,
+      newSignal: null,
+      multDelta: null,
+      approximateFinalMultiplierNew: null,
+      flagWouldFlip: false,
+      bridgeSource: args.bridge.source,
+    };
+  }
+  const newMult = args.bridge.multiplier;
+  const multDelta = newMult - args.oldCompsMomentum;
+  const finalDelta = multDelta * COMPS_MOMENTUM_WEIGHT;
+  const approxFinal = Math.max(0.70, Math.min(1.50, args.oldFinalMultiplier + finalDelta));
+  const newRising = args.bridge.signal === "rising";
+  const newFalling = args.bridge.signal === "falling";
+  const flagWouldFlip =
+    args.oldFlagsIncludes.rising !== newRising
+    || args.oldFlagsIncludes.falling !== newFalling;
+  return {
+    newCompsMomentum: newMult,
+    newSignal: args.bridge.signal,
+    multDelta,
+    approximateFinalMultiplierNew: Math.round(approxFinal * 1000) / 1000,
+    flagWouldFlip,
+    bridgeSource: args.bridge.source,
+  };
 }
 
 // -------------------------------------------------------------------------
@@ -725,13 +872,66 @@ export async function getPredictedPrice(
   ]
     .map((s) => String(s).trim())
     .join("|");
-  const [signals, floorDoc] = await Promise.all([
+  const [signals, floorDoc, playerInSetBridge] = await Promise.all([
     options?.signalsOverride
       ? Promise.resolve(options.signalsOverride)
       : fetchSignals(card.playerName),
     fetchPriceFloor(cardId),
+    // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): SHADOW — fetch the
+    // per-(player, release, year) momentum in parallel. Result is
+    // LOGGED for shadow analysis but NOT applied to `signals` yet.
+    // Cutover happens after the shadow review (separate HALT).
+    // Bridge runs ONLY in production paths (signalsOverride means
+    // backtest harness — don't double-fetch for synthetic runs).
+    options?.signalsOverride
+      ? Promise.resolve<PlayerInSetMomentumBridgeResult>({
+          multiplier: null,
+          signal: null,
+          source: "bridge_unavailable",
+        })
+      : fetchPlayerInSetMomentumBridge(card.playerName, card.set, card.year),
   ]);
   const floorValue = floorDoc?.floor ?? null;
+
+  // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): SHADOW LOG.
+  // Compute what signals.final_multiplier WOULD become with the per-
+  // release compsMomentum value, log delta + flag-flip, but DON'T
+  // mutate `signals`. Read by App Insights / log scrape for cutover
+  // review. ASCII-only, single-line; grep key: [mcp.compsMomentum_shadow].
+  if (!options?.signalsOverride) {
+    try {
+      const oldCM = signals.components?.compsMomentum ?? 1.0;
+      const oldFlags = signals.signal_flags ?? [];
+      const shadow = computeShadowDelta({
+        oldCompsMomentum: oldCM,
+        oldFlagsIncludes: {
+          rising: oldFlags.includes("compsMomentum_rising"),
+          falling: oldFlags.includes("compsMomentum_falling"),
+          noData: oldFlags.includes("compsMomentum_no_data"),
+        },
+        oldFinalMultiplier: signals.final_multiplier ?? 1.0,
+        bridge: playerInSetBridge,
+      });
+      console.log(
+        `[mcp.compsMomentum_shadow] ` +
+          `player="${(card.playerName ?? "").slice(0, 32)}" ` +
+          `release="${(card.set ?? "").slice(0, 40)}" ` +
+          `year=${card.year} ` +
+          `old_cm=${oldCM.toFixed(3)} ` +
+          `new_cm=${shadow.newCompsMomentum === null ? "null" : shadow.newCompsMomentum.toFixed(3)} ` +
+          `cm_delta=${shadow.multDelta === null ? "null" : shadow.multDelta.toFixed(3)} ` +
+          `old_final=${(signals.final_multiplier ?? 1.0).toFixed(3)} ` +
+          `approx_new_final=${shadow.approximateFinalMultiplierNew === null ? "null" : shadow.approximateFinalMultiplierNew.toFixed(3)} ` +
+          `flag_would_flip=${shadow.flagWouldFlip} ` +
+          `old_signal_rising=${oldFlags.includes("compsMomentum_rising")} ` +
+          `old_signal_falling=${oldFlags.includes("compsMomentum_falling")} ` +
+          `new_signal="${shadow.newSignal ?? "null"}" ` +
+          `bridge_source=${shadow.bridgeSource}`,
+      );
+    } catch {
+      // Shadow log must never throw.
+    }
+  }
 
   // Phase A — compute time-series analytics over cached comps
   const analytics = computeCompsAnalytics(card.recentComps);
