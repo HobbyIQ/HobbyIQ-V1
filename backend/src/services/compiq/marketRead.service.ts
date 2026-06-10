@@ -608,6 +608,16 @@ export function validateMarketReadNumbers(
   add(fp.excludedPriceMin);
   add(fp.excludedPriceMax);
   add(fp.fmv);
+  // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): GRADE-DIGIT EXEMPTION.
+  // The grade designation the request asked for is a legitimate
+  // number in the prose ("PSA 10", "BGS 9.5", "SGC 8"). The regex
+  // below treats those digits as standalone numeric tokens, which
+  // would otherwise false-positive on every graded LLM response.
+  // The exemption is SCOPED to the grade the caller requested —
+  // a PSA 9 response that drops a stray "10" STILL rejects, so a
+  // hallucinated grade can't slip through.
+  const gradeMatch = fp.grade?.match(/(\d+(?:\.\d+)?)/);
+  if (gradeMatch) add(Number(gradeMatch[1]));
 
   const matches = text.match(/-?\$?\d+(?:\.\d+)?/g) ?? [];
   const offending: number[] = [];
@@ -820,7 +830,16 @@ export async function generateMarketRead(
 ): Promise<MarketReadResult> {
   const { factPack, excludedComps } = buildFactPackAndExcludedInternal(pricing, grade, est, cardId);
   const factPackHash = hashFactPack(factPack);
-  const cacheKey = `marketread:v1:${cardId}|${grade}|${factPackHash}`;
+  // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): cache-key mode discriminator.
+  // Without `|llm` vs `|tmpl` appended, flipping MARKET_READ_LLM (in
+  // either direction) would keep serving cross-mode stale entries for
+  // up to the 24h TTL — i.e. a rollback from on→off would keep
+  // emitting LLM prose, and a flag flip from off→on would keep
+  // emitting template prose. Mode-tagging the key makes the flag safe
+  // to toggle both ways: cache hits stay within the mode that wrote
+  // them; the other mode runs cold until it warms.
+  const mode = process.env.MARKET_READ_LLM === "on" ? "llm" : "tmpl";
+  const cacheKey = `marketread:v1:${cardId}|${grade}|${factPackHash}|${mode}`;
 
   return await cacheWrap(
     cacheKey,

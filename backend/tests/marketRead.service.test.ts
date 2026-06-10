@@ -454,6 +454,48 @@ describe("validateMarketReadNumbers", () => {
     const v = validateMarketReadNumbers(text, fp);
     expect(v.ok).toBe(true);
   });
+
+  // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10) — GRADE-DIGIT EXEMPTION.
+  // The "10" in "PSA 10" must be allowed when the request grade IS
+  // PSA 10. The exemption must stay SCOPED to the actual grade — a
+  // PSA 9 response that emits "10" must still reject so a
+  // hallucinated grade designation can't slip through.
+
+  it("grade-digit exemption: PSA 10 pack + output that cites '10' → ok", () => {
+    const fp10: MarketReadFactPack = { ...fp, grade: "PSA 10" };
+    const text = "For a PSA 10 copy, the fixed-price median is $315 across 11 sales.";
+    const v = validateMarketReadNumbers(text, fp10);
+    expect(v.ok).toBe(true);
+  });
+
+  it("grade-digit exemption stays STRICT: PSA 9 pack + stray '10' STILL rejects", () => {
+    // Hypothetical hallucinated upgrade — LLM cites PSA 10 in a PSA 9
+    // response. Validator must NOT pass this even though "10" is a
+    // common numeric token. fp.grade controls the exemption.
+    const fp9: MarketReadFactPack = { ...fp, grade: "PSA 9" };
+    const text = "For a PSA 9 copy, sales settle around $315 — with a PSA 10 trading at $500.";
+    const v = validateMarketReadNumbers(text, fp9);
+    expect(v.ok).toBe(false);
+    expect(v.offendingNumbers).toContain(10);
+  });
+
+  it("grade-digit exemption: BGS 9.5 pack permits 9.5 specifically", () => {
+    const fpBgs: MarketReadFactPack = { ...fp, grade: "BGS 9.5" };
+    const text = "For a BGS 9.5 copy, the fixed-price median is $315 across 11 sales.";
+    const v = validateMarketReadNumbers(text, fpBgs);
+    expect(v.ok).toBe(true);
+  });
+
+  it("grade-digit exemption: Raw (no grade digit) adds nothing, behavior unchanged", () => {
+    // Sanity: the regex matches nothing for "Raw", so no spurious
+    // number lands in the allowed set. A previously-allowed text
+    // still passes; a stray "10" still rejects.
+    const fpRaw: MarketReadFactPack = { ...fp, grade: "Raw" };
+    const okText = "For a raw copy, the fixed-price median is $315 across 11 sales.";
+    expect(validateMarketReadNumbers(okText, fpRaw).ok).toBe(true);
+    const badText = "For a raw copy, sales settle around $315 — and a slab traded at $10.";
+    expect(validateMarketReadNumbers(badText, fpRaw).ok).toBe(false);
+  });
 });
 
 describe("hashFactPack + buildLLMPrompt", () => {
@@ -1042,12 +1084,39 @@ describeLlm("generateMarketRead LLM hook (CF-MARKET-READ-LLM-WIRE-UP)", () => {
   itLlm("cache-hit on the same fact-pack hash → LLM only called once across repeat invocations", async () => {
     process.env.MARKET_READ_LLM = "on";
     createMock.mockResolvedValue({
-      choices: [{ message: { content: "Recent sales cluster around $402 across 10 Buy It Now copies." } }],
+      choices: [{ message: { content: "Recent sales cluster around $402 across a handful of fixed-price copies." } }],
     });
     const cardId = "card-cache-hit-" + Date.now();
     const seed = llmTroutPricingSeed();
     await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
     await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
     expectLlm(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  itLlm("cache-key mode discriminator: flag toggle off→on bypasses any cached template entry", async () => {
+    // First request: flag OFF → caches under |tmpl. Second request:
+    // flag ON → cache MISSES (mode is |llm), LLM fires fresh.
+    // This is the rollback-safety property the discriminator adds.
+    delete process.env.MARKET_READ_LLM;
+    const cardId = "card-mode-toggle-" + Date.now();
+    const seed = llmTroutPricingSeed();
+    const r1 = await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
+    expectLlm(r1.source).toBe("template");
+    expectLlm(createMock).not.toHaveBeenCalled();
+
+    process.env.MARKET_READ_LLM = "on";
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: "Recent sales cluster around $402 across a handful of fixed-price copies." } }],
+    });
+    const r2 = await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
+    expectLlm(r2.source).toBe("llm");
+    expectLlm(createMock).toHaveBeenCalledTimes(1);
+
+    // Toggle back off → previous LLM entry doesn't bleed into the
+    // tmpl mode either; the |tmpl entry from r1 is what serves.
+    delete process.env.MARKET_READ_LLM;
+    const r3 = await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
+    expectLlm(r3.source).toBe("template");
+    expectLlm(createMock).toHaveBeenCalledTimes(1); // still 1 — no extra LLM call
   });
 });
