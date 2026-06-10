@@ -925,6 +925,120 @@ describeLlm("generateMarketRead LLM hook (CF-MARKET-READ-LLM-WIRE-UP)", () => {
     expectLlm(createMock).not.toHaveBeenCalled();
   });
 
+  itLlm("flag ON + LLM takes longer than 2500ms → AbortSignal.timeout fires, template served", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    // AbortSignal.timeout(2500) is wired up by the implementation. We
+    // simulate the wire by having the mock honor the abort signal from
+    // options — the openai client passes the signal down to the
+    // request. When the signal fires before resolution, the promise
+    // rejects with an AbortError. The mock mimics that behavior.
+    createMock.mockImplementation((_body: unknown, opts: { signal?: AbortSignal } | undefined) => {
+      return new Promise((resolve, reject) => {
+        const t = setTimeout(() => resolve({
+          choices: [{ message: { content: "Recent sales cluster around $402." } }],
+        }), 5000);
+        opts?.signal?.addEventListener("abort", () => {
+          clearTimeout(t);
+          const err = new Error("Request was aborted");
+          (err as { name?: string }).name = "AbortError";
+          reject(err);
+        });
+      });
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-llm-timeout");
+    expectLlm(result.source).toBe("template");
+    expectLlm(warnSpy).toHaveBeenCalledWith(expectLlm.stringContaining("LLM call failed"));
+    warnSpy.mockRestore();
+  }, 7000);
+
+  itLlm("AZURE_OPENAI_DEPLOYMENT_MARKETREAD takes precedence over AZURE_OPENAI_DEPLOYMENT", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    process.env.AZURE_OPENAI_DEPLOYMENT_MARKETREAD = "gpt-4o-mini-marketread";
+    process.env.AZURE_OPENAI_DEPLOYMENT = "gpt-4o";
+    createMock.mockImplementation((body: { model?: string }) => {
+      // Capture what was sent so we can assert the deployment name.
+      (createMock as unknown as { lastModel?: string }).lastModel = body.model;
+      return Promise.resolve({
+        choices: [{ message: { content: "Recent sales cluster around $402." } }],
+      });
+    });
+    await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-deploy-pref");
+    expectLlm((createMock as unknown as { lastModel?: string }).lastModel).toBe("gpt-4o-mini-marketread");
+    delete process.env.AZURE_OPENAI_DEPLOYMENT_MARKETREAD;
+  });
+
+  itLlm("NULL-FMV HARDENING: when fp.fmv is null, user message prepends the no-value NOTE", async () => {
+    // Direct test of buildLLMPrompt — assertively check the literal
+    // prepend so a future code edit that removes it will fail this
+    // test. The model's behavior under that note is sample-reviewed
+    // separately at the STEP 2 HALT.
+    const fpNoFmv: MarketReadFactPack = {
+      cardId: "x",
+      grade: "Raw",
+      sampleUsed: 2,
+      sampleAvailable: 2,
+      windowDays: 14,
+      priceMin: null, priceMax: null,
+      binMedian: null, binCount: 0,
+      binPriceMin: null, binPriceMax: null,
+      auctionMedian: null, auctionCount: 0,
+      trendDirection: "flat", trendPct: 0,
+      excludedCount: 0,
+      excludedPriceMin: null, excludedPriceMax: null,
+      topExclusionReasons: [],
+      fmv: null,
+    };
+    const { user } = buildLLMPrompt(fpNoFmv, "(template)");
+    expectLlm(user.startsWith("NOTE: fmv is null")).toBe(true);
+  });
+
+  itLlm("NULL-FMV HARDENING: when fmv present + sample healthy, no prepend", async () => {
+    const fpHealthy: MarketReadFactPack = {
+      cardId: "x",
+      grade: "Raw",
+      sampleUsed: 22,
+      sampleAvailable: 26,
+      windowDays: 14,
+      priceMin: 200, priceMax: 650,
+      binMedian: 450, binCount: 8,
+      binPriceMin: 200, binPriceMax: 650,
+      auctionMedian: 235.5, auctionCount: 3,
+      trendDirection: "flat", trendPct: 0,
+      excludedCount: 4,
+      excludedPriceMin: 158, excludedPriceMax: 200,
+      topExclusionReasons: [],
+      fmv: 402,
+    };
+    const { user } = buildLLMPrompt(fpHealthy, "(template)");
+    expectLlm(user.startsWith("NOTE: fmv is null")).toBe(false);
+    expectLlm(user.startsWith("Reference paragraph")).toBe(true);
+  });
+
+  itLlm("NULL-FMV HARDENING: when sampleUsed < 3, prepend fires even if fmv looks set", async () => {
+    // Low-sample variant — the user brief specified "fmv is null OR
+    // low-sample". sampleUsed=2 means the system shouldn't price even
+    // if a stub fmv is present.
+    const fpThin: MarketReadFactPack = {
+      cardId: "x",
+      grade: "Raw",
+      sampleUsed: 2,
+      sampleAvailable: 2,
+      windowDays: 14,
+      priceMin: 100, priceMax: 200,
+      binMedian: 150, binCount: 1,
+      binPriceMin: 150, binPriceMax: 150,
+      auctionMedian: null, auctionCount: 0,
+      trendDirection: "flat", trendPct: 0,
+      excludedCount: 0,
+      excludedPriceMin: null, excludedPriceMax: null,
+      topExclusionReasons: [],
+      fmv: 150,
+    };
+    const { user } = buildLLMPrompt(fpThin, "(template)");
+    expectLlm(user.startsWith("NOTE: fmv is null")).toBe(true);
+  });
+
   itLlm("cache-hit on the same fact-pack hash → LLM only called once across repeat invocations", async () => {
     process.env.MARKET_READ_LLM = "on";
     createMock.mockResolvedValue({

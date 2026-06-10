@@ -695,7 +695,23 @@ export function buildLLMPrompt(
     "- If the pack lists excluded sales, you may note in passing that some outliers were set aside — without listing them.",
   ].join("\n");
 
-  const user = [
+  // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10) — NULL-FMV HARDENING.
+  // Don't rely on the model spotting fmv: null in the JSON. When the
+  // pack has no value (fmv null, OR sample too thin to call a price),
+  // PREPEND a literal directive. The no-value sample in the previous
+  // probe pass succeeded without this, but the prompt is a contract;
+  // making the rule explicit removes the failure mode where a future
+  // model variant treats the null as "use a recent comp as the value"
+  // and confidently states a number.
+  const noValueGate =
+    fp.fmv === null
+    || fp.fmv === undefined
+    || (typeof fp.sampleUsed === "number" && fp.sampleUsed < 3);
+  const nullFmvNote = noValueGate
+    ? "NOTE: fmv is null — the no-value rule applies.\n\n"
+    : "";
+
+  const user = nullFmvNote + [
     "Reference paragraph — match this VOICE and register, write fresh, use the FACT PACK below for every fact:",
     "",
     templateOutput,
@@ -733,7 +749,15 @@ async function callLLMMarketRead(
 
   const endpoint = (process.env.AZURE_OPENAI_ENDPOINT ?? "").trim();
   const apiKey = (process.env.AZURE_OPENAI_API_KEY ?? process.env.AZURE_OPENAI_KEY ?? "").trim();
-  const deployment = (process.env.AZURE_OPENAI_DEPLOYMENT ?? "").trim();
+  // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): prefer the market-read-
+  // dedicated deployment name so the prose path can be re-pointed
+  // independent of MCP /predict (e.g. to a smaller-TPM deployment
+  // when costs justify it). Falls back to the shared deployment.
+  const deployment = (
+    process.env.AZURE_OPENAI_DEPLOYMENT_MARKETREAD
+    ?? process.env.AZURE_OPENAI_DEPLOYMENT
+    ?? ""
+  ).trim();
   const apiVersion = (process.env.AZURE_OPENAI_API_VERSION ?? "2024-08-01-preview").trim();
   if (!endpoint || !apiKey || !deployment) return null;
 
