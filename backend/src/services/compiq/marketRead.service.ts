@@ -300,14 +300,34 @@ function buildExcludedComps(
 /** Internal: runs the filter ONCE and returns both the fact pack and the
  *  per-comp excluded-comps array. Used by generateMarketRead; the public
  *  buildMarketReadFactPack delegates to this and returns just the fact
- *  pack so existing callers / tests keep their signature. */
+ *  pack so existing callers / tests keep their signature.
+ *
+ *  CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): parallelId threaded
+ *  through and applied right after the grade filter. The fact-pack pool
+ *  is now character-identical to the value path's
+ *  `selectSalesByGrade → filterRecordsByParallel` chain
+ *  (compiqEstimate.service.ts:1220-1225). Same input, same operations,
+ *  same order → the two pools cannot disagree by construction. */
 function buildFactPackAndExcludedInternal(
   pricing: CardsightPricingResponse,
   grade: string,
   est: Record<string, unknown>,
   cardId: string,
+  parallelId: string | null = null,
 ): { factPack: MarketReadFactPack; excludedComps: ExcludedCompEntry[] } {
-  const sales: CardsightSaleRecord[] = selectSalesByGrade(pricing as unknown as Parameters<typeof selectSalesByGrade>[0], grade);
+  const salesByGrade: CardsightSaleRecord[] = selectSalesByGrade(
+    pricing as unknown as Parameters<typeof selectSalesByGrade>[0],
+    grade,
+  );
+  // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): mirror step 2 of the
+  // value path. parallelId present → keep only Cardsight records tagged
+  // with that parallel_id. parallelId null → keep only base records
+  // (no parallel_id), matching the "base excludes Cognac/Gold/Blue
+  // bleed" semantics of fetchComps. The local twin
+  // `filterByParallelHere` has identical body to compiqEstimate's
+  // exported `filterRecordsByParallel` — the only divergence point
+  // between the two pools is now closed.
+  const sales: CardsightSaleRecord[] = filterByParallelHere(salesByGrade, parallelId);
 
   const enriched: EnrichedComp[] = sales
     .filter((s) => Number.isFinite(s.price) && s.price > 0)
@@ -410,14 +430,23 @@ function buildFactPackAndExcludedInternal(
 }
 
 /** Public wrapper: returns just the fact pack. Preserved for tests +
- *  external callers that only need the prose-input shape. */
+ *  external callers that only need the prose-input shape.
+ *
+ *  CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): added optional
+ *  parallelId. Default null = base-only (matches the value path's
+ *  no-parallel semantics). Callers that already pass nothing get the
+ *  base-only filter, which is the correct behavior for an unspecified
+ *  parallel — previously the fact pack would have included parallel-
+ *  tagged records (Cognac/Gold/Blue bleed); now it excludes them in
+ *  line with `fetchComps`. */
 export function buildMarketReadFactPack(
   pricing: CardsightPricingResponse,
   grade: string,
   est: Record<string, unknown>,
   cardId: string,
+  parallelId: string | null = null,
 ): MarketReadFactPack {
-  return buildFactPackAndExcludedInternal(pricing, grade, est, cardId).factPack;
+  return buildFactPackAndExcludedInternal(pricing, grade, est, cardId, parallelId).factPack;
 }
 
 /** Round dollar amount for display in prose. Whole dollars; the
@@ -821,14 +850,24 @@ export async function __callLLMMarketReadForPreview(
 }
 
 /** Orchestrator. Cached on the fact-pack hash so identical comp sets
- *  produce identical text + excluded-comps list without burning tokens. */
+ *  produce identical text + excluded-comps list without burning tokens.
+ *
+ *  CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): parallelId threaded
+ *  through to buildFactPackAndExcludedInternal so the fact pack derives
+ *  from the post-parallel-filter pool, not a base pool. Cache key gains
+ *  a parallel segment so a Gold and a base sit at distinct entries even
+ *  when the parallel pool is thin (both might produce all-null fact
+ *  packs that hash identically without the explicit segment). */
 export async function generateMarketRead(
   pricing: CardsightPricingResponse,
   grade: string,
   est: Record<string, unknown>,
   cardId: string,
+  parallelId: string | null = null,
 ): Promise<MarketReadResult> {
-  const { factPack, excludedComps } = buildFactPackAndExcludedInternal(pricing, grade, est, cardId);
+  const { factPack, excludedComps } = buildFactPackAndExcludedInternal(
+    pricing, grade, est, cardId, parallelId,
+  );
   const factPackHash = hashFactPack(factPack);
   // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): cache-key mode discriminator.
   // Without `|llm` vs `|tmpl` appended, flipping MARKET_READ_LLM (in
@@ -839,7 +878,7 @@ export async function generateMarketRead(
   // to toggle both ways: cache hits stay within the mode that wrote
   // them; the other mode runs cold until it warms.
   const mode = process.env.MARKET_READ_LLM === "on" ? "llm" : "tmpl";
-  const cacheKey = `marketread:v1:${cardId}|${grade}|${factPackHash}|${mode}`;
+  const cacheKey = `marketread:v1:${cardId}|${grade}|${parallelId ?? ""}|${factPackHash}|${mode}`;
 
   return await cacheWrap(
     cacheKey,

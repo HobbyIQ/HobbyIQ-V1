@@ -161,6 +161,199 @@ describe("buildMarketReadFactPack", () => {
   });
 });
 
+// CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): buildMarketReadFactPack
+// now accepts an optional parallelId arg and applies
+// filterByParallelHere(salesByGrade, parallelId) right after the grade
+// filter. Fact-pack pool is character-identical to the value path's
+// selectSalesByGrade → filterRecordsByParallel chain
+// (compiqEstimate.service.ts:1220-1225).
+//
+// Four surface cases per the brief:
+//   1) parallel request → fact-pack medians come from the parallel pool,
+//      not base
+//   2) parallel request with zero sales → null medians, NO base leak
+//   3) grade request (parallelId=null default) → still uses grade pool
+//      (regression-locked)
+//   4) base (parallelId=null) → excludes parallel-tagged records
+//      (closes the bleed)
+
+const GOLD_PARALLEL = "b44f73a5-3100-41d5-8235-047636739e6e";
+const BLUE_PARALLEL = "11111111-1111-1111-1111-111111111111";
+
+function recWithParallel(
+  price: number,
+  title: string,
+  daysAgo: number,
+  parallelId: string | null,
+  listing_type: "fixed" | "auction" | null = "fixed",
+) {
+  const r: any = {
+    price,
+    title,
+    date: isoDaysAgo(daysAgo),
+    source: "ebay" as const,
+    listing_type,
+    url: null,
+  };
+  if (parallelId) {
+    r.parallel_id = parallelId;
+    r.parallel_name = "TestParallel";
+  }
+  return r;
+}
+
+function makeMixedPricing() {
+  // Same player/card, mixed pool: 8 base raw + 6 Gold + 4 Blue. All
+  // surface as raw.records since base+parallels at the same grade live
+  // in the same Cardsight bucket; the parallel_id tag is the only
+  // discriminator.
+  return {
+    card: {
+      card_id: TROUT_ID,
+      name: "Mike Trout",
+      number: "US175",
+      set: { set_id: "fake", name: "Base Set", year: "2011", release: "Topps Update" },
+    },
+    raw: {
+      count: 18,
+      records: [
+        // 8 base raw, all fixed-price, $400-$500 range
+        recWithParallel(400, "raw base 1", 1, null),
+        recWithParallel(420, "raw base 2", 2, null),
+        recWithParallel(440, "raw base 3", 3, null),
+        recWithParallel(450, "raw base 4", 4, null),
+        recWithParallel(460, "raw base 5", 5, null),
+        recWithParallel(480, "raw base 6", 6, null),
+        recWithParallel(500, "raw base 7", 7, null),
+        recWithParallel(410, "raw base 8", 8, null, "auction"),
+        // 6 Gold parallel, $1000-$1300 — the parallel pool is its own
+        // sub-market; mixing it into base medians inflates them.
+        recWithParallel(1000, "gold 1", 1, GOLD_PARALLEL),
+        recWithParallel(1100, "gold 2", 2, GOLD_PARALLEL),
+        recWithParallel(1200, "gold 3", 3, GOLD_PARALLEL),
+        recWithParallel(1150, "gold 4", 4, GOLD_PARALLEL),
+        recWithParallel(1250, "gold 5", 5, GOLD_PARALLEL, "auction"),
+        recWithParallel(1300, "gold 6", 6, GOLD_PARALLEL, "auction"),
+        // 4 Blue parallel — completely different sub-market again
+        recWithParallel(200, "blue 1", 1, BLUE_PARALLEL),
+        recWithParallel(210, "blue 2", 2, BLUE_PARALLEL),
+        recWithParallel(220, "blue 3", 3, BLUE_PARALLEL),
+        recWithParallel(230, "blue 4", 4, BLUE_PARALLEL),
+      ],
+    },
+    graded: [],
+    meta: { total_records: 18, last_sale_date: isoDaysAgo(0) },
+  } as any;
+}
+
+describe("buildMarketReadFactPack — sub-market isolation (CF-FACTPACK-SUB-MARKET-ISOLATION)", () => {
+  const est = {
+    compsUsed: 8,
+    compsAvailable: 8,
+    fairMarketValue: 450,
+    trendIQ: { components: { cardTrajectory: { pctChange: 0 } } },
+  };
+
+  // 1) Parallel request → fact-pack medians come from the parallel pool
+
+  it("parallel request: fact-pack medians come from the parallel pool, NOT base", () => {
+    const pricing = makeMixedPricing();
+    const fp = buildMarketReadFactPack(pricing, "Raw", est, TROUT_ID, GOLD_PARALLEL);
+
+    // Gold pool: $1000, $1100, $1150, $1200 fixed (median $1125); $1250, $1300 auction (median $1275)
+    expect(fp.binMedian).not.toBeNull();
+    expect(fp.auctionMedian).not.toBeNull();
+    // Bin median should sit inside the Gold range, not the base range
+    expect(fp.binMedian!).toBeGreaterThanOrEqual(1000);
+    expect(fp.binMedian!).toBeLessThanOrEqual(1200);
+    expect(fp.auctionMedian!).toBeGreaterThanOrEqual(1250);
+    expect(fp.auctionMedian!).toBeLessThanOrEqual(1300);
+    // Bin range should be Gold-only
+    expect(fp.binPriceMin!).toBeGreaterThanOrEqual(1000);
+    expect(fp.binPriceMax!).toBeLessThanOrEqual(1200);
+    // Overall price range Gold-only (no base $400 leak, no Blue $200 leak)
+    expect(fp.priceMin!).toBeGreaterThanOrEqual(1000);
+    expect(fp.priceMax!).toBeLessThanOrEqual(1300);
+  });
+
+  // 2) Parallel request with zero sales → null medians, NO base leak
+
+  it("parallel request with zero matching records → null medians + counts=0, NO base leak", () => {
+    const pricing = makeMixedPricing();
+    const phantomParallel = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+    const fp = buildMarketReadFactPack(pricing, "Raw", est, TROUT_ID, phantomParallel);
+
+    expect(fp.binMedian).toBeNull();
+    expect(fp.binCount).toBe(0);
+    expect(fp.binPriceMin).toBeNull();
+    expect(fp.binPriceMax).toBeNull();
+    expect(fp.auctionMedian).toBeNull();
+    expect(fp.auctionCount).toBe(0);
+    expect(fp.priceMin).toBeNull();
+    expect(fp.priceMax).toBeNull();
+    // The whole point of the invariant: no base $450 leaks through.
+    // Every numeric field that isn't null/0 should be derived from the
+    // (empty) post-filter pool, so all medians/ranges are null.
+  });
+
+  // 3) Grade regression-locked (default parallelId=null)
+
+  it("grade request (no parallel arg) — grade pool isolation preserved (regression lock)", () => {
+    // Reuse the existing makeTroutPricing fixture (no parallel tags) so
+    // the new default-null parallel filter is a no-op for backwards
+    // compat. binMedian/auctionMedian should match the values asserted
+    // by the existing buildMarketReadFactPack tests.
+    const pricing = makeTroutPricing();
+    const localEst = {
+      compsUsed: 22,
+      compsAvailable: 26,
+      fairMarketValue: 368,
+      trendIQ: { components: { cardTrajectory: { pctChange: 0 } } },
+    };
+    const fp = buildMarketReadFactPack(pricing, "Raw", localEst, TROUT_ID);
+    // Same expectations as the original buildMarketReadFactPack test
+    expect(fp.binCount).toBeGreaterThanOrEqual(10);
+    expect(fp.binMedian).toBeGreaterThan(300);
+    expect(fp.auctionCount).toBeGreaterThanOrEqual(3);
+    expect(fp.auctionMedian).toBeLessThan(300);
+  });
+
+  // 4) Base request (parallelId=null) excludes parallel-tagged records
+
+  it("base request (parallelId=null) excludes parallel-tagged records — closes the bleed", () => {
+    const pricing = makeMixedPricing();
+    const fp = buildMarketReadFactPack(pricing, "Raw", est, TROUT_ID, null);
+
+    // Base pool: 7 fixed ($400-$500) + 1 auction ($410). No Gold ($1000+)
+    // or Blue ($200-$230) should land in any field.
+    expect(fp.binMedian).not.toBeNull();
+    expect(fp.binMedian!).toBeGreaterThanOrEqual(400);
+    expect(fp.binMedian!).toBeLessThanOrEqual(500);
+    expect(fp.binPriceMin!).toBeGreaterThanOrEqual(400);
+    expect(fp.binPriceMax!).toBeLessThanOrEqual(500);
+    // Overall price range must NOT include any Gold $1000+ OR Blue $200
+    expect(fp.priceMax!).toBeLessThan(1000);
+    expect(fp.priceMin!).toBeGreaterThanOrEqual(400);
+    // Single auction in base ($410) - count = 1
+    expect(fp.auctionCount).toBe(1);
+    expect(fp.auctionMedian).toBe(410);
+  });
+
+  it("explicit parallelId=null behaves the same as the default (omitted) arg", () => {
+    // Backwards compat: existing callers that don't pass parallelId get
+    // the same fact pack as callers that explicitly pass null.
+    const pricing = makeMixedPricing();
+    const fpDefault = buildMarketReadFactPack(pricing, "Raw", est, TROUT_ID);
+    const fpExplicit = buildMarketReadFactPack(pricing, "Raw", est, TROUT_ID, null);
+
+    expect(fpDefault.binMedian).toBe(fpExplicit.binMedian);
+    expect(fpDefault.binCount).toBe(fpExplicit.binCount);
+    expect(fpDefault.auctionMedian).toBe(fpExplicit.auctionMedian);
+    expect(fpDefault.priceMin).toBe(fpExplicit.priceMin);
+    expect(fpDefault.priceMax).toBe(fpExplicit.priceMax);
+  });
+});
+
 describe("templateMarketRead", () => {
   const baseFp: MarketReadFactPack = {
     cardId: TROUT_ID,

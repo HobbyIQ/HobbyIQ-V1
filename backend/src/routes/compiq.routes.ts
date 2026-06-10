@@ -1311,11 +1311,18 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             body.gradeCompany && body.gradeValue !== undefined
               ? `${body.gradeCompany} ${body.gradeValue}`
               : "Raw";
+          // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): pass parallelId
+          // so the fact-pack pool derives from the SAME post-filter set
+          // (selectSalesByGrade → filterRecordsByParallel) as the value
+          // path. Previously this call omitted parallelId, so a Gold
+          // parallel response had fmv=null (post-filter) alongside
+          // binMedian=$450 (pre-filter base figure).
           marketReadResult = await generateMarketRead(
             pricingForMR,
             gradeKey,
             est as Record<string, unknown>,
             resolvedCardId,
+            resolvedParallelId ?? null,
           );
           cardImageThumbUrl = pickCardImageUrl(
             pricingForMR,
