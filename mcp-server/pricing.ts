@@ -433,6 +433,67 @@ export function computeShadowDelta(args: {
   };
 }
 
+/** Apply the bridge override to the signals payload returned by
+ *  fn-serve-signals. When bridge.multiplier is non-null:
+ *    - Replace signals.components.compsMomentum with bridge.multiplier
+ *    - Recompute signals.final_multiplier under the aggregator's 0.20
+ *      weight (first-order: oldFinal + (newCM - oldCM) * 0.20, clamped
+ *      [0.70, 1.50]). Ignores overlay multipliers (show/pack/playoff/
+ *      arc) which are typically ~1.0 and unknowable post-hoc — within
+ *      ~5% in practice.
+ *    - Swap signals.signal_flags: remove any compsMomentum_* flag, add
+ *      the one matching bridge.signal.
+ *    - Update signals.component_signals.compsMomentum to the bridge
+ *      direction for prompt clarity.
+ *  When bridge.multiplier is null: return signals unchanged. */
+export function applyPlayerInSetBridge(
+  signals: SignalPayload,
+  bridge: PlayerInSetMomentumBridgeResult,
+): SignalPayload {
+  if (bridge.multiplier === null) return signals;
+
+  const oldCM = signals.components?.compsMomentum ?? 1.0;
+  const oldFinal = signals.final_multiplier ?? 1.0;
+  const newCM = bridge.multiplier;
+  const cmDelta = newCM - oldCM;
+  const newFinal = Math.max(
+    0.70,
+    Math.min(1.50, oldFinal + cmDelta * COMPS_MOMENTUM_WEIGHT),
+  );
+
+  // Strip any existing compsMomentum_* flag; add the new one. The
+  // aggregator emits rising/falling/no_data; the bridge emits
+  // rising/falling/stable. We map stable → DROP the flag (not in the
+  // aggregator's vocabulary) and let the no-flag case mean "stable".
+  const filteredFlags = (signals.signal_flags ?? []).filter(
+    (f) => f !== "compsMomentum_rising"
+        && f !== "compsMomentum_falling"
+        && f !== "compsMomentum_no_data",
+  );
+  const newFlags = [...filteredFlags];
+  if (bridge.signal === "rising") newFlags.push("compsMomentum_rising");
+  else if (bridge.signal === "falling") newFlags.push("compsMomentum_falling");
+
+  // component_signals is { [signal]: <direction string> } per the
+  // aggregator's output shape. Mirror the new direction so prompt-
+  // adjacent reads of that map see the same value as components.
+  const newComponentSignals = { ...(signals.component_signals ?? {}) };
+  if (bridge.signal === "rising" || bridge.signal === "falling" || bridge.signal === "stable") {
+    newComponentSignals.compsMomentum = bridge.signal;
+  }
+
+  return {
+    ...signals,
+    final_multiplier: Math.round(newFinal * 1000) / 1000,
+    signal_flags: newFlags,
+    components: {
+      ...(signals.components ?? {}),
+      compsMomentum: Math.round(newCM * 1000) / 1000,
+    },
+    component_signals: newComponentSignals,
+  };
+}
+
 // -------------------------------------------------------------------------
 // H6 — Price floor fetch
 // -------------------------------------------------------------------------
@@ -872,17 +933,15 @@ export async function getPredictedPrice(
   ]
     .map((s) => String(s).trim())
     .join("|");
-  const [signals, floorDoc, playerInSetBridge] = await Promise.all([
+  const [signalsRaw, floorDoc, playerInSetBridge] = await Promise.all([
     options?.signalsOverride
       ? Promise.resolve(options.signalsOverride)
       : fetchSignals(card.playerName),
     fetchPriceFloor(cardId),
-    // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): SHADOW — fetch the
-    // per-(player, release, year) momentum in parallel. Result is
-    // LOGGED for shadow analysis but NOT applied to `signals` yet.
-    // Cutover happens after the shadow review (separate HALT).
-    // Bridge runs ONLY in production paths (signalsOverride means
-    // backtest harness — don't double-fetch for synthetic runs).
+    // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): fetch the per-(player,
+    // release, year) momentum in parallel with fetchSignals. Bridge
+    // runs ONLY in production paths (signalsOverride means backtest
+    // harness — don't double-fetch for synthetic runs).
     options?.signalsOverride
       ? Promise.resolve<PlayerInSetMomentumBridgeResult>({
           multiplier: null,
@@ -893,43 +952,56 @@ export async function getPredictedPrice(
   ]);
   const floorValue = floorDoc?.floor ?? null;
 
-  // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10): SHADOW LOG.
-  // Compute what signals.final_multiplier WOULD become with the per-
-  // release compsMomentum value, log delta + flag-flip, but DON'T
-  // mutate `signals`. Read by App Insights / log scrape for cutover
-  // review. ASCII-only, single-line; grep key: [mcp.compsMomentum_shadow].
+  // CF-MCP-PLAYER-IN-SET-BRIDGE (2026-06-10) — CUTOVER (was SHADOW).
+  //
+  // When the bridge returns a non-null per-(player, release, year)
+  // multiplier, REPLACE signals.components.compsMomentum with the
+  // bridge value, recompute signals.final_multiplier under the
+  // aggregator's 0.20 weight, and swap the compsMomentum_* flag.
+  //
+  // When the bridge returns null (≤1 qualifying cards, network
+  // failure, etc.), fall back to the player-wide value — current
+  // behavior preserved, no alert impact.
+  //
+  // Shadow probe across 10 tracked cards showed: bridge has data
+  // ~40% of the time. Where it does, the OLD aggregator was reading
+  // some megastars (Judge, Ohtani) as ceiling-clamped rising — a
+  // per-player rollup pathology that fetchPlayerInSetMomentum's
+  // per-card median ratio corrects. Median |final_multiplier shift|
+  // 0.062, max 0.067 on the cards where bridge had data.
+  //
+  // Single grep-key log line per /predict call:
+  //   [mcp.compsMomentum_bridge] ... cutover_applied=true/false
+  const signals = applyPlayerInSetBridge(signalsRaw, playerInSetBridge);
+
   if (!options?.signalsOverride) {
     try {
-      const oldCM = signals.components?.compsMomentum ?? 1.0;
-      const oldFlags = signals.signal_flags ?? [];
-      const shadow = computeShadowDelta({
-        oldCompsMomentum: oldCM,
-        oldFlagsIncludes: {
-          rising: oldFlags.includes("compsMomentum_rising"),
-          falling: oldFlags.includes("compsMomentum_falling"),
-          noData: oldFlags.includes("compsMomentum_no_data"),
-        },
-        oldFinalMultiplier: signals.final_multiplier ?? 1.0,
-        bridge: playerInSetBridge,
-      });
+      const oldCM = signalsRaw.components?.compsMomentum ?? 1.0;
+      const oldFlags = signalsRaw.signal_flags ?? [];
+      const newCM = signals.components?.compsMomentum ?? oldCM;
+      const newFlags = signals.signal_flags ?? [];
+      const cutoverApplied = playerInSetBridge.multiplier !== null;
+      const cmDelta = cutoverApplied ? newCM - oldCM : 0;
       console.log(
-        `[mcp.compsMomentum_shadow] ` +
+        `[mcp.compsMomentum_bridge] ` +
           `player="${(card.playerName ?? "").slice(0, 32)}" ` +
           `release="${(card.set ?? "").slice(0, 40)}" ` +
           `year=${card.year} ` +
+          `cutover_applied=${cutoverApplied} ` +
           `old_cm=${oldCM.toFixed(3)} ` +
-          `new_cm=${shadow.newCompsMomentum === null ? "null" : shadow.newCompsMomentum.toFixed(3)} ` +
-          `cm_delta=${shadow.multDelta === null ? "null" : shadow.multDelta.toFixed(3)} ` +
-          `old_final=${(signals.final_multiplier ?? 1.0).toFixed(3)} ` +
-          `approx_new_final=${shadow.approximateFinalMultiplierNew === null ? "null" : shadow.approximateFinalMultiplierNew.toFixed(3)} ` +
-          `flag_would_flip=${shadow.flagWouldFlip} ` +
+          `new_cm=${newCM.toFixed(3)} ` +
+          `cm_delta=${cmDelta.toFixed(3)} ` +
+          `old_final=${(signalsRaw.final_multiplier ?? 1.0).toFixed(3)} ` +
+          `new_final=${(signals.final_multiplier ?? 1.0).toFixed(3)} ` +
           `old_signal_rising=${oldFlags.includes("compsMomentum_rising")} ` +
           `old_signal_falling=${oldFlags.includes("compsMomentum_falling")} ` +
-          `new_signal="${shadow.newSignal ?? "null"}" ` +
-          `bridge_source=${shadow.bridgeSource}`,
+          `new_signal_rising=${newFlags.includes("compsMomentum_rising")} ` +
+          `new_signal_falling=${newFlags.includes("compsMomentum_falling")} ` +
+          `new_signal_no_data=${newFlags.includes("compsMomentum_no_data")} ` +
+          `bridge_source=${playerInSetBridge.source}`,
       );
     } catch {
-      // Shadow log must never throw.
+      // Telemetry must never throw.
     }
   }
 
