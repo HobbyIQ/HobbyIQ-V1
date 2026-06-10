@@ -378,9 +378,47 @@ struct CompIQPriceExcludedComp: Codable, Hashable, Identifiable {
     var relativeDate: String { CompIQCompDateParser.relative(date) }
 }
 
+/// CF-PRICEHISTORY-60D (2026-06-10): 60-day chart series point on
+/// `/api/compiq/price-by-id` for the comp-page price-history chart.
+/// Wire shape per backend SHA 9441dcc:
+///   { soldDate: ISO8601 string, price: Double, listingType: "fixed" | "auction" | null }
+/// ≤150 points, sorted ASCENDING by soldDate (plot as-is, no client sort).
+/// `listingType` carries the raw Cardsight wire value — `"fixed"` renders
+/// as a BIN circle, `"auction"` as an auction triangle, nil falls through
+/// to a neutral default.
+struct PriceHistoryPoint: Codable, Hashable, Identifiable {
+    let soldDate: String?
+    let price: Double?
+    let listingType: String?
+
+    var id: String { "\(soldDate ?? "")-\(price ?? 0)" }
+
+    var parsedDate: Date? { CompIQCompDateParser.parse(soldDate) }
+
+    /// Normalized BIN/auction classifier. Anything other than the two
+    /// canonical wire values collapses to `.unknown` so the chart still
+    /// plots the point (neutral color/shape) rather than dropping data.
+    enum Kind { case bin, auction, unknown }
+
+    var kind: Kind {
+        switch listingType?.lowercased() {
+        case "fixed": return .bin
+        case "auction": return .auction
+        default: return .unknown
+        }
+    }
+}
+
 /// Shared ISO8601 parser for recent + excluded comp date fields. Backend
 /// emits either `.withInternetDateTime` or `.withFractionalSeconds` shapes
 /// depending on the data source.
+///
+/// CF-PRICEHISTORY-60D (2026-06-10) addition: backend's priceHistory[]
+/// soldDate carries 6-digit microsecond precision (e.g.
+/// `2026-06-09T10:20:50.208067Z`) which `.withFractionalSeconds` is
+/// documented to handle only up to 3 digits. The third arm truncates
+/// any sub-millisecond tail and retries — pure additive fallback, never
+/// kicks in when the existing two-arm chain already returns a date.
 enum CompIQCompDateParser {
     static func parse(_ raw: String?) -> Date? {
         guard let raw, raw.isEmpty == false else { return nil }
@@ -389,7 +427,15 @@ enum CompIQCompDateParser {
         if let date = fractional.date(from: raw) { return date }
         let standard = ISO8601DateFormatter()
         standard.formatOptions = [.withInternetDateTime]
-        return standard.date(from: raw)
+        if let date = standard.date(from: raw) { return date }
+        // Sub-millisecond precision fallback (CF-PRICEHISTORY-60D 2026-06-10).
+        let normalized = raw.replacingOccurrences(
+            of: #"(\.\d{3})\d+(Z|[+\-]\d{2}:?\d{2})$"#,
+            with: "$1$2",
+            options: .regularExpression
+        )
+        if normalized != raw, let date = fractional.date(from: normalized) { return date }
+        return nil
     }
 
     static func relative(_ raw: String?) -> String {
@@ -498,6 +544,13 @@ struct CompIQPriceByIdResponse: Codable {
     /// (condition/lot/damage). Nil or empty → skip the "Excluded from
     /// value" section entirely.
     let excludedComps: [CompIQPriceExcludedComp]?
+    /// CF-PRICEHISTORY-60D (2026-06-10): 60-day chart series for the
+    /// comp-page price-history section. Display-only — never enters the
+    /// training corpus. Sorted ASCENDING by soldDate; ≤150 points.
+    /// Suppressed (or rendered empty) when the success branch couldn't
+    /// build one (variant-mismatch / thin-data); the view layer ignores
+    /// counts <2 to keep the chart from drawing a broken axis.
+    let priceHistory: [PriceHistoryPoint]?
     /// CF-B addition (2026-06-08): canonical card photo for the priced-
     /// card hero slot. Nil → graceful neutral-card placeholder; never
     /// surface a broken-image glyph.
@@ -593,6 +646,7 @@ struct CompIQPriceByIdResponse: Codable {
         trendAnalysis = try? container.decodeIfPresent(CompIQPriceTrendAnalysis.self, forKey: .trendAnalysis)
         recentComps = try? container.decodeIfPresent([CompIQPriceRecentComp].self, forKey: .recentComps)
         excludedComps = try? container.decodeIfPresent([CompIQPriceExcludedComp].self, forKey: .excludedComps)
+        priceHistory = try? container.decodeIfPresent([PriceHistoryPoint].self, forKey: .priceHistory)
         cardImageUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageUrl)
         cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
         gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
@@ -630,7 +684,7 @@ struct CompIQPriceByIdResponse: Codable {
         case success, cardsightCardId, summary, marketTier
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
-        case confidence, source, trendAnalysis, recentComps, excludedComps
+        case confidence, source, trendAnalysis, recentComps, excludedComps, priceHistory
         case cardImageUrl
         case cardIdentity, gradeUsed, compsUsed, compsAvailable, daysSinceNewestComp
         case verdict, action, quickSaleValue, premiumValue, explanation

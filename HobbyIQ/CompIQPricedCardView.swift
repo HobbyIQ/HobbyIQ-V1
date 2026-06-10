@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import Charts
 import os
 
 struct CompIQPricedCardView: View {
@@ -300,6 +301,18 @@ struct CompIQPricedCardView: View {
                 cardGroup(title: "Strategy", icon: "target") {
                     exitStrategyContent(response)
                     freshnessContent(response)
+                }
+
+                // CF-PRICEHISTORY-60D (2026-06-10): 60d chart series for
+                // the comp page. Rendered as its own section card so the
+                // chart precedes the "Recent sales" table inside
+                // Reference Data (chart-then-table pattern). The view fn
+                // self-suppresses (returns EmptyView) when priceHistory
+                // has fewer than 2 points — never a broken axis.
+                if let history = response.priceHistory, history.count >= 2 {
+                    cardGroup(title: "Price History", icon: "chart.xyaxis.line") {
+                        priceHistoryContent(response)
+                    }
                 }
 
                 // Reference Data group
@@ -941,6 +954,271 @@ struct CompIQPricedCardView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
         }
+    }
+
+    // MARK: - Price History chart (CF-PRICEHISTORY-60D 2026-06-10)
+
+    /// Auction amber — matches the inline literal in `saleTypeChip` so the
+    /// chart legend reads as the same color the auction chip uses.
+    /// Kept inline (not lifted to HobbyIQTheme) to scope this CF.
+    private static let priceHistoryAuctionAmber = Color(hex: 0xE5B64A)
+
+    /// Trend/reference line neutral. Subdued enough to read as a derived
+    /// overlay, not a third data series.
+    private static let priceHistoryNeutralLine =
+        HobbyIQTheme.Colors.mutedText.opacity(0.6)
+
+    /// 60-day comp-page price-history chart. Suppressed by caller when the
+    /// series has fewer than 2 points. Within ≥2-point series, the trend
+    /// line additionally requires ≥2 distinct x values; the reference line
+    /// is only drawn when `marketTier.value` falls inside the padded y
+    /// domain. Either may be absent on edge cases without breaking the
+    /// chart — the points always render.
+    @ViewBuilder
+    private func priceHistoryContent(_ response: CompIQPriceByIdResponse) -> some View {
+        let history: [PriceHistoryPoint] = (response.priceHistory ?? []).filter { p in
+            p.parsedDate != nil && (p.price ?? 0) > 0
+        }
+        if history.count >= 2 {
+            let prices = history.compactMap { $0.price }
+            let yMinRaw = prices.min() ?? 0
+            let yMaxRaw = prices.max() ?? 0
+            let yPad = max((yMaxRaw - yMinRaw) * 0.10, 1.0)
+            let yMin = max(0, yMinRaw - yPad)
+            let yMax = yMaxRaw + yPad
+            let dates = history.compactMap { $0.parsedDate }
+            let xMin = dates.min() ?? Date()
+            let xMax = dates.max() ?? Date()
+
+            let regression = priceHistoryLeastSquares(history)
+            let reference: Double? = {
+                guard let v = response.marketTier?.value, v >= yMin, v <= yMax else { return nil }
+                return v
+            }()
+
+            VStack(alignment: .center, spacing: 10) {
+                priceHistoryHeader(response)
+                priceHistoryLegend(showsTrend: regression != nil, showsReference: reference != nil)
+                priceHistoryChart(
+                    history: history,
+                    yMin: yMin,
+                    yMax: yMax,
+                    xMin: xMin,
+                    xMax: xMax,
+                    regression: regression,
+                    reference: reference
+                )
+                .frame(height: 210)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func priceHistoryHeader(_ response: CompIQPriceByIdResponse) -> some View {
+        let grade = response.gradeUsed?.trimmingCharacters(in: .whitespaces)
+        let subhead = (grade?.isEmpty == false)
+            ? "\(grade!) · last 60 days"
+            : "last 60 days"
+        return Text(subhead)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func priceHistoryLegend(showsTrend: Bool, showsReference: Bool) -> some View {
+        HStack(spacing: 14) {
+            priceHistoryLegendChip(
+                color: HobbyIQTheme.Colors.electricBlue,
+                shape: .circle,
+                label: "BIN"
+            )
+            priceHistoryLegendChip(
+                color: Self.priceHistoryAuctionAmber,
+                shape: .triangle,
+                label: "Auction"
+            )
+            if showsTrend {
+                priceHistoryLegendDash(
+                    color: Self.priceHistoryNeutralLine,
+                    label: "Trend",
+                    dotted: false
+                )
+            }
+            if showsReference {
+                priceHistoryLegendDash(
+                    color: Self.priceHistoryNeutralLine,
+                    label: "Market",
+                    dotted: true
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private enum PriceHistoryLegendShape { case circle, triangle }
+
+    private func priceHistoryLegendChip(
+        color: Color, shape: PriceHistoryLegendShape, label: String
+    ) -> some View {
+        HStack(spacing: 5) {
+            Group {
+                if shape == .triangle {
+                    Triangle().fill(color).frame(width: 9, height: 9)
+                } else {
+                    Circle().fill(color).frame(width: 8, height: 8)
+                }
+            }
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
+    private func priceHistoryLegendDash(
+        color: Color, label: String, dotted: Bool
+    ) -> some View {
+        HStack(spacing: 5) {
+            DashedLineSwatch(color: color, dotted: dotted)
+                .frame(width: 18, height: 2)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
+    /// The chart body itself. Pulled into its own fn so the parent stack
+    /// reads cleanly + so the type-checker doesn't choke on a 200-line
+    /// `some View` expression.
+    @ViewBuilder
+    private func priceHistoryChart(
+        history: [PriceHistoryPoint],
+        yMin: Double,
+        yMax: Double,
+        xMin: Date,
+        xMax: Date,
+        regression: (slope: Double, intercept: Double, xEpoch: Double)?,
+        reference: Double?
+    ) -> some View {
+        Chart {
+            ForEach(history) { p in
+                if let date = p.parsedDate, let price = p.price {
+                    if p.kind == .auction {
+                        PointMark(
+                            x: .value("Date", date),
+                            y: .value("Price", price)
+                        )
+                        .symbol(.triangle)
+                        .symbolSize(34)
+                        .foregroundStyle(Self.priceHistoryAuctionAmber)
+                    } else {
+                        PointMark(
+                            x: .value("Date", date),
+                            y: .value("Price", price)
+                        )
+                        .symbol(.circle)
+                        .symbolSize(34)
+                        .foregroundStyle(
+                            p.kind == .bin
+                                ? HobbyIQTheme.Colors.electricBlue
+                                : HobbyIQTheme.Colors.mutedText.opacity(0.7)
+                        )
+                    }
+                }
+            }
+
+            if let regression {
+                let yStart = regression.intercept
+                    + regression.slope * (xMin.timeIntervalSince1970 - regression.xEpoch)
+                let yEnd = regression.intercept
+                    + regression.slope * (xMax.timeIntervalSince1970 - regression.xEpoch)
+                LineMark(
+                    x: .value("Date", xMin),
+                    y: .value("Trend", yStart),
+                    series: .value("series", "trend")
+                )
+                .foregroundStyle(Self.priceHistoryNeutralLine)
+                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                LineMark(
+                    x: .value("Date", xMax),
+                    y: .value("Trend", yEnd),
+                    series: .value("series", "trend")
+                )
+                .foregroundStyle(Self.priceHistoryNeutralLine)
+                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            }
+
+            if let reference {
+                RuleMark(y: .value("Market", reference))
+                    .foregroundStyle(Self.priceHistoryNeutralLine)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
+            }
+        }
+        .chartLegend(.hidden)
+        .chartYScale(domain: yMin...yMax)
+        .chartXScale(domain: xMin...xMax)
+        .chartYAxis {
+            AxisMarks(position: .leading) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    if let n = value.as(Double.self) {
+                        Text(n.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic(desiredCount: 5)) { value in
+                AxisGridLine()
+                AxisTick()
+                AxisValueLabel {
+                    if let date = value.as(Date.self) {
+                        Text(date, format: .dateTime.month(.abbreviated).day())
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Client-side least-squares: slope m = Σ((xi-x̄)(yi-ȳ)) / Σ((xi-x̄)²),
+    /// intercept b = ȳ - m·x̄. Returns nil when fewer than 2 distinct x
+    /// values are present (can't fit a line through coincident x's), or
+    /// when the variance is zero (all-coincident data). Date offsets are
+    /// computed against `xEpoch` (the min date's timeInterval) so the
+    /// numbers stay in a sensible magnitude.
+    private func priceHistoryLeastSquares(
+        _ points: [PriceHistoryPoint]
+    ) -> (slope: Double, intercept: Double, xEpoch: Double)? {
+        let usable: [(x: Double, y: Double)] = points.compactMap { p in
+            guard let d = p.parsedDate, let y = p.price else { return nil }
+            return (d.timeIntervalSince1970, y)
+        }
+        let distinctXs = Set(usable.map { $0.x })
+        guard distinctXs.count >= 2 else { return nil }
+        let xEpoch = usable.map { $0.x }.min() ?? 0
+        let xs = usable.map { $0.x - xEpoch }
+        let ys = usable.map { $0.y }
+        let n = Double(usable.count)
+        let xMean = xs.reduce(0, +) / n
+        let yMean = ys.reduce(0, +) / n
+        var cov = 0.0
+        var varX = 0.0
+        for i in 0..<usable.count {
+            let dx = xs[i] - xMean
+            cov += dx * (ys[i] - yMean)
+            varX += dx * dx
+        }
+        guard varX > 0 else { return nil }
+        let slope = cov / varX
+        // Translate back: the intercept we expose is at x = xEpoch (i.e.
+        // raw timeInterval). So at any raw timeInterval xRaw, the fitted
+        // y is intercept + slope * (xRaw - xEpoch).
+        let intercept = yMean - slope * xMean
+        return (slope: slope, intercept: intercept, xEpoch: xEpoch)
     }
 
     private func recentCompRow(_ comp: CompIQPriceRecentComp, showsTopDivider: Bool) -> some View {
@@ -2457,5 +2735,46 @@ private extension View {
                     .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1.0)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+}
+
+// MARK: - CF-PRICEHISTORY-60D legend shapes (2026-06-10)
+
+/// Filled triangle used by the price-history legend "Auction" chip so
+/// the legend swatch matches the chart's PointMark `.triangle` symbol.
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Thin dashed/dotted horizontal line used in the price-history legend
+/// to label the trend (dashed) and reference (dotted) overlays. The
+/// dash pattern mirrors the in-chart `StrokeStyle` so a user can read
+/// the legend and visually pick out the matching line in the chart.
+private struct DashedLineSwatch: View {
+    let color: Color
+    let dotted: Bool
+
+    var body: some View {
+        GeometryReader { geo in
+            Path { p in
+                p.move(to: CGPoint(x: 0, y: geo.size.height / 2))
+                p.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height / 2))
+            }
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: dotted ? 1.0 : 1.5,
+                    lineCap: .butt,
+                    dash: dotted ? [2, 3] : [5, 4]
+                )
+            )
+        }
     }
 }
