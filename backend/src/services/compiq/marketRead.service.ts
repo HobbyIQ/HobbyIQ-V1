@@ -675,7 +675,7 @@ export function buildLLMPrompt(
     "- Calm, plain, confident. A knowledgeable person reading the comps aloud, not a marketer.",
     "- 2 to 4 sentences. No more.",
     '- No hype, no urgency, no exclamation points. Never "hot," "fire," "steal," "must-have."',
-    "- DESCRIBE what the market is doing. Never tell the reader to buy, sell, or hold — that is their decision, not yours.",
+    "- DESCRIBE what the market is doing. You may note practical selling mechanics the data directly supports — e.g. that fixed-price copies have been settling above auctions, or that the trend is cooling. Do NOT predict future prices, do NOT make buy/hold calls, and do NOT use urgency or pressure (\"act now,\" \"before it's gone\"). The reader decides what to do with their money; you describe the market.",
     "- Match the register of the reference paragraph in the user message. Do not get more casual than it. Write a fresh paragraph in that voice — do not copy it.",
     "",
     "GROUNDING — absolute",
