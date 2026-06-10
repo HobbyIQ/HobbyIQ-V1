@@ -696,10 +696,15 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
-          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
-          // post-filter sub-market pool to derive last-sale from.
+          // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+          // thin/null branch — no post-filter sub-market pool to derive
+          // last-sale from, so the trend-extrapolated path can't fire
+          // either. All three null.
           lastSale: null,
           estimateSource: null,
+          estimatedValue: null,
+          estimateRange: null,
+          estimateBasis: null,
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -837,12 +842,17 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
-        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
-        // signal the service emits — mirror it onto the response so
-        // iOS can render "last sold $X, N ago" + decide between
-        // "observed" vs "last-sale" vs missing.
+        // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+        // mirror the service's record + source signal so iOS can
+        // render "last sold $X, N ago" or "Estimated $X (range Y–Z)
+        // — based on the last sale N ago, adjusted for the set's
+        // recent trend." estimateSource discriminates between
+        // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        estimatedValue: (est as any).estimatedValue ?? null,
+        estimateRange: (est as any).estimateRange ?? null,
+        estimateBasis: (est as any).estimateBasis ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
@@ -956,10 +966,15 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
-          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
-          // post-filter sub-market pool to derive last-sale from.
+          // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+          // thin/null branch — no post-filter sub-market pool to derive
+          // last-sale from, so the trend-extrapolated path can't fire
+          // either. All three null.
           lastSale: null,
           estimateSource: null,
+          estimatedValue: null,
+          estimateRange: null,
+          estimateBasis: null,
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -1058,12 +1073,17 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
-        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
-        // signal the service emits — mirror it onto the response so
-        // iOS can render "last sold $X, N ago" + decide between
-        // "observed" vs "last-sale" vs missing.
+        // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+        // mirror the service's record + source signal so iOS can
+        // render "last sold $X, N ago" or "Estimated $X (range Y–Z)
+        // — based on the last sale N ago, adjusted for the set's
+        // recent trend." estimateSource discriminates between
+        // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        estimatedValue: (est as any).estimatedValue ?? null,
+        estimateRange: (est as any).estimateRange ?? null,
+        estimateBasis: (est as any).estimateBasis ?? null,
         variantWarning,
         neighborSynthesis: (est as any).neighborSynthesis ?? null,
         crossParallelAnchor: (est as any).crossParallelAnchor ?? null,
@@ -1238,10 +1258,15 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           compsUsed: 0,
           compsAvailable: 0,
           daysSinceNewestComp: null,
-          // CF-LASTSALE-SCAFFOLD (2026-06-10): thin/null branch — no
-          // post-filter sub-market pool to derive last-sale from.
+          // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+          // thin/null branch — no post-filter sub-market pool to derive
+          // last-sale from, so the trend-extrapolated path can't fire
+          // either. All three null.
           lastSale: null,
           estimateSource: null,
+          estimatedValue: null,
+          estimateRange: null,
+          estimateBasis: null,
           broaderTrend: null,
         };
       }
@@ -1409,12 +1434,17 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         compsUsed: (est as any).compsUsed ?? 0,
         compsAvailable: (est as any).compsAvailable ?? (est as any).compsUsed ?? 0,
         daysSinceNewestComp: (est as any).daysSinceNewestComp ?? null,
-        // CF-LASTSALE-SCAFFOLD (2026-06-10): same record + same source
-        // signal the service emits — mirror it onto the response so
-        // iOS can render "last sold $X, N ago" + decide between
-        // "observed" vs "last-sale" vs missing.
+        // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+        // mirror the service's record + source signal so iOS can
+        // render "last sold $X, N ago" or "Estimated $X (range Y–Z)
+        // — based on the last sale N ago, adjusted for the set's
+        // recent trend." estimateSource discriminates between
+        // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        estimatedValue: (est as any).estimatedValue ?? null,
+        estimateRange: (est as any).estimateRange ?? null,
+        estimateBasis: (est as any).estimateBasis ?? null,
         broaderTrend: (est as any).broaderTrend ?? null,
         // CF-MARKET-READ (2026-06-08): prose + fact-pack pair. iOS
         // should render `marketRead` as a calm prose paragraph; the

@@ -108,6 +108,15 @@ export interface MarketReadFactPack {
   // validator's allowed set extended to include lastSalePrice.
   lastSaleDate: string | null;
   lastSalePrice: number | null;
+  // CF-TREND-EXTRAPOLATED (2026-06-10): when the route surfaced an
+  // estimatedValue (trend-extrapolated branch), let the LLM cite it
+  // with the range and an honest basis. fmv stays null in this branch
+  // — these fields tell the LLM "you're describing an estimate, not
+  // an observation."
+  estimatedValue: number | null;
+  estimateRangeLow: number | null;
+  estimateRangeHigh: number | null;
+  estimateBasis: "trend-extrapolated" | null;
 }
 
 /** Single comp dropped by applyCompQualityFilter within the 14d window.
@@ -433,6 +442,32 @@ function buildFactPackAndExcludedInternal(
       ? estLastSale.price
       : null;
 
+  // CF-TREND-EXTRAPOLATED (2026-06-10): pull the route's
+  // estimatedValue/range/source from est so the prose can cite the
+  // estimate honestly ("estimated $X, range $Y–$Z, based on last sold
+  // $A, N days ago, adjusted for the set's recent trend"). The
+  // validator's allowed set is extended below to include these
+  // figures so a grounded citation passes.
+  const estEstimateSource = (est?.estimateSource ?? null) as
+    | "trend-extrapolated" | "last-sale" | "observed" | null;
+  const estEstimatedValueRaw = est?.estimatedValue;
+  const estimatedValue =
+    typeof estEstimatedValueRaw === "number" && Number.isFinite(estEstimatedValueRaw)
+      ? estEstimatedValueRaw
+      : null;
+  const estEstimateRange = (est?.estimateRange ?? null) as
+    | { low?: number; high?: number } | null;
+  const estimateRangeLow =
+    estEstimateRange && typeof estEstimateRange.low === "number" && Number.isFinite(estEstimateRange.low)
+      ? estEstimateRange.low
+      : null;
+  const estimateRangeHigh =
+    estEstimateRange && typeof estEstimateRange.high === "number" && Number.isFinite(estEstimateRange.high)
+      ? estEstimateRange.high
+      : null;
+  const estimateBasis: "trend-extrapolated" | null =
+    estEstimateSource === "trend-extrapolated" ? "trend-extrapolated" : null;
+
   const factPack: MarketReadFactPack = {
     cardId,
     grade,
@@ -456,6 +491,10 @@ function buildFactPackAndExcludedInternal(
     fmv: fmv !== null ? round2(fmv) : null,
     lastSaleDate,
     lastSalePrice: lastSalePrice !== null ? round2(lastSalePrice) : null,
+    estimatedValue: estimatedValue !== null ? round2(estimatedValue) : null,
+    estimateRangeLow: estimateRangeLow !== null ? round2(estimateRangeLow) : null,
+    estimateRangeHigh: estimateRangeHigh !== null ? round2(estimateRangeHigh) : null,
+    estimateBasis,
   };
 
   const excludedComps = buildExcludedComps(
@@ -682,6 +721,12 @@ export function validateMarketReadNumbers(
   // pack. For now: only the price is validator-grounded; the day-count
   // is left for prose phrasing.
   add(fp.lastSalePrice);
+  // CF-TREND-EXTRAPOLATED (2026-06-10): the trend-extrapolated prose
+  // cites the estimate and its range. Allow all three so the LLM can
+  // ground "estimated $X (range $Y–$Z)" without rejection.
+  add(fp.estimatedValue);
+  add(fp.estimateRangeLow);
+  add(fp.estimateRangeHigh);
   // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): GRADE-DIGIT EXEMPTION.
   // The grade designation the request asked for is a legitimate
   // number in the prose ("PSA 10", "BGS 9.5", "SGC 8"). The regex
@@ -735,6 +780,14 @@ export function hashFactPack(fp: MarketReadFactPack): string {
     // landed sale would be invisible to the prose for up to 24h.
     lastSaleDate: fp.lastSaleDate,
     lastSalePrice: fp.lastSalePrice,
+    // CF-TREND-EXTRAPOLATED (2026-06-10): hashing the estimate fields
+    // means a trend-shift on a stale-comp card → new fact-pack hash →
+    // fresh LLM regen of the prose. Without this, an estimate change
+    // would be invisible to the prose for up to 24h.
+    estimatedValue: fp.estimatedValue,
+    estimateRangeLow: fp.estimateRangeLow,
+    estimateRangeHigh: fp.estimateRangeHigh,
+    estimateBasis: fp.estimateBasis,
   });
   return crypto.createHash("sha256").update(stable).digest("hex").slice(0, 16);
 }
@@ -780,6 +833,9 @@ export function buildLLMPrompt(
     "",
     "NO-VALUE CASE",
     "- If fmv is null or the pack signals too few samples for a value, do NOT state or imply a price. Say plainly there isn't enough recent sales data to call a value, and describe what little sold, if anything. Honesty here matters more than sounding complete.",
+    "",
+    "TREND-EXTRAPOLATED CASE",
+    "- When fmv is null AND the pack carries estimatedValue (with estimateBasis=\"trend-extrapolated\"), lead with the estimate honestly: it is an ESTIMATE, not an observed price. Cite estimatedValue, the range (estimateRangeLow–estimateRangeHigh), and ground it in the lastSale anchor: 'estimated $X (range $Y–$Z), based on the last sale at $A, N days ago, adjusted for the set's recent trend.' Use lastSalePrice + lastSaleDate as the anchor; pull the day-count from the pack if present or spell it as words. Do NOT call it a 'market value' or 'fair value' — those terms imply observation. 'Estimate' / 'estimated' is the load-bearing word.",
     "",
     "EXCLUDED SALES",
     "- If the pack lists excluded sales, you may note in passing that some outliers were set aside — without listing them.",

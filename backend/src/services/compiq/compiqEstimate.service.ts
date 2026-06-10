@@ -1094,6 +1094,83 @@ export function pickLastSale(comps: ReadonlyArray<RawComp>): {
   };
 }
 
+// CF-TREND-EXTRAPOLATED (2026-06-10): reprice a lastSale anchor across a
+// stale gap using the player-in-set 14-day momentum signal. Damped,
+// anti-compounding: the multiplier scales with how much of the gap the
+// 14-day trend window actually covers, capped at one window (gapFactor
+// = min(gap, WINDOW)/WINDOW). A fresh anchor (gap≈0) gets ~zero
+// adjustment; a 14-day-old anchor gets the full multiplier; a
+// 25-day-old anchor still gets the full multiplier (capped — no
+// compounding beyond one window's worth of drift). Range widens with
+// total gap and trend magnitude.
+//
+// Returns null when:
+//   - gap is outside [0, TREND_CUTOFF_DAYS]
+//   - multiplier is non-finite
+//   - anchor price is non-positive
+// Caller (insufficient short-circuit) treats null as "fall through to
+// last-sale display" — no estimatedValue surfaced.
+
+export const TREND_CUTOFF_DAYS = 30;
+export const TREND_WINDOW_DAYS = 14;
+const TREND_SPREAD_BASE = 0.12;
+const TREND_SPREAD_MAX = 0.30;
+const TREND_SPREAD_TREND_FACTOR = 0.25;
+const TREND_SPREAD_GAP_FACTOR = 0.10;
+
+export interface TrendExtrapolatedEstimate {
+  estimatedValue: number;
+  estimateRange: { low: number; high: number };
+  basis: {
+    anchorPrice: number;
+    anchorDaysAgo: number;
+    multiplier: number;
+    gapFactor: number;
+    adjustment: number;
+    spread: number;
+  };
+}
+
+export function repriceTrendExtrapolated(
+  anchor: { price: number },
+  gapDays: number,
+  multiplier: number,
+): TrendExtrapolatedEstimate | null {
+  if (!Number.isFinite(gapDays) || gapDays < 0 || gapDays > TREND_CUTOFF_DAYS) return null;
+  if (!Number.isFinite(multiplier)) return null;
+  if (!Number.isFinite(anchor.price) || anchor.price <= 0) return null;
+
+  const gapFactor = Math.min(gapDays, TREND_WINDOW_DAYS) / TREND_WINDOW_DAYS;
+  const adjustment = (multiplier - 1.0) * gapFactor;
+  const estimatedValue = anchor.price * (1 + adjustment);
+
+  const spread = Math.max(
+    TREND_SPREAD_BASE,
+    Math.min(
+      TREND_SPREAD_MAX,
+      TREND_SPREAD_BASE
+        + (gapDays / TREND_CUTOFF_DAYS) * TREND_SPREAD_GAP_FACTOR
+        + Math.abs(multiplier - 1.0) * TREND_SPREAD_TREND_FACTOR,
+    ),
+  );
+
+  return {
+    estimatedValue: Math.round(estimatedValue * 100) / 100,
+    estimateRange: {
+      low: Math.round(estimatedValue * (1 - spread) * 100) / 100,
+      high: Math.round(estimatedValue * (1 + spread) * 100) / 100,
+    },
+    basis: {
+      anchorPrice: anchor.price,
+      anchorDaysAgo: gapDays,
+      multiplier,
+      gapFactor: Math.round(gapFactor * 1000) / 1000,
+      adjustment: Math.round(adjustment * 1000) / 1000,
+      spread: Math.round(spread * 1000) / 1000,
+    },
+  };
+}
+
 async function fetchComps(
   query: string,
   grade: string = "Raw",
@@ -1737,6 +1814,15 @@ export function emitPredictionToCorpus(params: {
   trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
   compsUsed?: number;
   callContext: PredictionCallContext;
+  // CF-TREND-EXTRAPOLATED (2026-06-10): audit signal — distinguishes
+  // observed fmv (training-eligible) from trend-extrapolated estimates
+  // (training-excluded via fairMarketValue=null). Descriptive only;
+  // training-exclusion is structural via fairMarketValue, NOT this
+  // flag. Required field on every emit so analysts can assert the
+  // invariant: no row with estimateSource="trend-extrapolated" has a
+  // non-null fairMarketValue.
+  estimateSource?: "observed" | "trend-extrapolated" | "last-sale" | null;
+  estimatedValue?: number | null;
 }): void {
   try {
     const fmv =
@@ -1827,7 +1913,30 @@ export function emitPredictionToCorpus(params: {
       userId: params.callContext.userId ?? null,
       holdingId: params.callContext.holdingId ?? null,
       routedFromHolding: params.callContext.routedFromHolding,
+      // CF-TREND-EXTRAPOLATED (2026-06-10): audit fields. Training-
+      // exclusion is STRUCTURAL via fairMarketValue=null; estimateSource
+      // is the descriptive signal that lets analysts assert the
+      // invariant after the fact. estimatedValue is the display-only
+      // figure (never routed into fairMarketValue).
+      estimateSource: params.estimateSource ?? null,
+      estimatedValue:
+        typeof params.estimatedValue === "number" && Number.isFinite(params.estimatedValue)
+          ? params.estimatedValue
+          : null,
     };
+
+    // CF-TREND-EXTRAPOLATED (2026-06-10): assert the structural
+    // training-exclusion invariant — a trend-extrapolated row must
+    // NEVER carry a non-null fairMarketValue. Defensive guard for
+    // future refactors that accidentally route the estimate into fmv.
+    if (params.estimateSource === "trend-extrapolated" && fmv !== null) {
+      console.error(
+        "[compiq.prediction_emitted] INVARIANT VIOLATION: estimateSource=trend-extrapolated with non-null fairMarketValue. " +
+          "This row would contaminate training-as-observed. Forcing fairMarketValue to null on the corpus row.",
+      );
+      (__predictionEmit as { fairMarketValue: number | null }).fairMarketValue = null;
+    }
+
     console.log("[compiq.prediction_emitted] " + JSON.stringify(__predictionEmit));
     writePredictionLog(__predictionEmit);
   } catch {
@@ -2330,12 +2439,16 @@ export async function computeEstimate(
       verdict: `Unsupported sport (${detectedCategory}). CompIQ currently prices baseball cards only.`,
       gradeUsed: cardHedgeGrade,
       marketDNA: { trend: "flat", speed: "Normal" },
-      // CF-LASTSALE-SCAFFOLD (2026-06-10): unsupported_sport never
-      // derives a last-sale figure — the comps belong to a different
-      // sport CompIQ doesn't price. iOS treats this as not-a-card.
+      // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+      // unsupported_sport never derives a last-sale figure — the comps
+      // belong to a different sport CompIQ doesn't price. iOS treats
+      // this as not-a-card.
       daysSinceNewestComp: null,
       lastSale: null,
       estimateSource: null,
+      estimatedValue: null,
+      estimateRange: null,
+      estimateBasis: null,
     } as Record<string, unknown>;
   }
 
@@ -2740,6 +2853,12 @@ export async function computeEstimate(
       // a separate state and shouldn't render last-sale prose here.
       lastSale: null,
       estimateSource: null,
+      // CF-TREND-EXTRAPOLATED (2026-06-10): variant-mismatch never
+      // emits an estimatedValue — the comps belong to a different
+      // variant of the card.
+      estimatedValue: null,
+      estimateRange: null,
+      estimateBasis: null,
       variantWarning: fetched.variantWarning,
       // CF-VARIANT-MISMATCH-PRICESOURCE-PARITY (2026-05-28): propagate
       // the router's parallel-resolution attribution onto the variant-
@@ -2804,6 +2923,38 @@ export async function computeEstimate(
     tierLadderTrace,
   };
   const cardIdentity = fetched.card;
+
+  // CF-TREND-EXTRAPOLATED (2026-06-10): fire the player-in-set momentum
+  // fetch EARLY so it's available before the insufficient short-circuit
+  // (which uses it to optionally trend-extrapolate the lastSale into an
+  // estimatedValue + estimateRange). On the success path, the same
+  // resolved value flows downstream — the Promise.all at the prior
+  // fetch site is collapsed to fetch sibling-pool only.
+  //
+  // Variable names re-used by the downstream `productForSignals`/
+  // `cardYearForSignals` declarations were folded into this single
+  // upstream declaration to avoid duplication and keep the trend's
+  // sub-market scope (player + release + year) defined exactly once.
+  const playerNameForSignals =
+    cardIdentity?.player?.trim() || body.playerName?.trim() || "";
+  const productForSignals =
+    cardIdentity?.release?.trim()
+    || cardIdentity?.set?.trim()
+    || body.product?.trim()
+    || "";
+  const cardYearForSignals: number | undefined =
+    typeof cardIdentity?.year === "number" && cardIdentity.year > 0
+      ? cardIdentity.year
+      : typeof body.cardYear === "number" && body.cardYear > 0
+      ? body.cardYear
+      : undefined;
+  const playerMomentum = await (playerNameForSignals && productForSignals
+    ? fetchPlayerInSetMomentum({
+        playerName: playerNameForSignals,
+        product: productForSignals,
+        cardYear: cardYearForSignals,
+      }).catch(() => null)
+    : Promise.resolve(null));
 
   // --- Thin-data short-circuit ----------------------------------------------
   // CompIQ Anti-Yesterday Rule + "never anchor to a single stale sale".
@@ -3132,6 +3283,39 @@ export async function computeEstimate(
     // short-circuit. fmvMechanism="unavailable" (FMV null); predicted
     // comes from mechanism1 if Bowman-family, else null. compsUsed is
     // the raw fetched-comps count (which failed the sufficiency gate).
+    // CF-TREND-EXTRAPOLATED (2026-06-10): when we reach this return
+    // path, marketValue/fairMarketValue ARE null (no recent comps to
+    // price from). If we also have an anchor (lastSale) + a usable
+    // trend (playerMomentum) + a gap within cutoff, surface an
+    // estimatedValue + estimateRange under a distinct field so iOS
+    // can render "Estimated $X (range Y–Z), based on the last sale
+    // N ago adjusted for the set's recent trend."
+    //
+    // The estimatedValue is INTENTIONALLY surfaced under
+    // `estimatedValue` (NOT fairMarketValue). The training join's
+    // realizedReturn formula reads fairMarketValue — leaving it null
+    // is the structural gate that excludes trend-extrapolated rows
+    // from training-as-observed. estimateSource is the audit signal
+    // for the prediction-corpus emit (see emitPredictionToCorpus).
+    //
+    // Computed BEFORE the corpus emit so estimateSource can be passed
+    // through and the invariant check (estimateSource=trend-extrapolated
+    // implies fairMarketValue=null) fires at the right moment.
+    const trendEstimate =
+      playerMomentum && typeof playerMomentum.multiplier === "number" &&
+      lastSale !== null && daysSinceNewest !== null
+        ? repriceTrendExtrapolated(lastSale, daysSinceNewest, playerMomentum.multiplier)
+        : null;
+    const resolvedEstimateSource: "trend-extrapolated" | "last-sale" | null =
+      trendEstimate !== null
+        ? "trend-extrapolated"
+        : lastSale !== null
+        ? "last-sale"
+        : null;
+    const resolvedEstimatedValue = trendEstimate?.estimatedValue ?? null;
+    const resolvedEstimateRange = trendEstimate?.estimateRange ?? null;
+    const resolvedEstimateBasis = trendEstimate?.basis ?? null;
+
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
       body,
@@ -3145,6 +3329,11 @@ export async function computeEstimate(
           : "unavailable",
       compsUsed: fetched.comps.length,
       callContext,
+      // CF-TREND-EXTRAPOLATED (2026-06-10): audit fields. fairMarketValue
+      // stays null (structural training-exclusion); estimateSource +
+      // estimatedValue are descriptive only.
+      estimateSource: resolvedEstimateSource,
+      estimatedValue: resolvedEstimatedValue,
     });
 
     return {
@@ -3153,10 +3342,18 @@ export async function computeEstimate(
       action: "Hold",
       dealScore: 0,
       quickSaleValue: null,
+      // STRUCTURAL TRAINING-EXCLUSION GATE: fairMarketValue stays null
+      // for the trend-extrapolated branch. trainingDatasetJoin's
+      // realizedReturn formula returns null when fairMarketValue is
+      // null/0, so this row contributes nothing to training as
+      // observed. The estimatedValue below is for display only.
       fairMarketValue: null,
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
       marketValue: null,
+      estimatedValue: resolvedEstimatedValue,
+      estimateRange: resolvedEstimateRange,
+      estimateBasis: resolvedEstimateBasis,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
@@ -3214,13 +3411,14 @@ export async function computeEstimate(
       gradeUsed: cardHedgeGrade,
       source: "no-recent-comps",
       daysSinceNewestComp: daysSinceNewest,
-      // CF-LASTSALE-SCAFFOLD (2026-06-10): surface the most-recent sale
-      // from the unwindowed post-(grade + parallel) pool. fmv is null on
-      // this branch, so estimateSource is "last-sale" when a lastSale
-      // exists (iOS no-value screen can render "last sold $X, N ago"),
-      // null when fetched.comps has zero parseable-date records.
+      // CF-LASTSALE-SCAFFOLD + CF-TREND-EXTRAPOLATED (2026-06-10):
+      // lastSale surfaces the most-recent sub-market-isolated sale.
+      // estimateSource is "trend-extrapolated" when the four-condition
+      // gate (above) produced an estimatedValue; falls back to
+      // "last-sale" when an anchor exists but trend is unusable; null
+      // when no anchor at all.
       lastSale,
-      estimateSource: lastSale !== null ? ("last-sale" as const) : null,
+      estimateSource: resolvedEstimateSource,
       variantWarning: fetched.variantWarning,
       crossParallelAnchor: null,
       effectiveFmv: null,
@@ -3246,49 +3444,21 @@ export async function computeEstimate(
   // momentum nightly) is left running but is no longer the Layer 1
   // source. CF-C re-homes the blob job to per-(player, set) tuples;
   // this CF stops READING the player-wide blob.
-  const playerNameForSignals =
-    cardIdentity?.player?.trim() || body.playerName?.trim() || "";
-  // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): prefer the release/product-
-  // line over the literal subset name. `cardIdentity.set` is the Cardsight
-  // subset name (e.g. "Base Set"), which collides across releases — every
-  // release's main subset is "Base Set". `cardIdentity.release` is the
-  // product line (e.g. "Bowman Draft", "Topps Update"), uniquely scoping
-  // the player-in-set pool. fetchCompsByPlayer takes this as `product` and
-  // searches Cardsight catalog with "<player> <product>" — passing "Base
-  // Set" returns garbage; passing "Bowman Draft" finds the right cards.
-  const productForSignals =
-    cardIdentity?.release?.trim()
-    || cardIdentity?.set?.trim()
-    || body.product?.trim()
-    || "";
-  const cardYearForSignals: number | undefined =
-    typeof cardIdentity?.year === "number" && cardIdentity.year > 0
-      ? cardIdentity.year
-      : typeof body.cardYear === "number" && body.cardYear > 0
-      ? body.cardYear
-      : undefined;
-  const [siblingPool, playerMomentum] = await Promise.all([
-    cardIdentity
-      ? fetchSiblingSales(cardIdentity, cardHedgeGrade).catch(() => ({
-          siblingCardIds: [] as string[],
-          sales: [] as Array<{ price: number; ts: number }>,
-        }))
-      : Promise.resolve({
-          siblingCardIds: [] as string[],
-          sales: [] as Array<{ price: number; ts: number }>,
-        }),
-    // Layer 1 returns PlayerMomentumComponent | null directly — no
-    // separate build step. WEIGHT_TABLE renormalize fires when null.
-    // No fallback to the deprecated player-wide blob: a true miss is
-    // an honest omit, not a substituted coarser signal.
-    playerNameForSignals && productForSignals
-      ? fetchPlayerInSetMomentum({
-          playerName: playerNameForSignals,
-          product: productForSignals,
-          cardYear: cardYearForSignals,
-        }).catch(() => null)
-      : Promise.resolve(null),
-  ]);
+  // CF-TREND-EXTRAPOLATED (2026-06-10): playerNameForSignals /
+  // productForSignals / cardYearForSignals AND playerMomentum were
+  // moved UP — declared once right after `cardIdentity` so the
+  // insufficient short-circuit can use the trend signal. Here we just
+  // fetch sibling-pool; momentum is already in scope from the upstream
+  // await. No double-fetch.
+  const siblingPool = cardIdentity
+    ? await fetchSiblingSales(cardIdentity, cardHedgeGrade).catch(() => ({
+        siblingCardIds: [] as string[],
+        sales: [] as Array<{ price: number; ts: number }>,
+      }))
+    : {
+        siblingCardIds: [] as string[],
+        sales: [] as Array<{ price: number; ts: number }>,
+      };
   // CF-TREND-DIRTY-POOL (2026-06-08): pass the junk-excluded clean pool
   // as exactComps (was `fetched.comps`). siblingPool hygiene is unchanged
   // — sibling junk is a SEPARATE pass (siblings flow through their own
@@ -3941,6 +4111,13 @@ export async function computeEstimate(
         : lastSale !== null
         ? ("last-sale" as const)
         : null,
+    // CF-TREND-EXTRAPOLATED (2026-06-10): the success path always has
+    // a numeric fairMarketValue, so estimateSource is "observed" and
+    // these fields are null by definition. They're here for response-
+    // shape consistency across all 4 return branches.
+    estimatedValue: null,
+    estimateRange: null,
+    estimateBasis: null,
     variantWarning: fetched.variantWarning,
     // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. iOS
     // reads `priceSource` (3-category: exact / approximate / broad).

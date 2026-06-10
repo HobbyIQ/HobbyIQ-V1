@@ -117,6 +117,14 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   "userId",
   "holdingId",
   "routedFromHolding",
+  // CF-TREND-EXTRAPOLATED (2026-06-10): two audit fields landed on the
+  // canonical payload. estimateSource discriminates training-eligible
+  // ("observed") from training-excluded ("trend-extrapolated" /
+  // "last-sale" / null); estimatedValue is the display-only figure
+  // (NEVER routed into fairMarketValue — that's the structural gate
+  // that excludes the row from training as observed).
+  "estimateSource",
+  "estimatedValue",
 ] as const;
 
 const EXPECTED_TRENDIQ_KEYS = [
