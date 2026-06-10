@@ -295,18 +295,26 @@ def _tuple_key(entry: dict[str, Any]) -> tuple[str, str, Any]:
     )
 
 
-def _aggregate_sales_for_query(query: str) -> tuple[list[dict[str, Any]], int]:
+def _aggregate_sales_for_query(
+    query: str,
+) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Search catalog for `query`, fan out pricing across the top-K
-    matches, and return the AGGREGATED raw + graded sales list across
-    all matched cards. Returns (sales, cards_scanned).
+    matches, and return a PER-CARD sales dict (cardId -> raw + graded
+    sales for that card). Returns (per_card_sales, cards_scanned).
 
-    Grade-agnostic by design: flattens raw + every graded tier into one
-    list so the resulting recent-vs-prior split reflects the broad set
-    direction (the brief's framing). Per-card pricing is already cached
-    by the cardsight client at the 6h cs:pricing layer, so the fan-out
-    cost is bounded.
+    CF-PLAYER-IN-SET-PER-CARD-DIRECTION (2026-06-10): keep the per-card
+    grouping so the downstream signal compute can do per-card recent-vs-
+    prior ratios. The prior "flatten all sales into one list" path
+    surfaced composition (cheap base vs expensive auto in recent
+    window) as price direction — mix, not movement.
+
+    Grade-agnostic per card: each card's bucket flattens raw + every
+    graded tier (so the per-card recent/prior reflects the card's broad
+    direction, not a single-grade slice). Per-card pricing is already
+    cached by the cardsight client at the 6h cs:pricing layer, so the
+    fan-out cost is bounded.
     """
-    sales: list[dict[str, Any]] = []
+    per_card_sales: dict[str, list[dict[str, Any]]] = {}
     candidates = search_catalog(query, take=PIS_TOP_N) or []
     cards_scanned = 0
     for c in candidates[:PIS_TOP_N]:
@@ -316,14 +324,164 @@ def _aggregate_sales_for_query(query: str) -> tuple[list[dict[str, Any]], int]:
         pricing = get_pricing(cid)
         if not pricing:
             continue
+        card_sales: list[dict[str, Any]] = []
         raw_records = (pricing.get("raw") or {}).get("records") or []
-        sales.extend(raw_records)
+        card_sales.extend(raw_records)
         for co in pricing.get("graded") or []:
             for g in co.get("grades") or []:
                 grade_records = g.get("records") or []
-                sales.extend(grade_records)
+                card_sales.extend(grade_records)
+        if card_sales:
+            per_card_sales[cid] = card_sales
         cards_scanned += 1
-    return sales, cards_scanned
+    return per_card_sales, cards_scanned
+
+
+# ─── Per-card momentum compute ─────────────────────────────────────────
+#
+# CF-PLAYER-IN-SET-PER-CARD-DIRECTION (2026-06-10): aggregate the
+# release's direction from PER-CARD ratios rather than pooled
+# recent-vs-prior averages. Cards without ≥MIN_PER_WINDOW samples in
+# BOTH windows are EXCLUDED — never fabricate direction from one
+# window. Mirrors the live backend's fetchPlayerInSetMomentum.
+
+PIS_WINDOW_SIZE = 7
+PIS_MIN_PER_WINDOW = 3
+PIS_MIN_QUALIFYING_CARDS = 2
+PIS_MULTIPLIER_LO = 0.85
+PIS_MULTIPLIER_HI = 1.20
+PIS_RISING_THRESHOLD = 1.08
+PIS_FALLING_THRESHOLD = 0.93
+
+
+def _median(xs: list[float]) -> float:
+    if not xs:
+        return 0.0
+    s = sorted(xs)
+    n = len(s)
+    if n % 2 == 0:
+        return (s[n // 2 - 1] + s[n // 2]) / 2.0
+    return s[n // 2]
+
+
+def _per_card_ratio(card_sales: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """For a single card's sales list, return its recent-vs-prior
+    median ratio + window stats. None when the card doesn't have
+    ≥MIN_PER_WINDOW samples in BOTH windows."""
+
+    def _parse_date(s: Any) -> float:
+        if not isinstance(s, str) or not s:
+            return 0.0
+        try:
+            # Cardsight dates are ISO-ish (e.g. "2025-09-12" or with time);
+            # take the date prefix and rely on lex sort by ISO date.
+            return float(datetime.fromisoformat(s.replace("Z", "+00:00").split("T")[0]).timestamp())
+        except Exception:  # noqa: BLE001
+            return 0.0
+
+    dated = [
+        (s, _parse_date(s.get("date")))
+        for s in card_sales
+        if isinstance(s.get("price"), (int, float))
+        and s["price"] > 0
+        and s.get("date")
+    ]
+    if not dated:
+        return None
+    dated.sort(key=lambda t: t[1], reverse=True)  # desc by date
+    prices = [float(s["price"]) for s, _ in dated]
+    recent = prices[: min(PIS_WINDOW_SIZE, len(prices))]
+    prior = prices[
+        len(recent) : len(recent) + min(PIS_WINDOW_SIZE, max(0, len(prices) - len(recent)))
+    ]
+    if len(recent) < PIS_MIN_PER_WINDOW or len(prior) < PIS_MIN_PER_WINDOW:
+        return None
+    recent_median = _median(recent)
+    prior_median = _median(prior)
+    if prior_median <= 0:
+        return None
+    return {
+        "ratio": recent_median / prior_median,
+        "recent_median": recent_median,
+        "prior_median": prior_median,
+        "recent_n": len(recent),
+        "prior_n": len(prior),
+    }
+
+
+def _build_per_card_payload(
+    player: str, per_card_sales: dict[str, list[dict[str, Any]]]
+) -> dict[str, Any]:
+    """Build a compsMomentum-shaped payload from per-card sales using the
+    per-card median-ratio aggregation. Same output keys as the legacy
+    build_comps_payload (multiplier, signal, comp_count, median_price)
+    so the signal-aggregator contract is preserved, plus per-card
+    breakdown surfaced under `per_card_ratios`."""
+
+    # Pool totals (still surfaced for context, but NOT the direction input)
+    all_prices: list[float] = []
+    for sales in per_card_sales.values():
+        for s in sales:
+            p = s.get("price")
+            if isinstance(p, (int, float)) and p > 0:
+                all_prices.append(float(p))
+    pool_size = len(all_prices)
+    pool_median = _median(all_prices) if all_prices else 0.0
+
+    per_card_ratios: list[dict[str, Any]] = []
+    for card_id, sales in per_card_sales.items():
+        r = _per_card_ratio(sales)
+        if r is None:
+            continue
+        per_card_ratios.append(
+            {
+                "card_id": card_id,
+                "ratio": round(r["ratio"], 3),
+                "recent_median": round(r["recent_median"], 2),
+                "prior_median": round(r["prior_median"], 2),
+                "recent_n": r["recent_n"],
+                "prior_n": r["prior_n"],
+            }
+        )
+
+    if len(per_card_ratios) < PIS_MIN_QUALIFYING_CARDS:
+        # Honest no-direction: not enough cards with both windows
+        # populated. Aggregator reads multiplier=1.0 (neutral).
+        return {
+            "player": player,
+            "multiplier": 1.0,
+            "signal": "no_direction",
+            "comp_count": pool_size,
+            "median_price": round(pool_median, 2),
+            "qualifying_cards": len(per_card_ratios),
+            "cards_in_pool": len(per_card_sales),
+            "per_card_ratios": per_card_ratios,
+            "aggregated_ratio": 1.0,
+        }
+
+    # Median of per-card ratios → robust to one card dominating volume
+    # and immune to mix-skew (cheap-base-skewed recent window can't pull
+    # the release signal without each card's OWN sales moving).
+    aggregated = _median([p["ratio"] for p in per_card_ratios])
+    multiplier = max(PIS_MULTIPLIER_LO, min(PIS_MULTIPLIER_HI, aggregated))
+    if multiplier > PIS_RISING_THRESHOLD:
+        signal = "rising"
+    elif multiplier < PIS_FALLING_THRESHOLD:
+        signal = "falling"
+    else:
+        signal = "stable"
+
+    return {
+        "player": player,
+        "multiplier": round(multiplier, 3),
+        "signal": signal,
+        "comp_count": pool_size,
+        "median_price": round(pool_median, 2),
+        "qualifying_cards": len(per_card_ratios),
+        "cards_in_pool": len(per_card_sales),
+        "per_card_ratios": per_card_ratios,
+        "aggregated_ratio": round(aggregated, 3),
+    }
 
 
 def compute_and_persist_player_in_set(
@@ -347,8 +505,8 @@ def compute_and_persist_player_in_set(
     # on the right edition. "<player> Base Set" returns garbage;
     # "2024 Bowman Draft Konnor Griffin" lands on the right cards.
     query = f"{year} {release} {player}"
-    sales, cards_scanned = _aggregate_sales_for_query(query)
-    if not sales:
+    per_card_sales, cards_scanned = _aggregate_sales_for_query(query)
+    if not per_card_sales:
         logging.info(
             "[playerInSet] %s / %s %d — no sales aggregated (cards_scanned=%d); skipping snapshot",
             player,
@@ -358,11 +516,11 @@ def compute_and_persist_player_in_set(
         )
         return None
 
-    # Reuse build_comps_payload — same recent-7 vs prior-7 ratio,
-    # clamp [0.85, 1.20], thresholds 1.08/0.93 — that mirrors what
-    # backend's live fetchPlayerInSetMomentum computes. Same heuristic,
-    # different surface (history persistence vs live read).
-    payload = build_comps_payload(player, sales)
+    # CF-PLAYER-IN-SET-PER-CARD-DIRECTION (2026-06-10): aggregate via
+    # per-card recent-vs-prior median ratio, NOT pooled averages.
+    # Cards without enough sales in both windows are EXCLUDED so a
+    # cheap-base-skewed recent week can't masquerade as direction.
+    payload = _build_per_card_payload(player, per_card_sales)
     payload.update(
         {
             "release": release,

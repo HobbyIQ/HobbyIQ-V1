@@ -24,8 +24,11 @@ export interface PlayerMomentumComponent {
   multiplier: number;
   /** Signal flags that fired (e.g. "trends_spike"). */
   flags: string[];
-  /** Per-signal contribution map from aggregator. */
-  componentSignals: Record<string, number>;
+  /** Per-signal contribution map from aggregator. Scalar by default;
+   *  CF-PLAYER-IN-SET-PER-CARD-DIRECTION (2026-06-10) added
+   *  `per_card_ratios` as an array breakdown so iOS / advisor can show
+   *  "3 of 5 cards down" instead of one pooled number. */
+  componentSignals: Record<string, number | readonly unknown[]>;
   /** ISO timestamp from the aggregator's last write. */
   lastUpdated: string | null;
   /** URL the signal fetch hit (null if env unconfigured). */
