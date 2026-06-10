@@ -649,33 +649,141 @@ export function hashFactPack(fp: MarketReadFactPack): string {
   return crypto.createHash("sha256").update(stable).digest("hex").slice(0, 16);
 }
 
-/** Build the prompt the LLM would receive. Kept as a named function
- *  so it's testable and so the integration-CF reviewer can see the
- *  exact contract (fact pack → ground rules → output format). */
-export function buildLLMPrompt(fp: MarketReadFactPack): string {
-  return [
-    "You write 2-4 calm sentences summarizing the recent comp pool for a single trading card.",
-    "Use ONLY the numbers from the FACT PACK below — invent no figures. Hedge appropriately;",
-    'the bin vs auction split is directional, not absolute — phrasings like "most of the spread,"',
-    '"tend toward," "cluster around" are preferred over hard claims. No emoji. No headlines.',
-    "If a fact is null or zero, do not invent context.",
+/** Build the {system, user} prompt pair the LLM receives.
+ *
+ *  CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): the user message includes
+ *  the already-computed template paragraph as a VOICE ANCHOR. The
+ *  template is free (we compute it as the fallback path anyway), and
+ *  giving the model a reference paragraph in-register gives it
+ *  something to match — voice + register stay consistent across cards
+ *  without depending on the model to invent the register from scratch.
+ *
+ *  The system message owns voice/grounding/no-value/excluded rules.
+ *  The user message owns the per-card payload + the "match this voice,
+ *  use only these facts" anchor.
+ *
+ *  Validator stays exactly as-is downstream of this — these prompts
+ *  are written to keep it quiet, not to replace it. */
+export function buildLLMPrompt(
+  fp: MarketReadFactPack,
+  templateOutput: string,
+): { system: string; user: string } {
+  const system = [
+    "You are the Market Read voice for HobbyIQ, a sports-card pricing tool. You write one short, grounded paragraph telling a collector what the recent sales data says about a single card — in the calm, plain voice of someone who knows the hobby and isn't trying to sell them anything.",
     "",
-    "FACT PACK:",
-    JSON.stringify(fp, null, 2),
+    "VOICE",
+    "- Calm, plain, confident. A knowledgeable person reading the comps aloud, not a marketer.",
+    "- 2 to 4 sentences. No more.",
+    '- No hype, no urgency, no exclamation points. Never "hot," "fire," "steal," "must-have."',
+    "- DESCRIBE what the market is doing. Never tell the reader to buy, sell, or hold — that is their decision, not yours.",
+    "- Match the register of the reference paragraph in the user message. Do not get more casual than it. Write a fresh paragraph in that voice — do not copy it.",
+    "",
+    "GROUNDING — absolute",
+    "- Use ONLY the numbers and facts in the FACT PACK.",
+    "- Never invent, estimate, or imply any price, date, grade, sale, count, or percentage not in the FACT PACK.",
+    "- If a fact isn't in the pack, leave it out. Never speculate to fill space.",
+    "- Every dollar figure you write must appear verbatim in the FACT PACK.",
+    "",
+    "NUMBER FORMATTING",
+    '- Any number you write that is NOT an exact FACT PACK value must be spelled as words ("a couple of sales," "the past two weeks," "a handful").',
+    "- FACT PACK figures (prices, percentages, key counts) should be digits when you cite them precisely. If you'd rather soften a count, spell it as a word — never as a bare digit that isn't in the pack.",
+    "",
+    "NO-VALUE CASE",
+    "- If fmv is null or the pack signals too few samples for a value, do NOT state or imply a price. Say plainly there isn't enough recent sales data to call a value, and describe what little sold, if anything. Honesty here matters more than sounding complete.",
+    "",
+    "EXCLUDED SALES",
+    "- If the pack lists excluded sales, you may note in passing that some outliers were set aside — without listing them.",
   ].join("\n");
+
+  const user = [
+    "Reference paragraph — match this VOICE and register, write fresh, use the FACT PACK below for every fact:",
+    "",
+    templateOutput,
+    "",
+    "FACT PACK — the only facts you may use:",
+    "",
+    JSON.stringify(fp, null, 2),
+    "",
+    "Write the Market Read paragraph now: 2–4 sentences, grounded only in the FACT PACK, in the voice of the reference paragraph.",
+  ].join("\n");
+
+  return { system, user };
 }
 
-/** LLM call hook. Returns null in this build — no OpenAI client is
- *  wired up yet. The fact pack + prompt + validator + cache are all in
- *  place so the integration CF only needs to swap this stub with a real
- *  call (e.g. openai.chat.completions.create). When wired:
- *    - Read OPENAI_API_KEY from env; null when unset
- *    - Token budget cap; null on rejection
- *    - Timeout (5s) → null on timeout
- *    - Strip leading/trailing quotes the model occasionally adds */
-async function callLLMMarketRead(_fp: MarketReadFactPack): Promise<string | null> {
-  // Future integration; see CF-MARKET-READ-LLM-WIRE-UP.
-  return null;
+/** LLM call hook — Azure OpenAI gpt-4o-mini deployment.
+ *
+ *  Gated on `MARKET_READ_LLM=on`. Default: OFF until the STEP 2 HALT
+ *  voice + grounding review. When OFF: returns null immediately, no
+ *  client created, zero cost. When ON + Azure env unset: returns null.
+ *  When ON + client throws / times out / empty: throws or returns null,
+ *  caller in generateMarketRead catches and falls back to template.
+ *
+ *  Timeout: 2.5s. /price-by-id is on the interactive request path; the
+ *  market read is a SUPPLEMENT, never load-bearing for FMV / predicted
+ *  price. A slow LLM must not hold the response hostage.
+ *
+ *  Model + deployment: AZURE_OPENAI_DEPLOYMENT (currently gpt-4o-mini).
+ *  temperature 0.3 — a touch of variability for prose tone without
+ *  losing grounding (validator catches any hallucinations anyway). */
+async function callLLMMarketRead(
+  fp: MarketReadFactPack,
+  templateOutput: string,
+): Promise<string | null> {
+  if (process.env.MARKET_READ_LLM !== "on") return null;
+
+  const endpoint = (process.env.AZURE_OPENAI_ENDPOINT ?? "").trim();
+  const apiKey = (process.env.AZURE_OPENAI_API_KEY ?? process.env.AZURE_OPENAI_KEY ?? "").trim();
+  const deployment = (process.env.AZURE_OPENAI_DEPLOYMENT ?? "").trim();
+  const apiVersion = (process.env.AZURE_OPENAI_API_VERSION ?? "2024-08-01-preview").trim();
+  if (!endpoint || !apiKey || !deployment) return null;
+
+  // Dynamic import keeps `openai` out of the cold-start path on env
+  // configurations that don't have the flag on. ~80ms first-call;
+  // negligible thereafter (Node module cache).
+  const { AzureOpenAI } = await import("openai");
+  const client = new AzureOpenAI({ endpoint, apiKey, deployment, apiVersion });
+
+  const { system, user } = buildLLMPrompt(fp, templateOutput);
+
+  const response = await client.chat.completions.create(
+    {
+      model: deployment,
+      temperature: 0.3,
+      max_tokens: 220,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    },
+    { signal: AbortSignal.timeout(2500) },
+  );
+
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) return null;
+  // Models occasionally wrap in quotes / markdown — strip.
+  const stripped = raw
+    .trim()
+    .replace(/^["'`“”]+/, "")
+    .replace(/["'`“”]+$/, "")
+    .trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
+/** Internal export for tests + samples — bypasses the env flag so a
+ *  preview script can render LLM output regardless of production
+ *  default. NOT consumed by /price-by-id; only the gated hook is. */
+export async function __callLLMMarketReadForPreview(
+  fp: MarketReadFactPack,
+  templateOutput: string,
+): Promise<string | null> {
+  const prior = process.env.MARKET_READ_LLM;
+  process.env.MARKET_READ_LLM = "on";
+  try {
+    return await callLLMMarketRead(fp, templateOutput);
+  } finally {
+    if (prior === undefined) delete process.env.MARKET_READ_LLM;
+    else process.env.MARKET_READ_LLM = prior;
+  }
 }
 
 /** Orchestrator. Cached on the fact-pack hash so identical comp sets
@@ -693,11 +801,19 @@ export async function generateMarketRead(
   return await cacheWrap(
     cacheKey,
     async () => {
-      let marketRead: string | null = null;
+      // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): compute the template
+      // FIRST. It serves a dual role: (a) the voice anchor passed into
+      // the LLM prompt (free, since we'd compute it for the fallback
+      // path anyway), and (b) the fallback paragraph on any LLM error,
+      // timeout, empty output, or grounding-validator rejection. The
+      // template is therefore load-bearing on every cache miss and
+      // gets cached alongside whichever output ultimately wins.
+      const templateOutput = templateMarketRead(factPack);
+      let marketRead = templateOutput;
       let source: "llm" | "template" = "template";
 
       try {
-        const llmText = await callLLMMarketRead(factPack);
+        const llmText = await callLLMMarketRead(factPack, templateOutput);
         if (llmText && llmText.trim().length > 0) {
           const verdict = validateMarketReadNumbers(llmText, factPack);
           if (verdict.ok) {
@@ -711,11 +827,6 @@ export async function generateMarketRead(
         }
       } catch (err) {
         console.warn(`[marketRead] LLM call failed (non-fatal): ${(err as Error)?.message ?? err}`);
-      }
-
-      if (!marketRead) {
-        marketRead = templateMarketRead(factPack);
-        source = "template";
       }
 
       return { marketRead, source, factPack, factPackHash, excludedComps };

@@ -493,11 +493,22 @@ describe("hashFactPack + buildLLMPrompt", () => {
     expect(hashFactPack({ ...fpA, sampleUsed: 21 })).not.toBe(before);
   });
 
-  it("prompt includes the fact pack and the ground rules", () => {
-    const prompt = buildLLMPrompt(fpA);
-    expect(prompt).toContain("FACT PACK");
-    expect(prompt).toContain("invent no figures");
-    expect(prompt).toContain('"sampleUsed": 22');
+  it("prompt {system, user} includes the fact pack, ground rules, and the template anchor", () => {
+    // CF-MARKET-READ-LLM-WIRE-UP (2026-06-10): buildLLMPrompt now returns
+    // {system, user}; the user message includes the template paragraph
+    // as a voice anchor.
+    const templateAnchor = "Recent sales cluster around the same neighborhood with no real movement.";
+    const { system, user } = buildLLMPrompt(fpA, templateAnchor);
+    // System owns voice + grounding + no-value + excluded rules
+    expect(system).toContain("VOICE");
+    expect(system).toContain("GROUNDING");
+    expect(system).toContain("Use ONLY the numbers and facts in the FACT PACK");
+    expect(system).toContain("NO-VALUE CASE");
+    // User owns the per-card payload + the voice anchor
+    expect(user).toContain("Reference paragraph");
+    expect(user).toContain(templateAnchor);
+    expect(user).toContain("FACT PACK");
+    expect(user).toContain('"sampleUsed": 22');
   });
 });
 
@@ -789,5 +800,140 @@ describe("pickCardImageUrl", () => {
       meta: { total_records: 0, last_sale_date: null },
     } as any;
     expect(pickCardImageUrl(pricing, "PSA 10", 1184)).toBeUndefined();
+  });
+});
+
+// CF-MARKET-READ-LLM-WIRE-UP (2026-06-10) — LLM hook gating + fallback
+// behavior under the orchestrator. Pure-mocked OpenAI client; no network.
+import { describe as describeLlm, it as itLlm, expect as expectLlm, vi, beforeEach } from "vitest";
+
+const { createMock } = vi.hoisted(() => ({
+  createMock: vi.fn(),
+}));
+
+// AzureOpenAI must be `new`-able; declare a real class inside the mock
+// factory so the constructor contract is satisfied. `createMock` is
+// hoisted, so the class body can capture it via closure.
+vi.mock("openai", () => {
+  class MockAzureOpenAI {
+    chat = { completions: { create: createMock } };
+  }
+  return { AzureOpenAI: MockAzureOpenAI };
+});
+
+import { generateMarketRead as generateMarketReadLlm } from "../src/services/compiq/marketRead.service";
+
+function llmTroutPricingSeed() {
+  // Minimal pricing payload that produces a non-thin fact pack so the
+  // template emits real content (otherwise the "too few sales" branch
+  // dominates and the LLM has nothing distinctive to mimic).
+  const rec2 = (price: number, days: number, kind: "fixed" | "auction" = "fixed") => ({
+    price,
+    title: "2011 Topps Update Mike Trout #US175 RC",
+    date: new Date(Date.now() - days * 86_400_000).toISOString(),
+    source: "ebay" as const,
+    listing_type: kind,
+    url: null,
+  });
+  return {
+    card: {
+      card_id: TROUT_ID,
+      name: "Mike Trout",
+      number: "US175",
+      set: { set_id: "x", name: "Base Set", year: "2011", release: "Topps Update" },
+    },
+    raw: {
+      count: 12,
+      records: [
+        rec2(380, 1), rec2(385, 2), rec2(395, 3), rec2(400, 4), rec2(405, 5),
+        rec2(410, 6), rec2(415, 7), rec2(420, 8), rec2(425, 9), rec2(430, 10),
+        rec2(210, 1, "auction"), rec2(220, 4, "auction"),
+      ],
+    },
+    graded: [],
+    meta: { total_records: 12, last_sale_date: new Date().toISOString() },
+  } as any;
+}
+
+const llmEst = { compsUsed: 12, compsAvailable: 12, fairMarketValue: 402, trendIQ: { components: { cardTrajectory: { pctChange: 0, recentMedian: 400 } } } };
+
+describeLlm("generateMarketRead LLM hook (CF-MARKET-READ-LLM-WIRE-UP)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.MARKET_READ_LLM;
+    process.env.AZURE_OPENAI_ENDPOINT = "https://fake-openai.openai.azure.com/";
+    process.env.AZURE_OPENAI_API_KEY = "fake-key";
+    process.env.AZURE_OPENAI_DEPLOYMENT = "gpt-4o-mini";
+  });
+
+  itLlm("flag OFF (default) → LLM is never called, template served", async () => {
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-flag-off");
+    expectLlm(result.source).toBe("template");
+    expectLlm(result.marketRead).toContain("anchor to the fixed-price market");
+    expectLlm(createMock).not.toHaveBeenCalled();
+  });
+
+  itLlm("flag ON + valid LLM output → source=llm, LLM text wins", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    // Output uses only the fmv ($402) — every other quantity spelled
+    // out as a word so the validator has zero false-positive surface.
+    createMock.mockResolvedValue({
+      choices: [{
+        message: { content: "Recent sales cluster around $402 across a handful of fixed-price copies, with auctions landing a touch lower. The market's held steady the past two weeks, with no real movement either direction." }
+      }],
+    });
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-llm-valid");
+    expectLlm(result.source).toBe("llm");
+    expectLlm(result.marketRead).toMatch(/Recent sales cluster around \$402/);
+    expectLlm(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  itLlm("flag ON + LLM invents a dollar figure → validator rejects, template served", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: "Recent sales cluster around $999.99 with bin median of $402." } }],
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-llm-invent");
+    expectLlm(result.source).toBe("template");
+    expectLlm(warnSpy).toHaveBeenCalledWith(expectLlm.stringContaining("LLM output rejected"));
+    warnSpy.mockRestore();
+  });
+
+  itLlm("flag ON + LLM throws → template served, no propagation", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    createMock.mockRejectedValue(new Error("openai 500"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-llm-throw");
+    expectLlm(result.source).toBe("template");
+    expectLlm(warnSpy).toHaveBeenCalledWith(expectLlm.stringContaining("LLM call failed"));
+    warnSpy.mockRestore();
+  });
+
+  itLlm("flag ON + LLM returns empty content → template served", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    createMock.mockResolvedValue({ choices: [{ message: { content: "" } }] });
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-llm-empty");
+    expectLlm(result.source).toBe("template");
+  });
+
+  itLlm("flag ON but AZURE_OPENAI env unset → LLM is null-out before client construction", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    delete process.env.AZURE_OPENAI_ENDPOINT;
+    const result = await generateMarketReadLlm(llmTroutPricingSeed(), "Raw", llmEst, "card-no-env");
+    expectLlm(result.source).toBe("template");
+    expectLlm(createMock).not.toHaveBeenCalled();
+  });
+
+  itLlm("cache-hit on the same fact-pack hash → LLM only called once across repeat invocations", async () => {
+    process.env.MARKET_READ_LLM = "on";
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: "Recent sales cluster around $402 across 10 Buy It Now copies." } }],
+    });
+    const cardId = "card-cache-hit-" + Date.now();
+    const seed = llmTroutPricingSeed();
+    await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
+    await generateMarketReadLlm(seed, "Raw", llmEst, cardId);
+    expectLlm(createMock).toHaveBeenCalledTimes(1);
   });
 });
