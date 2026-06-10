@@ -43,6 +43,15 @@ import {
   selectSalesByGrade,
   applyCompQualityFilterDetailed,
 } from "./compiqEstimate.service.js";
+// CF-FILTER-CONSOLIDATION (2026-06-10): single source of pool truth.
+// Was duplicated locally as `filterByParallelHere` to avoid a
+// hypothetical marketRead → compiqEstimate import cycle; the reverse
+// edge never existed, so the twin was unnecessary. filters.ts has no
+// imports → cannot close any cycle. Both this file and
+// compiqEstimate.service.ts now import the SAME helper, so the
+// value path and the fact-pack path are GUARANTEED to apply the
+// same parallel-isolation semantics by construction.
+import { filterRecordsByParallel } from "./filters.js";
 import { cacheWrap } from "../shared/cache.service.js";
 import type {
   CardsightPricingResponse,
@@ -319,15 +328,16 @@ function buildFactPackAndExcludedInternal(
     pricing as unknown as Parameters<typeof selectSalesByGrade>[0],
     grade,
   );
-  // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10): mirror step 2 of the
-  // value path. parallelId present → keep only Cardsight records tagged
-  // with that parallel_id. parallelId null → keep only base records
-  // (no parallel_id), matching the "base excludes Cognac/Gold/Blue
-  // bleed" semantics of fetchComps. The local twin
-  // `filterByParallelHere` has identical body to compiqEstimate's
-  // exported `filterRecordsByParallel` — the only divergence point
-  // between the two pools is now closed.
-  const sales: CardsightSaleRecord[] = filterByParallelHere(salesByGrade, parallelId);
+  // CF-FACTPACK-SUB-MARKET-ISOLATION (2026-06-10) +
+  // CF-FILTER-CONSOLIDATION (2026-06-10): mirror step 2 of the value
+  // path. parallelId present → keep only Cardsight records tagged with
+  // that parallel_id. parallelId null → keep only base records (no
+  // parallel_id), matching the "base excludes Cognac/Gold/Blue bleed"
+  // semantics of fetchComps. Imports the SAME `filterRecordsByParallel`
+  // helper from ./filters.js that compiqEstimate.service.ts uses — the
+  // value path and the fact-pack path are now byte-identical on this
+  // filter step (one function, two call sites, drift impossible).
+  const sales: CardsightSaleRecord[] = filterRecordsByParallel(salesByGrade, parallelId);
 
   const enriched: EnrichedComp[] = sales
     .filter((s) => Number.isFinite(s.price) && s.price > 0)
@@ -983,18 +993,11 @@ function recentDirectionFromRecords(
   return "flat";
 }
 
-/** Per-record parallel filter mirroring filterRecordsByParallel from
- *  compiqEstimate.service.ts — duplicated here to avoid a circular
- *  import (marketRead → compiqEstimate would create one). Same
- *  semantics: parallelId present → keep matching; absent → keep
- *  records without a parallel_id. */
-function filterByParallelHere<T extends { parallel_id?: string | null }>(
-  records: ReadonlyArray<T>,
-  parallelId: string | null | undefined,
-): T[] {
-  if (parallelId) return records.filter((r) => r.parallel_id === parallelId);
-  return records.filter((r) => r.parallel_id === null || r.parallel_id === undefined);
-}
+// CF-FILTER-CONSOLIDATION (2026-06-10): the local `filterByParallelHere`
+// twin was deleted. Both call sites in this file (buildFactPack and
+// buildGradeBreakdown below) now import `filterRecordsByParallel` from
+// ./filters.js — same helper the value path in compiqEstimate.service.ts
+// uses. One function, two consumers, drift impossible.
 
 export function buildGradeBreakdown(
   pricing: CardsightPricingResponse,
@@ -1023,7 +1026,7 @@ export function buildGradeBreakdown(
     }
 
     for (const { gradeLabel, records } of merged.values()) {
-      const filtered = filterByParallelHere(records, parallelId);
+      const filtered = filterRecordsByParallel(records, parallelId);
       const prices = filtered
         .map((r) => r.price)
         .filter((p) => Number.isFinite(p) && p > 0);

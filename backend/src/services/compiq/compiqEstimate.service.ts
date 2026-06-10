@@ -1045,29 +1045,14 @@ export function selectSalesByGrade(
   return matching.flatMap((g) => g.records ?? []);
 }
 
-/** CF-PARALLEL-AWARE-VALUE (2026-06-09): per-record parallel filter.
- *  Authoritative — applied at the sales[] layer right after grade
- *  selection so EVERY downstream pool (FMV, marketRead factPack,
- *  trajectory, recentComps, excludedComps) sees the parallel-scoped
- *  records only.
- *    - parallelId provided → keep only records whose parallel_id
- *      matches that id verbatim
- *    - parallelId NOT provided → keep only records WITHOUT a
- *      parallel_id (base/unnumbered only) — closes the parallel-bleed
- *      where Cognac Diamond / Gold / Blue Border records were
- *      contaminating raw FMV.
- *  Cardsight tags both raw + graded records (verified 0a). */
-export function filterRecordsByParallel<T extends { parallel_id?: string | null }>(
-  records: ReadonlyArray<T>,
-  parallelId: string | null | undefined,
-): T[] {
-  if (parallelId) {
-    return records.filter((r) => r.parallel_id === parallelId);
-  }
-  return records.filter(
-    (r) => r.parallel_id === null || r.parallel_id === undefined,
-  );
-}
+// CF-FILTER-CONSOLIDATION (2026-06-10): filterRecordsByParallel lifted
+// into ./filters.ts so the value path AND the marketRead fact-pack path
+// import the SAME helper (was duplicated as the local twin
+// `filterByParallelHere` in marketRead.service.ts). Re-exported here so
+// external consumers + existing imports keep working without a
+// path change.
+import { filterRecordsByParallel } from "./filters.js";
+export { filterRecordsByParallel };
 
 async function fetchComps(
   query: string,
