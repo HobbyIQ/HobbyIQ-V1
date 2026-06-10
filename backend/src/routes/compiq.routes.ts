@@ -1429,6 +1429,12 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         ...regimeFieldsFromEstimate(est as Record<string, unknown>),
         ...predictedRangeFieldsFromEstimate(est as Record<string, unknown>),
         recentComps: (est as any).recentComps ?? [],
+        // CF-PRICEHISTORY-60D (2026-06-10): 60d comp-page chart series.
+        // Display-only — never enters predictionCorpus (verified at the
+        // service's emitPredictionToCorpus call site, which doesn't
+        // accept recentComps/priceHistory). Empty [] on non-success
+        // branches that don't build one.
+        priceHistory: (est as any).priceHistory ?? [],
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,
