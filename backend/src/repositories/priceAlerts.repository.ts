@@ -2,8 +2,16 @@
 // Container: compiq_alerts, partition /userId.
 //
 // Wire format matches the iOS `PriceAlert.swift` model exactly. Records are
-// read here for CRUD and consumed by fn-price-alert-checker which re-prices
-// each active alert via /api/compiq/predict and fires APNs on threshold cross.
+// read here for CRUD and consumed by the in-process priceAlertEvaluator
+// job (backend/src/jobs/priceAlertEvaluator.job.ts) which re-prices each
+// active alert via computeEstimate and fires APNs on threshold cross.
+//
+// CF-FN-PRICE-ALERT-CHECKER-DELETE (2026-06-10): the prior path through
+// the Azure Function fn-price-alert-checker was vestigial — it GETed a
+// nonexistent /api/alerts/internal/all backend route, silently returned
+// zero alerts on the 404, and ran every 6h emitting "Succeeded in 38ms"
+// without doing anything. The function and its references are gone; the
+// in-process evaluator has been the real path the whole time.
 
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";

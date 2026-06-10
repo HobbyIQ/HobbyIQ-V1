@@ -67,8 +67,11 @@ router.put("/preferences", async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // Per-card price alert CRUD. iOS `PriceAlertService.swift` consumes these.
 // Records live in Cosmos container `compiq_alerts` (partition /userId) and
-// are picked up by fn-price-alert-checker which re-prices each active alert
-// and fires APNs on threshold cross.
+// are picked up by the in-process priceAlertEvaluator job
+// (backend/src/jobs/priceAlertEvaluator.job.ts) which re-prices each
+// active alert and fires APNs on threshold cross. (The prior reference
+// to fn-price-alert-checker was historical — that Azure Function was
+// vestigial and deleted in CF-FN-PRICE-ALERT-CHECKER-DELETE 2026-06-10.)
 // ---------------------------------------------------------------------------
 
 function sanitizeSnapshot(raw: unknown): PriceAlertCardSnapshot | null {
