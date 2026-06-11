@@ -675,6 +675,12 @@ struct CompIQPriceByIdResponse: Codable {
     /// card hero slot. Nil → graceful neutral-card placeholder; never
     /// surface a broken-image glyph.
     let cardImageUrl: String?
+    /// CF-CARD-IMAGE-FALLBACK (2026-06-11): eBay listing thumb (~225px)
+    /// shipped alongside `cardImageUrl` so the hero can fall back when
+    /// the proxy 404s (Cardsight coverage gap on the proxy route).
+    /// Softer than a proxy scan but reliably available on cards with a
+    /// recent comp, including parallels the proxy doesn't cover.
+    let cardImageThumbUrl: String?
     let cardIdentity: CompIQPriceCardIdentity?
     let gradeUsed: String?
     let compsUsed: Int?
@@ -803,6 +809,7 @@ struct CompIQPriceByIdResponse: Codable {
         excludedComps = try? container.decodeIfPresent([CompIQPriceExcludedComp].self, forKey: .excludedComps)
         priceHistory = try? container.decodeIfPresent([PriceHistoryPoint].self, forKey: .priceHistory)
         cardImageUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageUrl)
+        cardImageThumbUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageThumbUrl)
         cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
         gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
         compsUsed = try? container.decodeIfPresent(Int.self, forKey: .compsUsed)
@@ -849,7 +856,7 @@ struct CompIQPriceByIdResponse: Codable {
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
         case confidence, source, trendAnalysis, recentComps, excludedComps, priceHistory
-        case cardImageUrl
+        case cardImageUrl, cardImageThumbUrl
         case cardIdentity, gradeUsed, compsUsed, compsAvailable, daysSinceNewestComp
         case verdict, action, quickSaleValue, premiumValue, explanation
         case graderPremium, buyWindow, freshness, broaderTrend

@@ -1887,28 +1887,39 @@ struct CompIQPricedCardView: View {
     private func cardHeroImageCard(_ response: CompIQPriceByIdResponse) -> some View {
         HStack {
             Spacer(minLength: 0)
-            cardHeroImage(urlString: response.cardImageUrl)
-                .frame(width: 180, height: 252) // 2.5:3.5 → 180:252
+            cardHeroImage(
+                primary: response.cardImageUrl,
+                fallback: response.cardImageThumbUrl
+            )
+            .frame(width: 180, height: 252) // 2.5:3.5 → 180:252
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
     }
 
-    private func cardHeroImage(urlString: String?) -> some View {
+    /// CF-CARD-IMAGE-FALLBACK (2026-06-11): nested-AsyncImage fallback —
+    /// `primary` (backend proxy) is the better image when it exists; when
+    /// the proxy 404s (Cardsight coverage gap on certain parallels), the
+    /// inner AsyncImage on `fallback` (eBay listing thumb ~225px, softer
+    /// but reliably available) takes over; only if both fail does the
+    /// neutral-card placeholder render — same path as the comp rows so a
+    /// missing photo never surfaces a broken-image glyph.
+    private func cardHeroImage(primary: String?, fallback: String?) -> some View {
         Group {
-            if let urlString, urlString.isEmpty == false, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
+            if let primaryString = primary, primaryString.isEmpty == false,
+               let primaryURL = URL(string: primaryString) {
+                AsyncImage(url: primaryURL) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     case .empty, .failure:
-                        compThumbnailPlaceholder
+                        cardHeroFallback(fallback)
                     @unknown default:
-                        compThumbnailPlaceholder
+                        cardHeroFallback(fallback)
                     }
                 }
             } else {
-                compThumbnailPlaceholder
+                cardHeroFallback(fallback)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -1917,6 +1928,24 @@ struct CompIQPricedCardView: View {
                 .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.45), lineWidth: 0.5)
         )
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.12), radius: 14, x: 0, y: 6)
+    }
+
+    @ViewBuilder
+    private func cardHeroFallback(_ urlString: String?) -> some View {
+        if let urlString, urlString.isEmpty == false, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                case .empty, .failure:
+                    compThumbnailPlaceholder
+                @unknown default:
+                    compThumbnailPlaceholder
+                }
+            }
+        } else {
+            compThumbnailPlaceholder
+        }
     }
 
     // MARK: - Comp Thumbnail (shared by recent + excluded rows)
