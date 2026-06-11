@@ -297,7 +297,10 @@ describe("CF-PINNED-PARALLEL-RECOVERY #3 — recovery pools reach FMV (variant-l
   });
 
   /** Fixture: 5 base + 1 Blue + 0 Gold — recovery isolates exactly the
-   *  single Blue record → priceSourceInternal="title-match-low-sample". */
+   *  single Blue record → priceSourceInternal="title-match-low-sample".
+   *  The Blue record is at isoDaysAgo(1) — FRESH anchor, so the age-
+   *  based insufficient floor stays false post-low-sample-bypass-drop;
+   *  the value path produces an observed FMV. */
   function makeSingleBluePricing() {
     const f = makeLeoUnifiedPricing();
     f.raw.records = f.raw.records.filter((r: any) => {
@@ -310,7 +313,24 @@ describe("CF-PINNED-PARALLEL-RECOVERY #3 — recovery pools reach FMV (variant-l
     return f;
   }
 
-  it("low-sample (1 comp) recovery — bypasses ladder floor, surfaces FMV, priceSource=approximate", async () => {
+  /** Stale-anchor variant of makeSingleBluePricing — single Blue sale
+   *  pushed to ~30 days ago to exercise the new (CF — route low-sample
+   *  into trend-extrapolation) routing. Replaces the blue 0 record at
+   *  isoDaysAgo(1) with one at isoDaysAgo(30) so the insufficient floor
+   *  (compCount===1 AND daysSinceNewest > 14) fires and routes through
+   *  repriceTrendExtrapolated. */
+  function makeStaleSingleBluePricing() {
+    const f = makeSingleBluePricing();
+    const stale = isoDaysAgo(30);
+    f.raw.records = f.raw.records.map((r: any) => {
+      const t = String(r.title).toLowerCase();
+      return t.endsWith("blue 0)") ? { ...r, date: stale } : r;
+    });
+    f.meta = { ...(f.meta ?? {}), last_sale_date: stale };
+    return f;
+  }
+
+  it("low-sample (1 comp, FRESH anchor) — observed path with FMV (insufficient floor stays false at age <=14d)", async () => {
     (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeSingleBluePricing(),
     );
@@ -340,6 +360,53 @@ describe("CF-PINNED-PARALLEL-RECOVERY #3 — recovery pools reach FMV (variant-l
     expect(typeof result.fairMarketValue).toBe("number");
     expect(result.fairMarketValue as number).toBeGreaterThan(200);
     expect(result.fairMarketValue as number).toBeLessThan(500);
+  });
+
+  it("low-sample (1 comp, STALE anchor) — routes through trend-extrapolation: estimateSource set + marketValue null", async () => {
+    // CF — route title-match-low-sample into trend-extrapolation
+    // (2026-06-11 follow-up): the variant-tier-ladder bypass still
+    // fires (so the single record passes the variant filter), but
+    // title-match-low-sample is no longer in the insufficient-bypass
+    // set. With age > 14d the insufficient floor (compCount===1 AND
+    // daysSinceNewest > 14) fires, routing through repriceTrendExtrapolated.
+    // Per the forward-looking value model, a thin recovered parallel
+    // reads as ESTIMATED, not observed — same surface every other
+    // thin card uses.
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeStaleSingleBluePricing(),
+    );
+    (cardSight.getCardDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeoDetail(),
+    );
+
+    const result = (await computeEstimate(
+      {
+        playerName: LEO_BASE_ID,
+        cardsightCardId: LEO_BASE_ID,
+        parallelId: BLUE_REFRACTOR_150_ID,
+        parallel: "Blue Refractor",
+        isAuto: true,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    expect(result.priceSourceInternal).toBe("title-match-low-sample");
+    expect(result.source).toBe("no-recent-comps");
+    // Observed value surface is null — this is the headline change.
+    expect(result.fairMarketValue).toBeNull();
+    expect(result.marketValue).toBeNull();
+    // Spectrum surface populated. In this test env, playerMomentum is
+    // null (mocked Cardsight returns empty for siblings + aggregates),
+    // so trend-extrapolation returns null and the fallback path sets
+    // estimateSource="last-sale" with the recovered $320 record as the
+    // lastSale anchor. Production with non-null playerMomentum yields
+    // estimateSource="trend-extrapolated" + estimatedValue + estimateRange.
+    expect(
+      ["trend-extrapolated", "last-sale"].includes(result.estimateSource as string),
+    ).toBe(true);
+    expect(result.lastSale).not.toBeNull();
+    const lastSale = result.lastSale as { price?: number };
+    expect(lastSale.price).toBe(320);
   });
 
   it("corpus guardrail — low-sample emits fairMarketValue=null to predictionCorpus (display-not-train)", async () => {

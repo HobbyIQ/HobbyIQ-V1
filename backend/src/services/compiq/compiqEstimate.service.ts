@@ -3228,9 +3228,24 @@ export async function computeEstimate(
   // the corpus guardrail (low-sample → fmv=null at emit) carry the
   // confidence story; the on-screen FMV is honest for what it is.
   // compCount === 0 still nulls (recovery returned nothing usable).
+  //
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) follow-up: ONLY
+  // title-matched-parallel (>=3) keeps the observed bypass. The
+  // low-sample variant (<3 records) is INTENTIONALLY left to fall into
+  // the insufficient short-circuit so it routes through the
+  // trend-extrapolation path (repriceTrendExtrapolated → estimateSource
+  // = "trend-extrapolated"|"last-sale" + estimatedValue + estimateRange
+  // + marketValue/fairMarketValue null). Per the forward-looking value
+  // model, a thin recovered parallel reads as an ESTIMATED next-sale
+  // price, not a rear-view observed market value — same surface every
+  // other thin card uses. iOS' value-spectrum render (7f0ec9b, merged
+  // 2026-06-11) decodes the spectrum fields and renders the hedged
+  // "Estimated next sale ~$X" treatment instead of the bold "Market
+  // value" headline. Training exclusion is structural via
+  // fairMarketValue=null in the existing insufficient-branch corpus
+  // emit.
   const isRecoveryIsolatedPoolForCount =
-    fetched.priceSourceInternal === "title-matched-parallel"
-    || fetched.priceSourceInternal === "title-match-low-sample";
+    fetched.priceSourceInternal === "title-matched-parallel";
   const insufficient =
     compCount === 0
     || (!isRecoveryIsolatedPoolForCount && (
