@@ -483,6 +483,15 @@ struct CompIQPricedCardView: View {
                 }
             }
 
+            // CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11):
+            // always-on Overall Trend section. Falls through trendIQ →
+            // broaderTrend → "flat" so a thin slot never reads as blank.
+            // Directional: "<arrow> <direction> · ±X%". Flat: text only
+            // ("Holding steady, no clear direction") — no bare "0.0%".
+            cardGroup(title: "Overall Trend", icon: "arrow.triangle.swap") {
+                overallTrendContent(response)
+            }
+
             // CF-PRICEHISTORY-60D (2026-06-10): 60d chart series for
             // the comp page. Rendered as its own section card so the
             // chart precedes the "Recent sales" table inside the
@@ -558,26 +567,33 @@ struct CompIQPricedCardView: View {
             VStack(spacing: 8) {
                 priceSlotContent(response)
 
-                // Metadata chips (High / Grade / Comps) — only meaningful
-                // when the headline IS a confident observed value. The
-                // other branches carry their own range / basis / last-sold
-                // line; chaining "Comps 0 of 0" alongside the empty/last-
-                // sale copy reads as broken.
-                if isObservedBranch(response) {
+                // CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11):
+                // value-block follower runs under EVERY slot, not just
+                // observed — same shell shape regardless of price branch.
+                valueBlockFollower(response)
+
+                // CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11):
+                // chip row used to gate on `isObservedBranch` and blank
+                // every chip on thin slots. Now per-chip:
+                //   HIGH  → only when the slot has a real spread (observed
+                //           multi-sale); a single sale has no spread, so
+                //           we keep the isObservedBranch gate locally.
+                //   GRADE → always when `gradeUsed` is present.
+                //   SALES → renamed from "Comps", surfaces the true count
+                //           + parallel disambiguator from the hit
+                //           (e.g. "1 · Blue /150"). Hidden at zero so the
+                //           chip row doesn't repeat the no-sales empty-state.
+                let salesCount = response.compsUsed ?? response.compsAvailable ?? 0
+                if hasChipRowContent(response, salesCount: salesCount) {
                     HStack(spacing: 12) {
-                        if let high = response.marketTier?.high {
+                        if isObservedBranch(response), let high = response.marketTier?.high {
                             metadataChip(label: "High", value: high.formatted(.currency(code: "USD")))
                         }
                         if let grade = response.gradeUsed {
                             metadataChip(label: "Grade", value: grade)
                         }
-                        if let comps = response.compsUsed {
-                            metadataChip(
-                                label: "Comps",
-                                value: response.compsAvailable.map { available in
-                                    available >= comps ? "\(comps) of \(available)" : "\(comps)"
-                                } ?? "\(comps)"
-                            )
+                        if salesCount > 0 {
+                            metadataChip(label: "Sales", value: salesChipValue(response, count: salesCount))
                         }
                     }
                     .padding(.top, 2)
@@ -695,6 +711,80 @@ struct CompIQPricedCardView: View {
         }
     }
 
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): hoisted out
+    /// of `observedPriceSlot` so EVERY price slot (observed / trend-
+    /// extrapolated / last-sale / no-sales) gets the same follower row.
+    /// Directional (abs(impliedPct) >= 0.5 with trendIQ or broaderTrend
+    /// pct present): "<arrow> Next sale ~$Y · ±X%" + range. Flat (no
+    /// pct, near-zero pct, or no projection target): "<right-arrow>
+    /// Holding steady" — text only, never an invented number. The 0.5%
+    /// floor kills "Next sale ~$430 · 0.0%" tautologies; the text-only
+    /// flat copy keeps the shell intact instead of stripping the row.
+    @ViewBuilder
+    private func valueBlockFollower(_ response: CompIQPriceByIdResponse) -> some View {
+        let pct: Double? = response.trendIQ?.impliedPct ?? response.broaderTrend?.impliedTrendPct
+        let direction: String? = response.trendIQ?.direction ?? response.broaderTrend?.direction
+        if let predicted = response.predictedPrice,
+           let range = response.predictedPriceRange,
+           let low = range.low, let high = range.high,
+           let p = pct, abs(p) >= 0.5 {
+            let tint = trendColor(direction)
+            VStack(spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: trendArrow(direction))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(tint)
+                    Text("Next sale ~\(predicted.formatted(.currency(code: "USD"))) · \(String(format: "%+.1f%%", p))")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(tint)
+                }
+                Text("range \(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.top, 4)
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.right")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Text("Holding steady")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): always-on
+    /// overall-trend body. Fall-through: trendIQ → broaderTrend → flat.
+    /// Directional only when abs(pct) >= 0.5 AND direction is up/down;
+    /// otherwise renders the text-only "Holding steady" line so the
+    /// section never blanks and never surfaces a bare "0.0%".
+    @ViewBuilder
+    private func overallTrendContent(_ response: CompIQPriceByIdResponse) -> some View {
+        let rawDirection = (response.trendIQ?.direction ?? response.broaderTrend?.direction ?? "flat").lowercased()
+        let pct = response.trendIQ?.impliedPct ?? response.broaderTrend?.impliedTrendPct ?? 0.0
+        let isDirectional = abs(pct) >= 0.5 && (rawDirection == "up" || rawDirection == "down")
+        if isDirectional {
+            let tint = trendColor(rawDirection)
+            HStack(spacing: 10) {
+                Image(systemName: trendArrow(rawDirection))
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(tint)
+                Text("\(rawDirection.capitalized) · \(String(format: "%+.1f%%", pct))")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tint)
+                Spacer()
+            }
+        } else {
+            Text("Holding steady, no clear direction")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private func observedHeadlineString(_ response: CompIQPriceByIdResponse) -> String {
         if let v = response.marketTier?.value { return v.formatted(.currency(code: "USD")) }
         if let v = response.marketValue       { return v.formatted(.currency(code: "USD")) }
@@ -781,33 +871,65 @@ struct CompIQPricedCardView: View {
         return "From the last sale (\(price.formatted(.currency(code: "USD"))), \(daysAgoCopy(days))), adjusted for the set's recent trend."
     }
 
-    /// Last-sale branch — no estimate offered; just the most recent
-    /// transaction and how stale it is.
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): reshaped to
+    /// match the observed frame — uppercase "LAST SALE" caption +
+    /// 48pt bold number + "N days ago" qualifier — instead of the prior
+    /// 26pt sentence-in-a-box treatment. The recovered comp now reads
+    /// as a real value, not a footnote.
     @ViewBuilder
     private func lastSalePriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        let priceStr: String? = response.lastSale?.price.map { $0.formatted(.currency(code: "USD")) }
+        let days: Int? = response.lastSale?.daysSinceSold ?? response.daysSinceNewestComp
         VStack(spacing: 4) {
             Text("Last sale")
                 .font(.caption.weight(.semibold))
                 .tracking(1.0)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .textCase(.uppercase)
-            Text(lastSaleHeadline(response))
-                .font(.system(size: 26, weight: .semibold, design: .rounded))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.92))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(priceStr ?? "—")
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
+            if let d = days {
+                Text(daysAgoCopy(d))
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
         }
     }
 
-    private func lastSaleHeadline(_ response: CompIQPriceByIdResponse) -> String {
-        let priceStr: String? = response.lastSale?.price.map { $0.formatted(.currency(code: "USD")) }
-        let days: Int? = response.lastSale?.daysSinceSold ?? response.daysSinceNewestComp
-        switch (priceStr, days) {
-        case let (p?, d?): return "Last sold \(p) · \(daysAgoCopy(d))"
-        case let (p?, nil): return "Last sold \(p)"
-        case let (nil, d?): return "Last sold \(daysAgoCopy(d))"
-        case (nil, nil):    return "Last sale on file"
-        }
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): true when
+    /// the chip row has at least one chip worth rendering. Hides the row
+    /// entirely on the no-sales empty-state so the calm copy isn't
+    /// interrupted by an orphan Grade chip.
+    private func hasChipRowContent(_ response: CompIQPriceByIdResponse, salesCount: Int) -> Bool {
+        let hasHigh = isObservedBranch(response) && response.marketTier?.high != nil
+        let hasGrade = response.gradeUsed != nil
+        let hasSales = salesCount > 0
+        return hasHigh || hasGrade || hasSales
+    }
+
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): Sales chip
+    /// value — "<count>" alone, "<count> of <available>" when both are
+    /// known, with a parallel suffix (" · Blue /150") when the hit was
+    /// a parallel-row tap so the user sees which sub-market the sales
+    /// belong to.
+    private func salesChipValue(_ response: CompIQPriceByIdResponse, count: Int) -> String {
+        let head: String = {
+            if let available = response.compsAvailable, available >= count, available != count {
+                return "\(count) of \(available)"
+            }
+            return "\(count)"
+        }()
+        guard let parallel = hit.variant?.trimmingCharacters(in: .whitespaces),
+              parallel.isEmpty == false else { return head }
+        return "\(head) · \(parallel)"
     }
 
     /// "No sales yet" state — the first-sale-sets-the-market line.
@@ -1905,36 +2027,80 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Predicted Price (CF-COMP-DETAIL-EXPAND, 2026-06-07)
 
-    /// CF-BUYER-COPY (2026-06-10): demoted from a competing headline
-    /// number to a calm "near-term direction" treatment so a buyer doesn't
-    /// have to reconcile $430 Market Value (hero) vs $441 Predicted (here)
-    /// with no explanation. Drops: the engine-attribution chip
-    /// ("trendiq-projection"), the Forward Projection Factor row (debug
-    /// stat). Renames: "Predicted Price" → "Where it's heading", "Range"
-    /// → "Likely range". Value renders in muted white instead of
-    /// electricBlue so the page hierarchy reads as "today vs next 30d".
+    /// CF-ELEVATE-PROJECTION (2026-06-11): the forward "next sale" number
+    /// moved to follow the headline in `observedPriceSlot`. This card now
+    /// reads as a *derivation* — "Market value today" + "Recent-sales
+    /// trend" + "Projected next sale" + "Likely range" — instead of
+    /// restating the projection as a competing big number. When the
+    /// follower is suppressed (predictedPriceRange / trendIQ.impliedPct
+    /// nil or `abs(impliedPct) < 0.5`), the card collapses to a single
+    /// neutral line so the page never says "$X market value" beside
+    /// "$X projected" with no narrative tying them together.
     @ViewBuilder
     private func predictedPriceContent(_ response: CompIQPriceByIdResponse) -> some View {
         if let predicted = response.predictedPrice {
-            VStack(alignment: .leading, spacing: 8) {
+            let fmv = response.marketTier?.value ?? response.marketValue ?? response.estimatedValue
+            VStack(alignment: .leading, spacing: 10) {
                 sectionHeader(title: "Where it's heading")
 
-                Text(predicted.formatted(.currency(code: "USD")))
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.9))
-
-                if let range = response.predictedPriceRange,
+                if let pct = response.trendIQ?.impliedPct,
+                   abs(pct) >= 0.5,
+                   let range = response.predictedPriceRange,
                    let low = range.low, let high = range.high {
-                    HStack(spacing: 6) {
-                        Text("Likely range")
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Text("\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                    let direction = response.trendIQ?.direction
+                    VStack(alignment: .leading, spacing: 8) {
+                        derivationRow(
+                            label: "Market value today",
+                            value: fmv.map { $0.formatted(.currency(code: "USD")) } ?? "—"
+                        )
+                        derivationRow(
+                            label: "Recent-sales trend",
+                            value: String(format: "%+.1f%%", pct),
+                            valueColor: trendColor(direction),
+                            leadingIcon: trendArrow(direction)
+                        )
+                        derivationRow(
+                            label: "Projected next sale",
+                            value: predicted.formatted(.currency(code: "USD"))
+                        )
+                        derivationRow(
+                            label: "Likely range",
+                            value: "\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))"
+                        )
                     }
+                } else if let fmv {
+                    Text("Recent sales are holding around \(fmv.formatted(.currency(code: "USD"))).")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    /// CF-ELEVATE-PROJECTION (2026-06-11): one row of the "Where it's
+    /// heading" derivation — label left, value right, optional leading
+    /// arrow icon for the trend row.
+    @ViewBuilder
+    private func derivationRow(
+        label: String,
+        value: String,
+        valueColor: Color = HobbyIQTheme.Colors.pureWhite.opacity(0.9),
+        leadingIcon: String? = nil
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            if let icon = leadingIcon {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(valueColor)
+            }
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(valueColor)
         }
     }
 

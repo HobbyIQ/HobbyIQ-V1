@@ -541,6 +541,12 @@ struct CompIQPriceBroaderTrend: Codable, Hashable {
     let direction: String?
     let label: String?
     let note: String?
+    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): backend
+    /// engine `01ac241+` ships an `impliedTrendPct` alongside
+    /// `direction`/`label` so the iOS "Overall Trend" + value-block
+    /// follower can fall back to a broader-trend pct when
+    /// `trendIQ.impliedPct` is absent (thin-pool / no-recent-comps).
+    let impliedTrendPct: Double?
 }
 
 struct CompIQPriceExitStrategy: Codable, Hashable {
