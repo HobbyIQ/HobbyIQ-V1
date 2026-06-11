@@ -81,33 +81,17 @@ struct CompIQPricedCardView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: HobbyIQTheme.Spacing.large) {
+                inlineBackBar
                 headerCard
                 contentSection
             }
-            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.top, 4)
             .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
         .background(HobbyIQBackground())
-        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Back")
-                            .font(.subheadline.weight(.medium))
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             guard !skipFetch else { return }
             await fetchPrice()
@@ -174,19 +158,114 @@ struct CompIQPricedCardView: View {
         }
     }
 
+    // MARK: - Inline Back Bar (replaces the navigation bar)
+
+    /// Lightweight Back affordance rendered inside the scroll content so
+    /// the system navigation bar can be hidden entirely, matching the
+    /// picker's treatment. Same dismiss behavior the toolbar Back button
+    /// used to provide.
+    private var inlineBackBar: some View {
+        HStack(spacing: 4) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Back")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                .padding(.trailing, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            Spacer()
+        }
+    }
+
     // MARK: - Header (integrated grade picker)
 
+    /// Identity header. Player name primary; full card details secondary
+    /// ("{year} {set} · #{number}"). When the price response has loaded,
+    /// uses `cardIdentity` as the canonical source (set name comes back
+    /// fully spelled out — e.g. "Topps Update"); falls back to the
+    /// variant-hit fields during the initial load so the header is never
+    /// blank.
     private var headerCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(hit.resolvedLabel)
-                .font(HobbyIQTheme.Typography.title)
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(headerPrimaryTitle)
+                    .font(HobbyIQTheme.Typography.title)
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let details = headerCardDetails {
+                    Text(details)
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
 
             gradePicker
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .hiqCard()
+    }
+
+    /// Player name primary. Prefers `cardIdentity.player` (server-canonical)
+    /// once the price response has loaded, falls back to the variant hit's
+    /// `player` field, then to `resolvedLabel` so we never render blank.
+    private var headerPrimaryTitle: String {
+        if let player = priceResponse?.cardIdentity?.player?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           player.isEmpty == false {
+            return player
+        }
+        if let player = hit.player?.trimmingCharacters(in: .whitespacesAndNewlines),
+           player.isEmpty == false {
+            return player
+        }
+        return hit.resolvedLabel
+    }
+
+    /// "{year} {set} · #{number}" composed from the response's
+    /// `cardIdentity` when present, else the variant hit. Returns nil when
+    /// neither source can produce a non-empty line.
+    private var headerCardDetails: String? {
+        let year: String? = {
+            if let y = priceResponse?.cardIdentity?.year { return String(y) }
+            return hit.year.map(String.init)
+        }()
+        let set: String? = {
+            let serverSet = priceResponse?.cardIdentity?.set?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let serverSet, serverSet.isEmpty == false { return serverSet }
+            let hitBrand = hit.brand?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let hitBrand, hitBrand.isEmpty == false { return hitBrand }
+            let hitSet = hit.set?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (hitSet?.isEmpty == false) ? hitSet : nil
+        }()
+        let number: String? = {
+            let serverNum = priceResponse?.cardIdentity?.number?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let serverNum, serverNum.isEmpty == false { return serverNum }
+            let hitNum = hit.number?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (hitNum?.isEmpty == false) ? hitNum : nil
+        }()
+
+        let head = [year, set].compactMap { $0 }.joined(separator: " ")
+        guard head.isEmpty == false else {
+            return number.map { "#\($0)" }
+        }
+        if let number {
+            return "\(head) · #\(number)"
+        }
+        return head
     }
 
     // MARK: - Grade Picker
@@ -245,68 +324,79 @@ struct CompIQPricedCardView: View {
         }
 
         if let response = priceResponse {
-            if response.hasInsufficientComps {
-                insufficientCompsCard
-            } else {
-                // Hero image — CF-B addition (2026-06-08). Sits above
-                // the FMV card so the user has a visual anchor for the
-                // card identity before the pricing rolls in.
-                cardHeroImageCard(response)
+            // CF-NO-VALUE-TAKEOVER (2026-06-10): the prior
+            // `if hasInsufficientComps { insufficientCompsCard } else { ... }`
+            // short-circuit handed the whole view to a takeover card and
+            // hid the hero / Market Read prose / comps even when the wire
+            // carried them. Each section now self-gates: the price slot
+            // surfaces a calm "No current estimate" empty state, the
+            // comps section shows its own thin-pool line, and Market Read
+            // still renders whenever the backend ships prose. Optional
+            // analytics groups (TrendIQ / Market Analysis / Trends /
+            // Regime / advanced tools) continue to gate on their inputs
+            // individually — they collapse to nothing on thin-pool, but
+            // never block hero/marketRead/comps from rendering.
 
-                // Hero
-                fmvCard(response)
+            // Hero image — visual anchor for the card identity.
+            cardHeroImageCard(response)
 
-                // Verdict
-                verdictPill(response)
+            // Hero price slot (FMV $ or "No current estimate").
+            fmvCard(response)
 
-                // Warning
-                variantWarningBanner(response)
-
-                // TrendIQ (leads when available)
-                trendIQSection(response)
-
-                // Segment Trajectory Full (pro_seller gate)
-                segmentTrajectoryFullSection
-
-                // Advanced pricing tools
-                advancedToolsSection(response)
-
-                // Market Analysis group
-                cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
-                    predictedPriceContent(response)
-                    zonesCard(response)
-                    buyWindowContent(response)
-                    confidenceContent(response)
-                }
-
-                // Trends group
-                cardGroup(title: "Trends", icon: "arrow.triangle.swap") {
-                    trendContent(response)
-                    trendIQDetailContent(response)
-                    broaderTrendContent(response)
-                }
-
-                // Regime group — CF-COMP-DETAIL-EXPAND (2026-06-07).
-                // Only renders when the backend produced regime
-                // classification output; insufficient_data short-circuits
-                // skip the section so we don't show empty rows.
-                if response.regime != nil || response.regimeDiagnostics != nil {
-                    cardGroup(title: "Regime", icon: "waveform.path.ecg") {
-                        regimeContent(response)
-                    }
-                }
-
-                // Strategy group
+            // Strategy / Market Read prose — promoted to right after the
+            // price slot per the mockup flow (hero → identity → price →
+            // market read → recent sales). Hides cleanly on thin-pool
+            // responses where marketRead is nil/empty.
+            if let read = response.marketRead?.trimmingCharacters(in: .whitespacesAndNewlines),
+               read.isEmpty == false {
                 cardGroup(title: "Strategy", icon: "target") {
-                    exitStrategyContent(response)
-                    freshnessContent(response)
+                    marketReadContent(read: read, disclaimer: response.marketReadDisclaimer)
                 }
+            }
 
-                // Reference Data group
-                cardGroup(title: "Reference Data", icon: "doc.text.magnifyingglass") {
-                    explanationContent(response)
-                    compsContent(response)
-                    excludedCompsContent(response)
+            // Reference Data group — comps + excluded sit here so they
+            // appear right after Market Read in the scroll order. The
+            // explanation block stays attached to it.
+            cardGroup(title: "Reference Data", icon: "doc.text.magnifyingglass") {
+                explanationContent(response)
+                compsContent(response)
+                excludedCompsContent(response)
+            }
+
+            // Verdict / warning — secondary banners under the primary
+            // content. Self-gating, render only when populated.
+            verdictPill(response)
+            variantWarningBanner(response)
+
+            // TrendIQ — only when the backend has signal.
+            trendIQSection(response)
+
+            // Segment Trajectory Full (pro_seller gate).
+            segmentTrajectoryFullSection
+
+            // Advanced pricing tools.
+            advancedToolsSection(response)
+
+            // Market Analysis group.
+            cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
+                predictedPriceContent(response)
+                zonesCard(response)
+                buyWindowContent(response)
+                confidenceContent(response)
+            }
+
+            // Trends group.
+            cardGroup(title: "Trends", icon: "arrow.triangle.swap") {
+                trendContent(response)
+                trendIQDetailContent(response)
+                broaderTrendContent(response)
+            }
+
+            // Regime group — only when the backend produced regime
+            // classification output.
+            if response.regime != nil || response.regimeDiagnostics != nil {
+                cardGroup(title: "Regime", icon: "waveform.path.ecg") {
+                    regimeContent(response)
                 }
             }
         }
@@ -316,44 +406,41 @@ struct CompIQPricedCardView: View {
 
     private func fmvCard(_ response: CompIQPriceByIdResponse) -> some View {
         VStack(spacing: HobbyIQTheme.Spacing.medium) {
-            // FMV section
+            // CF-VALUE-SPECTRUM (2026-06-10): the price slot now branches
+            // on `estimateSource` so each state reads as visually distinct:
+            //   "observed"           → confident headline "$X"
+            //   "trend-extrapolated" → hedged "~$X" + range + basis
+            //   "last-sale"          → "Last sold $X · N days ago"
+            //   nil                  → "No sales yet — the first one sets
+            //                          the market." (no last-sale path)
+            // Legacy: nil + observed marketTier value → observed treatment.
             VStack(spacing: 8) {
-                sectionHeader(title: "Fair Market Value")
+                priceSlotContent(response)
 
-                Text(response.formattedFMV)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
-
-                // Metadata row
-                HStack(spacing: 12) {
-                    if let high = response.marketTier?.high {
-                        metadataChip(label: "High", value: high.formatted(.currency(code: "USD")))
+                // Metadata chips (High / Grade / Comps) — only meaningful
+                // when the headline IS a confident observed value. The
+                // other branches carry their own range / basis / last-sold
+                // line; chaining "Comps 0 of 0" alongside the empty/last-
+                // sale copy reads as broken.
+                if isObservedBranch(response) {
+                    HStack(spacing: 12) {
+                        if let high = response.marketTier?.high {
+                            metadataChip(label: "High", value: high.formatted(.currency(code: "USD")))
+                        }
+                        if let grade = response.gradeUsed {
+                            metadataChip(label: "Grade", value: grade)
+                        }
+                        if let comps = response.compsUsed {
+                            metadataChip(
+                                label: "Comps",
+                                value: response.compsAvailable.map { available in
+                                    available >= comps ? "\(comps) of \(available)" : "\(comps)"
+                                } ?? "\(comps)"
+                            )
+                        }
                     }
-                    if let grade = response.gradeUsed {
-                        metadataChip(label: "Grade", value: grade)
-                    }
-                    if let comps = response.compsUsed {
-                        // CF-COMP-DETAIL-EXPAND (2026-06-07): show "N of M"
-                        // when compsAvailable is known so the user sees the
-                        // condition-filter delta. Falls back to bare count
-                        // for older responses that don't carry the
-                        // denominator.
-                        metadataChip(
-                            label: "Comps",
-                            value: response.compsAvailable.map { available in
-                                available >= comps ? "\(comps) of \(available)" : "\(comps)"
-                            } ?? "\(comps)"
-                        )
-                    }
+                    .padding(.top, 2)
                 }
-                .padding(.top, 2)
             }
             .frame(maxWidth: .infinity)
 
@@ -408,6 +495,229 @@ struct CompIQPricedCardView: View {
                 .stroke(tint.opacity(0.2), lineWidth: 1.2)
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: - Price slot variants (CF-VALUE-SPECTRUM, 2026-06-10)
+
+    /// Returns true when the price slot should use the confident observed
+    /// treatment. Treats a legacy response (estimateSource absent but
+    /// `marketTier.value` present) as observed for backward compat.
+    private func isObservedBranch(_ response: CompIQPriceByIdResponse) -> Bool {
+        if response.estimateSource == "observed" { return true }
+        return response.estimateSource == nil && response.marketTier?.value != nil
+    }
+
+    /// Routes the price slot to the right variant based on
+    /// `estimateSource`. Default-falls-through to a sensible state when
+    /// the backend didn't ship the discriminator (legacy or thin pool).
+    @ViewBuilder
+    private func priceSlotContent(_ response: CompIQPriceByIdResponse) -> some View {
+        switch response.estimateSource {
+        case "observed":
+            observedPriceSlot(response)
+        case "trend-extrapolated":
+            trendExtrapolatedPriceSlot(response)
+        case "last-sale":
+            lastSalePriceSlot(response)
+        case "no-sales", "no_sales", "none":
+            noSalesYetPriceSlot()
+        case .some:
+            // Unknown enum from a newer backend — degrade gracefully to
+            // the most informative state we can derive locally.
+            fallbackPriceSlot(response)
+        case nil:
+            // Legacy: no estimateSource on the wire. Use the same
+            // heuristic the rest of the view falls back on.
+            fallbackPriceSlot(response)
+        }
+    }
+
+    /// Confident observed value — the canonical "Market value." headline.
+    @ViewBuilder
+    private func observedPriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        VStack(spacing: 4) {
+            Text("Market value")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Text(observedHeadlineString(response))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
+        }
+    }
+
+    private func observedHeadlineString(_ response: CompIQPriceByIdResponse) -> String {
+        if let v = response.marketTier?.value { return v.formatted(.currency(code: "USD")) }
+        if let v = response.marketValue       { return v.formatted(.currency(code: "USD")) }
+        if let v = response.estimatedValue    { return v.formatted(.currency(code: "USD")) }
+        return "—"
+    }
+
+    /// Trend-extrapolated — hedged, NOT a confident headline. The "est."
+    /// marker, secondary weight on the value, and the range + basis lines
+    /// all communicate uncertainty.
+    @ViewBuilder
+    private func trendExtrapolatedPriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Estimated value")
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.0)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .textCase(.uppercase)
+                Text("est.")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(HobbyIQTheme.Colors.warning.opacity(0.18))
+                    .clipShape(Capsule())
+            }
+
+            // Hedged value treatment: "~$X" at secondary weight (regular,
+            // not bold), no gradient/glow — distinct from the observed
+            // headline.
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("~")
+                    .font(.system(size: 34, weight: .regular, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.7))
+                Text(extrapolatedValueString(response))
+                    .font(.system(size: 38, weight: .regular, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+            }
+
+            if let rangeLine = extrapolatedRangeLine(response) {
+                Text(rangeLine)
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+
+            if let basis = trendBasisLine(response) {
+                Text(basis)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    private func extrapolatedValueString(_ response: CompIQPriceByIdResponse) -> String {
+        if let v = response.estimatedValue { return v.formatted(.currency(code: "USD")) }
+        if let v = response.marketValue    { return v.formatted(.currency(code: "USD")) }
+        return "—"
+    }
+
+    private func extrapolatedRangeLine(_ response: CompIQPriceByIdResponse) -> String? {
+        guard let range = response.estimateRange,
+              let low = range.low, let high = range.high else { return nil }
+        return "range \(low.formatted(.currency(code: "USD")))–\(high.formatted(.currency(code: "USD")))"
+    }
+
+    /// Basis line — prefers the backend's `estimateBasis` prose; falls
+    /// back to composing a local sentence from `lastSale` when the wire
+    /// didn't ship one.
+    private func trendBasisLine(_ response: CompIQPriceByIdResponse) -> String? {
+        if let backendBasis = response.estimateBasis?.trimmingCharacters(in: .whitespacesAndNewlines),
+           backendBasis.isEmpty == false {
+            return backendBasis
+        }
+        guard let sale = response.lastSale,
+              let price = sale.price,
+              let days = sale.daysSinceSold else {
+            return nil
+        }
+        return "From the last sale (\(price.formatted(.currency(code: "USD"))), \(daysAgoCopy(days))), adjusted for the set's recent trend."
+    }
+
+    /// Last-sale branch — no estimate offered; just the most recent
+    /// transaction and how stale it is.
+    @ViewBuilder
+    private func lastSalePriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        VStack(spacing: 4) {
+            Text("Last sale")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Text(lastSaleHeadline(response))
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.92))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func lastSaleHeadline(_ response: CompIQPriceByIdResponse) -> String {
+        let priceStr: String? = response.lastSale?.price.map { $0.formatted(.currency(code: "USD")) }
+        let days: Int? = response.lastSale?.daysSinceSold ?? response.daysSinceNewestComp
+        switch (priceStr, days) {
+        case let (p?, d?): return "Last sold \(p) · \(daysAgoCopy(d))"
+        case let (p?, nil): return "Last sold \(p)"
+        case let (nil, d?): return "Last sold \(daysAgoCopy(d))"
+        case (nil, nil):    return "Last sale on file"
+        }
+    }
+
+    /// "No sales yet" state — the first-sale-sets-the-market line.
+    @ViewBuilder
+    private func noSalesYetPriceSlot() -> some View {
+        VStack(spacing: 4) {
+            Text("No sales yet")
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                .multilineTextAlignment(.center)
+            Text("The first one sets the market.")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Fallback for unknown / nil estimateSource. Routes to the most
+    /// informative variant we can derive from what's present.
+    @ViewBuilder
+    private func fallbackPriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        if response.marketTier?.value != nil || response.marketValue != nil {
+            // Legacy observed response.
+            observedPriceSlot(response)
+        } else if response.lastSale?.price != nil {
+            lastSalePriceSlot(response)
+        } else {
+            noSalesYetPriceSlot()
+        }
+    }
+
+    /// Days-ago copy reused by every branch so the language stays
+    /// consistent ("today" / "1 day ago" / "N days ago").
+    private func daysAgoCopy(_ days: Int) -> String {
+        switch days {
+        case ..<0:  return "date unknown"
+        case 0:     return "today"
+        case 1:     return "1 day ago"
+        default:    return "\(days) days ago"
+        }
+    }
+
+    /// Reused by the comps-empty line so it shares one source of truth.
+    private func lastSoldCopy(daysAgo days: Int) -> String {
+        switch days {
+        case ..<0:  return "Last sale date unknown"
+        case 0:     return "Last sold today"
+        case 1:     return "Last sold 1 day ago"
+        default:    return "Last sold \(days) days ago"
+        }
     }
 
     // MARK: - Verdict Pill
@@ -804,48 +1114,6 @@ struct CompIQPricedCardView: View {
         return parts.joined(separator: " ")
     }
 
-    // MARK: - Exit Strategy (inner content)
-
-    @ViewBuilder
-    private func exitStrategyContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let exit = response.exitStrategy, exit.recommendedMethod != nil || exit.timingRecommendation != nil {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Exit Strategy")
-
-                if let method = exit.recommendedMethod {
-                    HStack {
-                        Text("Method")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Spacer()
-                        Text(method)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    }
-                }
-
-                if let days = exit.expectedDaysToSell {
-                    HStack {
-                        Text("Expected Days to Sell")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Spacer()
-                        Text("\(days)")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    }
-                }
-
-                if let timing = exit.timingRecommendation {
-                    Text(timing)
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
     // MARK: - Explanation (inner content)
 
     @ViewBuilder
@@ -905,26 +1173,76 @@ struct CompIQPricedCardView: View {
         }
     }
 
+    // MARK: - Market Read (CF-MARKET-READ, 2026-06-08)
+
+    /// Advisor-voice strategy prose. Body-copy treatment (not a stat card)
+    /// because this is counsel, not a metric — readable line height,
+    /// primary text, no chrome. Disclaimer footnote always appears for
+    /// legal/UX consistency; backend may override the copy via
+    /// `marketReadDisclaimer`, otherwise we fall back to the default.
+    private func marketReadContent(read: String, disclaimer: String?) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(read)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.92))
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            let footnote: String = {
+                if let disclaimer = disclaimer?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   disclaimer.isEmpty == false {
+                    return disclaimer
+                }
+                return "Market guidance, not investment advice."
+            }()
+            Text(footnote)
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     // MARK: - Recent Comps (inner content)
 
-    /// CF-B (2026-06-08): per-mockup row layout —
-    ///   thumbnail | [ price  saleTypeChip  · below market ]
-    ///             | title · date  (single line, ellipsized)
-    /// Header line: "Recent sales" left, "N of M" right (compsUsed of
-    /// compsAvailable). Belt-and-suspenders: section is hidden entirely
-    /// when there are no comps.
+    /// CF-B (2026-06-08): per-mockup row layout.
+    /// CF-NO-VALUE-TAKEOVER (2026-06-10): on thin-pool responses where
+    /// `recentComps` is nil/empty, the section degrades to a single calm
+    /// "No recent sales yet" line + freshness note (rather than the
+    /// section being silently absent). Replaces the prior full-screen
+    /// `insufficientCompsCard` takeover.
     @ViewBuilder
     private func compsContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let comps = response.recentComps, comps.isEmpty == false {
-            VStack(alignment: .leading, spacing: 8) {
-                compsHeader(response)
+        VStack(alignment: .leading, spacing: 8) {
+            compsHeader(response)
+            if let comps = response.recentComps, comps.isEmpty == false {
                 VStack(spacing: 0) {
                     ForEach(Array(comps.enumerated()), id: \.element.id) { index, comp in
                         recentCompRow(comp, showsTopDivider: index > 0)
                     }
                 }
+            } else {
+                noRecentCompsLine(response)
             }
         }
+    }
+
+    /// Calm comps-empty line for thin-pool responses. Replaces the prior
+    /// `insufficientCompsCard` takeover: states the situation in one line,
+    /// optional freshness note when daysSinceNewestComp is present.
+    @ViewBuilder
+    private func noRecentCompsLine(_ response: CompIQPriceByIdResponse) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("No recent sales yet")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+            if let days = response.daysSinceNewestComp {
+                Text(lastSoldCopy(daysAgo: days))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     /// "Recent sales" + "N of M" — only emits the ratio when both counts
@@ -1181,45 +1499,6 @@ struct CompIQPricedCardView: View {
         }
     }
 
-    // MARK: - Freshness (inner content)
-
-    @ViewBuilder
-    private func freshnessContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let f = response.freshness, f.status != nil || f.daysSinceNewestComp != nil {
-            HStack(spacing: 10) {
-                Image(systemName: freshnessIcon(f.status))
-                    .foregroundStyle(freshnessColor(f.status))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(f.status?.capitalized ?? "Unknown")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(freshnessColor(f.status))
-                    if let days = f.daysSinceNewestComp ?? response.daysSinceNewestComp {
-                        Text("Newest comp \(days)d ago")
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                }
-                Spacer()
-                if let deal = response.dealScore {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text("Deal Score")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            HIQHelpButton(
-                                title: "Deal Score",
-                                message: "How attractive this comp looks vs. recent sales, on a 0–100 scale. 70+ is a strong deal, 40–69 is fair, under 40 means it's priced above what comps support."
-                            )
-                        }
-                        Text(String(format: "%.0f", deal))
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(dealScoreColor(deal))
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Predicted Price (CF-COMP-DETAIL-EXPAND, 2026-06-07)
 
     @ViewBuilder
@@ -1469,28 +1748,6 @@ struct CompIQPricedCardView: View {
         }
     }
 
-    // MARK: - Insufficient Comps
-
-    private var insufficientCompsCard: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "chart.bar.xaxis.ascending")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.warning)
-
-            Text("Insufficient Recent Comps")
-                .font(HobbyIQTheme.Typography.cardTitle)
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-            Text("There aren't enough recent sales to price this variant. Try a different grade or check back later.")
-                .font(.subheadline)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-        .hiqCard()
-    }
-
     // MARK: - Loading & Error
 
     private var loadingCard: some View {
@@ -1644,28 +1901,6 @@ struct CompIQPricedCardView: View {
 
     private func buyWindowColor(_ score: Double?) -> Color {
         guard let score else { return HobbyIQTheme.Colors.mutedText }
-        if score >= 70 { return HobbyIQTheme.Colors.successGreen }
-        if score >= 40 { return HobbyIQTheme.Colors.warning }
-        return HobbyIQTheme.Colors.danger
-    }
-
-    private func freshnessIcon(_ status: String?) -> String {
-        switch status?.lowercased() {
-        case "fresh": return "checkmark.seal.fill"
-        case "stale": return "clock.arrow.circlepath"
-        default: return "questionmark.circle"
-        }
-    }
-
-    private func freshnessColor(_ status: String?) -> Color {
-        switch status?.lowercased() {
-        case "fresh": return HobbyIQTheme.Colors.successGreen
-        case "stale": return HobbyIQTheme.Colors.warning
-        default: return HobbyIQTheme.Colors.mutedText
-        }
-    }
-
-    private func dealScoreColor(_ score: Double) -> Color {
         if score >= 70 { return HobbyIQTheme.Colors.successGreen }
         if score >= 40 { return HobbyIQTheme.Colors.warning }
         return HobbyIQTheme.Colors.danger

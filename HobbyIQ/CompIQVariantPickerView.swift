@@ -47,6 +47,11 @@ struct CompIQVariantPickerView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: HobbyIQTheme.Spacing.large) {
+                // Inline Back row replaces the navigation bar so the
+                // content can sit closer to the top edge. Keeps the same
+                // dismiss affordance the toolbar Back button provided.
+                inlineBackBar
+
                 // Show full search card only before the first search;
                 // once results load, collapse to a compact field.
                 if hasSearched {
@@ -57,31 +62,13 @@ struct CompIQVariantPickerView: View {
                 statusSection
                 resultsSection
             }
-            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.top, 4)
             .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
         .background(HobbyIQBackground())
-        .navigationTitle("Find Cards")
-        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Back")
-                            .font(.subheadline.weight(.medium))
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             // Skip auto-load when initialHits were injected (cert resolve bridge).
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && hits.isEmpty {
@@ -92,6 +79,33 @@ struct CompIQVariantPickerView: View {
             // Cancel any in-flight search so a backgrounded view doesn't keep
             // chewing on a slow request that the user has already moved past.
             searchTask?.cancel()
+        }
+    }
+
+    // MARK: - Inline Back Bar (replaces the navigation bar)
+
+    /// Lightweight Back affordance rendered inside the scroll content so
+    /// the system navigation bar can be hidden entirely. Keeps the dismiss
+    /// behavior the toolbar Back button used to provide.
+    private var inlineBackBar: some View {
+        HStack(spacing: 4) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Back")
+                        .font(.subheadline.weight(.medium))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.vertical, 8)
+                .padding(.trailing, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+            Spacer()
         }
     }
 
@@ -193,32 +207,43 @@ struct CompIQVariantPickerView: View {
     private var resultsSection: some View {
         if hits.isEmpty == false {
             VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
-                // Quiet, left-aligned count label — sentence case, pluralized.
-                // Replaces the centered all-caps "N VARIANTS" divider so the
-                // results card feels calm rather than announced.
-                Text(resultsCountLabel)
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .padding(.horizontal, 4)
+                // Picker v2 header: player name once when all rows share a
+                // player, plus "{N} results · Cardsight catalog". On mixed-
+                // player results the player line is suppressed and each row
+                // keeps its small player name instead.
+                resultsHeader
 
                 // Flat results card — no gradient stroke; reserve the hero
-                // gradient for dashboard cards.
+                // gradient for dashboard cards. Rows are FLATTENED so each
+                // base card + each parallel is its own full row, and SORTED
+                // by relevance to the current query so the closest match
+                // ("Blue Refractor /150" when the user searched "blue")
+                // bubbles to the top.
+                let rows = sortedPickerRows
                 LazyVStack(spacing: 0) {
-                    ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
-                        NavigationLink {
-                            CompIQPricedCardView(hit: hit, initialGrade: initialGrade)
-                                .environmentObject(sessionViewModel)
-                        } label: {
-                            variantRow(hit, isLast: index == hits.count - 1)
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                        VStack(alignment: .leading, spacing: 0) {
+                            NavigationLink {
+                                CompIQPricedCardView(hit: row.hit, initialGrade: initialGrade)
+                                    .environmentObject(sessionViewModel)
+                            } label: {
+                                variantRow(row.hit)
+                            }
+                            .buttonStyle(.plain)
+
+                            if index < rows.count - 1 {
+                                Rectangle()
+                                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                                    .frame(height: 1)
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(HobbyIQTheme.Spacing.medium)
                 .background(HobbyIQTheme.Colors.cardNavy)
                 .overlay(
                     RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.35), lineWidth: 1)
+                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
 
@@ -232,85 +257,241 @@ struct CompIQVariantPickerView: View {
         }
     }
 
-    private var resultsCountLabel: String {
-        hits.count == 1 ? "1 result" : "\(hits.count) results"
+    // MARK: - Results header (v2)
+
+    /// Adaptive header: when all rows share the same player, surface the
+    /// name once + count + source. On mixed-player results the player line
+    /// is omitted (each row will carry its own small name instead).
+    /// Cardsearch CAN return mixed players (observed: a "Leo" query
+    /// catching "De Leon" surnames), so the adaptive guard stays.
+    @ViewBuilder
+    private var resultsHeader: some View {
+        let total = sortedPickerRows.count
+        let resultsWord = total == 1 ? "result" : "results"
+        VStack(alignment: .leading, spacing: 2) {
+            if let player = unifiedPlayerName {
+                Text(player)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+            Text("\(total) \(resultsWord) · Cardsight catalog")
+                .font(.system(size: 12))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+        .padding(.horizontal, 4)
     }
 
-    // MARK: - Row
+    /// Single player name shared by every row, or nil when the result set
+    /// spans multiple players (e.g. a "Leo" query that catches "De Leon").
+    private var unifiedPlayerName: String? {
+        let names = Set(
+            sortedPickerRows.compactMap { row -> String? in
+                let trimmed = row.hit.player?.trimmingCharacters(in: .whitespaces) ?? ""
+                return trimmed.isEmpty ? nil : trimmed
+            }
+        )
+        return names.count == 1 ? names.first : nil
+    }
 
-    private func variantRow(_ hit: CompIQVariantHit, isLast: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                variantThumbnail(hit)
+    /// "Base Set" denylist for the subset line. Matches the engineered list
+    /// + the empty/whitespace fallthrough so a row whose set never made it
+    /// onto the wire doesn't render a blank line.
+    private func isBaseSet(_ raw: String?) -> Bool {
+        let normalized = (raw ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalized.isEmpty || normalized == "base set" || normalized == "base"
+    }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    // Player name primary; resolvedLabel fallback only when
-                    // the candidate carries no player.
-                    Text(hit.player ?? hit.resolvedLabel)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        .lineLimit(2)
+    /// Title line: "{year} {brand}". Returns nil when both are missing so
+    /// the view can omit the line cleanly.
+    private func titleLine(for hit: CompIQVariantHit) -> String? {
+        let year = hit.year.map(String.init)
+        let trimmedBrand = hit.brand?.trimmingCharacters(in: .whitespaces)
+        let brand = (trimmedBrand?.isEmpty == false) ? trimmedBrand : nil
+        let head = [year, brand].compactMap { $0 }.joined(separator: " ")
+        return head.isEmpty ? nil : head
+    }
+
+    /// "{parallel} /{run}" line — NO leading separator. Returned for use
+    /// as its own row line (LINE 2 in the fixed-lanes spec).
+    private func parallelLine(for hit: CompIQVariantHit) -> String? {
+        guard let variant = hit.variant?.trimmingCharacters(in: .whitespaces),
+              variant.isEmpty == false else {
+            return nil
+        }
+        if let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces),
+           serial.isEmpty == false {
+            return "\(variant) \(serial.hasPrefix("/") ? serial : "/\(serial)")"
+        }
+        return variant
+    }
+
+    /// Inline Auto badge — solid gold fill (stronger than the prior tinted
+    /// pill) with dark text. Right-pinned on LINE 1; never inline with the
+    /// parallel or in the tags row.
+    private var inlineAutoBadge: some View {
+        let gold = Color(hex: 0xE5B64A)
+        return Text("Auto")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(gold)
+            .clipShape(Capsule())
+    }
+
+    // MARK: - Flattened, ranked row set
+
+    /// Discriminator wrapper so SwiftUI's ForEach has a stable, unique id
+    /// even when the same parallel UUID is referenced under multiple base
+    /// cards (Cardsight's parallel UUIDs are shared across base products).
+    private struct PickerRow: Identifiable {
+        let id: String
+        let hit: CompIQVariantHit
+        let isParallel: Bool
+    }
+
+    /// Flattens the backend's base-candidate-with-nested-parallels shape
+    /// into a single row list — one row per base card AND one row per
+    /// parallel. Identity composes "{baseId}::{parallelId}" so the same
+    /// parallel under two different base products doesn't collide.
+    private var pickerRows: [PickerRow] {
+        var rows: [PickerRow] = []
+        for hit in hits {
+            rows.append(PickerRow(id: hit.cardsightCardId, hit: hit, isParallel: false))
+            if let parallels = hit.parallels, parallels.isEmpty == false {
+                for parallel in parallels {
+                    let synth = parallelHit(parent: hit, parallel: parallel)
+                    rows.append(PickerRow(
+                        id: "\(hit.cardsightCardId)::\(parallel.id)",
+                        hit: synth,
+                        isParallel: true
+                    ))
+                }
+            }
+        }
+        return rows
+    }
+
+    /// Token-coverage relevance sort. Rows whose identity matches MORE
+    /// query tokens float to the top; backend order breaks ties so the
+    /// dispatcher's own ranking is preserved within each tier.
+    private var sortedPickerRows: [PickerRow] {
+        let rows = pickerRows
+        let tokens = query
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split(separator: " ", omittingEmptySubsequences: true)
+            .map(String.init)
+        guard tokens.isEmpty == false else { return rows }
+
+        return rows.enumerated()
+            .map { (idx, row) -> (Int, Int, PickerRow) in
+                (relevanceScore(row.hit, tokens: tokens), idx, row)
+            }
+            .sorted { lhs, rhs in
+                if lhs.0 != rhs.0 { return lhs.0 > rhs.0 }
+                return lhs.1 < rhs.1
+            }
+            .map { $0.2 }
+    }
+
+    private func relevanceScore(_ hit: CompIQVariantHit, tokens: [String]) -> Int {
+        let parts = [
+            hit.player,
+            hit.year.map(String.init),
+            hit.brand,
+            hit.set,
+            hit.title,
+            hit.variant,
+            hit.number,
+        ].compactMap { $0?.lowercased() }
+        let haystack = parts.joined(separator: " ")
+        return tokens.reduce(into: 0) { acc, token in
+            if haystack.contains(token) { acc += 1 }
+        }
+    }
+
+    // MARK: - Row (v3 — fixed lanes)
+
+    private func variantRow(_ hit: CompIQVariantHit) -> some View {
+        let showPlayerOnRow = unifiedPlayerName == nil
+        return HStack(alignment: .center, spacing: 12) {
+            variantThumbnail(hit)
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Per-row player name only when the result set is mixed-
+                // player (header already shows it on unified-player sets).
+                if showPlayerOnRow,
+                   let player = hit.player?.trimmingCharacters(in: .whitespaces),
+                   player.isEmpty == false {
+                    Text(player)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .fixedSize(horizontal: false, vertical: true)
-
-                    // year · setName · #cardNumber — `#cardNumber` segment
-                    // is OMITTED entirely when `hit.number` is null/empty so
-                    // we never render "#null".
-                    let details = [
-                        hit.year.map(String.init),
-                        hit.set?.trimmingCharacters(in: .whitespaces),
-                        hit.number.flatMap { n -> String? in
-                            let trimmed = n.trimmingCharacters(in: .whitespaces)
-                            return trimmed.isEmpty ? nil : "#\(trimmed)"
-                        }
-                    ].compactMap { $0?.trimmingCharacters(in: .whitespaces) }
-                     .filter { !$0.isEmpty }
-                    if !details.isEmpty {
-                        Text(details.joined(separator: " · "))
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .lineLimit(1)
-                    }
-
-                    let pills = variantPills(for: hit)
-                    if pills.isEmpty == false {
-                        WrappingHStack(items: pills) { pill in
-                            variantPill(pill)
-                        }
-                    }
-
-                    variantFootnote(hit)
                 }
 
-                Spacer(minLength: 0)
+                // LINE 1 — flex space-between: title left, Auto badge
+                // pinned RIGHT when this is an auto card. Auto lives ONLY
+                // here, right-aligned — never inline with the parallel.
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if let title = titleLine(for: hit) {
+                        Text(title)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 4)
+                    if hit.isAuto {
+                        inlineAutoBadge
+                    }
+                }
+
+                // LINE 2 — parallel + serial, no leading separator.
+                // Omitted when the row carries no parallel.
+                if let parallel = parallelLine(for: hit) {
+                    Text(parallel)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // LINE 3 — insert/subset name. Base sets ("Base Set" /
+                // "Base" / empty) are suppressed so the row doesn't waste
+                // a lane on a non-disambiguator.
+                if !isBaseSet(hit.set),
+                   let subset = hit.set?.trimmingCharacters(in: .whitespaces),
+                   subset.isEmpty == false {
+                    Text(subset)
+                        .font(.system(size: 13))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // Condition tag — Raw (or grade) only. Parallel and Auto
+                // are on lines 1–2 now, never the tags row.
+                let tags = variantPills(for: hit)
+                if tags.isEmpty == false {
+                    WrappingHStack(items: tags) { pill in
+                        variantPill(pill)
+                    }
+                }
             }
 
-            // CTA: every row carries an explicit affordance so the tap
-            // target's purpose is unmistakable. Replaces the bare chevron.
-            HStack(spacing: 4) {
-                Spacer()
-                Text("Tap to see pricing & comps")
-                    .font(.caption.weight(.semibold))
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-            }
-            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, 10)
         .padding(.horizontal, 4)
-        // Divider between rows only — suppressed under the last row so we
-        // don't double-up against the card's own border.
-        .overlay(alignment: .bottom) {
-            if !isLast {
-                Rectangle()
-                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-                    .frame(height: 1)
-            }
-        }
         .contentShape(Rectangle())
     }
 
-    // MARK: - Thumbnail (with initials fallback)
+    // MARK: - Thumbnail (with initials fallback) — 54×75 per v2
 
     @ViewBuilder
     private func variantThumbnail(_ hit: CompIQVariantHit) -> some View {
@@ -325,11 +506,11 @@ struct CompIQVariantPickerView: View {
                     initialsTile(hit)
                 }
             }
-            .frame(width: 40, height: 56)
+            .frame(width: 54, height: 75)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         } else {
             initialsTile(hit)
-                .frame(width: 40, height: 56)
+                .frame(width: 54, height: 75)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
     }
@@ -359,48 +540,65 @@ struct CompIQVariantPickerView: View {
 
     // MARK: - Pills
 
-    /// Build the ordered pill set for a row per the redesign spec:
-    /// AUTO (if auto) → Raw/grade → RC (when in attributes) → "+N parallels"
-    /// (when parallels present). Cert-style disambiguators that an
-    /// authoritative row carries (specific parallel name, variation, serial)
-    /// still surface so a cert hit isn't conflated with a catalog hit.
+    /// Tags row carries only the condition pill (Raw or grade). Parallel
+    /// and Auto are now expressed on the wrapping title line so the tags
+    /// row collapses to a single chip.
     private func variantPills(for hit: CompIQVariantHit) -> [VariantPill] {
-        var pills: [VariantPill] = []
-
-        if hit.isAuto {
-            pills.append(VariantPill(text: "AUTO", kind: .auto))
-        }
         if let display = hit.gradeDisplay {
-            pills.append(VariantPill(text: display, kind: .grade))
-        } else {
-            pills.append(VariantPill(text: "Raw", kind: .neutral))
+            return [VariantPill(text: display, kind: .grade)]
         }
-        // RC sits in the `attributes` array, not as a flag — surface it as a
-        // pill so the rookie-card signal is scannable at row level.
-        if let attrs = hit.attributes,
-           attrs.contains(where: { $0.caseInsensitiveCompare("RC") == .orderedSame }) {
-            pills.append(VariantPill(text: "RC", kind: .accent))
-        }
-        // Specific cert-side disambiguators — emit only when the candidate
-        // actually committed to a specific parallel/variation/serial. The
-        // catalog-side "summary" of "+N parallels" comes after these.
-        if let parallel = hit.variant?.trimmingCharacters(in: .whitespaces), !parallel.isEmpty {
-            pills.append(VariantPill(text: parallel, kind: .accent))
-        }
-        if let variation = hit.variation?.trimmingCharacters(in: .whitespaces), !variation.isEmpty {
-            pills.append(VariantPill(text: variation, kind: .neutral))
-        }
-        if let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces), !serial.isEmpty {
-            pills.append(VariantPill(text: serial.hasPrefix("/") ? serial : "/\(serial)", kind: .neutral))
-        }
-        // Catalog parallels summary: only show when the candidate didn't
-        // already pin a specific parallel (otherwise it's redundant).
-        if let parallels = hit.parallels, parallels.isEmpty == false,
-           (hit.variant?.trimmingCharacters(in: .whitespaces).isEmpty ?? true) {
-            pills.append(VariantPill(text: "+\(parallels.count) parallels", kind: .neutral))
-        }
+        return [VariantPill(text: "Raw", kind: .neutral)]
+    }
 
-        return pills
+    // MARK: - Parallel hit synthesis (used by the flattened row list)
+
+    /// Synthesizes a child `CompIQVariantHit` for a tapped parallel so the
+    /// existing `CompIQPricedCardView` flow can drive a comp page for that
+    /// parallel without a new view path. Wire contract:
+    ///   - `cardsightCardId` = `parallel.id` — best guess at the per-parallel
+    ///     pricing id. If backend rejects (no per-parallel pricing for this
+    ///     row), the comp page surfaces a "no comps" state rather than
+    ///     crashing.
+    ///   - `variant` = `parallel.name` so the comp header reads
+    ///     "{player} · {parallel}".
+    ///   - `serialNumber` = `/{numberedTo}` when present, so the priced
+    ///     card surfaces the print run too.
+    /// All identity carry-over (player/year/set/brand/etc.) comes from
+    /// the parent hit so the comp page identity matches the row the user
+    /// tapped from.
+    private func parallelHit(parent: CompIQVariantHit, parallel: CompIQCardsightParallel) -> CompIQVariantHit {
+        let serial = parallel.numberedTo.map { "/\($0)" }
+        let parallelTitle: String? = {
+            if let parentTitle = parent.title?.trimmingCharacters(in: .whitespaces),
+               parentTitle.isEmpty == false {
+                return "\(parentTitle) \(parallel.name)"
+            }
+            return parallel.name
+        }()
+        return CompIQVariantHit(
+            cardsightCardId: parallel.id,
+            player: parent.player,
+            set: parent.set,
+            year: parent.year,
+            number: parent.number,
+            variant: parallel.name,
+            title: parallelTitle,
+            displayLabel: nil,
+            imageUrl: parent.imageUrl,
+            brand: parent.brand,
+            variation: nil,
+            isAuto: parent.isAuto,
+            serialNumber: serial,
+            gradeCompany: nil,
+            gradeValue: nil,
+            grade: nil,
+            certNumber: nil,
+            source: parent.source,
+            attribution: parent.attribution,
+            confidence: parent.confidence,
+            attributes: parent.attributes,
+            parallels: nil
+        )
     }
 
     private struct VariantPill: Hashable {
@@ -444,39 +642,6 @@ struct CompIQVariantPickerView: View {
                     HobbyIQTheme.Colors.electricBlue.opacity(0.18),
                     HobbyIQTheme.Colors.electricBlue.opacity(0.5))
         }
-    }
-
-    // MARK: - Footnote (source + neutral approximate-match hint + cert #)
-
-    @ViewBuilder
-    private func variantFootnote(_ hit: CompIQVariantHit) -> some View {
-        let parts = footnoteParts(hit)
-        if parts.isEmpty == false {
-            Text(parts.joined(separator: " · "))
-                .font(.caption2)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-    }
-
-    /// Footnote text. NEVER color-coded; never red.
-    /// "approximate match" surfaces ONLY when the candidate is genuinely
-    /// low-confidence AND there is more than one candidate to choose from
-    /// (a single-result page can't be ambiguous — calling it "low match"
-    /// just looks like a system failure to the user).
-    private func footnoteParts(_ hit: CompIQVariantHit) -> [String] {
-        var parts: [String] = []
-        if let label = hit.sourceLabel, label.isEmpty == false {
-            parts.append(label)
-        }
-        if hits.count > 1, hit.confidenceLevel == .low {
-            parts.append("approximate match")
-        }
-        if let cert = hit.certNumber?.trimmingCharacters(in: .whitespaces), cert.isEmpty == false {
-            parts.append("Cert #\(cert)")
-        }
-        return parts
     }
 
     // MARK: - Shimmer

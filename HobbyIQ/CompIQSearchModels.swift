@@ -327,12 +327,13 @@ struct CompIQPriceCardIdentity: Codable, Hashable {
     let cardId: String?
     let player: String?
     let set: String?
+    let year: Int?
     let number: String?
     let variant: String?
 
     private enum CodingKeys: String, CodingKey {
         case cardId = "card_id"
-        case player, set, number, variant
+        case player, set, year, number, variant
     }
 }
 
@@ -376,6 +377,26 @@ struct CompIQPriceExcludedComp: Codable, Hashable, Identifiable {
 
     var parsedDate: Date? { CompIQCompDateParser.parse(date) }
     var relativeDate: String { CompIQCompDateParser.relative(date) }
+}
+
+/// CF-VALUE-SPECTRUM (2026-06-10): single last-sale envelope used by the
+/// price slot when the engine has no observed value but a recent sale on
+/// file. Same date parser as recentComps for consistency.
+struct CompIQLastSale: Codable, Hashable {
+    let price: Double?
+    let soldDate: String?
+    let listingType: String?
+
+    var parsedDate: Date? { CompIQCompDateParser.parse(soldDate) }
+
+    /// Whole-day distance from the parsed sold date to "now". Returns nil
+    /// when soldDate is missing or unparseable.
+    var daysSinceSold: Int? {
+        guard let date = parsedDate else { return nil }
+        let cal = Calendar.current
+        let now = Date()
+        return cal.dateComponents([.day], from: date, to: now).day
+    }
 }
 
 /// Shared ISO8601 parser for recent + excluded comp date fields. Backend
@@ -422,6 +443,41 @@ struct CompIQPriceExitStrategy: Codable, Hashable {
     let recommendedMethod: String?
     let expectedDaysToSell: Int?
     let timingRecommendation: String?
+}
+
+/// CF-MARKET-READ (2026-06-08): advisor-voice strategy block on the
+/// pricing response. Replaces the now-deprecated `exitStrategy` +
+/// `freshness` pair on engine `e541463+`. `marketRead` is full prose;
+/// `marketReadFactPack` is the structured backing data the prose was
+/// generated from. The fact pack is decoded for availability but not
+/// rendered — the view treats `marketRead` as the canonical surface.
+struct CompIQMarketReadFactPack: Codable, Hashable {
+    let cardId: String?
+    let grade: String?
+    let sampleUsed: Int?
+    let sampleAvailable: Int?
+    let windowDays: Int?
+    let priceMin: Double?
+    let priceMax: Double?
+    let binMedian: Double?
+    let binCount: Int?
+    let binPriceMin: Double?
+    let binPriceMax: Double?
+    let auctionMedian: Double?
+    let auctionCount: Int?
+    let trendDirection: String?
+    let trendPct: Double?
+    let excludedCount: Int?
+    let excludedPriceMin: Double?
+    let excludedPriceMax: Double?
+    let topExclusionReasons: [CompIQMarketReadExclusionReason]?
+    let fmv: Double?
+}
+
+struct CompIQMarketReadExclusionReason: Codable, Hashable {
+    let reason: String?
+    let count: Int?
+    let label: String?
 }
 
 // MARK: - TrendIQ
@@ -533,6 +589,37 @@ struct CompIQPriceByIdResponse: Codable {
     let dataSufficiency: String?
     let trendIQ: TrendIQResponse?
 
+    /// CF-MARKET-READ (2026-06-08): advisor-voice prose for the Strategy
+    /// group. Replaces `exitStrategy` + `freshness` on engine `e541463+`.
+    /// Nil/empty → hide the Strategy group entirely.
+    let marketRead: String?
+    /// Optional disclaimer footnote shown beneath `marketRead`. The view
+    /// substitutes a default ("Market guidance, not investment advice.")
+    /// when the wire field is nil so the legal footnote always appears.
+    let marketReadDisclaimer: String?
+    /// Structured backing data for `marketRead`. Decoded for availability
+    /// but not rendered.
+    let marketReadFactPack: CompIQMarketReadFactPack?
+
+    /// CF-VALUE-SPECTRUM (2026-06-10): discriminator for the price-slot
+    /// rendering. Wire values: `"observed"`, `"trend-extrapolated"`,
+    /// `"last-sale"`, or nil (no sales / unknown). The view branches
+    /// directly on this — legacy responses (estimateSource missing but
+    /// `marketTier?.value` present) fall back to the observed treatment.
+    let estimateSource: String?
+    /// Engine's central estimate for the "trend-extrapolated" branch.
+    /// Distinct from `marketValue` (which only fills on observed).
+    let estimatedValue: Double?
+    /// Hedged range that accompanies the extrapolated estimate.
+    let estimateRange: CompIQPriceRange?
+    /// One-line basis prose explaining how the extrapolated estimate was
+    /// derived (e.g. "From the last sale ($A, N days ago), adjusted for
+    /// the set's recent trend.").
+    let estimateBasis: String?
+    /// Last sale envelope for the "last-sale" branch and the basis line
+    /// on extrapolated branches.
+    let lastSale: CompIQLastSale?
+
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
     }
@@ -624,6 +711,14 @@ struct CompIQPriceByIdResponse: Codable {
         compQuality = try? container.decodeIfPresent(String.self, forKey: .compQuality)
         dataSufficiency = try? container.decodeIfPresent(String.self, forKey: .dataSufficiency)
         trendIQ = try? container.decodeIfPresent(TrendIQResponse.self, forKey: .trendIQ)
+        marketRead = try? container.decodeIfPresent(String.self, forKey: .marketRead)
+        marketReadDisclaimer = try? container.decodeIfPresent(String.self, forKey: .marketReadDisclaimer)
+        marketReadFactPack = try? container.decodeIfPresent(CompIQMarketReadFactPack.self, forKey: .marketReadFactPack)
+        estimateSource = try? container.decodeIfPresent(String.self, forKey: .estimateSource)
+        estimatedValue = try? container.decodeIfPresent(Double.self, forKey: .estimatedValue)
+        estimateRange = try? container.decodeIfPresent(CompIQPriceRange.self, forKey: .estimateRange)
+        estimateBasis = try? container.decodeIfPresent(String.self, forKey: .estimateBasis)
+        lastSale = try? container.decodeIfPresent(CompIQLastSale.self, forKey: .lastSale)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -638,5 +733,7 @@ struct CompIQPriceByIdResponse: Codable {
         case exitStrategy, dealScore, variantWarning
         case compQuality, dataSufficiency, trendIQ
         case regime, regimeConfidence, regimeDiagnostics
+        case marketRead, marketReadDisclaimer, marketReadFactPack
+        case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
     }
 }

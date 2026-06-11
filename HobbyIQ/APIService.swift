@@ -106,9 +106,20 @@ struct APIService {
     }
 
     func priceByCardId(cardsightCardId: String, query: String?, gradeCompany: String?, gradeValue: Double?) async throws -> CompIQPriceByIdResponse {
+        // CF-PRICE-BY-ID-ROUTE (2026-06-07): when a candidate id is pinned,
+        // send id + grade ONLY — omit a meaningful query. Backend treats a
+        // non-empty `query` alongside `cardsightCardId` as free-text intent
+        // and routes through findCompsRouted, which bypasses the pinned-card
+        // schema fix and the returned-id consistency guard shipped in
+        // f7d2f97 (resulting in Frazier $1 / 4-of-4 instead of Trout $377 /
+        // 20-of-26 for fda530ab…). Forcing query=nil here drops
+        // hasMeaningfulQuery=true on the backend so the request lands on
+        // the pinned path. Callers keep their query string for ergonomics;
+        // we only strip it on the wire when an id is actually present.
+        let pinnedQuery: String? = cardsightCardId.isEmpty ? query : nil
         let body = CompIQPriceByIdRequest(
             cardsightCardId: cardsightCardId,
-            query: query,
+            query: pinnedQuery,
             gradeCompany: gradeCompany,
             gradeValue: gradeValue
         )
