@@ -3217,11 +3217,27 @@ export async function computeEstimate(
   const lastSale = lastSalePick;
 
   const compCount = fetched.comps.length;
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): treat title-match-recovered
+  // pools as "by definition recent enough" — the recovery isolated a
+  // CLEAN parallel-specific sub-market via title tokens + sibling guard +
+  // span-scoped finish-vocab backstop. For a rare /150 parallel a 30-day-
+  // old sale is the truth; the age-based insufficient floor exists to
+  // protect against "single stale base-mixed sale anchoring a generic
+  // request," which doesn't apply to the recovery branch. The display
+  // disclosure (dataSufficiency.level + priceSource="approximate") and
+  // the corpus guardrail (low-sample → fmv=null at emit) carry the
+  // confidence story; the on-screen FMV is honest for what it is.
+  // compCount === 0 still nulls (recovery returned nothing usable).
+  const isRecoveryIsolatedPoolForCount =
+    fetched.priceSourceInternal === "title-matched-parallel"
+    || fetched.priceSourceInternal === "title-match-low-sample";
   const insufficient =
-    compCount === 0 ||
-    (compCount === 1 && (daysSinceNewest == null || daysSinceNewest > 14)) ||
-    (compCount === 2 && (daysSinceNewest == null || daysSinceNewest > 180)) ||
-    (compCount >= 3 && (daysSinceNewest == null || daysSinceNewest > 365));
+    compCount === 0
+    || (!isRecoveryIsolatedPoolForCount && (
+      (compCount === 1 && (daysSinceNewest == null || daysSinceNewest > 14)) ||
+      (compCount === 2 && (daysSinceNewest == null || daysSinceNewest > 180)) ||
+      (compCount >= 3 && (daysSinceNewest == null || daysSinceNewest > 365))
+    ));
 
   if (insufficient) {
     const mechanism1 = computeMultiplierAnchoredPredictedPrice({
