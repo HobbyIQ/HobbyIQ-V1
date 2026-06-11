@@ -9,6 +9,8 @@ import {
   TARGET_GRADES,
   type GradedProjectionResult,
 } from "../src/services/compiq/gradedPriceProjection.js";
+import { selectSalesByGrade } from "../src/services/compiq/compiqEstimate.service.js";
+import { isBaseTitle } from "../src/services/compiq/parallelTitleMatch.js";
 import type {
   CardsightPricingResponse,
   CardsightSaleRecord,
@@ -288,54 +290,50 @@ function byGrade(results: GradedProjectionResult[], label: string): GradedProjec
   return found!;
 }
 
+// Strip the synthetic $1,299.99 PSA 10 Blue Refractor record from the
+// Leo fixture so the parallel test can exercise the "PSA 10 emit" branch.
+// (With the GUARD active, leaving the record in skips PSA 10 entirely —
+// a separate assertion below confirms that behavior.)
+function makeLeoParallelPricingNoBlueGraded(): CardsightPricingResponse {
+  const fixture = makeLeoPricing();
+  const newGraded = (fixture.graded ?? []).map((co) => {
+    if (co.company_name !== "PSA") return co;
+    return {
+      ...co,
+      grades: (co.grades ?? []).map((g) => {
+        if (Number(g.grade_value) !== 10) return g;
+        return {
+          ...g,
+          records: (g.records ?? []).filter((r) => r.price !== 1299.99),
+        };
+      }),
+    };
+  });
+  return { ...fixture, graded: newGraded };
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────
 
-describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries (modern thin coverage)", () => {
-  const pricing = makeLeoPricing();
-
-  it("BASE TARGET — PSA 10 ≈ baseRawMed × 2.560 from tier-1 card-specific ratio", () => {
-    const out = computeGradedProjection({ pricing });
+describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-fill)", () => {
+  it("GUARD — PSA 10 + PSA 9 SKIPPED entirely (have ≥1 observed base sale)", () => {
+    const out = computeGradedProjection({ pricing: makeLeoPricing() });
     expectAllFmvNull(out);
-
-    const psa10 = byGrade(out, "PSA 10");
-    expect(psa10.confidenceTier).toBe("estimate");
-    expect(psa10.ratioSource).toBe("card");
-    expect(psa10.anchorKind).toBe("base");
-    // baseRawMed should be ≈ $228.93 per the fixture
-    expect(psa10.diagnostics.baseRawMedian).toBeCloseTo(228.93, 1);
-    // Card-specific PSA 10 base median should be 586 (9 base records, median)
-    expect(psa10.diagnostics.cardSpecificBaseSamples).toBe(9);
-    expect(psa10.diagnostics.targetGradeBaseMedian).toBeCloseTo(586, 1);
-    // Implied ratio ≈ 2.560
-    expect(psa10.diagnostics.ratio!).toBeCloseTo(2.560, 2);
-    // Point estimate ≈ 228.93 × 2.560 ≈ $586
-    expect(psa10.estimatedValue!).toBeGreaterThan(550);
-    expect(psa10.estimatedValue!).toBeLessThan(620);
-    // ±10% band
-    expect(psa10.estimateLow!).toBeCloseTo(psa10.estimatedValue! * 0.9, 1);
-    expect(psa10.estimateHigh!).toBeCloseTo(psa10.estimatedValue! * 1.1, 1);
+    const grades = new Set(out.map((r) => r.grade));
+    expect(grades.has("PSA 10")).toBe(false);
+    expect(grades.has("PSA 9")).toBe(false);
+    // Output should contain only the gap grades.
+    expect(out.length).toBe(2);
   });
 
-  it("BASE TARGET — PSA 9 ≈ baseRawMed × 0.961 (close-to-parity tier-1)", () => {
-    const out = computeGradedProjection({ pricing });
-    const psa9 = byGrade(out, "PSA 9");
-    expect(psa9.confidenceTier).toBe("estimate");
-    expect(psa9.ratioSource).toBe("card");
-    expect(psa9.diagnostics.cardSpecificBaseSamples).toBe(11);
-    expect(psa9.diagnostics.targetGradeBaseMedian).toBeCloseTo(220.05, 1);
-    expect(psa9.diagnostics.ratio!).toBeCloseTo(0.961, 2);
-    expect(psa9.estimatedValue!).toBeCloseTo(228.93 * 0.961, 0);
-  });
-
-  it("BASE TARGET — BGS 9.5 + SGC 10 fall through to tier-3 market premium (ballpark)", () => {
-    const out = computeGradedProjection({ pricing });
+  it("BGS 9.5 + SGC 10 EMITTED via tier-3 market premium (ballpark)", () => {
+    const out = computeGradedProjection({ pricing: makeLeoPricing() });
 
     const bgs95 = byGrade(out, "BGS 9.5");
     expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.ratioSource).toBe("market");
     expect(bgs95.anchorKind).toBe("base");
     expect(bgs95.diagnostics.cardSpecificBaseSamples).toBe(0);
-    // BGS 9.5 market premium = 3.5x per GRADER_PREMIUMS
+    // BGS 9.5 market premium = 3.5× per GRADER_PREMIUMS
     expect(bgs95.diagnostics.ratio).toBe(3.5);
     expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.5, 1);
     // ±30% band on ballpark
@@ -349,19 +347,30 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries (modern thin coverage)", (
     expect(sgc10.estimatedValue!).toBeCloseTo(228.93 * 3.4, 1);
   });
 
-  it("BASE TARGET — PSA 10 base ratio EXCLUDES the $1,299.99 parallel record", () => {
-    const out = computeGradedProjection({ pricing });
-    const psa10 = byGrade(out, "PSA 10");
-    // If the parallel had been included, n_base would be 10 and median would
-    // shift toward $613ish. The base-only filter must hold the median at 586.
-    expect(psa10.diagnostics.cardSpecificBaseSamples).toBe(9);
-    expect(psa10.diagnostics.targetGradeBaseMedian).toBeCloseTo(586, 1);
+  it("BASE RAW ANCHOR — diagnostics confirm the 6 parallel raw records are excluded (n=24, not 30)", () => {
+    // The fixture has 30 raw records (24 base + 6 parallel). The base
+    // anchor must be computed from the 24 base records ONLY. This was the
+    // pre-GUARD assertion for "PSA 10 base ratio excludes the parallel
+    // record" — now expressed against an emitted grade's diagnostic.
+    const out = computeGradedProjection({ pricing: makeLeoPricing() });
+    expect(out.length).toBeGreaterThan(0);
+    for (const r of out) {
+      expect(r.diagnostics.baseRawSampleCount).toBe(24);
+      expect(r.diagnostics.baseRawMedian).toBeCloseTo(228.93, 1);
+    }
   });
+});
 
-  it("PARALLEL TARGET (Blue /150, observed anchor $1,183) — PSA 10 = $1,183 × base ratio (2.56), confidenceTier='rough'", () => {
+describe("CF-GRADED-PRICE-PROJECTION — Leo Blue /150 PARALLEL target", () => {
+  const BLUE_PID = "0383bf13-523d-407d-b69e-53d33c2a775f";
+
+  it("PSA 10 EMITTED as rough ($1,183 × card ratio 2.560), basis names parallel-observed anchor", () => {
+    // Use the pricing fixture WITHOUT the synthetic $1,299.99 Blue
+    // Refractor PSA 10 record, mirroring Leo's production state
+    // (Cardsight has 0 graded Blue Refractor records for him).
     const out = computeGradedProjection({
-      pricing,
-      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: BLUE_PID,
       targetParallelRawFmv: 1183,
       targetParallelName: "Blue Refractor",
     });
@@ -369,78 +378,57 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries (modern thin coverage)", (
 
     const psa10 = byGrade(out, "PSA 10");
     expect(psa10.confidenceTier).toBe("rough");
-    expect(psa10.ratioSource).toBe("card"); // ratio still borrowed from base
+    expect(psa10.ratioSource).toBe("card"); // borrowed from base
     expect(psa10.anchorKind).toBe("parallel-observed");
     expect(psa10.diagnostics.anchorPrice).toBe(1183);
     expect(psa10.diagnostics.ratio!).toBeCloseTo(2.560, 2);
     expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
-    // Basis names the single-sale anchor + base-premium borrow
     expect(psa10.basis).toContain("parallel raw anchor");
     expect(psa10.basis).toContain("base graded comps");
-    // ±20% rough band
+    // ±20% band on rough
     expect(psa10.estimateLow!).toBeCloseTo(psa10.estimatedValue! * 0.8, 1);
     expect(psa10.estimateHigh!).toBeCloseTo(psa10.estimatedValue! * 1.2, 1);
   });
+
+  it("GUARD on PARALLEL scope — $1,299.99 Blue Refractor PSA 10 record IS observed → PSA 10 SKIPPED", () => {
+    // ORIGINAL fixture with the $1,299.99 record present. Title contains
+    // "Blue Refractor" tokens, so the parallel-scope guard sees it as
+    // observed → PSA 10 must NOT be emitted.
+    const out = computeGradedProjection({
+      pricing: makeLeoPricing(),
+      targetParallelId: BLUE_PID,
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+    });
+    const grades = new Set(out.map((r) => r.grade));
+    expect(grades.has("PSA 10")).toBe(false);
+    // The other grades have zero parallel-scope observed records → emitted.
+    expect(grades.has("PSA 9")).toBe(true);
+    expect(grades.has("BGS 9.5")).toBe(true);
+    expect(grades.has("SGC 10")).toBe(true);
+  });
 });
 
-describe("CF-GRADED-PRICE-PROJECTION — Trout (liquid coverage + dup-bucket quirk)", () => {
-  const pricing = makeTroutPricing();
-
-  it("BASE TARGET — full liquid set hits tier-1 except SGC 10 (below threshold)", () => {
-    const out = computeGradedProjection({ pricing });
-    expectAllFmvNull(out);
-    expect(out.length).toBe(TARGET_GRADES.length);
-
-    const psa10 = byGrade(out, "PSA 10");
-    expect(psa10.confidenceTier).toBe("estimate");
-    expect(psa10.ratioSource).toBe("card");
-    expect(psa10.diagnostics.targetGradeBaseMedian).toBeCloseTo(1003.5, 1);
-
-    const psa9 = byGrade(out, "PSA 9");
-    expect(psa9.confidenceTier).toBe("estimate");
-    expect(psa9.ratioSource).toBe("card");
-
-    const bgs95 = byGrade(out, "BGS 9.5");
-    expect(bgs95.confidenceTier).toBe("estimate");
-    expect(bgs95.ratioSource).toBe("card");
-    expect(bgs95.diagnostics.targetGradeBaseMedian).toBeCloseTo(625, 1);
-
-    // SGC 10 — only 2 base records → tier-1 misses → market fallback
-    const sgc10 = byGrade(out, "SGC 10");
-    expect(sgc10.confidenceTier).toBe("ballpark");
-    expect(sgc10.ratioSource).toBe("market");
-    expect(sgc10.diagnostics.cardSpecificBaseSamples).toBe(2);
-  });
-
-  it("PSA 9 DUP-BUCKET MERGE — both grades[] entries fold into a single n=8 base pool", () => {
-    const out = computeGradedProjection({ pricing });
-    const psa9 = byGrade(out, "PSA 9");
-    // BucketA = 5 + BucketB = 3 → merged should be 8 base records.
-    expect(psa9.diagnostics.cardSpecificBaseSamples).toBe(8);
-    // Concatenated median sanity: [388, 379.99, 389.99, 399.99, 405, 409.99, 412, 419.99]
-    // → sorted: 379.99, 388, 389.99, 399.99, 405, 409.99, 412, 419.99
-    // → median of 8 = (399.99 + 405) / 2 ≈ 402.495
-    expect(psa9.diagnostics.targetGradeBaseMedian!).toBeGreaterThan(390);
-    expect(psa9.diagnostics.targetGradeBaseMedian!).toBeLessThan(420);
-  });
-
-  it("BASE ANCHOR — parallel records are excluded from baseRawMedian", () => {
-    const out = computeGradedProjection({ pricing });
-    const any = out[0];
-    // Fixture has 13 base raw + 2 parallel raw. Base count must be 13.
-    expect(any.diagnostics.baseRawSampleCount).toBe(13);
-    expect(any.diagnostics.baseRawMedian).toBeCloseTo(299.995, 2);
+describe("CF-GRADED-PRICE-PROJECTION — Trout (full coverage proof)", () => {
+  it("EVERY target grade has observed base sales → ZERO estimates emitted", () => {
+    // Trout's fixture covers PSA 10 + PSA 9 + BGS 9.5 + SGC 10 with
+    // observed base records (PSA 10 n=11, PSA 9 dup-bucket n=8, BGS 9.5
+    // n=7, SGC 10 n=2 — all ≥1, all GUARD-triggering). The estimator
+    // must return zero results: it fills gaps, never overlays observed.
+    const out = computeGradedProjection({ pricing: makeTroutPricing() });
+    expect(out).toEqual([]);
   });
 });
 
 describe("CF-GRADED-PRICE-PROJECTION — display-not-train discipline", () => {
-  it("EVERY result on EVERY card carries marketValue=null AND fairMarketValue=null", () => {
+  it("EVERY emitted result on EVERY card carries marketValue=null AND fairMarketValue=null", () => {
     for (const pricing of [makeLeoPricing(), makeTroutPricing()]) {
       const baseOut = computeGradedProjection({ pricing });
       const parallelOut = computeGradedProjection({
         pricing,
         targetParallelId: "test-parallel",
         targetParallelRawFmv: 500,
+        targetParallelName: "Some Parallel",
       });
       expectAllFmvNull(baseOut);
       expectAllFmvNull(parallelOut);
@@ -450,9 +438,10 @@ describe("CF-GRADED-PRICE-PROJECTION — display-not-train discipline", () => {
     }
   });
 
-  it("EVERY result has a basis string naming the anchor + ratio source", () => {
+  it("EVERY emitted result has a basis string naming anchor + ratio", () => {
     const pricing = makeLeoPricing();
     const out = computeGradedProjection({ pricing });
+    expect(out.length).toBeGreaterThan(0);
     for (const r of out) {
       expect(typeof r.basis).toBe("string");
       expect(r.basis.length).toBeGreaterThan(20);
@@ -461,8 +450,63 @@ describe("CF-GRADED-PRICE-PROJECTION — display-not-train discipline", () => {
   });
 });
 
+describe("CF-GRADED-PRICE-PROJECTION — FMV regression (the proof)", () => {
+  // The invariant: the estimator's presence never moves a single
+  // observed number. Operationally, this means every grade that
+  // appears in the estimator output is GUARANTEED to carry zero
+  // observed comps in the requested scope — proof that the GUARD
+  // truly prevents overlay. When Phase 1b wires the estimator into
+  // the response, this property survives.
+
+  it("BASE scope INVARIANT — every emitted grade has zero base observed records (any fixture)", () => {
+    // Use the imports the engine itself uses, so the test is a direct
+    // mirror of the GUARD's own definition of "observed".
+    for (const pricing of [makeLeoPricing(), makeTroutPricing()]) {
+      const out = computeGradedProjection({ pricing });
+      for (const r of out) {
+        const records = selectSalesByGrade(pricing, r.grade);
+        const baseN = records.filter(
+          (rec: CardsightSaleRecord) =>
+            rec.parallel_id == null && isBaseTitle(rec.title),
+        ).length;
+        expect(
+          baseN,
+          `${r.grade} emitted estimate while ${baseN} base observed records exist`,
+        ).toBe(0);
+      }
+    }
+  });
+
+  it("PARALLEL scope INVARIANT — every emitted grade has zero parallel-scope observed records", () => {
+    const BLUE_PID = "0383bf13-523d-407d-b69e-53d33c2a775f";
+
+    const pricing = makeLeoPricing();
+    const out = computeGradedProjection({
+      pricing,
+      targetParallelId: BLUE_PID,
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+    });
+    for (const r of out) {
+      const records = selectSalesByGrade(pricing, r.grade) as CardsightSaleRecord[];
+      // Strict tag
+      const strict = records.filter((rec) => rec.parallel_id === BLUE_PID).length;
+      // Title-token fallback (matches engine's GUARD logic)
+      const titleMatch = records.filter((rec) => {
+        const t = String(rec.title ?? "").toLowerCase();
+        return /\bblue\b/.test(t) && /\brefractor\b/.test(t);
+      }).length;
+      const parallelObserved = strict > 0 ? strict : titleMatch;
+      expect(
+        parallelObserved,
+        `${r.grade} emitted estimate while ${parallelObserved} parallel-scope observed records exist`,
+      ).toBe(0);
+    }
+  });
+});
+
 describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {
-  it("empty pricing → all results are insufficient", () => {
+  it("empty pricing → no observed (GUARD doesn't fire) → all results 'insufficient'", () => {
     const empty: CardsightPricingResponse = {
       card: { card_id: "x", name: "x", number: "x" } as any,
       raw: { count: 0, records: [] },
@@ -470,6 +514,11 @@ describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {
       meta: { total_records: 0, last_sale_date: null },
     } as CardsightPricingResponse;
     const out = computeGradedProjection({ pricing: empty });
+    // GUARD doesn't fire (no observed anywhere), so all 4 grades reach
+    // the ratio + emit step. Anchor is null → confidenceTier="insufficient",
+    // value/range null. The output is non-empty but every entry is honest
+    // "no data" — never a hallucinated number.
+    expect(out.length).toBe(TARGET_GRADES.length);
     for (const r of out) {
       expect(r.confidenceTier).toBe("insufficient");
       expect(r.anchorKind).toBe("none");

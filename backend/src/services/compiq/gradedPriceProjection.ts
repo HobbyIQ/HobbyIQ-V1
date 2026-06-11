@@ -28,6 +28,7 @@ import {
 } from "./compiqEstimate.service.js";
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
+import { tokenizeParallel } from "./cardsight.mapper.js";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -136,6 +137,63 @@ function fmtUSD(n: number): string {
 function isBaseRecord(r: CardsightSaleRecord): boolean {
   if (r.parallel_id != null) return false;
   return isBaseTitle(r.title);
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * CF-GRADED-PRICE-PROJECTION (2026-06-12) — observed-first precedence GUARD.
+ *
+ * Counts the OBSERVED comps a target grade carries within the requested
+ * scope (base or parallel). The estimator NEVER emits a result when this
+ * returns > 0 — observed data always wins; the estimator fills gaps,
+ * never competes with real sales.
+ *
+ * Scope rules:
+ *   - BASE target (no parallelId): count records that pass `isBaseRecord`
+ *     (parallel_id null AND title carries no finish-vocab tokens).
+ *   - PARALLEL target: count records that match the parallel by EITHER
+ *       (a) `parallel_id === targetParallelId` (strict Cardsight tag), OR
+ *       (b) title contains ALL user-parallel tokens as word-boundary
+ *           matches (covers untagged parallels — Cardsight's tagging is
+ *           unreliable for many cards; see cardsight.client.ts:513-522).
+ *     This intentionally over-counts toward "observed" — better to skip
+ *     a justified estimate than to overlay one on real data.
+ */
+function countObservedInScope(
+  pricing: CardsightPricingResponse,
+  company: string,
+  grade: string,
+  targetParallelId: string | null | undefined,
+  targetParallelName: string | null | undefined,
+): number {
+  const records = selectSalesByGrade(pricing, `${company} ${grade}`);
+  if (records.length === 0) return 0;
+
+  // BASE scope
+  if (!targetParallelId) {
+    return records.filter(isBaseRecord).length;
+  }
+
+  // PARALLEL scope — strict tag first
+  const strict = records.filter((r) => r.parallel_id === targetParallelId);
+  if (strict.length > 0) return strict.length;
+
+  // PARALLEL scope — title-token fallback (untagged Cardsight records)
+  if (targetParallelName) {
+    const tokens = tokenizeParallel(targetParallelName);
+    if (tokens.length === 0) return 0;
+    const patterns = tokens.map(
+      (t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"),
+    );
+    return records.filter((r) => {
+      const title = r.title ?? "";
+      return patterns.every((p) => p.test(title));
+    }).length;
+  }
+  return 0;
 }
 
 // ── Anchor resolution ──────────────────────────────────────────────────────
@@ -320,6 +378,19 @@ export function computeGradedProjection(
 
   const results: GradedProjectionResult[] = [];
   for (const tg of targetGrades) {
+    // GUARD — observed-first precedence. Skip estimating any grade with
+    // ≥1 observed sale in the requested scope. Observed data renders
+    // through the existing FMV / comp / gradeBreakdown pipeline; the
+    // estimator only fills gaps, never overlays real numbers.
+    const observedInScope = countObservedInScope(
+      pricing,
+      tg.company,
+      tg.grade,
+      targetParallelId,
+      targetParallelName,
+    );
+    if (observedInScope > 0) continue;
+
     const ratio = resolveRatio(
       tg.company,
       tg.grade,
