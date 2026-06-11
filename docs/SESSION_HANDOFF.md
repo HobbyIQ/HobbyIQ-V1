@@ -2,6 +2,10 @@
 
 ---
 
+**North star:** See the "standard for pricing" section in HOBBYIQ_ROADMAP_2026Q2_Q3.md — observation/estimate/personal firewall + the outcome loop as the path to pricing authority.
+
+---
+
 ## 2026-06-08 — Cardsight /pricing schema fix + returned-id consistency guard (deployed `f7d2f97`)
 
 **What broke.** /api/compiq/price-by-id's pinned-cardId path was returning half-broken cardIdentity on every call — only `title` and `number` populated; `card_id`, `player`, `set`, `year` all null. iOS comp page rendered a $1.00 / 4-of-4 pathology for Mike Trout 2011 Topps Update RC (fda530ab-...) tied to wrong-card Frazier comp data.

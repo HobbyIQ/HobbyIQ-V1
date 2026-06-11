@@ -17,6 +17,41 @@ This document is canonical. Updates committed here as diffs, not absorbed into s
 
 **Update 2026-05-21:** Card Hedge subscription cancelled 2026-05-19. Production state characterization (Phase 0) determined CH is effectively disconnected at the router layer (`CARDSIGHT_MODE=exclusive` + Site B short-circuit returns `[]` without calling CH). Remaining CH work is cleanup, not deliberate decommissioning. Separately, the production observability layer was found to be largely unwired (comp_logs writer never shipped, compiq_corpus sampling at zero, warn-line traces at ~9% capture). PR-A1 (and PR-A1.1) restored observability before any migration code change. Cardsight is the sole comp data source going forward; coverage gap at cutover cannot be sized from existing telemetry and is accepted as post-deploy discovery.
 
+## North star: the standard for sports-card pricing
+
+**The goal.** HobbyIQ becomes the source the hobby trusts to answer "what is this card worth" — every card, every grade, every parallel. Not one pricing app among many: the reference, the way Kelley Blue Book is the reference for cars.
+
+**What "the standard" requires.** Authority in pricing is trust, and trust is two things: the numbers are accurate, and the source is honest about its own confidence. The standard-setters earn it by tracking real transactions and showing a band instead of false-precision points. Pretenders lose it the first time a guess presented as a fact gets caught. Coverage — a number for everything — confers nothing on its own. Coverage *with honesty about which numbers are observed and which are estimated* is what confers authority.
+
+**The precondition: the observation/estimate firewall.** Every number HobbyIQ shows is one of three kinds, and they never blur:
+- **Observed** — real market sales (Cardsight comps, user eBay sales). Authoritative, trainable, shown as fact.
+- **Estimated** — model predictions where observations are thin: forward next-sale projection (time axis), graded-price projection (grade axis). Shown only as clearly-labeled estimates with a basis and a range; FMV-null; never written to the training corpus.
+- **Personal** — a user's own cost basis. Shown as cost basis only; never a market price, never a comp.
+
+This firewall is the precondition for the ambition, not a constraint on it. The day HobbyIQ is the standard, every number must survive an audit. Letting an estimate or a purchase price masquerade as an observed comp — or training the model on its own guesses — is the fastest disqualifier. One caught bluff taints the real data with it.
+
+**Honest gaps are a feature.** "No graded sales yet — estimated from base-card premiums, low confidence" earns more credibility than a confident fake. Showing the gap clearly is differentiation no competitor offers.
+
+**Two pillars of the path:**
+
+1. **Estimate coverage, honestly.** Fill the gaps observations leave with labeled estimates.
+   - *Time axis* — forward next-sale projection (shipped): anchor + dampened trend, FMV-null, basis-labeled.
+   - *Grade axis* — graded-price estimator (to spec): predict PSA/BGS/SGC values from the raw anchor via a hierarchical multiplier (card-specific raw→graded ratio if available; else player/set level; else market grade-premium table). Labeled estimate, range, FMV-null, display-not-train. Doubles as a "should I grade this?" signal and a portfolio recommendation hook.
+   - Honest "insufficient data" states wherever neither an observation nor a defensible estimate exists.
+
+2. **The outcome loop — the actual crown.** Estimate, let the market resolve, score the estimate against the real outcome, recalibrate. Only HobbyIQ holds its own prediction history paired with actual sales. This is the moat realized — the thing no competitor can copy, and what turns "a pricing tool" into "the pricing standard." Mechanically: Phases 4c–4e (ML pipeline + outcome tracking) and the Phase 5 sales feedback loop.
+
+**This reframes, it does not rescope.** The moat phases already in this roadmap (4c, 4d, 4e, 5) ARE this path. This section names the destination they lead to and the trust principle governing every number along the way.
+
+**Anti-goals (what forfeits the standard):**
+- Presenting an estimate or a cost basis as an observed comp.
+- Writing predicted or paid values into the training corpus.
+- A confident number on a card with no data and no confidence signal.
+
+**Near-term captured items:**
+- Graded-price estimator (grade-axis estimate engine) — feature build + honest-labeling plumbing; slots alongside the predictive-pricing work. To be specced.
+- Add-to-inventory CTA from the priced-card view — small portfolio feature; the resulting user *sales* (not acquisition costs) feed the Phase 5 outcome loop.
+
 ## The problems being solved
 
 **1. Silent prediction regression (reframed).** **RESOLVED 2026-06-01.** Warn `primary_mode_cardhedge_namespace_only` removed by CF-CARDHEDGE-HARD-CUTOVER (`10ad39d`, 2026-05-29) plus the antecedent CF-PRICE-BY-ID-MIGRATION (`5640084`). Step-0 verification on 2026-06-01: 0 warns over last 7d, 0 warns over last 30d; warn-emit string grep-zero in `backend/src/`; `getCardSalesRouted` is a 21-line Cardsight-only passthrough with no namespace discriminant and no `[]` short-circuit; the pinned-cardId path at `compiqEstimate.service.ts` now calls `getPricing()` directly. The bug's prerequisite (`cardhedge.client.ts`) was deleted by `10ad39d`. *(Historical for reference:* the router's `primary_mode_cardhedge_namespace_only` short-circuit in `CARDSIGHT_MODE=exclusive` returned `[]` for cardhedge-namespace IDs. Header comment at `cardsight.router.ts` L17-L20 explicitly stated Cardsight pricing was never called for cardhedge IDs in that iteration. Severity could not be quantified from existing telemetry (warn captured at ~9% in App Insights). Phase 1 Track B was scoped to close this gap; structurally eliminated ahead of schedule by the hard cutover.*)
