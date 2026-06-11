@@ -150,8 +150,27 @@ function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   if (typeof fmv !== "number" || !Number.isFinite(fmv) || fmv <= 0) return true;
   const trendIQ = est.trendIQ as { coverage?: string } | undefined;
   if (trendIQ?.coverage === "no_card") return true;
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) #3: skip the compsUsed<3
+  // thin gate for title-match-recovered pools. Same rationale as the
+  // upstream variant-tier-ladder + dataSufficiency + insufficient-
+  // short-circuit bypasses: the recovery isolated a CLEAN parallel-
+  // specific sub-market via title tokens + sibling-registry guard +
+  // span-scoped finish-vocab backstop. 1-2 records of THAT pool are
+  // the honest market value; nulling the price tiers here would
+  // contradict the rest of the pipeline. iOS reads priceSource=
+  // "approximate" for the thin-data disclosure.
+  const priceSourceInternal = est.priceSourceInternal;
+  const isRecoveryIsolatedPool =
+    priceSourceInternal === "title-matched-parallel"
+    || priceSourceInternal === "title-match-low-sample";
   const compsUsed = est.compsUsed;
-  if (typeof compsUsed === "number" && compsUsed < 3) return true;
+  if (
+    typeof compsUsed === "number"
+    && compsUsed < 3
+    && !isRecoveryIsolatedPool
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -1155,7 +1174,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
-    const { cardsightCardId, query, gradeCompany, gradeValue, parallelId, parallelName } =
+    const { cardsightCardId, query, gradeCompany, gradeValue, parallelId, parallelName, parallel } =
       req.body || {};
 
     const resolvedCardId =
@@ -1179,8 +1198,16 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       }
       resolvedParallelId = parallelId;
     }
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): accept either `parallelName`
+    // (the legacy iOS field, informational) OR `parallel` (the
+    // queryContext field the title-match recovery needs). parallelName
+    // takes precedence so existing iOS callers keep their wire shape.
     const resolvedParallelName =
-      typeof parallelName === "string" && parallelName.length > 0 ? parallelName : undefined;
+      typeof parallelName === "string" && parallelName.length > 0
+        ? parallelName
+        : typeof parallel === "string" && parallel.length > 0
+        ? parallel
+        : undefined;
 
     const cacheKey = normalizeCacheKey(
       "compiq:price-by-id:v4",
@@ -1205,6 +1232,18 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // CF-PARALLEL-AWARE-VALUE (2026-06-09)
         parallelId: resolvedParallelId,
         parallelName: resolvedParallelName,
+        // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): also thread
+        // parallelName into `body.parallel`. The downstream queryContext
+        // (compiqEstimate.service.ts:2273) reads `body.parallel` —
+        // `body.parallelName` is documented as "informational only —
+        // not part of any filter decision" (compiq.types.ts:42-45). The
+        // pinned-id branch's title-match recovery needs a string to
+        // match against, so without this the recovery sees
+        // userParallelInput="" and collapses to "unified-no-parallel"
+        // regardless of how good the unified pool is. Verified live on
+        // 2026-06-11: SHA dfc81fe deployed, probes A+B returned
+        // "unified-no-parallel"; recovery log confirmed parallel="".
+        parallel: resolvedParallelName,
       };
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price-by-id
       // pins to a Cardsight UUID. Public route, no auth context.
@@ -1435,6 +1474,17 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // accept recentComps/priceHistory). Empty [] on non-success
         // branches that don't build one.
         priceHistory: (est as any).priceHistory ?? [],
+        // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): surface the parallel-
+        // match attribution to iOS / sweeps / backtests. priceSource is
+        // the 3-category collapse (exact / approximate / broad);
+        // priceSourceInternal is the 7-value telemetry detail. Both are
+        // null on base requests + on the success path where the pinned-
+        // branch didn't trip the recovery (priceSource fields are
+        // omitted from the service return there).
+        priceSource: (est as any).priceSource ?? null,
+        priceSourceInternal: (est as any).priceSourceInternal ?? null,
+        parallelMatchFilteredCount: (est as any).parallelMatchFilteredCount ?? null,
+        parallelMatchUnifiedCount: (est as any).parallelMatchUnifiedCount ?? null,
         cardIdentity: (est as any).cardIdentity ?? null,
         gradeUsed: (est as any).gradeUsed ?? null,
         compsUsed: (est as any).compsUsed ?? 0,

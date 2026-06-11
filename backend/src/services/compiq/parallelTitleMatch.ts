@@ -26,6 +26,10 @@
 
 import type { CardsightPricingResponse } from "./cardsight.client.js";
 import { tokenizeParallel } from "./cardsight.mapper.js";
+import {
+  CHROME_DRAFT_MULTIPLIERS,
+  BOWMAN_2022_FAMILY_ENTRIES,
+} from "./chromeDraftMultipliers.js";
 
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
@@ -34,6 +38,57 @@ const log = {
 
 /** Number of records required to consider a title-matched sample "normal" confidence. */
 const LOW_SAMPLE_THRESHOLD = 3;
+
+/**
+ * CF-PINNED-PARALLEL-RECOVERY (2026-06-11) — registry-independent
+ * specificity guard.
+ *
+ * Tokens that describe the card CATEGORY (autograph variant, refractor
+ * family, base version) but do NOT discriminate between sibling finishes
+ * within that category. The variant tier ladder handles auto/non-auto +
+ * base/non-base distinctions on the value path; this guard only needs
+ * to reject MORE-SPECIFIC sibling parallels (e.g. "Blue Wave Refractor"
+ * for a target "Blue Refractor"), so common category labels must not
+ * trigger rejection.
+ */
+const CATEGORY_LABEL_TOKENS: ReadonlySet<string> = new Set([
+  "auto",
+  "autograph",
+  "refractor",
+  "base",
+]);
+
+/**
+ * CF-PINNED-PARALLEL-RECOVERY (2026-06-11) — finish/qualifier vocabulary
+ * derived at module load from every canonical parallel name in the
+ * owner-curated multiplier tables. Used as a registry-INDEPENDENT
+ * backstop to the existing siblingParallels-based specificity guard:
+ * even when Cardsight's detail.parallels[] omits a sibling (Leo De
+ * Vries Blue Refractor /150 case — the registry didn't list "Blue Wave
+ * Refractor", so the registry guard had no token to subtract; the leak
+ * surfaced a $285 Blue Wave at "Blue Refractor"), the vocab catches
+ * extra finish tokens in candidate titles.
+ *
+ * Updates automatically when the curated tables grow. Subtracting the
+ * CATEGORY_LABEL_TOKENS up-front keeps "auto"/"refractor"-suffixed
+ * titles from incorrectly triggering rejection.
+ */
+const PARALLEL_QUALIFIER_VOCAB: ReadonlySet<string> = (() => {
+  const tokens = new Set<string>();
+  const collect = (parallelName: string): void => {
+    for (const t of tokenizeParallel(parallelName)) {
+      if (CATEGORY_LABEL_TOKENS.has(t)) continue;
+      tokens.add(t);
+    }
+  };
+  for (const entry of Object.values(CHROME_DRAFT_MULTIPLIERS)) {
+    collect(entry.parallelName);
+  }
+  for (const entry of BOWMAN_2022_FAMILY_ENTRIES) {
+    collect(entry.parallelName);
+  }
+  return tokens;
+})();
 
 export type ParallelPriceSource =
   | "cardsight-parallel-id"
@@ -176,6 +231,34 @@ export function applyParallelTitleMatch(
     }
     for (const pattern of exclusionPatterns) {
       if (pattern.test(title)) return false;
+    }
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): span-scoped finish-vocab
+    // backstop. AUGMENTS the registry-based exclusion above — never
+    // replaces it. A candidate title that carries a vocab token
+    // INTERIOR to the user-token span (strictly between the first and
+    // last user-token occurrence) is a more-specific sibling and is
+    // rejected even when detail.parallels[] didn't enumerate it.
+    //
+    // Span-scoping (not full-title) matters because color/finish
+    // tokens often appear elsewhere in real titles as TEAM context —
+    // "Toronto Blue Jays ... Gold Refractor" must NOT reject on
+    // "blue", and "Boston Red Sox ... Blue Refractor" must NOT reject
+    // on "red". By bounding the check to between the user tokens, we
+    // only catch tokens semantically PART OF the parallel descriptor.
+    const titleTokens = tokenizeParallel(title);
+    const userTokenPositions: number[] = [];
+    for (let i = 0; i < titleTokens.length; i++) {
+      if (userTokenSet.has(titleTokens[i])) userTokenPositions.push(i);
+    }
+    if (userTokenPositions.length > 0) {
+      const spanStart = userTokenPositions[0];
+      const spanEnd = userTokenPositions[userTokenPositions.length - 1];
+      for (let i = spanStart + 1; i < spanEnd; i++) {
+        const t = titleTokens[i];
+        if (userTokenSet.has(t)) continue;
+        if (CATEGORY_LABEL_TOKENS.has(t)) continue;
+        if (PARALLEL_QUALIFIER_VOCAB.has(t)) return false;
+      }
     }
     return true;
   };

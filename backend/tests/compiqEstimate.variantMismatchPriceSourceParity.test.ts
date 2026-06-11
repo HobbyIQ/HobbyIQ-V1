@@ -179,10 +179,22 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
     expect(result.parallelMatchUnifiedCount).toBe(5);
   });
 
-  it("variant-mismatch propagates 'approximate' / title-matched attribution when router reports it", async () => {
-    // Router built the pool via title-match (user provided a parallel that
-    // resolved); the variant filter rejected downstream. priceSource should
-    // still reflect HOW the pool was built, not the rejection.
+  it("title-match-low-sample BYPASSES the variant tier ladder (CF-PINNED-PARALLEL-RECOVERY #3)", async () => {
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) #3: when the router (or
+    // pinned-id branch's recovery) reports title-matched-parallel or
+    // title-match-low-sample, the value-path BYPASSES the variant tier
+    // ladder. Rationale: title-match already did the variant-correctness
+    // check (word-boundary + sibling-registry guard + span-scoped
+    // finish-vocab backstop) that the ladder duplicates; double-rejecting
+    // collapses clean 1-2-comp recovery pools to "variant-mismatch" with
+    // no FMV. Post-bypass, the pool flows through to FMV computation
+    // with priceSource attribution preserved for the thin-data disclosure.
+    //
+    // Pre-CF: this case returned source="variant-mismatch" because the
+    // 2-comp pool was below VARIANT_TIER_MIN_COMPS=3. Post-CF: the ladder
+    // is skipped for recovery sources; source becomes "live" (FMV
+    // present) or "no-recent-comps" (pool too thin for an anchor).
+    // Either way, NOT variant-mismatch.
     mockFindCompsRouted.mockResolvedValue(variantMismatchRouterResponse({
       priceSource: "approximate",
       priceSourceInternal: "title-match-low-sample",
@@ -199,7 +211,8 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       gradeValue: 9,
     } as any, testCallContext)) as Record<string, unknown>;
 
-    expect(result.source).toBe("variant-mismatch");
+    expect(result.source).not.toBe("variant-mismatch");
+    // priceSource attribution still propagates on whichever path was taken.
     expect(result.priceSource).toBe("approximate");
     expect(result.priceSourceInternal).toBe("title-match-low-sample");
     expect(result.parallelMatchFilteredCount).toBe(2);
@@ -257,13 +270,24 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
 
 describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — scope-lock regression (other paths still omit priceSource fields)", () => {
   // These tests pin the scope of THIS CF behaviorally. If someone later
-  // adds priceSource fields to no-recent-comps / sibling-pool /
-  // unsupported_sport without doing the design calls captured in
-  // CF-PRICESOURCE-PARITY-FULL, these will catch the drift. The
-  // sibling-pool / unsupported_sport cases have design ambiguity
-  // (sibling-pool: synthesized from peer cards; unsupported_sport:
-  // does priceSource apply when sport-rejected?) that require explicit
-  // resolution — not silent expansion of this CF.
+  // adds priceSource fields to sibling-pool / unsupported_sport without
+  // doing the design calls captured in CF-PRICESOURCE-PARITY-FULL, these
+  // will catch the drift. The sibling-pool / unsupported_sport cases
+  // have design ambiguity (sibling-pool: synthesized from peer cards;
+  // unsupported_sport: does priceSource apply when sport-rejected?) that
+  // require explicit resolution — not silent expansion.
+  //
+  // NOTE: no-recent-comps was originally scope-locked too, but
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-10) extended it INTENTIONALLY.
+  // Rationale: the pinned-id branch's title-match recovery emits
+  // priceSourceInternal="unified-fallback-no-match" when it couldn't
+  // isolate the parallel from the unified pool — and collapses comps
+  // to 0 to keep base-pooled FMVs out of the training corpus. That
+  // routes through no-recent-comps. iOS needs to see the
+  // "unified-fallback-no-match" attribution to render the right "we
+  // couldn't isolate this parallel" copy rather than a generic
+  // "couldn't find recent comps" message. The no-recent-comps positive
+  // test for that propagation lives in compiqPinnedParallelRecovery.test.ts.
 
   beforeAll(() => {
     process.env.CARD_HEDGE_API_KEY = "test-key";
@@ -273,7 +297,7 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — scope-lock regression (othe
     vi.clearAllMocks();
   });
 
-  it("no-recent-comps return does NOT surface priceSource fields (out of scope for this CF)", async () => {
+  it("no-recent-comps return propagates priceSource (CF-PINNED-PARALLEL-RECOVERY extension)", async () => {
     mockFindCompsRouted.mockResolvedValue(noRecentCompsRouterResponse());
 
     const result = (await computeEstimate({
@@ -285,10 +309,14 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — scope-lock regression (othe
     } as any, testCallContext)) as Record<string, unknown>;
 
     expect(result.source).toBe("no-recent-comps");
-    expect(result.priceSource).toBeUndefined();
-    expect(result.priceSourceInternal).toBeUndefined();
-    expect(result.parallelMatchFilteredCount).toBeUndefined();
-    expect(result.parallelMatchUnifiedCount).toBeUndefined();
+    // priceSource fields now propagate (was scope-locked-undefined pre-
+    // CF-PINNED-PARALLEL-RECOVERY 2026-06-10). The pinned-id branch's
+    // title-match recovery surfaces "unified-fallback-no-match" through
+    // this return path; iOS reads it to render the right UX.
+    expect(result.priceSource).toBe("broad");
+    expect(result.priceSourceInternal).toBe("unified-no-parallel");
+    expect(result.parallelMatchFilteredCount).toBe(0);
+    expect(result.parallelMatchUnifiedCount).toBe(0);
   });
 
   it("unsupported_sport return does NOT surface priceSource fields (out of scope for this CF)", async () => {

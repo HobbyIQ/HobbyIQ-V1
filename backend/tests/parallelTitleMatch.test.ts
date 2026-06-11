@@ -405,6 +405,202 @@ describe("applyParallelTitleMatch — word-boundary semantics (NOT substring)", 
   });
 });
 
+// ─── CF-PINNED-PARALLEL-RECOVERY (2026-06-11): span-scoped finish-vocab backstop ────
+// Live find (Leo De Vries Blue Refractor /150 probe, SHA 7956d2a):
+// the registry-based specificity guard had zero coverage because
+// Cardsight's detail.parallels[] for Leo's base cardId omitted "Blue
+// Wave Refractor" — so the registry guard built no distinguishing
+// tokens and a $285 Blue Wave leaked into the Blue Refractor pool. The
+// vocab backstop is registry-INDEPENDENT: it detects extra finish
+// tokens INTERIOR to the user-token span in candidate titles. These
+// tests sit alongside the existing registry-based guard tests above —
+// they use a deliberately MINIMAL siblingParallels (just the matched
+// parallel) so the vocab is the only thing doing the work.
+
+describe("applyParallelTitleMatch — span-scoped finish-vocab backstop (registry-independent)", () => {
+  // Minimal sibling list — only the matched parallel. The registry
+  // guard collects ZERO distinguishingTokens from this list, so any
+  // rejection MUST come from the vocab backstop.
+  const REGISTRY_OMITTED_SIBLINGS = [
+    { id: "p-blue-refractor", name: "Blue Refractor" },
+  ];
+
+  it("EXCLUDE — 'Blue Wave Refractor /150' (interior 'wave', registry omitted)", () => {
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "2024 Bowman Chrome 1st Autograph Leo De Vries CPA-LD Blue Refractor /150",
+            "2024 Bowman Chrome 1st Autograph Leo De Vries CPA-LD Blue Refractor /150 RC",
+            "2024 Bowman Chrome 1st Autograph Leo De Vries CPA-LD Blue Refractor /150 #27",
+            "2024 Bowman Chrome 1st Autograph Leo De Vries CPA-LD Blue Wave Refractor /150",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+    const titles = r.response.raw.records.map((rec) => rec.title.toLowerCase());
+    expect(titles.every((t) => !t.includes("wave"))).toBe(true);
+  });
+
+  it("EXCLUDE — 'Blue Shimmer Refractor /150' (interior 'shimmer', registry omitted)", () => {
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 a",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 b",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 c",
+            "2024 Bowman Chrome Leo De Vries Blue Shimmer Refractor /150",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+    const titles = r.response.raw.records.map((rec) => rec.title.toLowerCase());
+    expect(titles.every((t) => !t.includes("shimmer"))).toBe(true);
+  });
+
+  it("EXCLUDE — 'Blue Atomic Refractor /100' (interior 'atomic', registry omitted)", () => {
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 a",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 b",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 c",
+            "2024 Bowman Chrome Leo De Vries Blue Atomic Refractor /100",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+    const titles = r.response.raw.records.map((rec) => rec.title.toLowerCase());
+    expect(titles.every((t) => !t.includes("atomic"))).toBe(true);
+  });
+
+  it("EXCLUDE — 'Gold Refractor /50' (fails user-token \\bblue\\b; sanity)", () => {
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 a",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 b",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 c",
+            "2024 Bowman Chrome Leo De Vries Gold Refractor /50",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+    const titles = r.response.raw.records.map((rec) => rec.title.toLowerCase());
+    expect(titles.every((t) => !t.includes("gold"))).toBe(true);
+  });
+
+  it("KEEP — 'BLUE REFRACTOR AUTO 30/150' (auto is a CATEGORY_LABEL)", () => {
+    // Auto/autograph/refractor/base are common-category tokens that
+    // describe the card kind, not the finish — they must not trigger
+    // sibling rejection even though they appear in canonical parallel
+    // names (e.g. "Base Auto" is the unnumbered auto baseline).
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "LEO DE VRIES 2024 BOWMAN CHROME #CPA-LD 1ST PROSPECT BLUE REFRACTOR AUTO 30/150",
+            "LEO DE VRIES 2024 BOWMAN CHROME #CPA-LD BLUE REFRACTOR AUTO 31/150",
+            "Leo De Vries 2024 Bowman Chrome Blue Refractor Auto 32/150",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+  });
+
+  it("KEEP — 'Boston Red Sox ... Blue Refractor /150' ('red' is team context, OUTSIDE span)", () => {
+    // Span-scoping point: color/finish vocab tokens that appear in
+    // team/player context — strictly OUTSIDE the user-token span —
+    // must not trigger rejection. The user-token span here is
+    // ["blue", "refractor"]; "red" sits before "blue" in the title.
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "Rafael Devers Boston Red Sox 2024 Topps Chrome Blue Refractor /150 a",
+            "Rafael Devers Boston Red Sox 2024 Topps Chrome Blue Refractor /150 b",
+            "Rafael Devers Boston Red Sox 2024 Topps Chrome Blue Refractor /150 c",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+  });
+
+  it("KEEP — 'Toronto Blue Jays ... Gold Refractor /50' ('blue' is team context, OUTSIDE span)", () => {
+    // Same span-scoping point with the user's color flipped. User
+    // tokens here are ["gold", "refractor"]; "blue" lives in "Blue
+    // Jays" upstream of the parallel descriptor.
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Gold Refractor",
+        matchedParallelId: "p-gold-refractor",
+        siblingParallels: [{ id: "p-gold-refractor", name: "Gold Refractor" }],
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "Vladimir Guerrero Jr Toronto Blue Jays 2024 Topps Chrome Gold Refractor /50 a",
+            "Vladimir Guerrero Jr Toronto Blue Jays 2024 Topps Chrome Gold Refractor /50 b",
+            "Vladimir Guerrero Jr Toronto Blue Jays 2024 Topps Chrome Gold Refractor /50 c",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+  });
+
+  it("KEEP — clean 'Blue Refractor /150' target (no vocab tokens in span)", () => {
+    const r = applyParallelTitleMatch(
+      baseInput({
+        userParallelInput: "Blue Refractor",
+        matchedParallelId: "p-blue-refractor",
+        siblingParallels: REGISTRY_OMITTED_SIBLINGS,
+        pricingCameFromUnifiedFallback: true,
+        pricingResponse: pricingResponse({
+          rawTitles: [
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 a",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 b",
+            "2024 Bowman Chrome Leo De Vries Blue Refractor /150 c",
+          ],
+        }),
+      }),
+    );
+    expect(r.filteredCount).toBe(3);
+  });
+});
+
 // ─── Safety: graded-bucket filtering preserves structure ──────────────────
 
 describe("applyParallelTitleMatch — graded-bucket filtering", () => {
