@@ -1471,17 +1471,70 @@ async function fetchComps(
 }
 
 /**
- * Apply the CompIQ "21-day window" rule: discard sales older than 21 days
+ * Apply the CompIQ recency window: discard sales older than `windowDays` days
  * unless that would leave fewer than 3 comps (thin market — keep everything).
+ *
+ * Default `windowDays = 21` preserves the legacy 21-day rule byte-identically.
+ * CF-PRICEHISTORY-60D (2026-06-10): the priceHistory[] series re-runs the
+ * sub-market matcher at windowDays=60 for chart display only.
  */
-function applyRecencyFilter(pool: RawComp[]): RawComp[] {
-  const cutoff = Date.now() - 21 * 24 * 3600 * 1000;
+function applyRecencyFilter(pool: RawComp[], windowDays: number = 21): RawComp[] {
+  const cutoff = Date.now() - windowDays * 24 * 3600 * 1000;
   const fresh = pool.filter((c) => {
     if (!c.soldDate) return false;
     const ts = Date.parse(c.soldDate);
     return Number.isFinite(ts) && ts >= cutoff;
   });
   return fresh.length >= 3 ? fresh : pool;
+}
+
+/**
+ * CF-PRICEHISTORY-60D (2026-06-10): evenly downsample an items array by
+ * its sort-order index to a target count, preserving endpoints.
+ *
+ * Used to cap priceHistory[] at 150 points on dense 60d pools without
+ * truncating to the most-recent-150 (which would lose temporal spread).
+ * Caller is responsible for sorting `items` first; this fn picks
+ * indices `round(i * (n - 1) / (target - 1))` for i in [0..target-1].
+ *
+ * Pure module-level export so the downsample logic is unit-testable
+ * in isolation from computeEstimate's 30-step pipeline.
+ */
+export function evenlyDownsample<T>(items: ReadonlyArray<T>, target: number): T[] {
+  if (target <= 0) return [];
+  if (items.length <= target) return items.slice();
+  if (target === 1) return [items[0]];
+  const out: T[] = new Array(target);
+  const step = (items.length - 1) / (target - 1);
+  const seen = new Set<number>();
+  for (let i = 0; i < target; i++) {
+    let idx = Math.round(i * step);
+    if (idx >= items.length) idx = items.length - 1;
+    // Guard against duplicate picks on small n / large target — walk forward.
+    while (seen.has(idx) && idx < items.length - 1) idx++;
+    seen.add(idx);
+    out[i] = items[idx];
+  }
+  return out;
+}
+
+/**
+ * CF-PRICEHISTORY-60D (2026-06-10): loose typo-backstop for the 60d
+ * priceHistory pool. Drops sales whose price falls outside
+ * [median/10, median*10]. Intent: kill $1 / $50k typos against a ~$450
+ * median; preserve real swings (e.g. $600 vs $450 median, ratio 1.33,
+ * survives). Distinct from the value-path `filterPriceOutliers` (MAD)
+ * which is dispersion-sensitive and clips real trend endpoints.
+ * Skipped when sample size < 4 or median <= 0.
+ */
+function loosePriceTypoFilter(sales: RawComp[]): RawComp[] {
+  if (sales.length < 4) return sales;
+  const prices = sales.map((s) => s.price).sort((a, b) => a - b);
+  const median = prices[Math.floor(prices.length / 2)];
+  if (!Number.isFinite(median) || median <= 0) return sales;
+  const lo = median / 10;
+  const hi = median * 10;
+  return sales.filter((s) => s.price >= lo && s.price <= hi);
 }
 
 /**
@@ -3930,6 +3983,76 @@ export async function computeEstimate(
   const tierVerdictOverride = VARIANT_TIER_VERDICT[chosenTier];
   const verdictText = tierVerdictOverride ?? result.verdict ?? "Hold";
 
+  // CF-PRICEHISTORY-60D (2026-06-10): build the 60-day chart series for
+  // the comp page. Display-only — never flows into emitPredictionToCorpus
+  // (verified: corpus emit at L3912 doesn't accept recentComps or
+  // priceHistory). Independent of the value path: the 21d filter +
+  // ladder + value-path quality filter above run untouched, and a
+  // separate 60d window is matched against the SAME tier the 21d path
+  // chose (no re-laddering — see CF-PRICEHISTORY-60D recon Q1: a richer
+  // 60d count would land a broader tier and the chart's sub-market
+  // would diverge from the FMV's).
+  //
+  // Quality split: keyword/identity exclusions stay full-strength
+  // (lot/damage/wrong-card junk dropped uniformly across 0-60d).
+  // Price-outlier trim is a LOOSE ratio backstop only — preserves real
+  // dispersion so the trend line reflects what actually happened.
+  // Post-tier parallel/auto/grade filters mirror the value path.
+  // Downsample to 150 evenly across the date span when >150.
+  const priceHistory: Array<{
+    soldDate: string;
+    price: number;
+    listingType: "fixed" | "auction" | null;
+  }> = (() => {
+    if (!cardIdentity) return [];
+    const windowed60 = applyRecencyFilter(fetched.comps, 60);
+    if (windowed60.length === 0) return [];
+    const tiered60 = classifyCompsForTier(windowed60, parsedForGuard, chosenTier).matched;
+    if (tiered60.length === 0) return [];
+    // Quality split: keyword full-strength via scoreCompQuality (same as
+    // value path); outlier replaced with loose ratio-band typo backstop.
+    const keywordPassed: RawComp[] = [];
+    for (const c of tiered60) {
+      const verdict = scoreCompQuality(c, {
+        player: cardIdentity?.player ?? body.playerName ?? null,
+        year: cardIdentity?.year ?? body.cardYear ?? null,
+        set: cardIdentity?.set ?? body.product ?? null,
+      });
+      if (verdict.include) keywordPassed.push(c);
+    }
+    const typoFiltered = loosePriceTypoFilter(keywordPassed);
+    // Mirror the value-path post-quality filters in the same order:
+    // (1) serial filter when no parallel requested, (2) parallel match,
+    // (3) auto match, (4) grade match. Reuse the local helpers defined
+    // upthread so the predicates can never drift from the value path.
+    let pool60: RawComp[] = hasParallel
+      ? typoFiltered
+      : typoFiltered.filter((c) => !serialPattern.test(c.title));
+    if (pool60.length < 3) pool60 = typoFiltered;
+    if (normalizedParallel && normalizedParallel !== "base") {
+      pool60 = applyParallelFilter(pool60, normalizedParallel);
+    }
+    if (effectiveIsAuto) pool60 = applyAutoFilter(pool60);
+    if (normalizedGradeCompany && body.gradeValue !== undefined) {
+      pool60 = applyGradeFilter(pool60, `${normalizedGradeCompany} ${body.gradeValue}`);
+    }
+    // Sort ascending by soldDate so downsample preserves temporal endpoints.
+    const sorted = pool60
+      .filter((c) => {
+        if (!c.soldDate) return false;
+        const ts = Date.parse(c.soldDate);
+        return Number.isFinite(ts) && ts > 0;
+      })
+      .sort((a, b) => (Date.parse(a.soldDate || "") || 0) - (Date.parse(b.soldDate || "") || 0));
+    const capped = sorted.length > 150 ? evenlyDownsample(sorted, 150) : sorted;
+    return capped.map((c) => ({
+      soldDate: c.soldDate || "",
+      price: c.price,
+      listingType:
+        c.listingType === "fixed" || c.listingType === "auction" ? c.listingType : null,
+    }));
+  })();
+
   // CF-FMV-NOWCAST Ship 1: per-FMV uncertainty band. Inputs live in scope
   // here from the broaderTrend block above + daysSinceNewest from L2007.
   // The band is additive — the FMV composition itself is unchanged.
@@ -4096,6 +4219,10 @@ export async function computeEstimate(
           return entry;
         });
     })(),
+    // CF-PRICEHISTORY-60D (2026-06-10): 60-day series for the comp-page
+    // chart. Display-only — never enters the corpus emit at L3912.
+    // Built upthread; coexists with recentComps as an independent surface.
+    priceHistory,
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     // CF-LASTSALE-SCAFFOLD (2026-06-10): mirror the insufficient branch.
