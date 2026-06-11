@@ -4,7 +4,16 @@ import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricin
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./cardsight.mapper.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext, type RoutedCard } from "./cardsight.router.js";
-import { getPricing, type CardsightSaleRecord } from "./cardsight.client.js";
+import {
+  getPricing,
+  getCardDetail,
+  type CardsightSaleRecord,
+} from "./cardsight.client.js";
+import {
+  applyParallelTitleMatch,
+  collapsePriceSource,
+  type ParallelPriceSource,
+} from "./parallelTitleMatch.js";
 // PHASE-4A-2.2 (2026-06-02): per-prediction cache-stats scope. The
 // `cacheStatsContext.run` wrap around the body lets every cacheWrap call
 // underneath tally hits/misses into a per-prediction bucket, which the
@@ -1324,13 +1333,148 @@ async function fetchComps(
     // right after the grade pick. Authoritative; affects every
     // downstream pool. See filterRecordsByParallel header for the
     // base-vs-parallel semantics.
-    const sales = filterRecordsByParallel(salesByGrade, parallelId ?? null);
+    const filteredByParallel = filterRecordsByParallel(salesByGrade, parallelId ?? null);
+
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-10): mirror the routed-search
+    // path's applyParallelTitleMatch recovery in the pinned-id branch.
+    //
+    // Cause: Cardsight's per-sale `parallel_id` tagging is unreliable for
+    // most cards (documented at cardsight.client.ts:513-522 from the
+    // 2026-05-27 Maddux Tiffany incident — verified again for 2024 Bowman
+    // Chrome Blue Refractor /150 on 2026-06-10). When the user picks a
+    // parallel and Cardsight didn't tag the sales, `filterRecordsByParallel`
+    // collapses to 0 even though the unified pool contains real Blue-
+    // Refractor-titled sales. The routed-search path recovers via
+    // title-token matching with a sibling-parallels specificity guard
+    // (applyParallelTitleMatch); the pinned branch never inherited that
+    // recovery — this CF fixes the asymmetry.
+    //
+    // We do NOT pass parallelId to getPricing above: the inner
+    // _getPricing parallel-id fallback at cardsight.client.ts:506-549
+    // already retries unified when the parallel_id call returns 0, but
+    // that costs an extra HTTP per request and the unified pool we'd get
+    // back is identical to what the no-parallelId call above already
+    // returned (verified architecturally — Cardsight pricing for a base
+    // cardId returns the same sales regardless of parallel_id query).
+    // The title-match recovery here covers both "Cardsight tagged some"
+    // and "Cardsight tagged nothing" classes uniformly.
+    //
+    // getCardDetail fires ONLY when (parallelId is provided) AND (the
+    // filter collapsed below RECOVERY_THRESHOLD) — never on base requests,
+    // never on a healthy filtered pool. Cached via cs:detail wrap.
+    const RECOVERY_THRESHOLD = 3;
+    let sales: typeof filteredByParallel = filteredByParallel;
+    let pinnedPriceSource: ParallelPriceSource | null = null;
+    let pinnedFilteredCount: number | null = null;
+    let pinnedUnifiedCount: number | null = null;
+
+    if (
+      parallelId
+      && filteredByParallel.length < RECOVERY_THRESHOLD
+      && salesByGrade.length >= RECOVERY_THRESHOLD
+    ) {
+      const detailStartMs = Date.now();
+      const detail = await getCardDetail(pinnedCardId).catch((err) => {
+        console.warn(
+          `[compiq.fetchComps] pinned-parallel getCardDetail failed: ${
+            (err as Error)?.message ?? err
+          }`,
+        );
+        return null;
+      });
+      const detailLatencyMs = Date.now() - detailStartMs;
+      const detailOk = detail !== null && !detail.notFound;
+      const siblingParallels =
+        detailOk && detail!.parallels ? detail!.parallels : [];
+
+      // Build a synthetic pricing response with the grade-selected
+      // records under raw.records. applyParallelTitleMatch walks raw +
+      // graded; collapsing graded to [] here keeps the title-match
+      // working on the SAME records the value path consumes (no
+      // accidental other-grade leakage).
+      const syntheticPricing = {
+        ...pricing,
+        raw: {
+          count: salesByGrade.length,
+          records: salesByGrade as unknown as NonNullable<
+            typeof pricing.raw
+          >["records"],
+        },
+        graded: [],
+      };
+
+      const matchStartMs = Date.now();
+      const outcome = applyParallelTitleMatch({
+        pricingResponse: syntheticPricing,
+        // We KNOW Cardsight's parallel_id tagging didn't deliver here
+        // (filteredByParallel collapsed). Set the flag explicitly so the
+        // helper engages title-match rather than short-circuiting to
+        // "cardsight-parallel-id".
+        pricingCameFromUnifiedFallback: true,
+        userParallelInput: queryContext?.parallel,
+        matchedParallelId: parallelId,
+        siblingParallels,
+      });
+      const matchLatencyMs = Date.now() - matchStartMs;
+
+      pinnedPriceSource = outcome.priceSource;
+      pinnedFilteredCount = outcome.filteredCount;
+      pinnedUnifiedCount = outcome.totalUnifiedCount;
+
+      console.log(
+        `[compiq.fetchComps] pinned-parallel recovery: parallelId=${parallelId} ` +
+          `parallel="${queryContext?.parallel ?? ""}" ` +
+          `priceSource=${outcome.priceSource} filtered=${outcome.filteredCount} ` +
+          `unified=${outcome.totalUnifiedCount} ` +
+          `detailMs=${detailLatencyMs} matchMs=${matchLatencyMs}`,
+      );
+
+      // GUARDRAIL — corpus pollution: "unified-fallback-no-match" means
+      // title-match couldn't isolate any parallel-titled records. The
+      // unified pool that's left is base-mixed; using it as the
+      // parallel's comps would emit a BASE-derived FMV tagged to the
+      // parallel UUID in predictionCorpus. That poisons training. Same
+      // discipline as CF-TREND-EXTRAPOLATED's structural fmv=null gate:
+      // collapse to thin-data on no-match so the downstream short-
+      // circuit emits fairMarketValue=null to emitPredictionToCorpus.
+      if (
+        outcome.priceSource === "title-matched-parallel"
+        || outcome.priceSource === "title-match-low-sample"
+      ) {
+        sales = (outcome.response.raw?.records ?? []) as typeof sales;
+      } else {
+        sales = [];
+      }
+    } else if (parallelId && filteredByParallel.length >= RECOVERY_THRESHOLD) {
+      // Cardsight DID tag enough records — no recovery needed.
+      // Surface the source so iOS sees "exact" for these wins.
+      pinnedPriceSource = "cardsight-parallel-id";
+      pinnedFilteredCount = filteredByParallel.length;
+      pinnedUnifiedCount = salesByGrade.length;
+    }
+
+    // priceSource fields surfaced only when parallelId was provided
+    // (they describe the parallel-match outcome; meaningless on base).
+    const priceSourceFields = pinnedPriceSource
+      ? {
+          priceSource: collapsePriceSource(pinnedPriceSource),
+          priceSourceInternal: pinnedPriceSource,
+          parallelMatchFilteredCount: pinnedFilteredCount ?? undefined,
+          parallelMatchUnifiedCount: pinnedUnifiedCount ?? undefined,
+        }
+      : {};
 
     if (sales.length === 0) {
       console.warn(
-        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} returned 0 comps`
+        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} returned 0 comps`,
       );
-      return { comps: [], card: identity, variantWarning: [], aiCategory: null };
+      return {
+        comps: [],
+        card: identity,
+        variantWarning: [],
+        aiCategory: null,
+        ...priceSourceFields,
+      };
     }
 
     const mapped: RawComp[] = sales
@@ -1351,9 +1495,15 @@ async function fetchComps(
       .filter((c) => c.price > 0);
 
     console.log(
-      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} comps=${mapped.length}`
+      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} comps=${mapped.length} priceSource=${pinnedPriceSource ?? "(n/a)"}`,
     );
-    return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
+    return {
+      comps: mapped,
+      card: identity,
+      variantWarning: [],
+      aiCategory: null,
+      ...priceSourceFields,
+    };
   }
 
   const {
@@ -3473,6 +3623,17 @@ export async function computeEstimate(
       lastSale,
       estimateSource: resolvedEstimateSource,
       variantWarning: fetched.variantWarning,
+      // CF-PINNED-PARALLEL-RECOVERY (2026-06-10): propagate the parallel-
+      // match attribution onto the no-recent-comps thin-data branch too.
+      // When recovery hit "unified-fallback-no-match" we want iOS to
+      // still SEE that the parallel was the missing piece — and ops to
+      // see the priceSourceInternal in telemetry — rather than collapse
+      // to a generic "thin" state. Mirrors the variant-mismatch branch's
+      // parity surface above (L3076-3079).
+      priceSource: fetched.priceSource ?? null,
+      priceSourceInternal: fetched.priceSourceInternal ?? null,
+      parallelMatchFilteredCount: fetched.parallelMatchFilteredCount ?? null,
+      parallelMatchUnifiedCount: fetched.parallelMatchUnifiedCount ?? null,
       crossParallelAnchor: null,
       effectiveFmv: null,
       dataSufficiency: {
