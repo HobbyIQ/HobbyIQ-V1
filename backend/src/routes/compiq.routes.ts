@@ -150,8 +150,27 @@ function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   if (typeof fmv !== "number" || !Number.isFinite(fmv) || fmv <= 0) return true;
   const trendIQ = est.trendIQ as { coverage?: string } | undefined;
   if (trendIQ?.coverage === "no_card") return true;
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) #3: skip the compsUsed<3
+  // thin gate for title-match-recovered pools. Same rationale as the
+  // upstream variant-tier-ladder + dataSufficiency + insufficient-
+  // short-circuit bypasses: the recovery isolated a CLEAN parallel-
+  // specific sub-market via title tokens + sibling-registry guard +
+  // span-scoped finish-vocab backstop. 1-2 records of THAT pool are
+  // the honest market value; nulling the price tiers here would
+  // contradict the rest of the pipeline. iOS reads priceSource=
+  // "approximate" for the thin-data disclosure.
+  const priceSourceInternal = est.priceSourceInternal;
+  const isRecoveryIsolatedPool =
+    priceSourceInternal === "title-matched-parallel"
+    || priceSourceInternal === "title-match-low-sample";
   const compsUsed = est.compsUsed;
-  if (typeof compsUsed === "number" && compsUsed < 3) return true;
+  if (
+    typeof compsUsed === "number"
+    && compsUsed < 3
+    && !isRecoveryIsolatedPool
+  ) {
+    return true;
+  }
   return false;
 }
 
