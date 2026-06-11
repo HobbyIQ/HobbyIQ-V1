@@ -25,6 +25,7 @@ import type {
 import {
   selectSalesByGrade,
   getGraderPremium,
+  detectGradeFromTitle,
 } from "./compiqEstimate.service.js";
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
@@ -38,7 +39,11 @@ export type GradedProjectionConfidenceTier =
   | "ballpark"      // tier-3 market ratio × any anchor
   | "insufficient"; // missing anchor or no ratio source
 
-export type GradedProjectionRatioSource = "card" | "market" | "none";
+export type GradedProjectionRatioSource =
+  | "card"        // Tier 1: card-specific base graded/raw ratio
+  | "player-set"  // Tier 2: aggregated across sibling cards (same player, same release)
+  | "market"      // Tier 3: existing GRADER_PREMIUMS table
+  | "none";       // Insufficient (no anchor or no ratio source available)
 
 export type GradedProjectionAnchorKind =
   | "base"
@@ -79,6 +84,22 @@ export interface GradedProjectionResult {
   };
 }
 
+/**
+ * Tier-2 sibling input — one sale from another card by the same player
+ * in the same release. The live path's fetchCompsByPlayer returns
+ * `{ cardId, title, price, date, source }` (CompByPlayer) — title is
+ * the load-bearing field for base/grade detection. `parallel_id` is
+ * optional because the live aggregated fetch doesn't preserve it; when
+ * absent we accept the (slightly weaker) title-only base check and
+ * note the limitation in the basis prose. Callers with richer per-
+ * sibling pricing payloads can populate it.
+ */
+export interface GradedProjectionSiblingComp {
+  title: string | null | undefined;
+  price: number;
+  parallel_id?: string | null;
+}
+
 export interface ComputeGradedProjectionInput {
   pricing: CardsightPricingResponse;
   /** Cardsight parallelId the user is asking about. Null/undefined for base. */
@@ -89,6 +110,13 @@ export interface ComputeGradedProjectionInput {
   /** Parallel name (e.g. "Blue Refractor") for parallel-composed fallback
    *  via lookupMultiplier when targetParallelRawFmv is absent. */
   targetParallelName?: string | null;
+  /**
+   * Tier-2 input: flat list of sibling sales (same player + same release,
+   * exact-card-id excluded). On the live path this comes from
+   * fetchCompsByPlayer.comps. Optional — when absent or empty, tier-2
+   * is skipped and gap grades fall through to tier-3 market premium.
+   */
+  siblingComps?: ReadonlyArray<GradedProjectionSiblingComp>;
   /** Target grade tuples to project. Defaults to TARGET_GRADES below. */
   targetGrades?: ReadonlyArray<{ company: string; grade: string; label: string }>;
 }
@@ -109,6 +137,8 @@ export const TARGET_GRADES: ReadonlyArray<{
 
 /** Minimum card-specific base graded samples to trust the tier-1 ratio. */
 const TIER1_MIN_BASE_SAMPLES = 3;
+/** Minimum aggregated sibling base graded samples to trust the tier-2 ratio. */
+const TIER2_MIN_SIBLING_BASE_SAMPLES = 5;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -271,12 +301,96 @@ interface ResolvedRatio {
   targetGradeBaseMedian: number | null;
 }
 
+/**
+ * Tier 2 — aggregated base graded median / base raw median across sibling
+ * cards (same player, same release; exact card-id excluded by the caller's
+ * sibling-fetch logic). "Base" defined as `isBaseTitle(title) AND
+ * parallel_id ∈ {null, undefined}`. The aggregated raw denominator comes
+ * from the SAME sibling pool (raw-titled records that pass the base check
+ * AND lack any graded marker in title) — not from the card's own anchor.
+ *
+ * Returns null when the ratio can't be defended (too few graded samples,
+ * missing denominator, or zero/negative medians). Caller falls through to
+ * tier 3.
+ */
+function resolvePlayerSetRatio(
+  company: string,
+  grade: string,
+  label: string,
+  siblingComps: ReadonlyArray<GradedProjectionSiblingComp>,
+): {
+  ratio: number;
+  description: string;
+  siblingBaseGradedSamples: number;
+  siblingBaseRawSamples: number;
+  siblingBaseGradedMedian: number;
+  siblingBaseRawMedian: number;
+} | null {
+  if (siblingComps.length === 0) return null;
+  const numNeeded = Number(grade);
+  if (!Number.isFinite(numNeeded)) return null;
+
+  // Sibling base pool — base check uses isBaseTitle and (when parallel_id
+  // is provided) parallel_id == null. When parallel_id is absent, treat
+  // it as null (the live aggregated fetch via fetchCompsByPlayer doesn't
+  // preserve parallel_id, so this is the realistic input shape — slightly
+  // less strict than tier 1's record-level base detection).
+  const baseSiblings = siblingComps.filter((c) => {
+    if (c.parallel_id != null) return false;
+    return isBaseTitle(c.title);
+  });
+  if (baseSiblings.length === 0) return null;
+
+  // Bucket by grade detected from title.
+  const baseGraded: number[] = [];
+  const baseRaw: number[] = [];
+  for (const c of baseSiblings) {
+    const det = c.title ? detectGradeFromTitle(c.title) : null;
+    if (!det) {
+      // No graded marker in title → treat as raw
+      baseRaw.push(c.price);
+      continue;
+    }
+    if (
+      det.company.toUpperCase() === company.toUpperCase()
+      && Number(det.grade) === numNeeded
+    ) {
+      baseGraded.push(c.price);
+    }
+    // Other grades for the same sibling — ignored at this layer (each
+    // tier-2 call resolves ONE grade; other grades surface in their own
+    // resolvePlayerSetRatio call).
+  }
+
+  if (baseGraded.length < TIER2_MIN_SIBLING_BASE_SAMPLES) return null;
+  if (baseRaw.length === 0) return null;
+
+  const gradedMed = median(baseGraded);
+  const rawMed = median(baseRaw);
+  if (gradedMed === null || rawMed === null || rawMed <= 0) return null;
+
+  const ratio = gradedMed / rawMed;
+  return {
+    ratio,
+    description:
+      `${label} ratio ${ratio.toFixed(3)}× from ${baseGraded.length} base ${label} ` +
+      `comps across this player's same-release sibling cards ` +
+      `(median ${fmtUSD(gradedMed)} ÷ aggregated sibling base raw median ` +
+      `${fmtUSD(rawMed)} from ${baseRaw.length} sales)`,
+    siblingBaseGradedSamples: baseGraded.length,
+    siblingBaseRawSamples: baseRaw.length,
+    siblingBaseGradedMedian: gradedMed,
+    siblingBaseRawMedian: rawMed,
+  };
+}
+
 function resolveRatio(
   company: string,
   grade: string,
   label: string,
   baseRawMedian: number | null,
   pricing: CardsightPricingResponse,
+  siblingComps: ReadonlyArray<GradedProjectionSiblingComp>,
 ): ResolvedRatio {
   // Tier 1 — card-specific base ratio (dup-bucket merge inherited from
   // selectSalesByGrade — see compiqEstimate.service.ts:1022-1056).
@@ -301,10 +415,23 @@ function resolveRatio(
       }
     }
   }
-  // Tier 2 (Phase 1b) — player/set-level aggregated ratio. Clean seam.
-  //
-  // const playerSetRatio = resolvePlayerSetRatio(...);
-  // if (playerSetRatio) return { ...playerSetRatio, source: "player-set" };
+
+  // Tier 2 — player/set-level aggregated ratio across sibling cards.
+  // Fires when tier 1 missed (card n_base < TIER1_MIN_BASE_SAMPLES) AND
+  // sibling-aggregated n_base >= TIER2_MIN_SIBLING_BASE_SAMPLES.
+  const playerSet = resolvePlayerSetRatio(company, grade, label, siblingComps);
+  if (playerSet) {
+    return {
+      ratio: playerSet.ratio,
+      source: "player-set",
+      description:
+        cardSpecificBaseSamples > 0
+          ? `${playerSet.description}; card's own ${cardSpecificBaseSamples} base ${label} sample(s) were below the tier-1 threshold of ${TIER1_MIN_BASE_SAMPLES}`
+          : playerSet.description,
+      cardSpecificBaseSamples,
+      targetGradeBaseMedian: null,
+    };
+  }
 
   // Tier 3 — market grade-premium table (read-only).
   const marketPremium = getGraderPremium(company, grade);
@@ -312,7 +439,7 @@ function resolveRatio(
     return {
       ratio: marketPremium,
       source: "market",
-      description: `${label} fell back to market grade-premium table (${marketPremium.toFixed(3)}×) — only ${cardSpecificBaseSamples} card-specific base sale(s), below the tier-1 threshold of ${TIER1_MIN_BASE_SAMPLES}`,
+      description: `${label} fell back to market grade-premium table (${marketPremium.toFixed(3)}×) — only ${cardSpecificBaseSamples} card-specific base sale(s), below the tier-1 threshold of ${TIER1_MIN_BASE_SAMPLES}; sibling aggregation also thin or absent`,
       cardSpecificBaseSamples,
       targetGradeBaseMedian: null,
     };
@@ -320,7 +447,7 @@ function resolveRatio(
   return {
     ratio: null,
     source: "none",
-    description: `${label} has no card-specific data (n=${cardSpecificBaseSamples}) and no market premium`,
+    description: `${label} has no card-specific data (n=${cardSpecificBaseSamples}), no sibling aggregation, and no market premium`,
     cardSpecificBaseSamples,
     targetGradeBaseMedian: null,
   };
@@ -334,9 +461,10 @@ function classifyConfidence(
 ): GradedProjectionConfidenceTier {
   if (anchorKind === "none" || ratioSource === "none") return "insufficient";
   if (ratioSource === "market") return "ballpark";
+  if (ratioSource === "player-set") return "rough";
   // ratioSource === "card"
   if (anchorKind === "base") return "estimate";
-  return "rough"; // parallel-observed or parallel-composed
+  return "rough"; // parallel-observed or parallel-composed with card ratio
 }
 
 /** Range as a fraction of the point estimate — widens with lower confidence. */
@@ -359,6 +487,7 @@ export function computeGradedProjection(
     targetParallelId,
     targetParallelRawFmv,
     targetParallelName,
+    siblingComps = [],
     targetGrades = TARGET_GRADES,
   } = input;
 
@@ -397,6 +526,7 @@ export function computeGradedProjection(
       tg.label,
       baseRawMedian,
       pricing,
+      siblingComps,
     );
     const tier = classifyConfidence(anchor.kind, ratio.source);
 

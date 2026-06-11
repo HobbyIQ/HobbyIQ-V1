@@ -505,6 +505,134 @@ describe("CF-GRADED-PRICE-PROJECTION — FMV regression (the proof)", () => {
   });
 });
 
+describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)", () => {
+  // Sibling-aggregation fixtures: mimic CompByPlayer shape that the live
+  // path's fetchSiblingSales → fetchCompsByPlayer would emit. Each
+  // entry carries title + price (parallel_id absent — the realistic
+  // input shape on the live path; tier-2 falls back to title-only base
+  // detection, slightly less strict than tier-1's record-level check).
+  function makeSiblingComps(opts: {
+    nBgs95Base: number;
+    nRawBase: number;
+    nBgs95Parallel?: number;
+    bgs95Price?: number;
+    rawPrice?: number;
+  }) {
+    const comps: Array<{
+      title: string;
+      price: number;
+      parallel_id?: string | null;
+    }> = [];
+    for (let i = 0; i < opts.nBgs95Base; i++) {
+      comps.push({
+        title: `2024 Bowman Chrome Brendan Birdsong #CPA-BB base sibling ${i} BGS 9.5`,
+        price: (opts.bgs95Price ?? 800) + i * 5,
+      });
+    }
+    for (let i = 0; i < opts.nRawBase; i++) {
+      comps.push({
+        title: `2024 Bowman Chrome Brendan Birdsong #CPA-BB sibling raw ${i}`,
+        price: (opts.rawPrice ?? 250) + i * 5,
+      });
+    }
+    for (let i = 0; i < (opts.nBgs95Parallel ?? 0); i++) {
+      // Parallel sibling — must be EXCLUDED from tier-2 base detection
+      comps.push({
+        title: `2024 Bowman Chrome Brendan Birdsong #CPA-BB Blue Refractor /150 sibling ${i} BGS 9.5`,
+        price: 2500,
+      });
+    }
+    return comps;
+  }
+
+  it("Leo BGS 9.5 — siblings supply ≥5 base BGS 9.5 → tier-2 emit ('rough' / 'player-set')", () => {
+    const pricing = makeLeoPricing();
+    const siblingComps = makeSiblingComps({ nBgs95Base: 6, nRawBase: 8 });
+    const out = computeGradedProjection({ pricing, siblingComps });
+    expectAllFmvNull(out);
+
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.confidenceTier).toBe("rough");
+    expect(bgs95.ratioSource).toBe("player-set");
+    expect(bgs95.anchorKind).toBe("base");
+    // Ratio = sibling base BGS 9.5 median / sibling base raw median.
+    // Sibling BGS 9.5 prices: 800..825 → median 812.5
+    // Sibling raw     prices: 250..285 → median 267.5
+    // Ratio ≈ 812.5 / 267.5 ≈ 3.037×
+    expect(bgs95.diagnostics.ratio!).toBeCloseTo(3.037, 1);
+    // Anchor remains the card's own base raw median ($228.93) — the
+    // sibling raw is the tier-2 DENOMINATOR, not the anchor.
+    expect(bgs95.diagnostics.anchorPrice).toBeCloseTo(228.93, 1);
+    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * (812.5 / 267.5), 0);
+    expect(bgs95.basis).toContain("sibling cards");
+    expect(bgs95.basis).toContain("6 base BGS 9.5");
+    // ±20% rough band
+    expect(bgs95.estimateLow!).toBeCloseTo(bgs95.estimatedValue! * 0.8, 1);
+    expect(bgs95.estimateHigh!).toBeCloseTo(bgs95.estimatedValue! * 1.2, 1);
+  });
+
+  it("Leo BGS 9.5 — siblings thin (<5 base BGS 9.5) → tier-3 market fallback (ballpark)", () => {
+    const pricing = makeLeoPricing();
+    const siblingComps = makeSiblingComps({ nBgs95Base: 4, nRawBase: 8 });
+    const out = computeGradedProjection({ pricing, siblingComps });
+
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.confidenceTier).toBe("ballpark");
+    expect(bgs95.ratioSource).toBe("market");
+    expect(bgs95.diagnostics.ratio).toBe(3.5);
+    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.5, 1);
+  });
+
+  it("Tier 2 — sibling PARALLEL records are excluded from the tier-2 base aggregation", () => {
+    // 4 base BGS 9.5 siblings (below threshold) + 4 PARALLEL BGS 9.5 siblings.
+    // Tier 2 sees only the 4 base → below threshold → falls to tier 3.
+    const pricing = makeLeoPricing();
+    const siblingComps = makeSiblingComps({
+      nBgs95Base: 4,
+      nBgs95Parallel: 4,
+      nRawBase: 8,
+    });
+    const out = computeGradedProjection({ pricing, siblingComps });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.ratioSource).toBe("market");
+  });
+
+  it("Tier 2 — siblingComps empty (default) → tier-1 miss → tier-3 fallback (existing behavior preserved)", () => {
+    const out = computeGradedProjection({ pricing: makeLeoPricing() });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.confidenceTier).toBe("ballpark");
+    expect(bgs95.ratioSource).toBe("market");
+  });
+
+  it("Tier 2 — sibling raw denominator missing → tier-3 fallback (can't anchor the ratio)", () => {
+    // 6 BGS 9.5 base siblings (above threshold) but ZERO base raw siblings.
+    // Tier 2 needs both numerator AND denominator; falls through to tier 3.
+    const pricing = makeLeoPricing();
+    const siblingComps = makeSiblingComps({ nBgs95Base: 6, nRawBase: 0 });
+    const out = computeGradedProjection({ pricing, siblingComps });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.ratioSource).toBe("market");
+  });
+
+  it("Tier 2 — confidenceTier stays 'rough' even when card-anchor is parallel-observed", () => {
+    const pricing = makeLeoParallelPricingNoBlueGraded();
+    const siblingComps = makeSiblingComps({ nBgs95Base: 6, nRawBase: 8 });
+    const out = computeGradedProjection({
+      pricing,
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+      siblingComps,
+    });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.confidenceTier).toBe("rough");
+    expect(bgs95.ratioSource).toBe("player-set");
+    expect(bgs95.anchorKind).toBe("parallel-observed");
+    expect(bgs95.diagnostics.anchorPrice).toBe(1183);
+    expect(bgs95.estimatedValue!).toBeCloseTo(1183 * (812.5 / 267.5), 0);
+  });
+});
+
 describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {
   it("empty pricing → no observed (GUARD doesn't fire) → all results 'insufficient'", () => {
     const empty: CardsightPricingResponse = {
