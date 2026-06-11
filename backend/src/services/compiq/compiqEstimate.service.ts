@@ -71,6 +71,7 @@ import {
   computeTrendIQ,
   formatTrendIQLogLine,
 } from "./trendIQ.compute.js";
+import type { TrendIQResult } from "./trendIQ.types.js";
 // CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B locked) —
 // TrendIQ-driven forward projection layer on top of fairMarketValue.
 import { computePredictedPrice } from "./forwardProjection.js";
@@ -3280,6 +3281,21 @@ export async function computeEstimate(
       `[compiq.computeEstimate] thin-data short-circuit: comps=${fetched.comps.length} daysSinceNewest=${daysSinceNewest} query="${cardTitle}"`
     );
 
+    // CF-THIN-CARD-FULL-DETAIL-PARITY (2026-06-12): scratch vars to carry
+    // the thin path's overall-trend signal onto the no-recent-comps return.
+    // Computed inside the `if (cardIdentity)` block below (free piggyback on
+    // the sibling-pool rescue's existing fetchSiblingSales). Hoisted here so
+    // they survive past that block's closing brace and reach the return.
+    //
+    // GUARD: these feed the OVERALL TREND section's direction/context only.
+    // They never overwrite the card's last-sale value, never flip the FMV-
+    // null display-not-train flag, and never produce an estimatedValue.
+    // (Repricing of the last sale → estimatedValue is still gated on
+    // playerMomentum × repriceTrendExtrapolated below — unchanged.)
+    let thinBranchSiblingPool: SiblingSalesPool = { siblingCardIds: [], sales: [] };
+    let thinBranchBroaderTrend: BroaderTrend | null = null;
+    let thinBranchTrendIQ: TrendIQResult | null = null;
+
     // CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING (2026-05-26):
     // Before returning "no-recent-comps", try the sibling-pool rescue path.
     // Approach A pattern from CF-CARDSIGHT-SIBLING-DISCOVERY (e2d5864):
@@ -3303,6 +3319,51 @@ export async function computeEstimate(
       } catch (err) {
         console.warn(
           `[compiq.computeEstimate] sibling-pool rescue: fetchSiblingSales threw — falling through to "no-recent-comps": ${(err as Error)?.message ?? err}`
+        );
+      }
+      thinBranchSiblingPool = siblingPool;
+
+      // CF-THIN-CARD-FULL-DETAIL-PARITY (2026-06-12): compute broaderTrend +
+      // trendIQ NOW so the no-recent-comps return shape matches the live
+      // path. Free piggyback on the siblingPool we just fetched. Does NOT
+      // affect the rescue path below — that path has its own self-contained
+      // trendIQ compute at L3411-3424 with playerMomentum hardcoded to null
+      // (its own design); we don't touch it. Live path (L3732+) untouched.
+      //
+      // playerMomentum is the hoisted per-(player, release, year) momentum
+      // from L2957 (CF-TREND-EXTRAPOLATED). cardTrajectory typically nulls
+      // on this branch (the recovery pool is by definition thin —
+      // computeCardTrajectory needs ≥2 in 0-14d AND ≥2 in 15-45d on
+      // trendCleanComps). segmentTrajectory load-bears off siblingPool.
+      // Coverage degrades honestly to "insufficient" when all three are
+      // null → flat composite + impliedPct 0; iOS' "Holding steady, no
+      // clear direction" text fills that surface (per Phase 2 spec).
+      try {
+        thinBranchBroaderTrend = await fetchBroaderTrend(
+          cardIdentity,
+          cardHedgeGrade,
+          trendCleanComps,
+          siblingPool,
+        );
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] thin-path fetchBroaderTrend threw — leaving broaderTrend=null: ${(err as Error)?.message ?? err}`,
+        );
+      }
+      try {
+        const cardTrajectory = computeCardTrajectory(
+          trendCleanComps.map((c) => ({ price: c.price, soldDate: c.soldDate })),
+        );
+        const segR = computeSegmentTrajectoryAndFull(siblingPool, newestTs);
+        thinBranchTrendIQ = computeTrendIQ({
+          playerMomentum,
+          cardTrajectory,
+          segmentTrajectory: segR.component,
+        });
+        console.log(`[thin-path] ${formatTrendIQLogLine(thinBranchTrendIQ)}`);
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] thin-path computeTrendIQ threw — leaving trendIQ=null: ${(err as Error)?.message ?? err}`,
         );
       }
 
@@ -3687,6 +3748,20 @@ export async function computeEstimate(
       // when no anchor at all.
       lastSale,
       estimateSource: resolvedEstimateSource,
+      // CF-THIN-CARD-FULL-DETAIL-PARITY (2026-06-12): shape parity with
+      // the live branch — surface trendIQ + broaderTrend (and the trendIQ
+      // lastUpdated as signalsLastUpdated, mirroring the live path at
+      // L4234) so iOS can render the OVERALL TREND section on this branch
+      // off the same fields. Both are computed above in the cardIdentity
+      // block and may be null when cardIdentity is null (rare) or when
+      // the underlying fetches threw. trendIQ degrades honestly to
+      // coverage="insufficient" / direction="flat" when all three layers
+      // are null — the iOS surface fills that with "Holding steady, no
+      // clear direction." Neither field overrides the headline last-sale
+      // value; neither flips the fairMarketValue=null training gate.
+      trendIQ: thinBranchTrendIQ,
+      broaderTrend: thinBranchBroaderTrend,
+      signalsLastUpdated: thinBranchTrendIQ?.lastUpdated ?? null,
       variantWarning: fetched.variantWarning,
       // CF-PINNED-PARALLEL-RECOVERY (2026-06-10): propagate the parallel-
       // match attribution onto the no-recent-comps thin-data branch too.
