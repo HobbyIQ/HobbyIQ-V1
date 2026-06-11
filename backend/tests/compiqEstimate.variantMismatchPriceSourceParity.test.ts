@@ -179,10 +179,22 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
     expect(result.parallelMatchUnifiedCount).toBe(5);
   });
 
-  it("variant-mismatch propagates 'approximate' / title-matched attribution when router reports it", async () => {
-    // Router built the pool via title-match (user provided a parallel that
-    // resolved); the variant filter rejected downstream. priceSource should
-    // still reflect HOW the pool was built, not the rejection.
+  it("title-match-low-sample BYPASSES the variant tier ladder (CF-PINNED-PARALLEL-RECOVERY #3)", async () => {
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) #3: when the router (or
+    // pinned-id branch's recovery) reports title-matched-parallel or
+    // title-match-low-sample, the value-path BYPASSES the variant tier
+    // ladder. Rationale: title-match already did the variant-correctness
+    // check (word-boundary + sibling-registry guard + span-scoped
+    // finish-vocab backstop) that the ladder duplicates; double-rejecting
+    // collapses clean 1-2-comp recovery pools to "variant-mismatch" with
+    // no FMV. Post-bypass, the pool flows through to FMV computation
+    // with priceSource attribution preserved for the thin-data disclosure.
+    //
+    // Pre-CF: this case returned source="variant-mismatch" because the
+    // 2-comp pool was below VARIANT_TIER_MIN_COMPS=3. Post-CF: the ladder
+    // is skipped for recovery sources; source becomes "live" (FMV
+    // present) or "no-recent-comps" (pool too thin for an anchor).
+    // Either way, NOT variant-mismatch.
     mockFindCompsRouted.mockResolvedValue(variantMismatchRouterResponse({
       priceSource: "approximate",
       priceSourceInternal: "title-match-low-sample",
@@ -199,7 +211,8 @@ describe("CF-VARIANT-MISMATCH-PRICESOURCE-PARITY — variant-mismatch propagates
       gradeValue: 9,
     } as any, testCallContext)) as Record<string, unknown>;
 
-    expect(result.source).toBe("variant-mismatch");
+    expect(result.source).not.toBe("variant-mismatch");
+    // priceSource attribution still propagates on whichever path was taken.
     expect(result.priceSource).toBe("approximate");
     expect(result.priceSourceInternal).toBe("title-match-low-sample");
     expect(result.parallelMatchFilteredCount).toBe(2);

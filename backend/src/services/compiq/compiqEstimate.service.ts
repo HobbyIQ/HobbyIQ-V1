@@ -2879,6 +2879,40 @@ export async function computeEstimate(
       tierLadderTrace: { T0: t0Count, T1: 0, T2: 0, T3: 0 } as Record<VariantStrictness, number>,
       everythingFilteredOut: t0EverythingFilteredOut,
     };
+  } else if (
+    fetched.priceSourceInternal === "title-matched-parallel"
+    || fetched.priceSourceInternal === "title-match-low-sample"
+  ) {
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): bypass the tier ladder's
+    // VARIANT_TIER_MIN_COMPS=3 floor for title-match-recovered pools.
+    // The recovery (applyParallelTitleMatch + sibling-registry guard +
+    // span-scoped finish-vocab backstop) has already done the variant-
+    // correctness check the tier ladder duplicates — running both layers
+    // collapses 1-2 comp recovery pools to 0 even when they're cleanly
+    // parallel-isolated. Synthesize a T0 tierResult: everything passes,
+    // confidence calibration handles the thin-pool ceiling downstream
+    // (calibrateConfidence's n<3 → 45% cap is the right surface).
+    //
+    // This branch fires ONLY for the two TITLE-MATCH internal sources;
+    // cardsight-parallel-id (the actual Cardsight tag delivered) falls
+    // through to the normal ladder because that path didn't filter
+    // titles itself.
+    console.log(
+      `[compiq.computeEstimate] recovery-isolated pool (${fetched.priceSourceInternal}); bypassing tier ladder count-floor — pool size=${recencyFilteredComps.length}`,
+    );
+    tierResult = {
+      chosenTier: "T0" as VariantStrictness,
+      variantFiltered: recencyFilteredComps,
+      variantExclusionReasons: {},
+      variantExcludedCount: 0,
+      tierLadderTrace: {
+        T0: recencyFilteredComps.length,
+        T1: 0,
+        T2: 0,
+        T3: 0,
+      } as Record<VariantStrictness, number>,
+      everythingFilteredOut: false,
+    };
   } else {
     tierResult = runVariantTierLadder(recencyFilteredComps, parsedForGuard);
   }
@@ -3872,7 +3906,23 @@ export async function computeEstimate(
     totalComps: compQualityInfo.totalComps,
     recentCount: broaderTrend?.recentCount ?? 0,
   });
-  if (!dataSufficiency.sufficient) {
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): bypass the 3-comp
+  // sufficiency floor's FMV-null assignment for TITLE-MATCH-recovered
+  // pools. Title-match isolated a clean parallel-specific sub-market
+  // (word-boundary + sibling-registry guard + span-scoped finish-vocab
+  // backstop); the single sale IS the honest market value for this
+  // sub-market and surfacing it as an approximate FMV is the correct
+  // UX — iOS reads priceSource="approximate" + dataSufficiency.level
+  // ("very_thin"/"thin") and renders the thin-data disclosure. The
+  // dataSufficiency object itself stays untouched so the disclosure
+  // is preserved on the response. Corpus pollution is prevented by
+  // the title-match-low-sample → fairMarketValue=null override at
+  // the corpus emit further down — the on-screen FMV is honest
+  // display data; the corpus emit excludes it from training.
+  const isRecoveryIsolatedPool =
+    fetched.priceSourceInternal === "title-matched-parallel"
+    || fetched.priceSourceInternal === "title-match-low-sample";
+  if (!dataSufficiency.sufficient && !isRecoveryIsolatedPool) {
     quickSaleValue = null as unknown as number;
     fairMarketValue = null as unknown as number;
     premiumValue = null as unknown as number;
@@ -4123,10 +4173,29 @@ export async function computeEstimate(
   // unified helper. Replaces the prior inline payload construction. Same
   // payload shape; the helper adds `fmvMechanism`, `surfacedPrice`,
   // `surfacedPriceSource`.
+  //
+  // CF-PINNED-PARALLEL-RECOVERY (2026-06-11) corpus guard: exclude FMV
+  // from training when the value-path consumed a TITLE-MATCH-LOW-SAMPLE
+  // pool (recovery isolated 1-2 comps). The on-screen FMV is honest
+  // display data with the "approximate" priceSource disclosing the
+  // thin sample, but a 1-2-comp value isn't a robust ground-truth
+  // realizedReturn anchor — joining it back through the corpus would
+  // teach the model on noise. Same structural fmv=null gate as
+  // CF-TREND-EXTRAPOLATED's display-not-train discipline.
+  //
+  // TITLE-MATCHED-PARALLEL (≥3 comps post-recovery) stays trainable —
+  // that's a clean isolated pool large enough to anchor a realized
+  // return.
+  const corpusFmv =
+    fetched.priceSourceInternal === "title-match-low-sample"
+      ? null
+      : typeof fairMarketValue === "number"
+      ? fairMarketValue
+      : null;
   emitPredictionToCorpus({
     cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
     body,
-    fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+    fairMarketValue: corpusFmv,
     fmvMechanism: "main-pipeline",
     predictedPrice: __predicted.predictedPrice,
     predictedPriceRange: __predicted.predictedPriceRange,

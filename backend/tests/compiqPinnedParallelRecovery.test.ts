@@ -267,3 +267,160 @@ describe("CF-PINNED-PARALLEL-RECOVERY — Leo De Vries Blue Refractor /150", () 
     expect(result.compsUsed).toBeGreaterThanOrEqual(3);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// CF #3 — recovery-isolated pools reach FMV.
+//
+// Pre-fix: title-match-low-sample (1-2 comp recovery pools) ALWAYS collapsed
+// to compsUsed=0 because runVariantTierLadder's VARIANT_TIER_MIN_COMPS=3
+// floor rejected the clean-but-thin recovery pool. The single $1183 Blue
+// Refractor Leo De Vries record on the live probe never reached FMV.
+//
+// Post-fix: the ladder is BYPASSED when priceSourceInternal is one of the
+// two recovery sources — title-matched-parallel or title-match-low-sample.
+// Recovery already did the variant-correctness check (word-boundary +
+// registry guard + span-scoped finish-vocab backstop); the ladder would
+// double-reject. Downstream confidence calibration (n<3 → 45% ceiling)
+// is the right surface for the thin-pool disclosure, not a hard reject.
+//
+// Corpus guardrail: title-match-low-sample (1-2 comps) still excluded
+// from training via fairMarketValue=null at emit. title-matched-parallel
+// (≥3) STAYS trainable.
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("CF-PINNED-PARALLEL-RECOVERY #3 — recovery pools reach FMV (variant-ladder bypass + corpus guard)", () => {
+  beforeAll(() => {
+    process.env.CARDSIGHT_API_KEY = "test-cardsight-key";
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Fixture: 5 base + 1 Blue + 0 Gold — recovery isolates exactly the
+   *  single Blue record → priceSourceInternal="title-match-low-sample". */
+  function makeSingleBluePricing() {
+    const f = makeLeoUnifiedPricing();
+    f.raw.records = f.raw.records.filter((r: any) => {
+      const t = String(r.title).toLowerCase();
+      if (t.includes("gold")) return false;            // drop all Gold
+      if (!t.includes("blue")) return true;            // keep all base
+      return t.endsWith("blue 0)");                    // keep only first Blue
+    });
+    f.raw.count = f.raw.records.length;
+    return f;
+  }
+
+  it("low-sample (1 comp) recovery — bypasses ladder floor, surfaces FMV, priceSource=approximate", async () => {
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSingleBluePricing(),
+    );
+    (cardSight.getCardDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeoDetail(),
+    );
+
+    const result = (await computeEstimate(
+      {
+        playerName: LEO_BASE_ID,
+        cardsightCardId: LEO_BASE_ID,
+        parallelId: BLUE_REFRACTOR_150_ID,
+        parallel: "Blue Refractor",
+        isAuto: true,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    expect(result.priceSourceInternal).toBe("title-match-low-sample");
+    expect(result.priceSource).toBe("approximate");
+    expect(result.compsUsed).toBe(1);
+    // Bypass verification — variant-mismatch MUST NOT fire on a clean
+    // recovery-isolated pool. Pre-fix this returned "variant-mismatch".
+    expect(result.source).not.toBe("variant-mismatch");
+    // The single Blue record is at price 320 (i=0 → 320 + 0*15) — FMV
+    // should land in the Blue band, not collapse to null.
+    expect(typeof result.fairMarketValue).toBe("number");
+    expect(result.fairMarketValue as number).toBeGreaterThan(200);
+    expect(result.fairMarketValue as number).toBeLessThan(500);
+  });
+
+  it("corpus guardrail — low-sample emits fairMarketValue=null to predictionCorpus (display-not-train)", async () => {
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeSingleBluePricing(),
+    );
+    (cardSight.getCardDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeoDetail(),
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const result = (await computeEstimate(
+      {
+        playerName: LEO_BASE_ID,
+        cardsightCardId: LEO_BASE_ID,
+        parallelId: BLUE_REFRACTOR_150_ID,
+        parallel: "Blue Refractor",
+        isAuto: true,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    // On-screen FMV present (display contract honored)
+    expect(result.priceSourceInternal).toBe("title-match-low-sample");
+    expect(typeof result.fairMarketValue).toBe("number");
+
+    // Corpus emit — fairMarketValue MUST be null
+    const lines = logSpy.mock.calls.map((c) => String(c[0] ?? ""));
+    const emitLine = lines.find(
+      (l) =>
+        l.includes("[compiq.prediction_emitted]") &&
+        l.includes('"fmvMechanism":"main-pipeline"'),
+    );
+    expect(emitLine).toBeDefined();
+    const json = emitLine!.replace("[compiq.prediction_emitted] ", "").trim();
+    const parsed = JSON.parse(json);
+    expect(parsed.fairMarketValue).toBeNull();
+
+    logSpy.mockRestore();
+  });
+
+  it("title-matched-parallel (>=3 comps) STAYS trainable — corpus emit carries non-null FMV", async () => {
+    // 5 Blue + 5 base + 3 Gold (default fixture) — title-match isolates
+    // 5 Blue → priceSourceInternal="title-matched-parallel", samples
+    // are robust enough to train against.
+    (cardSight.getPricing as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeoUnifiedPricing(),
+    );
+    (cardSight.getCardDetail as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeLeoDetail(),
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const result = (await computeEstimate(
+      {
+        playerName: LEO_BASE_ID,
+        cardsightCardId: LEO_BASE_ID,
+        parallelId: BLUE_REFRACTOR_150_ID,
+        parallel: "Blue Refractor",
+        isAuto: true,
+      } as any,
+      testCallContext,
+    )) as Record<string, unknown>;
+
+    expect(result.priceSourceInternal).toBe("title-matched-parallel");
+
+    const lines = logSpy.mock.calls.map((c) => String(c[0] ?? ""));
+    const emitLine = lines.find(
+      (l) =>
+        l.includes("[compiq.prediction_emitted]") &&
+        l.includes('"fmvMechanism":"main-pipeline"'),
+    );
+    expect(emitLine).toBeDefined();
+    const parsed = JSON.parse(
+      emitLine!.replace("[compiq.prediction_emitted] ", "").trim(),
+    );
+    expect(typeof parsed.fairMarketValue).toBe("number");
+    expect(parsed.fairMarketValue).toBeGreaterThan(0);
+
+    logSpy.mockRestore();
+  });
+});
