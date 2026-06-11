@@ -554,18 +554,28 @@ struct CompIQVariantPickerView: View {
 
     /// Synthesizes a child `CompIQVariantHit` for a tapped parallel so the
     /// existing `CompIQPricedCardView` flow can drive a comp page for that
-    /// parallel without a new view path. Wire contract:
-    ///   - `cardsightCardId` = `parallel.id` — best guess at the per-parallel
-    ///     pricing id. If backend rejects (no per-parallel pricing for this
-    ///     row), the comp page surfaces a "no comps" state rather than
-    ///     crashing.
-    ///   - `variant` = `parallel.name` so the comp header reads
-    ///     "{player} · {parallel}".
-    ///   - `serialNumber` = `/{numberedTo}` when present, so the priced
-    ///     card surfaces the print run too.
+    /// parallel without a new view path.
+    ///
+    /// CF-PARALLEL-SUBMARKET (2026-06-10): pricing id is the PARENT base
+    /// UUID, NOT the parallel UUID. Backend's /api/compiq/price-by-id
+    /// resolves the base card and then filters comps to the matched
+    /// parallel sub-market using a separate `parallelId` field on the
+    /// request body (compiq.routes.ts:1158 — destructures parallelId +
+    /// parallelName from req.body, validates UUID-shape, cache-keys on
+    /// the parallel so base vs Blue Refractor sit at distinct entries).
+    /// Previously sending `cardsightCardId = parallel.id` left the
+    /// pricing id unrecognized (parallel UUIDs aren't first-class
+    /// pricing keys) and returned all-null cardIdentity + zero comps.
+    ///
+    /// Carry-through:
+    ///   - `cardsightCardId` = `parent.cardsightCardId` (base — pricing id)
+    ///   - `parallelId`      = `parallel.id` (sub-market filter)
+    ///   - `variant`         = `parallel.name` (also wired as
+    ///     `parallelName` on the wire body so the backend's logs +
+    ///     marketRead prose can use the human name)
+    ///   - `serialNumber`    = `/{numberedTo}` when present
     /// All identity carry-over (player/year/set/brand/etc.) comes from
-    /// the parent hit so the comp page identity matches the row the user
-    /// tapped from.
+    /// the parent so the comp page identity matches the row tapped.
     private func parallelHit(parent: CompIQVariantHit, parallel: CompIQCardsightParallel) -> CompIQVariantHit {
         let serial = parallel.numberedTo.map { "/\($0)" }
         let parallelTitle: String? = {
@@ -576,7 +586,7 @@ struct CompIQVariantPickerView: View {
             return parallel.name
         }()
         return CompIQVariantHit(
-            cardsightCardId: parallel.id,
+            cardsightCardId: parent.cardsightCardId,
             player: parent.player,
             set: parent.set,
             year: parent.year,
@@ -597,7 +607,8 @@ struct CompIQVariantPickerView: View {
             attribution: parent.attribution,
             confidence: parent.confidence,
             attributes: parent.attributes,
-            parallels: nil
+            parallels: nil,
+            parallelId: parallel.id
         )
     }
 

@@ -12,7 +12,7 @@ struct CompIQPricedCardView: View {
     @State private var priceResponse: CompIQPriceByIdResponse?
     @State private var isLoading = false
     @State private var error: String?
-    @State private var selectedGrade: GradeOption = .raw
+    @State private var selectedGrade: GradeOption = GradeOption.raw
     @State private var fetchTask: Task<Void, Never>?
     @State private var showLayerBreakdown = false
     @State private var segmentTrajectoryFull: SegmentTrajectoryFull?
@@ -39,43 +39,41 @@ struct CompIQPricedCardView: View {
         }
     }
 
-    /// Maps a backend cert candidate's (gradeCompany, gradeValue) pair to the
+    /// Maps a backend cert candidate's (gradeCompany, gradeValue) pair to a
     /// matching GradeOption so a comped result lands grade-matched on first
-    /// paint. Returns nil when the grade falls outside the picker's known
-    /// options — caller should leave `selectedGrade` at its default (.raw).
+    /// paint. Post CF-FULL-GRADE-RAIL, every numeric grade is selectable —
+    /// the helper now succeeds for any (company, value) pair, not just the
+    /// pre-rail hard-coded four.
     static func gradeOption(forCompany company: String?, value: Double?) -> GradeOption? {
         guard let company = company?.uppercased(), let value else { return nil }
-        switch (company, value) {
-        case ("PSA", 9):    return .psa9
-        case ("PSA", 10):   return .psa10
-        case ("BGS", 9.5):  return .bgs95
-        default:            return nil
-        }
+        return GradeOption(
+            label: GradeOption.composeLabel(company: company, value: value),
+            gradeCompany: company,
+            gradeValue: value
+        )
     }
 
-    enum GradeOption: String, CaseIterable, Identifiable {
-        case raw = "Raw"
-        case psa9 = "PSA 9"
-        case psa10 = "PSA 10"
-        case bgs95 = "BGS 9.5"
+    /// CF-FULL-GRADE-RAIL (2026-06-10): one selectable grade chip on the
+    /// rail. Replaces the pre-rail enum (Raw/PSA9/PSA10/BGS9.5 hard-coded)
+    /// so chips are derived from the response's `gradeBreakdown`. Carries
+    /// the same `gradeCompany` + `gradeValue` pair the existing fetchPrice
+    /// path already speaks — no backend contract change.
+    struct GradeOption: Hashable, Identifiable {
+        let label: String
+        let gradeCompany: String?
+        let gradeValue: Double?
 
-        var id: String { rawValue }
+        var id: String { label }
 
-        var gradeCompany: String? {
-            switch self {
-            case .raw: return nil
-            case .psa9, .psa10: return "PSA"
-            case .bgs95: return "BGS"
-            }
-        }
+        static let raw = GradeOption(label: "Raw", gradeCompany: nil, gradeValue: nil)
 
-        var gradeValue: Double? {
-            switch self {
-            case .raw: return nil
-            case .psa9: return 9
-            case .psa10: return 10
-            case .bgs95: return 9.5
-            }
+        /// "PSA 10" / "BGS 9.5" — drops trailing ".0" so integer grades
+        /// render without a meaningless decimal.
+        static func composeLabel(company: String, value: Double) -> String {
+            let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return "\(company) \(valueStr)"
         }
     }
 
@@ -189,33 +187,51 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Header (integrated grade picker)
 
-    /// Identity header. Player name primary; full card details secondary
-    /// ("{year} {set} · #{number}"). When the price response has loaded,
-    /// uses `cardIdentity` as the canonical source (set name comes back
-    /// fully spelled out — e.g. "Topps Update"); falls back to the
-    /// variant-hit fields during the initial load so the header is never
-    /// blank.
+    /// CF-CENTERED-HEADER (2026-06-10): identity column centered, player
+    /// name 32pt bold rounded, release line 17pt muted, generous gap down
+    /// to the grade rail. Reads as a calm anchor — the page's "who and
+    /// what" — before the price/comps/chart roll in.
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .center, spacing: 8) {
                 Text(headerPrimaryTitle)
-                    .font(HobbyIQTheme.Typography.title)
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let details = headerCardDetails {
                     Text(details)
-                        .font(.subheadline)
+                        .font(.system(size: 17))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
             gradePicker
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .hiqCard()
+    }
+
+    /// CF-BUYER-COPY (2026-06-10): the "Comps by Player" tool label
+    /// substitutes a real player name so the button reads ("Other Trout
+    /// cards") instead of generic ("Comps by Player"). Prefers the
+    /// cardIdentity surname (proper noun, shorter), falls back to full
+    /// player name, then to "this player" so we never render an empty
+    /// possessive.
+    private var playerForToolLabel: String {
+        let raw = (priceResponse?.cardIdentity?.player
+            ?? hit.player
+            ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard raw.isEmpty == false else { return "this player" }
+        if let surname = raw.split(separator: " ").last, surname.isEmpty == false {
+            return String(surname)
+        }
+        return raw
     }
 
     /// Player name primary. Prefers `cardIdentity.player` (server-canonical)
@@ -234,22 +250,40 @@ struct CompIQPricedCardView: View {
         return hit.resolvedLabel
     }
 
-    /// "{year} {set} · #{number}" composed from the response's
+    /// "{year} {release} · #{number}" composed from the response's
     /// `cardIdentity` when present, else the variant hit. Returns nil when
     /// neither source can produce a non-empty line.
+    /// CF-RELEASE-IDENTITY (2026-06-10): priority is now
+    ///   cardIdentity.release → hit.brand → cardIdentity.set → hit.set
+    /// with a base-set denylist guarding the trailing fallbacks. The wire's
+    /// canonical path is `cardIdentity.release` ("Topps Update") so the
+    /// header reads "2011 Topps Update · #US175" instead of the
+    /// subset-leakage "2011 Base Set · #US175".
     private var headerCardDetails: String? {
         let year: String? = {
             if let y = priceResponse?.cardIdentity?.year { return String(y) }
             return hit.year.map(String.init)
         }()
         let set: String? = {
-            let serverSet = priceResponse?.cardIdentity?.set?
+            let serverRelease = priceResponse?.cardIdentity?.release?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if let serverSet, serverSet.isEmpty == false { return serverSet }
+            if let serverRelease, serverRelease.isEmpty == false {
+                return serverRelease
+            }
             let hitBrand = hit.brand?.trimmingCharacters(in: .whitespacesAndNewlines)
             if let hitBrand, hitBrand.isEmpty == false { return hitBrand }
+            // Fall back to subset only when nothing else is on hand AND it
+            // isn't the "Base Set" boilerplate (denylist below).
+            let serverSet = priceResponse?.cardIdentity?.set?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let serverSet, isHeaderSetFallbackUsable(serverSet) {
+                return serverSet
+            }
             let hitSet = hit.set?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (hitSet?.isEmpty == false) ? hitSet : nil
+            if let hitSet, isHeaderSetFallbackUsable(hitSet) {
+                return hitSet
+            }
+            return nil
         }()
         let number: String? = {
             let serverNum = priceResponse?.cardIdentity?.number?
@@ -269,47 +303,141 @@ struct CompIQPricedCardView: View {
         return head
     }
 
-    // MARK: - Grade Picker
+    /// Base-set denylist — the subset fallback should never surface
+    /// "Base Set" / "Base" / empty in the identity line. Used only on the
+    /// trailing fallback arms; the canonical wire path is `release`.
+    private func isHeaderSetFallbackUsable(_ raw: String) -> Bool {
+        let lower = raw.lowercased()
+        return lower.isEmpty == false && lower != "base set" && lower != "base"
+    }
 
-    private var gradePicker: some View {
-        HStack(spacing: 6) {
-            ForEach(GradeOption.allCases) { grade in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedGrade = grade
-                    }
-                } label: {
-                    Text(grade.rawValue)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(
-                            selectedGrade == grade
-                                ? HobbyIQTheme.Colors.pureWhite
-                                : HobbyIQTheme.Colors.mutedText
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(
-                            selectedGrade == grade
-                                ? HobbyIQTheme.Colors.electricBlue
-                                : HobbyIQTheme.Colors.steelGray.opacity(0.4)
-                        )
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(
-                                    selectedGrade == grade
-                                        ? HobbyIQTheme.Colors.electricBlue.opacity(0.5)
-                                        : Color.clear,
-                                    lineWidth: 1.5
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
+    // MARK: - Grade Picker (CF-FULL-GRADE-RAIL, 2026-06-10)
+
+    /// CF-FULL-GRADE-RAIL: data-driven rail derived from the response's
+    /// `gradeBreakdown` — Raw first, then every (grader, grade) bucket
+    /// with `compCount > 0` and a numeric grade. Non-numeric labels (e.g.
+    /// "Authentic") are filtered out client-side since the request body's
+    /// `gradeValue: Double?` can't carry them; backend-side those buckets
+    /// stay on the wire and would resurface with a future `gradeLabel`
+    /// plumbing CF.
+    private var availableGrades: [GradeOption] {
+        var result: [GradeOption] = [GradeOption.raw]
+        guard let breakdown = priceResponse?.gradeBreakdown,
+              breakdown.isEmpty == false else { return result }
+
+        // Filter + normalize.
+        struct GradeBucket {
+            let grader: String
+            let value: Double
+        }
+        let buckets: [GradeBucket] = breakdown.compactMap { entry in
+            guard let grader = entry.grader?
+                    .trimmingCharacters(in: .whitespaces)
+                    .uppercased(),
+                  grader.isEmpty == false,
+                  let value = entry.numericGrade,
+                  let count = entry.compCount, count > 0 else { return nil }
+            return GradeBucket(grader: grader, value: value)
+        }
+
+        // CF-RAIL-SCROLL (2026-06-10): explicit company order (PSA → BGS
+        // → SGC → others), grades DESC within each company. Replaces the
+        // alphabetical sort so the rail reads in the order a collector
+        // expects (PSA first — the dominant grader by volume).
+        let preferredOrder = ["PSA", "BGS", "SGC"]
+        let grouped = Dictionary(grouping: buckets, by: { $0.grader })
+        var orderedGraders = preferredOrder.filter { grouped.keys.contains($0) }
+        let extras = grouped.keys.filter { preferredOrder.contains($0) == false }.sorted()
+        orderedGraders.append(contentsOf: extras)
+        for grader in orderedGraders {
+            let entries = (grouped[grader] ?? []).sorted { $0.value > $1.value }
+            for bucket in entries {
+                result.append(
+                    GradeOption(
+                        label: GradeOption.composeLabel(company: bucket.grader, value: bucket.value),
+                        gradeCompany: bucket.grader,
+                        gradeValue: bucket.value
+                    )
+                )
             }
         }
-        .padding(4)
-        .background(HobbyIQTheme.Colors.cardNavy.opacity(0.8))
-        .clipShape(Capsule())
+        return result
+    }
+
+    /// CF-RAIL-SCROLL (2026-06-10): horizontal scroll strip (was wrapping
+    /// flow). Chips render in a single row, fixed-size, no shrink. A
+    /// `ScrollViewReader` auto-centers the selected chip on appear AND on
+    /// every `selectedGrade` change, so landing on a deep grade (PSA 5,
+    /// SGC 9, etc.) never leaves the active pill hidden off-screen.
+    private var gradePicker: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: true) {
+                HStack(spacing: 8) {
+                    ForEach(availableGrades) { grade in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedGrade = grade
+                            }
+                        } label: {
+                            Text(grade.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(
+                                    selectedGrade == grade
+                                        ? HobbyIQTheme.Colors.pureWhite
+                                        : HobbyIQTheme.Colors.mutedText
+                                )
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    selectedGrade == grade
+                                        ? HobbyIQTheme.Colors.electricBlue
+                                        : HobbyIQTheme.Colors.steelGray.opacity(0.4)
+                                )
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(
+                                            selectedGrade == grade
+                                                ? HobbyIQTheme.Colors.electricBlue.opacity(0.5)
+                                                : Color.clear,
+                                            lineWidth: 1.5
+                                        )
+                                )
+                                .fixedSize()
+                        }
+                        .buttonStyle(.plain)
+                        .id(grade.id)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+            }
+            .onAppear {
+                // Defer one runloop so the row has laid out before we
+                // scroll — without this, scrollTo can no-op on first paint.
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(selectedGrade.id, anchor: .center)
+                    }
+                }
+            }
+            .onChange(of: selectedGrade) { _, newGrade in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(newGrade.id, anchor: .center)
+                }
+            }
+            .onChange(of: availableGrades) { _, _ in
+                // Rail repopulates each refetch (new gradeBreakdown comes
+                // back). Re-center the selected chip in case the new bucket
+                // order changed its position.
+                DispatchQueue.main.async {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(selectedGrade.id, anchor: .center)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Content
@@ -1006,81 +1134,79 @@ struct CompIQPricedCardView: View {
         }
     }
 
+    /// CF-BUYER-COPY (2026-06-10): rewritten for buyer-readability.
+    /// The prior "104.6% Up · +4.6% implied" headline forced the user to
+    /// reconcile a composite multiplier, a direction word, AND an implied
+    /// percent — three numbers for one fact. Now one sentence carries the
+    /// trend; the layer breakdown moves to a small info-circle so the
+    /// power-user shortcut is still there without taking a card slot.
     private func trendIQHeadline(_ trendIQ: TrendIQResponse) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "Signal")
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: trendIQDirectionIcon(trendIQ.direction))
+                .font(.title3.weight(.bold))
+                .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
 
-            HStack(spacing: 12) {
-                Image(systemName: trendIQDirectionIcon(trendIQ.direction))
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
+            Text(trendIQHeadlineCopy(trendIQ))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    if let composite = trendIQ.composite {
-                        // TODO: post-diagnosis decision — raw percentage for now
-                        Text(String(format: "%.1f%%", composite * 100))
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
-                    }
-
-                    if let direction = trendIQ.direction {
-                        Text(direction.capitalized)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    }
-                }
-
-                Spacer()
-
-                if let impliedPct = trendIQ.impliedPct {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(String(format: "%+.1f%%", impliedPct))
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(trendIQDirectionColor(trendIQ.direction))
-                        Text("implied")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                }
-            }
+            Spacer(minLength: 4)
 
             Button {
                 showLayerBreakdown = true
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chart.bar.doc.horizontal")
-                        .font(.caption.weight(.semibold))
-                    Text("Layer Breakdown")
-                        .font(.caption.weight(.bold))
-                }
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                .clipShape(Capsule())
+                Image(systemName: "info.circle")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Layer breakdown")
         }
     }
 
+    /// One-sentence buyer-readable trend summary. Prefers `impliedPct` for
+    /// the magnitude (that's the user-facing percent the rest of the page
+    /// references); falls back to a direction-only sentence when no pct.
+    private func trendIQHeadlineCopy(_ trendIQ: TrendIQResponse) -> String {
+        let direction = (trendIQ.direction ?? "").lowercased()
+        let isFlat = direction == "flat" || direction == "stable"
+        if let pct = trendIQ.impliedPct, !isFlat {
+            return "Trending \(String(format: "%+.1f%%", pct)) over the last 30 days"
+        }
+        if isFlat {
+            return "About steady over the last 30 days"
+        }
+        switch direction {
+        case "rising":  return "Trending up over the last 30 days"
+        case "falling": return "Trending down over the last 30 days"
+        default:        return "Trend signal unavailable"
+        }
+    }
+
+    /// CF-BUYER-COPY (2026-06-10): one calm sentence describing the trend's
+    /// data basis. Drops the colored icon + the cryptic weights breakdown
+    /// ("P:50% C:50%") that engineering-flavored the row before.
     @ViewBuilder
     private func trendIQCoverageRow(_ trendIQ: TrendIQResponse) -> some View {
         if let coverage = trendIQ.coverage {
-            HStack(spacing: 8) {
-                let display = trendIQCoverageDisplay(coverage)
-                Image(systemName: display.icon)
-                    .font(.caption)
-                    .foregroundStyle(display.color)
-                Text(display.label)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(display.color)
-                Spacer()
-                if let weights = trendIQ.weights {
-                    Text(trendIQWeightsSummary(weights))
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-            }
+            Text(trendIQCoverageBuyerCopy(coverage))
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func trendIQCoverageBuyerCopy(_ coverage: String) -> String {
+        switch coverage.lowercased() {
+        case "full":
+            return "Based on player momentum, this card's sales, and similar cards in the set."
+        case "card_only", "no_segment":
+            return "Based on player momentum and this card's sales."
+        case "player_only", "no_card":
+            return "Based on player momentum only — this card has thin sales."
+        default:
+            return "Based on available signals for this card."
         }
     }
 
@@ -1779,51 +1905,33 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Predicted Price (CF-COMP-DETAIL-EXPAND, 2026-06-07)
 
+    /// CF-BUYER-COPY (2026-06-10): demoted from a competing headline
+    /// number to a calm "near-term direction" treatment so a buyer doesn't
+    /// have to reconcile $430 Market Value (hero) vs $441 Predicted (here)
+    /// with no explanation. Drops: the engine-attribution chip
+    /// ("trendiq-projection"), the Forward Projection Factor row (debug
+    /// stat). Renames: "Predicted Price" → "Where it's heading", "Range"
+    /// → "Likely range". Value renders in muted white instead of
+    /// electricBlue so the page hierarchy reads as "today vs next 30d".
     @ViewBuilder
     private func predictedPriceContent(_ response: CompIQPriceByIdResponse) -> some View {
         if let predicted = response.predictedPrice {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Predicted Price")
+            VStack(alignment: .leading, spacing: 8) {
+                sectionHeader(title: "Where it's heading")
 
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(predicted.formatted(.currency(code: "USD")))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Spacer()
-                    if let attribution = response.predictedPriceAttribution,
-                       let mechanism = attribution.mechanism {
-                        Text(mechanism)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .tracking(0.6)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-                            .clipShape(Capsule())
-                    }
-                }
+                Text(predicted.formatted(.currency(code: "USD")))
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.9))
 
                 if let range = response.predictedPriceRange,
                    let low = range.low, let high = range.high {
                     HStack(spacing: 6) {
-                        Text("Range")
-                            .font(.caption.weight(.semibold))
+                        Text("Likely range")
+                            .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         Text("\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    }
-                }
-
-                if let factor = response.predictedPriceAttribution?.forwardProjectionFactor {
-                    HStack(spacing: 6) {
-                        Text("Forward Projection Factor")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Spacer()
-                        Text(String(format: "%.4f", factor))
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
                     }
                 }
             }
@@ -2318,10 +2426,13 @@ struct CompIQPricedCardView: View {
     private func advancedToolsSection(_ response: CompIQPriceByIdResponse) -> some View {
         cardGroup(title: "Advanced Tools", icon: "wrench.and.screwdriver") {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                toolButton(title: "What-If", icon: "questionmark.circle", action: { showWhatIf = true })
-                toolButton(title: "Grade Premium", icon: "star.circle", action: { showGradePremium = true })
-                toolButton(title: "Sell Window", icon: "calendar.circle", action: { showSellWindow = true })
-                toolButton(title: "Comps by Player", icon: "person.2.circle", action: { showCompsByPlayer = true })
+                // CF-BUYER-COPY (2026-06-10): tool labels rewritten in
+                // buyer-spoken language. The underlying tools are unchanged;
+                // just the entry-point copy reads as actionable verbs.
+                toolButton(title: "Try a different scenario", icon: "questionmark.circle", action: { showWhatIf = true })
+                toolButton(title: "What if I grade it?", icon: "star.circle", action: { showGradePremium = true })
+                toolButton(title: "Best time to flip", icon: "calendar.circle", action: { showSellWindow = true })
+                toolButton(title: "Other cards by \(playerForToolLabel)", icon: "person.2.circle", action: { showCompsByPlayer = true })
             }
         }
     }
@@ -2355,11 +2466,17 @@ struct CompIQPricedCardView: View {
         error = nil
 
         do {
+            // CF-PARALLEL-SUBMARKET (2026-06-10): pass the synthesized
+            // parallel disambiguators when the hit came from a parallel-row
+            // tap. The pricing id stays the parent's base UUID; backend
+            // filters comps to the matched sub-market via parallelId.
             let response = try await CompIQSearchService.shared.priceByCardId(
                 hit.cardsightCardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
                 gradeCompany: selectedGrade.gradeCompany,
-                gradeValue: selectedGrade.gradeValue
+                gradeValue: selectedGrade.gradeValue,
+                parallelId: hit.parallelId,
+                parallelName: hit.variant
             )
             priceResponse = response
         } catch {
@@ -2488,13 +2605,18 @@ private extension View {
             .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.25), radius: 20, x: 0, y: 10)
     }
 
+    /// CF-TILES-GRADIENT (2026-06-10): blue→green dashboard gradient
+    /// border (matches the picker results card + dashboard hero treatment)
+    /// in place of the flat steelGray stroke. Applied to both the identity
+    /// header card and every section `cardGroup` so the comp page reads
+    /// with the signature HobbyIQ accent around every tile.
     func hiqCard() -> some View {
         self
             .padding(HobbyIQTheme.Spacing.medium)
             .background(HobbyIQTheme.Colors.cardNavy)
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.6), lineWidth: 1.2)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
@@ -2506,7 +2628,7 @@ private extension View {
             .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
             .overlay(
                 RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1.0)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.6)
             )
             .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
             .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
@@ -3013,3 +3135,83 @@ private struct DashedLineSwatch: View {
         }
     }
 }
+
+// MARK: - CF-FULL-GRADE-RAIL grade chips layout (2026-06-10)
+
+/// Wrap-and-justify-center Layout for the grade-rail chips. Built on
+/// SwiftUI's Layout protocol (iOS 16+) so chips flow naturally onto
+/// multiple rows and each row is horizontally centered — matches the
+/// approved mock's centered identity column treatment. A standalone
+/// implementation (not the `FlowLayout` defined in the picker file) so
+/// this file stays self-contained.
+private struct GradeRailFlow: Layout {
+    var itemSpacing: CGFloat = 8
+    var lineSpacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        let rows = computeRows(subviews: subviews, maxWidth: maxWidth)
+        let totalHeight = rows.reduce(CGFloat(0)) { acc, row in
+            acc + row.height
+        } + max(0, CGFloat(rows.count - 1)) * lineSpacing
+        let totalWidth = rows.map { $0.width }.max() ?? 0
+        return CGSize(width: max(0, totalWidth), height: totalHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let rows = computeRows(subviews: subviews, maxWidth: bounds.width)
+        var y = bounds.minY
+        for row in rows {
+            // Center each row horizontally.
+            var x = bounds.minX + (bounds.width - row.width) / 2
+            for index in row.indices {
+                let subview = subviews[index]
+                let size = subview.sizeThatFits(.unspecified)
+                subview.place(
+                    at: CGPoint(x: x, y: y),
+                    proposal: ProposedViewSize(size)
+                )
+                x += size.width + itemSpacing
+            }
+            y += row.height + lineSpacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int]
+        var width: CGFloat
+        var height: CGFloat
+    }
+
+    private func computeRows(subviews: Subviews, maxWidth: CGFloat) -> [Row] {
+        var rows: [Row] = []
+        var currentIndices: [Int] = []
+        var currentWidth: CGFloat = 0
+        var currentHeight: CGFloat = 0
+        for (i, subview) in subviews.enumerated() {
+            let size = subview.sizeThatFits(.unspecified)
+            let prospective = currentIndices.isEmpty
+                ? size.width
+                : currentWidth + itemSpacing + size.width
+            if !currentIndices.isEmpty && prospective > maxWidth {
+                rows.append(Row(indices: currentIndices, width: currentWidth, height: currentHeight))
+                currentIndices = [i]
+                currentWidth = size.width
+                currentHeight = size.height
+            } else {
+                if currentIndices.isEmpty {
+                    currentWidth = size.width
+                } else {
+                    currentWidth = prospective
+                }
+                currentIndices.append(i)
+                currentHeight = max(currentHeight, size.height)
+            }
+        }
+        if !currentIndices.isEmpty {
+            rows.append(Row(indices: currentIndices, width: currentWidth, height: currentHeight))
+        }
+        return rows
+    }
+}
+

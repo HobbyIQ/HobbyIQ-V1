@@ -35,18 +35,26 @@ final class CompIQSearchService {
     }
 
     /// Fetches full pricing data for a specific card variant by its Cardsight ID.
+    /// CF-PARALLEL-SUBMARKET (2026-06-10): `parallelId` + `parallelName`
+    /// added so a parallel-row tap in the picker can request the
+    /// sub-market via the parent's base id + parallel disambiguator —
+    /// matching the wire contract at compiq.routes.ts:1158.
     func priceByCardId(
         _ id: String,
         query: String?,
         gradeCompany: String?,
-        gradeValue: Double?
+        gradeValue: Double?,
+        parallelId: String? = nil,
+        parallelName: String? = nil
     ) async throws -> CompIQPriceByIdResponse {
         logger.info("Fetching price for cardId: \(id)")
         let response = try await APIService.shared.priceByCardId(
             cardsightCardId: id,
             query: query,
             gradeCompany: gradeCompany,
-            gradeValue: gradeValue
+            gradeValue: gradeValue,
+            parallelId: parallelId,
+            parallelName: parallelName
         )
         if let fmv = response.marketTier?.value {
             logger.info("Price received: $\(fmv)")

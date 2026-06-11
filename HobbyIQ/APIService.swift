@@ -105,7 +105,14 @@ struct APIService {
         return try await post(path: "/api/compiq/cardsearch", body: body, responseType: CompIQVariantListResponse.self)
     }
 
-    func priceByCardId(cardsightCardId: String, query: String?, gradeCompany: String?, gradeValue: Double?) async throws -> CompIQPriceByIdResponse {
+    func priceByCardId(
+        cardsightCardId: String,
+        query: String?,
+        gradeCompany: String?,
+        gradeValue: Double?,
+        parallelId: String? = nil,
+        parallelName: String? = nil
+    ) async throws -> CompIQPriceByIdResponse {
         // CF-PRICE-BY-ID-ROUTE (2026-06-07): when a candidate id is pinned,
         // send id + grade ONLY — omit a meaningful query. Backend treats a
         // non-empty `query` alongside `cardsightCardId` as free-text intent
@@ -117,11 +124,30 @@ struct APIService {
         // the pinned path. Callers keep their query string for ergonomics;
         // we only strip it on the wire when an id is actually present.
         let pinnedQuery: String? = cardsightCardId.isEmpty ? query : nil
+        // CF-PARALLEL-SUBMARKET (2026-06-10): when a parallel is selected,
+        // backend wants `cardsightCardId = parent base UUID` PLUS
+        // `parallelId = parallel UUID` so the comp filter narrows to the
+        // matched sub-market (vs the parallel UUID landing on
+        // cardsightCardId alone, which doesn't resolve as a pricing key).
+        // Empty/whitespace parallelId is dropped to nil so the wire body
+        // doesn't carry a meaningless field.
+        let cleanParallelId: String? = {
+            guard let raw = parallelId?.trimmingCharacters(in: .whitespaces),
+                  raw.isEmpty == false else { return nil }
+            return raw
+        }()
+        let cleanParallelName: String? = {
+            guard let raw = parallelName?.trimmingCharacters(in: .whitespaces),
+                  raw.isEmpty == false else { return nil }
+            return raw
+        }()
         let body = CompIQPriceByIdRequest(
             cardsightCardId: cardsightCardId,
             query: pinnedQuery,
             gradeCompany: gradeCompany,
-            gradeValue: gradeValue
+            gradeValue: gradeValue,
+            parallelId: cleanParallelId,
+            parallelName: cleanParallelName
         )
         // CF-COMP-PAGE-RECON (2026-06-07): inline request to capture the
         // raw response BEFORE decode so an out-of-band diff against the

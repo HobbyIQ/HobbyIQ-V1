@@ -30,6 +30,14 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     let title: String?
     let displayLabel: String?
     let imageUrl: String?
+    /// CF-PARALLEL-SUBMARKET (2026-06-10): parallel UUID carried through
+    /// navigation from a parallel-row tap in the picker. Nil on the wire
+    /// (the cardsearch dispatcher's CardIdentity doesn't ship it) and nil
+    /// for base-row taps; the picker's `parallelHit(parent:parallel:)`
+    /// synth sets it from `parallel.id` so the downstream priceByCardId
+    /// can include `parallelId` on the wire request and backend filters
+    /// comps to the matched sub-market.
+    let parallelId: String?
 
     // CF-VARIANT-PICKER-RICH (2026-06-07): full CardIdentity disambiguators
     // so the row can surface every signal the candidate carries.
@@ -143,6 +151,10 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         confidence = try? container.decodeIfPresent(Double.self, forKey: .confidence)
         attributes = try? container.decodeIfPresent([String].self, forKey: .attributes)
         parallels = try? container.decodeIfPresent([CompIQCardsightParallel].self, forKey: .parallels)
+        // CF-PARALLEL-SUBMARKET (2026-06-10): wire doesn't carry
+        // `parallelId` on cardsearch candidates; nil here is correct.
+        // The picker's parallelHit synth populates this for navigation.
+        parallelId = nil
     }
 
     // Backend CardIdentity (cardIdentity.ts) field names:
@@ -192,7 +204,8 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         attribution: String? = nil,
         confidence: Double? = nil,
         attributes: [String]? = nil,
-        parallels: [CompIQCardsightParallel]? = nil
+        parallels: [CompIQCardsightParallel]? = nil,
+        parallelId: String? = nil
     ) {
         self.cardsightCardId = cardsightCardId
         self.player = player
@@ -216,6 +229,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         self.confidence = confidence
         self.attributes = attributes
         self.parallels = parallels
+        self.parallelId = parallelId
     }
 
     init(from holding: InventoryCard) {
@@ -241,6 +255,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         self.confidence = nil
         self.attributes = nil
         self.parallels = nil
+        self.parallelId = nil
     }
 }
 
@@ -275,6 +290,14 @@ struct CompIQPriceByIdRequest: Codable {
     let query: String?
     let gradeCompany: String?
     let gradeValue: Double?
+    /// CF-PARALLEL-SUBMARKET (2026-06-10): per-parallel comp filter.
+    /// Wire keys match `backend/src/routes/compiq.routes.ts:1158` —
+    /// `parallelId` (UUID-shape; backend validates) selects the
+    /// sub-market, `parallelName` is descriptive (e.g. "Blue Refractor").
+    /// Both omitted on base-card requests; cache key includes
+    /// `parallelId` so base vs parallel sit at separate entries.
+    let parallelId: String?
+    let parallelName: String?
 }
 
 struct PriceZone: Codable, Hashable {
@@ -326,14 +349,49 @@ struct CompIQPriceTrendAnalysis: Codable, Hashable {
 struct CompIQPriceCardIdentity: Codable, Hashable {
     let cardId: String?
     let player: String?
+    /// Subset name (e.g. "Base Set", "Chrome Prospect Autographs").
     let set: String?
+    /// CF-RELEASE-IDENTITY (2026-06-10): release name (e.g. "Topps Update").
+    /// Backend ships both `set` (subset) and `release` (publication line);
+    /// the header prefers `release` so the identity reads "2011 Topps
+    /// Update · #US175" instead of "2011 Base Set · #US175".
+    let release: String?
     let year: Int?
     let number: String?
     let variant: String?
 
     private enum CodingKeys: String, CodingKey {
         case cardId = "card_id"
-        case player, set, year, number, variant
+        case player, set, release, year, number, variant
+    }
+}
+
+/// CF-FULL-GRADE-RAIL (2026-06-10): one bucket of the engine's per-grade
+/// sale-pool inventory. Backend ships every (grader, grade) for which it
+/// has data — the iOS rail renders a selectable chip per numeric-grade
+/// bucket with `compCount > 0` (non-numeric grades like "Authentic" are
+/// filtered out client-side until the request body grows a `gradeLabel`
+/// field). `median` and `recentDirection` are decoded for availability
+/// — the rail currently uses only `grader` + `grade` + `compCount`.
+struct CompIQGradeBreakdownEntry: Codable, Hashable, Identifiable {
+    let grader: String?
+    /// Raw wire value as a string — can be numeric ("10", "9.5") or
+    /// non-numeric ("Authentic"). The view layer decides whether to
+    /// render based on whether `numericGrade` resolves.
+    let grade: String?
+    let compCount: Int?
+    let median: Double?
+    let recentDirection: String?
+
+    var id: String { "\(grader ?? "")-\(grade ?? "")" }
+
+    /// Numeric grade parsed from the wire string, or nil for non-numeric
+    /// labels like "Authentic". A nil here = chip not selectable in the
+    /// current request shape (`gradeValue: Double?`).
+    var numericGrade: Double? {
+        guard let raw = grade?.trimmingCharacters(in: .whitespaces),
+              raw.isEmpty == false else { return nil }
+        return Double(raw)
     }
 }
 
@@ -672,6 +730,10 @@ struct CompIQPriceByIdResponse: Codable {
     /// Last sale envelope for the "last-sale" branch and the basis line
     /// on extrapolated branches.
     let lastSale: CompIQLastSale?
+    /// CF-FULL-GRADE-RAIL (2026-06-10): per-(grader,grade) sale-pool
+    /// inventory the rail renders selectable chips from. Optional — older
+    /// engine builds may omit.
+    let gradeBreakdown: [CompIQGradeBreakdownEntry]?
 
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
@@ -773,6 +835,7 @@ struct CompIQPriceByIdResponse: Codable {
         estimateRange = try? container.decodeIfPresent(CompIQPriceRange.self, forKey: .estimateRange)
         estimateBasis = try? container.decodeIfPresent(String.self, forKey: .estimateBasis)
         lastSale = try? container.decodeIfPresent(CompIQLastSale.self, forKey: .lastSale)
+        gradeBreakdown = try? container.decodeIfPresent([CompIQGradeBreakdownEntry].self, forKey: .gradeBreakdown)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -789,5 +852,6 @@ struct CompIQPriceByIdResponse: Codable {
         case regime, regimeConfidence, regimeDiagnostics
         case marketRead, marketReadDisclaimer, marketReadFactPack
         case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
+        case gradeBreakdown
     }
 }
