@@ -7,8 +7,10 @@ import { describe, it, expect } from "vitest";
 import {
   computeGradedProjection,
   buildGradedEstimates,
+  aggregateReleaseGradeCurveFromPricings,
   TARGET_GRADES,
   type GradedProjectionResult,
+  type ReleaseGradeCurve,
 } from "../src/services/compiq/gradedPriceProjection.js";
 import { selectSalesByGrade } from "../src/services/compiq/compiqEstimate.service.js";
 import { isBaseTitle } from "../src/services/compiq/parallelTitleMatch.js";
@@ -778,6 +780,311 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     }
   });
 
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium curve
+// ─────────────────────────────────────────────────────────────────────────
+// Tests aggregateReleaseGradeCurveFromPricings (the pure aggregation that
+// the live computeReleaseGradeCurve calls after searchCatalog + harvest)
+// AND the resolveRatio tier-2b wiring that consumes the curve.
+//
+// The curve is the MEDIAN of PER-CARD raw→graded ratios — value-normalized
+// so an expensive auto in the release doesn't dominate the curve when a
+// dozen commons would otherwise outweigh it.
+
+describe("CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium curve", () => {
+  /** Fixture: tiny synthetic "release" — 4 cards with varying coverage.
+   *  Card A: base raw $100, PSA 10 base $400, BGS 9.5 base $350 → PSA10=4.0, BGS95=3.5
+   *  Card B: base raw $200, PSA 10 base $700, BGS 9.5 base $600 → PSA10=3.5, BGS95=3.0
+   *  Card C: base raw $50,  PSA 10 base $250                    → PSA10=5.0
+   *  Card D: base raw $300, SGC 10 base $720                    → SGC10=2.4 (only this card has SGC 10)
+   *  Expected curve:
+   *    PSA 10:  median([4.0, 3.5, 5.0]) = 4.0, n=3 (PASS threshold)
+   *    BGS 9.5: median([3.5, 3.0])      = 3.25, n=2 (FAIL threshold — <3)
+   *    SGC 10:  median([2.4])           = 2.4, n=1 (FAIL threshold — <3)
+   *    PSA 9: no contributing cards (none have it) — absent from curve */
+  function makeReleaseFixturePricings(): CardsightPricingResponse[] {
+    const rawPrices = [100, 200, 50, 300];
+    const psa10Prices: Array<number | null> = [400, 700, 250, null];
+    const bgs95Prices: Array<number | null> = [350, 600, null, null];
+    const sgc10Prices: Array<number | null> = [null, null, null, 720];
+    const out: CardsightPricingResponse[] = [];
+    for (let i = 0; i < 4; i++) {
+      // Build 3 base raw records around the median so n>=3 → tier-1 anchor.
+      const r = rawPrices[i]!;
+      const baseRaw: CardsightSaleRecord[] = [
+        rec(`Release Card ${i} base raw a`, r - 5),
+        rec(`Release Card ${i} base raw b`, r),
+        rec(`Release Card ${i} base raw c`, r + 5),
+      ];
+      const gradedCompanies: Array<{
+        company_name: string;
+        grades: Array<{ grade_value: number | string; count: number; records: CardsightSaleRecord[] }>;
+      }> = [];
+      const psa10 = psa10Prices[i];
+      if (psa10 != null) {
+        const recs: CardsightSaleRecord[] = [
+          rec(`Release Card ${i} PSA 10 base a`, psa10 - 10),
+          rec(`Release Card ${i} PSA 10 base b`, psa10),
+          rec(`Release Card ${i} PSA 10 base c`, psa10 + 10),
+        ];
+        gradedCompanies.push({
+          company_name: "PSA",
+          grades: [gradedBucket(10, recs)],
+        });
+      }
+      const bgs95 = bgs95Prices[i];
+      if (bgs95 != null) {
+        const recs: CardsightSaleRecord[] = [
+          rec(`Release Card ${i} BGS 9.5 base a`, bgs95 - 10),
+          rec(`Release Card ${i} BGS 9.5 base b`, bgs95),
+          rec(`Release Card ${i} BGS 9.5 base c`, bgs95 + 10),
+        ];
+        gradedCompanies.push({
+          company_name: "BGS",
+          grades: [gradedBucket(9.5, recs)],
+        });
+      }
+      const sgc10 = sgc10Prices[i];
+      if (sgc10 != null) {
+        const recs: CardsightSaleRecord[] = [
+          rec(`Release Card ${i} SGC 10 base a`, sgc10 - 10),
+          rec(`Release Card ${i} SGC 10 base b`, sgc10),
+          rec(`Release Card ${i} SGC 10 base c`, sgc10 + 10),
+        ];
+        gradedCompanies.push({
+          company_name: "SGC",
+          grades: [gradedBucket(10, recs)],
+        });
+      }
+      out.push({
+        card: { card_id: `card-${i}`, name: `Card ${i}` } as any,
+        raw: { count: baseRaw.length, records: baseRaw },
+        graded: gradedCompanies,
+        meta: { total_records: baseRaw.length, last_sale_date: null },
+      } as CardsightPricingResponse);
+    }
+    return out;
+  }
+
+  it("aggregateReleaseGradeCurveFromPricings — value-normalized median per-card ratios; threshold gates per grade", () => {
+    const pricings = makeReleaseFixturePricings();
+    const curve = aggregateReleaseGradeCurveFromPricings(pricings);
+
+    // PSA 10: 3 cards contribute → curve fires
+    expect(curve.has("PSA 10")).toBe(true);
+    const psa10 = curve.get("PSA 10")!;
+    expect(psa10.contributingCards).toBe(3);
+    expect(psa10.ratio).toBeCloseTo(4.0, 2); // median([4.0, 3.5, 5.0]) = 4.0
+
+    // BGS 9.5: only 2 cards contribute → BELOW threshold, dropped
+    expect(curve.has("BGS 9.5")).toBe(false);
+
+    // SGC 10: only 1 card contributes → BELOW threshold, dropped
+    expect(curve.has("SGC 10")).toBe(false);
+
+    // PSA 9: no cards → absent
+    expect(curve.has("PSA 9")).toBe(false);
+  });
+
+  it("expensive card doesn't dominate — per-card-ratio median ignores price magnitude", () => {
+    // Build a release where one $5,000 card has ratio 3.0× and three
+    // $50 cards have ratio 6.0×. Pooled (raw-pool / graded-pool) would
+    // be dominated by the $5,000 card. Per-card median should be 6.0×.
+    const cheap = (cardId: string, ratio: number): CardsightPricingResponse => ({
+      card: { card_id: cardId, name: cardId } as any,
+      raw: {
+        count: 3,
+        records: [
+          rec(`${cardId} base raw a`, 48),
+          rec(`${cardId} base raw b`, 50),
+          rec(`${cardId} base raw c`, 52),
+        ],
+      },
+      graded: [{
+        company_name: "PSA",
+        grades: [gradedBucket(10, [
+          rec(`${cardId} PSA 10 base a`, 50 * ratio - 5),
+          rec(`${cardId} PSA 10 base b`, 50 * ratio),
+          rec(`${cardId} PSA 10 base c`, 50 * ratio + 5),
+        ])],
+      }],
+      meta: { total_records: 6, last_sale_date: null },
+    } as CardsightPricingResponse);
+    const expensive: CardsightPricingResponse = {
+      card: { card_id: "expensive", name: "Expensive" } as any,
+      raw: {
+        count: 3,
+        records: [
+          rec("expensive base raw a", 4995),
+          rec("expensive base raw b", 5000),
+          rec("expensive base raw c", 5005),
+        ],
+      },
+      graded: [{
+        company_name: "PSA",
+        grades: [gradedBucket(10, [
+          rec("expensive PSA 10 base a", 14995),
+          rec("expensive PSA 10 base b", 15000),
+          rec("expensive PSA 10 base c", 15005),
+        ])],
+      }],
+      meta: { total_records: 6, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const curve = aggregateReleaseGradeCurveFromPricings([
+      cheap("a", 6),
+      cheap("b", 6),
+      cheap("c", 6),
+      expensive,
+    ]);
+    const psa10 = curve.get("PSA 10")!;
+    expect(psa10).toBeDefined();
+    expect(psa10.contributingCards).toBe(4);
+    // Per-card ratios: [6.0, 6.0, 6.0, 3.0]. Median = (6 + 6) / 2 = 6.0
+    // (4 values: 3, 6, 6, 6 sorted → median of middle two = 6).
+    expect(psa10.ratio).toBeCloseTo(6.0, 2);
+    // Pooled-median check: pooled graded ($300 + $300 + $300 + $15000) median
+    // would be $300 vs pooled raw $50, ratio = 6 — happens to match here
+    // because the cheap cards dominate count. The KEY assertion is that
+    // contributingCards is the per-card vote count, not the record count.
+  });
+
+  it("tier-2b wiring — release curve fills a BASE-target gap grade as rough/release", () => {
+    // Leo base scope (no parallel). BGS 9.5 has no card-specific base
+    // graded comps → tier-1 misses. With a release curve providing
+    // BGS 9.5 ratio 3.25×, tier-2b fires; without it, tier-3 ballpark.
+    const pricing = makeLeoPricing();
+    const curve: ReleaseGradeCurve = new Map([
+      ["BGS 9.5", { ratio: 3.25, contributingCards: 7 }],
+      ["SGC 10", { ratio: 3.05, contributingCards: 4 }],
+    ]);
+    const out = computeGradedProjection({
+      pricing,
+      releaseRatios: curve,
+      releaseLabel: "2024 Bowman Chrome Prospects Autographs",
+    });
+    expectAllFmvNull(out);
+
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.confidenceTier).toBe("rough");
+    expect(bgs95.ratioSource).toBe("release");
+    expect(bgs95.anchorKind).toBe("base");
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(3.25, 2);
+    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.25, 0);
+    expect(bgs95.basis).toContain("2024 Bowman Chrome Prospects Autographs");
+    expect(bgs95.basis).toContain("7 cards in the release");
+    // ±20% rough band
+    expect(bgs95.estimateLow!).toBeCloseTo(bgs95.estimatedValue! * 0.8, 1);
+    expect(bgs95.estimateHigh!).toBeCloseTo(bgs95.estimatedValue! * 1.2, 1);
+
+    const sgc10 = byGrade(out, "SGC 10");
+    expect(sgc10.ratioSource).toBe("release");
+    expect(sgc10.confidenceTier).toBe("rough");
+  });
+
+  it("tier-2b absent for a grade → tier-3 market fallback (ballpark)", () => {
+    // Curve covers BGS 9.5 but NOT SGC 10. SGC 10 must fall through to
+    // tier-3 market premium (3.4×).
+    const pricing = makeLeoPricing();
+    const curve: ReleaseGradeCurve = new Map([
+      ["BGS 9.5", { ratio: 3.25, contributingCards: 5 }],
+    ]);
+    const out = computeGradedProjection({
+      pricing,
+      releaseRatios: curve,
+      releaseLabel: "2024 Bowman Chrome Prospects Autographs",
+    });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.ratioSource).toBe("release"); // tier-2b
+    const sgc10 = byGrade(out, "SGC 10");
+    expect(sgc10.ratioSource).toBe("market");   // tier-3 fallback
+    expect(sgc10.confidenceTier).toBe("ballpark");
+  });
+
+  it("tier-2b respects tier-1 precedence — never overrides a card-specific ratio", () => {
+    // Trout has card-specific base graded for every liquid grade →
+    // tier-1 fires on every observed-skip path. The release curve
+    // should be irrelevant for any grade where tier-1 anchored. But
+    // since the GUARD skips observed grades entirely for Trout, the
+    // result is still [] — proves tier ordering at the engine, not
+    // the filter, by checking the output is empty even with a curve.
+    const pricing = makeTroutPricing();
+    const curve: ReleaseGradeCurve = new Map([
+      ["PSA 10", { ratio: 99, contributingCards: 9 }],   // wildly wrong on purpose
+      ["BGS 9.5", { ratio: 99, contributingCards: 9 }],
+      ["SGC 10", { ratio: 99, contributingCards: 9 }],
+      ["PSA 9", { ratio: 99, contributingCards: 9 }],
+    ]);
+    const out = computeGradedProjection({
+      pricing,
+      releaseRatios: curve,
+      releaseLabel: "2011 Topps Update",
+    });
+    // Every grade has observed sales → GUARD skips all → output empty.
+    // If the curve had bled past the GUARD, we'd see ratio=99 entries.
+    expect(out).toEqual([]);
+  });
+
+  it("tier-2b doesn't override tier-2a — player-set still wins when populated", () => {
+    // Phase 1b's player-set tier is no-op in production (no graded
+    // sibling source) but still in the engine. When BOTH are present,
+    // player-set should win (it's "more specific" — same player vs
+    // same release).
+    const pricing = makeLeoPricing();
+    // 6 base BGS 9.5 sibling comps + 8 base raw sibling comps (Phase
+    // 1b's tier-2a threshold).
+    const siblingComps = [
+      ...Array.from({ length: 6 }, (_, i) => ({
+        title: `2024 Bowman Chrome Brendan Birdsong #CPA-BB base sibling ${i} BGS 9.5`,
+        price: 800 + i * 5,
+      })),
+      ...Array.from({ length: 8 }, (_, i) => ({
+        title: `2024 Bowman Chrome Brendan Birdsong #CPA-BB sibling raw ${i}`,
+        price: 250 + i * 5,
+      })),
+    ];
+    const curve: ReleaseGradeCurve = new Map([
+      ["BGS 9.5", { ratio: 99, contributingCards: 99 }], // wildly wrong on purpose
+    ]);
+    const out = computeGradedProjection({
+      pricing,
+      siblingComps,
+      releaseRatios: curve,
+      releaseLabel: "2024 Bowman Chrome Prospects Autographs",
+    });
+    const bgs95 = byGrade(out, "BGS 9.5");
+    expect(bgs95.ratioSource).toBe("player-set"); // tier-2a beats tier-2b
+    expect(bgs95.diagnostics.ratio).not.toBeCloseTo(99, 1);
+  });
+
+  it("buildGradedEstimates surfaces tier-2b 'rough' — grounded filter accepts ratioSource=release", () => {
+    // Integration check: the Phase 2 grounded-only filter must pass
+    // "release"-tier results through (they're "rough", not "ballpark").
+    const pricing = makeLeoPricing();
+    const curve: ReleaseGradeCurve = new Map([
+      ["BGS 9.5", { ratio: 3.25, contributingCards: 5 }],
+      ["SGC 10", { ratio: 3.05, contributingCards: 4 }],
+    ]);
+    const { estimates, mutationDetected } = buildGradedEstimates({
+      pricing,
+      releaseRatios: curve,
+      releaseLabel: "2024 Bowman Chrome Prospects Autographs",
+      snapshots: {
+        marketTierValue: 228.93,
+        recentComps: [],
+        gradeBreakdown: [],
+      },
+    });
+    expect(mutationDetected).toBe(false);
+    const grades = estimates.map((e) => e.grade).sort();
+    expect(grades).toEqual(["BGS 9.5", "SGC 10"]);
+    for (const e of estimates) {
+      expect(e.confidenceTier).toBe("rough");
+      expect(e.ratioSource).toBe("release");
+      expect(e.fairMarketValue).toBeNull();
+    }
+  });
 });
 
 describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {

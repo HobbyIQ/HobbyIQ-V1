@@ -23,6 +23,10 @@ import type {
   CardsightSaleRecord,
 } from "./cardsight.client.js";
 import {
+  searchCatalog,
+  getPricing as fetchPricing,
+} from "./cardsight.client.js";
+import {
   selectSalesByGrade,
   getGraderPremium,
   detectGradeFromTitle,
@@ -30,6 +34,7 @@ import {
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
 import { tokenizeParallel } from "./cardsight.mapper.js";
+import { cacheWrap } from "../shared/cache.service.js";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -41,7 +46,8 @@ export type GradedProjectionConfidenceTier =
 
 export type GradedProjectionRatioSource =
   | "card"        // Tier 1: card-specific base graded/raw ratio
-  | "player-set"  // Tier 2: aggregated across sibling cards (same player, same release)
+  | "player-set"  // Tier 2a: aggregated across sibling cards (same player, same release)
+  | "release"     // Tier 2b: median per-card ratio across the entire release (set-level curve)
   | "market"      // Tier 3: existing GRADER_PREMIUMS table
   | "none";       // Insufficient (no anchor or no ratio source available)
 
@@ -100,6 +106,26 @@ export interface GradedProjectionSiblingComp {
   parallel_id?: string | null;
 }
 
+/**
+ * Tier-2b input — release-level grade-premium curve. Keyed by grade
+ * label ("PSA 10", "PSA 9", "BGS 9.5", "SGC 10"). Each entry is the
+ * median per-card ratio (value-normalized so expensive cards don't
+ * skew the curve) plus the count of contributing cards.
+ *
+ * Computed once per (release, year) and cached at the same 6h TTL as
+ * cs:pricing — first card in a release computes it, the rest reuse.
+ * See computeReleaseGradeCurve() below.
+ */
+export interface ReleaseGradeRatio {
+  /** Median per-card ratio for the grade across the release. */
+  ratio: number;
+  /** Number of release cards with ≥1 base graded(g) AND ≥1 base raw — the
+   *  per-card ratios that contributed to the median. */
+  contributingCards: number;
+}
+
+export type ReleaseGradeCurve = ReadonlyMap<string, ReleaseGradeRatio>;
+
 export interface ComputeGradedProjectionInput {
   pricing: CardsightPricingResponse;
   /** Cardsight parallelId the user is asking about. Null/undefined for base. */
@@ -111,12 +137,24 @@ export interface ComputeGradedProjectionInput {
    *  via lookupMultiplier when targetParallelRawFmv is absent. */
   targetParallelName?: string | null;
   /**
-   * Tier-2 input: flat list of sibling sales (same player + same release,
-   * exact-card-id excluded). On the live path this comes from
-   * fetchCompsByPlayer.comps. Optional — when absent or empty, tier-2
-   * is skipped and gap grades fall through to tier-3 market premium.
+   * Tier-2a input: flat list of sibling sales (same player + same release,
+   * exact-card-id excluded). Documented as no-op on the live path post
+   * CF-Phase-1c recon — fetchCompsByPlayer surfaces only raw comps,
+   * so per-player aggregation can't fire in practice. Interface kept for
+   * test coverage and future graded-capable sibling sources.
    */
   siblingComps?: ReadonlyArray<GradedProjectionSiblingComp>;
+  /**
+   * Tier-2b input: release-level grade-premium curve, pre-computed by the
+   * caller via computeReleaseGradeCurve(release, year). The engine reads
+   * the entry for each target grade label; missing entries fall through
+   * to tier-3 market premium. This is the production tier-2 source.
+   */
+  releaseRatios?: ReleaseGradeCurve | null;
+  /** Human-readable release label for the tier-2b basis string
+   *  ("2024 Bowman Chrome Prospects Autographs"). Optional; falls back to
+   *  a generic phrasing when absent. */
+  releaseLabel?: string | null;
   /** Target grade tuples to project. Defaults to TARGET_GRADES below. */
   targetGrades?: ReadonlyArray<{ company: string; grade: string; label: string }>;
 }
@@ -137,8 +175,14 @@ export const TARGET_GRADES: ReadonlyArray<{
 
 /** Minimum card-specific base graded samples to trust the tier-1 ratio. */
 const TIER1_MIN_BASE_SAMPLES = 3;
-/** Minimum aggregated sibling base graded samples to trust the tier-2 ratio. */
+/** Minimum aggregated sibling base graded samples to trust the tier-2a ratio. */
 const TIER2_MIN_SIBLING_BASE_SAMPLES = 5;
+/** Minimum contributing cards to trust the tier-2b release ratio. */
+const TIER2_RELEASE_MIN_CONTRIBUTING_CARDS = 3;
+/** Release-curve cache + harvest tuning. */
+const RELEASE_CURVE_TTL_SEC = 6 * 3600;
+const RELEASE_HARVEST_CONCURRENCY = 5;
+const RELEASE_SEARCH_TAKE = 25;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -391,6 +435,8 @@ function resolveRatio(
   baseRawMedian: number | null,
   pricing: CardsightPricingResponse,
   siblingComps: ReadonlyArray<GradedProjectionSiblingComp>,
+  releaseRatios: ReleaseGradeCurve | null | undefined,
+  releaseLabel: string | null | undefined,
 ): ResolvedRatio {
   // Tier 1 — card-specific base ratio (dup-bucket merge inherited from
   // selectSalesByGrade — see compiqEstimate.service.ts:1022-1056).
@@ -433,6 +479,29 @@ function resolveRatio(
     };
   }
 
+  // Tier 2b — release-level grade-premium curve. Median per-card ratio
+  // across the release; value-normalized so expensive cards in the
+  // release don't skew the curve. Caller pre-computes via
+  // computeReleaseGradeCurve(release, year) — the engine just reads.
+  if (releaseRatios) {
+    const entry = releaseRatios.get(label);
+    if (entry && entry.ratio > 0) {
+      const releasePhrase = releaseLabel
+        ? `${releaseLabel}'s`
+        : "this release's";
+      return {
+        ratio: entry.ratio,
+        source: "release",
+        description:
+          `${label} ${entry.ratio.toFixed(3)}× from ${releasePhrase} typical ` +
+          `${label} premium across ${entry.contributingCards} cards in the ` +
+          `release (median of per-card raw→graded ratios)`,
+        cardSpecificBaseSamples,
+        targetGradeBaseMedian: null,
+      };
+    }
+  }
+
   // Tier 3 — market grade-premium table (read-only).
   const marketPremium = getGraderPremium(company, grade);
   if (marketPremium > 0 && marketPremium !== 1.0) {
@@ -462,6 +531,7 @@ function classifyConfidence(
   if (anchorKind === "none" || ratioSource === "none") return "insufficient";
   if (ratioSource === "market") return "ballpark";
   if (ratioSource === "player-set") return "rough";
+  if (ratioSource === "release") return "rough";
   // ratioSource === "card"
   if (anchorKind === "base") return "estimate";
   return "rough"; // parallel-observed or parallel-composed with card ratio
@@ -488,6 +558,8 @@ export function computeGradedProjection(
     targetParallelRawFmv,
     targetParallelName,
     siblingComps = [],
+    releaseRatios = null,
+    releaseLabel = null,
     targetGrades = TARGET_GRADES,
   } = input;
 
@@ -527,6 +599,8 @@ export function computeGradedProjection(
       baseRawMedian,
       pricing,
       siblingComps,
+      releaseRatios,
+      releaseLabel,
     );
     const tier = classifyConfidence(anchor.kind, ratio.source);
 
@@ -595,6 +669,12 @@ export interface BuildGradedEstimatesInput {
   targetParallelRawFmv?: number | null;
   targetParallelName?: string | null;
   siblingComps?: ReadonlyArray<GradedProjectionSiblingComp>;
+  /** Tier-2b release-level grade-premium curve, pre-computed by the caller
+   *  via computeReleaseGradeCurve(release, year). When present, fills gap
+   *  grades at confidenceTier="rough" / ratioSource="release". */
+  releaseRatios?: ReleaseGradeCurve | null;
+  /** Human-readable release label for the tier-2b basis string. */
+  releaseLabel?: string | null;
   /** Observed fields shipped on the same response. Snapshotted pre-call;
    *  asserted byte-identical post-call. The estimator never receives
    *  references to these (it takes only `pricing` + scope params), so
@@ -628,6 +708,8 @@ export function buildGradedEstimates(
     targetParallelRawFmv: input.targetParallelRawFmv,
     targetParallelName: input.targetParallelName,
     siblingComps: input.siblingComps,
+    releaseRatios: input.releaseRatios,
+    releaseLabel: input.releaseLabel,
   });
 
   const pricingAfter = JSON.stringify(input.pricing);
@@ -649,4 +731,154 @@ export function buildGradedEstimates(
     (r) => r.confidenceTier === "estimate" || r.confidenceTier === "rough",
   );
   return { estimates: grounded, mutationDetected: false };
+}
+
+// ── Phase 1c (CF-GRADED-PRICE-PROJECTION) — release-level grade curve ──────
+//
+// Tier-2b mechanism. Discovers the cards in a (release, year) via
+// searchCatalog, harvests each card's getPricing payload with bounded
+// concurrency, computes each card's own raw→graded ratio for the liquid
+// grades, and returns the value-normalized median per-card ratio across
+// the release. Cached at the same 6h TTL as cs:pricing.
+//
+// Why median-of-per-card-ratios, not a pooled median:
+//   The pooled median would let expensive cards (rookies, autos) dominate
+//   the curve while commons contribute nothing. The median of per-card
+//   ratios is value-normalized — each contributing card votes once,
+//   regardless of price.
+
+/** Bounded-concurrency map. Caps in-flight promises; results in input
+ *  order. Errors per item resolve to whatever fn() returns for them. */
+async function runWithConcurrency<T, R>(
+  items: ReadonlyArray<T>,
+  concurrency: number,
+  fn: (item: T, idx: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(concurrency, items.length)) },
+    async () => {
+      while (true) {
+        const my = cursor++;
+        if (my >= items.length) return;
+        results[my] = await fn(items[my]!, my);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+/** Per-card sub-result used by the curve compute step. */
+interface PerCardRatios {
+  /** Map from grade label ("PSA 10") to that card's raw→graded ratio. */
+  ratios: Map<string, number>;
+}
+
+function computePerCardRatios(
+  pricing: CardsightPricingResponse | null | undefined,
+): PerCardRatios | null {
+  if (!pricing || (pricing as { notFound?: boolean }).notFound) return null;
+  const baseRaw = (pricing.raw?.records ?? []).filter(isBaseRecord);
+  const baseRawMed = median(baseRaw.map((r) => r.price));
+  if (baseRawMed === null || baseRawMed <= 0) return null;
+
+  const ratios = new Map<string, number>();
+  for (const tg of TARGET_GRADES) {
+    const recs = selectSalesByGrade(pricing, `${tg.company} ${tg.grade}`);
+    const baseRecs = recs.filter(isBaseRecord);
+    if (baseRecs.length === 0) continue;
+    const gMed = median(baseRecs.map((r) => r.price));
+    if (gMed === null || gMed <= 0) continue;
+    ratios.set(tg.label, gMed / baseRawMed);
+  }
+  return { ratios };
+}
+
+/** Aggregate per-card ratios into a release curve. Each grade requires
+ *  ≥ TIER2_RELEASE_MIN_CONTRIBUTING_CARDS contributing cards. */
+function aggregateReleaseCurve(
+  perCard: ReadonlyArray<PerCardRatios | null>,
+): Array<[string, ReleaseGradeRatio]> {
+  const out: Array<[string, ReleaseGradeRatio]> = [];
+  for (const tg of TARGET_GRADES) {
+    const ratios: number[] = [];
+    for (const c of perCard) {
+      if (!c) continue;
+      const r = c.ratios.get(tg.label);
+      if (r != null && Number.isFinite(r) && r > 0) ratios.push(r);
+    }
+    if (ratios.length < TIER2_RELEASE_MIN_CONTRIBUTING_CARDS) continue;
+    const med = median(ratios);
+    if (med === null || !Number.isFinite(med) || med <= 0) continue;
+    out.push([tg.label, { ratio: med, contributingCards: ratios.length }]);
+  }
+  return out;
+}
+
+/** Discover the cards in a (release, year) via searchCatalog with the
+ *  same release-name filter fetchCompsByPlayer uses. Take-25 capped —
+ *  pagination is not required for current Cardsight pages but the
+ *  cap is documented so future-us knows when to revisit. */
+async function discoverReleaseCardIds(
+  release: string,
+  year: number,
+): Promise<string[]> {
+  const catalog = await searchCatalog(release, { year, take: RELEASE_SEARCH_TAKE });
+  const expected = release.toLowerCase().trim();
+  return catalog
+    .filter(
+      (c) =>
+        (c.releaseName ?? "").toLowerCase().trim() === expected
+        && Number(c.year) === year,
+    )
+    .map((c) => c.id);
+}
+
+/**
+ * Compute (or fetch from cache) the release-level grade-premium curve
+ * for (release, year). First call in a release populates the cache;
+ * subsequent calls within the 6h window reuse it cheaply.
+ *
+ * Returns an empty Map when discovery returns 0 cards OR every grade
+ * has < TIER2_RELEASE_MIN_CONTRIBUTING_CARDS contributing cards. The
+ * engine treats an empty curve the same as no curve (falls through to
+ * tier 3).
+ */
+export async function computeReleaseGradeCurve(
+  release: string,
+  year: number,
+): Promise<ReleaseGradeCurve> {
+  const releaseClean = (release ?? "").trim();
+  if (!releaseClean || !Number.isFinite(year) || year <= 0) {
+    return new Map();
+  }
+  const key = `cs:graded-curve:${releaseClean.toLowerCase()}|${year}`;
+  const entries = await cacheWrap(
+    key,
+    async () => {
+      const ids = await discoverReleaseCardIds(releaseClean, year);
+      if (ids.length === 0) return [];
+      const pricings = await runWithConcurrency(
+        ids,
+        RELEASE_HARVEST_CONCURRENCY,
+        (id) => fetchPricing(id).catch(() => null),
+      );
+      const perCard = pricings.map(computePerCardRatios);
+      return aggregateReleaseCurve(perCard);
+    },
+    RELEASE_CURVE_TTL_SEC,
+  );
+  return new Map(entries);
+}
+
+/** Exposed for direct unit testing — feeds an array of (already-fetched)
+ *  pricings into the same per-card → median aggregation the live path
+ *  uses. Keeps the live path's network calls out of test scope. */
+export function aggregateReleaseGradeCurveFromPricings(
+  pricings: ReadonlyArray<CardsightPricingResponse | null>,
+): ReleaseGradeCurve {
+  const perCard = pricings.map(computePerCardRatios);
+  return new Map(aggregateReleaseCurve(perCard));
 }

@@ -23,8 +23,11 @@ import {
 // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): wire graded estimator
 // into /price-by-id. Grounded-only (estimate + rough); ballpark + insufficient
 // dropped. Display-not-train: every entry has fairMarketValue=null.
+// Phase 1c (2026-06-14): tier-2b release-level grade-premium curve plumbed
+// via computeReleaseGradeCurve; cached (release, year) at 6h.
 import {
   buildGradedEstimates,
+  computeReleaseGradeCurve,
   type GradedProjectionResult,
 } from "../services/compiq/gradedPriceProjection.js";
 
@@ -1471,11 +1474,48 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
           const parallelRawFmv =
             resolvedParallelId && isRawScope && fmv > 0 ? fmv : null;
+
+          // CF-GRADED-PRICE-PROJECTION Phase 1c (2026-06-14): release-level
+          // tier-2b grade-premium curve. Cardsight's pricing.card.set
+          // exposes release ("Bowman Chrome") + year ("2024"). Compute
+          // curve when both present; identityForSeed already verified
+          // these earlier in this scope. The curve compute is cached at
+          // 6h (cs:graded-curve:{release}|{year}) — first request in a
+          // release pays the cold cost; the rest reuse. Per-request
+          // pricing fan-out is bounded internally (concurrency=5,
+          // take=25 catalog candidates). Cold-case latency capped by
+          // 5-wide getPricing parallelism on the 25-card harvest.
+          const releaseFromPricing =
+            pricingForMR.card?.set?.release ?? null;
+          const yearRaw = pricingForMR.card?.set?.year;
+          const yearNum =
+            yearRaw != null && Number.isFinite(Number(yearRaw))
+              ? Number(yearRaw)
+              : null;
+          let releaseRatios = null;
+          let releaseLabel: string | null = null;
+          if (releaseFromPricing && yearNum && yearNum > 0) {
+            try {
+              releaseRatios = await computeReleaseGradeCurve(
+                releaseFromPricing,
+                yearNum,
+              );
+              releaseLabel = `${yearNum} ${releaseFromPricing}`;
+            } catch (err) {
+              console.warn(
+                `[compiq.price-by-id] release-curve compute failed (non-fatal): ${(err as Error)?.message ?? err}`,
+              );
+              releaseRatios = null;
+            }
+          }
+
           const built = buildGradedEstimates({
             pricing: pricingForMR,
             targetParallelId: resolvedParallelId ?? null,
             targetParallelName: resolvedParallelName ?? null,
             targetParallelRawFmv: parallelRawFmv,
+            releaseRatios,
+            releaseLabel,
             snapshots: {
               marketTierValue: isThin ? null : fmv,
               recentComps: (est as any).recentComps ?? [],
