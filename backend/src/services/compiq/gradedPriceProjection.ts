@@ -41,8 +41,15 @@ import { cacheWrap } from "../shared/cache.service.js";
 export type GradedProjectionConfidenceTier =
   | "estimate"      // tier-1 card ratio × base raw anchor (cleanest)
   | "rough"         // tier-1 card ratio × parallel anchor (compose noise)
-  | "ballpark"      // tier-3 market ratio × any anchor
-  | "insufficient"; // missing anchor or no ratio source
+  | "ballpark"      // tier-3 market ratio × any anchor — SURFACES with number
+                    // (CF-ALWAYS-A-NUMBER 2026-06-12 reversed the prior 3A drop)
+  | "no-data"       // no anchor at all (no raw/parallel/release value to multiply)
+  | "insufficient"; // DEPRECATED — kept for back-compat in the union; the engine
+                    // no longer emits it. classifyConfidence routes the no-anchor
+                    // case to "no-data" instead. Existing callers consuming the
+                    // type continue to compile; new code should branch on
+                    // "no-data". Remove in a future cleanup CF when all callers
+                    // (assembler, tests, iOS) have shifted off.
 
 export type GradedProjectionRatioSource =
   | "card"        // Tier 1: card-specific base graded/raw ratio
@@ -552,11 +559,66 @@ function resolveRatio(
 
 // ── Confidence classification ──────────────────────────────────────────────
 
+// ── CF-ALWAYS-A-NUMBER (2026-06-12) ────────────────────────────────────────
+// Tunable per-tier spread + rounding. Single source of truth so spread/round
+// calibration against actuals only changes one constant. The point estimate
+// AND the range bounds are both rounded per tier — ballpark numbers must
+// READ ballpark (2 sig figs: ~$830, ~$2,300, ~$23,000), never the false
+// precision of "$832.42".
+
+export interface GradeConfidenceConfig {
+  /** Range as a fraction of the point estimate — widens with lower confidence. */
+  spreadPct: number;
+  /** Sig-fig rounding for the point + bounds. null → cents (legacy round2). */
+  roundSigFigs: number | null;
+}
+
+export const GRADE_CONFIDENCE: Record<
+  "estimate" | "rough" | "ballpark",
+  GradeConfidenceConfig
+> = {
+  estimate: { spreadPct: 0.10, roundSigFigs: null }, // card-specific — precise
+  rough:    { spreadPct: 0.20, roundSigFigs: 3 },    // release / parallel-anchor card ratio
+  ballpark: { spreadPct: 0.45, roundSigFigs: 2 },    // generic premium — widest, hard round
+};
+
+/** Round to N significant figures. E.g.:
+ *    roundToSigFigs(832.42, 2)   → 830
+ *    roundToSigFigs(2299, 2)     → 2300
+ *    roundToSigFigs(22940, 2)    → 23000
+ *    roundToSigFigs(572, 3)      → 572 (already 3 sig figs)
+ *  Zero and non-finite inputs pass through. Negative inputs round absolute
+ *  magnitude (sign preserved).
+ */
+function roundToSigFigs(n: number, sigFigs: number): number {
+  if (!Number.isFinite(n) || n === 0) return n;
+  if (!Number.isFinite(sigFigs) || sigFigs <= 0) return n;
+  const sign = n < 0 ? -1 : 1;
+  const abs = Math.abs(n);
+  const magnitude = Math.floor(Math.log10(abs));
+  const factor = Math.pow(10, magnitude - sigFigs + 1);
+  return sign * Math.round(abs / factor) * factor;
+}
+
+/** Apply per-tier rounding to a value. */
+function applyTierRounding(
+  v: number,
+  tier: "estimate" | "rough" | "ballpark",
+): number {
+  const cfg = GRADE_CONFIDENCE[tier];
+  return cfg.roundSigFigs == null ? round2(v) : roundToSigFigs(v, cfg.roundSigFigs);
+}
+
 function classifyConfidence(
   anchorKind: GradedProjectionAnchorKind,
   ratioSource: GradedProjectionRatioSource,
 ): GradedProjectionConfidenceTier {
-  if (anchorKind === "none" || ratioSource === "none") return "insufficient";
+  // CF-ALWAYS-A-NUMBER (2026-06-12): "insufficient" is RETIRED for the
+  // anchored-but-thin case; tier-3 ballpark surfaces with a number now.
+  // The remaining no-data case is when there's no anchor at all OR
+  // no ratio at all to multiply by — render "no-data" so the assembler
+  // emits a marker the user can read as "can't anchor an estimate."
+  if (anchorKind === "none" || ratioSource === "none") return "no-data";
   if (ratioSource === "market") return "ballpark";
   if (ratioSource === "player-set") return "rough";
   if (ratioSource === "release") return "rough";
@@ -565,14 +627,11 @@ function classifyConfidence(
   return "rough"; // parallel-observed or parallel-composed with card ratio
 }
 
-/** Range as a fraction of the point estimate — widens with lower confidence. */
+/** Legacy spread reader — kept for any external consumer; new code reads
+ *  GRADE_CONFIDENCE[tier].spreadPct directly. */
 function spreadFor(tier: GradedProjectionConfidenceTier): number {
-  switch (tier) {
-    case "estimate":     return 0.10;
-    case "rough":        return 0.20;
-    case "ballpark":     return 0.30;
-    case "insufficient": return 0;
-  }
+  if (tier === "no-data" || tier === "insufficient") return 0;
+  return GRADE_CONFIDENCE[tier].spreadPct;
 }
 
 // ── Engine ─────────────────────────────────────────────────────────────────
@@ -636,19 +695,24 @@ export function computeGradedProjection(
     );
     const tier = classifyConfidence(anchor.kind, ratio.source);
 
+    // CF-ALWAYS-A-NUMBER (2026-06-12): emit a number for every tier
+    // except "no-data" (no anchor or no ratio). Per-tier spread + sig-fig
+    // rounding from GRADE_CONFIDENCE config.
     let estimatedValue: number | null = null;
     let estimateLow: number | null = null;
     let estimateHigh: number | null = null;
     if (
       anchor.price !== null
       && ratio.ratio !== null
-      && tier !== "insufficient"
+      && tier !== "no-data"
+      && tier !== "insufficient"  // defensive — engine never produces this now
     ) {
-      const v = round2(anchor.price * ratio.ratio);
-      const s = spreadFor(tier);
+      const rawValue = anchor.price * ratio.ratio;
+      const cfg = GRADE_CONFIDENCE[tier];
+      const v = applyTierRounding(rawValue, tier);
       estimatedValue = v;
-      estimateLow = round2(v * (1 - s));
-      estimateHigh = round2(v * (1 + s));
+      estimateLow = applyTierRounding(rawValue * (1 - cfg.spreadPct), tier);
+      estimateHigh = applyTierRounding(rawValue * (1 + cfg.spreadPct), tier);
     }
 
     const basis = `Anchor: ${anchor.description}. Ratio: ${ratio.description}.`;
@@ -675,6 +739,106 @@ export function computeGradedProjection(
       },
     });
   }
+
+  // CF-ALWAYS-A-NUMBER (2026-06-12) — LADDER COHERENCE GUARDS.
+  //
+  // Guard 1: every emitted grade ≥ the raw anchor. A card/release ratio
+  // < 1.0 is unreliable (the 0.931× PSA 9 case from Leo Blue's data: card-
+  // specific base PSA 9 median $221 vs base raw $238 produced a sub-raw
+  // PSA 9 estimate). Sub-raw estimates print confusingly to the user
+  // ("PSA 9 is worth less than raw?") and signal noisy ratio data. Fall
+  // back to the generic GRADER_PREMIUMS premium for the grade, emit as
+  // ballpark — the table values are ≥ 1.0 by design for the liquid set.
+  //
+  // Guard 2: same-grader monotonicity. Within a grader (PSA 10 vs PSA 9,
+  // BGS 10 vs BGS 9.5, etc.), higher numeric grade ≥ lower. On violation,
+  // raise both sides to the generic premium ballpark — neither card-ratio
+  // nor release-curve is trustworthy when same-grader order inverts. Cross-
+  // grader ordering (BGS 9.5 vs PSA 10, etc.) is NOT enforced — those
+  // relationships are genuinely fuzzy at the market level.
+  if (anchor.price !== null && anchor.price > 0) {
+    const anchorPrice = anchor.price;
+
+    // Helper: re-emit a result at the generic premium ballpark. Mutates
+    // the result entry in place; preserves anchorPrice + baseRawMedian/
+    // SampleCount in diagnostics, resets ratio + targetGradeBaseMedian +
+    // confidence/source to the ballpark values, reapplies ballpark
+    // rounding + spread.
+    const rebaseToGeneric = (r: GradedProjectionResult, company: string, gradeStr: string, reason: string) => {
+      const generic = getGraderPremium(company, gradeStr);
+      if (!Number.isFinite(generic) || generic < 1.0) {
+        // Generic premium not available or sub-1.0 — refuse to print
+        // sub-raw. Demote to no-data so the assembler surfaces a marker.
+        r.estimatedValue = null;
+        r.estimateLow = null;
+        r.estimateHigh = null;
+        r.confidenceTier = "no-data";
+        r.ratioSource = "none";
+        r.diagnostics.ratio = null;
+        r.diagnostics.targetGradeBaseMedian = null;
+        return;
+      }
+      const rawValue = anchorPrice * generic;
+      const cfg = GRADE_CONFIDENCE.ballpark;
+      r.estimatedValue = applyTierRounding(rawValue, "ballpark");
+      r.estimateLow = applyTierRounding(rawValue * (1 - cfg.spreadPct), "ballpark");
+      r.estimateHigh = applyTierRounding(rawValue * (1 + cfg.spreadPct), "ballpark");
+      r.confidenceTier = "ballpark";
+      r.ratioSource = "market";
+      r.diagnostics.ratio = generic;
+      r.diagnostics.targetGradeBaseMedian = null;
+      // Annotate the basis so /price-by-id consumers can audit the
+      // fallback in diagnostics; assembler rewrites this for iOS display.
+      r.basis = `${r.basis} [coherence: ${reason} → fell back to generic ${company} ${gradeStr} premium ${generic.toFixed(3)}×]`;
+    };
+
+    // Guard 1: ≥ raw anchor floor. Iterate over results, fall sub-anchor
+    // emits back to generic premium.
+    for (const r of results) {
+      if (r.estimatedValue == null) continue;
+      if (r.estimatedValue >= anchorPrice) continue;
+      const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+      if (!m) continue;
+      rebaseToGeneric(r, m[1]!, m[2]!, "ratio < 1.0 (sub-raw)");
+    }
+
+    // Guard 2: same-grader monotonicity. Group by grader, sort by numeric
+    // grade descending, walk pairs; on violation, raise BOTH sides to
+    // generic premium (a same-grader inversion means neither card nor
+    // release ratio is trustworthy for this pair).
+    interface GradeEntry {
+      result: GradedProjectionResult;
+      company: string;
+      gradeValue: number;
+      gradeStr: string;
+    }
+    const byGrader = new Map<string, GradeEntry[]>();
+    for (const r of results) {
+      if (r.estimatedValue == null) continue;
+      const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+      if (!m) continue;
+      const co = m[1]!;
+      const gradeStr = m[2]!;
+      const gv = Number(gradeStr);
+      if (!Number.isFinite(gv)) continue;
+      if (!byGrader.has(co)) byGrader.set(co, []);
+      byGrader.get(co)!.push({ result: r, company: co, gradeValue: gv, gradeStr });
+    }
+    for (const [, list] of byGrader) {
+      list.sort((a, b) => b.gradeValue - a.gradeValue); // higher grade first
+      for (let i = 0; i < list.length - 1; i++) {
+        const higher = list[i]!;
+        const lower = list[i + 1]!;
+        if (higher.result.estimatedValue == null || lower.result.estimatedValue == null) continue;
+        if (higher.result.estimatedValue >= lower.result.estimatedValue) continue;
+        // Violation: higher grade < lower grade. Raise both to generic.
+        const reason = `same-grader inversion (${lower.result.grade}=$${lower.result.estimatedValue} > ${higher.result.grade}=$${higher.result.estimatedValue})`;
+        rebaseToGeneric(higher.result, higher.company, higher.gradeStr, reason);
+        rebaseToGeneric(lower.result, lower.company, lower.gradeStr, reason);
+      }
+    }
+  }
+
   return results;
 }
 
@@ -765,49 +929,51 @@ export function buildGradedEstimates(
     return { estimates: [], mutationDetected: true };
   }
 
-  // CF-PHASE-3A (2026-06-14): replace the prior grounded-only filter with
-  // an insufficient-marker collapse. Every target grade the engine emits
-  // (i.e. every gap grade — observed grades are GUARD-skipped upstream)
-  // shows up on the wire so iOS can render a placeholder row:
-  //   • grounded (estimate / rough) → pass through with value + range
-  //   • ungrounded (ballpark / insufficient) → collapse to
-  //     { confidenceTier: "insufficient", estimatedValue: null, ranges null,
-  //       ratioSource: "none", anchorKind: "none", diagnostics.ratio: null,
-  //       diagnostics.anchorPrice: null, diagnostics.targetGradeBaseMedian: null }
-  //     — the tier-3 ballpark number is dropped at the helper boundary
-  //     and CANNOT be reconstructed from leaked diag fields.
-  // The pricing-pool stats (baseRawMedian + baseRawSampleCount +
-  // cardSpecificBaseSamples) are observed pool figures, safe to surface
-  // as "why we can't estimate" diagnostics.
-  // Phase 3A addendum-2 (2026-06-14): parallel-scope insufficient prose
-  // must label the count as BASE raw (not implied as the parallel's own
-  // raw count) and name the parallel — the prose is about a parallel
-  // grade gap, but the count it cites comes from the base pool. When
-  // base scope, the existing prose ("N raw sales observed") is correct
-  // as-is. The parallelName falls back to "this parallel" when the
-  // route didn't supply a name.
+  // CF-ALWAYS-A-NUMBER (2026-06-12): reverse the Phase 3A drop of tier-3.
+  // The new pass-through rules:
+  //   • grounded (estimate / rough) → pass through with value + range,
+  //     engine's technical basis preserved verbatim.
+  //   • ballpark → PASS THROUGH WITH NUMBER + range + tier-rounded value.
+  //     Override the engine's technical basis with the scope-labeled
+  //     friendly prose so iOS reads "No PSA 10 sales for this Blue
+  //     Refractor — extrapolated from the generic grade-premium curve.
+  //     Indicative only." The number IS surfaced — anti-leak no longer
+  //     applies to ballpark.
+  //   • no-data → COLLAPSE to a marker with null value + scope-labeled
+  //     "can't anchor an estimate" prose. This is the only remaining
+  //     null-value branch.
+  // FIREWALL unchanged: ballpark + estimate + rough all stay
+  // fairMarketValue/marketValue null, isEstimate true, display-not-
+  // train, never a comp. Surfacing the number changes DISPLAY policy,
+  // not TRAINING policy.
   const parallelScopeName = input.targetParallelId
     ? (input.targetParallelName && input.targetParallelName.trim().length > 0
        ? input.targetParallelName.trim()
-       : "parallel")  // prose already has "for this " prefix → "for this parallel"
+       : "parallel")
     : null;
 
   const estimates: GradedProjectionResult[] = all.map((r) => {
     if (r.confidenceTier === "estimate" || r.confidenceTier === "rough") {
       return r;
     }
+    if (r.confidenceTier === "ballpark") {
+      // CF-ALWAYS-A-NUMBER: surface the number, override basis with the
+      // scope-labeled friendly prose. Everything else (value, range,
+      // diagnostics, isEstimate, FMV nulls) is preserved.
+      return {
+        ...r,
+        basis: buildBallparkBasis(r.grade, parallelScopeName),
+      };
+    }
+    // no-data (or legacy "insufficient" if it ever leaks through) →
+    // collapse to a marker. No value + scope-labeled prose.
     return {
       grade: r.grade,
       estimatedValue: null,
       estimateLow: null,
       estimateHigh: null,
-      basis: buildInsufficientBasis(
-        r.grade,
-        r.diagnostics.baseRawSampleCount,
-        r.diagnostics.cardSpecificBaseSamples,
-        parallelScopeName,
-      ),
-      confidenceTier: "insufficient",
+      basis: buildNoDataBasis(r.grade, parallelScopeName),
+      confidenceTier: "no-data",
       ratioSource: "none",
       anchorKind: "none",
       isEstimate: true,
@@ -824,6 +990,31 @@ export function buildGradedEstimates(
     };
   });
   return { estimates, mutationDetected: false };
+}
+
+/** Friendly basis for ballpark entries — surfaces that the number came
+ *  from the generic grade-premium table, scope-labeled for parallel vs
+ *  base. The number itself is in r.estimatedValue / range; this prose
+ *  is the "why it's wide" tap-state context. */
+function buildBallparkBasis(
+  grade: string,
+  parallelScopeName: string | null,
+): string {
+  const isParallel = parallelScopeName != null && parallelScopeName.length > 0;
+  const scope = isParallel ? `this ${parallelScopeName}` : "this card";
+  return `No ${grade} sales for ${scope} — extrapolated from the generic grade-premium curve. Indicative only.`;
+}
+
+/** Basis for no-data markers — no anchor at all, no grade to multiply.
+ *  Distinct from buildInsufficientBasis (the retired pool-count prose):
+ *  this is the "can't anchor anything" floor. */
+function buildNoDataBasis(
+  grade: string,
+  parallelScopeName: string | null,
+): string {
+  const isParallel = parallelScopeName != null && parallelScopeName.length > 0;
+  const scopePhrase = isParallel ? ` for this ${parallelScopeName}` : "";
+  return `Can't anchor an estimate${scopePhrase} — no sales in ${grade} or any related grade or parallel.`;
 }
 
 /**

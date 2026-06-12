@@ -328,7 +328,10 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
     expect(out.length).toBe(2);
   });
 
-  it("BGS 9.5 + SGC 10 EMITTED via tier-3 market premium (ballpark)", () => {
+  it("BGS 9.5 + SGC 10 EMITTED via tier-3 market premium (ballpark, ±45% / 2 sig figs)", () => {
+    // CF-ALWAYS-A-NUMBER (2026-06-12): ballpark surfaces a NUMBER (engine
+    // stopped collapsing tier-3). Value is rounded to 2 sig figs;
+    // range is ±45% per GRADE_CONFIDENCE.ballpark.
     const out = computeGradedProjection({ pricing: makeLeoPricing() });
 
     const bgs95 = byGrade(out, "BGS 9.5");
@@ -336,18 +339,20 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
     expect(bgs95.ratioSource).toBe("market");
     expect(bgs95.anchorKind).toBe("base");
     expect(bgs95.diagnostics.cardSpecificBaseSamples).toBe(0);
-    // BGS 9.5 market premium = 3.5× per GRADER_PREMIUMS
     expect(bgs95.diagnostics.ratio).toBe(3.5);
-    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.5, 1);
-    // ±30% band on ballpark
-    expect(bgs95.estimateLow!).toBeCloseTo(bgs95.estimatedValue! * 0.7, 1);
-    expect(bgs95.estimateHigh!).toBeCloseTo(bgs95.estimatedValue! * 1.3, 1);
+    // 228.93 * 3.5 = 801.255 → 2 sig figs = 800
+    expect(bgs95.estimatedValue).toBe(800);
+    // ±45% band, also rounded to 2 sig figs
+    // low: 801.255 * 0.55 ≈ 440.7 → 440; high: 801.255 * 1.45 ≈ 1161.8 → 1200
+    expect(bgs95.estimateLow).toBe(440);
+    expect(bgs95.estimateHigh).toBe(1200);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.confidenceTier).toBe("ballpark");
     expect(sgc10.ratioSource).toBe("market");
-    expect(sgc10.diagnostics.ratio).toBe(3.4); // SGC 10 market premium
-    expect(sgc10.estimatedValue!).toBeCloseTo(228.93 * 3.4, 1);
+    expect(sgc10.diagnostics.ratio).toBe(3.4);
+    // 228.93 * 3.4 = 778.36 → 2 sig figs = 780
+    expect(sgc10.estimatedValue).toBe(780);
   });
 
   it("BASE RAW ANCHOR — diagnostics confirm the 6 parallel raw records are excluded (n=24, not 30)", () => {
@@ -385,12 +390,15 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo Blue /150 PARALLEL target", () => {
     expect(psa10.anchorKind).toBe("parallel-observed");
     expect(psa10.diagnostics.anchorPrice).toBe(1183);
     expect(psa10.diagnostics.ratio!).toBeCloseTo(2.560, 2);
-    expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
+    // CF-ALWAYS-A-NUMBER: rough rounds to 3 sig figs.
+    // 1183 * 2.560 = 3028.48 → 3 sig figs = 3030
+    expect(psa10.estimatedValue).toBe(3030);
     expect(psa10.basis).toContain("parallel raw anchor");
     expect(psa10.basis).toContain("base graded comps");
-    // ±20% band on rough
-    expect(psa10.estimateLow!).toBeCloseTo(psa10.estimatedValue! * 0.8, 1);
-    expect(psa10.estimateHigh!).toBeCloseTo(psa10.estimatedValue! * 1.2, 1);
+    // ±20% band on rough, rounded to 3 sig figs
+    // low: 3028.48 * 0.8 ≈ 2422.78 → 2420; high: 3028.48 * 1.2 ≈ 3634.18 → 3630
+    expect(psa10.estimateLow).toBe(2420);
+    expect(psa10.estimateHigh).toBe(3630);
   });
 
   it("GUARD on PARALLEL scope — $1,299.99 Blue Refractor PSA 10 record IS observed → PSA 10 SKIPPED", () => {
@@ -566,15 +574,18 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     // Anchor remains the card's own base raw median ($228.93) — the
     // sibling raw is the tier-2 DENOMINATOR, not the anchor.
     expect(bgs95.diagnostics.anchorPrice).toBeCloseTo(228.93, 1);
-    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * (812.5 / 267.5), 0);
+    // CF-ALWAYS-A-NUMBER (2026-06-12): rough rounds to 3 sig figs.
+    // 228.93 * 3.037 ≈ 695.2 → 3 sig figs = 695
+    expect(bgs95.estimatedValue).toBe(695);
     expect(bgs95.basis).toContain("sibling cards");
     expect(bgs95.basis).toContain("6 base BGS 9.5");
-    // ±20% rough band
-    expect(bgs95.estimateLow!).toBeCloseTo(bgs95.estimatedValue! * 0.8, 1);
-    expect(bgs95.estimateHigh!).toBeCloseTo(bgs95.estimatedValue! * 1.2, 1);
+    // ±20% rough band, also rounded
+    // low: 695.2 * 0.8 ≈ 556.2 → 556; high: 695.2 * 1.2 ≈ 834.2 → 834
+    expect(bgs95.estimateLow).toBe(556);
+    expect(bgs95.estimateHigh).toBe(834);
   });
 
-  it("Leo BGS 9.5 — siblings thin (<5 base BGS 9.5) → tier-3 market fallback (ballpark)", () => {
+  it("Leo BGS 9.5 — siblings thin (<5 base BGS 9.5) → tier-3 market fallback (ballpark, ±45% / 2 sig figs)", () => {
     const pricing = makeLeoPricing();
     const siblingComps = makeSiblingComps({ nBgs95Base: 4, nRawBase: 8 });
     const out = computeGradedProjection({ pricing, siblingComps });
@@ -583,7 +594,8 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.ratioSource).toBe("market");
     expect(bgs95.diagnostics.ratio).toBe(3.5);
-    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.5, 1);
+    // CF-ALWAYS-A-NUMBER: 228.93 * 3.5 = 801.255 → 2 sig figs = 800
+    expect(bgs95.estimatedValue).toBe(800);
   });
 
   it("Tier 2 — sibling PARALLEL records are excluded from the tier-2 base aggregation", () => {
@@ -632,7 +644,9 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     expect(bgs95.ratioSource).toBe("player-set");
     expect(bgs95.anchorKind).toBe("parallel-observed");
     expect(bgs95.diagnostics.anchorPrice).toBe(1183);
-    expect(bgs95.estimatedValue!).toBeCloseTo(1183 * (812.5 / 267.5), 0);
+    // CF-ALWAYS-A-NUMBER: rough rounds to 3 sig figs.
+    // 1183 * (812.5 / 267.5) ≈ 3593.2 → 3 sig figs = 3590
+    expect(bgs95.estimatedValue).toBe(3590);
   });
 });
 
@@ -689,40 +703,36 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(psa10.ratioSource).toBe("card");
     expect(psa10.anchorKind).toBe("parallel-observed");
     expect(psa10.diagnostics.anchorPrice).toBe(1183);
-    expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
+    // CF-ALWAYS-A-NUMBER: rough → 3 sig figs. 1183 * 2.560 = 3028.48 → 3030
+    expect(psa10.estimatedValue).toBe(3030);
 
     const psa9 = estimates.find((e) => e.grade === "PSA 9")!;
-    expect(psa9.confidenceTier).toBe("rough");
-    expect(psa9.ratioSource).toBe("card");
+    // CF-ALWAYS-A-NUMBER ladder guard 1: PSA 9 card ratio = 0.931× → sub-raw
+    // → falls back to generic PSA 9 premium 1.7× × $1,183 = $2,011 → ballpark.
+    expect(psa9.confidenceTier).toBe("ballpark");
+    expect(psa9.ratioSource).toBe("market");
+    expect(psa9.estimatedValue).toBe(2000);  // 2 sig figs
 
-    // BGS 9.5 + SGC 10 — collapsed insufficient markers. The tier-3
-    // ballpark number ($1183 × 3.5 ≈ $4140 / × 3.4 ≈ $4022) must NOT
-    // appear on these entries. Diagnostics.ratio must be null too —
-    // a leaked 3.5 + anchorPrice would let anyone reconstruct $4140.
+    // CF-ALWAYS-A-NUMBER (2026-06-12): BGS 9.5 + SGC 10 NOW surface as
+    // ballpark WITH numbers (rounded to 2 sig figs) — engine no longer
+    // collapses tier-3. Per-card ratio for BGS 9.5/SGC 10 is < 1.0 in the
+    // makeLeoParallelPricingNoBlueGraded fixture so the ladder coherence
+    // guard catches sub-raw values and rebases to generic premium.
     for (const grade of ["BGS 9.5", "SGC 10"]) {
       const r = estimates.find((e) => e.grade === grade)!;
-      expect(r.confidenceTier).toBe("insufficient");
-      expect(r.estimatedValue).toBeNull();
-      expect(r.estimateLow).toBeNull();
-      expect(r.estimateHigh).toBeNull();
-      expect(r.ratioSource).toBe("none");
-      expect(r.anchorKind).toBe("none");
-      expect(r.diagnostics.ratio).toBeNull();
-      expect(r.diagnostics.anchorPrice).toBeNull();
-      expect(r.diagnostics.targetGradeBaseMedian).toBeNull();
-      // Safe pool stats preserved (observed, not derived)
+      expect(r.confidenceTier).toBe("ballpark");
+      expect(r.estimatedValue).not.toBeNull();
+      expect(r.estimateLow).not.toBeNull();
+      expect(r.estimateHigh).not.toBeNull();
+      expect(r.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor
+      expect(r.ratioSource).toBe("market");
+      expect(r.diagnostics.anchorPrice).toBe(1183);
+      // Safe pool stats preserved
       expect(r.diagnostics.baseRawSampleCount).toBeGreaterThan(0);
-      // Phase 3A addendum-2: parallel-scope prose labels the count as
-      // BASE raw (not implied as the parallel's own) and names the
-      // parallel — gap is at the parallel grade; count is the base pool.
-      expect(r.basis).toContain(`No ${grade} sales yet for this Blue Refractor`);
-      expect(r.basis).toContain(`${r.diagnostics.baseRawSampleCount} base raw sales observed`);
-      expect(r.basis).toContain(`none graded ${grade}`);
-      // Anti-leak: basis must NEVER contain the dropped ballpark number
-      // ($1,183 × 3.5 = $4,140; × 3.4 = $4,022).
-      expect(r.basis).not.toContain("4140");
-      expect(r.basis).not.toContain("4022");
-      expect(r.basis).not.toContain("$");  // no dollar figures at all
+      // Assembler emits the scope-labeled ballpark prose
+      expect(r.basis).toContain(`No ${grade} sales for this Blue Refractor`);
+      expect(r.basis).toContain("extrapolated from the generic grade-premium curve");
+      expect(r.basis).toContain("Indicative only");
     }
 
     // FMV-null + isEstimate invariants hold across ALL emitted entries.
@@ -733,10 +743,10 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     }
   });
 
-  it("Leo BASE → emits BGS 9.5 + SGC 10 as insufficient markers (PSA 10/9 GUARD-skipped)", () => {
+  it("Leo BASE → emits BGS 9.5 + SGC 10 as ballpark with numbers (CF-ALWAYS-A-NUMBER; PSA 10/9 GUARD-skipped)", () => {
     // BASE-scope call (no parallel passthrough). GUARD skips PSA 10/9
-    // (observed). BGS 9.5 + SGC 10 are tier-3 ballpark in the engine →
-    // Phase 3A collapses them to insufficient markers.
+    // (observed). BGS 9.5 + SGC 10 surface as ballpark with rounded
+    // numbers (tier-3 market premium × base raw anchor).
     const pricing = makeLeoPricing();
     const fmv = 228.93;
     const { estimates, mutationDetected } = buildGradedEstimates({
@@ -752,15 +762,20 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     const grades = estimates.map((e) => e.grade).sort();
     expect(grades).toEqual(["BGS 9.5", "SGC 10"]);
     for (const e of estimates) {
-      expect(e.confidenceTier).toBe("insufficient");
-      expect(e.estimatedValue).toBeNull();
-      expect(e.estimateLow).toBeNull();
-      expect(e.estimateHigh).toBeNull();
-      expect(e.ratioSource).toBe("none");
-      expect(e.fairMarketValue).toBeNull();
-      expect(e.diagnostics.ratio).toBeNull();
-      expect(e.diagnostics.anchorPrice).toBeNull();
+      expect(e.confidenceTier).toBe("ballpark");
+      expect(e.estimatedValue).not.toBeNull();
+      expect(e.estimateLow).not.toBeNull();
+      expect(e.estimateHigh).not.toBeNull();
+      expect(e.ratioSource).toBe("market");
+      expect(e.fairMarketValue).toBeNull();  // firewall — value, not FMV
+      expect(e.marketValue).toBeNull();
+      expect(e.isEstimate).toBe(true);
+      expect(e.diagnostics.anchorPrice).toBe(228.93);
+      expect(e.estimatedValue!).toBeGreaterThan(228.93);  // ≥ raw anchor
     }
+    // BGS 9.5: 228.93 * 3.5 = 801.255 → 800; SGC 10: 228.93 * 3.4 = 778.36 → 780
+    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(800);
+    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(780);
   });
 
   it("Trout → emits nothing (full coverage; every grade observed → engine returns [])", () => {
@@ -870,7 +885,8 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(psa10.ratioSource).toBe("card");
     expect(psa10.anchorKind).toBe("parallel-observed");
     expect(psa10.diagnostics.anchorPrice).toBe(1183);  // ← matches displayed value
-    expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
+    // CF-ALWAYS-A-NUMBER: rough → 3 sig figs. 1183 * 2.560 = 3028.48 → 3030
+    expect(psa10.estimatedValue).toBe(3030);
     // Honest basis prose
     expect(psa10.basis).toContain("anchored on the last sale $1183.00");
     expect(psa10.basis).toContain("34 days ago");
@@ -933,45 +949,52 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     // ratio; BGS 9.5 + SGC 10 collapsed to insufficient markers.
     const grades = estimates.map((e) => e.grade).sort();
     expect(grades).toEqual(["BGS 9.5", "PSA 10", "PSA 9", "SGC 10"]);
-    // Grounded entries: PSA 10 + PSA 9 carry the last-sale anchor.
-    for (const grade of ["PSA 10", "PSA 9"]) {
-      const e = estimates.find((x) => x.grade === grade)!;
-      expect(e.fairMarketValue).toBeNull();
-      expect(e.marketValue).toBeNull();
-      expect(e.confidenceTier).toBe("rough");
-      expect(e.diagnostics.anchorPrice).toBe(1183);
-      expect(e.basis).toContain("anchored on the last sale $1183.00");
-      expect(e.basis).toContain("34 days ago");
-    }
-    // Insufficient markers: BGS 9.5 + SGC 10 carry no number.
+    // Grounded entries: PSA 10 keeps card-ratio rough. PSA 9's card-ratio
+    // is 0.931× → sub-raw → Guard 1 rebases to ballpark.
+    const psa10 = estimates.find((x) => x.grade === "PSA 10")!;
+    expect(psa10.fairMarketValue).toBeNull();
+    expect(psa10.confidenceTier).toBe("rough");
+    expect(psa10.diagnostics.anchorPrice).toBe(1183);
+    expect(psa10.basis).toContain("anchored on the last sale $1183.00");
+    expect(psa10.basis).toContain("34 days ago");
+
+    const psa9 = estimates.find((x) => x.grade === "PSA 9")!;
+    expect(psa9.confidenceTier).toBe("ballpark");
+    expect(psa9.ratioSource).toBe("market");
+    expect(psa9.estimatedValue).toBeGreaterThan(1183);  // ≥ raw anchor
+    // CF-ALWAYS-A-NUMBER: BGS 9.5 + SGC 10 NOW surface as ballpark with
+    // numbers (engine stopped collapsing tier-3). Card-specific ratios
+    // for those grades are < 1.0 → ladder guard rebases to generic
+    // premium. Numbers are anchor (1183) × generic premium.
     for (const grade of ["BGS 9.5", "SGC 10"]) {
       const e = estimates.find((x) => x.grade === grade)!;
-      expect(e.confidenceTier).toBe("insufficient");
-      expect(e.estimatedValue).toBeNull();
-      expect(e.estimateLow).toBeNull();
-      expect(e.estimateHigh).toBeNull();
-      expect(e.diagnostics.ratio).toBeNull();
-      expect(e.diagnostics.anchorPrice).toBeNull();
+      expect(e.confidenceTier).toBe("ballpark");
+      expect(e.estimatedValue).not.toBeNull();
+      expect(e.estimateLow).not.toBeNull();
+      expect(e.estimateHigh).not.toBeNull();
+      expect(e.diagnostics.ratio).toBe(e.grade === "BGS 9.5" ? 3.5 : 3.4);
+      expect(e.diagnostics.anchorPrice).toBe(1183);
+      expect(e.basis).toContain(`No ${e.grade} sales for this Blue Refractor`);
     }
   });
 
-  // ── Phase 3A addendum — insufficient basis prose ───────────────────────
-  // The basis on an insufficient marker is the iOS tap-state prose. It
-  // MUST cite the preserved observed pool stats (raw sale count, graded
-  // count at this card) for honest "why" context — and MUST NOT surface
-  // the dropped ballpark number or any derived value.
+  // ── CF-ALWAYS-A-NUMBER (2026-06-12) — BALLPARK / NO-DATA prose suite ──
+  // Reverses the Phase 3A "insufficient marker collapses ballpark" rule.
+  // Ballpark surfaces with a NUMBER + scope-labeled friendly prose.
+  // No-data (truly no anchor) keeps a marker-style prose, no $ figures.
 
-  it("INSUFFICIENT BASIS — N raw + 0 graded → 'No {grade} sales yet to estimate from — N raw sales observed, none graded {grade}.'", () => {
-    // Leo BASE: 24 base raw sales, 0 base BGS 9.5/SGC 10 sales (engine
-    // GUARD-skips PSA 10/9; BGS/SGC collapse to insufficient).
+  it("BALLPARK BASIS — Leo BASE BGS 9.5: friendly prose + number surfaces (was previously insufficient)", () => {
+    // Leo BASE: 24 base raw sales, 0 base BGS 9.5 sales. Tier-3 ballpark
+    // emits via generic premium.
     const pricing = makeLeoPricing();
     const { estimates } = buildGradedEstimates({
       pricing,
       snapshots: { marketTierValue: 228.93, recentComps: [], gradeBreakdown: [] },
     });
     const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.basis).toBe(
-      "No BGS 9.5 sales yet to estimate from — 24 raw sales observed, none graded BGS 9.5.",
+      "No BGS 9.5 sales for this card — extrapolated from the generic grade-premium curve. Indicative only.",
     );
     // Anti-leak: basis must NOT carry the dropped tier-3 ballpark number
     // ($228.93 × 3.5 = $801.26 would be the ballpark) — no dollar figures.
@@ -981,7 +1004,9 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(bgs95.basis).not.toContain("3.5");
   });
 
-  it("INSUFFICIENT BASIS — singular '1 raw sale observed' pluralization", () => {
+  it("BALLPARK BASIS — singular 1 raw sale → ballpark still surfaces (1 sale enough to anchor)", () => {
+    // CF-ALWAYS-A-NUMBER: 1 raw sale gives baseRawMedian=$100, enough
+    // to anchor tier-3 ballpark. BGS 9.5 = $100 × 3.5 = $350 → 2 sig figs = $350.
     const pricing: CardsightPricingResponse = {
       card: { card_id: "x", name: "x", number: "x" } as any,
       raw: {
@@ -993,88 +1018,15 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     } as CardsightPricingResponse;
     const { estimates } = buildGradedEstimates({ pricing });
     const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    // 1 raw → singular; tier-3 ballpark dropped → insufficient marker.
-    expect(bgs95.confidenceTier).toBe("insufficient");
-    expect(bgs95.basis).toBe(
-      "No BGS 9.5 sales yet to estimate from — 1 raw sale observed, none graded BGS 9.5.",
-    );
+    expect(bgs95.confidenceTier).toBe("ballpark");
+    expect(bgs95.estimatedValue).toBe(350);
+    expect(bgs95.basis).toContain("No BGS 9.5 sales for this card");
+    expect(bgs95.basis).toContain("Indicative only");
   });
 
-  it("INSUFFICIENT BASIS — gradedN > 0 but below threshold → cites the count + the needed threshold", () => {
-    // To exercise the gradedN > 0 branch of the insufficient basis, we
-    // need a path where the GUARD passes BUT tier-1's threshold doesn't:
-    // a PARALLEL-scope request where the card has 2 base BGS 9.5 (below
-    // tier-1's 3-sample threshold) AND zero parallel BGS 9.5 records
-    // (so the GUARD on the parallel scope passes). Tier-1 sees the 2
-    // base records, misses; tier-3 fallback; collapse → insufficient
-    // marker with the "Not enough… only N graded… need at least 3" prose.
-    const baseRaw: CardsightSaleRecord[] = [];
-    for (let i = 0; i < 5; i++) {
-      baseRaw.push(rec(`2024 Bowman Chrome Threshold Tester #CPA-T base ${i}`, 100 + i * 5));
-    }
-    // Two base BGS 9.5 — observed at the BASE scope only, but the request
-    // is for the (fake) "Cosmic Aura" parallel scope, so the GUARD
-    // (which counts parallel-scope records) sees 0 and passes.
-    const bgs95Base: CardsightSaleRecord[] = [
-      rec("2024 Bowman Chrome Threshold Tester #CPA-T base BGS 9.5 sale a", 700),
-      rec("2024 Bowman Chrome Threshold Tester #CPA-T base BGS 9.5 sale b", 720),
-    ];
-    const pricing: CardsightPricingResponse = {
-      card: { card_id: "thresh", name: "Threshold Tester", number: "CPA-T" } as any,
-      raw: { count: baseRaw.length, records: baseRaw },
-      graded: [{
-        company_name: "BGS",
-        grades: [gradedBucket(9.5, bgs95Base)],
-      }],
-      meta: { total_records: baseRaw.length + bgs95Base.length, last_sale_date: null },
-    } as CardsightPricingResponse;
-    const { estimates } = buildGradedEstimates({
-      pricing,
-      targetParallelId: "11111111-1111-1111-1111-111111111111",
-      targetParallelName: "Cosmic Aura",     // not in any record's title → GUARD passes
-      targetParallelRawFmv: 200,             // observed parallel raw anchor
-    });
-    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95).toBeDefined();
-    expect(bgs95.confidenceTier).toBe("insufficient");
-    expect(bgs95.basis).toBe(
-      "Not enough BGS 9.5 sales to estimate for this Cosmic Aura — 5 base raw sales observed; only 2 graded BGS 9.5 (need at least 3).",
-    );
-    // Anti-leak: the 2 BGS 9.5 sales had median $710; the dropped tier-3
-    // ballpark would have been $200 × 3.5 = $700. Neither number, nor any
-    // dollar figure, may appear in the basis.
-    expect(bgs95.basis).not.toContain("710");
-    expect(bgs95.basis).not.toContain("700");
-    expect(bgs95.basis).not.toContain("$");
-  });
-
-  it("INSUFFICIENT BASIS — empty raw pool → 'No data to estimate {grade} — no raw sales observed at this card.'", () => {
-    const empty: CardsightPricingResponse = {
-      card: { card_id: "empty", name: "Empty", number: "E" } as any,
-      raw: { count: 0, records: [] },
-      graded: [],
-      meta: { total_records: 0, last_sale_date: null },
-    } as CardsightPricingResponse;
-    const { estimates } = buildGradedEstimates({ pricing: empty });
-    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95.confidenceTier).toBe("insufficient");
-    expect(bgs95.basis).toBe(
-      "No data to estimate BGS 9.5 — no raw sales observed at this card.",
-    );
-  });
-
-  // ── Phase 3A addendum-2 — scope-labeled insufficient prose ─────────────
-  // When the request is for a parallel, the count cited in the basis is
-  // labeled "base raw" (not implied as the parallel's own) and the
-  // parallel name is woven into the prose. Base-scope prose is unchanged.
-
-  it("INSUFFICIENT BASIS (parallel) — N base raw + 0 graded → 'No {grade} sales yet for this {parallel} — N base raw sales observed, none graded {grade}.'", () => {
-    // Leo Blue /150 parallel-scope request. The BLUE_PID hit doesn't
-    // exist as Cardsight-tagged records; the BGS 9.5 / SGC 10 grades
-    // have 0 records in BLUE scope → GUARD passes → tier-3 fallback →
-    // collapse → insufficient marker. Basis says "for this Blue Refractor"
-    // and labels the 24 base raw count as base, not as the Blue scope's
-    // own raw.
+  it("BALLPARK BASIS (parallel) — friendly scope-labeled prose: 'for this {parallel}'", () => {
+    // Leo Blue /150 parallel-scope. BGS 9.5/SGC 10 surface as ballpark
+    // with the friendly scope-labeled prose.
     const pricing = makeLeoParallelPricingNoBlueGraded();
     const { estimates } = buildGradedEstimates({
       pricing,
@@ -1083,14 +1035,61 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       targetParallelRawFmv: 1183,
     });
     const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95.confidenceTier).toBe("insufficient");
+    expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.basis).toBe(
-      "No BGS 9.5 sales yet for this Blue Refractor — 24 base raw sales observed, none graded BGS 9.5.",
+      "No BGS 9.5 sales for this Blue Refractor — extrapolated from the generic grade-premium curve. Indicative only.",
     );
+  });
+
+  it("BALLPARK BASIS (parallel without name) — falls back to 'this parallel'", () => {
+    const pricing = makeLeoPricing();
+    const { estimates } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "11111111-1111-1111-1111-111111111111",
+      targetParallelRawFmv: 1000,
+      // targetParallelName intentionally absent
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("ballpark");
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales for this parallel — extrapolated from the generic grade-premium curve. Indicative only.",
+    );
+  });
+
+  it("BALLPARK BASIS (base scope) — 'for this card', no parallel phrase", () => {
+    // Base-scope ballpark prose.
+    const pricing = makeLeoPricing();
+    const { estimates } = buildGradedEstimates({ pricing });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales for this card — extrapolated from the generic grade-premium curve. Indicative only.",
+    );
+    expect(bgs95.basis).not.toContain("for this Blue");  // not the parallel scope
+  });
+
+  it("NO-DATA BASIS — empty raw pool → 'Can't anchor an estimate' (no $ figures, scope-labeled)", () => {
+    // CF-ALWAYS-A-NUMBER: no anchor at all → "no-data" tier. Distinct
+    // from ballpark which has at least the raw anchor to multiply by.
+    const empty: CardsightPricingResponse = {
+      card: { card_id: "empty", name: "Empty", number: "E" } as any,
+      raw: { count: 0, records: [] },
+      graded: [],
+      meta: { total_records: 0, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const { estimates } = buildGradedEstimates({ pricing: empty });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("no-data");
+    expect(bgs95.estimatedValue).toBeNull();
+    expect(bgs95.estimateLow).toBeNull();
+    expect(bgs95.estimateHigh).toBeNull();
+    expect(bgs95.basis).toBe(
+      "Can't anchor an estimate — no sales in BGS 9.5 or any related grade or parallel.",
+    );
+    // Anti-leak on no-data: NO dollar figures anywhere in the prose.
     expect(bgs95.basis).not.toContain("$");
   });
 
-  it("INSUFFICIENT BASIS (parallel) — 0 raw → 'No data to estimate {grade} for this {parallel} — no base raw sales observed at this card.'", () => {
+  it("NO-DATA BASIS (parallel) — scope-labeled 'for this {parallel}' on no-anchor", () => {
     const empty: CardsightPricingResponse = {
       card: { card_id: "empty", name: "Empty", number: "E" } as any,
       raw: { count: 0, records: [] },
@@ -1103,35 +1102,80 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       targetParallelName: "Gold Refractor",
     });
     const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("no-data");
     expect(bgs95.basis).toBe(
-      "No data to estimate BGS 9.5 for this Gold Refractor — no base raw sales observed at this card.",
+      "Can't anchor an estimate for this Gold Refractor — no sales in BGS 9.5 or any related grade or parallel.",
     );
+    expect(bgs95.basis).not.toContain("$");
   });
 
-  it("INSUFFICIENT BASIS (parallel without name) — falls back to 'this parallel'", () => {
-    const pricing = makeLeoPricing();
-    const { estimates } = buildGradedEstimates({
-      pricing,
-      targetParallelId: "11111111-1111-1111-1111-111111111111",
-      // targetParallelName intentionally absent — route may not always supply
+  // ── CF-ALWAYS-A-NUMBER LADDER COHERENCE GUARDS ─────────────────────────
+  // Guard 1: no emitted grade < raw anchor (sub-1.0 ratio fallback).
+  // Guard 2: same-grader monotonicity (PSA 10 ≥ PSA 9, BGS 10 ≥ BGS 9.5).
+
+  it("LADDER GUARD 1 — sub-1.0 card ratio (0.931× PSA 9) falls back to generic premium, not sub-raw", () => {
+    // Leo Blue /150 PSA 9 case: card-specific PSA 9 base ratio = 0.931×.
+    // With anchor $1,183, raw card ratio would give $1,101 — BELOW raw.
+    // Guard 1 catches it, rebases to generic PSA 9 premium 1.7×.
+    // 1183 * 1.7 = 2011.1 → 2 sig figs = 2000.
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
     });
-    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95.basis).toBe(
-      "No BGS 9.5 sales yet for this parallel — 24 base raw sales observed, none graded BGS 9.5.",
-    );
+    const psa9 = byGrade(out, "PSA 9");
+    expect(psa9.estimatedValue).toBe(2000);
+    expect(psa9.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor
+    expect(psa9.confidenceTier).toBe("ballpark");
+    expect(psa9.ratioSource).toBe("market");
+    expect(psa9.diagnostics.ratio).toBe(1.7);
+    expect(psa9.basis).toContain("coherence: ratio < 1.0");
   });
 
-  it("INSUFFICIENT BASIS (base scope unchanged) — 'raw sales observed', no 'base' qualifier, no 'for this' phrase", () => {
-    // Direct regression guard: the base-scope prose stays exactly as
-    // addendum-1 emitted it. No "base raw" relabel, no parallel phrase.
-    const pricing = makeLeoPricing();
-    const { estimates } = buildGradedEstimates({ pricing });
-    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
-    expect(bgs95.basis).toBe(
-      "No BGS 9.5 sales yet to estimate from — 24 raw sales observed, none graded BGS 9.5.",
-    );
-    expect(bgs95.basis).not.toContain("for this");
-    expect(bgs95.basis).not.toContain("base raw");
+  it("LADDER GUARD 1 — generic premium also < 1.0 → demoted to no-data (refuses sub-raw)", () => {
+    // Synthetic: a grade where the card ratio < 1.0 AND the generic
+    // premium is also < 1.0 (e.g. SGC 8 = 1.0× isn't sub but...).
+    // We don't have a real liquid grade with generic < 1.0, so this
+    // test asserts the helper signature defensively: when a fallback
+    // would still print sub-raw, the engine sets no-data + nulls.
+    // Tested via PSA 7 (0.95× premium) in targetGrades override.
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+      targetGrades: [{ company: "PSA", grade: "7", label: "PSA 7" }],
+    });
+    const psa7 = byGrade(out, "PSA 7");
+    // PSA 7 generic premium 0.95× × $1,183 = $1,124 → sub-raw → demote to no-data
+    expect(psa7.confidenceTier).toBe("no-data");
+    expect(psa7.estimatedValue).toBeNull();
+  });
+
+  it("LADDER (Guard 1 fixed) — Leo Blue full ladder is ordered: PSA 10 > PSA 9, all > raw", () => {
+    // Full integration: PSA 10 (rough, card ratio 2.405×) + PSA 9
+    // (ballpark via Guard 1 fallback, 1.7×) + BGS 9.5 / SGC 10 (ballpark
+    // via Guard 1, since card ratios < 1.0). All ≥ raw anchor $1,183.
+    // PSA 10 = 3030 (rough rounding); PSA 9 = 2000 (ballpark);
+    // PSA 10 (3030) > PSA 9 (2000) ✓ same-grader monotonic.
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    const psa9 = byGrade(out, "PSA 9");
+    const bgs95 = byGrade(out, "BGS 9.5");
+    const sgc10 = byGrade(out, "SGC 10");
+    // All ≥ raw anchor
+    expect(psa10.estimatedValue!).toBeGreaterThanOrEqual(1183);
+    expect(psa9.estimatedValue!).toBeGreaterThanOrEqual(1183);
+    expect(bgs95.estimatedValue!).toBeGreaterThanOrEqual(1183);
+    expect(sgc10.estimatedValue!).toBeGreaterThanOrEqual(1183);
+    // Same-grader monotonic for PSA
+    expect(psa10.estimatedValue!).toBeGreaterThanOrEqual(psa9.estimatedValue!);
   });
 });
 
@@ -1324,12 +1368,14 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium cu
     expect(bgs95.ratioSource).toBe("release");
     expect(bgs95.anchorKind).toBe("base");
     expect(bgs95.diagnostics.ratio).toBeCloseTo(3.25, 2);
-    expect(bgs95.estimatedValue!).toBeCloseTo(228.93 * 3.25, 0);
+    // CF-ALWAYS-A-NUMBER: rough → 3 sig figs. 228.93 * 3.25 = 744.0225 → 744
+    expect(bgs95.estimatedValue).toBe(744);
     expect(bgs95.basis).toContain("2024 Bowman Chrome Prospects Autographs");
     expect(bgs95.basis).toContain("7 cards in the release");
-    // ±20% rough band
-    expect(bgs95.estimateLow!).toBeCloseTo(bgs95.estimatedValue! * 0.8, 1);
-    expect(bgs95.estimateHigh!).toBeCloseTo(bgs95.estimatedValue! * 1.2, 1);
+    // ±20% rough band — rounded to 3 sig figs
+    // low: 744.0225 * 0.8 ≈ 595.2 → 595; high: 744.0225 * 1.2 ≈ 892.8 → 893
+    expect(bgs95.estimateLow).toBe(595);
+    expect(bgs95.estimateHigh).toBe(893);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.ratioSource).toBe("release");
@@ -1440,8 +1486,8 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium cu
   });
 });
 
-describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {
-  it("empty pricing → no observed (GUARD doesn't fire) → all results 'insufficient'", () => {
+describe("CF-GRADED-PRICE-PROJECTION — no-data edge cases", () => {
+  it("empty pricing → no observed (GUARD doesn't fire) → all results 'no-data'", () => {
     const empty: CardsightPricingResponse = {
       card: { card_id: "x", name: "x", number: "x" } as any,
       raw: { count: 0, records: [] },
@@ -1450,12 +1496,12 @@ describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {
     } as CardsightPricingResponse;
     const out = computeGradedProjection({ pricing: empty });
     // GUARD doesn't fire (no observed anywhere), so all 4 grades reach
-    // the ratio + emit step. Anchor is null → confidenceTier="insufficient",
-    // value/range null. The output is non-empty but every entry is honest
-    // "no data" — never a hallucinated number.
+    // the ratio + emit step. Anchor is null → confidenceTier="no-data",
+    // value/range null. CF-ALWAYS-A-NUMBER renamed "insufficient" → "no-data"
+    // for the no-anchor case.
     expect(out.length).toBe(TARGET_GRADES.length);
     for (const r of out) {
-      expect(r.confidenceTier).toBe("insufficient");
+      expect(r.confidenceTier).toBe("no-data");
       expect(r.anchorKind).toBe("none");
       expect(r.estimatedValue).toBeNull();
       expect(r.estimateLow).toBeNull();
