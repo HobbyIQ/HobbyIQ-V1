@@ -133,6 +133,15 @@ export interface ComputeGradedProjectionInput {
   /** Observed raw FMV for the parallel target, if available (single sale OK).
    *  When present and positive, used as the parallel-observed anchor. */
   targetParallelRawFmv?: number | null;
+  /** Where the parallel-raw anchor came from. "fmv" = pool median (the value
+   *  iOS shows as marketTier.value). "last-sale" = a single observed sale (the
+   *  value iOS shows in the "last sold $X, N ago" slot when coverage is
+   *  thin). The estimator emits a different basis string for each so the
+   *  thin/stale provenance is visible, not hidden. Default "fmv" when absent. */
+  targetParallelRawFmvSource?: "fmv" | "last-sale";
+  /** Age in days of the last-sale anchor. Only meaningful when
+   *  targetParallelRawFmvSource === "last-sale"; surfaced in the basis prose. */
+  targetParallelRawFmvAgeDays?: number | null;
   /** Parallel name (e.g. "Blue Refractor") for parallel-composed fallback
    *  via lookupMultiplier when targetParallelRawFmv is absent. */
   targetParallelName?: string | null;
@@ -284,6 +293,8 @@ function resolveAnchor(
   opts: {
     targetParallelId?: string | null;
     targetParallelRawFmv?: number | null;
+    targetParallelRawFmvSource?: "fmv" | "last-sale";
+    targetParallelRawFmvAgeDays?: number | null;
     targetParallelName?: string | null;
   },
 ): ResolvedAnchor {
@@ -292,6 +303,23 @@ function resolveAnchor(
     // Parallel-observed: caller provided a parallel-raw anchor
     const pf = opts.targetParallelRawFmv;
     if (typeof pf === "number" && Number.isFinite(pf) && pf > 0) {
+      // CF-ANCHOR-PRECEDENCE (2026-06-14): when the anchor came from the
+      // last-sale slot (iOS thin-data path), the basis prose names it and
+      // its age so the thin/stale provenance is visible — never hidden
+      // behind generic "parallel raw anchor" phrasing.
+      const source = opts.targetParallelRawFmvSource ?? "fmv";
+      if (source === "last-sale") {
+        const ageDays = opts.targetParallelRawFmvAgeDays;
+        const agePhrase =
+          ageDays != null && Number.isFinite(ageDays) && ageDays >= 0
+            ? `, ${Math.round(ageDays)} day${Math.round(ageDays) === 1 ? "" : "s"} ago`
+            : "";
+        return {
+          price: pf,
+          kind: "parallel-observed",
+          description: `anchored on the last sale ${fmtUSD(pf)}${agePhrase} (single observed parallel sale; thin pool)`,
+        };
+      }
       return {
         price: pf,
         kind: "parallel-observed",
@@ -556,6 +584,8 @@ export function computeGradedProjection(
     pricing,
     targetParallelId,
     targetParallelRawFmv,
+    targetParallelRawFmvSource,
+    targetParallelRawFmvAgeDays,
     targetParallelName,
     siblingComps = [],
     releaseRatios = null,
@@ -574,6 +604,8 @@ export function computeGradedProjection(
   const anchor = resolveAnchor(baseRawMedian, baseRawSampleCount, {
     targetParallelId,
     targetParallelRawFmv,
+    targetParallelRawFmvSource,
+    targetParallelRawFmvAgeDays,
     targetParallelName,
   });
 
@@ -667,6 +699,10 @@ export interface BuildGradedEstimatesInput {
   pricing: CardsightPricingResponse;
   targetParallelId?: string | null;
   targetParallelRawFmv?: number | null;
+  /** Mirror of ComputeGradedProjectionInput.targetParallelRawFmvSource. */
+  targetParallelRawFmvSource?: "fmv" | "last-sale";
+  /** Mirror of ComputeGradedProjectionInput.targetParallelRawFmvAgeDays. */
+  targetParallelRawFmvAgeDays?: number | null;
   targetParallelName?: string | null;
   siblingComps?: ReadonlyArray<GradedProjectionSiblingComp>;
   /** Tier-2b release-level grade-premium curve, pre-computed by the caller
@@ -706,6 +742,8 @@ export function buildGradedEstimates(
     pricing: input.pricing,
     targetParallelId: input.targetParallelId,
     targetParallelRawFmv: input.targetParallelRawFmv,
+    targetParallelRawFmvSource: input.targetParallelRawFmvSource,
+    targetParallelRawFmvAgeDays: input.targetParallelRawFmvAgeDays,
     targetParallelName: input.targetParallelName,
     siblingComps: input.siblingComps,
     releaseRatios: input.releaseRatios,

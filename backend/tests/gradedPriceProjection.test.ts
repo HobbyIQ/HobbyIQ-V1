@@ -780,6 +780,124 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     }
   });
 
+  // ── CF-ANCHOR-PRECEDENCE (2026-06-14) ──────────────────────────────────
+  // The estimator's parallel-raw anchor must mirror the value iOS DISPLAYS.
+  // When fmv > 0, anchor on fmv (iOS shows marketTier.value). When fmv is
+  // null but lastSale.price is present, anchor on lastSale.price (iOS shows
+  // "last sold $X, N ago"). Else null (no raw shown → composed fallback).
+
+  it("ANCHOR PRECEDENCE — fmv > 0 → anchor on fmv (default 'fmv' source)", () => {
+    // Leo BLUE /150 with healthy fmv: anchor = fmv = $1,183. Same as
+    // pre-Phase-2 behavior. The basis names "parallel raw anchor" (not
+    // last-sale phrasing).
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelRawFmvSource: "fmv",
+      targetParallelName: "Blue Refractor",
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.anchorKind).toBe("parallel-observed");
+    expect(psa10.diagnostics.anchorPrice).toBe(1183);
+    expect(psa10.basis).toContain("parallel raw anchor $1183.00");
+    expect(psa10.basis).not.toContain("last sale");
+  });
+
+  it("ANCHOR PRECEDENCE — fmv null, lastSale provided → anchor on lastSale.price; basis names sale + age", () => {
+    // Leo BLUE /150 thin path: fmv null, lastSale=$1,183 sold 34 days ago.
+    // The route should pass targetParallelRawFmv=1183 with source="last-sale"
+    // and ageDays=34. The engine must:
+    //   1. Use $1,183 as the anchor (same as displayed value)
+    //   2. Emit a basis prose that names "last sale" + the age
+    //   3. Stay at confidenceTier="rough" (parallel anchor + card ratio)
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelRawFmvSource: "last-sale",
+      targetParallelRawFmvAgeDays: 34,
+      targetParallelName: "Blue Refractor",
+    });
+    expectAllFmvNull(out);
+
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.confidenceTier).toBe("rough");
+    expect(psa10.ratioSource).toBe("card");
+    expect(psa10.anchorKind).toBe("parallel-observed");
+    expect(psa10.diagnostics.anchorPrice).toBe(1183);  // ← matches displayed value
+    expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
+    // Honest basis prose
+    expect(psa10.basis).toContain("anchored on the last sale $1183.00");
+    expect(psa10.basis).toContain("34 days ago");
+    expect(psa10.basis).toContain("thin pool");
+  });
+
+  it("ANCHOR PRECEDENCE — last-sale source, age=null → basis omits the day phrase but keeps the 'last sale' label", () => {
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelRawFmvSource: "last-sale",
+      targetParallelRawFmvAgeDays: null,
+      targetParallelName: "Blue Refractor",
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.basis).toContain("anchored on the last sale $1183.00");
+    expect(psa10.basis).not.toContain("days ago");
+  });
+
+  it("ANCHOR PRECEDENCE — '1 day ago' singular pluralization", () => {
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelRawFmv: 1183,
+      targetParallelRawFmvSource: "last-sale",
+      targetParallelRawFmvAgeDays: 1,
+      targetParallelName: "Blue Refractor",
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.basis).toContain("1 day ago");
+    expect(psa10.basis).not.toContain("1 days ago");
+  });
+
+  it("ANCHOR PRECEDENCE — buildGradedEstimates forwards last-sale source through grounded filter; FMV-null + no-mutation invariants hold", () => {
+    const pricing = makeLeoParallelPricingNoBlueGraded();
+    const recentCompsRef = [{ price: 1183, date: "2026-05-08" }];
+    const gradeBreakdownRef: unknown[] = [];
+    const pricingJsonBefore = JSON.stringify(pricing);
+    const recentJsonBefore = JSON.stringify(recentCompsRef);
+
+    const { estimates, mutationDetected } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelName: "Blue Refractor",
+      targetParallelRawFmv: 1183,
+      targetParallelRawFmvSource: "last-sale",
+      targetParallelRawFmvAgeDays: 34,
+      snapshots: {
+        marketTierValue: null,  // ← thin path: no marketTier.value
+        recentComps: recentCompsRef,
+        gradeBreakdown: gradeBreakdownRef,
+      },
+    });
+    expect(mutationDetected).toBe(false);
+    expect(JSON.stringify(pricing)).toBe(pricingJsonBefore);
+    expect(JSON.stringify(recentCompsRef)).toBe(recentJsonBefore);
+
+    // PSA 10 + PSA 9 surface (both grounded via card ratio); BGS 9.5 + SGC 10
+    // dropped (tier-3 ballpark filtered).
+    const grades = estimates.map((e) => e.grade).sort();
+    expect(grades).toEqual(["PSA 10", "PSA 9"]);
+    for (const e of estimates) {
+      expect(e.fairMarketValue).toBeNull();
+      expect(e.marketValue).toBeNull();
+      expect(e.confidenceTier).toBe("rough");
+      expect(e.diagnostics.anchorPrice).toBe(1183);
+      expect(e.basis).toContain("anchored on the last sale $1183.00");
+      expect(e.basis).toContain("34 days ago");
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

@@ -1472,8 +1472,43 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           // fmv would be the parallel's graded median (PSA 10 / etc.),
           // not the raw anchor the engine wants.
           const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
-          const parallelRawFmv =
-            resolvedParallelId && isRawScope && fmv > 0 ? fmv : null;
+          // CF-ANCHOR-PRECEDENCE (2026-06-14): the estimator's parallel-raw
+          // anchor must mirror the value iOS DISPLAYS as the card's raw
+          // worth. Precedence: fmv > 0 (iOS shows marketTier.value) else
+          // lastSale.price (iOS shows "last sold $X, N ago" in the
+          // thin-data slot) else null (no raw shown → composed fallback
+          // inside the engine). Without this, a thin Leo Blue /150 path
+          // would surface $1,183 to iOS while the estimator anchored on
+          // base raw × multiplier ≈ $580 — display and grade estimate
+          // visibly diverge. With this, they share a source.
+          const lastSalePriceRaw = (est as any).lastSale?.price;
+          const lastSalePrice =
+            typeof lastSalePriceRaw === "number"
+            && Number.isFinite(lastSalePriceRaw)
+            && lastSalePriceRaw > 0
+              ? lastSalePriceRaw
+              : null;
+          const daysSinceNewestCompRaw = (est as any).daysSinceNewestComp;
+          const daysSinceNewestComp =
+            typeof daysSinceNewestCompRaw === "number"
+            && Number.isFinite(daysSinceNewestCompRaw)
+            && daysSinceNewestCompRaw >= 0
+              ? daysSinceNewestCompRaw
+              : null;
+          let parallelRawFmv: number | null = null;
+          let parallelRawFmvSource: "fmv" | "last-sale" | undefined;
+          let parallelRawFmvAgeDays: number | null = null;
+          if (resolvedParallelId && isRawScope) {
+            if (fmv > 0) {
+              parallelRawFmv = fmv;
+              parallelRawFmvSource = "fmv";
+              parallelRawFmvAgeDays = null;
+            } else if (lastSalePrice != null) {
+              parallelRawFmv = lastSalePrice;
+              parallelRawFmvSource = "last-sale";
+              parallelRawFmvAgeDays = daysSinceNewestComp;
+            }
+          }
 
           // CF-GRADED-PRICE-PROJECTION Phase 1c (2026-06-14): release-level
           // tier-2b grade-premium curve. Cardsight's pricing.card.set
@@ -1517,6 +1552,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             targetParallelId: resolvedParallelId ?? null,
             targetParallelName: resolvedParallelName ?? null,
             targetParallelRawFmv: parallelRawFmv,
+            targetParallelRawFmvSource: parallelRawFmvSource,
+            targetParallelRawFmvAgeDays: parallelRawFmvAgeDays,
             releaseRatios,
             releaseLabel,
             snapshots: {
