@@ -637,25 +637,33 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring
+// CF-GRADED-PRICE-PROJECTION Phase 2 + Phase 3A — buildGradedEstimates wiring
 // ─────────────────────────────────────────────────────────────────────────
 // Live-path integration coverage for the wrapper that the /price-by-id
 // route calls. Proves:
-//   1. Grounded-only filter (ratioSource ∈ {card, player-set} survive;
-//      ratioSource="market" + "none" dropped → "gaps honest").
+//   1. Insufficient-marker collapse (Phase 3A): every target grade the
+//      engine emits surfaces on the wire. Grounded (estimate / rough)
+//      keep value + range; ungrounded (ballpark / insufficient) collapse
+//      to { confidenceTier: "insufficient", estimatedValue: null,
+//      estimateLow/High: null, ratioSource: "none", anchorKind: "none",
+//      diagnostics.ratio: null, diagnostics.anchorPrice: null,
+//      diagnostics.targetGradeBaseMedian: null } — the tier-3 ballpark
+//      number is dropped and CANNOT be reconstructed.
 //   2. No-mutation invariant on pricing payload + marketTier.value +
 //      recentComps + gradeBreakdown (the structural firewall — graded
 //      estimates can't touch a single observed number).
 //   3. FMV-null on every emitted entry (display-not-train discipline).
 
 describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", () => {
-  it("Leo Blue /150 → emits PSA 10 + PSA 9 rough; drops BGS 9.5 + SGC 10 ballpark", () => {
+  it("Leo Blue /150 → emits PSA 10 + PSA 9 rough; collapses BGS 9.5 + SGC 10 to insufficient markers", () => {
     // Mirror the live /price-by-id call shape: pricing + parallel scope +
     // observed parallel raw FMV. iOS asks for the Blue /150 parallel raw
     // FMV; the engine borrows the base card ratio for PSA 10/9 because
-    // the parallel itself has zero graded comps.
+    // the parallel itself has zero graded comps. BGS 9.5 + SGC 10 hit
+    // tier-3 in the engine; the helper collapses them to insufficient
+    // markers (Phase 3A) so iOS can render placeholder rows.
     const pricing = makeLeoParallelPricingNoBlueGraded();
-    const fmv = 1183; // est.fairMarketValue for the parallel-scope request
+    const fmv = 1183;
     const recentCompsSnap = [{ price: 1183, date: "2026-06-09" }];
     const gradeBreakdownSnap = [{ grade: "PSA 10", n: 9, median: 586 }];
 
@@ -672,10 +680,9 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     });
 
     expect(mutationDetected).toBe(false);
-    // GROUNDED-ONLY: PSA 10 + PSA 9 (card-ratio rough) survive; BGS 9.5 +
-    // SGC 10 (tier-3 market ballpark) are dropped.
+    // ALL 4 target grades surface — Phase 3A.
     const grades = estimates.map((e) => e.grade).sort();
-    expect(grades).toEqual(["PSA 10", "PSA 9"]);
+    expect(grades).toEqual(["BGS 9.5", "PSA 10", "PSA 9", "SGC 10"]);
 
     const psa10 = estimates.find((e) => e.grade === "PSA 10")!;
     expect(psa10.confidenceTier).toBe("rough");
@@ -683,16 +690,32 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(psa10.anchorKind).toBe("parallel-observed");
     expect(psa10.diagnostics.anchorPrice).toBe(1183);
     expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
-    expect(psa10.fairMarketValue).toBeNull();
-    expect(psa10.marketValue).toBeNull();
-    expect(psa10.isEstimate).toBe(true);
 
     const psa9 = estimates.find((e) => e.grade === "PSA 9")!;
     expect(psa9.confidenceTier).toBe("rough");
     expect(psa9.ratioSource).toBe("card");
-    expect(psa9.fairMarketValue).toBeNull();
 
-    // Every emitted entry FMV-null (display-not-train invariant).
+    // BGS 9.5 + SGC 10 — collapsed insufficient markers. The tier-3
+    // ballpark number ($1183 × 3.5 ≈ $4140 / × 3.4 ≈ $4022) must NOT
+    // appear on these entries. Diagnostics.ratio must be null too —
+    // a leaked 3.5 + anchorPrice would let anyone reconstruct $4140.
+    for (const grade of ["BGS 9.5", "SGC 10"]) {
+      const r = estimates.find((e) => e.grade === grade)!;
+      expect(r.confidenceTier).toBe("insufficient");
+      expect(r.estimatedValue).toBeNull();
+      expect(r.estimateLow).toBeNull();
+      expect(r.estimateHigh).toBeNull();
+      expect(r.ratioSource).toBe("none");
+      expect(r.anchorKind).toBe("none");
+      expect(r.diagnostics.ratio).toBeNull();
+      expect(r.diagnostics.anchorPrice).toBeNull();
+      expect(r.diagnostics.targetGradeBaseMedian).toBeNull();
+      // Safe pool stats preserved (observed, not derived)
+      expect(r.diagnostics.baseRawSampleCount).toBeGreaterThan(0);
+      expect(r.basis).toContain("Insufficient grounded coverage");
+    }
+
+    // FMV-null + isEstimate invariants hold across ALL emitted entries.
     for (const e of estimates) {
       expect(e.fairMarketValue).toBeNull();
       expect(e.marketValue).toBeNull();
@@ -700,10 +723,10 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     }
   });
 
-  it("Leo BASE → emits nothing (PSA 10/9 observed; BGS 9.5/SGC 10 are tier-3 ballpark, dropped)", () => {
+  it("Leo BASE → emits BGS 9.5 + SGC 10 as insufficient markers (PSA 10/9 GUARD-skipped)", () => {
     // BASE-scope call (no parallel passthrough). GUARD skips PSA 10/9
-    // (observed). BGS 9.5 + SGC 10 only have tier-3 market premium →
-    // grounded filter drops them. Result: empty.
+    // (observed). BGS 9.5 + SGC 10 are tier-3 ballpark in the engine →
+    // Phase 3A collapses them to insufficient markers.
     const pricing = makeLeoPricing();
     const fmv = 228.93;
     const { estimates, mutationDetected } = buildGradedEstimates({
@@ -716,7 +739,18 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     });
 
     expect(mutationDetected).toBe(false);
-    expect(estimates).toEqual([]);
+    const grades = estimates.map((e) => e.grade).sort();
+    expect(grades).toEqual(["BGS 9.5", "SGC 10"]);
+    for (const e of estimates) {
+      expect(e.confidenceTier).toBe("insufficient");
+      expect(e.estimatedValue).toBeNull();
+      expect(e.estimateLow).toBeNull();
+      expect(e.estimateHigh).toBeNull();
+      expect(e.ratioSource).toBe("none");
+      expect(e.fairMarketValue).toBeNull();
+      expect(e.diagnostics.ratio).toBeNull();
+      expect(e.diagnostics.anchorPrice).toBeNull();
+    }
   });
 
   it("Trout → emits nothing (full coverage; every grade observed → engine returns [])", () => {
@@ -885,17 +919,29 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(JSON.stringify(pricing)).toBe(pricingJsonBefore);
     expect(JSON.stringify(recentCompsRef)).toBe(recentJsonBefore);
 
-    // PSA 10 + PSA 9 surface (both grounded via card ratio); BGS 9.5 + SGC 10
-    // dropped (tier-3 ballpark filtered).
+    // Phase 3A: ALL 4 grades surface. PSA 10 + PSA 9 grounded via card
+    // ratio; BGS 9.5 + SGC 10 collapsed to insufficient markers.
     const grades = estimates.map((e) => e.grade).sort();
-    expect(grades).toEqual(["PSA 10", "PSA 9"]);
-    for (const e of estimates) {
+    expect(grades).toEqual(["BGS 9.5", "PSA 10", "PSA 9", "SGC 10"]);
+    // Grounded entries: PSA 10 + PSA 9 carry the last-sale anchor.
+    for (const grade of ["PSA 10", "PSA 9"]) {
+      const e = estimates.find((x) => x.grade === grade)!;
       expect(e.fairMarketValue).toBeNull();
       expect(e.marketValue).toBeNull();
       expect(e.confidenceTier).toBe("rough");
       expect(e.diagnostics.anchorPrice).toBe(1183);
       expect(e.basis).toContain("anchored on the last sale $1183.00");
       expect(e.basis).toContain("34 days ago");
+    }
+    // Insufficient markers: BGS 9.5 + SGC 10 carry no number.
+    for (const grade of ["BGS 9.5", "SGC 10"]) {
+      const e = estimates.find((x) => x.grade === grade)!;
+      expect(e.confidenceTier).toBe("insufficient");
+      expect(e.estimatedValue).toBeNull();
+      expect(e.estimateLow).toBeNull();
+      expect(e.estimateHigh).toBeNull();
+      expect(e.diagnostics.ratio).toBeNull();
+      expect(e.diagnostics.anchorPrice).toBeNull();
     }
   });
 });

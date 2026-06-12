@@ -765,10 +765,47 @@ export function buildGradedEstimates(
     return { estimates: [], mutationDetected: true };
   }
 
-  const grounded = all.filter(
-    (r) => r.confidenceTier === "estimate" || r.confidenceTier === "rough",
-  );
-  return { estimates: grounded, mutationDetected: false };
+  // CF-PHASE-3A (2026-06-14): replace the prior grounded-only filter with
+  // an insufficient-marker collapse. Every target grade the engine emits
+  // (i.e. every gap grade — observed grades are GUARD-skipped upstream)
+  // shows up on the wire so iOS can render a placeholder row:
+  //   • grounded (estimate / rough) → pass through with value + range
+  //   • ungrounded (ballpark / insufficient) → collapse to
+  //     { confidenceTier: "insufficient", estimatedValue: null, ranges null,
+  //       ratioSource: "none", anchorKind: "none", diagnostics.ratio: null,
+  //       diagnostics.anchorPrice: null, diagnostics.targetGradeBaseMedian: null }
+  //     — the tier-3 ballpark number is dropped at the helper boundary
+  //     and CANNOT be reconstructed from leaked diag fields.
+  // The pricing-pool stats (baseRawMedian + baseRawSampleCount +
+  // cardSpecificBaseSamples) are observed pool figures, safe to surface
+  // as "why we can't estimate" diagnostics.
+  const estimates: GradedProjectionResult[] = all.map((r) => {
+    if (r.confidenceTier === "estimate" || r.confidenceTier === "rough") {
+      return r;
+    }
+    return {
+      grade: r.grade,
+      estimatedValue: null,
+      estimateLow: null,
+      estimateHigh: null,
+      basis: "Insufficient grounded coverage for this grade — no card-specific, sibling, or release-level base→graded ratio met threshold.",
+      confidenceTier: "insufficient",
+      ratioSource: "none",
+      anchorKind: "none",
+      isEstimate: true,
+      marketValue: null,
+      fairMarketValue: null,
+      diagnostics: {
+        anchorPrice: null,
+        cardSpecificBaseSamples: r.diagnostics.cardSpecificBaseSamples,
+        ratio: null,
+        targetGradeBaseMedian: null,
+        baseRawMedian: r.diagnostics.baseRawMedian,
+        baseRawSampleCount: r.diagnostics.baseRawSampleCount,
+      },
+    };
+  });
+  return { estimates, mutationDetected: false };
 }
 
 // ── Phase 1c (CF-GRADED-PRICE-PROJECTION) — release-level grade curve ──────
