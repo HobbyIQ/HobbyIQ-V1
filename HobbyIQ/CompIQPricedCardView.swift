@@ -373,6 +373,25 @@ struct CompIQPricedCardView: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: true) {
                 HStack(spacing: 8) {
+                    // CF-HEADER-PILLS (2026-06-11): identity descriptors
+                    // lead the rail so "Blue Refractor · /150 · Auto · Raw"
+                    // reads as one band — the full card the user selected.
+                    // Single source per pill (no re-resolution): variant +
+                    // serialNumber via the picker's parallelHit synth,
+                    // isAuto direct from the hit's cardsearch CardIdentity.
+                    // Each pill self-absents when its source is nil/false,
+                    // so base-row taps render the existing grade-only rail.
+                    if let variant = hit.variant?.trimmingCharacters(in: .whitespaces),
+                       variant.isEmpty == false {
+                        identityPill(variant)
+                    }
+                    if let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces),
+                       serial.isEmpty == false {
+                        identityPill(serial)
+                    }
+                    if hit.isAuto {
+                        identityPill("Auto")
+                    }
                     ForEach(availableGrades) { grade in
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -438,6 +457,22 @@ struct CompIQPricedCardView: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// CF-HEADER-PILLS (2026-06-11): static identity descriptor pill —
+    /// reuses the unselected grade-pill styling (subheadline semibold,
+    /// muted text, horizontal 14 / vertical 8 padding, steelGray@40%
+    /// capsule) so the identity strip reads visually identical to the
+    /// rail. Not a Button — these are informational, not selectable.
+    private func identityPill(_ label: String) -> some View {
+        Text(label)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+            .clipShape(Capsule())
+            .fixedSize()
     }
 
     // MARK: - Content
