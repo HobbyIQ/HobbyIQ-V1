@@ -313,37 +313,44 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Grade Picker (CF-FULL-GRADE-RAIL, 2026-06-10)
 
-    /// CF-FULL-GRADE-RAIL: data-driven rail derived from the response's
-    /// `gradeBreakdown` — Raw first, then every (grader, grade) bucket
-    /// with `compCount > 0` and a numeric grade. Non-numeric labels (e.g.
-    /// "Authentic") are filtered out client-side since the request body's
-    /// `gradeValue: Double?` can't carry them; backend-side those buckets
-    /// stay on the wire and would resurface with a future `gradeLabel`
-    /// plumbing CF.
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): rail = gradeBreakdown (observed)
+    /// ∪ gradedEstimates (estimate/rough/ballpark/no-data), intermixed in
+    /// canonical grade order (Raw first, then PSA DESC, BGS DESC, SGC
+    /// DESC, others). The engine GUARD-skips observed grades from the
+    /// estimates array so the two sets are disjoint — no dedupe needed.
+    /// Each entry's confidence tier comes from `tierForGrade(_:)`; the
+    /// chip styling and value-block routing both read from there.
     private var availableGrades: [GradeOption] {
         var result: [GradeOption] = [GradeOption.raw]
-        guard let breakdown = priceResponse?.gradeBreakdown,
-              breakdown.isEmpty == false else { return result }
-
-        // Filter + normalize.
-        struct GradeBucket {
+        struct Bucket: Hashable {
             let grader: String
             let value: Double
         }
-        let buckets: [GradeBucket] = breakdown.compactMap { entry in
-            guard let grader = entry.grader?
-                    .trimmingCharacters(in: .whitespaces)
-                    .uppercased(),
-                  grader.isEmpty == false,
-                  let value = entry.numericGrade,
-                  let count = entry.compCount, count > 0 else { return nil }
-            return GradeBucket(grader: grader, value: value)
+        var seen: Set<Bucket> = []
+        var buckets: [Bucket] = []
+        // Observed numeric buckets with comps.
+        if let breakdown = priceResponse?.gradeBreakdown {
+            for entry in breakdown {
+                guard let grader = entry.grader?
+                        .trimmingCharacters(in: .whitespaces)
+                        .uppercased(),
+                      grader.isEmpty == false,
+                      let value = entry.numericGrade,
+                      let count = entry.compCount, count > 0 else { continue }
+                let b = Bucket(grader: grader, value: value)
+                if seen.insert(b).inserted { buckets.append(b) }
+            }
         }
-
+        // Estimated grades (engine ensures these don't collide with observed).
+        if let estimates = priceResponse?.gradedEstimates {
+            for est in estimates {
+                guard let parsed = parseEstimateGradeLabel(est.grade) else { continue }
+                let b = Bucket(grader: parsed.grader, value: parsed.value)
+                if seen.insert(b).inserted { buckets.append(b) }
+            }
+        }
         // CF-RAIL-SCROLL (2026-06-10): explicit company order (PSA → BGS
-        // → SGC → others), grades DESC within each company. Replaces the
-        // alphabetical sort so the rail reads in the order a collector
-        // expects (PSA first — the dominant grader by volume).
+        // → SGC → others), grades DESC within each company.
         let preferredOrder = ["PSA", "BGS", "SGC"]
         let grouped = Dictionary(grouping: buckets, by: { $0.grader })
         var orderedGraders = preferredOrder.filter { grouped.keys.contains($0) }
@@ -362,6 +369,123 @@ struct CompIQPricedCardView: View {
             }
         }
         return result
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): parse a wire grade label
+    /// ("PSA 10", "BGS 9.5") into a (grader, value) bucket. Returns nil
+    /// for malformed / non-numeric labels.
+    private func parseEstimateGradeLabel(_ raw: String?) -> (grader: String, value: Double)? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespaces), raw.isEmpty == false else { return nil }
+        let parts = raw.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard parts.count == 2,
+              let value = Double(parts[1]) else { return nil }
+        return (String(parts[0]).uppercased(), value)
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): unified tier for a rail chip —
+    /// `.observed` when gradeBreakdown carries the bucket with comps,
+    /// otherwise one of the estimate tiers from gradedEstimates, with
+    /// `.observed` as the safe fallback for Raw (always observed when
+    /// raw comps exist; falls back to `.noData` when even Raw has none).
+    private func tierForGrade(_ grade: GradeOption) -> RailTier {
+        if grade == .raw {
+            return observedRawValue() != nil ? .observed : .noData
+        }
+        if observedMedianFor(grade) != nil { return .observed }
+        if let est = estimateFor(grade) {
+            switch est.tier {
+            case .estimate: return .estimate
+            case .rough:    return .rough
+            case .ballpark: return .ballpark
+            case .noData:   return .noData
+            }
+        }
+        return .noData
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): observed Raw median lookup —
+    /// raw comps live in gradeBreakdown with grader nil/empty/"RAW" and
+    /// no numeric grade. Returns the bucket's median when present.
+    private func observedRawValue() -> Double? {
+        guard let breakdown = priceResponse?.gradeBreakdown else { return nil }
+        if let raw = breakdown.first(where: { entry in
+            let grader = entry.grader?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+            return entry.numericGrade == nil && (grader.isEmpty || grader == "RAW")
+        }) {
+            return raw.median
+        }
+        // Fallback: response.marketTier.value when the request anchored on
+        // raw. With the canonical PSA/10 send we no longer expect this
+        // path, but keeping it lets older response shapes still surface a
+        // Raw value rather than an empty chip.
+        return priceResponse?.marketTier?.value
+    }
+
+    private func observedMedianFor(_ grade: GradeOption) -> Double? {
+        guard let breakdown = priceResponse?.gradeBreakdown,
+              let company = grade.gradeCompany,
+              let value = grade.gradeValue else { return nil }
+        return breakdown.first(where: { entry in
+            (entry.grader?.uppercased() == company.uppercased())
+                && entry.numericGrade == value
+                && (entry.compCount ?? 0) > 0
+        })?.median
+    }
+
+    private func observedNoteFor(_ grade: GradeOption) -> String? {
+        guard let breakdown = priceResponse?.gradeBreakdown,
+              let company = grade.gradeCompany,
+              let value = grade.gradeValue else { return nil }
+        return breakdown.first(where: { entry in
+            (entry.grader?.uppercased() == company.uppercased())
+                && entry.numericGrade == value
+        })?.note?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func estimateFor(_ grade: GradeOption) -> CompIQGradedEstimate? {
+        guard let estimates = priceResponse?.gradedEstimates,
+              let company = grade.gradeCompany,
+              let value = grade.gradeValue else { return nil }
+        return estimates.first(where: { est in
+            guard let parsed = parseEstimateGradeLabel(est.grade) else { return false }
+            return parsed.grader == company.uppercased() && parsed.value == value
+        })
+    }
+
+    /// Rail tier — unifies observed vs the 4 estimate tiers so the chip
+    /// styling and value-block routing have a single source.
+    enum RailTier: String {
+        case observed
+        case estimate
+        case rough
+        case ballpark
+        case noData
+
+        var isObserved: Bool { self == .observed }
+
+        /// Color the chip + estimate-block tier pill — solid blue for
+        /// observed (confident), amber/orange for the estimate ladder,
+        /// muted grey when there's no anchor at all.
+        var tint: Color {
+            switch self {
+            case .observed: return HobbyIQTheme.Colors.electricBlue
+            case .estimate, .rough, .ballpark: return HobbyIQTheme.Colors.warning
+            case .noData: return HobbyIQTheme.Colors.mutedText
+            }
+        }
+
+        /// Pill label rendered on the value block — short token the user
+        /// can scan ("Observed" never appears since observed shows the
+        /// canonical "Market value" headline; the rest are tier names).
+        var pillLabel: String {
+            switch self {
+            case .observed: return "Observed"
+            case .estimate: return "Estimate"
+            case .rough:    return "Rough"
+            case .ballpark: return "Ballpark · low confidence"
+            case .noData:   return "No data yet"
+            }
+        }
     }
 
     /// CF-RAIL-SCROLL (2026-06-10): horizontal scroll strip (was wrapping
@@ -393,6 +517,8 @@ struct CompIQPricedCardView: View {
                         identityPill("Auto")
                     }
                     ForEach(availableGrades) { grade in
+                        let tier = tierForGrade(grade)
+                        let isSelected = selectedGrade == grade
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 selectedGrade = grade
@@ -401,25 +527,31 @@ struct CompIQPricedCardView: View {
                             Text(grade.label)
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(
-                                    selectedGrade == grade
+                                    isSelected
                                         ? HobbyIQTheme.Colors.pureWhite
                                         : HobbyIQTheme.Colors.mutedText
                                 )
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
                                 .background(
-                                    selectedGrade == grade
-                                        ? HobbyIQTheme.Colors.electricBlue
+                                    isSelected
+                                        ? tier.tint
                                         : HobbyIQTheme.Colors.steelGray.opacity(0.4)
                                 )
                                 .clipShape(Capsule())
                                 .overlay(
+                                    // CF-GRADED-RAIL-RENDER (2026-06-12):
+                                    // per-tier border so confidence reads at
+                                    // a glance — solid blue (observed), solid
+                                    // amber (estimate), dashed amber (rough),
+                                    // dotted muted amber (ballpark), muted
+                                    // grey (no-data). Selected chip preserves
+                                    // its tint at the original lineWidth for
+                                    // the highlight.
                                     Capsule()
                                         .stroke(
-                                            selectedGrade == grade
-                                                ? HobbyIQTheme.Colors.electricBlue.opacity(0.5)
-                                                : Color.clear,
-                                            lineWidth: 1.5
+                                            tier.tint.opacity(isSelected ? 0.5 : 0.6),
+                                            style: railChipStrokeStyle(tier: tier)
                                         )
                                 )
                                 .fixedSize()
@@ -457,6 +589,18 @@ struct CompIQPricedCardView: View {
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): per-tier stroke style — solid
+    /// for observed/estimate/no-data, dashed for rough, dotted for
+    /// ballpark — so the chip border reads as the confidence signal.
+    private func railChipStrokeStyle(tier: RailTier) -> StrokeStyle {
+        switch tier {
+        case .rough:    return StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+        case .ballpark: return StrokeStyle(lineWidth: 1.5, dash: [1.5, 3])
+        case .observed, .estimate, .noData:
+            return StrokeStyle(lineWidth: 1.5)
+        }
     }
 
     /// CF-HEADER-PILLS (2026-06-11): static identity descriptor pill —
@@ -691,36 +835,151 @@ struct CompIQPricedCardView: View {
 
     // MARK: - Price slot variants (CF-VALUE-SPECTRUM, 2026-06-10)
 
-    /// Returns true when the price slot should use the confident observed
-    /// treatment. Treats a legacy response (estimateSource absent but
-    /// `marketTier.value` present) as observed for backward compat.
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): true when the price slot
+    /// should use the confident observed treatment for the SELECTED
+    /// grade — controls follower row + High/Grade/Sales chip row
+    /// rendering. Falls back to the legacy heuristic if the rail data
+    /// isn't usable.
     private func isObservedBranch(_ response: CompIQPriceByIdResponse) -> Bool {
-        if response.estimateSource == "observed" { return true }
-        return response.estimateSource == nil && response.marketTier?.value != nil
+        let tier = tierForGrade(selectedGrade)
+        if tier == .observed { return true }
+        // Defensive — if we couldn't resolve a tier (no breakdown / no
+        // estimates yet), preserve the legacy "marketTier.value present
+        // → observed" path so the page doesn't blank during the first
+        // paint before the response settles.
+        if response.gradeBreakdown == nil && response.gradedEstimates == nil {
+            if response.estimateSource == "observed" { return true }
+            return response.estimateSource == nil && response.marketTier?.value != nil
+        }
+        return false
     }
 
-    /// Routes the price slot to the right variant based on
-    /// `estimateSource`. Default-falls-through to a sensible state when
-    /// the backend didn't ship the discriminator (legacy or thin pool).
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): routes the price slot per the
+    /// selected rail entry's tier. Observed → existing observed block
+    /// (per-grade median lookup). Estimate / Rough / Ballpark → tier-
+    /// styled estimate block with "~$X" + range + tier pill + basis.
+    /// No-data → muted "Can't estimate yet" block with basis prose. The
+    /// older `estimateSource` switch only fires when the response
+    /// pre-dates the graded-rail wire shape (no gradeBreakdown AND no
+    /// gradedEstimates ship together).
     @ViewBuilder
     private func priceSlotContent(_ response: CompIQPriceByIdResponse) -> some View {
-        switch response.estimateSource {
-        case "observed":
-            observedPriceSlot(response)
-        case "trend-extrapolated":
-            trendExtrapolatedPriceSlot(response)
-        case "last-sale":
-            lastSalePriceSlot(response)
-        case "no-sales", "no_sales", "none":
-            noSalesYetPriceSlot()
-        case .some:
-            // Unknown enum from a newer backend — degrade gracefully to
-            // the most informative state we can derive locally.
-            fallbackPriceSlot(response)
-        case nil:
-            // Legacy: no estimateSource on the wire. Use the same
-            // heuristic the rest of the view falls back on.
-            fallbackPriceSlot(response)
+        if response.gradeBreakdown == nil && response.gradedEstimates == nil {
+            switch response.estimateSource {
+            case "observed":              observedPriceSlot(response)
+            case "trend-extrapolated":    trendExtrapolatedPriceSlot(response)
+            case "last-sale":             lastSalePriceSlot(response)
+            case "no-sales", "no_sales", "none": noSalesYetPriceSlot()
+            case .some, nil:              fallbackPriceSlot(response)
+            }
+        } else {
+            switch tierForGrade(selectedGrade) {
+            case .observed:
+                observedPriceSlot(response)
+                if let note = observedNoteForSelected() {
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 4)
+                }
+            case .estimate, .rough, .ballpark:
+                if let est = estimateFor(selectedGrade) {
+                    estimateRailSlot(tier: tierForGrade(selectedGrade), estimate: est)
+                } else {
+                    noDataRailSlot(basis: nil)
+                }
+            case .noData:
+                noDataRailSlot(basis: estimateFor(selectedGrade)?.basis)
+            }
+        }
+    }
+
+    private func observedNoteForSelected() -> String? {
+        if selectedGrade == .raw { return nil }
+        guard let raw = observedNoteFor(selectedGrade), raw.isEmpty == false else { return nil }
+        return raw
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): hedged estimate value block —
+    /// "Estimated value · <tier>" caption + tier pill + "~$X" + range
+    /// line + basis prose. Visually distinct from the observed block:
+    /// amber tint instead of electric blue, regular weight instead of
+    /// bold, no gradient/glow.
+    @ViewBuilder
+    private func estimateRailSlot(tier: RailTier, estimate: CompIQGradedEstimate) -> some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Estimated value")
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.0)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .textCase(.uppercase)
+                Text(tier.pillLabel)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(tier.tint)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(tier.tint.opacity(0.18))
+                    .clipShape(Capsule())
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("~")
+                    .font(.system(size: 34, weight: .regular, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.7))
+                if let value = estimate.estimatedValue {
+                    Text(value.formatted(.currency(code: "USD")))
+                        .font(.system(size: 38, weight: .regular, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                } else {
+                    Text("—")
+                        .font(.system(size: 38, weight: .regular, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.5))
+                }
+            }
+            if let low = estimate.estimateLow, let high = estimate.estimateHigh {
+                Text("range \(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            if let basis = estimate.basis?.trimmingCharacters(in: .whitespacesAndNewlines),
+               basis.isEmpty == false {
+                Text(basis)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): muted "no data" slot — no
+    /// number, just the basis prose from the engine ("Can't anchor"
+    /// scope-labeled message). When the engine didn't even attach a
+    /// basis, falls back to a calm one-liner.
+    @ViewBuilder
+    private func noDataRailSlot(basis: String?) -> some View {
+        VStack(spacing: 4) {
+            Text("Can't estimate yet")
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+            if let basis = basis?.trimmingCharacters(in: .whitespacesAndNewlines),
+               basis.isEmpty == false {
+                Text(basis)
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Not enough comp signal in scope yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
@@ -821,6 +1080,15 @@ struct CompIQPricedCardView: View {
     }
 
     private func observedHeadlineString(_ response: CompIQPriceByIdResponse) -> String {
+        // CF-GRADED-RAIL-RENDER (2026-06-12): the canonical PSA/10 send
+        // locks `response.marketTier.value` to the PSA 10 anchor, so the
+        // observed headline lookup goes per-grade — Raw bucket median
+        // for Raw, the (grader, grade) bucket median for graded.
+        let perGrade: Double? = selectedGrade == .raw
+            ? observedRawValue()
+            : observedMedianFor(selectedGrade)
+        if let v = perGrade { return v.formatted(.currency(code: "USD")) }
+        // Defensive fallback for the legacy / first-paint path.
         if let v = response.marketTier?.value { return v.formatted(.currency(code: "USD")) }
         if let v = response.marketValue       { return v.formatted(.currency(code: "USD")) }
         if let v = response.estimatedValue    { return v.formatted(.currency(code: "USD")) }
@@ -2700,11 +2968,19 @@ struct CompIQPricedCardView: View {
             // parallel disambiguators when the hit came from a parallel-row
             // tap. The pricing id stays the parent's base UUID; backend
             // filters comps to the matched sub-market via parallelId.
+            // CF-GRADED-RAIL-RENDER (2026-06-12): always send a canonical
+            // graded pair (PSA/10) so the backend returns the full
+            // `gradedEstimates` array. The estimator computes all 4
+            // ladder entries against the same composed anchor — sending
+            // PSA 10 vs BGS 9.5 yields byte-identical estimates per the
+            // backend handoff. The selected grade no longer drives the
+            // request scope; the rail picks per-grade values from
+            // gradeBreakdown ∪ gradedEstimates locally.
             let response = try await CompIQSearchService.shared.priceByCardId(
                 hit.cardsightCardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
-                gradeCompany: selectedGrade.gradeCompany,
-                gradeValue: selectedGrade.gradeValue,
+                gradeCompany: "PSA",
+                gradeValue: 10,
                 parallelId: hit.parallelId,
                 parallelName: hit.variant
             )

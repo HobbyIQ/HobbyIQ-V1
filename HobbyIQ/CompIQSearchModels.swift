@@ -382,6 +382,13 @@ struct CompIQGradeBreakdownEntry: Codable, Hashable, Identifiable {
     let compCount: Int?
     let median: Double?
     let recentDirection: String?
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): backend `53ab950+` attaches a
+    /// `note` field when an observed grade's median sits below the
+    /// observed raw median for the same scope ("Raw trades above PSA 9
+    /// here — common for hot prospects."). Display-only — the median
+    /// itself is real and unmodified. iOS renders this beneath the
+    /// observed value block when the user selects a sub-raw bucket.
+    let note: String?
 
     var id: String { "\(grader ?? "")-\(grade ?? "")" }
 
@@ -392,6 +399,53 @@ struct CompIQGradeBreakdownEntry: Codable, Hashable, Identifiable {
         guard let raw = grade?.trimmingCharacters(in: .whitespaces),
               raw.isEmpty == false else { return nil }
         return Double(raw)
+    }
+}
+
+/// CF-GRADED-RAIL-RENDER (2026-06-12): one bucket of the engine's per-
+/// grade ESTIMATE inventory (separate from gradeBreakdown, which is
+/// purely observed). Returned when the /price-by-id request body
+/// includes any valid (gradeCompany, gradeValue) pair — the array shape
+/// is identical regardless of which pair was sent (PSA 10 / BGS 9.5
+/// produce byte-identical arrays per backend handoff). Each entry is
+/// the engine's projection for that grade, with a confidence tier and a
+/// human-readable basis prose. Values are pre-rounded by the engine to
+/// the tier's significant-figure rule — render as-is, no reformatting.
+struct CompIQGradedEstimate: Codable, Hashable, Identifiable {
+    /// Human-readable grade label as returned by the engine ("PSA 10",
+    /// "BGS 9.5", "SGC 10", "PSA 9"). Identifier source.
+    let grade: String?
+    let estimatedValue: Double?
+    let estimateLow: Double?
+    let estimateHigh: Double?
+    /// One-sentence basis ("Anchor: …. Ratio: …."). The view surfaces it
+    /// on the rail's ballpark / no-data faces and beneath the expanded
+    /// estimate block.
+    let basis: String?
+    /// One of: "estimate", "rough", "ballpark", "no-data". The defensive
+    /// "insufficient" the backend never emits is mapped to .noData by
+    /// `tier` so the view never needs to know about it.
+    let confidenceTier: String?
+
+    var id: String { grade ?? UUID().uuidString }
+
+    enum Tier: String {
+        case estimate
+        case rough
+        case ballpark
+        case noData = "no-data"
+    }
+
+    /// Parsed tier; defensive "insufficient" or any unknown string falls
+    /// through to .noData so the rail still renders the muted state
+    /// instead of crashing.
+    var tier: Tier {
+        switch confidenceTier {
+        case "estimate": return .estimate
+        case "rough":    return .rough
+        case "ballpark": return .ballpark
+        default:         return .noData
+        }
     }
 }
 
@@ -746,6 +800,12 @@ struct CompIQPriceByIdResponse: Codable {
     /// inventory the rail renders selectable chips from. Optional — older
     /// engine builds may omit.
     let gradeBreakdown: [CompIQGradeBreakdownEntry]?
+    /// CF-GRADED-RAIL-RENDER (2026-06-12): engine's per-grade ESTIMATES
+    /// for grades the observed pool doesn't cover. Returned whenever the
+    /// request body included any valid (gradeCompany, gradeValue) pair.
+    /// The rail intermixes these with `gradeBreakdown` in grade order
+    /// with per-tier confidence styling.
+    let gradedEstimates: [CompIQGradedEstimate]?
 
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
@@ -849,6 +909,7 @@ struct CompIQPriceByIdResponse: Codable {
         estimateBasis = try? container.decodeIfPresent(String.self, forKey: .estimateBasis)
         lastSale = try? container.decodeIfPresent(CompIQLastSale.self, forKey: .lastSale)
         gradeBreakdown = try? container.decodeIfPresent([CompIQGradeBreakdownEntry].self, forKey: .gradeBreakdown)
+        gradedEstimates = try? container.decodeIfPresent([CompIQGradedEstimate].self, forKey: .gradedEstimates)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -865,6 +926,6 @@ struct CompIQPriceByIdResponse: Codable {
         case regime, regimeConfidence, regimeDiagnostics
         case marketRead, marketReadDisclaimer, marketReadFactPack
         case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
-        case gradeBreakdown
+        case gradeBreakdown, gradedEstimates
     }
 }
