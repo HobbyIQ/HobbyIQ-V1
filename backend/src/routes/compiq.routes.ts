@@ -25,11 +25,11 @@ import {
 // dropped. Display-not-train: every entry has fairMarketValue=null.
 // Phase 1c (2026-06-14): tier-2b release-level grade-premium curve plumbed
 // via computeReleaseGradeCurve; cached (release, year) at 6h.
-import {
-  buildGradedEstimates,
-  computeReleaseGradeCurve,
-  type GradedProjectionResult,
-} from "../services/compiq/gradedPriceProjection.js";
+// CF-COMPILE-GRADED-ESTIMATES (2026-06-14): assembly extracted to
+// compileGradedEstimatesForCard so autoPriceHolding can reuse the same
+// canonical path. Behavior here is unchanged — see helper header.
+import type { GradedProjectionResult } from "../services/compiq/gradedPriceProjection.js";
+import { compileGradedEstimatesForCard } from "../services/compiq/compileGradedEstimatesForCard.js";
 
 // CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
 // `/api/compiq/card-image/:id` proxy route from the request context.
@@ -1463,121 +1463,34 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // gradedEstimates ≠ gradeBreakdown: gradeBreakdown stays purely
       // observed (real, trainable); gradedEstimates is purely estimated
       // (display-not-train, fairMarketValue=null per result).
+      // CF-COMPILE-GRADED-ESTIMATES (2026-06-14): assembly extracted to
+      // compileGradedEstimatesForCard so autoPriceHolding can reuse the
+      // same canonical path. Helper traps internal errors → returns
+      // { estimates: [], mutationDetected: false }; no outer try/catch
+      // needed here. Behavior is byte-identical to the prior inline
+      // assembly (anchor precedence + release-curve fetch + buildGradedEstimates
+      // + telemetry) — verified by a before/after probe diff at the
+      // extraction commit gate.
       let gradedEstimates: GradedProjectionResult[] = [];
-      try {
-        if (pricingForMR && !pricingForMR.notFound) {
-          // Recompute gradeKey here (the prior gradeKey is scoped inside
-          // the marketRead try/if). Raw-grade requests pass fmv as the
-          // parallel raw anchor; graded-key requests pass null because
-          // fmv would be the parallel's graded median (PSA 10 / etc.),
-          // not the raw anchor the engine wants.
-          const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
-          // CF-ANCHOR-PRECEDENCE (2026-06-14): the estimator's parallel-raw
-          // anchor must mirror the value iOS DISPLAYS as the card's raw
-          // worth. Precedence: fmv > 0 (iOS shows marketTier.value) else
-          // lastSale.price (iOS shows "last sold $X, N ago" in the
-          // thin-data slot) else null (no raw shown → composed fallback
-          // inside the engine). Without this, a thin Leo Blue /150 path
-          // would surface $1,183 to iOS while the estimator anchored on
-          // base raw × multiplier ≈ $580 — display and grade estimate
-          // visibly diverge. With this, they share a source.
-          const lastSalePriceRaw = (est as any).lastSale?.price;
-          const lastSalePrice =
-            typeof lastSalePriceRaw === "number"
-            && Number.isFinite(lastSalePriceRaw)
-            && lastSalePriceRaw > 0
-              ? lastSalePriceRaw
-              : null;
-          const daysSinceNewestCompRaw = (est as any).daysSinceNewestComp;
-          const daysSinceNewestComp =
-            typeof daysSinceNewestCompRaw === "number"
-            && Number.isFinite(daysSinceNewestCompRaw)
-            && daysSinceNewestCompRaw >= 0
-              ? daysSinceNewestCompRaw
-              : null;
-          let parallelRawFmv: number | null = null;
-          let parallelRawFmvSource: "fmv" | "last-sale" | undefined;
-          let parallelRawFmvAgeDays: number | null = null;
-          if (resolvedParallelId && isRawScope) {
-            if (fmv > 0) {
-              parallelRawFmv = fmv;
-              parallelRawFmvSource = "fmv";
-              parallelRawFmvAgeDays = null;
-            } else if (lastSalePrice != null) {
-              parallelRawFmv = lastSalePrice;
-              parallelRawFmvSource = "last-sale";
-              parallelRawFmvAgeDays = daysSinceNewestComp;
-            }
-          }
-
-          // CF-GRADED-PRICE-PROJECTION Phase 1c (2026-06-14): release-level
-          // tier-2b grade-premium curve. Cardsight's pricing.card.set
-          // exposes release ("Bowman Chrome") + year ("2024"). Compute
-          // curve when both present; identityForSeed already verified
-          // these earlier in this scope. The curve compute is cached at
-          // 6h (cs:graded-curve:{release}|{year}) — first request in a
-          // release pays the cold cost; the rest reuse. Per-request
-          // pricing fan-out is bounded internally (concurrency=5,
-          // take=25 catalog candidates). Cold-case latency capped by
-          // 5-wide getPricing parallelism on the 25-card harvest.
-          const releaseFromPricing =
-            pricingForMR.card?.set?.release ?? null;
-          const setNameFromPricing =
-            pricingForMR.card?.set?.name ?? null;
-          const yearRaw = pricingForMR.card?.set?.year;
-          const yearNum =
-            yearRaw != null && Number.isFinite(Number(yearRaw))
-              ? Number(yearRaw)
-              : null;
-          let releaseRatios = null;
-          let releaseLabel: string | null = null;
-          if (releaseFromPricing && yearNum && yearNum > 0) {
-            try {
-              releaseRatios = await computeReleaseGradeCurve(
-                releaseFromPricing,
-                yearNum,
-                setNameFromPricing,
-              );
-              releaseLabel = `${yearNum} ${releaseFromPricing}`;
-            } catch (err) {
-              console.warn(
-                `[compiq.price-by-id] release-curve compute failed (non-fatal): ${(err as Error)?.message ?? err}`,
-              );
-              releaseRatios = null;
-            }
-          }
-
-          const built = buildGradedEstimates({
-            pricing: pricingForMR,
-            targetParallelId: resolvedParallelId ?? null,
-            targetParallelName: resolvedParallelName ?? null,
-            targetParallelRawFmv: parallelRawFmv,
-            targetParallelRawFmvSource: parallelRawFmvSource,
-            targetParallelRawFmvAgeDays: parallelRawFmvAgeDays,
-            releaseRatios,
-            releaseLabel,
-            snapshots: {
-              marketTierValue: isThin ? null : fmv,
-              recentComps: (est as any).recentComps ?? [],
-              gradeBreakdown,
-            },
-          });
-          if (built.mutationDetected) {
-            console.error(JSON.stringify({
-              event: "graded_estimates_mutation_detected",
-              source: "compiq.price-by-id",
-              subsystem: "graded-projection",
-              cardId: resolvedCardId,
-              parallelId: resolvedParallelId ?? null,
-            }));
-          }
-          gradedEstimates = built.estimates;
-        }
-      } catch (err) {
-        console.warn(
-          `[compiq.price-by-id] gradedEstimates build failed (non-fatal): ${(err as Error)?.message ?? err}`,
-        );
-        gradedEstimates = [];
+      if (pricingForMR && !pricingForMR.notFound) {
+        const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
+        const compiled = await compileGradedEstimatesForCard({
+          pricing: pricingForMR,
+          estimate: est as {
+            fairMarketValue?: number | null;
+            lastSale?: { price?: number | null } | null;
+            daysSinceNewestComp?: number | null;
+            recentComps?: ReadonlyArray<unknown>;
+          },
+          parallelId: resolvedParallelId ?? null,
+          parallelName: resolvedParallelName ?? null,
+          isRawScope,
+          isThinMarket: isThin,
+          gradeBreakdown,
+          source: "compiq.price-by-id",
+          cardId: resolvedCardId,
+        });
+        gradedEstimates = compiled.estimates;
       }
 
       return {
