@@ -329,30 +329,32 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
   });
 
   it("BGS 9.5 + SGC 10 EMITTED via tier-3 market premium (ballpark, ±45% / 2 sig figs)", () => {
-    // CF-ALWAYS-A-NUMBER (2026-06-12): ballpark surfaces a NUMBER (engine
-    // stopped collapsing tier-3). Value is rounded to 2 sig figs;
-    // range is ±45% per GRADE_CONFIDENCE.ballpark.
+    // CF-CROSS-GRADE-COHERENCE (2026-06-12): ballpark grades anchor on
+    // R = highest-confidence grounded grade in scope. For Leo BASE:
+    // R = PSA 10 observed (median $586, n=9, generic 4.0×). Ballparks
+    // scale RELATIVELY: ballpark(G) = R.value × (genericPremium(G) /
+    // R.genericPremium). PSA 10 + PSA 9 are GUARD-skipped (observed)
+    // and don't appear in results.
     const out = computeGradedProjection({ pricing: makeLeoPricing() });
 
     const bgs95 = byGrade(out, "BGS 9.5");
     expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.ratioSource).toBe("market");
-    expect(bgs95.anchorKind).toBe("base");
-    expect(bgs95.diagnostics.cardSpecificBaseSamples).toBe(0);
-    expect(bgs95.diagnostics.ratio).toBe(3.5);
-    // 228.93 * 3.5 = 801.255 → 2 sig figs = 800
-    expect(bgs95.estimatedValue).toBe(800);
-    // ±45% band, also rounded to 2 sig figs
-    // low: 801.255 * 0.55 ≈ 440.7 → 440; high: 801.255 * 1.45 ≈ 1161.8 → 1200
-    expect(bgs95.estimateLow).toBe(440);
-    expect(bgs95.estimateHigh).toBe(1200);
+    // Diagnostics.ratio is now the RELATIVE scale factor: 3.5/4.0 = 0.875
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.875, 3);
+    // 586 * (3.5 / 4.0) = 512.75 → 2 sig figs = 510
+    expect(bgs95.estimatedValue).toBe(510);
+    // ±45% band, 2 sig figs
+    // low: 512.75 * 0.55 ≈ 282 → 280; high: 512.75 * 1.45 ≈ 743 → 740
+    expect(bgs95.estimateLow).toBe(280);
+    expect(bgs95.estimateHigh).toBe(740);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.confidenceTier).toBe("ballpark");
     expect(sgc10.ratioSource).toBe("market");
-    expect(sgc10.diagnostics.ratio).toBe(3.4);
-    // 228.93 * 3.4 = 778.36 → 2 sig figs = 780
-    expect(sgc10.estimatedValue).toBe(780);
+    expect(sgc10.diagnostics.ratio).toBeCloseTo(0.85, 3);  // 3.4/4.0
+    // 586 * (3.4 / 4.0) = 498.10 → 2 sig figs = 500
+    expect(sgc10.estimatedValue).toBe(500);
   });
 
   it("BASE RAW ANCHOR — diagnostics confirm the 6 parallel raw records are excluded (n=24, not 30)", () => {
@@ -585,7 +587,7 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     expect(bgs95.estimateHigh).toBe(834);
   });
 
-  it("Leo BGS 9.5 — siblings thin (<5 base BGS 9.5) → tier-3 market fallback (ballpark, ±45% / 2 sig figs)", () => {
+  it("Leo BGS 9.5 — siblings thin (<5 base BGS 9.5) → tier-3 market fallback (ballpark, R-relative)", () => {
     const pricing = makeLeoPricing();
     const siblingComps = makeSiblingComps({ nBgs95Base: 4, nRawBase: 8 });
     const out = computeGradedProjection({ pricing, siblingComps });
@@ -593,9 +595,10 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     const bgs95 = byGrade(out, "BGS 9.5");
     expect(bgs95.confidenceTier).toBe("ballpark");
     expect(bgs95.ratioSource).toBe("market");
-    expect(bgs95.diagnostics.ratio).toBe(3.5);
-    // CF-ALWAYS-A-NUMBER: 228.93 * 3.5 = 801.255 → 2 sig figs = 800
-    expect(bgs95.estimatedValue).toBe(800);
+    // CF-CROSS-GRADE-COHERENCE: relative-scaled to R = PSA 10 observed $586.
+    // Ratio = 3.5/4.0 = 0.875; value = 586 * 0.875 = 512.75 → $510 (2 sig figs)
+    expect(bgs95.diagnostics.ratio).toBeCloseTo(0.875, 3);
+    expect(bgs95.estimatedValue).toBe(510);
   });
 
   it("Tier 2 — sibling PARALLEL records are excluded from the tier-2 base aggregation", () => {
@@ -707,17 +710,20 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(psa10.estimatedValue).toBe(3030);
 
     const psa9 = estimates.find((e) => e.grade === "PSA 9")!;
-    // CF-ALWAYS-A-NUMBER ladder guard 1: PSA 9 card ratio = 0.931× → sub-raw
-    // → falls back to generic PSA 9 premium 1.7× × $1,183 = $2,011 → ballpark.
+    // CF-CROSS-GRADE-COHERENCE: PSA 9 card ratio = 0.961× → sub-raw
+    // ($1,183 × 0.961 = $1,137) → demoted to ballpark, then relative-
+    // scaled to R = PSA 10 rough $3,030 × (1.7 / 4.0) = $1,288 → 2 sig figs $1,300.
     expect(psa9.confidenceTier).toBe("ballpark");
     expect(psa9.ratioSource).toBe("market");
-    expect(psa9.estimatedValue).toBe(2000);  // 2 sig figs
+    expect(psa9.estimatedValue).toBe(1300);  // 2 sig figs
+    expect(psa9.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor
 
-    // CF-ALWAYS-A-NUMBER (2026-06-12): BGS 9.5 + SGC 10 NOW surface as
-    // ballpark WITH numbers (rounded to 2 sig figs) — engine no longer
-    // collapses tier-3. Per-card ratio for BGS 9.5/SGC 10 is < 1.0 in the
-    // makeLeoParallelPricingNoBlueGraded fixture so the ladder coherence
-    // guard catches sub-raw values and rebases to generic premium.
+    // CF-CROSS-GRADE-COHERENCE: BGS 9.5 + SGC 10 ballpark, relative-scaled
+    // to R = PSA 10 rough $3,030.
+    //   BGS 9.5 = $3,030 × (3.5/4.0) = $2,651 → 2 sig figs $2,700
+    //   SGC 10  = $3,030 × (3.4/4.0) = $2,576 → 2 sig figs $2,600
+    // Both > raw $1,183 ✓. Both ≤ R = PSA 10 ($3,030) — same-rank PSA 10/SGC 10
+    // unconstrained; BGS 9.5 ≤ PSA 10 by ordering ceiling.
     for (const grade of ["BGS 9.5", "SGC 10"]) {
       const r = estimates.find((e) => e.grade === grade)!;
       expect(r.confidenceTier).toBe("ballpark");
@@ -773,9 +779,13 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.diagnostics.anchorPrice).toBe(228.93);
       expect(e.estimatedValue!).toBeGreaterThan(228.93);  // ≥ raw anchor
     }
-    // BGS 9.5: 228.93 * 3.5 = 801.255 → 800; SGC 10: 228.93 * 3.4 = 778.36 → 780
-    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(800);
-    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(780);
+    // CF-CROSS-GRADE-COHERENCE: R = PSA 10 observed $586 (n=9 sufficient).
+    // BGS 9.5 = $586 * (3.5/4.0) = $512.75 → 2 sig figs $510
+    // SGC 10 = $586 * (3.4/4.0) = $498.10 → 2 sig figs $500
+    expect(estimates.find((e) => e.grade === "BGS 9.5")!.estimatedValue).toBe(510);
+    expect(estimates.find((e) => e.grade === "SGC 10")!.estimatedValue).toBe(500);
+    // Anchor diagnostics still reference the raw anchor (used by ≥-raw floor)
+    expect(estimates.find((e) => e.grade === "BGS 9.5")!.diagnostics.anchorPrice).toBe(228.93);
   });
 
   it("Trout → emits nothing (full coverage; every grade observed → engine returns [])", () => {
@@ -972,7 +982,9 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.estimatedValue).not.toBeNull();
       expect(e.estimateLow).not.toBeNull();
       expect(e.estimateHigh).not.toBeNull();
-      expect(e.diagnostics.ratio).toBe(e.grade === "BGS 9.5" ? 3.5 : 3.4);
+      // CF-CROSS-GRADE-COHERENCE: relative-scaled ratio = generic / R.generic
+      // BGS 9.5: 3.5/4.0 = 0.875; SGC 10: 3.4/4.0 = 0.85
+      expect(e.diagnostics.ratio).toBeCloseTo(e.grade === "BGS 9.5" ? 0.875 : 0.85, 3);
       expect(e.diagnostics.anchorPrice).toBe(1183);
       expect(e.basis).toContain(`No ${e.grade} sales for this Blue Refractor`);
     }
@@ -1113,11 +1125,11 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
   // Guard 1: no emitted grade < raw anchor (sub-1.0 ratio fallback).
   // Guard 2: same-grader monotonicity (PSA 10 ≥ PSA 9, BGS 10 ≥ BGS 9.5).
 
-  it("LADDER GUARD 1 — sub-1.0 card ratio (0.931× PSA 9) falls back to generic premium, not sub-raw", () => {
-    // Leo Blue /150 PSA 9 case: card-specific PSA 9 base ratio = 0.931×.
-    // With anchor $1,183, raw card ratio would give $1,101 — BELOW raw.
-    // Guard 1 catches it, rebases to generic PSA 9 premium 1.7×.
-    // 1183 * 1.7 = 2011.1 → 2 sig figs = 2000.
+  it("LADDER GUARD 1 — sub-1.0 card ratio (0.961× PSA 9) demoted to ballpark + relative-scaled to R", () => {
+    // CF-CROSS-GRADE-COHERENCE: PSA 9 card ratio = 0.961× → sub-raw
+    // ($1,183 × 0.961 = $1,137). Engine demotes PSA 9 to ballpark, then
+    // relative scales: R = PSA 10 rough $3,030, generic 4.0× → PSA 9 =
+    // $3,030 × (1.7/4.0) = $1,288 → 2 sig figs $1,300. ≥ raw anchor ✓.
     const out = computeGradedProjection({
       pricing: makeLeoParallelPricingNoBlueGraded(),
       targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
@@ -1125,30 +1137,35 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       targetParallelName: "Blue Refractor",
     });
     const psa9 = byGrade(out, "PSA 9");
-    expect(psa9.estimatedValue).toBe(2000);
-    expect(psa9.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor
+    expect(psa9.estimatedValue).toBe(1300);
+    expect(psa9.estimatedValue!).toBeGreaterThan(1183);  // ≥ raw anchor ✓
     expect(psa9.confidenceTier).toBe("ballpark");
     expect(psa9.ratioSource).toBe("market");
-    expect(psa9.diagnostics.ratio).toBe(1.7);
-    expect(psa9.basis).toContain("coherence: ratio < 1.0");
+    expect(psa9.diagnostics.ratio).toBeCloseTo(0.425, 3);  // 1.7/4.0
+    expect(psa9.basis).toContain("sub-raw card-ratio");
+    expect(psa9.basis).toContain("relative-scaled to PSA 10");
   });
 
-  it("LADDER GUARD 1 — generic premium also < 1.0 → demoted to no-data (refuses sub-raw)", () => {
-    // Synthetic: a grade where the card ratio < 1.0 AND the generic
-    // premium is also < 1.0 (e.g. SGC 8 = 1.0× isn't sub but...).
-    // We don't have a real liquid grade with generic < 1.0, so this
-    // test asserts the helper signature defensively: when a fallback
-    // would still print sub-raw, the engine sets no-data + nulls.
-    // Tested via PSA 7 (0.95× premium) in targetGrades override.
+  it("LADDER GUARD 1 — no R available → falls back to absolute generic; demoted to no-data when generic also <1.0", () => {
+    // Synthetic: a fixture with NO observed grades AND no card-ratio
+    // exercise the no-R path. Target a grade where absolute generic is
+    // sub-raw (PSA 7 = 0.95×). Engine demotes to no-data.
+    const baseRaw: CardsightSaleRecord[] = [];
+    for (let i = 0; i < 4; i++) {
+      baseRaw.push(rec(`2024 Bowman Chrome Test #X base ${i}`, 100 + i * 5));
+    }
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "no-r", name: "No R", number: "X" } as any,
+      raw: { count: baseRaw.length, records: baseRaw },
+      graded: [],  // no observed grades anywhere
+      meta: { total_records: baseRaw.length, last_sale_date: null },
+    } as CardsightPricingResponse;
     const out = computeGradedProjection({
-      pricing: makeLeoParallelPricingNoBlueGraded(),
-      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
-      targetParallelRawFmv: 1183,
-      targetParallelName: "Blue Refractor",
+      pricing,
       targetGrades: [{ company: "PSA", grade: "7", label: "PSA 7" }],
     });
     const psa7 = byGrade(out, "PSA 7");
-    // PSA 7 generic premium 0.95× × $1,183 = $1,124 → sub-raw → demote to no-data
+    // PSA 7 generic 0.95× × ~$110 = ~$105 sub-raw → demote to no-data
     expect(psa7.confidenceTier).toBe("no-data");
     expect(psa7.estimatedValue).toBeNull();
   });

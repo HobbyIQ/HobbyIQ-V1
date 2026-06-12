@@ -1058,6 +1058,12 @@ export interface GradeBreakdownEntry {
   /** Whole-dollar median price. */
   median: number;
   recentDirection?: "up" | "down" | "flat";
+  /** CF-CROSS-GRADE-COHERENCE additive (2026-06-12): short display-only
+   *  note when this OBSERVED grade's median sits below the observed base
+   *  raw median for the same card. Common for hot prospects where raw
+   *  speculation trades above slabbed comps. Display-only, no value
+   *  change — the median above is real and unmodified. */
+  note?: string;
 }
 
 function pricesMedianWholeDollar(prices: ReadonlyArray<number>): number {
@@ -1102,6 +1108,20 @@ export function buildGradeBreakdown(
 ): GradeBreakdownEntry[] {
   const out: GradeBreakdownEntry[] = [];
 
+  // CF-CROSS-GRADE-COHERENCE additive (2026-06-12): compute the observed
+  // base raw median to detect grades trading below raw. Filtered to the
+  // SAME scope (parallelId) as the graded entries so the comparison is
+  // apples-to-apples — base raw for base-scope requests, parallel raw
+  // for parallel-scope. Whole-dollar rounded to match the median field.
+  let observedRawMedian: number | null = null;
+  if (pricing.raw?.records) {
+    const filtered = filterRecordsByParallel(pricing.raw.records, parallelId);
+    const prices = filtered
+      .map((r) => r.price)
+      .filter((p) => Number.isFinite(p) && p > 0);
+    if (prices.length > 0) observedRawMedian = pricesMedianWholeDollar(prices);
+  }
+
   for (const company of pricing.graded ?? []) {
     // Merge duplicate same-grade buckets within a company by
     // Number(grade_value). Preserve the FIRST occurrence's grade_value
@@ -1137,6 +1157,16 @@ export function buildGradeBreakdown(
       };
       const dir = recentDirectionFromRecords(filtered);
       if (dir !== undefined) entry.recentDirection = dir;
+      // CF-CROSS-GRADE-COHERENCE additive: when this observed grade's
+      // median sits below observed raw, attach a short display-only note.
+      // Common for hot prospects where raw speculation trades above
+      // slabbed comps. The median field itself is real + unmodified.
+      if (
+        observedRawMedian !== null
+        && entry.median < observedRawMedian
+      ) {
+        entry.note = `Raw trades above ${entry.grader} ${entry.grade} here — common for hot prospects.`;
+      }
       out.push(entry);
     }
   }

@@ -740,106 +740,367 @@ export function computeGradedProjection(
     });
   }
 
-  // CF-ALWAYS-A-NUMBER (2026-06-12) — LADDER COHERENCE GUARDS.
+  // CF-CROSS-GRADE-COHERENCE (2026-06-12) — LADDER COHERENCE GUARDS.
   //
-  // Guard 1: every emitted grade ≥ the raw anchor. A card/release ratio
-  // < 1.0 is unreliable (the 0.931× PSA 9 case from Leo Blue's data: card-
-  // specific base PSA 9 median $221 vs base raw $238 produced a sub-raw
-  // PSA 9 estimate). Sub-raw estimates print confusingly to the user
-  // ("PSA 9 is worth less than raw?") and signal noisy ratio data. Fall
-  // back to the generic GRADER_PREMIUMS premium for the grade, emit as
-  // ballpark — the table values are ≥ 1.0 by design for the liquid set.
+  // Step 1 of two: anchor every ballpark grade to the card's grounded
+  // LEVEL, not the absolute generic curve. The pre-CF mix of strategies
+  // (grounded grades anchored on card data, ballparks anchored on
+  // absolute generic) produced cross-grade incoherence: Leo Blue PSA 10
+  // grounded $2,850 sat below BGS 9.5 ballpark $4,100 because PSA 10
+  // used the card's below-market ratio while BGS 9.5 used the at-market
+  // generic. Relative scaling fixes this by scaling the generic CURVE
+  // to the card's LEVEL.
   //
-  // Guard 2: same-grader monotonicity. Within a grader (PSA 10 vs PSA 9,
-  // BGS 10 vs BGS 9.5, etc.), higher numeric grade ≥ lower. On violation,
-  // raise both sides to the generic premium ballpark — neither card-ratio
-  // nor release-curve is trustworthy when same-grader order inverts. Cross-
-  // grader ordering (BGS 9.5 vs PSA 10, etc.) is NOT enforced — those
-  // relationships are genuinely fuzzy at the market level.
+  // OBSERVED IS FACT (hard structural invariant): observed grades are
+  // never in `results` — `countObservedInScope` at the top of the
+  // per-grade loop skips them entirely. Both Guard 1 + the ordering
+  // ceiling iterate over `results`; they CANNOT touch an observed
+  // grade's value. The "OBSERVED IS FACT" comment below every loop
+  // documents this so a future refactor doesn't accidentally drop the
+  // observed-skip and start clamping real comp sales. Confirmed via
+  // explicit defensive check in selectAnchorGrade() too — R candidates
+  // include observed VALUES, but rail emit is GUARD-skipped upstream.
   if (anchor.price !== null && anchor.price > 0) {
     const anchorPrice = anchor.price;
 
-    // Helper: re-emit a result at the generic premium ballpark. Mutates
-    // the result entry in place; preserves anchorPrice + baseRawMedian/
-    // SampleCount in diagnostics, resets ratio + targetGradeBaseMedian +
-    // confidence/source to the ballpark values, reapplies ballpark
-    // rounding + spread.
-    const rebaseToGeneric = (r: GradedProjectionResult, company: string, gradeStr: string, reason: string) => {
-      const generic = getGraderPremium(company, gradeStr);
-      if (!Number.isFinite(generic) || generic < 1.0) {
-        // Generic premium not available or sub-1.0 — refuse to print
-        // sub-raw. Demote to no-data so the assembler surfaces a marker.
-        r.estimatedValue = null;
-        r.estimateLow = null;
-        r.estimateHigh = null;
-        r.confidenceTier = "no-data";
-        r.ratioSource = "none";
-        r.diagnostics.ratio = null;
-        r.diagnostics.targetGradeBaseMedian = null;
-        return;
-      }
-      const rawValue = anchorPrice * generic;
-      const cfg = GRADE_CONFIDENCE.ballpark;
-      r.estimatedValue = applyTierRounding(rawValue, "ballpark");
-      r.estimateLow = applyTierRounding(rawValue * (1 - cfg.spreadPct), "ballpark");
-      r.estimateHigh = applyTierRounding(rawValue * (1 + cfg.spreadPct), "ballpark");
-      r.confidenceTier = "ballpark";
-      r.ratioSource = "market";
-      r.diagnostics.ratio = generic;
+    // Demote a result to no-data — used when refusal floor triggers.
+    const demoteToNoData = (r: GradedProjectionResult, reason: string) => {
+      r.estimatedValue = null;
+      r.estimateLow = null;
+      r.estimateHigh = null;
+      r.confidenceTier = "no-data";
+      r.ratioSource = "none";
+      r.diagnostics.ratio = null;
       r.diagnostics.targetGradeBaseMedian = null;
-      // Annotate the basis so /price-by-id consumers can audit the
-      // fallback in diagnostics; assembler rewrites this for iOS display.
-      r.basis = `${r.basis} [coherence: ${reason} → fell back to generic ${company} ${gradeStr} premium ${generic.toFixed(3)}×]`;
+      r.basis = `${r.basis} [coherence: ${reason} → demoted to no-data]`;
     };
 
-    // Guard 1: ≥ raw anchor floor. Iterate over results, fall sub-anchor
-    // emits back to generic premium.
+    // Stamp a ballpark result at a given absolute value with ballpark
+    // rounding + spread.
+    const setBallparkValue = (r: GradedProjectionResult, value: number, ratio: number, reason: string) => {
+      const cfg = GRADE_CONFIDENCE.ballpark;
+      r.estimatedValue = applyTierRounding(value, "ballpark");
+      r.estimateLow = applyTierRounding(value * (1 - cfg.spreadPct), "ballpark");
+      r.estimateHigh = applyTierRounding(value * (1 + cfg.spreadPct), "ballpark");
+      r.confidenceTier = "ballpark";
+      r.ratioSource = "market";
+      r.diagnostics.ratio = ratio;
+      r.diagnostics.targetGradeBaseMedian = null;
+      r.basis = `${r.basis} [coherence: ${reason}]`;
+    };
+
+    // SUB-RAW DEMOTION (the canonical PSA 9 case): a card/release ratio
+    // that produces a sub-raw value is unreliable as a card-specific
+    // signal. Demote the grade from estimate/rough to ballpark so the
+    // relative-scaling pass below re-anchors it via R, producing a
+    // coherent number above raw. The pre-CF behavior fell back to the
+    // ABSOLUTE generic — that mixed strategies and re-introduced cross-
+    // grade incoherence. Now it's relative-scaled like every other
+    // ballpark. OBSERVED IS FACT: this loop only touches results entries
+    // (observed grades are GUARD-skipped upstream).
     for (const r of results) {
       if (r.estimatedValue == null) continue;
+      if (r.confidenceTier !== "estimate" && r.confidenceTier !== "rough") continue;
       if (r.estimatedValue >= anchorPrice) continue;
-      const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
-      if (!m) continue;
-      rebaseToGeneric(r, m[1]!, m[2]!, "ratio < 1.0 (sub-raw)");
+      r.confidenceTier = "ballpark";
+      r.ratioSource = "market";
+      r.basis = `${r.basis} [coherence: sub-raw card-ratio (value $${r.estimatedValue.toFixed(2)} < anchor $${anchorPrice.toFixed(2)}) → demoted to ballpark for relative scaling]`;
     }
 
-    // Guard 2: same-grader monotonicity. Group by grader, sort by numeric
-    // grade descending, walk pairs; on violation, raise BOTH sides to
-    // generic premium (a same-grader inversion means neither card nor
-    // release ratio is trustworthy for this pair).
-    interface GradeEntry {
-      result: GradedProjectionResult;
+    // OBSERVED IS FACT: extract observed values from the pricing payload
+    // so the relative-scaling anchor R can use real comp sales when
+    // available. These values are READ-ONLY here — never mutated, never
+    // surfaced as estimates. The rail's per-grade compute loop already
+    // GUARD-skipped the same grades from emission; observedValues exists
+    // as auxiliary context for R selection + the ordering ceiling.
+    const observedValues = extractObservedGradeValues(
+      pricing,
+      targetParallelId,
+      targetParallelName,
+    );
+
+    // R selection. Candidates: observed grades with n ≥ tier-1 threshold
+    // AND a generic premium entry > 1.0, OR rail estimate/rough entries
+    // with same constraint. Ballparks are NOT candidates (using a
+    // ballpark to scale another ballpark is circular). Sort by:
+    //   1. confidence rank (observed-sufficient > observed-thin > estimate > rough)
+    //   2. numeric grade rank (10 > 9.5 > 9 > ...)
+    //   3. value (tie-break)
+    interface RCandidate {
+      label: string;
       company: string;
-      gradeValue: number;
       gradeStr: string;
+      value: number;
+      genericPremium: number;
+      confidenceRank: number;
+      gradeRank: number;
     }
-    const byGrader = new Map<string, GradeEntry[]>();
+    const rCandidates: RCandidate[] = [];
+    for (const [label, info] of observedValues) {
+      const generic = getGraderPremium(info.company, info.gradeStr);
+      if (!(generic > 1.0)) continue;
+      const gradeRank = Number(info.gradeStr);
+      if (!Number.isFinite(gradeRank)) continue;
+      const confidenceRank = info.n >= TIER1_MIN_BASE_SAMPLES ? 100 : 70;
+      rCandidates.push({
+        label,
+        company: info.company,
+        gradeStr: info.gradeStr,
+        value: info.value,
+        genericPremium: generic,
+        confidenceRank,
+        gradeRank,
+      });
+    }
     for (const r of results) {
       if (r.estimatedValue == null) continue;
+      if (r.confidenceTier !== "estimate" && r.confidenceTier !== "rough") continue;
       const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
       if (!m) continue;
-      const co = m[1]!;
-      const gradeStr = m[2]!;
-      const gv = Number(gradeStr);
-      if (!Number.isFinite(gv)) continue;
-      if (!byGrader.has(co)) byGrader.set(co, []);
-      byGrader.get(co)!.push({ result: r, company: co, gradeValue: gv, gradeStr });
+      const generic = getGraderPremium(m[1]!, m[2]!);
+      if (!(generic > 1.0)) continue;
+      const gradeRank = Number(m[2]!);
+      if (!Number.isFinite(gradeRank)) continue;
+      rCandidates.push({
+        label: r.grade,
+        company: m[1]!,
+        gradeStr: m[2]!,
+        value: r.estimatedValue,
+        genericPremium: generic,
+        confidenceRank: r.confidenceTier === "estimate" ? 50 : 40,
+        gradeRank,
+      });
     }
-    for (const [, list] of byGrader) {
-      list.sort((a, b) => b.gradeValue - a.gradeValue); // higher grade first
-      for (let i = 0; i < list.length - 1; i++) {
-        const higher = list[i]!;
-        const lower = list[i + 1]!;
-        if (higher.result.estimatedValue == null || lower.result.estimatedValue == null) continue;
-        if (higher.result.estimatedValue >= lower.result.estimatedValue) continue;
-        // Violation: higher grade < lower grade. Raise both to generic.
-        const reason = `same-grader inversion (${lower.result.grade}=$${lower.result.estimatedValue} > ${higher.result.grade}=$${higher.result.estimatedValue})`;
-        rebaseToGeneric(higher.result, higher.company, higher.gradeStr, reason);
-        rebaseToGeneric(lower.result, lower.company, lower.gradeStr, reason);
+    rCandidates.sort(
+      (a, b) =>
+        b.confidenceRank - a.confidenceRank
+        || b.gradeRank - a.gradeRank
+        || b.value - a.value,
+    );
+    const R = rCandidates.length > 0 ? rCandidates[0]! : null;
+
+    if (R !== null) {
+      // RELATIVE SCALING: anchor ballparks to R's grounded level.
+      //   ballpark(G) = R.value × ( genericPremium(G) / R.genericPremium )
+      // For Leo BASE with R = PSA 10 (value $572, generic 4.0×):
+      //   BGS 9.5 ballpark = $572 × (3.5 / 4.0) = $500.50
+      //   SGC 10 ballpark = $572 × (3.4 / 4.0) = $486.20
+      // Sub-raw guard (≥-raw floor): a relative-scaled ballpark below
+      // the raw anchor signals the card-anchor is so far below the
+      // generic curve that lower grades round-trip to sub-raw. Refuse
+      // to print sub-raw — demote to no-data. Falling back to absolute
+      // generic here would re-introduce the mix-strategies bug.
+      // OBSERVED IS FACT: this loop only touches results entries;
+      // observed grades are not in results.
+      for (const r of results) {
+        if (r.confidenceTier !== "ballpark") continue;
+        const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+        if (!m) continue;
+        const generic = getGraderPremium(m[1]!, m[2]!);
+        if (!(generic > 0)) {
+          demoteToNoData(r, `no generic premium for ${r.grade}`);
+          continue;
+        }
+        const scaleRatio = generic / R.genericPremium;
+        const relative = R.value * scaleRatio;
+        if (relative < anchorPrice) {
+          demoteToNoData(
+            r,
+            `relative-scaled to ${R.label} ($${R.value.toFixed(2)}) × ${scaleRatio.toFixed(3)} = $${relative.toFixed(2)} < raw $${anchorPrice.toFixed(2)}`,
+          );
+          continue;
+        }
+        setBallparkValue(
+          r,
+          relative,
+          scaleRatio,
+          `relative-scaled to ${R.label} ($${R.value.toFixed(2)}) × ${scaleRatio.toFixed(3)}`,
+        );
+      }
+
+      // ORDERING CEILING: a ballpark grade may not exceed a grounded
+      // HIGHER-ranked grade. Rank = numeric grade value (10 > 9.5 > 9).
+      // Same-rank grades (BGS 10 vs PSA 10 vs SGC 10) are unconstrained
+      // — cross-grader prestige is fuzzy. Observed grades and rail
+      // estimate/rough entries qualify as grounded for the ceiling;
+      // OTHER ballparks do NOT (using ballpark to constrain ballpark is
+      // circular).
+      // OBSERVED IS FACT: ceiling READS observed values from observedValues,
+      // but only CLAMPS ballparks in results — observed grades are not
+      // in results.
+      const groundedByRank = new Map<number, number[]>();
+      for (const [, info] of observedValues) {
+        const rank = Number(info.gradeStr);
+        if (!Number.isFinite(rank)) continue;
+        if (!groundedByRank.has(rank)) groundedByRank.set(rank, []);
+        groundedByRank.get(rank)!.push(info.value);
+      }
+      for (const r of results) {
+        if (r.estimatedValue == null) continue;
+        if (r.confidenceTier !== "estimate" && r.confidenceTier !== "rough") continue;
+        const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+        if (!m) continue;
+        const rank = Number(m[2]!);
+        if (!Number.isFinite(rank)) continue;
+        if (!groundedByRank.has(rank)) groundedByRank.set(rank, []);
+        groundedByRank.get(rank)!.push(r.estimatedValue);
+      }
+      for (const r of results) {
+        if (r.confidenceTier !== "ballpark") continue;
+        if (r.estimatedValue == null) continue;
+        const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+        if (!m) continue;
+        const myRank = Number(m[2]!);
+        if (!Number.isFinite(myRank)) continue;
+        let ceiling = Infinity;
+        for (const [otherRank, values] of groundedByRank) {
+          if (otherRank > myRank) {
+            const minHere = Math.min(...values);
+            if (minHere < ceiling) ceiling = minHere;
+          }
+        }
+        if (Number.isFinite(ceiling) && r.estimatedValue > ceiling) {
+          setBallparkValue(
+            r,
+            ceiling,
+            ceiling / anchorPrice,
+            `ordering ceiling clamp from grounded higher-rank ($${ceiling.toFixed(2)})`,
+          );
+        }
+      }
+    } else {
+      // No grounded grade with a generic premium — fall back to ABSOLUTE
+      // generic curve (current pre-CF Guard 1 behavior). Applies the
+      // sub-raw floor + same-grader monotonicity. Rare path: only fires
+      // when the card has zero observed grades AND no card/release-ratio
+      // tier-1/tier-2 fired for any target grade.
+      const rebaseToGeneric = (
+        r: GradedProjectionResult,
+        company: string,
+        gradeStr: string,
+        reason: string,
+      ) => {
+        const generic = getGraderPremium(company, gradeStr);
+        if (!Number.isFinite(generic) || generic < 1.0) {
+          demoteToNoData(r, reason);
+          return;
+        }
+        setBallparkValue(r, anchorPrice * generic, generic, reason);
+      };
+      // Guard 1: ≥ raw anchor floor (absolute fallback).
+      for (const r of results) {
+        if (r.estimatedValue == null) continue;
+        if (r.estimatedValue >= anchorPrice) continue;
+        const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+        if (!m) continue;
+        rebaseToGeneric(r, m[1]!, m[2]!, "ratio < 1.0 (sub-raw)");
+      }
+      // Guard 2: same-grader monotonicity (absolute fallback).
+      interface GradeEntry {
+        result: GradedProjectionResult;
+        company: string;
+        gradeValue: number;
+        gradeStr: string;
+      }
+      const byGrader = new Map<string, GradeEntry[]>();
+      for (const r of results) {
+        if (r.estimatedValue == null) continue;
+        const m = r.grade.match(/^([A-Z]+)\s+([0-9]+(?:\.[0-9]+)?)$/);
+        if (!m) continue;
+        const co = m[1]!;
+        const gradeStr = m[2]!;
+        const gv = Number(gradeStr);
+        if (!Number.isFinite(gv)) continue;
+        if (!byGrader.has(co)) byGrader.set(co, []);
+        byGrader.get(co)!.push({ result: r, company: co, gradeValue: gv, gradeStr });
+      }
+      for (const [, list] of byGrader) {
+        list.sort((a, b) => b.gradeValue - a.gradeValue);
+        for (let i = 0; i < list.length - 1; i++) {
+          const higher = list[i]!;
+          const lower = list[i + 1]!;
+          if (higher.result.estimatedValue == null || lower.result.estimatedValue == null) continue;
+          if (higher.result.estimatedValue >= lower.result.estimatedValue) continue;
+          const reason = `same-grader inversion (${lower.result.grade}=$${lower.result.estimatedValue} > ${higher.result.grade}=$${higher.result.estimatedValue})`;
+          rebaseToGeneric(higher.result, higher.company, higher.gradeStr, reason);
+          rebaseToGeneric(lower.result, lower.company, lower.gradeStr, reason);
+        }
       }
     }
   }
 
   return results;
+}
+
+/** Observed grade aggregate for the requested scope. Read-only auxiliary
+ *  context for the ladder coherence guards — never mutated, never surfaced
+ *  as an estimate. The rail's per-grade compute loop already GUARD-skips
+ *  these grades from emission via countObservedInScope. */
+interface ObservedGradeValue {
+  value: number;       // base-only or parallel-scope median
+  n: number;           // sample count
+  company: string;
+  gradeStr: string;
+}
+
+/** Extract observed (company, grade) median values from the pricing
+ *  payload, filtered to the same scope (base or parallel) that
+ *  countObservedInScope uses. Iterates pricing.graded directly, then
+ *  re-queries selectSalesByGrade per unique (company, grade) tuple to
+ *  handle Cardsight's dup-bucket quirk (CF-PRICING-BUCKET-MERGE). */
+function extractObservedGradeValues(
+  pricing: CardsightPricingResponse,
+  targetParallelId: string | null | undefined,
+  targetParallelName: string | null | undefined,
+): Map<string, ObservedGradeValue> {
+  const out = new Map<string, ObservedGradeValue>();
+  const tuples = new Set<string>();
+  for (const company of (pricing.graded ?? [])) {
+    const co = String(company.company_name ?? "").toUpperCase().trim();
+    if (!co) continue;
+    for (const g of (company.grades ?? [])) {
+      const gradeStr = String(g.grade_value ?? "").trim();
+      if (!gradeStr) continue;
+      tuples.add(`${co}|${gradeStr}`);
+    }
+  }
+  for (const key of tuples) {
+    const [co, gradeStr] = key.split("|");
+    if (!co || !gradeStr) continue;
+    const records = selectSalesByGrade(pricing, `${co} ${gradeStr}`);
+    // Filter to scope (mirrors countObservedInScope above)
+    let scope: CardsightSaleRecord[];
+    if (!targetParallelId) {
+      scope = records.filter(isBaseRecord);
+    } else {
+      const strict = records.filter((r) => r.parallel_id === targetParallelId);
+      if (strict.length > 0) {
+        scope = strict;
+      } else if (targetParallelName) {
+        const ptokens = tokenizeParallel(targetParallelName);
+        if (ptokens.length === 0) continue;
+        const patterns = ptokens.map(
+          (t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"),
+        );
+        scope = records.filter((r) => {
+          const title = r.title ?? "";
+          return patterns.every((p) => p.test(title));
+        });
+      } else {
+        continue;
+      }
+    }
+    if (scope.length === 0) continue;
+    const med = median(scope.map((r) => r.price));
+    if (med === null || med <= 0) continue;
+    out.set(`${co} ${gradeStr}`, {
+      value: med,
+      n: scope.length,
+      company: co,
+      gradeStr,
+    });
+  }
+  return out;
 }
 
 // ── Phase 2 wiring (CF-GRADED-PRICE-PROJECTION) ────────────────────────────
