@@ -1487,6 +1487,8 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           // 5-wide getPricing parallelism on the 25-card harvest.
           const releaseFromPricing =
             pricingForMR.card?.set?.release ?? null;
+          const setNameFromPricing =
+            pricingForMR.card?.set?.name ?? null;
           const yearRaw = pricingForMR.card?.set?.year;
           const yearNum =
             yearRaw != null && Number.isFinite(Number(yearRaw))
@@ -1499,6 +1501,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
               releaseRatios = await computeReleaseGradeCurve(
                 releaseFromPricing,
                 yearNum,
+                setNameFromPricing,
               );
               releaseLabel = `${yearNum} ${releaseFromPricing}`;
             } catch (err) {

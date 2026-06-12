@@ -824,8 +824,21 @@ function aggregateReleaseCurve(
 async function discoverReleaseCardIds(
   release: string,
   year: number,
+  setName?: string | null,
 ): Promise<string[]> {
-  const catalog = await searchCatalog(release, { year, take: RELEASE_SEARCH_TAKE });
+  // Cardsight catalog indexing quirk (documented 2026-06-14): the SAME
+  // physical product is sometimes indexed under multiple releaseName
+  // values depending on the search query. q="Bowman Chrome" year=2024
+  // returns releaseName="Bowman" / setName="Chrome Prospects", which
+  // fails an exact releaseName="Bowman Chrome" filter. Only
+  // q="Bowman Chrome Prospects Autographs" returns the canonical
+  // releaseName="Bowman Chrome" matches. When setName is supplied
+  // (pricing.card.set.name is the live source), include it in the
+  // query — the catalog then returns the same releaseName the pricing
+  // payload uses, and the exact-match filter holds.
+  const query =
+    setName && setName.trim() ? `${release} ${setName}`.trim() : release;
+  const catalog = await searchCatalog(query, { year, take: RELEASE_SEARCH_TAKE });
   const expected = release.toLowerCase().trim();
   return catalog
     .filter(
@@ -849,16 +862,20 @@ async function discoverReleaseCardIds(
 export async function computeReleaseGradeCurve(
   release: string,
   year: number,
+  setName?: string | null,
 ): Promise<ReleaseGradeCurve> {
   const releaseClean = (release ?? "").trim();
   if (!releaseClean || !Number.isFinite(year) || year <= 0) {
     return new Map();
   }
+  // Cache key on (release, year) only — setName is a query-shape
+  // disambiguator that gets the right card_ids back; the curve itself
+  // is keyed on release identity, not on query path.
   const key = `cs:graded-curve:${releaseClean.toLowerCase()}|${year}`;
   const entries = await cacheWrap(
     key,
     async () => {
-      const ids = await discoverReleaseCardIds(releaseClean, year);
+      const ids = await discoverReleaseCardIds(releaseClean, year, setName);
       if (ids.length === 0) return [];
       const pricings = await runWithConcurrency(
         ids,
