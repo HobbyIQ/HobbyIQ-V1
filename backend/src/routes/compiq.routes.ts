@@ -1467,13 +1467,28 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // compileGradedEstimatesForCard so autoPriceHolding can reuse the
       // same canonical path. Helper traps internal errors → returns
       // { estimates: [], mutationDetected: false }; no outer try/catch
-      // needed here. Behavior is byte-identical to the prior inline
-      // assembly (anchor precedence + release-curve fetch + buildGradedEstimates
-      // + telemetry) — verified by a before/after probe diff at the
-      // extraction commit gate.
+      // needed here.
+      //
+      // CF-DECOUPLE-RAIL-SCOPE (2026-06-12): the gradedEstimates rail
+      // ALWAYS assembles in graded scope (isRawScope=false), regardless
+      // of whether the request's top-level scope is raw or graded.
+      // Pre-CF, the rail inherited isRawScope from body.gradeCompany +
+      // body.gradeValue presence, which meant a raw-scope request
+      // returned a raw-anchored rail (PSA 9 $1,200 for Leo Blue) that
+      // didn't match what autoPriceHolding stores ($1,400 graded-scope
+      // for the same holding). iOS rail render couldn't get
+      // holding-matching gradedEstimates without ALSO flipping
+      // top-level (marketTier / recentComps / trend / history /
+      // strategy) into graded scope.
+      //
+      // Now the rail is invariant to top-level scope: it always anchors
+      // on the parallel-COMPOSED value (base raw × multiplier) for
+      // parallel-scope requests, and on the base raw median for
+      // base-scope requests. Top-level fields keep honoring the
+      // request's grade fields — unchanged. iOS can render a holding-
+      // matching rail next to a raw-scope comp card in one request.
       let gradedEstimates: GradedProjectionResult[] = [];
       if (pricingForMR && !pricingForMR.notFound) {
-        const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
         const compiled = await compileGradedEstimatesForCard({
           pricing: pricingForMR,
           estimate: est as {
@@ -1484,7 +1499,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           },
           parallelId: resolvedParallelId ?? null,
           parallelName: resolvedParallelName ?? null,
-          isRawScope,
+          isRawScope: false,
           isThinMarket: isThin,
           gradeBreakdown,
           source: "compiq.price-by-id",
