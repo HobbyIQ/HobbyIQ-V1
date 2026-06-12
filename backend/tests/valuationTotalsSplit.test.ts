@@ -111,6 +111,159 @@ describe("summarizeHoldings — observed/estimated/pending split", () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// CF-HEADLINE-HONEST-TOTAL (2026-06-12) — explicit honest fields
+// alongside the legacy cost-proxy fields. Hard rule: no estimated dollar
+// ever enters observedGainLoss / observedGainLossPct.
+// ─────────────────────────────────────────────────────────────────────────
+describe("summarizeHoldings — CF-HEADLINE-HONEST-TOTAL", () => {
+  it("3-holding brief example: observed Trout + estimated Leo Blue PSA 10 + pending Leo Blue BGS 9.5", () => {
+    const items: PortfolioHolding[] = [
+      // Trout PSA 10 — observed @ $956, cost $700
+      makeHolding({
+        id: "trout",
+        purchasePrice: 700,
+        totalCostBasis: 700,
+        fairMarketValue: 956,
+        quantity: 1,
+        valuationStatus: "observed",
+      }),
+      // Leo Blue PSA 10 — estimated @ $3,260.40, cost $1,000
+      makeHolding({
+        id: "leo-psa10",
+        purchasePrice: 1000,
+        totalCostBasis: 1000,
+        fairMarketValue: undefined,
+        quantity: 1,
+        valuationStatus: "estimated",
+        estimatedValue: 3260.40,
+        isEstimate: true,
+      } as any),
+      // Leo Blue BGS 9.5 — pending (no number), cost $800
+      makeHolding({
+        id: "leo-bgs95",
+        purchasePrice: 800,
+        totalCostBasis: 800,
+        fairMarketValue: undefined,
+        quantity: 1,
+        valuationStatus: "pending",
+        isEstimate: true,
+      } as any),
+    ];
+    const s = summarizeHoldings(items);
+    // Honest fields:
+    expect(s.displayableTotalValue).toBe(4216.40);   // 956 + 3260.40
+    expect(s.observedValue).toBe(956);
+    expect(s.estimatedValue).toBe(3260.40);
+    expect(s.observedPct).toBeCloseTo(0.2267, 4);
+    expect(s.observedCostBasis).toBe(700);            // Trout cost ONLY
+    expect(s.observedGainLoss).toBe(256);              // 956 - 700
+    expect(s.observedGainLossPct).toBeCloseTo(0.3657, 4);  // 256 / 700
+    expect(s.estimatedCount).toBe(1);
+    expect(s.pendingCount).toBe(1);
+    // Legacy fields BYTE-IDENTICAL to pre-CF behavior — cost-proxy fallback
+    // means: Trout observed → 956, Leo PSA 10 (null FMV) → cost 1000,
+    // Leo BGS 9.5 (null FMV) → cost 800. Sum 2756.
+    expect(s.totalValue).toBe(2756);
+    expect(s.totalCost).toBe(2500);
+    expect(s.totalGainLoss).toBe(256);
+    expect(s.cardCount).toBe(3);
+  });
+
+  it("HARD RULE: estimated dollar contributes ZERO to observedGainLoss/Pct", () => {
+    // One estimated holding with massive estimatedValue and tiny cost.
+    // observedGainLoss must be 0 (no observed holdings).
+    // observedGainLossPct must be null (no observed cost basis).
+    const items: PortfolioHolding[] = [
+      makeHolding({
+        id: "lottery",
+        purchasePrice: 1,
+        totalCostBasis: 1,
+        fairMarketValue: undefined,
+        valuationStatus: "estimated",
+        estimatedValue: 100000,    // $100K estimate, $1 cost — would be huge gain if folded in
+        isEstimate: true,
+      } as any),
+    ];
+    const s = summarizeHoldings(items);
+    expect(s.observedGainLoss).toBe(0);
+    expect(s.observedGainLossPct).toBeNull();      // no observed cost basis → null, not 0
+    expect(s.observedValue).toBe(0);
+    expect(s.estimatedValue).toBe(100000);
+    expect(s.displayableTotalValue).toBe(100000);
+  });
+
+  it("pending holdings contribute ZERO to observedCostBasis (and thus ZERO to observed gain)", () => {
+    const items: PortfolioHolding[] = [
+      makeHolding({ id: "obs", fairMarketValue: 500, totalCostBasis: 400, valuationStatus: "observed" }),
+      makeHolding({
+        id: "pend",
+        purchasePrice: 999,
+        totalCostBasis: 999,
+        fairMarketValue: undefined,
+        valuationStatus: "pending",
+        isEstimate: true,
+      } as any),
+    ];
+    const s = summarizeHoldings(items);
+    expect(s.observedCostBasis).toBe(400);          // ONLY the observed holding's cost
+    expect(s.observedGainLoss).toBe(100);           // 500 - 400; pending's $999 cost ignored
+    expect(s.observedGainLossPct).toBeCloseTo(0.25, 4);
+  });
+
+  it("empty portfolio: observedGainLossPct=null, observedGainLoss=0, displayableTotalValue=0", () => {
+    const s = summarizeHoldings([]);
+    expect(s.observedGainLoss).toBe(0);
+    expect(s.observedGainLossPct).toBeNull();
+    expect(s.observedCostBasis).toBe(0);
+    expect(s.displayableTotalValue).toBe(0);
+  });
+
+  it("all-observed portfolio: legacy and honest fields agree (no estimated holdings → no divergence)", () => {
+    const items: PortfolioHolding[] = [
+      makeHolding({ id: "a", fairMarketValue: 100, totalCostBasis: 80, valuationStatus: "observed" }),
+      makeHolding({ id: "b", fairMarketValue: 250, totalCostBasis: 200, valuationStatus: "observed" }),
+    ];
+    const s = summarizeHoldings(items);
+    expect(s.displayableTotalValue).toBe(s.observedValue);
+    expect(s.observedGainLoss).toBe(s.totalGainLoss);
+    // Legacy totalGainLossPct is *100 scale; observedGainLossPct is fractional.
+    expect(s.observedGainLossPct).toBeCloseTo(s.totalGainLossPct / 100, 4);
+  });
+
+  it("legacy fields BYTE-IDENTICAL to pre-CF behavior (regression guard)", () => {
+    // A portfolio with one of each status. Legacy fields must equal the
+    // exact values they would have produced before CF-HEADLINE-HONEST-TOTAL.
+    const items: PortfolioHolding[] = [
+      makeHolding({ id: "o", fairMarketValue: 500, totalCostBasis: 300, valuationStatus: "observed" }),
+      makeHolding({
+        id: "e",
+        purchasePrice: 50,
+        totalCostBasis: 50,
+        fairMarketValue: undefined,
+        valuationStatus: "estimated",
+        estimatedValue: 1000,
+        isEstimate: true,
+      } as any),
+      makeHolding({
+        id: "p",
+        purchasePrice: 25,
+        totalCostBasis: 25,
+        fairMarketValue: undefined,
+        valuationStatus: "pending",
+        isEstimate: true,
+      } as any),
+    ];
+    const s = summarizeHoldings(items);
+    // computeDisplayValue: observed=500, estimated (null FMV)→cost=50, pending (null FMV)→cost=25
+    expect(s.totalValue).toBe(575);
+    expect(s.totalCost).toBe(375);
+    expect(s.totalGainLoss).toBe(200);
+    expect(s.totalGainLossPct).toBeCloseTo((200 / 375) * 100, 2);
+    expect(s.cardCount).toBe(3);
+  });
+});
+
 describe("composeHoldingWireShape — displayableValue + displayableValueSource", () => {
   it("observed holding: displayableValue = fmv × qty; source = 'observed'", () => {
     const wire = composeHoldingWireShape(makeHolding({

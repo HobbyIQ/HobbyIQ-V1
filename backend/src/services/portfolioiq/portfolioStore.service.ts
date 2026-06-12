@@ -1574,6 +1574,21 @@ export interface PortfolioSummary {
   estimatedCount: number;
   pendingCount: number;
   observedPct: number | null;
+  // CF-HEADLINE-HONEST-TOTAL (2026-06-12): explicit honest fields the
+  // iOS dashboard can read directly. Legacy fields above stay observed-
+  // or-cost-proxy (existing contract); these surface the real picture:
+  //   displayableTotalValue = observedValue + estimatedValue
+  //     — the headline matches what iOS shows per-row (Σ displayableValue).
+  //   observedCostBasis = Σ costBasis where valuationStatus==="observed"
+  //   observedGainLoss / observedGainLossPct  — REAL P&L, computed only
+  //     over observed holdings. HARD RULE: no estimated dollar enters any
+  //     *GainLoss field. Estimated upside surfaces as VALUE (estimatedValue,
+  //     displayableTotalValue), not as a realized-looking gain. Pending
+  //     holdings excluded from gain entirely.
+  displayableTotalValue: number;
+  observedCostBasis: number;
+  observedGainLoss: number;
+  observedGainLossPct: number | null;
 }
 
 const EXCLUDED_STATUS = new Set([
@@ -1603,6 +1618,10 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
   let estimatedValue = 0;
   let estimatedCount = 0;
   let pendingCount = 0;
+  // CF-HEADLINE-HONEST-TOTAL (2026-06-12): observed-only cost-basis
+  // accumulator so observedGainLoss/Pct can be computed in the same
+  // pass without re-iterating the holdings array.
+  let observedCostBasis = 0;
   for (const h of items) {
     const status = String((h as any).cardStatus ?? (h as any).statusCategory ?? "")
       .trim()
@@ -1638,12 +1657,26 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
       if (observedTotal !== null && observedTotal > 0) {
         observedValue += observedTotal;
       }
+      // CF-HEADLINE-HONEST-TOTAL — observed-only cost basis is the
+      // observedGainLoss denominator. computeCostBasisTotal already
+      // returns 0 for holdings with no purchasePrice/totalCostBasis,
+      // so a cost-less observed holding contributes nothing here.
+      observedCostBasis += computeCostBasisTotal(h);
     }
   }
   const totalGainLoss = totalValue - totalCost;
   const totalGainLossPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
   const headlineTotal = observedValue + estimatedValue;
   const observedPct = headlineTotal > 0 ? observedValue / headlineTotal : null;
+  // CF-HEADLINE-HONEST-TOTAL — observed-only P&L. HARD RULE: no estimated
+  // dollar enters either field. The estimated upside (e.g. Leo Blue PSA 10:
+  // $3,260.40 estimated vs $1,000 purchase) surfaces as VALUE via
+  // estimatedValue + displayableTotalValue, NEVER as a realized-looking
+  // gain. observedGainLossPct returns null when there's no observed cost
+  // to divide by (don't synthesize a 0% return when nothing observed).
+  const observedGainLoss = observedValue - observedCostBasis;
+  const observedGainLossPct =
+    observedCostBasis > 0 ? observedGainLoss / observedCostBasis : null;
   return {
     totalValue: round2(totalValue),
     totalCost: round2(totalCost),
@@ -1655,6 +1688,13 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
     estimatedCount,
     pendingCount,
     observedPct: observedPct === null ? null : Math.round(observedPct * 10000) / 10000,
+    displayableTotalValue: round2(headlineTotal),
+    observedCostBasis: round2(observedCostBasis),
+    observedGainLoss: round2(observedGainLoss),
+    observedGainLossPct:
+      observedGainLossPct === null
+        ? null
+        : Math.round(observedGainLossPct * 10000) / 10000,
   };
 }
 
