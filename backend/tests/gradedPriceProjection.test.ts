@@ -712,10 +712,11 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(r.diagnostics.targetGradeBaseMedian).toBeNull();
       // Safe pool stats preserved (observed, not derived)
       expect(r.diagnostics.baseRawSampleCount).toBeGreaterThan(0);
-      // Phase 3A addendum: basis cites observed pool stats for honest
-      // "why" context — never the dropped tier-3 ballpark number.
-      expect(r.basis).toContain(`No ${grade} sales yet to estimate from`);
-      expect(r.basis).toContain(`${r.diagnostics.baseRawSampleCount} raw sales observed`);
+      // Phase 3A addendum-2: parallel-scope prose labels the count as
+      // BASE raw (not implied as the parallel's own) and names the
+      // parallel — gap is at the parallel grade; count is the base pool.
+      expect(r.basis).toContain(`No ${grade} sales yet for this Blue Refractor`);
+      expect(r.basis).toContain(`${r.diagnostics.baseRawSampleCount} base raw sales observed`);
       expect(r.basis).toContain(`none graded ${grade}`);
       // Anti-leak: basis must NEVER contain the dropped ballpark number
       // ($1,183 × 3.5 = $4,140; × 3.4 = $4,022).
@@ -1037,7 +1038,7 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(bgs95).toBeDefined();
     expect(bgs95.confidenceTier).toBe("insufficient");
     expect(bgs95.basis).toBe(
-      "Not enough BGS 9.5 sales to estimate — 5 raw sales observed; only 2 graded BGS 9.5 (need at least 3).",
+      "Not enough BGS 9.5 sales to estimate for this Cosmic Aura — 5 base raw sales observed; only 2 graded BGS 9.5 (need at least 3).",
     );
     // Anti-leak: the 2 BGS 9.5 sales had median $710; the dropped tier-3
     // ballpark would have been $200 × 3.5 = $700. Neither number, nor any
@@ -1060,6 +1061,77 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
     expect(bgs95.basis).toBe(
       "No data to estimate BGS 9.5 — no raw sales observed at this card.",
     );
+  });
+
+  // ── Phase 3A addendum-2 — scope-labeled insufficient prose ─────────────
+  // When the request is for a parallel, the count cited in the basis is
+  // labeled "base raw" (not implied as the parallel's own) and the
+  // parallel name is woven into the prose. Base-scope prose is unchanged.
+
+  it("INSUFFICIENT BASIS (parallel) — N base raw + 0 graded → 'No {grade} sales yet for this {parallel} — N base raw sales observed, none graded {grade}.'", () => {
+    // Leo Blue /150 parallel-scope request. The BLUE_PID hit doesn't
+    // exist as Cardsight-tagged records; the BGS 9.5 / SGC 10 grades
+    // have 0 records in BLUE scope → GUARD passes → tier-3 fallback →
+    // collapse → insufficient marker. Basis says "for this Blue Refractor"
+    // and labels the 24 base raw count as base, not as the Blue scope's
+    // own raw.
+    const pricing = makeLeoParallelPricingNoBlueGraded();
+    const { estimates } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelName: "Blue Refractor",
+      targetParallelRawFmv: 1183,
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("insufficient");
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales yet for this Blue Refractor — 24 base raw sales observed, none graded BGS 9.5.",
+    );
+    expect(bgs95.basis).not.toContain("$");
+  });
+
+  it("INSUFFICIENT BASIS (parallel) — 0 raw → 'No data to estimate {grade} for this {parallel} — no base raw sales observed at this card.'", () => {
+    const empty: CardsightPricingResponse = {
+      card: { card_id: "empty", name: "Empty", number: "E" } as any,
+      raw: { count: 0, records: [] },
+      graded: [],
+      meta: { total_records: 0, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const { estimates } = buildGradedEstimates({
+      pricing: empty,
+      targetParallelId: "11111111-1111-1111-1111-111111111111",
+      targetParallelName: "Gold Refractor",
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.basis).toBe(
+      "No data to estimate BGS 9.5 for this Gold Refractor — no base raw sales observed at this card.",
+    );
+  });
+
+  it("INSUFFICIENT BASIS (parallel without name) — falls back to 'this parallel'", () => {
+    const pricing = makeLeoPricing();
+    const { estimates } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "11111111-1111-1111-1111-111111111111",
+      // targetParallelName intentionally absent — route may not always supply
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales yet for this parallel — 24 base raw sales observed, none graded BGS 9.5.",
+    );
+  });
+
+  it("INSUFFICIENT BASIS (base scope unchanged) — 'raw sales observed', no 'base' qualifier, no 'for this' phrase", () => {
+    // Direct regression guard: the base-scope prose stays exactly as
+    // addendum-1 emitted it. No "base raw" relabel, no parallel phrase.
+    const pricing = makeLeoPricing();
+    const { estimates } = buildGradedEstimates({ pricing });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales yet to estimate from — 24 raw sales observed, none graded BGS 9.5.",
+    );
+    expect(bgs95.basis).not.toContain("for this");
+    expect(bgs95.basis).not.toContain("base raw");
   });
 });
 

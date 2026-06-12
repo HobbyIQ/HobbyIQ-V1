@@ -779,6 +779,19 @@ export function buildGradedEstimates(
   // The pricing-pool stats (baseRawMedian + baseRawSampleCount +
   // cardSpecificBaseSamples) are observed pool figures, safe to surface
   // as "why we can't estimate" diagnostics.
+  // Phase 3A addendum-2 (2026-06-14): parallel-scope insufficient prose
+  // must label the count as BASE raw (not implied as the parallel's own
+  // raw count) and name the parallel — the prose is about a parallel
+  // grade gap, but the count it cites comes from the base pool. When
+  // base scope, the existing prose ("N raw sales observed") is correct
+  // as-is. The parallelName falls back to "this parallel" when the
+  // route didn't supply a name.
+  const parallelScopeName = input.targetParallelId
+    ? (input.targetParallelName && input.targetParallelName.trim().length > 0
+       ? input.targetParallelName.trim()
+       : "parallel")  // prose already has "for this " prefix → "for this parallel"
+    : null;
+
   const estimates: GradedProjectionResult[] = all.map((r) => {
     if (r.confidenceTier === "estimate" || r.confidenceTier === "rough") {
       return r;
@@ -792,6 +805,7 @@ export function buildGradedEstimates(
         r.grade,
         r.diagnostics.baseRawSampleCount,
         r.diagnostics.cardSpecificBaseSamples,
+        parallelScopeName,
       ),
       confidenceTier: "insufficient",
       ratioSource: "none",
@@ -814,29 +828,44 @@ export function buildGradedEstimates(
 
 /**
  * Build the "why" prose for an insufficient marker using observed pool
- * stats. Both inputs are OBSERVED counts (real raw / real graded sale
- * counts at this card), preserved from the engine result; the helper
+ * stats. All numeric inputs are OBSERVED counts (real raw / real graded
+ * sale counts at this card), preserved from the engine result; the helper
  * never references estimates or derived values. baseRawMedian is
  * intentionally NOT surfaced in the prose — it's pool context, never
  * the grade's value. iOS uses this string verbatim in the row's tap-
  * state.
+ *
+ * Scope label (Phase 3A addendum-2): when the request is for a parallel
+ * (parallelScopeName non-null), the count is labeled "base raw" — the
+ * raw sample count comes from the base pool, not the parallel itself —
+ * AND the parallel name is named so the user knows which grade gap the
+ * prose is about. When base scope (null), prose says "raw sales observed"
+ * unmodified, since the count IS the base raw count and "base" is
+ * implicit.
  */
 function buildInsufficientBasis(
   grade: string,
   baseRawSampleCount: number,
   cardSpecificBaseSamples: number,
+  parallelScopeName: string | null,
 ): string {
   const rawN = baseRawSampleCount;
   const gradedN = cardSpecificBaseSamples;
-  const rawWord = (n: number) => `${n} raw sale${n === 1 ? "" : "s"}`;
+  const isParallel = parallelScopeName != null && parallelScopeName.length > 0;
+  const rawLabel = isParallel ? "base raw" : "raw";
+  const rawWord = (n: number) => `${n} ${rawLabel} sale${n === 1 ? "" : "s"}`;
+  // "for this {parallel}" frames the gap as scoped to the parallel; base
+  // scope omits the phrase (the gap is at the base level).
+  const scopePhrase = isParallel ? ` for this ${parallelScopeName}` : " to estimate from";
+
   if (rawN === 0) {
-    return `No data to estimate ${grade} — no raw sales observed at this card.`;
+    return `No data to estimate ${grade}${isParallel ? ` for this ${parallelScopeName}` : ""} — no ${rawLabel} sales observed at this card.`;
   }
   if (gradedN === 0) {
-    return `No ${grade} sales yet to estimate from — ${rawWord(rawN)} observed, none graded ${grade}.`;
+    return `No ${grade} sales yet${scopePhrase} — ${rawWord(rawN)} observed, none graded ${grade}.`;
   }
   // gradedN > 0 but below tier-1 threshold
-  return `Not enough ${grade} sales to estimate — ${rawWord(rawN)} observed; only ${gradedN} graded ${grade} (need at least ${TIER1_MIN_BASE_SAMPLES}).`;
+  return `Not enough ${grade} sales to estimate${isParallel ? ` for this ${parallelScopeName}` : ""} — ${rawWord(rawN)} observed; only ${gradedN} graded ${grade} (need at least ${TIER1_MIN_BASE_SAMPLES}).`;
 }
 
 // ── Phase 1c (CF-GRADED-PRICE-PROJECTION) — release-level grade curve ──────
