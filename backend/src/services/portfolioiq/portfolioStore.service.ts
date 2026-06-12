@@ -3,6 +3,12 @@ import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): assemble the same gradedEstimates
+// array /price-by-id surfaces, so a graded holding's stored valuation
+// can mirror the rail's grounded/insufficient verdict at write time.
+import { compileGradedEstimatesForCard } from "../compiq/compileGradedEstimatesForCard.js";
+import { getPricing as getPricingForMarketRead } from "../compiq/cardsight.client.js";
+import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
@@ -689,6 +695,42 @@ export function computePerUnitValue(holding: PortfolioHolding | undefined | null
   return typeof fmv === "number" && Number.isFinite(fmv) ? fmv : null;
 }
 
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): observed-only per-unit reader.
+// Returns ONLY fairMarketValue — never an estimate. Used by every
+// accounting/reporting consumer that cannot tolerate estimated dollars:
+// ERP valuation, Schedule D, tax outputs, sell-flow proceeds math, P&L
+// aggregation. Structurally identical to computePerUnitValue today; the
+// rename exists so call sites declare intent and a future audit can
+// grep for "Observed" reads vs "Displayable" reads with zero ambiguity.
+export function computeObservedPerUnitValue(holding: PortfolioHolding | undefined | null): number | null {
+  return computePerUnitValue(holding);
+}
+
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): wire/dashboard per-unit reader.
+// Prefers observed FMV; falls back to graded-rail estimatedValue when the
+// holding is graded-estimated (valuationStatus="estimated"); returns null
+// when neither (valuationStatus="pending" / no data). Returns the SOURCE
+// flag too so the caller can label the displayed value ("observed" /
+// "estimated") and surface different UI treatment per the contract.
+// NEVER used by ERP / Schedule D / tax math — those go through
+// computeObservedPerUnitValue exclusively.
+export interface DisplayablePerUnitValue {
+  value: number | null;
+  source: "observed" | "estimated" | null;
+}
+export function computeDisplayablePerUnitValue(
+  holding: PortfolioHolding | undefined | null,
+): DisplayablePerUnitValue {
+  if (!holding) return { value: null, source: null };
+  const observed = computeObservedPerUnitValue(holding);
+  if (observed !== null) return { value: observed, source: "observed" };
+  const est = (holding as { estimatedValue?: number | null }).estimatedValue;
+  if (typeof est === "number" && Number.isFinite(est) && est > 0) {
+    return { value: est, source: "estimated" };
+  }
+  return { value: null, source: null };
+}
+
 export function computeTotalValue(holding: PortfolioHolding | undefined | null): number | null {
   const perUnit = computePerUnitValue(holding);
   if (perUnit === null) return null;
@@ -935,7 +977,157 @@ async function autoPriceHolding(
   // short-circuit at the next line).
   const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
 
-  if (fairValue <= 0) {
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail resolution.
+  // Run when the holding is graded (gradeCompany + gradeValue present
+  // and well-formed) AND we have a cardsightCardId to fetch pricing
+  // for. The rail produces 4 entries per pricing payload; match the
+  // holding's grade against them and branch per the resolution tree:
+  //   • no match (engine GUARD-skipped the grade because there's ≥1
+  //     observed sale in scope) → grade is OBSERVED. Use computeEstimate's
+  //     fairValue as before; valuationStatus = "observed".
+  //   • match grounded (confidenceTier ∈ {estimate, rough}) →
+  //     fairMarketValue = null (no estimate landing in the observed
+  //     slot that feeds ERP P&L / Schedule D); populate estimate* fields;
+  //     valuationStatus = "estimated".
+  //   • match insufficient → fairMarketValue + estimatedValue both null;
+  //     estimateBasis = entry.basis (the scope-labeled "why" prose for
+  //     iOS tap-state); valuationStatus = "pending".
+  // Ungraded holdings or holdings without cardsightCardId skip the rail
+  // entirely; their valuation is the existing fairValue path, stamped
+  // valuationStatus = "observed" to populate the new field.
+  //
+  // Grade match is NORMALIZED (uppercase company, Number(value)) on
+  // BOTH sides — a lowercase "psa" or string "10" from iOS input must
+  // match the engine's "PSA 10" entry; a silent no-match would route
+  // a grounded grade to the "observed" branch and surface a null/base
+  // FMV instead of the estimate (wrong-valuation bug, no crash).
+  const normalizedGradeCompany = String(
+    (holding as any).gradingCompany ?? (holding as any).gradeCompany ?? "",
+  ).trim().toUpperCase();
+  const normalizedGradeValue = (() => {
+    const n = Number((holding as any).gradeValue);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const isGraded =
+    normalizedGradeCompany.length > 0 && normalizedGradeValue !== null;
+  const cardsightCardId =
+    typeof holding.cardsightCardId === "string" && holding.cardsightCardId.length > 0
+      ? holding.cardsightCardId
+      : null;
+
+  let railResolution: {
+    fairMarketValueOverride: number | null;  // null when estimated/pending; fairValue when observed
+    valuationStatus: "observed" | "estimated" | "pending";
+    estimatedValue: number | null;
+    estimateLow: number | null;
+    estimateHigh: number | null;
+    estimateConfidence: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+    estimateBasis: string | null;
+    isEstimate: boolean;
+  } | null = null;
+
+  if (isGraded && cardsightCardId) {
+    try {
+      const pricing = await getPricingForMarketRead(cardsightCardId);
+      if (pricing && !pricing.notFound) {
+        const parallelId =
+          typeof (holding as { parallelId?: string | null }).parallelId === "string"
+          && ((holding as { parallelId?: string | null }).parallelId as string).length > 0
+            ? (holding as { parallelId?: string | null }).parallelId as string
+            : null;
+        const parallelName = String(holding.parallel ?? "").trim() || null;
+        const gradeBreakdown = buildGradeBreakdown(pricing, parallelId);
+        const compiled = await compileGradedEstimatesForCard({
+          pricing,
+          estimate: estimate as {
+            fairMarketValue?: number | null;
+            lastSale?: { price?: number | null } | null;
+            daysSinceNewestComp?: number | null;
+            recentComps?: ReadonlyArray<unknown>;
+          },
+          parallelId,
+          parallelName,
+          // Holding flow is graded-scope (we have gradeCompany+gradeValue),
+          // so anchor on parallel-composed for parallel scope; for base
+          // scope the anchor is base raw regardless of isRawScope.
+          isRawScope: false,
+          isThinMarket: !(fairValue > 0),
+          gradeBreakdown,
+          source: "portfolio.autoPriceHolding",
+          cardId: cardsightCardId,
+        });
+        const targetLabel = `${normalizedGradeCompany} ${normalizedGradeValue}`;
+        const match = compiled.estimates.find((e) => {
+          // Engine labels are e.g. "PSA 10" or "BGS 9.5" — same shape
+          // we built above, normalized to uppercase + numeric value.
+          // Defensive normalize the engine side too in case of drift.
+          const parts = e.grade.trim().split(/\s+/);
+          if (parts.length !== 2) return false;
+          const co = parts[0]!.toUpperCase();
+          const val = Number(parts[1]);
+          return (
+            co === normalizedGradeCompany
+            && Number.isFinite(val)
+            && val === normalizedGradeValue
+          );
+        });
+        if (!match) {
+          // No rail entry → GUARD skipped (observed in scope). Existing
+          // fairValue path with explicit valuationStatus.
+          railResolution = {
+            fairMarketValueOverride: fairValue > 0 ? fairValue : null,
+            valuationStatus: "observed",
+            estimatedValue: null,
+            estimateLow: null,
+            estimateHigh: null,
+            estimateConfidence: null,
+            estimateBasis: null,
+            isEstimate: false,
+          };
+        } else if (
+          match.confidenceTier === "estimate"
+          || match.confidenceTier === "rough"
+        ) {
+          // Grounded estimate → display-not-train. fairMarketValue NULL
+          // (the firewall — no estimate landing in the slot ERP reads).
+          railResolution = {
+            fairMarketValueOverride: null,
+            valuationStatus: "estimated",
+            estimatedValue: match.estimatedValue,
+            estimateLow: match.estimateLow,
+            estimateHigh: match.estimateHigh,
+            estimateConfidence: match.confidenceTier,
+            estimateBasis: match.basis,
+            isEstimate: true,
+          };
+        } else {
+          // Insufficient marker → "valuation pending". estimateBasis
+          // carries the scope-labeled prose for iOS tap-state.
+          railResolution = {
+            fairMarketValueOverride: null,
+            valuationStatus: "pending",
+            estimatedValue: null,
+            estimateLow: null,
+            estimateHigh: null,
+            estimateConfidence: "insufficient",
+            estimateBasis: match.basis,
+            isEstimate: true,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[portfolio.autoPriceHolding] graded-rail resolution failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+      railResolution = null;
+    }
+  }
+
+  // For ungraded holdings: preserve the existing "abort on fairValue<=0"
+  // behavior — the rail wasn't going to fire anyway, and we don't want
+  // to start stamping valuationStatus on cases that previously persisted
+  // with no value at all.
+  if (!railResolution && fairValue <= 0) {
     return holding;
   }
 
@@ -977,9 +1169,34 @@ async function autoPriceHolding(
     ? (__trendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
     : null;
 
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): merge railResolution into the
+  // stamped holding. Ungraded / no-cardsightCardId path: railResolution
+  // is null → fairMarketValue = fairValue (existing behavior),
+  // valuationStatus = "observed". Graded with rail match: fields per
+  // the resolution tree.
+  const resolved = railResolution ?? {
+    fairMarketValueOverride: fairValue,
+    valuationStatus: "observed" as const,
+    estimatedValue: null,
+    estimateLow: null,
+    estimateHigh: null,
+    estimateConfidence: null,
+    estimateBasis: null,
+    isEstimate: false,
+  };
+
   const updated: PortfolioHolding = {
     ...holding,
-    fairMarketValue: fairValue,
+    fairMarketValue: resolved.fairMarketValueOverride === null
+      ? null as any  // null erases the field on display; ERP read coerces null→null
+      : resolved.fairMarketValueOverride,
+    estimatedValue: resolved.estimatedValue,
+    estimateLow: resolved.estimateLow,
+    estimateHigh: resolved.estimateHigh,
+    estimateConfidence: resolved.estimateConfidence,
+    estimateBasis: resolved.estimateBasis,
+    isEstimate: resolved.isEstimate,
+    valuationStatus: resolved.valuationStatus,
     predictedPrice,
     predictedPriceLow,
     predictedPriceHigh,
@@ -999,11 +1216,21 @@ async function autoPriceHolding(
     // marketPressure (Gate-2 β), freshnessStatus.
   };
 
-  appendPriceHistory(doc, holding.id, {
-    at: now,
-    value: fairValue,
-    source,
-  });
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): priceHistory stays observed-
+  // only. Estimated and pending holdings do NOT append — the trajectory
+  // iOS renders represents real comp-anchored value over time, never
+  // estimate points (which would drift as the engine re-anchors) or
+  // null gaps. When valuationStatus flips from observed to estimated
+  // (e.g., a graded holding refresh where the grade lost its last
+  // observed sale), we leave the prior observed trail intact and stop
+  // appending — the trajectory pauses honestly.
+  if (resolved.valuationStatus === "observed" && resolved.fairMarketValueOverride !== null) {
+    appendPriceHistory(doc, holding.id, {
+      at: now,
+      value: resolved.fairMarketValueOverride,
+      source,
+    });
+  }
 
   evaluateHoldingAlerts(doc, previous, updated);
   doc.holdings[holding.id] = updated;
@@ -3173,4 +3400,8 @@ export async function runBatchReprice(req: Request, res: Response) {
 export const __portfolioStoreInternals = {
   writeUserDoc,
   validateHoldingIdentity,
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): exposed for in-process probe
+  // tests that exercise the resolution tree without spinning up the
+  // route + auth + Cosmos write path. Do not call from production.
+  autoPriceHolding,
 };

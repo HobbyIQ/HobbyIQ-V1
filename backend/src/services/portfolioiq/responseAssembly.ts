@@ -156,6 +156,16 @@ export interface PortfolioHoldingWire {
   verdict: string | null;
   recommendation: string | null;
   predictedPriceMechanism: string | null;
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail valuation fields.
+  // Structurally separate from fairMarketValue — iOS reads these to
+  // render the "estimated" badge + tap-state for graded holdings.
+  estimatedValue: number | null;
+  estimateLow: number | null;
+  estimateHigh: number | null;
+  estimateConfidence: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+  estimateBasis: string | null;
+  isEstimate: boolean;
+  valuationStatus: "observed" | "estimated" | "pending" | null;
   // Computed CHEAP at response (7)
   currentValue: number;
   totalProfitLoss: number;
@@ -235,6 +245,20 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     verdict: holding.verdict ?? null,
     recommendation: holding.recommendation ?? null,
     predictedPriceMechanism: holding.predictedPriceMechanism ?? null,
+    // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail valuation fields.
+    // fmvPerUnit is OBSERVED-ONLY (computePerUnitValue). estimatedValue
+    // is the labeled estimate when the rail fires grounded; null when
+    // observed or pending. iOS reads valuationStatus to decide which
+    // treatment to render. currentValue/quickSale/premium below still
+    // use observed-only fmvPerUnit — Step 2's totals split decides
+    // whether to fold estimated dollars into headline aggregates.
+    estimatedValue: holding.estimatedValue ?? null,
+    estimateLow: holding.estimateLow ?? null,
+    estimateHigh: holding.estimateHigh ?? null,
+    estimateConfidence: holding.estimateConfidence ?? null,
+    estimateBasis: holding.estimateBasis ?? null,
+    isEstimate: holding.isEstimate ?? false,
+    valuationStatus: holding.valuationStatus ?? null,
     // Computed CHEAP
     currentValue,
     totalProfitLoss,

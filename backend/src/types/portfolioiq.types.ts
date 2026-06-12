@@ -128,4 +128,44 @@ export interface PortfolioHolding {
   // ENDPOINT-EVAL (006176d) Finding 2 GREEN. Same posture as R1
   // (cardsightCardId) -- additive, backward-compatible, no migration.
   cardsightGradeId?: string | null;
+
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): pinned-parallel Cardsight UUID
+  // for a parallel holding (e.g. Leo Blue Refractor /150 → parallelId
+  // "0383bf13…"). Distinct from `parallel` (the human-readable name).
+  // When present, autoPriceHolding's gradedEstimates assembly runs in
+  // PARALLEL scope (anchor on the parallel's raw FMV); when absent, BASE
+  // scope. Name-only holdings would otherwise silently fall to base
+  // scope and surface the wrong rail entry — iOS POSTs from the comp
+  // card include the pinned parallelId from the engine response.
+  parallelId?: string | null;
+
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail valuation fields.
+  // STRUCTURALLY SEPARATE from fairMarketValue (observed-only). When the
+  // holding's grade matches a grounded gradedEstimates entry, the rail
+  // entry populates these; fairMarketValue stays null (no estimate
+  // landing in the observed slot that feeds ERP P&L / Schedule D).
+  // When the entry is insufficient, estimatedValue stays null but
+  // estimateBasis carries the scope-labeled "why" prose for iOS tap-
+  // state. When the grade has observed sales (GUARD-skipped from the
+  // rail), all these fields stay null and fairMarketValue carries the
+  // observed value as before. Display-only — assert no training/comp
+  // path reads these (firewall test in Step 1 commit).
+  estimatedValue?: number | null;
+  estimateLow?: number | null;
+  estimateHigh?: number | null;
+  estimateConfidence?: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+  estimateBasis?: string | null;
+  isEstimate?: boolean;
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): valuation provenance tag.
+  // "observed"   → holding has real comp-anchored FMV in fairMarketValue
+  //                (ungraded holding OR graded holding where the grade
+  //                had observed sales in scope).
+  // "estimated"  → holding has a grounded graded-rail estimate in
+  //                estimatedValue (PSA 10/9 borrow from card-base ratio
+  //                or release-curve fill). fairMarketValue null; iOS
+  //                renders the estimate with a clear "estimated" badge.
+  // "pending"    → holding's grade hit an insufficient marker on the
+  //                rail. fairMarketValue + estimatedValue both null;
+  //                iOS surfaces estimateBasis prose explaining the gap.
+  valuationStatus?: "observed" | "estimated" | "pending" | null;
 }
