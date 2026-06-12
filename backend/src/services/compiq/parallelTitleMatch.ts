@@ -90,6 +90,37 @@ const PARALLEL_QUALIFIER_VOCAB: ReadonlySet<string> = (() => {
   return tokens;
 })();
 
+/**
+ * CF-GRADED-PRICE-PROJECTION (2026-06-12): exported "is this title a
+ * base record?" predicate. Single source of truth for base/parallel
+ * splitting across the value path (recovery's specificity guard) and
+ * the new graded-price estimator. Returns TRUE when the title carries
+ * NO finish-qualifier tokens beyond the category labels (auto /
+ * autograph / refractor / base) — i.e., no color/finish word that
+ * would mark it as a more-specific sibling.
+ *
+ * Whitespace + hyphen + slash + comma + period + hash split, parens
+ * dropped (not their content extracted — different from
+ * tokenizeParallel's wrapper-strip; titles use parens for sample
+ * markers, not for canonical-name aliasing). Case-insensitive.
+ *
+ * Empty/missing title → treat as base (can't classify; default to
+ * inclusion, the value path already filters by parallel_id elsewhere).
+ */
+export function isBaseTitle(title: string | null | undefined): boolean {
+  if (title == null) return true;
+  const stripped = String(title).replace(/\([^)]*\)/g, " ");
+  const tokens = stripped
+    .split(/[\s\-\/.,#]+/)
+    .map((t) => t.toLowerCase())
+    .filter((t) => t.length > 0);
+  for (const t of tokens) {
+    if (CATEGORY_LABEL_TOKENS.has(t)) continue;
+    if (PARALLEL_QUALIFIER_VOCAB.has(t)) return false;
+  }
+  return true;
+}
+
 export type ParallelPriceSource =
   | "cardsight-parallel-id"
   | "title-matched-parallel"

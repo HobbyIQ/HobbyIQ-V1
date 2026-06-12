@@ -43,6 +43,16 @@ export interface ValuationResponse {
     freshCount: number;
     staleCount: number;
     missingCount: number;
+    // CF-VALUATION-TOTALS-SPLIT (2026-06-12): counts ONLY — no dollars.
+    // Estimated holdings carry fairMarketValue=null on disk (Step 1
+    // resolution tree), so they're already excluded from snapshotValue
+    // and tracked under missingCount. estimatedCount + pendingCount are
+    // SUB-buckets of the no-FMV set so the UI can tell "we couldn't
+    // price it at all" from "we have a labeled estimate, just not on
+    // the tax line." Schedule D CSV, tax accounting, all derived
+    // dollar fields stay UNCHANGED.
+    estimatedCount: number;
+    pendingCount: number;
   };
   fullPosition: {
     realizedYtd: number;
@@ -99,9 +109,22 @@ export function buildValuation(
   let freshCount = 0;
   let staleCount = 0;
   let missingCount = 0;
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): counts only. Sub-buckets of
+  // the no-FMV set — these holdings ARE in missingCount + NOT in
+  // snapshotValue, but the UI can distinguish "couldn't price" (the
+  // remainder of missingCount after subtracting these two) from
+  // "labeled rail estimate, kept off the tax line" (estimatedCount) and
+  // "rail says insufficient" (pendingCount). NO DOLLAR FROM AN ESTIMATE
+  // ENTERS this function's outputs — Schedule D / tax integrity hard
+  // invariant.
+  let estimatedCount = 0;
+  let pendingCount = 0;
   let asOfMs: number | null = null;
 
   const rows: ValuationHolding[] = holdings.map((h) => {
+    const vs = (h as { valuationStatus?: string }).valuationStatus;
+    if (vs === "estimated") estimatedCount += 1;
+    else if (vs === "pending") pendingCount += 1;
     const fmv = typeof h.fairMarketValue === "number" && Number.isFinite(h.fairMarketValue) ? h.fairMarketValue : null;
     const qty = typeof h.quantity === "number" && h.quantity > 0 ? h.quantity : 1;
     const cost = costBasisFor(h);
@@ -157,6 +180,8 @@ export function buildValuation(
       freshCount,
       staleCount,
       missingCount,
+      estimatedCount,
+      pendingCount,
     },
     fullPosition: {
       realizedYtd: r2(realizedYtd),

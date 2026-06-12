@@ -2,6 +2,134 @@
 
 ---
 
+**North star:** See the "standard for pricing" section in HOBBYIQ_ROADMAP_2026Q2_Q3.md — observation/estimate/personal firewall + the outcome loop as the path to pricing authority.
+
+---
+
+## 2026-06-12 — Graded-estimator + always-a-number arc (deployed `20d57de`; commits `e18adc3` → `20d57de`)
+
+A multi-CF arc that took the graded-projection engine from "engine exists but never surfaces" to "every target grade always shows a number with confidence + range + scope-labeled prose, anchored on the card's grounded level, with a clean firewall." Eight commits, all live on HobbyIQ3.
+
+### Commit ladder (clean rollback points)
+
+1. **`e18adc3`** — `compileGradedEstimatesForCard` extraction (pure no-behavior-change refactor). Byte-identical diff vs the pre-extraction route proved before/after — gated the wire-in.
+2. **`7937a1b`** — Graded rail wired into `autoPriceHolding`. `PortfolioHolding` gains `parallelId`, `estimatedValue`, `estimateLow/High`, `estimateConfidence`, `estimateBasis`, `isEstimate`, `valuationStatus`. `computeObservedPerUnitValue` + `computeDisplayablePerUnitValue` reader split. `appendPriceHistory` gated observed-only.
+3. **`bbd6d1d`** — `composeHoldingWireShape` adds `displayableValue`/`displayableValueSource`; `summarizeHoldings` adds `observedValue`/`estimatedValue`/`observedPct`; `buildValuation` adds `estimatedCount`/`pendingCount` (counts only — no estimated dollar in ERP); `evaluateHoldingAlerts` flip-guard.
+4. **`e4573f0`** — Honest headline total: `displayableTotalValue`, `observedCostBasis`, `observedGainLoss`, `observedGainLossPct`. Hard rule: no estimated dollar ever enters a `*GainLoss` field (estimated upside surfaces as VALUE, never as gain).
+5. **`465467e`** — CF-ALWAYS-A-NUMBER: reverses Phase 3A drop. Ballpark surfaces with a number. `"no-data"` tier replaces `"insufficient"` for no-anchor. Guard 1 (≥-raw floor) + Guard 2 (same-grader monotonic) added at engine post-loop.
+6. **`53ab950`** — CF-CROSS-GRADE-COHERENCE: relative-scaled ballpark anchoring. R = highest-confidence grounded grade in scope with a `GRADER_PREMIUMS` entry. `ballpark(G) = R.value × (genericPremium(G) / genericPremium(R))`. Sub-raw card-ratio entries demoted to ballpark for relative scaling. Ordering ceiling: ballpark ≤ grounded higher-rank. Additive: `note` field on `gradeBreakdown` entries trading below raw ("Raw trades above PSA 9 here — common for hot prospects").
+7. **`20d57de`** — `GRADE_CONFIDENCE` locked: `{estimate: ±10%/3sf, rough: ±20%/3sf, ballpark: ±40%/2sf}`. Holding/dashboard tier mapping: ballpark → `valuationStatus="estimated"` with `estimateConfidence=tier`; no-data → `valuationStatus="pending"`. `estimateConfidence` union expanded to include `"ballpark"` + `"no-data"` (legacy `"insufficient"` kept for Cosmos back-compat reads).
+
+### Tiers (final shape)
+
+| Tier | Source | Surfaces | Notes |
+|---|---|---|---|
+| **observed** | real comp sales (`gradeBreakdown`) | iOS reads `gradeBreakdown` — NOT in `gradedEstimates` rail | Engine GUARD-skips observed grades from the rail. The "OBSERVED IS FACT" invariant: observed values are never clamped/floored/reordered, even sub-raw. |
+| **estimate** | tier-1 card-specific ratio × base raw anchor (cleanest) | rail `confidenceTier="estimate"`, ±10% / 3 sf | Currently only fires for base-target requests with ≥3 card-specific base graded samples + base raw anchor. |
+| **rough** | tier-1 card ratio × parallel anchor (compose noise) OR tier-2 release curve | rail `confidenceTier="rough"`, ±20% / 3 sf | Anchors PSA 10/9 in the parallel-scope flows (Leo Blue PSA 10 = $2,850–$3,260). |
+| **ballpark** | generic premium relative-scaled to R: `R.value × (genericPremium(G) / genericPremium(R))` | rail `confidenceTier="ballpark"`, ±40% / 2 sf | The CF-CROSS-GRADE-COHERENCE shape. Reads round-guess: $830, $2,300, $23,000. |
+| **no-data** | no anchor at all (no raw / parallel / release / observed grade to multiply) | rail entry with null value + scope-labeled "Can't anchor an estimate" basis | Holding flow maps to `valuationStatus="pending"`. |
+
+### Guards (apply to estimate/rough/ballpark; NEVER observed)
+
+- **Sub-raw demotion**: any non-observed `estimate`/`rough` whose value < raw anchor is demoted to `ballpark` for relative scaling. The canonical PSA 9 case (card ratio 0.961× × $1,183 = $1,137 < raw $1,183) flows through this. After demotion + R-relative scaling, PSA 9 = R × (1.7/4.0) = $1,200–$1,400.
+- **Grounded-relative anchoring**: ballparks scale RELATIVELY to R's grounded level. Pre-CF, ballparks used the ABSOLUTE generic curve while grounded used the CARD's data — that's how Leo Blue BGS 9.5 ballpark ended up at $4,100 above PSA 10 grounded $2,850. Relative scaling fixes the cross-grade incoherence by construction.
+- **≥-raw floor (Guard 1)**: a relative-scaled ballpark below raw → demote to `no-data`. Falling back to absolute generic would re-mix strategies.
+- **Same-grader monotonic (Guard 2, absolute-fallback path only)**: under R-relative scaling, within-grader monotonicity holds by construction (preserved by the ratio of premiums). The Guard 2 code runs only on the no-R absolute-fallback path.
+- **Ordering ceiling**: a ballpark grade may not exceed a grounded HIGHER-ranked grade. Rank = numeric grade value (10 > 9.5 > 9). Same-rank cross-grader (BGS 10 vs PSA 10 vs SGC 10) is unconstrained — those relationships are fuzzy at the market level. Source set: observed grades + rail estimate/rough entries. Ballparks do not constrain other ballparks.
+
+### Observed = fact (the hard structural invariant)
+
+The engine's `countObservedInScope` check at the top of the per-grade compute loop skips observed grades from emission. `results` contains ONLY non-observed entries. All guards iterate over `results`; they CANNOT touch an observed value by construction. Live proof: Leo BASE PSA 9 has 10 observed base sales with median $221.47 — sub-raw ($237.83 base raw). The engine emits PSA 10/9 observed in `gradeBreakdown` UNCHANGED. PSA 9 $221 < raw $237 surfaces as REAL.
+
+**Additive shipped at `53ab950`**: when an observed grade's median sits below the observed raw median for the same scope, `buildGradeBreakdown` attaches a `note` field: `"Raw trades above PSA 9 here — common for hot prospects."` Display-only — the median field is real and unmodified. Helps iOS frame the sub-raw observed without engine context.
+
+### Firewall (unchanged, structurally enforced)
+
+- Every rail entry: `fairMarketValue: null`, `marketValue: null`, `isEstimate: true`. Display-not-train discipline.
+- Holding flow: `fairMarketValue` on estimated holdings stays `null` on disk. ERP `buildValuation` reads `h.fairMarketValue` directly → `null` → excluded from `snapshotValue`. Tax outputs / Schedule D / `unrealizedGainLoss` see ZERO estimated dollars by construction.
+- Dashboard summary surfaces `estimatedCount` + `estimatedValue` separately so the user sees the full picture, but the HARD INVARIANT holds: estimated dollars NEVER enter a `*GainLoss` field. The `observedGainLoss` denominator (`observedCostBasis`) excludes estimated/pending holdings; estimated upside surfaces as VALUE only (`displayableTotalValue`, `estimatedValue`).
+- Training join (`predictionCorpus.service.ts`) reads from the estimate emission, not from `PortfolioHolding`. The structural firewall: `PortfolioHolding` type is NOT imported in `compiq/`, `mlTraining/`, `compLogs/`, or `corpus/`. Estimated values literally cannot reach training writes.
+
+### Holding / dashboard tier mapping
+
+- `autoPriceHolding`: matches holding's `(gradingCompany, gradeValue)` (normalized: uppercase + `Number()`) against `compileGradedEstimatesForCard` output:
+  - No rail match (engine GUARD-skipped because grade is observed) → `valuationStatus="observed"`, `fairMarketValue=fairValue` (existing path).
+  - Match `estimate`/`rough`/`ballpark` → `valuationStatus="estimated"`, `estimateConfidence=match.confidenceTier`, `fairMarketValue=null`, `estimatedValue=match.estimatedValue`, range + basis populated. iOS reads `estimateConfidence` to render a different badge per tier.
+  - Match `no-data` → `valuationStatus="pending"`, `estimateConfidence="no-data"`, `estimateBasis=match.basis` (the scope-labeled "Can't anchor" prose).
+- `appendPriceHistory` gated on `valuationStatus="observed"` only. Estimated/pending holdings don't append — the trajectory iOS renders represents real comp-anchored value over time.
+- `summarizeHoldings` (the canonical aggregator) + `buildValuation` (ERP) key on `valuationStatus`, NOT `estimateConfidence`. Ballpark holdings count under `estimatedCount`/`estimatedValue`; no-data holdings count under `pendingCount`. No tier-keyed paths exist downstream.
+
+### `GRADE_CONFIDENCE` config (tunable, single source)
+
+```ts
+export const GRADE_CONFIDENCE = {
+  estimate: { spreadPct: 0.10, roundSigFigs: 3 },   // card-specific, precise
+  rough:    { spreadPct: 0.20, roundSigFigs: 3 },    // release curve / parallel-anchor card ratio
+  ballpark: { spreadPct: 0.40, roundSigFigs: 2 },    // generic-relative, widest, hard round
+};
+```
+
+To re-tune: edit the constant, rebuild dist, redeploy. No other site to touch — `spreadFor` reads from the config and `applyTierRounding` reads `roundSigFigs` from it.
+
+### `/price-by-id` scope contract (verified at `20d57de`)
+
+[compiq.routes.ts:1476](src/routes/compiq.routes.ts#L1476): `const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);`
+
+| Body | Scope returned | What anchors |
+|---|---|---|
+| `{cardId}` or `{cardId, parallelId}` (no grade fields) | RAW | parallel anchor = `est.fairMarketValue` if > 0 else `est.lastSale.price` |
+| `{cardId, parallelId, gradeCompany, gradeValue}` (any valid pair) | GRADED | parallel anchor = parallel-COMPOSED = base raw × parallel multiplier |
+
+**The specific grade picked does NOT affect the rail.** Any `(gradeCompany, gradeValue)` triggers graded scope; the rail then computes all 4 entries against the same composed anchor. Live-verified: `(PSA, 10)` and `(BGS, 9.5)` bodies return byte-identical `gradedEstimates` arrays for Leo Blue /150.
+
+**iOS guidance:**
+- Rail rendered NEXT TO a graded holding → send grade fields (any) so the rail matches the holding's stored values.
+- Rail rendered on a standalone comp card → omit grade fields → rail anchors on the displayed raw value (`lastSale.price` / `marketTier.value`).
+
+This is purely an iOS-side decision; backend already exposes both modes deterministically on body shape.
+
+### Live actuals (Leo Blue /150 RAW scope, deployed `20d57de`)
+
+```
+PSA 10   rough     $2,850   range $2,280–$3,410
+PSA 9    ballpark  $1,200   range $730–$1,700    (sub-raw demote → R-relative)
+BGS 9.5  ballpark  $2,500   range $1,500–$3,500
+SGC 10   ballpark  $2,400   range $1,500–$3,400
+```
+
+All four ≥ raw anchor $1,183. PSA 10 > PSA 9 monotonic. BGS 9.5 + SGC 10 < PSA 10 (the cross-grade fix). ✓
+
+### Live actuals (3-holding portfolio summary, deployed `20d57de`)
+
+```json
+{
+  "totalValue": 2300,           // legacy cost-proxy
+  "observedValue": 0,
+  "estimatedValue": 7560,       // $3260 PSA 10 + $2900 BGS 9.5 + $1400 PSA 9
+  "estimatedCount": 3,
+  "pendingCount": 0,
+  "displayableTotalValue": 7560,
+  "observedCostBasis": 0,
+  "observedGainLoss": 0,
+  "observedGainLossPct": null   // null when no observed cost basis
+}
+```
+
+All three holdings land as `valuationStatus="estimated"` with `estimateConfidence` ∈ {rough, ballpark}. None as `pending` because all three got rail matches; no-data would mean a grade with no anchor anywhere.
+
+### Open follow-ups (carry forward)
+
+- **Parallel PSA 9 floors to raw despite the card's observed sub-raw signal.** On parallel-scope requests, PSA 9 is sub-raw-demoted because the card's BASE PSA 9 ratio is 0.961× (sub-raw at the BASE scope). But the user's observed BASE PSA 9 IS a real signal saying "this card's PSA 9 grade trades below raw." Applying that ratio to the PARALLEL anchor (Blue Refractor) produces a sub-raw parallel PSA 9 estimate. The current engine demotes that to ballpark + R-relative scaling, which surfaces $1,200–$1,400 — a number well above raw. That's defensible (PSA 9 of a Blue /150 should presumably trade above raw because of the parallel premium) but ERASES the card-specific "PSA 9 trades sub-raw" signal that the BASE observed data carries. Worth revisiting: should parallel PSA 9 keep the card-specific sub-raw discount somehow? Open design question — punt to a future CF.
+- **Two class-level scoping follow-ups never formally logged.** Earlier in the broader pricing work, two improvements to scope handling were identified but never threaded into a CF: (1) the `compileGradedEstimatesForCard` helper takes `isRawScope` as a boolean but the underlying semantic is really a 3-way ("raw observed anchor available" / "raw not available, fall to composed" / "graded scope, composed only"); (2) the holding flow always passes `isRawScope=false` even when the holding is RAW (no `gradingCompany` set). The current ungraded holding path early-returns before the rail runs, so the bug doesn't manifest — but if/when ungraded holdings ever flow through the rail, the `false` will produce a composed anchor instead of using the holding's raw worth. Both are silent today; log when surfaced.
+- **Cross-surface scope coherence is an iOS gate.** The scope contract above is deterministic on body shape, but iOS needs to know when to send grade fields. The CF that wires the rail render into iOS should explicitly thread the "next to a holding" vs "standalone comp card" decision through the API call. If iOS sends raw-scope bodies for both contexts, holding rows and comp-card rails will show different numbers for the same grade — the user sees the bug, not us. Backend can't enforce this — it's an iOS code review gate.
+
+### What's solid going into iOS work
+
+The backend ladder is locked. Numbers come out coherent across raw + graded scopes; cost-basis firewall holds; ERP/tax untouched by estimates; dashboard splits observed from estimated cleanly; the `estimateConfidence` tier flows to iOS so the render can distinguish ballpark from rough from estimate; `note` on `gradeBreakdown` carries the "raw trades above" framing. iOS now has the contract, the data, and the firewall to build the rail render without further backend changes.
+
+---
+
 ## 2026-06-08 — Cardsight /pricing schema fix + returned-id consistency guard (deployed `f7d2f97`)
 
 **What broke.** /api/compiq/price-by-id's pinned-cardId path was returning half-broken cardIdentity on every call — only `title` and `number` populated; `card_id`, `player`, `set`, `year` all null. iOS comp page rendered a $1.00 / 4-of-4 pathology for Mike Trout 2011 Topps Update RC (fda530ab-...) tied to wrong-card Frazier comp data.

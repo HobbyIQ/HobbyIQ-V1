@@ -95,3 +95,75 @@ describe("buildValuation — unrealized math", () => {
     expect(v.fullPosition.realizedYtdNote).toMatch(/CF-ERP rule/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-VALUATION-TOTALS-SPLIT (2026-06-12) — counts-only firewall in ERP.
+// Estimated holdings carry fairMarketValue=null; they MUST NOT contribute
+// any dollar to snapshotValue / unrealizedGainLoss / Schedule D math.
+// estimatedCount + pendingCount are the only new signals ERP gets.
+// ─────────────────────────────────────────────────────────────────────────
+describe("buildValuation — CF-VALUATION-TOTALS-SPLIT counts-only firewall", () => {
+  it("estimated holding contributes ZERO dollars; bumps estimatedCount; cost still added", () => {
+    // One observed @ $150 FMV / $100 cost; one estimated holding with
+    // a $3,260 estimatedValue but fairMarketValue=null + $500 cost.
+    // The estimated holding MUST NOT appear in snapshotValue and MUST
+    // NOT pollute the unrealized math.
+    const holdings: PortfolioHolding[] = [
+      h({ id: "observed-1", purchasePrice: 100, totalCostBasis: 100, fairMarketValue: 150 }),
+      h({
+        id: "estimated-1",
+        purchasePrice: 500,
+        totalCostBasis: 500,
+        fairMarketValue: undefined,
+        valuationStatus: "estimated",
+        estimatedValue: 3260.40,
+        isEstimate: true,
+      } as any),
+    ];
+    const v = buildValuation(holdings, [], Object.fromEntries(holdings.map((x) => [x.id, x])), NOW);
+    // The $3,260.40 estimate must not appear in totals.snapshotValue.
+    expect(v.totals.snapshotValue).toBe(150);
+    expect(v.totals.snapshotValue).not.toBe(3410.40);  // 150 + 3260.40
+    // Cost still adds.
+    expect(v.totals.costBasis).toBe(600);
+    // unrealizedGainLoss is observed-only ($150 - $600 = -$450).
+    expect(v.totals.unrealizedGainLoss).toBe(-450);
+    // Counts: 1 estimated, 0 pending.
+    expect(v.totals.estimatedCount).toBe(1);
+    expect(v.totals.pendingCount).toBe(0);
+    // The estimated holding's per-row snapshot is null.
+    const estimatedRow = v.holdings.find((r) => r.id === "estimated-1")!;
+    expect(estimatedRow.snapshotValue).toBeNull();
+    expect(estimatedRow.unrealizedGainLoss).toBeNull();
+  });
+
+  it("pending holding bumps pendingCount; contributes no dollars", () => {
+    const holdings: PortfolioHolding[] = [
+      h({ id: "observed-1", fairMarketValue: 100, totalCostBasis: 50 }),
+      h({
+        id: "pending-1",
+        purchasePrice: 200,
+        totalCostBasis: 200,
+        fairMarketValue: undefined,
+        valuationStatus: "pending",
+        estimatedValue: undefined,
+        isEstimate: true,
+      } as any),
+    ];
+    const v = buildValuation(holdings, [], Object.fromEntries(holdings.map((x) => [x.id, x])), NOW);
+    expect(v.totals.snapshotValue).toBe(100);
+    expect(v.totals.estimatedCount).toBe(0);
+    expect(v.totals.pendingCount).toBe(1);
+  });
+
+  it("all-observed portfolio: estimatedCount=0, pendingCount=0 (backward compat)", () => {
+    const holdings: PortfolioHolding[] = [
+      h({ id: "a", fairMarketValue: 100 }),
+      h({ id: "b", fairMarketValue: 200 }),
+    ];
+    const v = buildValuation(holdings, [], Object.fromEntries(holdings.map((x) => [x.id, x])), NOW);
+    expect(v.totals.estimatedCount).toBe(0);
+    expect(v.totals.pendingCount).toBe(0);
+    expect(v.totals.snapshotValue).toBe(300);
+  });
+});

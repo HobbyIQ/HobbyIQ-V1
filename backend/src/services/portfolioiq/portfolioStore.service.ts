@@ -3,6 +3,12 @@ import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): assemble the same gradedEstimates
+// array /price-by-id surfaces, so a graded holding's stored valuation
+// can mirror the rail's grounded/insufficient verdict at write time.
+import { compileGradedEstimatesForCard } from "../compiq/compileGradedEstimatesForCard.js";
+import { getPricing as getPricingForMarketRead } from "../compiq/cardsight.client.js";
+import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
@@ -689,6 +695,42 @@ export function computePerUnitValue(holding: PortfolioHolding | undefined | null
   return typeof fmv === "number" && Number.isFinite(fmv) ? fmv : null;
 }
 
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): observed-only per-unit reader.
+// Returns ONLY fairMarketValue — never an estimate. Used by every
+// accounting/reporting consumer that cannot tolerate estimated dollars:
+// ERP valuation, Schedule D, tax outputs, sell-flow proceeds math, P&L
+// aggregation. Structurally identical to computePerUnitValue today; the
+// rename exists so call sites declare intent and a future audit can
+// grep for "Observed" reads vs "Displayable" reads with zero ambiguity.
+export function computeObservedPerUnitValue(holding: PortfolioHolding | undefined | null): number | null {
+  return computePerUnitValue(holding);
+}
+
+// CF-GRADED-RAIL-WIRE-IN (2026-06-14): wire/dashboard per-unit reader.
+// Prefers observed FMV; falls back to graded-rail estimatedValue when the
+// holding is graded-estimated (valuationStatus="estimated"); returns null
+// when neither (valuationStatus="pending" / no data). Returns the SOURCE
+// flag too so the caller can label the displayed value ("observed" /
+// "estimated") and surface different UI treatment per the contract.
+// NEVER used by ERP / Schedule D / tax math — those go through
+// computeObservedPerUnitValue exclusively.
+export interface DisplayablePerUnitValue {
+  value: number | null;
+  source: "observed" | "estimated" | null;
+}
+export function computeDisplayablePerUnitValue(
+  holding: PortfolioHolding | undefined | null,
+): DisplayablePerUnitValue {
+  if (!holding) return { value: null, source: null };
+  const observed = computeObservedPerUnitValue(holding);
+  if (observed !== null) return { value: observed, source: "observed" };
+  const est = (holding as { estimatedValue?: number | null }).estimatedValue;
+  if (typeof est === "number" && Number.isFinite(est) && est > 0) {
+    return { value: est, source: "estimated" };
+  }
+  return { value: null, source: null };
+}
+
 export function computeTotalValue(holding: PortfolioHolding | undefined | null): number | null {
   const perUnit = computePerUnitValue(holding);
   if (perUnit === null) return null;
@@ -935,7 +977,173 @@ async function autoPriceHolding(
   // short-circuit at the next line).
   const fairValue = toNumber((estimate as any)?.fairMarketValue, toNumber((estimate as any)?.value, 0));
 
-  if (fairValue <= 0) {
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail resolution.
+  // Run when the holding is graded (gradeCompany + gradeValue present
+  // and well-formed) AND we have a cardsightCardId to fetch pricing
+  // for. The rail produces 4 entries per pricing payload; match the
+  // holding's grade against them and branch per the resolution tree:
+  //   • no match (engine GUARD-skipped the grade because there's ≥1
+  //     observed sale in scope) → grade is OBSERVED. Use computeEstimate's
+  //     fairValue as before; valuationStatus = "observed".
+  //   • match grounded (confidenceTier ∈ {estimate, rough}) →
+  //     fairMarketValue = null (no estimate landing in the observed
+  //     slot that feeds ERP P&L / Schedule D); populate estimate* fields;
+  //     valuationStatus = "estimated".
+  //   • match insufficient → fairMarketValue + estimatedValue both null;
+  //     estimateBasis = entry.basis (the scope-labeled "why" prose for
+  //     iOS tap-state); valuationStatus = "pending".
+  // Ungraded holdings or holdings without cardsightCardId skip the rail
+  // entirely; their valuation is the existing fairValue path, stamped
+  // valuationStatus = "observed" to populate the new field.
+  //
+  // Grade match is NORMALIZED (uppercase company, Number(value)) on
+  // BOTH sides — a lowercase "psa" or string "10" from iOS input must
+  // match the engine's "PSA 10" entry; a silent no-match would route
+  // a grounded grade to the "observed" branch and surface a null/base
+  // FMV instead of the estimate (wrong-valuation bug, no crash).
+  const normalizedGradeCompany = String(
+    (holding as any).gradingCompany ?? (holding as any).gradeCompany ?? "",
+  ).trim().toUpperCase();
+  const normalizedGradeValue = (() => {
+    const n = Number((holding as any).gradeValue);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const isGraded =
+    normalizedGradeCompany.length > 0 && normalizedGradeValue !== null;
+  const cardsightCardId =
+    typeof holding.cardsightCardId === "string" && holding.cardsightCardId.length > 0
+      ? holding.cardsightCardId
+      : null;
+
+  let railResolution: {
+    fairMarketValueOverride: number | null;  // null when estimated/pending; fairValue when observed
+    valuationStatus: "observed" | "estimated" | "pending";
+    estimatedValue: number | null;
+    estimateLow: number | null;
+    estimateHigh: number | null;
+    // CF-FINAL-CONSTANTS (2026-06-12): "ballpark" is now a valid
+    // estimateConfidence; the engine emits ballpark with a number under
+    // CF-ALWAYS-A-NUMBER + CF-CROSS-GRADE-COHERENCE. "insufficient" is
+    // RETIRED here too — the engine routes no-anchor to "no-data". Keep
+    // both in the type union for back-compat reads of any Cosmos docs
+    // written under the prior schema (additive surface).
+    estimateConfidence: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
+    estimateBasis: string | null;
+    isEstimate: boolean;
+  } | null = null;
+
+  if (isGraded && cardsightCardId) {
+    try {
+      const pricing = await getPricingForMarketRead(cardsightCardId);
+      if (pricing && !pricing.notFound) {
+        const parallelId =
+          typeof (holding as { parallelId?: string | null }).parallelId === "string"
+          && ((holding as { parallelId?: string | null }).parallelId as string).length > 0
+            ? (holding as { parallelId?: string | null }).parallelId as string
+            : null;
+        const parallelName = String(holding.parallel ?? "").trim() || null;
+        const gradeBreakdown = buildGradeBreakdown(pricing, parallelId);
+        const compiled = await compileGradedEstimatesForCard({
+          pricing,
+          estimate: estimate as {
+            fairMarketValue?: number | null;
+            lastSale?: { price?: number | null } | null;
+            daysSinceNewestComp?: number | null;
+            recentComps?: ReadonlyArray<unknown>;
+          },
+          parallelId,
+          parallelName,
+          // Holding flow is graded-scope (we have gradeCompany+gradeValue),
+          // so anchor on parallel-composed for parallel scope; for base
+          // scope the anchor is base raw regardless of isRawScope.
+          isRawScope: false,
+          isThinMarket: !(fairValue > 0),
+          gradeBreakdown,
+          source: "portfolio.autoPriceHolding",
+          cardId: cardsightCardId,
+        });
+        const targetLabel = `${normalizedGradeCompany} ${normalizedGradeValue}`;
+        const match = compiled.estimates.find((e) => {
+          // Engine labels are e.g. "PSA 10" or "BGS 9.5" — same shape
+          // we built above, normalized to uppercase + numeric value.
+          // Defensive normalize the engine side too in case of drift.
+          const parts = e.grade.trim().split(/\s+/);
+          if (parts.length !== 2) return false;
+          const co = parts[0]!.toUpperCase();
+          const val = Number(parts[1]);
+          return (
+            co === normalizedGradeCompany
+            && Number.isFinite(val)
+            && val === normalizedGradeValue
+          );
+        });
+        if (!match) {
+          // No rail entry → GUARD skipped (observed in scope). Existing
+          // fairValue path with explicit valuationStatus.
+          railResolution = {
+            fairMarketValueOverride: fairValue > 0 ? fairValue : null,
+            valuationStatus: "observed",
+            estimatedValue: null,
+            estimateLow: null,
+            estimateHigh: null,
+            estimateConfidence: null,
+            estimateBasis: null,
+            isEstimate: false,
+          };
+        } else if (
+          match.confidenceTier === "estimate"
+          || match.confidenceTier === "rough"
+          || match.confidenceTier === "ballpark"
+        ) {
+          // CF-FINAL-CONSTANTS (2026-06-12): the rail now emits ballpark
+          // with a number (relative-scaled to R = grounded grade in
+          // scope). ALL three confidence tiers map to valuationStatus
+          // "estimated" with the tier surfaced in estimateConfidence so
+          // iOS can render ballpark with a different badge than estimate
+          // or rough. fairMarketValue stays NULL on every estimated row
+          // — the firewall (no estimate dollar enters ERP/Schedule D/tax)
+          // is unchanged from Step 1.
+          railResolution = {
+            fairMarketValueOverride: null,
+            valuationStatus: "estimated",
+            estimatedValue: match.estimatedValue,
+            estimateLow: match.estimateLow,
+            estimateHigh: match.estimateHigh,
+            estimateConfidence: match.confidenceTier,
+            estimateBasis: match.basis,
+            isEstimate: true,
+          };
+        } else {
+          // CF-FINAL-CONSTANTS: no-data marker (was "insufficient" pre-
+          // CF-ALWAYS-A-NUMBER). The grade hit the no-anchor floor —
+          // no raw, parallel, or release value to multiply by. Show
+          // "pending" with the scope-labeled "Can't anchor an estimate"
+          // prose; iOS renders a placeholder row.
+          railResolution = {
+            fairMarketValueOverride: null,
+            valuationStatus: "pending",
+            estimatedValue: null,
+            estimateLow: null,
+            estimateHigh: null,
+            estimateConfidence: "no-data",
+            estimateBasis: match.basis,
+            isEstimate: true,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[portfolio.autoPriceHolding] graded-rail resolution failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+      railResolution = null;
+    }
+  }
+
+  // For ungraded holdings: preserve the existing "abort on fairValue<=0"
+  // behavior — the rail wasn't going to fire anyway, and we don't want
+  // to start stamping valuationStatus on cases that previously persisted
+  // with no value at all.
+  if (!railResolution && fairValue <= 0) {
     return holding;
   }
 
@@ -977,9 +1185,34 @@ async function autoPriceHolding(
     ? (__trendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
     : null;
 
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): merge railResolution into the
+  // stamped holding. Ungraded / no-cardsightCardId path: railResolution
+  // is null → fairMarketValue = fairValue (existing behavior),
+  // valuationStatus = "observed". Graded with rail match: fields per
+  // the resolution tree.
+  const resolved = railResolution ?? {
+    fairMarketValueOverride: fairValue,
+    valuationStatus: "observed" as const,
+    estimatedValue: null,
+    estimateLow: null,
+    estimateHigh: null,
+    estimateConfidence: null,
+    estimateBasis: null,
+    isEstimate: false,
+  };
+
   const updated: PortfolioHolding = {
     ...holding,
-    fairMarketValue: fairValue,
+    fairMarketValue: resolved.fairMarketValueOverride === null
+      ? null as any  // null erases the field on display; ERP read coerces null→null
+      : resolved.fairMarketValueOverride,
+    estimatedValue: resolved.estimatedValue,
+    estimateLow: resolved.estimateLow,
+    estimateHigh: resolved.estimateHigh,
+    estimateConfidence: resolved.estimateConfidence,
+    estimateBasis: resolved.estimateBasis,
+    isEstimate: resolved.isEstimate,
+    valuationStatus: resolved.valuationStatus,
     predictedPrice,
     predictedPriceLow,
     predictedPriceHigh,
@@ -999,11 +1232,21 @@ async function autoPriceHolding(
     // marketPressure (Gate-2 β), freshnessStatus.
   };
 
-  appendPriceHistory(doc, holding.id, {
-    at: now,
-    value: fairValue,
-    source,
-  });
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): priceHistory stays observed-
+  // only. Estimated and pending holdings do NOT append — the trajectory
+  // iOS renders represents real comp-anchored value over time, never
+  // estimate points (which would drift as the engine re-anchors) or
+  // null gaps. When valuationStatus flips from observed to estimated
+  // (e.g., a graded holding refresh where the grade lost its last
+  // observed sale), we leave the prior observed trail intact and stop
+  // appending — the trajectory pauses honestly.
+  if (resolved.valuationStatus === "observed" && resolved.fairMarketValueOverride !== null) {
+    appendPriceHistory(doc, holding.id, {
+      at: now,
+      value: resolved.fairMarketValueOverride,
+      source,
+    });
+  }
 
   evaluateHoldingAlerts(doc, previous, updated);
   doc.holdings[holding.id] = updated;
@@ -1058,6 +1301,22 @@ function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">)
 }
 
 function evaluateHoldingAlerts(doc: UserDoc, previous: PortfolioHolding | undefined, next: PortfolioHolding): void {
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed→estimated flip
+  // guard. A holding whose `valuationStatus` flips from "observed" to
+  // anything else (estimated / pending) has fairMarketValue=null on
+  // the next state — `nextValue` would be 0 not because the card lost
+  // value but because the slot changed. Don't fire threshold alerts
+  // on the resulting "100% drop" — that's a UX regression. Same guard
+  // covers the reverse flip (estimated → observed) so the synthetic
+  // "infinite gain" from 0→fmv doesn't trip either. Real value moves
+  // still alert (both sides observed); rail transitions don't.
+  const prevStatus = (previous as { valuationStatus?: string } | undefined)?.valuationStatus;
+  const nextStatus = (next as { valuationStatus?: string }).valuationStatus;
+  const prevObserved = prevStatus === "observed" || prevStatus == null;
+  const nextObserved = nextStatus === "observed" || nextStatus == null;
+  if (prevObserved !== nextObserved) {
+    return;
+  }
   const basis = toNumber(next.totalCostBasis, toNumber(next.purchasePrice, 0) * Math.max(1, toNumber(next.quantity, 1)));
   const prevValue = computePerUnitValue(previous) ?? 0;
   const nextValue = computePerUnitValue(next) ?? 0;
@@ -1315,6 +1574,37 @@ export interface PortfolioSummary {
   totalGainLoss: number;
   totalGainLossPct: number;
   cardCount: number;
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed/estimated/pending
+  // breakdown of the dashboard total. observedValue is the existing
+  // observed-FMV portion (what feeds ERP / P&L / tax); estimatedValue is
+  // the labeled rail estimate × qty for holdings in valuationStatus=
+  // "estimated"; totalValue = observedValue + estimatedValue so the iOS
+  // headline shows the full picture with an observedPct badge. pending
+  // holdings (insufficient markers, no number) contribute neither to
+  // observedValue nor estimatedValue — counted only via pendingCount.
+  // ESTIMATED DOLLARS NEVER ENTER any erp* path (Schedule D / tax) —
+  // that firewall is enforced in erpValuation by fairMarketValue=null
+  // on estimated holdings + counts-only addition there.
+  observedValue: number;
+  estimatedValue: number;
+  estimatedCount: number;
+  pendingCount: number;
+  observedPct: number | null;
+  // CF-HEADLINE-HONEST-TOTAL (2026-06-12): explicit honest fields the
+  // iOS dashboard can read directly. Legacy fields above stay observed-
+  // or-cost-proxy (existing contract); these surface the real picture:
+  //   displayableTotalValue = observedValue + estimatedValue
+  //     — the headline matches what iOS shows per-row (Σ displayableValue).
+  //   observedCostBasis = Σ costBasis where valuationStatus==="observed"
+  //   observedGainLoss / observedGainLossPct  — REAL P&L, computed only
+  //     over observed holdings. HARD RULE: no estimated dollar enters any
+  //     *GainLoss field. Estimated upside surfaces as VALUE (estimatedValue,
+  //     displayableTotalValue), not as a realized-looking gain. Pending
+  //     holdings excluded from gain entirely.
+  displayableTotalValue: number;
+  observedCostBasis: number;
+  observedGainLoss: number;
+  observedGainLossPct: number | null;
 }
 
 const EXCLUDED_STATUS = new Set([
@@ -1330,9 +1620,24 @@ function round2(v: number): number {
 }
 
 export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): canonical aggregator —
+  // single site that produces dashboard totals so observed vs estimated
+  // contributions can never drift across duplicate aggregation sites.
+  // computePortfolioHealth (L1353+) reads observed-only by design (risk
+  // scores never fold in estimates); ERP buildValuation reads
+  // h.fairMarketValue directly (null on estimated holdings, so they're
+  // already excluded from snapshotValue).
   let totalValue = 0;
   let totalCost = 0;
   let cardCount = 0;
+  let observedValue = 0;
+  let estimatedValue = 0;
+  let estimatedCount = 0;
+  let pendingCount = 0;
+  // CF-HEADLINE-HONEST-TOTAL (2026-06-12): observed-only cost-basis
+  // accumulator so observedGainLoss/Pct can be computed in the same
+  // pass without re-iterating the holdings array.
+  let observedCostBasis = 0;
   for (const h of items) {
     const status = String((h as any).cardStatus ?? (h as any).statusCategory ?? "")
       .trim()
@@ -1347,15 +1652,65 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
     totalValue += computeDisplayValue(h);
     totalCost += computeCostBasisTotal(h);
     cardCount += qty;
+
+    // CF-VALUATION-TOTALS-SPLIT — bucket by valuationStatus. Estimated
+    // and pending holdings carry fairMarketValue=null on disk (Step 1
+    // resolution tree). totalValue above falls back to cost for those;
+    // observedValue+estimatedValue below tracks the honest split.
+    const vs = (h as { valuationStatus?: string }).valuationStatus;
+    if (vs === "estimated") {
+      const ev = (h as { estimatedValue?: number | null }).estimatedValue;
+      if (typeof ev === "number" && Number.isFinite(ev) && ev > 0) {
+        estimatedValue += ev * qty;
+      }
+      estimatedCount += 1;
+    } else if (vs === "pending") {
+      pendingCount += 1;
+    } else {
+      // Treat undefined/null/"observed" all as observed (pre-Step-1
+      // holdings have no valuationStatus set; they were observed-only).
+      const observedTotal = computeTotalValue(h);
+      if (observedTotal !== null && observedTotal > 0) {
+        observedValue += observedTotal;
+      }
+      // CF-HEADLINE-HONEST-TOTAL — observed-only cost basis is the
+      // observedGainLoss denominator. computeCostBasisTotal already
+      // returns 0 for holdings with no purchasePrice/totalCostBasis,
+      // so a cost-less observed holding contributes nothing here.
+      observedCostBasis += computeCostBasisTotal(h);
+    }
   }
   const totalGainLoss = totalValue - totalCost;
   const totalGainLossPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+  const headlineTotal = observedValue + estimatedValue;
+  const observedPct = headlineTotal > 0 ? observedValue / headlineTotal : null;
+  // CF-HEADLINE-HONEST-TOTAL — observed-only P&L. HARD RULE: no estimated
+  // dollar enters either field. The estimated upside (e.g. Leo Blue PSA 10:
+  // $3,260.40 estimated vs $1,000 purchase) surfaces as VALUE via
+  // estimatedValue + displayableTotalValue, NEVER as a realized-looking
+  // gain. observedGainLossPct returns null when there's no observed cost
+  // to divide by (don't synthesize a 0% return when nothing observed).
+  const observedGainLoss = observedValue - observedCostBasis;
+  const observedGainLossPct =
+    observedCostBasis > 0 ? observedGainLoss / observedCostBasis : null;
   return {
     totalValue: round2(totalValue),
     totalCost: round2(totalCost),
     totalGainLoss: round2(totalGainLoss),
     totalGainLossPct: round2(totalGainLossPct),
     cardCount,
+    observedValue: round2(observedValue),
+    estimatedValue: round2(estimatedValue),
+    estimatedCount,
+    pendingCount,
+    observedPct: observedPct === null ? null : Math.round(observedPct * 10000) / 10000,
+    displayableTotalValue: round2(headlineTotal),
+    observedCostBasis: round2(observedCostBasis),
+    observedGainLoss: round2(observedGainLoss),
+    observedGainLossPct:
+      observedGainLossPct === null
+        ? null
+        : Math.round(observedGainLossPct * 10000) / 10000,
   };
 }
 
@@ -3173,4 +3528,13 @@ export async function runBatchReprice(req: Request, res: Response) {
 export const __portfolioStoreInternals = {
   writeUserDoc,
   validateHoldingIdentity,
+  // CF-GRADED-RAIL-WIRE-IN (2026-06-14): exposed for in-process probe
+  // tests that exercise the resolution tree without spinning up the
+  // route + auth + Cosmos write path. Do not call from production.
+  autoPriceHolding,
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): exposed for direct unit
+  // testing of the observed↔estimated alert flip guard. Do not call
+  // from production routes — evaluateHoldingAlerts is the alert
+  // emitter, called transparently inside autoPriceHolding.
+  evaluateHoldingAlerts,
 };
