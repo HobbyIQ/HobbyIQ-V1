@@ -788,7 +788,11 @@ export function buildGradedEstimates(
       estimatedValue: null,
       estimateLow: null,
       estimateHigh: null,
-      basis: "Insufficient grounded coverage for this grade — no card-specific, sibling, or release-level base→graded ratio met threshold.",
+      basis: buildInsufficientBasis(
+        r.grade,
+        r.diagnostics.baseRawSampleCount,
+        r.diagnostics.cardSpecificBaseSamples,
+      ),
       confidenceTier: "insufficient",
       ratioSource: "none",
       anchorKind: "none",
@@ -806,6 +810,33 @@ export function buildGradedEstimates(
     };
   });
   return { estimates, mutationDetected: false };
+}
+
+/**
+ * Build the "why" prose for an insufficient marker using observed pool
+ * stats. Both inputs are OBSERVED counts (real raw / real graded sale
+ * counts at this card), preserved from the engine result; the helper
+ * never references estimates or derived values. baseRawMedian is
+ * intentionally NOT surfaced in the prose — it's pool context, never
+ * the grade's value. iOS uses this string verbatim in the row's tap-
+ * state.
+ */
+function buildInsufficientBasis(
+  grade: string,
+  baseRawSampleCount: number,
+  cardSpecificBaseSamples: number,
+): string {
+  const rawN = baseRawSampleCount;
+  const gradedN = cardSpecificBaseSamples;
+  const rawWord = (n: number) => `${n} raw sale${n === 1 ? "" : "s"}`;
+  if (rawN === 0) {
+    return `No data to estimate ${grade} — no raw sales observed at this card.`;
+  }
+  if (gradedN === 0) {
+    return `No ${grade} sales yet to estimate from — ${rawWord(rawN)} observed, none graded ${grade}.`;
+  }
+  // gradedN > 0 but below tier-1 threshold
+  return `Not enough ${grade} sales to estimate — ${rawWord(rawN)} observed; only ${gradedN} graded ${grade} (need at least ${TIER1_MIN_BASE_SAMPLES}).`;
 }
 
 // ── Phase 1c (CF-GRADED-PRICE-PROJECTION) — release-level grade curve ──────

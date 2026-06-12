@@ -712,7 +712,16 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(r.diagnostics.targetGradeBaseMedian).toBeNull();
       // Safe pool stats preserved (observed, not derived)
       expect(r.diagnostics.baseRawSampleCount).toBeGreaterThan(0);
-      expect(r.basis).toContain("Insufficient grounded coverage");
+      // Phase 3A addendum: basis cites observed pool stats for honest
+      // "why" context — never the dropped tier-3 ballpark number.
+      expect(r.basis).toContain(`No ${grade} sales yet to estimate from`);
+      expect(r.basis).toContain(`${r.diagnostics.baseRawSampleCount} raw sales observed`);
+      expect(r.basis).toContain(`none graded ${grade}`);
+      // Anti-leak: basis must NEVER contain the dropped ballpark number
+      // ($1,183 × 3.5 = $4,140; × 3.4 = $4,022).
+      expect(r.basis).not.toContain("4140");
+      expect(r.basis).not.toContain("4022");
+      expect(r.basis).not.toContain("$");  // no dollar figures at all
     }
 
     // FMV-null + isEstimate invariants hold across ALL emitted entries.
@@ -943,6 +952,114 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", (
       expect(e.diagnostics.ratio).toBeNull();
       expect(e.diagnostics.anchorPrice).toBeNull();
     }
+  });
+
+  // ── Phase 3A addendum — insufficient basis prose ───────────────────────
+  // The basis on an insufficient marker is the iOS tap-state prose. It
+  // MUST cite the preserved observed pool stats (raw sale count, graded
+  // count at this card) for honest "why" context — and MUST NOT surface
+  // the dropped ballpark number or any derived value.
+
+  it("INSUFFICIENT BASIS — N raw + 0 graded → 'No {grade} sales yet to estimate from — N raw sales observed, none graded {grade}.'", () => {
+    // Leo BASE: 24 base raw sales, 0 base BGS 9.5/SGC 10 sales (engine
+    // GUARD-skips PSA 10/9; BGS/SGC collapse to insufficient).
+    const pricing = makeLeoPricing();
+    const { estimates } = buildGradedEstimates({
+      pricing,
+      snapshots: { marketTierValue: 228.93, recentComps: [], gradeBreakdown: [] },
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales yet to estimate from — 24 raw sales observed, none graded BGS 9.5.",
+    );
+    // Anti-leak: basis must NOT carry the dropped tier-3 ballpark number
+    // ($228.93 × 3.5 = $801.26 would be the ballpark) — no dollar figures.
+    expect(bgs95.basis).not.toContain("$");
+    expect(bgs95.basis).not.toContain("228");
+    expect(bgs95.basis).not.toContain("801");
+    expect(bgs95.basis).not.toContain("3.5");
+  });
+
+  it("INSUFFICIENT BASIS — singular '1 raw sale observed' pluralization", () => {
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "x", name: "x", number: "x" } as any,
+      raw: {
+        count: 1,
+        records: [rec("2024 Bowman Chrome 1st Autograph Test #CPA-T base solo", 100)],
+      },
+      graded: [],
+      meta: { total_records: 1, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const { estimates } = buildGradedEstimates({ pricing });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    // 1 raw → singular; tier-3 ballpark dropped → insufficient marker.
+    expect(bgs95.confidenceTier).toBe("insufficient");
+    expect(bgs95.basis).toBe(
+      "No BGS 9.5 sales yet to estimate from — 1 raw sale observed, none graded BGS 9.5.",
+    );
+  });
+
+  it("INSUFFICIENT BASIS — gradedN > 0 but below threshold → cites the count + the needed threshold", () => {
+    // To exercise the gradedN > 0 branch of the insufficient basis, we
+    // need a path where the GUARD passes BUT tier-1's threshold doesn't:
+    // a PARALLEL-scope request where the card has 2 base BGS 9.5 (below
+    // tier-1's 3-sample threshold) AND zero parallel BGS 9.5 records
+    // (so the GUARD on the parallel scope passes). Tier-1 sees the 2
+    // base records, misses; tier-3 fallback; collapse → insufficient
+    // marker with the "Not enough… only N graded… need at least 3" prose.
+    const baseRaw: CardsightSaleRecord[] = [];
+    for (let i = 0; i < 5; i++) {
+      baseRaw.push(rec(`2024 Bowman Chrome Threshold Tester #CPA-T base ${i}`, 100 + i * 5));
+    }
+    // Two base BGS 9.5 — observed at the BASE scope only, but the request
+    // is for the (fake) "Cosmic Aura" parallel scope, so the GUARD
+    // (which counts parallel-scope records) sees 0 and passes.
+    const bgs95Base: CardsightSaleRecord[] = [
+      rec("2024 Bowman Chrome Threshold Tester #CPA-T base BGS 9.5 sale a", 700),
+      rec("2024 Bowman Chrome Threshold Tester #CPA-T base BGS 9.5 sale b", 720),
+    ];
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "thresh", name: "Threshold Tester", number: "CPA-T" } as any,
+      raw: { count: baseRaw.length, records: baseRaw },
+      graded: [{
+        company_name: "BGS",
+        grades: [gradedBucket(9.5, bgs95Base)],
+      }],
+      meta: { total_records: baseRaw.length + bgs95Base.length, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const { estimates } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "11111111-1111-1111-1111-111111111111",
+      targetParallelName: "Cosmic Aura",     // not in any record's title → GUARD passes
+      targetParallelRawFmv: 200,             // observed parallel raw anchor
+    });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95).toBeDefined();
+    expect(bgs95.confidenceTier).toBe("insufficient");
+    expect(bgs95.basis).toBe(
+      "Not enough BGS 9.5 sales to estimate — 5 raw sales observed; only 2 graded BGS 9.5 (need at least 3).",
+    );
+    // Anti-leak: the 2 BGS 9.5 sales had median $710; the dropped tier-3
+    // ballpark would have been $200 × 3.5 = $700. Neither number, nor any
+    // dollar figure, may appear in the basis.
+    expect(bgs95.basis).not.toContain("710");
+    expect(bgs95.basis).not.toContain("700");
+    expect(bgs95.basis).not.toContain("$");
+  });
+
+  it("INSUFFICIENT BASIS — empty raw pool → 'No data to estimate {grade} — no raw sales observed at this card.'", () => {
+    const empty: CardsightPricingResponse = {
+      card: { card_id: "empty", name: "Empty", number: "E" } as any,
+      raw: { count: 0, records: [] },
+      graded: [],
+      meta: { total_records: 0, last_sale_date: null },
+    } as CardsightPricingResponse;
+    const { estimates } = buildGradedEstimates({ pricing: empty });
+    const bgs95 = estimates.find((e) => e.grade === "BGS 9.5")!;
+    expect(bgs95.confidenceTier).toBe("insufficient");
+    expect(bgs95.basis).toBe(
+      "No data to estimate BGS 9.5 — no raw sales observed at this card.",
+    );
   });
 });
 
