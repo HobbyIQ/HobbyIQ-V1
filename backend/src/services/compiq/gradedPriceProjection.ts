@@ -577,9 +577,12 @@ export const GRADE_CONFIDENCE: Record<
   "estimate" | "rough" | "ballpark",
   GradeConfidenceConfig
 > = {
-  estimate: { spreadPct: 0.10, roundSigFigs: null }, // card-specific — precise
-  rough:    { spreadPct: 0.20, roundSigFigs: 3 },    // release / parallel-anchor card ratio
-  ballpark: { spreadPct: 0.45, roundSigFigs: 2 },    // generic premium — widest, hard round
+  // CF-FINAL-CONSTANTS (2026-06-12): locked after CF-CROSS-GRADE-COHERENCE
+  // live actuals confirmed the relative-scaling math reads coherent at
+  // these widths/rounds.
+  estimate: { spreadPct: 0.10, roundSigFigs: 3 }, // card-specific; 3 sf kills cents-precision UX
+  rough:    { spreadPct: 0.20, roundSigFigs: 3 }, // release / parallel-anchor card ratio
+  ballpark: { spreadPct: 0.40, roundSigFigs: 2 }, // generic-relative; 2 sf reads round-guess
 };
 
 /** Round to N significant figures. E.g.:

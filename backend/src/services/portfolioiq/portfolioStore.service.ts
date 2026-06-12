@@ -1021,7 +1021,13 @@ async function autoPriceHolding(
     estimatedValue: number | null;
     estimateLow: number | null;
     estimateHigh: number | null;
-    estimateConfidence: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+    // CF-FINAL-CONSTANTS (2026-06-12): "ballpark" is now a valid
+    // estimateConfidence; the engine emits ballpark with a number under
+    // CF-ALWAYS-A-NUMBER + CF-CROSS-GRADE-COHERENCE. "insufficient" is
+    // RETIRED here too — the engine routes no-anchor to "no-data". Keep
+    // both in the type union for back-compat reads of any Cosmos docs
+    // written under the prior schema (additive surface).
+    estimateConfidence: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
     estimateBasis: string | null;
     isEstimate: boolean;
   } | null = null;
@@ -1087,9 +1093,16 @@ async function autoPriceHolding(
         } else if (
           match.confidenceTier === "estimate"
           || match.confidenceTier === "rough"
+          || match.confidenceTier === "ballpark"
         ) {
-          // Grounded estimate → display-not-train. fairMarketValue NULL
-          // (the firewall — no estimate landing in the slot ERP reads).
+          // CF-FINAL-CONSTANTS (2026-06-12): the rail now emits ballpark
+          // with a number (relative-scaled to R = grounded grade in
+          // scope). ALL three confidence tiers map to valuationStatus
+          // "estimated" with the tier surfaced in estimateConfidence so
+          // iOS can render ballpark with a different badge than estimate
+          // or rough. fairMarketValue stays NULL on every estimated row
+          // — the firewall (no estimate dollar enters ERP/Schedule D/tax)
+          // is unchanged from Step 1.
           railResolution = {
             fairMarketValueOverride: null,
             valuationStatus: "estimated",
@@ -1101,15 +1114,18 @@ async function autoPriceHolding(
             isEstimate: true,
           };
         } else {
-          // Insufficient marker → "valuation pending". estimateBasis
-          // carries the scope-labeled prose for iOS tap-state.
+          // CF-FINAL-CONSTANTS: no-data marker (was "insufficient" pre-
+          // CF-ALWAYS-A-NUMBER). The grade hit the no-anchor floor —
+          // no raw, parallel, or release value to multiply by. Show
+          // "pending" with the scope-labeled "Can't anchor an estimate"
+          // prose; iOS renders a placeholder row.
           railResolution = {
             fairMarketValueOverride: null,
             valuationStatus: "pending",
             estimatedValue: null,
             estimateLow: null,
             estimateHigh: null,
-            estimateConfidence: "insufficient",
+            estimateConfidence: "no-data",
             estimateBasis: match.basis,
             isEstimate: true,
           };

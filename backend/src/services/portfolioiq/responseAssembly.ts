@@ -163,7 +163,10 @@ export interface PortfolioHoldingWire {
   estimatedValue: number | null;
   estimateLow: number | null;
   estimateHigh: number | null;
-  estimateConfidence: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+  // CF-FINAL-CONSTANTS (2026-06-12): "ballpark" is a first-class tier
+  // (rail emits it with a number). "no-data" replaces "insufficient" for
+  // the no-anchor case. Old "insufficient" kept for Cosmos back-compat.
+  estimateConfidence: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
   estimateBasis: string | null;
   isEstimate: boolean;
   valuationStatus: "observed" | "estimated" | "pending" | null;

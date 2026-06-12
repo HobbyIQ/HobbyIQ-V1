@@ -344,10 +344,10 @@ describe("CF-GRADED-PRICE-PROJECTION — Leo De Vries BASE target (GUARD + gap-f
     expect(bgs95.diagnostics.ratio).toBeCloseTo(0.875, 3);
     // 586 * (3.5 / 4.0) = 512.75 → 2 sig figs = 510
     expect(bgs95.estimatedValue).toBe(510);
-    // ±45% band, 2 sig figs
-    // low: 512.75 * 0.55 ≈ 282 → 280; high: 512.75 * 1.45 ≈ 743 → 740
-    expect(bgs95.estimateLow).toBe(280);
-    expect(bgs95.estimateHigh).toBe(740);
+    // CF-FINAL-CONSTANTS: ±40% band, 2 sig figs
+    // low: 512.75 * 0.60 ≈ 308 → 310; high: 512.75 * 1.40 ≈ 718 → 720
+    expect(bgs95.estimateLow).toBe(310);
+    expect(bgs95.estimateHigh).toBe(720);
 
     const sgc10 = byGrade(out, "SGC 10");
     expect(sgc10.confidenceTier).toBe("ballpark");

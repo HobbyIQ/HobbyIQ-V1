@@ -153,7 +153,10 @@ export interface PortfolioHolding {
   estimatedValue?: number | null;
   estimateLow?: number | null;
   estimateHigh?: number | null;
-  estimateConfidence?: "estimate" | "rough" | "ballpark" | "insufficient" | null;
+  // CF-FINAL-CONSTANTS (2026-06-12): "ballpark" is a first-class tier;
+  // "no-data" replaces "insufficient" for the no-anchor case. Old
+  // "insufficient" kept for Cosmos back-compat reads.
+  estimateConfidence?: "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null;
   estimateBasis?: string | null;
   isEstimate?: boolean;
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): valuation provenance tag.
