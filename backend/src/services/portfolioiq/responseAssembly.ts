@@ -66,6 +66,7 @@ import {
   computePerUnitValue,
   computeCostBasisTotal,
   computeDisplayValue,
+  computeDisplayablePerUnitValue,
 } from "./portfolioStore.service.js";
 
 function applyMultiplierOrNull(value: number | null, multiplier: number): number | null {
@@ -174,6 +175,14 @@ export interface PortfolioHoldingWire {
   premiumValue: number | null;
   suggestedListPrice: number | null;
   freshnessStatus: string;
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed-or-estimated
+  // headline value for the per-row "what this holding is worth"
+  // display. ADDITIVE — currentValue stays observed-only above (any
+  // existing iOS code that reads currentValue keeps its semantics).
+  // iOS reads displayableValue + displayableValueSource for the new
+  // estimated-aware row treatment.
+  displayableValue: number | null;
+  displayableValueSource: "observed" | "estimated" | null;
 }
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
@@ -189,6 +198,12 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
   const basis = computeCostBasisTotal(holding);
   const totalProfitLoss = basis > 0 ? currentValue - basis : 0;
   const totalProfitLossPct = basis > 0 ? ((currentValue - basis) / basis) * 100 : 0;
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed-or-estimated per-row
+  // headline. Returns null for valuationStatus="pending" — iOS renders
+  // "valuation pending" treatment using estimateBasis prose.
+  const displayable = computeDisplayablePerUnitValue(holding);
+  const qty = Math.max(1, typeof holding.quantity === "number" && holding.quantity > 0 ? holding.quantity : 1);
+  const displayableValue = displayable.value !== null ? displayable.value * qty : null;
 
   return {
     // Identity
@@ -267,6 +282,8 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     premiumValue: applyMultiplierOrNull(fmvPerUnit, 1.15),
     suggestedListPrice: applyMultiplierOrNull(fmvPerUnit, 1.05),
     freshnessStatus: freshnessFromPricingTimestamp(holding),
+    displayableValue,
+    displayableValueSource: displayable.source,
   };
 }
 

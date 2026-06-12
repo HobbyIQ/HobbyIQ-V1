@@ -1285,6 +1285,22 @@ function addAlert(doc: UserDoc, alert: Omit<PortfolioAlert, "id" | "createdAt">)
 }
 
 function evaluateHoldingAlerts(doc: UserDoc, previous: PortfolioHolding | undefined, next: PortfolioHolding): void {
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed→estimated flip
+  // guard. A holding whose `valuationStatus` flips from "observed" to
+  // anything else (estimated / pending) has fairMarketValue=null on
+  // the next state — `nextValue` would be 0 not because the card lost
+  // value but because the slot changed. Don't fire threshold alerts
+  // on the resulting "100% drop" — that's a UX regression. Same guard
+  // covers the reverse flip (estimated → observed) so the synthetic
+  // "infinite gain" from 0→fmv doesn't trip either. Real value moves
+  // still alert (both sides observed); rail transitions don't.
+  const prevStatus = (previous as { valuationStatus?: string } | undefined)?.valuationStatus;
+  const nextStatus = (next as { valuationStatus?: string }).valuationStatus;
+  const prevObserved = prevStatus === "observed" || prevStatus == null;
+  const nextObserved = nextStatus === "observed" || nextStatus == null;
+  if (prevObserved !== nextObserved) {
+    return;
+  }
   const basis = toNumber(next.totalCostBasis, toNumber(next.purchasePrice, 0) * Math.max(1, toNumber(next.quantity, 1)));
   const prevValue = computePerUnitValue(previous) ?? 0;
   const nextValue = computePerUnitValue(next) ?? 0;
@@ -1542,6 +1558,22 @@ export interface PortfolioSummary {
   totalGainLoss: number;
   totalGainLossPct: number;
   cardCount: number;
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): observed/estimated/pending
+  // breakdown of the dashboard total. observedValue is the existing
+  // observed-FMV portion (what feeds ERP / P&L / tax); estimatedValue is
+  // the labeled rail estimate × qty for holdings in valuationStatus=
+  // "estimated"; totalValue = observedValue + estimatedValue so the iOS
+  // headline shows the full picture with an observedPct badge. pending
+  // holdings (insufficient markers, no number) contribute neither to
+  // observedValue nor estimatedValue — counted only via pendingCount.
+  // ESTIMATED DOLLARS NEVER ENTER any erp* path (Schedule D / tax) —
+  // that firewall is enforced in erpValuation by fairMarketValue=null
+  // on estimated holdings + counts-only addition there.
+  observedValue: number;
+  estimatedValue: number;
+  estimatedCount: number;
+  pendingCount: number;
+  observedPct: number | null;
 }
 
 const EXCLUDED_STATUS = new Set([
@@ -1557,9 +1589,20 @@ function round2(v: number): number {
 }
 
 export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): canonical aggregator —
+  // single site that produces dashboard totals so observed vs estimated
+  // contributions can never drift across duplicate aggregation sites.
+  // computePortfolioHealth (L1353+) reads observed-only by design (risk
+  // scores never fold in estimates); ERP buildValuation reads
+  // h.fairMarketValue directly (null on estimated holdings, so they're
+  // already excluded from snapshotValue).
   let totalValue = 0;
   let totalCost = 0;
   let cardCount = 0;
+  let observedValue = 0;
+  let estimatedValue = 0;
+  let estimatedCount = 0;
+  let pendingCount = 0;
   for (const h of items) {
     const status = String((h as any).cardStatus ?? (h as any).statusCategory ?? "")
       .trim()
@@ -1574,15 +1617,44 @@ export function summarizeHoldings(items: PortfolioHolding[]): PortfolioSummary {
     totalValue += computeDisplayValue(h);
     totalCost += computeCostBasisTotal(h);
     cardCount += qty;
+
+    // CF-VALUATION-TOTALS-SPLIT — bucket by valuationStatus. Estimated
+    // and pending holdings carry fairMarketValue=null on disk (Step 1
+    // resolution tree). totalValue above falls back to cost for those;
+    // observedValue+estimatedValue below tracks the honest split.
+    const vs = (h as { valuationStatus?: string }).valuationStatus;
+    if (vs === "estimated") {
+      const ev = (h as { estimatedValue?: number | null }).estimatedValue;
+      if (typeof ev === "number" && Number.isFinite(ev) && ev > 0) {
+        estimatedValue += ev * qty;
+      }
+      estimatedCount += 1;
+    } else if (vs === "pending") {
+      pendingCount += 1;
+    } else {
+      // Treat undefined/null/"observed" all as observed (pre-Step-1
+      // holdings have no valuationStatus set; they were observed-only).
+      const observedTotal = computeTotalValue(h);
+      if (observedTotal !== null && observedTotal > 0) {
+        observedValue += observedTotal;
+      }
+    }
   }
   const totalGainLoss = totalValue - totalCost;
   const totalGainLossPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
+  const headlineTotal = observedValue + estimatedValue;
+  const observedPct = headlineTotal > 0 ? observedValue / headlineTotal : null;
   return {
     totalValue: round2(totalValue),
     totalCost: round2(totalCost),
     totalGainLoss: round2(totalGainLoss),
     totalGainLossPct: round2(totalGainLossPct),
     cardCount,
+    observedValue: round2(observedValue),
+    estimatedValue: round2(estimatedValue),
+    estimatedCount,
+    pendingCount,
+    observedPct: observedPct === null ? null : Math.round(observedPct * 10000) / 10000,
   };
 }
 
@@ -3404,4 +3476,9 @@ export const __portfolioStoreInternals = {
   // tests that exercise the resolution tree without spinning up the
   // route + auth + Cosmos write path. Do not call from production.
   autoPriceHolding,
+  // CF-VALUATION-TOTALS-SPLIT (2026-06-12): exposed for direct unit
+  // testing of the observed↔estimated alert flip guard. Do not call
+  // from production routes — evaluateHoldingAlerts is the alert
+  // emitter, called transparently inside autoPriceHolding.
+  evaluateHoldingAlerts,
 };
