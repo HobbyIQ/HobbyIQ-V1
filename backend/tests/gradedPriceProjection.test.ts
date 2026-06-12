@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeGradedProjection,
+  buildGradedEstimates,
   TARGET_GRADES,
   type GradedProjectionResult,
 } from "../src/services/compiq/gradedPriceProjection.js";
@@ -631,6 +632,152 @@ describe("CF-GRADED-PRICE-PROJECTION — TIER 2 (player/set sibling aggregation)
     expect(bgs95.diagnostics.anchorPrice).toBe(1183);
     expect(bgs95.estimatedValue!).toBeCloseTo(1183 * (812.5 / 267.5), 0);
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring
+// ─────────────────────────────────────────────────────────────────────────
+// Live-path integration coverage for the wrapper that the /price-by-id
+// route calls. Proves:
+//   1. Grounded-only filter (ratioSource ∈ {card, player-set} survive;
+//      ratioSource="market" + "none" dropped → "gaps honest").
+//   2. No-mutation invariant on pricing payload + marketTier.value +
+//      recentComps + gradeBreakdown (the structural firewall — graded
+//      estimates can't touch a single observed number).
+//   3. FMV-null on every emitted entry (display-not-train discipline).
+
+describe("CF-GRADED-PRICE-PROJECTION Phase 2 — buildGradedEstimates wiring", () => {
+  it("Leo Blue /150 → emits PSA 10 + PSA 9 rough; drops BGS 9.5 + SGC 10 ballpark", () => {
+    // Mirror the live /price-by-id call shape: pricing + parallel scope +
+    // observed parallel raw FMV. iOS asks for the Blue /150 parallel raw
+    // FMV; the engine borrows the base card ratio for PSA 10/9 because
+    // the parallel itself has zero graded comps.
+    const pricing = makeLeoParallelPricingNoBlueGraded();
+    const fmv = 1183; // est.fairMarketValue for the parallel-scope request
+    const recentCompsSnap = [{ price: 1183, date: "2026-06-09" }];
+    const gradeBreakdownSnap = [{ grade: "PSA 10", n: 9, median: 586 }];
+
+    const { estimates, mutationDetected } = buildGradedEstimates({
+      pricing,
+      targetParallelId: "0383bf13-523d-407d-b69e-53d33c2a775f",
+      targetParallelName: "Blue Refractor",
+      targetParallelRawFmv: fmv,
+      snapshots: {
+        marketTierValue: fmv,
+        recentComps: recentCompsSnap,
+        gradeBreakdown: gradeBreakdownSnap,
+      },
+    });
+
+    expect(mutationDetected).toBe(false);
+    // GROUNDED-ONLY: PSA 10 + PSA 9 (card-ratio rough) survive; BGS 9.5 +
+    // SGC 10 (tier-3 market ballpark) are dropped.
+    const grades = estimates.map((e) => e.grade).sort();
+    expect(grades).toEqual(["PSA 10", "PSA 9"]);
+
+    const psa10 = estimates.find((e) => e.grade === "PSA 10")!;
+    expect(psa10.confidenceTier).toBe("rough");
+    expect(psa10.ratioSource).toBe("card");
+    expect(psa10.anchorKind).toBe("parallel-observed");
+    expect(psa10.diagnostics.anchorPrice).toBe(1183);
+    expect(psa10.estimatedValue!).toBeCloseTo(1183 * 2.560, 0);
+    expect(psa10.fairMarketValue).toBeNull();
+    expect(psa10.marketValue).toBeNull();
+    expect(psa10.isEstimate).toBe(true);
+
+    const psa9 = estimates.find((e) => e.grade === "PSA 9")!;
+    expect(psa9.confidenceTier).toBe("rough");
+    expect(psa9.ratioSource).toBe("card");
+    expect(psa9.fairMarketValue).toBeNull();
+
+    // Every emitted entry FMV-null (display-not-train invariant).
+    for (const e of estimates) {
+      expect(e.fairMarketValue).toBeNull();
+      expect(e.marketValue).toBeNull();
+      expect(e.isEstimate).toBe(true);
+    }
+  });
+
+  it("Leo BASE → emits nothing (PSA 10/9 observed; BGS 9.5/SGC 10 are tier-3 ballpark, dropped)", () => {
+    // BASE-scope call (no parallel passthrough). GUARD skips PSA 10/9
+    // (observed). BGS 9.5 + SGC 10 only have tier-3 market premium →
+    // grounded filter drops them. Result: empty.
+    const pricing = makeLeoPricing();
+    const fmv = 228.93;
+    const { estimates, mutationDetected } = buildGradedEstimates({
+      pricing,
+      snapshots: {
+        marketTierValue: fmv,
+        recentComps: [{ price: 250, date: "2026-06-08" }],
+        gradeBreakdown: [{ grade: "PSA 10", n: 9 }],
+      },
+    });
+
+    expect(mutationDetected).toBe(false);
+    expect(estimates).toEqual([]);
+  });
+
+  it("Trout → emits nothing (full coverage; every grade observed → engine returns [])", () => {
+    // Trout BASE: every liquid grade has observed base sales → GUARD
+    // skips all four → engine returns []. Filter is a no-op; estimates [].
+    const pricing = makeTroutPricing();
+    const fmv = 299.995;
+    const { estimates, mutationDetected } = buildGradedEstimates({
+      pricing,
+      snapshots: {
+        marketTierValue: fmv,
+        recentComps: [{ price: 300, date: "2026-06-09" }],
+        gradeBreakdown: [
+          { grade: "PSA 10", n: 11 },
+          { grade: "PSA 9", n: 8 },
+          { grade: "BGS 9.5", n: 7 },
+          { grade: "SGC 10", n: 2 },
+        ],
+      },
+    });
+
+    expect(mutationDetected).toBe(false);
+    expect(estimates).toEqual([]);
+  });
+
+  it("NO-MUTATION INVARIANT — pricing JSON byte-identical across the engine call (all three fixtures)", () => {
+    // Strongest assertion: serialize pricing before AND after the call,
+    // demand byte-equal. Proves the engine never mutates the shared
+    // pricing payload — the structural firewall that protects training
+    // joins from estimator side-effects.
+    for (const make of [makeLeoPricing, makeLeoParallelPricingNoBlueGraded, makeTroutPricing]) {
+      const pricing = make();
+      const beforeJson = JSON.stringify(pricing);
+      const recentCompsRef: unknown[] = [{ price: 100 }];
+      const recentCompsBefore = JSON.stringify(recentCompsRef);
+      const gradeBreakdownRef: unknown[] = [{ grade: "PSA 10", n: 1 }];
+      const gradeBreakdownBefore = JSON.stringify(gradeBreakdownRef);
+
+      const { mutationDetected } = buildGradedEstimates({
+        pricing,
+        targetParallelId: make === makeLeoParallelPricingNoBlueGraded
+          ? "0383bf13-523d-407d-b69e-53d33c2a775f"
+          : null,
+        targetParallelName: make === makeLeoParallelPricingNoBlueGraded
+          ? "Blue Refractor"
+          : null,
+        targetParallelRawFmv: make === makeLeoParallelPricingNoBlueGraded ? 1183 : null,
+        snapshots: {
+          marketTierValue: 228.93,
+          recentComps: recentCompsRef,
+          gradeBreakdown: gradeBreakdownRef,
+        },
+      });
+
+      expect(mutationDetected).toBe(false);
+      // Independent post-hoc check (defense in depth — don't trust the
+      // helper to police itself):
+      expect(JSON.stringify(pricing)).toBe(beforeJson);
+      expect(JSON.stringify(recentCompsRef)).toBe(recentCompsBefore);
+      expect(JSON.stringify(gradeBreakdownRef)).toBe(gradeBreakdownBefore);
+    }
+  });
+
 });
 
 describe("CF-GRADED-PRICE-PROJECTION — insufficient-data edge cases", () => {

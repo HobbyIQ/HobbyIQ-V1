@@ -20,6 +20,13 @@ import {
   getPricing as getPricingForMarketRead,
   getCardImage,
 } from "../services/compiq/cardsight.client.js";
+// CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): wire graded estimator
+// into /price-by-id. Grounded-only (estimate + rough); ballpark + insufficient
+// dropped. Display-not-train: every entry has fairMarketValue=null.
+import {
+  buildGradedEstimates,
+  type GradedProjectionResult,
+} from "../services/compiq/gradedPriceProjection.js";
 
 // CF-CARD-IMAGE-PROXY (2026-06-08): build an absolute URL for the
 // `/api/compiq/card-image/:id` proxy route from the request context.
@@ -1307,6 +1314,10 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           estimateRange: null,
           estimateBasis: null,
           broaderTrend: null,
+          // CF-GRADED-PRICE-PROJECTION Phase 2 — empty on unsupported_sport
+          // (no pricing payload to estimate from). Field present for shape
+          // stability across all branches.
+          gradedEstimates: [],
         };
       }
 
@@ -1392,8 +1403,11 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // request sees Gold counts/medians per grade tier (not the
       // base-mixed pool).
       let gradeBreakdown: GradeBreakdownEntry[] = [];
+      // Hoisted so the CF-GRADED-PRICE-PROJECTION Phase 2 block below can
+      // reuse the same fetched payload without a second cache lookup.
+      let pricingForMR: Awaited<ReturnType<typeof getPricingForMarketRead>> | null = null;
       try {
-        const pricingForMR = await getPricingForMarketRead(resolvedCardId);
+        pricingForMR = await getPricingForMarketRead(resolvedCardId);
         if (!pricingForMR.notFound) {
           const gradeKey =
             body.gradeCompany && body.gradeValue !== undefined
@@ -1426,6 +1440,64 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         marketReadResult = null;
         cardImageThumbUrl = undefined;
         gradeBreakdown = [];
+      }
+
+      // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): graded estimates.
+      // Calls the engine on the same cs:pricing payload already in hand.
+      // Grounded-only filter ("gaps honest"): only ratioSource ∈
+      // {card, player-set} grades survive; tier-3 market-table "ballpark"
+      // estimates are dropped so we never put a generic number on the wire
+      // for a card without grounded data. Parallel scope passes through
+      // resolvedParallelId/Name + the observed parallel raw FMV (only when
+      // gradeKey is "Raw" — else `fmv` would be the parallel's PSA 10/
+      // SGC 10/etc. median, not the raw anchor the engine wants). Tier 2
+      // is currently no-op pending CF-1c (graded-capable sibling source).
+      //
+      // NO-MUTATION GUARD: buildGradedEstimates snapshots pricingForMR +
+      // marketTier.value + recentComps + gradeBreakdown before the engine
+      // call and asserts byte-identical after. On mismatch: estimates=[],
+      // mutationDetected=true (logged here). Structural firewall in
+      // gradedEstimates ≠ gradeBreakdown: gradeBreakdown stays purely
+      // observed (real, trainable); gradedEstimates is purely estimated
+      // (display-not-train, fairMarketValue=null per result).
+      let gradedEstimates: GradedProjectionResult[] = [];
+      try {
+        if (pricingForMR && !pricingForMR.notFound) {
+          // Recompute gradeKey here (the prior gradeKey is scoped inside
+          // the marketRead try/if). Raw-grade requests pass fmv as the
+          // parallel raw anchor; graded-key requests pass null because
+          // fmv would be the parallel's graded median (PSA 10 / etc.),
+          // not the raw anchor the engine wants.
+          const isRawScope = !(body.gradeCompany && body.gradeValue !== undefined);
+          const parallelRawFmv =
+            resolvedParallelId && isRawScope && fmv > 0 ? fmv : null;
+          const built = buildGradedEstimates({
+            pricing: pricingForMR,
+            targetParallelId: resolvedParallelId ?? null,
+            targetParallelName: resolvedParallelName ?? null,
+            targetParallelRawFmv: parallelRawFmv,
+            snapshots: {
+              marketTierValue: isThin ? null : fmv,
+              recentComps: (est as any).recentComps ?? [],
+              gradeBreakdown,
+            },
+          });
+          if (built.mutationDetected) {
+            console.error(JSON.stringify({
+              event: "graded_estimates_mutation_detected",
+              source: "compiq.price-by-id",
+              subsystem: "graded-projection",
+              cardId: resolvedCardId,
+              parallelId: resolvedParallelId ?? null,
+            }));
+          }
+          gradedEstimates = built.estimates;
+        }
+      } catch (err) {
+        console.warn(
+          `[compiq.price-by-id] gradedEstimates build failed (non-fatal): ${(err as Error)?.message ?? err}`,
+        );
+        gradedEstimates = [];
       }
 
       return {
@@ -1534,6 +1606,15 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // parallel filter) are dropped — honest empty list rather
         // than fabricated medians on thin pools.
         gradeBreakdown,
+        // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13) — graded
+        // estimates for the LIQUID grade set (PSA 10/9, BGS 9.5,
+        // SGC 10) where no observed sale exists. Grounded only
+        // (confidenceTier ∈ {estimate, rough}); ballpark + insufficient
+        // are dropped to keep gaps honest. STRUCTURALLY SEPARATE from
+        // gradeBreakdown: that field stays purely observed (real,
+        // trainable); this is purely estimated (display-not-train,
+        // every entry has fairMarketValue=null).
+        gradedEstimates,
       };
     };
 
@@ -1600,6 +1681,9 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       compsAvailable: 0,
       daysSinceNewestComp: null,
       broaderTrend: null,
+      // CF-GRADED-PRICE-PROJECTION Phase 2 — empty on unresolved (no
+      // pricing payload to estimate from).
+      gradedEstimates: [],
     });
 
     // `result` is widened to Record<string, unknown> so the

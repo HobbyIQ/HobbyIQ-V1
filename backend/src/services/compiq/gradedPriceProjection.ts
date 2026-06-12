@@ -571,3 +571,82 @@ export function computeGradedProjection(
   }
   return results;
 }
+
+// ── Phase 2 wiring (CF-GRADED-PRICE-PROJECTION) ────────────────────────────
+//
+// buildGradedEstimates is the live-path adapter. It wraps
+// computeGradedProjection with:
+//   1. GROUNDED-ONLY FILTER ("gaps honest"): drop confidenceTier
+//      "ballpark" (tier-3 market table) and "insufficient" — those grades
+//      simply don't surface, no generic number on the wire.
+//   2. NO-MUTATION INVARIANT: snapshot the pricing payload + the three
+//      observed response fields shipped on the same response
+//      (marketTier.value, recentComps, gradeBreakdown) before the engine
+//      call; assert byte-identical after. The estimator must NEVER touch
+//      a single observed number — this is the integration-level proof
+//      that surfacing the estimator doesn't touch cards with data. On
+//      mismatch: return empty estimates (don't ship anything if the
+//      engine misbehaved) and flag mutationDetected so the caller can
+//      log + alert.
+
+export interface BuildGradedEstimatesInput {
+  pricing: CardsightPricingResponse;
+  targetParallelId?: string | null;
+  targetParallelRawFmv?: number | null;
+  targetParallelName?: string | null;
+  siblingComps?: ReadonlyArray<GradedProjectionSiblingComp>;
+  /** Observed fields shipped on the same response. Snapshotted pre-call;
+   *  asserted byte-identical post-call. The estimator never receives
+   *  references to these (it takes only `pricing` + scope params), so
+   *  the invariant is structurally guaranteed — this asserts it
+   *  explicitly at the integration boundary. */
+  snapshots?: {
+    marketTierValue?: number | null;
+    recentComps?: ReadonlyArray<unknown>;
+    gradeBreakdown?: ReadonlyArray<unknown>;
+  };
+}
+
+export interface BuildGradedEstimatesResult {
+  estimates: GradedProjectionResult[];
+  /** True iff any snapshot diverged across the engine call. When true,
+   *  estimates is forced to []. Callers should log + alert. */
+  mutationDetected: boolean;
+}
+
+export function buildGradedEstimates(
+  input: BuildGradedEstimatesInput,
+): BuildGradedEstimatesResult {
+  const pricingBefore = JSON.stringify(input.pricing);
+  const snapMarketBefore = input.snapshots?.marketTierValue ?? null;
+  const snapRecentBefore = JSON.stringify(input.snapshots?.recentComps ?? []);
+  const snapBreakdownBefore = JSON.stringify(input.snapshots?.gradeBreakdown ?? []);
+
+  const all = computeGradedProjection({
+    pricing: input.pricing,
+    targetParallelId: input.targetParallelId,
+    targetParallelRawFmv: input.targetParallelRawFmv,
+    targetParallelName: input.targetParallelName,
+    siblingComps: input.siblingComps,
+  });
+
+  const pricingAfter = JSON.stringify(input.pricing);
+  const snapMarketAfter = input.snapshots?.marketTierValue ?? null;
+  const snapRecentAfter = JSON.stringify(input.snapshots?.recentComps ?? []);
+  const snapBreakdownAfter = JSON.stringify(input.snapshots?.gradeBreakdown ?? []);
+
+  const mutationDetected =
+    pricingBefore !== pricingAfter
+    || snapMarketBefore !== snapMarketAfter
+    || snapRecentBefore !== snapRecentAfter
+    || snapBreakdownBefore !== snapBreakdownAfter;
+
+  if (mutationDetected) {
+    return { estimates: [], mutationDetected: true };
+  }
+
+  const grounded = all.filter(
+    (r) => r.confidenceTier === "estimate" || r.confidenceTier === "rough",
+  );
+  return { estimates: grounded, mutationDetected: false };
+}
