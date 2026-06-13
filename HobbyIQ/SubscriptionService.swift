@@ -47,8 +47,6 @@ struct SubscriptionService: SubscriptionServicing {
     static let shared = SubscriptionService()
 
     func currentTier(for scenario: AppSessionScenario) async throws -> SubscriptionTier? {
-        try await Task.sleep(for: .milliseconds(350))
-
         switch scenario {
         case .signedOut, .noAccess:
             return nil
