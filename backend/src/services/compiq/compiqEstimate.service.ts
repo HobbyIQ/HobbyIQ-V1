@@ -1430,22 +1430,66 @@ async function fetchComps(
           `detailMs=${detailLatencyMs} matchMs=${matchLatencyMs}`,
       );
 
-      // GUARDRAIL — corpus pollution: "unified-fallback-no-match" means
-      // title-match couldn't isolate any parallel-titled records. The
-      // unified pool that's left is base-mixed; using it as the
-      // parallel's comps would emit a BASE-derived FMV tagged to the
-      // parallel UUID in predictionCorpus. That poisons training. Same
-      // discipline as CF-TREND-EXTRAPOLATED's structural fmv=null gate:
-      // collapse to thin-data on no-match so the downstream short-
-      // circuit emits fairMarketValue=null to emitPredictionToCorpus.
-      if (
+      // CF-PARALLEL-COMP-VETO-FIX (2026-06-12): vendor tags authoritative,
+      // title-match adds backfill. The pre-CF logic discarded
+      // filteredByParallel records whenever title-match returned a
+      // non-positive outcome ("unified-fallback-no-match"), which threw
+      // away Cardsight's correctly tagged parallel_id records every time
+      // the title spelling didn't match the catalog parallel name (e.g.
+      // Blue RayWave Refractor: catalog name "Blue RayWave Refractor",
+      // seller title "Blue Wave Refractor" — 2 vendor-tagged records
+      // discarded). Vendor tags are the strict ground truth; recovery is
+      // BACKFILL for untagged sales, never a VETO of tagged ones.
+      //
+      // GUARDRAIL on corpus pollution: title-match's "unified-fallback-
+      // no-match" outcome is still treated as "no backfill records to
+      // add" — we only pull recovery records into the union when title-
+      // match positively isolated them ("title-matched-parallel" or
+      // "title-match-low-sample"). filteredByParallel itself is
+      // structurally parallel-pure (records carrying the right
+      // parallel_id from Cardsight), so including it in the sales pool
+      // does NOT introduce base-mixed records to corpus emit.
+      const recoveryRecords: typeof sales =
         outcome.priceSource === "title-matched-parallel"
         || outcome.priceSource === "title-match-low-sample"
-      ) {
-        sales = (outcome.response.raw?.records ?? []) as typeof sales;
-      } else {
-        sales = [];
+          ? ((outcome.response.raw?.records ?? []) as typeof sales)
+          : ([] as typeof sales);
+      const recordKey = (
+        r: { url?: string | null; title?: string | null; price?: number | null; date?: string | null; source?: string | null },
+      ): string =>
+        typeof r.url === "string" && r.url.length > 0
+          ? `u:${r.url}`
+          : `f:${r.title ?? ""}|${r.price ?? ""}|${r.date ?? ""}|${r.source ?? ""}`;
+      const seen = new Set<string>();
+      const merged: typeof sales = [];
+      for (const r of filteredByParallel) {
+        const k = recordKey(r as Parameters<typeof recordKey>[0]);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(r);
       }
+      for (const r of recoveryRecords) {
+        const k = recordKey(r as Parameters<typeof recordKey>[0]);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(r);
+      }
+      sales = merged;
+
+      // priceSource: when title-match contributed, keep its outcome name
+      // (the recovery's classification of how it isolated records).
+      // When title-match returned "unified-fallback-no-match" BUT
+      // filteredByParallel had vendor-tagged records that survive into
+      // the union, switch the source to "cardsight-parallel-id" — those
+      // are exact vendor tags, even if thin (below the recovery
+      // threshold). Mirrors the ≥-threshold branch below.
+      if (
+        outcome.priceSource === "unified-fallback-no-match"
+        && filteredByParallel.length > 0
+      ) {
+        pinnedPriceSource = "cardsight-parallel-id";
+      }
+      pinnedFilteredCount = sales.length;
     } else if (parallelId && filteredByParallel.length >= RECOVERY_THRESHOLD) {
       // Cardsight DID tag enough records — no recovery needed.
       // Surface the source so iOS sees "exact" for these wins.
