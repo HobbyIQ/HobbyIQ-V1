@@ -65,7 +65,6 @@ private struct AppTabShellView: View {
         .task(id: session.id) {
             selectedTab = .dashboard
             applyPendingOAuthCallbackIfNeeded()
-            await sessionViewModel.checkSessionOnLaunch()
 
             // Initialize sync service and trigger initial sync
             let service = PortfolioSyncService(
