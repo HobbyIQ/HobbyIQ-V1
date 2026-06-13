@@ -345,6 +345,61 @@ async function _searchCatalog(
 }
 
 /**
+ * Type-ahead suggestion for cards. Wraps Cardsight's autocomplete.cards
+ * surface (REST: /v1/autocomplete/cards). Returns name strings only —
+ * id resolution is the caller's job via searchCatalog if needed.
+ *
+ * Soft-fail by design: missing key, HTTP error, network error, timeout,
+ * or unexpected response shape all return []. The /api/compiq/suggest
+ * route relies on this so typeahead degrades silently rather than 500-ing
+ * the iOS search box on a vendor blip.
+ */
+export async function autocompleteCards(
+  query: string,
+  opts: { take?: number } = {},
+): Promise<string[]> {
+  if (!apiKey()) {
+    log.warn("api_key_missing", { endpoint: "autocompleteCards", query });
+    return [];
+  }
+  const take = opts.take ?? 8;
+  try {
+    const params = new URLSearchParams({ q: query, take: String(take) });
+    const res = await fetchWithRetry(`${BASE_URL}/autocomplete/cards?${params}`);
+    if (!res.ok) {
+      log.warn("api_http_error", {
+        status: res.status,
+        query,
+        endpoint: "autocompleteCards",
+      });
+      return [];
+    }
+    const body: any = await res.json();
+    const items: any[] = Array.isArray(body?.results)
+      ? body.results
+      : Array.isArray(body?.suggestions)
+        ? body.suggestions
+        : Array.isArray(body)
+          ? body
+          : [];
+    return items
+      .map((item: any) =>
+        typeof item === "string"
+          ? item
+          : (item?.name ?? item?.value ?? item?.text ?? null),
+      )
+      .filter((s: any): s is string => typeof s === "string" && s.length > 0);
+  } catch (err: any) {
+    log.warn("api_threw", {
+      query,
+      endpoint: "autocompleteCards",
+      error: err?.message ?? String(err),
+    });
+    return [];
+  }
+}
+
+/**
  * Get full card detail including parallels[].
  * Returns { notFound: true } sentinel on 404 — never throws for 404.
  */

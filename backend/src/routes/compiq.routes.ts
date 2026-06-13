@@ -19,6 +19,7 @@ import { enqueuePlayerSetTuple } from "../services/compiq/playerSetQueue.service
 import {
   getPricing as getPricingForMarketRead,
   getCardImage,
+  autocompleteCards,
 } from "../services/compiq/cardsight.client.js";
 // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): wire graded estimator
 // into /price-by-id. Grounded-only (estimate + rough); ballpark + insufficient
@@ -650,6 +651,82 @@ router.get("/card-image/:cardsightCardId", async (req, res, next) => {
     if (isCardsightTimeoutError(err)) {
       return res.status(504).json({ success: false, error: "Upstream timeout" });
     }
+    next(err);
+  }
+});
+
+// CF-SEARCH-SUGGEST (2026-06-12): GET /api/compiq/suggest
+// Thin proxy to Cardsight autocomplete for iOS search-box typeahead.
+// Public route (matches /cardsearch posture) — fires on every keystroke;
+// auth-gating would just shift the freeze elsewhere.
+//
+// Contract:
+//   • q < 3 chars after normalization → 200 { suggestions: [] }, no vendor call
+//   • take default 8, cap 10
+//   • vendor failure (timeout, 5xx, weird shape) → 200 { suggestions: [] }
+//   • in-process Map cache, 120s TTL, key = `${normalizedQ}:${take}`
+const SUGGEST_MIN_CHARS = 3;
+const SUGGEST_DEFAULT_TAKE = 8;
+const SUGGEST_MAX_TAKE = 10;
+const SUGGEST_CACHE_TTL_MS = 120_000;
+const suggestCache = new Map<string, { suggestions: string[]; expiresAt: number }>();
+
+router.get("/suggest", async (req, res, next) => {
+  try {
+    const rawQ = typeof req.query.q === "string" ? req.query.q : "";
+    const normalizedQ = rawQ.trim().toLowerCase();
+
+    const rawTake = typeof req.query.take === "string" ? parseInt(req.query.take, 10) : NaN;
+    const take =
+      Number.isFinite(rawTake) && rawTake > 0
+        ? Math.min(rawTake, SUGGEST_MAX_TAKE)
+        : SUGGEST_DEFAULT_TAKE;
+
+    if (normalizedQ.length < SUGGEST_MIN_CHARS) {
+      return res.status(200).json({ query: normalizedQ, suggestions: [] });
+    }
+
+    const cacheKey = `${normalizedQ}:${take}`;
+    const now = Date.now();
+    const cached = suggestCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      console.log(
+        JSON.stringify({
+          event: "suggest_cache_hit",
+          source: "compiq.routes",
+          subsystem: "cardsight",
+          q: normalizedQ,
+          take,
+          n: cached.suggestions.length,
+        }),
+      );
+      return res.status(200).json({ query: normalizedQ, suggestions: cached.suggestions });
+    }
+
+    console.log(
+      JSON.stringify({
+        event: "suggest_cache_miss",
+        source: "compiq.routes",
+        subsystem: "cardsight",
+        q: normalizedQ,
+        take,
+      }),
+    );
+
+    let suggestions: string[] = [];
+    try {
+      suggestions = await autocompleteCards(normalizedQ, { take });
+    } catch {
+      suggestions = [];
+    }
+
+    suggestCache.set(cacheKey, {
+      suggestions,
+      expiresAt: now + SUGGEST_CACHE_TTL_MS,
+    });
+
+    return res.status(200).json({ query: normalizedQ, suggestions });
+  } catch (err) {
     next(err);
   }
 });
