@@ -273,6 +273,8 @@ struct CompIQPricedCardView: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                headerIdentityStrip
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -280,6 +282,33 @@ struct CompIQPricedCardView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .hiqCard()
+    }
+
+    /// CF-HEADER-IDENTITY-STRIP: static identity descriptors (parallel name,
+    /// /serial run, Auto) live in the header where they belong — they
+    /// describe THE CARD, not a selectable grade. Previously they led the
+    /// horizontal grade rail and scrolled with it, which conflated "what
+    /// card is this" with "what grade are we pricing". Hidden entirely when
+    /// the hit carries no descriptor (base-row taps).
+    @ViewBuilder
+    private var headerIdentityStrip: some View {
+        let variant = hit.variant?.trimmingCharacters(in: .whitespaces) ?? ""
+        let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces) ?? ""
+        if variant.isEmpty == false || serial.isEmpty == false || hit.isAuto {
+            HStack(spacing: 8) {
+                if variant.isEmpty == false {
+                    identityPill(variant)
+                }
+                if serial.isEmpty == false {
+                    identityPill(serial)
+                }
+                if hit.isAuto {
+                    identityPill("Auto")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 4)
+        }
     }
 
     /// CF-BUYER-COPY (2026-06-10): the "Comps by Player" tool label
@@ -559,29 +588,16 @@ struct CompIQPricedCardView: View {
     /// `ScrollViewReader` auto-centers the selected chip on appear AND on
     /// every `selectedGrade` change, so landing on a deep grade (PSA 5,
     /// SGC 9, etc.) never leaves the active pill hidden off-screen.
+    ///
+    /// CF-HEADER-IDENTITY-STRIP: identity descriptors (variant, serial,
+    /// Auto) used to lead this rail — they were the card's identity, not
+    /// a selectable grade, and scrolling them away conflated the two.
+    /// They now live in `headerIdentityStrip` above; this rail is grades
+    /// only.
     private var gradePicker: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: true) {
                 HStack(spacing: 8) {
-                    // CF-HEADER-PILLS (2026-06-11): identity descriptors
-                    // lead the rail so "Blue Refractor · /150 · Auto · Raw"
-                    // reads as one band — the full card the user selected.
-                    // Single source per pill (no re-resolution): variant +
-                    // serialNumber via the picker's parallelHit synth,
-                    // isAuto direct from the hit's cardsearch CardIdentity.
-                    // Each pill self-absents when its source is nil/false,
-                    // so base-row taps render the existing grade-only rail.
-                    if let variant = hit.variant?.trimmingCharacters(in: .whitespaces),
-                       variant.isEmpty == false {
-                        identityPill(variant)
-                    }
-                    if let serial = hit.serialNumber?.trimmingCharacters(in: .whitespaces),
-                       serial.isEmpty == false {
-                        identityPill(serial)
-                    }
-                    if hit.isAuto {
-                        identityPill("Auto")
-                    }
                     ForEach(availableGrades) { grade in
                         let tier = tierForGrade(grade)
                         let isSelected = selectedGrade == grade
