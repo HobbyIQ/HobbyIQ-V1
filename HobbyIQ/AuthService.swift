@@ -23,6 +23,13 @@ protocol AuthServicing {
     func signInWithEmail() async throws -> AppUser
     func signUpWithEmail(email: String, password: String, username: String) async throws -> AppUser
     func signOut() async
+    /// Local-only session teardown for global 401 downgrade. Clears the
+    /// in-memory `session`, the persisted session id, and the TTL timestamp
+    /// (`auth.sessionValidatedAtKey`) so the next launch cannot TTL-skip
+    /// with a known-bad session. Does NOT hit /api/auth/signout — the
+    /// session is already invalid server-side, and a second authd round-trip
+    /// would just 401 again.
+    func invalidateSession()
 }
 
 @MainActor
@@ -142,6 +149,11 @@ final class AuthService: ObservableObject, AuthServicing {
         clearStoredSession()
     }
 
+    func invalidateSession() {
+        session = nil
+        clearStoredSession()
+    }
+
     func logout() async {
         await signOut()
     }
@@ -231,4 +243,13 @@ private enum TimeoutError: LocalizedError {
     var errorDescription: String? {
         "The backend took too long to respond."
     }
+}
+
+extension Notification.Name {
+    /// Posted by APIService when an authd endpoint returns 401. Observed by
+    /// AppSessionViewModel, which clears the local session and routes to
+    /// `.signedOut`. Auth-flow endpoints (sign-in/sign-up/validateSession/
+    /// signout) are excluded from this hook — they own their own 401
+    /// handling and must not double-route.
+    static let hobbyIQAuthSessionInvalidated = Notification.Name("HobbyIQ.AuthSessionInvalidated")
 }

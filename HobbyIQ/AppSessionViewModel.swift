@@ -19,6 +19,7 @@ final class AppSessionViewModel: ObservableObject {
     let subscriptionManager: SubscriptionManager
     private let logger = Logger(subsystem: "com.hobbyiq.app", category: "session")
     private var tierObservation: AnyCancellable?
+    private var sessionInvalidationObserver: Task<Void, Never>?
 
     init(
         authService: AuthServicing? = nil,
@@ -32,6 +33,20 @@ final class AppSessionViewModel: ObservableObject {
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
             }
+
+        // CF-401-DOWNGRADE: APIService posts hobbyIQAuthSessionInvalidated
+        // when any authd endpoint (entitlements, portfolio, sync, …) 401s.
+        // We clear the local session + route to .signedOut so the user
+        // doesn't get stranded on a signed-in UI inside the 90s TTL window
+        // after a server-side revoke.
+        sessionInvalidationObserver = Task { [weak self] in
+            let notifications = NotificationCenter.default.notifications(
+                named: .hobbyIQAuthSessionInvalidated
+            )
+            for await _ in notifications {
+                await self?.handleSessionInvalidatedFromServer()
+            }
+        }
     }
 
     var isAuthenticated: Bool {
@@ -177,6 +192,21 @@ final class AppSessionViewModel: ObservableObject {
         subscriptionManager.presentPaywall()
         launchState = .signedOut
         authStatusMessage = nil
+        isLoading = false
+    }
+
+    /// CF-401-DOWNGRADE: handler for `.hobbyIQAuthSessionInvalidated`. Local
+    /// teardown only — `authService.invalidateSession()` skips the
+    /// `/api/auth/signout` round-trip (it would just 401 again and could
+    /// re-fire this same hook). Guards on `currentUser` so parallel 401s
+    /// from concurrent authd requests collapse to a single downgrade.
+    private func handleSessionInvalidatedFromServer() async {
+        guard currentUser != nil else { return }
+        authService.invalidateSession()
+        currentUser = nil
+        subscriptionManager.presentPaywall()
+        launchState = .signedOut
+        authStatusMessage = "Your session expired. Please sign in again."
         isLoading = false
     }
 

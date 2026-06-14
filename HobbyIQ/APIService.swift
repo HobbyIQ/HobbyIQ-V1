@@ -1204,6 +1204,7 @@ struct APIService {
             #endif
 
             guard 200..<300 ~= httpResponse.statusCode else {
+                notifySessionInvalidatedIfNeeded(statusCode: httpResponse.statusCode, url: request.url)
                 throw APIServiceError.httpError(statusCode: httpResponse.statusCode, body: rawResponse)
             }
 
@@ -1520,6 +1521,7 @@ struct APIService {
 
             guard 200..<300 ~= httpResponse.statusCode else {
                 let rawResponse = String(data: data, encoding: .utf8) ?? ""
+                notifySessionInvalidatedIfNeeded(statusCode: httpResponse.statusCode, url: request.url)
                 throw APIServiceError.httpError(statusCode: httpResponse.statusCode, body: rawResponse)
             }
 
@@ -1541,6 +1543,34 @@ struct APIService {
         let method = request.httpMethod ?? "GET"
         let url = request.url?.absoluteString ?? "<invalid-url>"
         return "\(method) \(url)"
+    }
+
+    /// CF-401-DOWNGRADE: global session-revocation hook. Called from BOTH
+    /// `perform()` and `sendData()` immediately before they throw
+    /// `.httpError(401, ...)`. Posts `hobbyIQAuthSessionInvalidated` so
+    /// AppSessionViewModel can clear the local session + route to
+    /// `.signedOut`, closing the TTL-skip window where a server-revoked
+    /// session leaves the user stranded on a signed-in UI up to 90s.
+    ///
+    /// Excludes the auth flow itself — sign-in/sign-up return 401 on bad
+    /// credentials (handled inline as `errorMessage`); validateSession
+    /// already clears the session at AuthService.swift's 401 branch; signout
+    /// is moot. Letting any of those re-fire the global downgrade would
+    /// either double-route (validateSession) or wrongly sign-out the
+    /// already-signed-out flow (sign-in/sign-up).
+    private static let authFlowPaths: Set<String> = [
+        "/api/auth/apple",
+        "/api/auth/signin",
+        "/api/auth/register",
+        "/api/auth/session",
+        "/api/auth/signout"
+    ]
+
+    private func notifySessionInvalidatedIfNeeded(statusCode: Int, url: URL?) {
+        guard statusCode == 401 else { return }
+        let path = url?.path ?? ""
+        guard Self.authFlowPaths.contains(path) == false else { return }
+        NotificationCenter.default.post(name: .hobbyIQAuthSessionInvalidated, object: nil)
     }
 }
 
