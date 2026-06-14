@@ -9,6 +9,15 @@ import Foundation
 
 protocol AuthServicing {
     func restoreSession(for scenario: AppSessionScenario) async throws -> AppUser?
+    /// Sync prelude — loads stored session into `session` and returns the
+    /// cached user, or nil if no stored session. Used by launch paths that
+    /// want to parallelize the network validation with other launch work
+    /// (see AppSessionViewModel.checkSessionOnLaunch).
+    func loadStoredSessionSync() -> AppUser?
+    /// Network validation — calls /api/auth/session and updates `session`.
+    /// Assumes loadStoredSessionSync() was called first; honors the
+    /// CF-LAUNCH-FETCHSESSION-TTL skip when the cached validation is fresh.
+    func validateSession() async throws -> AppUser?
     func signInWithApple(identityToken: String, email: String?, fullName: String?, username: String) async throws -> AppUser
     func signInWithEmail(email: String, password: String) async throws -> AppUser
     func signInWithEmail() async throws -> AppUser
@@ -35,14 +44,25 @@ final class AuthService: ObservableObject, AuthServicing {
     }
 
     func restoreSession(for scenario: AppSessionScenario) async throws -> AppUser? {
+        guard loadStoredSessionSync() != nil else { return nil }
+        return try await validateSession()
+    }
+
+    func loadStoredSessionSync() -> AppUser? {
         guard let storedSession = loadStoredSession() else {
             session = nil
             clearStoredSession()
             return nil
         }
-
         let cachedUser = AppUser(id: storedSession.userId, displayName: storedSession.profileName, email: storedSession.profileName)
         session = AuthSession(user: cachedUser, token: storedSession.token)
+        return cachedUser
+    }
+
+    func validateSession() async throws -> AppUser? {
+        guard let currentSession = session else { return nil }
+        let storedToken = currentSession.token
+        let cachedUser = AppUser(id: currentSession.userId, displayName: currentSession.profileName, email: currentSession.profileName)
 
         // CF-LAUNCH-FETCHSESSION-TTL: skip the /api/auth/session round-trip
         // when the cached session was validated within the TTL window. Trades
@@ -65,7 +85,7 @@ final class AuthService: ObservableObject, AuthServicing {
                 return nil
             }
             let user = AppUser(id: backendUser.userId, displayName: backendUser.email, email: backendUser.email)
-            session = AuthSession(user: user, token: storedSession.token)
+            session = AuthSession(user: user, token: storedToken)
             UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: sessionValidatedAtKey)
             return user
         } catch let error as APIServiceError {

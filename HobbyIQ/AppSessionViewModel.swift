@@ -55,20 +55,37 @@ final class AppSessionViewModel: ObservableObject {
         errorMessage = nil
         authStatusMessage = nil
 
-        do {
-            let user = try await authService.restoreSession(for: .signedOut)
-            currentUser = user
+        // CF-LAUNCH-PARALLELIZE (2026-06-12): run the session-validation
+        // network call and the entitlements refresh concurrently. Both are
+        // independent network operations gated only on the session being
+        // set; loadStoredSessionSync below guarantees that synchronously
+        // before either parallel task fires. Saves the smaller of the two
+        // from launch wall-clock when both are doing network work
+        // (cache-miss path post-CF-LAUNCH-FETCHSESSION-TTL).
+        guard let cachedUser = authService.loadStoredSessionSync() else {
+            currentUser = nil
+            launchState = .signedOut
+            authStatusMessage = nil
+            isLoading = false
+            return
+        }
+        currentUser = cachedUser
+        authStatusMessage = nil
 
-            guard user != nil else {
+        do {
+            async let validatedUserTask = authService.validateSession()
+            async let prepareTask: () = subscriptionManager.prepare()
+            let validatedUser = try await validatedUserTask
+            await prepareTask
+
+            if validatedUser == nil {
+                currentUser = nil
                 launchState = .signedOut
                 authStatusMessage = nil
-                isLoading = false
-                return
+            } else {
+                currentUser = validatedUser
+                launchState = activeTier == .none ? .paywall : .ready
             }
-
-            authStatusMessage = nil
-            await subscriptionManager.prepare()
-            launchState = activeTier == .none ? .paywall : .ready
         } catch {
             currentUser = nil
             launchState = .signedOut
