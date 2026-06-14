@@ -22,6 +22,11 @@ struct CompIQPricedCardView: View {
     @State private var showCompsByPlayer = false
     @State private var showWhatIf = false
     @State private var showUpgradePaywall = false
+    /// CF-ADD-TO-INVENTORY (2026-06-12): sheet visibility for the
+    /// add-to-inventory flow + a toast surfaced on success so the user
+    /// gets visible confirmation before navigating away.
+    @State private var showAddToInventory = false
+    @State private var addToInventoryToast: String?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @Environment(\.dismiss) private var dismiss
     private var skipFetch: Bool = false
@@ -154,6 +159,67 @@ struct CompIQPricedCardView: View {
                 sessionViewModel: sessionViewModel,
                 suggestedTier: GatedFeature.minimumTier(for: GatedFeature.trendIQComposite)
             )
+        }
+        .sheet(isPresented: $showAddToInventory) {
+            if let response = priceResponse {
+                CompIQAddToInventorySheet(
+                    viewModel: CompIQAddToInventoryViewModel(
+                        hit: hit,
+                        response: response,
+                        preselectedGrade: gradeChoiceFromCurrentSelection()
+                    ),
+                    onSaved: { holding in
+                        if let player = holding?.playerName, player.isEmpty == false {
+                            addToInventoryToast = "Added \(player) to inventory"
+                        } else {
+                            addToInventoryToast = "Added to inventory"
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    /// CF-ADD-TO-INVENTORY (2026-06-12): seeds the sheet's grade picker
+    /// from the comp page's currently-selected rail chip so the user
+    /// doesn't have to re-pick the grade they already chose.
+    private func gradeChoiceFromCurrentSelection() -> GradeChoice {
+        if selectedGrade == .raw { return .raw }
+        if let company = selectedGrade.gradeCompany, let value = selectedGrade.gradeValue {
+            return .graded(company.uppercased(), value)
+        }
+        return .raw
+    }
+
+    /// CF-ADD-TO-INVENTORY (2026-06-12): "Add to inventory" CTA rendered
+    /// directly under the value block. Hidden until a priced response
+    /// has settled (no hit.cardsightCardId is fine — that just means the
+    /// holding will value at the base scope on save).
+    @ViewBuilder
+    private func addToInventoryButton(_ response: CompIQPriceByIdResponse) -> some View {
+        Button {
+            showAddToInventory = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.subheadline.weight(.bold))
+                Text("Add to inventory")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(HobbyIQTheme.Colors.electricBlue)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+        if let toast = addToInventoryToast {
+            Text(toast)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
         }
     }
 
@@ -650,6 +716,14 @@ struct CompIQPricedCardView: View {
 
             // Hero price slot (FMV $ or "No current estimate").
             fmvCard(response)
+
+            // CF-ADD-TO-INVENTORY (2026-06-12): action button right under
+            // the value block so the user can save the card they just
+            // valued into inventory without leaving the comp page. The
+            // sheet pins the card's identity + parallel, defaults the
+            // grade picker to the rail's currently-selected chip, and
+            // surfaces the same gradedEstimates value the rail does.
+            addToInventoryButton(response)
 
             // Strategy / Market Read prose — promoted to right after the
             // price slot per the mockup flow (hero → identity → price →

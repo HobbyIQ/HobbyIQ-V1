@@ -662,6 +662,20 @@ struct APIService {
         return envelope.holdings
     }
 
+    /// CF-ADD-TO-INVENTORY (2026-06-12): POST /api/portfolioiq/holdings.
+    /// Identity-gated server-side; auto-prices the holding (the response is
+    /// already comped, so the inventory view can render the new row at its
+    /// estimated value without a refetch). `parallelId` is the load-bearing
+    /// field for graded-scope valuation — without it the rail estimates
+    /// fall back to base scope and the holding values at the wrong number.
+    func addPortfolioHolding(_ body: AddHoldingRequest) async throws -> AddHoldingResponse {
+        try await post(
+            path: "/api/portfolioiq/holdings",
+            body: body,
+            responseType: AddHoldingResponse.self
+        )
+    }
+
     func fetchPortfolioLedger(userId: String = "") async throws -> PortfolioLedgerResponse {
         try await get(
             path: "/api/portfolio/ledger",
@@ -2248,6 +2262,32 @@ struct PortfolioIQBackendSummaryResponse: Decodable {
     let inventory: PortfolioInventorySummary?
     let month: SummaryPeriod?
     let year: SummaryPeriod?
+}
+
+/// CF-ADD-TO-INVENTORY (2026-06-12): wire body for POST
+/// /api/portfolioiq/holdings. parallelId is required for parallels so the
+/// server-side auto-price runs in graded scope (matching the rail
+/// estimate the user just saw on the comp page). purchasePrice is
+/// optional; nil means "I haven't entered a cost basis yet" — backend
+/// stores null and the dashboard's observed-gain line stays blank for
+/// this holding.
+struct AddHoldingRequest: Encodable {
+    let playerName: String
+    let cardsightCardId: String
+    let parallel: String?
+    let parallelId: String?
+    let gradeCompany: String?
+    let gradeValue: Double?
+    let purchasePrice: Double?
+    let quantity: Int
+}
+
+/// CF-ADD-TO-INVENTORY (2026-06-12): backend returns 201 with the
+/// auto-priced holding inline so the iOS sheet can confirm with the
+/// real valuation in hand (no double-fetch).
+struct AddHoldingResponse: Decodable {
+    let holding: InventoryCard?
+    let success: Bool?
 }
 
 struct PortfolioIQHoldingsEnvelope: Decodable {
