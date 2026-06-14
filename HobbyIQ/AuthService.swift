@@ -23,6 +23,8 @@ final class AuthService: ObservableObject, AuthServicing {
     @Published var session: AuthSession?
     private let sessionStorageKey = "auth.sessionId"
     private let legacySessionStorageKey = "HobbyIQ.AuthService.session"
+    private let sessionValidatedAtKey = "auth.sessionValidatedAt"
+    private static let sessionValidationTTL: TimeInterval = 90
 
     var isLoggedIn: Bool {
         session != nil
@@ -42,6 +44,17 @@ final class AuthService: ObservableObject, AuthServicing {
         let cachedUser = AppUser(id: storedSession.userId, displayName: storedSession.profileName, email: storedSession.profileName)
         session = AuthSession(user: cachedUser, token: storedSession.token)
 
+        // CF-LAUNCH-FETCHSESSION-TTL: skip the /api/auth/session round-trip
+        // when the cached session was validated within the TTL window. Trades
+        // a small staleness window for ~100-300ms (warm) up to ~5s (slow net)
+        // off cold-launch wall-clock. Invalidated on 401, sign-out, and any
+        // clearStoredSession() path.
+        let lastValidatedAt = UserDefaults.standard.double(forKey: sessionValidatedAtKey)
+        if lastValidatedAt > 0,
+           Date().timeIntervalSince1970 - lastValidatedAt < Self.sessionValidationTTL {
+            return cachedUser
+        }
+
         do {
             let response = try await withTimeout(seconds: 5) {
                 try await APIService.shared.fetchSession()
@@ -53,6 +66,7 @@ final class AuthService: ObservableObject, AuthServicing {
             }
             let user = AppUser(id: backendUser.userId, displayName: backendUser.email, email: backendUser.email)
             session = AuthSession(user: user, token: storedSession.token)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: sessionValidatedAtKey)
             return user
         } catch let error as APIServiceError {
             if case .httpError(let code, _) = error, code == 401 {
@@ -98,6 +112,7 @@ final class AuthService: ObservableObject, AuthServicing {
         let user = AppUser(id: backendUser.userId, displayName: backendUser.email, email: backendUser.email)
         session = AuthSession(user: user, token: token)
         saveSession(session)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: sessionValidatedAtKey)
         return user
     }
 
@@ -142,6 +157,7 @@ final class AuthService: ObservableObject, AuthServicing {
         UserDefaults.standard.removeObject(forKey: "auth.userId")
         UserDefaults.standard.removeObject(forKey: "auth.displayName")
         UserDefaults.standard.removeObject(forKey: legacySessionStorageKey)
+        UserDefaults.standard.removeObject(forKey: sessionValidatedAtKey)
     }
 
     private func withTimeout<T>(seconds: Double, operation: @escaping @Sendable () async throws -> T) async throws -> T {
