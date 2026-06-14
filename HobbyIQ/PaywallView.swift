@@ -43,7 +43,12 @@ struct PaywallView: View {
             }
         }
         .task {
-            await subscriptionManager.prepare()
+            // CF-LAUNCH-DEFER-STOREKIT (2026-06-12): products are now loaded
+            // here just-in-time instead of at launch. Run both in parallel —
+            // they're independent (StoreKit vs our /api/entitlements).
+            async let entitlements: () = subscriptionManager.prepare()
+            async let products: () = subscriptionManager.loadProductsIfNeeded()
+            _ = await (entitlements, products)
         }
         .onAppear {
             if let suggested = suggestedTier, suggested.rank > subscriptionManager.currentTier.rank {

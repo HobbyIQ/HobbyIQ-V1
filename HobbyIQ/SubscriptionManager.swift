@@ -382,9 +382,25 @@ final class SubscriptionManager: ObservableObject {
         URL(string: "https://apps.apple.com/account/subscriptions")
     }
 
+    /// Launch-time prep. Refreshes entitlements from the backend so launch
+    /// routing (paywall vs ready) reflects backend truth.
+    ///
+    /// CF-LAUNCH-DEFER-STOREKIT (2026-06-12): loadProducts() removed from
+    /// this path. StoreKit `Product.products(for:)` is expensive (~200-500ms
+    /// typical, can stall on bad StoreKit state) and only needed when the
+    /// user actually sees the paywall. PaywallView.task now loads them
+    /// just-in-time (concurrently with this entitlements refresh when both
+    /// are needed).
     func prepare() async {
-        await loadProducts()
         await refreshEntitlementsFromBackend()
+    }
+
+    /// Loads StoreKit products if not already loaded. Idempotent — the
+    /// hasLoadedProducts guard inside loadProducts() short-circuits repeat
+    /// calls. Safe to call from PaywallView.task or any other surface that
+    /// needs price/purchase UI.
+    func loadProductsIfNeeded() async {
+        await loadProducts()
     }
 
     func continueFree() {
