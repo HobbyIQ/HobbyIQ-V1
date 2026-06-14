@@ -75,7 +75,8 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
         }
     }
 
-    func save(apiService: APIService = .shared, completion: @escaping (InventoryCard?) -> Void) {
+    func save(completion: @escaping (InventoryCard?) -> Void) {
+        let apiService = APIService.shared
         let trimmedCost = purchasePriceText.trimmingCharacters(in: .whitespaces)
         let purchasePrice: Double? = trimmedCost.isEmpty ? nil : Double(trimmedCost)
 

@@ -37,3 +37,6 @@ tmp/
 
 # Azure Functions Python bytecode (Finding 10 / source-restoration PR)
 compiq-functions/**/__pycache__/
+
+# Xcode user-specific state (window layout, breakpoints, scheme selection)
+**/xcuserdata/
