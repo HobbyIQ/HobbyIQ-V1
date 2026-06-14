@@ -56,8 +56,13 @@ struct APIService {
             self.session = session
         } else {
             let configuration = URLSessionConfiguration.default
+            // CF-FIND-CARDS-REGROUND: keep per-request default at 15s
+            // (per-endpoint overrides via URLRequest.timeoutInterval still
+            // win), but raise the resource ceiling above the longest
+            // per-endpoint override (cardsearch = 30s) so the session
+            // doesn't preempt a legitimately long single request.
             configuration.timeoutIntervalForRequest = 15
-            configuration.timeoutIntervalForResource = 30
+            configuration.timeoutIntervalForResource = 60
             self.session = URLSession(configuration: configuration)
         }
     }
@@ -102,7 +107,19 @@ struct APIService {
 
     func searchVariantList(query: String) async throws -> CompIQVariantListResponse {
         let body = CompIQVariantSearchRequest(query: query)
-        return try await post(path: "/api/compiq/cardsearch", body: body, responseType: CompIQVariantListResponse.self)
+        // CF-FIND-CARDS-REGROUND: cardsearch needs headroom. Dispatcher's
+        // Cardsight enrichment is several seconds on a cold cache for broad
+        // queries ("Mike Trout", "Bowman Chrome"); the default 10s URLRequest
+        // timeout fired before the dispatcher could finish, surfacing as a
+        // false "search timed out" to the user. 30s covers cold-cache broad
+        // queries while still letting the user Cancel via the picker's
+        // shimmer state.
+        return try await post(
+            path: "/api/compiq/cardsearch",
+            body: body,
+            responseType: CompIQVariantListResponse.self,
+            timeoutSeconds: 30
+        )
     }
 
     func priceByCardId(
@@ -156,10 +173,23 @@ struct APIService {
         // DEBUG-only. Mirrors the existing post() → perform() chain
         // otherwise; on release builds we fall through to post() so the
         // generic helper handles it.
+        // CF-FIND-CARDS-REGROUND: price-by-id needs headroom too. With a
+        // `query` + `parallelId` + `parallelName` (the natural shape a
+        // comp-page tap produces for a graded auto parallel), backend
+        // routes through findCompsRouted, which aggregates comps from
+        // multiple sources and can run several seconds on a cold cache.
+        // The 10s default URLRequest timeout was firing before the
+        // dispatcher could finish on broader queries (observed: "2024
+        // bowman CHROME BLUE AUTO LEO DE VRIES" → 10s timeout).
         #if DEBUG
         return try await debugPriceByIdWithDump(body: body)
         #else
-        return try await post(path: "/api/compiq/price-by-id", body: body, responseType: CompIQPriceByIdResponse.self)
+        return try await post(
+            path: "/api/compiq/price-by-id",
+            body: body,
+            responseType: CompIQPriceByIdResponse.self,
+            timeoutSeconds: 30
+        )
         #endif
     }
 
@@ -167,7 +197,10 @@ struct APIService {
     private func debugPriceByIdWithDump(body: CompIQPriceByIdRequest) async throws -> CompIQPriceByIdResponse {
         let path = "/api/compiq/price-by-id"
         let bodyData = try encoder.encode(body)
-        let request = try makeRequest(path: path, method: "POST", bodyData: bodyData, sessionId: nil)
+        // Match the release-path timeout (CF-FIND-CARDS-REGROUND) — the
+        // DEBUG dump shouldn't preempt a request the release build would
+        // happily wait on.
+        let request = try makeRequest(path: path, method: "POST", bodyData: bodyData, sessionId: nil, timeoutSeconds: 30)
         let context = requestContext(request)
         do {
             let (data, response) = try await session.data(for: request)
@@ -1056,7 +1089,8 @@ struct APIService {
         queryItems: [URLQueryItem] = [],
         body: Request,
         responseType: Response.Type,
-        sessionId: String? = nil
+        sessionId: String? = nil,
+        timeoutSeconds: TimeInterval? = nil
     ) async throws -> Response {
         let bodyData = try encoder.encode(body)
         #if DEBUG
@@ -1064,7 +1098,7 @@ struct APIService {
             print("Request Body:", bodyText)
         }
         #endif
-        let request = try makeRequest(path: path, queryItems: queryItems, method: "POST", bodyData: bodyData, sessionId: sessionId)
+        let request = try makeRequest(path: path, queryItems: queryItems, method: "POST", bodyData: bodyData, sessionId: sessionId, timeoutSeconds: timeoutSeconds)
         return try await perform(request, responseType: responseType)
     }
 
@@ -1128,7 +1162,7 @@ struct APIService {
         return body
     }
 
-    private func makeRequest(path: String, queryItems: [URLQueryItem] = [], method: String, bodyData: Data?, sessionId: String? = nil) throws -> URLRequest {
+    private func makeRequest(path: String, queryItems: [URLQueryItem] = [], method: String, bodyData: Data?, sessionId: String? = nil, timeoutSeconds: TimeInterval? = nil) throws -> URLRequest {
         guard let baseURL = URL(string: baseURLString) else {
             throw APIServiceError.invalidURL
         }
@@ -1145,7 +1179,13 @@ struct APIService {
 
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 10
+        // CF-FIND-CARDS-REGROUND: per-request timeout override. Default 10s
+        // covers the vast majority of endpoints, but the cardsearch
+        // dispatcher's Cardsight enrichment runs several seconds on a cold
+        // cache for broad queries ("Mike Trout", "Bowman Chrome"). Callers
+        // that need headroom pass `timeoutSeconds` explicitly so we don't
+        // raise the floor for every endpoint.
+        request.timeoutInterval = timeoutSeconds ?? 10
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let resolvedSessionId = sessionId ?? AuthService.shared.session?.token
         if let sessionId = resolvedSessionId?.trimmingCharacters(in: .whitespacesAndNewlines), sessionId.isEmpty == false {

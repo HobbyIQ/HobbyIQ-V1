@@ -141,7 +141,7 @@ struct CompIQVariantPickerView: View {
                     startSearch()
                 }
 
-            HIQPrimaryButton(title: "Search Variants", systemImage: "magnifyingglass") {
+            HIQPrimaryButton(title: "Search", systemImage: "magnifyingglass") {
                 Task { await load() }
             }
             .opacity(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1)
@@ -241,20 +241,44 @@ struct CompIQVariantPickerView: View {
                 }
                 .padding(HobbyIQTheme.Spacing.medium)
                 .background(HobbyIQTheme.Colors.cardNavy)
-                .overlay(
-                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
-                )
                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
 
-                // Quiet refine hint so a single-result page feels intentional.
-                Text("Not the exact card? Add the card number or a parallel to your search.")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 4)
+                refineHint
             }
+        } else if hasSearched, !isLoading, error == nil {
+            emptyResultsCard
         }
+    }
+
+    // MARK: - Empty results / refine hint
+
+    /// Calm zero-results card. Replaces the prior red `exclamationmark` banner
+    /// — "no matches" isn't an error, it's a refine signal. Carries the same
+    /// refine copy as the populated state so the user sees the same guidance
+    /// regardless of outcome.
+    private var emptyResultsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("No matches for \u{201C}\(query.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Try the card number, year, or a parallel name. Cross-sport queries are supported — narrower searches resolve better.")
+                .font(.footnote)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(HobbyIQTheme.Spacing.medium)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    private var refineHint: some View {
+        Text("Not the exact card? Add the card number or a parallel to your search.")
+            .font(.caption)
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
     }
 
     // MARK: - Results header (v2)
@@ -303,14 +327,53 @@ struct CompIQVariantPickerView: View {
         return normalized.isEmpty || normalized == "base set" || normalized == "base"
     }
 
-    /// Title line: "{year} {brand}". Returns nil when both are missing so
-    /// the view can omit the line cleanly.
-    private func titleLine(for hit: CompIQVariantHit) -> String? {
+    /// CF-FIND-CARDS-REGROUND: rich identity line "{year} · {set} · #{number}".
+    /// Set prefers the explicit `set` field; falls back to `brand` when the
+    /// dispatcher only carried brand (cardsearch is uneven on this). Missing
+    /// parts drop out cleanly so the " · " separators never bracket empty
+    /// segments and a sparse row stays readable.
+    private func identityLine(for hit: CompIQVariantHit) -> String? {
         let year = hit.year.map(String.init)
-        let trimmedBrand = hit.brand?.trimmingCharacters(in: .whitespaces)
-        let brand = (trimmedBrand?.isEmpty == false) ? trimmedBrand : nil
-        let head = [year, brand].compactMap { $0 }.joined(separator: " ")
-        return head.isEmpty ? nil : head
+        let setOrBrand: String? = {
+            let trimmedSet = hit.set?.trimmingCharacters(in: .whitespaces)
+            if let s = trimmedSet, s.isEmpty == false, isBaseSet(s) == false {
+                return s
+            }
+            let trimmedBrand = hit.brand?.trimmingCharacters(in: .whitespaces)
+            return (trimmedBrand?.isEmpty == false) ? trimmedBrand : nil
+        }()
+        let number: String? = {
+            guard let raw = hit.number?.trimmingCharacters(in: .whitespaces),
+                  raw.isEmpty == false else { return nil }
+            return raw.hasPrefix("#") ? raw : "#\(raw)"
+        }()
+        let parts = [year, setOrBrand, number].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// CF-FIND-CARDS-REGROUND: pill set for the redesigned row. Combines
+    /// parallel-name + serial into one chip (the most common refine
+    /// disambiguator), adds RC when `attributes` carries it, keeps Auto +
+    /// grade/Raw as their own chips. Returns [] when the row is so bare
+    /// only "Raw" would render — that's fine; pills section just omits.
+    private func enrichedPills(for hit: CompIQVariantHit) -> [VariantPill] {
+        var pills: [VariantPill] = []
+        if let parallel = parallelLine(for: hit) {
+            pills.append(VariantPill(text: parallel, kind: .accent))
+        }
+        if let attrs = hit.attributes,
+           attrs.contains(where: { $0.trimmingCharacters(in: .whitespaces).uppercased() == "RC" }) {
+            pills.append(VariantPill(text: "RC", kind: .neutral))
+        }
+        if hit.isAuto {
+            pills.append(VariantPill(text: "Auto", kind: .auto))
+        }
+        if let display = hit.gradeDisplay {
+            pills.append(VariantPill(text: display, kind: .grade))
+        } else {
+            pills.append(VariantPill(text: "Raw", kind: .neutral))
+        }
+        return pills
     }
 
     /// "{parallel} /{run}" line — NO leading separator. Returned for use
@@ -325,20 +388,6 @@ struct CompIQVariantPickerView: View {
             return "\(variant) \(serial.hasPrefix("/") ? serial : "/\(serial)")"
         }
         return variant
-    }
-
-    /// Inline Auto badge — solid gold fill (stronger than the prior tinted
-    /// pill) with dark text. Right-pinned on LINE 1; never inline with the
-    /// parallel or in the tags row.
-    private var inlineAutoBadge: some View {
-        let gold = Color(hex: 0xE5B64A)
-        return Text("Auto")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.black)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(gold)
-            .clipShape(Capsule())
     }
 
     // MARK: - Flattened, ranked row set
@@ -413,14 +462,14 @@ struct CompIQVariantPickerView: View {
         }
     }
 
-    // MARK: - Row (v3 — fixed lanes)
+    // MARK: - Row (v4 — single rich identity + pill row + CTA)
 
     private func variantRow(_ hit: CompIQVariantHit) -> some View {
         let showPlayerOnRow = unifiedPlayerName == nil
         return HStack(alignment: .center, spacing: 12) {
             variantThumbnail(hit)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 // Per-row player name only when the result set is mixed-
                 // player (header already shows it on unified-player sets).
                 if showPlayerOnRow,
@@ -432,51 +481,33 @@ struct CompIQVariantPickerView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                // LINE 1 — flex space-between: title left, Auto badge
-                // pinned RIGHT when this is an auto card. Auto lives ONLY
-                // here, right-aligned — never inline with the parallel.
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    if let title = titleLine(for: hit) {
-                        Text(title)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 4)
-                    if hit.isAuto {
-                        inlineAutoBadge
-                    }
-                }
-
-                // LINE 2 — parallel + serial, no leading separator.
-                // Omitted when the row carries no parallel.
-                if let parallel = parallelLine(for: hit) {
-                    Text(parallel)
+                // Single rich identity line: "{year} · {set} · #{number}".
+                // Set falls back to brand when the dispatcher only carried
+                // brand. Missing parts collapse cleanly so the separators
+                // never bracket empty content.
+                if let identity = identityLine(for: hit) {
+                    Text(identity)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                // LINE 3 — insert/subset name. Base sets ("Base Set" /
-                // "Base" / empty) are suppressed so the row doesn't waste
-                // a lane on a non-disambiguator.
-                if !isBaseSet(hit.set),
-                   let subset = hit.set?.trimmingCharacters(in: .whitespaces),
-                   subset.isEmpty == false {
-                    Text(subset)
-                        .font(.system(size: 13))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                // Condition tag — Raw (or grade) only. Parallel and Auto
-                // are on lines 1–2 now, never the tags row.
-                let tags = variantPills(for: hit)
-                if tags.isEmpty == false {
-                    WrappingHStack(items: tags) { pill in
+                // Pill row: parallel (variant + /run), RC, Auto, grade/Raw.
+                // Wraps via WrappingHStack so long parallel names don't
+                // truncate or push the chevron offscreen.
+                let pills = enrichedPills(for: hit)
+                if pills.isEmpty == false {
+                    WrappingHStack(items: pills) { pill in
                         variantPill(pill)
                     }
                 }
+
+                // Quiet CTA cue so the tap affordance reads even when the
+                // chevron is overlooked.
+                Text("Tap to see pricing & comps")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
@@ -536,18 +567,6 @@ struct CompIQVariantPickerView: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
         }
-    }
-
-    // MARK: - Pills
-
-    /// Tags row carries only the condition pill (Raw or grade). Parallel
-    /// and Auto are now expressed on the wrapping title line so the tags
-    /// row collapses to a single chip.
-    private func variantPills(for hit: CompIQVariantHit) -> [VariantPill] {
-        if let display = hit.gradeDisplay {
-            return [VariantPill(text: display, kind: .grade)]
-        }
-        return [VariantPill(text: "Raw", kind: .neutral)]
     }
 
     // MARK: - Parallel hit synthesis (used by the flattened row list)
@@ -701,12 +720,10 @@ struct CompIQVariantPickerView: View {
         do {
             let newHits = try await CompIQSearchService.shared.searchVariants(query: trimmed)
             try Task.checkCancellation()
-            if newHits.isEmpty == false {
-                hits = newHits
-            } else if hits.isEmpty {
-                hits = []
-                error = "No variants found for \"\(trimmed)\"."
-            }
+            // CF-FIND-CARDS-REGROUND: zero results aren't an error. Reset
+            // `hits` so `resultsSection` can render the calm empty card with
+            // the refine hint instead of routing through the danger banner.
+            hits = newHits
         } catch is CancellationError {
             // User cancelled — don't surface a stale network-error string.
             // hits stays as-is so a prior result list (if any) keeps showing.
