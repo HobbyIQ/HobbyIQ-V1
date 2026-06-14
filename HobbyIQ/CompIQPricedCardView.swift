@@ -3042,19 +3042,19 @@ struct CompIQPricedCardView: View {
             // parallel disambiguators when the hit came from a parallel-row
             // tap. The pricing id stays the parent's base UUID; backend
             // filters comps to the matched sub-market via parallelId.
-            // CF-GRADED-RAIL-RENDER (2026-06-12): always send a canonical
-            // graded pair (PSA/10) so the backend returns the full
-            // `gradedEstimates` array. The estimator computes all 4
-            // ladder entries against the same composed anchor — sending
-            // PSA 10 vs BGS 9.5 yields byte-identical estimates per the
-            // backend handoff. The selected grade no longer drives the
-            // request scope; the rail picks per-grade values from
-            // gradeBreakdown ∪ gradedEstimates locally.
+            // CF-DECOUPLE-RAIL-SCOPE-REVERT (2026-06-12): backend `8ea7cc9+`
+            // decouples gradedEstimates assembly from the request's grade
+            // pair, so iOS no longer needs to force a canonical PSA/10 to
+            // surface the rail. The request now reflects the card's view
+            // (raw when selectedGrade is Raw, the user's grade otherwise)
+            // and top-level price / comps / trend / history / strategy
+            // align with that view again. The rail still picks per-grade
+            // values from gradeBreakdown ∪ gradedEstimates locally.
             let response = try await CompIQSearchService.shared.priceByCardId(
                 hit.cardsightCardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
-                gradeCompany: "PSA",
-                gradeValue: 10,
+                gradeCompany: selectedGrade.gradeCompany,
+                gradeValue: selectedGrade.gradeValue,
                 parallelId: hit.parallelId,
                 parallelName: hit.variant
             )
