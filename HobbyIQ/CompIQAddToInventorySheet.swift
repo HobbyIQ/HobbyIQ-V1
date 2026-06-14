@@ -150,6 +150,75 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
         guard parts.count == 2, let value = Double(parts[1]) else { return nil }
         return (String(parts[0]).uppercased(), value)
     }
+
+    // MARK: - Derived grade choices (CF-INVENTORY-GRADE-PICKER-DERIVED)
+
+    /// Picker options driven by the backend's actual capability for this
+    /// card. Starts with Raw (always selectable — the holding always has a
+    /// valid raw value via the comp-page market tier), then includes every
+    /// (grader, numericValue) pair the backend can price:
+    ///   • Observed comps from `gradeBreakdown` (compCount > 0) — these
+    ///     produce a "Will value at ${X} Observed" preview.
+    ///   • Estimates from `gradedEstimates` with a non-nil `estimatedValue`
+    ///     — these produce a "~${X} {tier}" preview.
+    /// Observed wins over estimated for the same (grader, value). Non-
+    /// numeric grades ("Authentic") drop out — `gradeValue: Double?` on the
+    /// wire can't carry them yet. Sorted alphabetically by grader, then
+    /// value descending, so PSA 10 leads its grader bucket.
+    ///
+    /// This replaces the prior hardcoded canonical-four ladder so the
+    /// picker never shows a grade that would land as "Valuation pending"
+    /// on save.
+    var gradeChoices: [GradeChoice] {
+        var seen = Set<String>()
+        var graded: [(grader: String, value: Double)] = []
+
+        if let breakdown = response.gradeBreakdown {
+            for entry in breakdown {
+                guard let grader = entry.grader?.trimmingCharacters(in: .whitespaces).uppercased(),
+                      grader.isEmpty == false,
+                      grader != "RAW",
+                      let value = entry.numericGrade,
+                      (entry.compCount ?? 0) > 0 else { continue }
+                let key = "\(grader)|\(value)"
+                if seen.insert(key).inserted {
+                    graded.append((grader, value))
+                }
+            }
+        }
+
+        if let estimates = response.gradedEstimates {
+            for est in estimates {
+                guard est.estimatedValue != nil,
+                      let parsed = parseGrade(est.grade) else { continue }
+                let key = "\(parsed.grader)|\(parsed.value)"
+                if seen.insert(key).inserted {
+                    graded.append(parsed)
+                }
+            }
+        }
+
+        // Honor the user's intent from the comp page: if the preselected
+        // grade isn't already backend-priced for this card, include it
+        // anyway so the picker reflects the inbound choice (preview will
+        // simply read "Valuation pending"). Without this, a sheet opened
+        // with preselectedGrade = (PSA, 9) for a card the backend has no
+        // PSA 9 data on would hide the user's own selection.
+        if case .graded(let grader, let value) = preselectedGrade {
+            let normalized = grader.uppercased()
+            let key = "\(normalized)|\(value)"
+            if seen.insert(key).inserted {
+                graded.append((normalized, value))
+            }
+        }
+
+        graded.sort { lhs, rhs in
+            if lhs.grader != rhs.grader { return lhs.grader < rhs.grader }
+            return lhs.value > rhs.value
+        }
+
+        return [.raw] + graded.map { GradeChoice.graded($0.grader, $0.value) }
+    }
 }
 
 /// CF-ADD-TO-INVENTORY (2026-06-12): the user-facing grade choices in the
@@ -195,17 +264,11 @@ struct CompIQAddToInventorySheet: View {
     let onSaved: (InventoryCard?) -> Void
     @Environment(\.dismiss) private var dismiss
 
-    /// Canonical grade options shown in the picker — Raw + the same four
-    /// graded ladder entries the comp-page rail surfaces. The sheet
-    /// previews the valuation for whichever the user picks so they see
-    /// exactly what the holding will be valued at on save.
-    private let gradeChoices: [GradeChoice] = [
-        .raw,
-        .graded("PSA", 10),
-        .graded("PSA", 9),
-        .graded("BGS", 9.5),
-        .graded("SGC", 10),
-    ]
+    /// CF-INVENTORY-GRADE-PICKER-DERIVED: picker options come from the view
+    /// model, which derives them from the backend's gradeBreakdown +
+    /// gradedEstimates for THIS card. Replaces the prior hardcoded ladder
+    /// so the user never gets to pick a grade the backend can't price.
+    private var gradeChoices: [GradeChoice] { viewModel.gradeChoices }
 
     var body: some View {
         NavigationStack {
