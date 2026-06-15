@@ -6,6 +6,84 @@
 
 ---
 
+## 2026-06-15 — Estimator Phase 2 high-tier fix: revert mult ≥ 14 to raw (deployed `042c9aa`)
+
+The Phase 2 power-law correction `mult^0.283` (shipped earlier today as `5c57734`) over-corrected past the Blue tier and crushed real high-tier autos. Verified external cite: Leo Gold Refractor PSA 10 $8,100 (eBay/SCI); Phase 2 emitted $1,220 — under-claim 6.6×. This fix gates the correction so mult ≥ 14 reverts to raw table multipliers.
+
+### Why the original fit went wrong
+
+The original Phase 2 sample of 15 raw-only over-claim points absorbed **9 mis-tagged low-dollar high-tier sales** ($8-$293 "Gold" / "Black" / "Red" sales, almost certainly Cardsight beta-pipeline mis-bucketed base autos). The constrained power-law `over(mult) = mult^0.717` extrapolated through those phantom over-claims and predicted Gold Refractor over-claim ~6.80× (vs verified 1.02×). The actual auto over-claim shape is a HUMP, not monotonic-increase:
+
+| Mult bucket | n (verified) | Median over-claim |
+|---|---:|---:|
+| Refractor / Speckle (2.2-2.7) | 3 | 1.44× |
+| Green Refractor (4.3) | 3 | 3.86× |
+| Blue Refractor (5.7) | 1 | 3.01× |
+| Gold Shimmer (9.3) | 1 (external) | 3.55× |
+| **Gold Refractor (14.5)** | 1 (external) | **1.64×** |
+
+Over-claim rises to ~3-5× at Blue/Green-Atomic, plateaus through Gold-low, then DROPS back toward 1.0× at Gold Refractor. The power law can't capture this curve shape with one parameter on noisy data.
+
+### Fix shape
+
+In `autoCorrectedBaseMultiplier` (both `gradedPriceProjection.ts` and `predictedRangeMultiplierAnchored.ts`):
+
+```ts
+const AUTO_HIGH_TIER_THRESHOLD = 14;
+function autoCorrectedBaseMultiplier(raw: number): number {
+  if (raw >= AUTO_HIGH_TIER_THRESHOLD) return raw;          // high-tier autos hold value
+  return Math.pow(raw, AUTO_BASE_MULTIPLIER_EXPONENT);      // sub-threshold: existing mult^0.283
+}
+```
+
+Both sites share the threshold for one coherent autoness model. Sibling-anchor site at `gradedPriceProjection.ts:467-469` remains untouched per Phase 1 invariant.
+
+### Per-tier effect (Leo De Vries CPA-LD, baseRawMed=$228.93)
+
+| Parallel | Mult | Pre (shipped 5c57734) | **Post (this fix)** | Verified |
+|---|---:|---:|---:|---|
+| Blue Refractor | 5.70 | $936 | **$959*** | $936 baseline |
+| Green Refractor | 4.30 | (sub-threshold, corrected) | unchanged | — |
+| Yellow Refractor | 6.70 | (sub-threshold, corrected) | unchanged | — |
+| Gold Shimmer Refractor | 9.30 | $1,075 | **$1,075** | $2,400 mid (accepted residual) |
+| **Gold Refractor** | **14.50** | $1,220 | **$8,500** | **$8,100 (within 5%)** ✓ |
+| Orange Refractor | 21.90 | $1,370 | **$12,800** | plausible (Orange /25 typical $5k-$15k) |
+| Black Refractor | 32.00 | $1,795 | **$18,800** | plausible (Black /10 typical $10k-$25k) |
+| Red Refractor | 55.00 | $2,381 | **$32,200** | plausible (Red /5 typical $30k-$60k) |
+| SuperFractor 1/1 | 125.00 | $3,995 | **$73,300** | plausible (1/1 typical $50k-$200k+) |
+
+\* Leo Blue dollar drift `$936 → $959` is NOT from the threshold gate. Corrected multiplier `1.636×` is mathematically unchanged (Blue mult 5.70 < threshold 14). The shift is upstream Cardsight tier-1 ratio drift — `tier-1 ratio = base graded median / base raw median` moved from `2.499` (8 base graded comps median $572) to `2.560` (9 base graded comps; Cardsight added a comp between Phase 2 ship and this CF). Surfacing the drift; it would have moved the shipped Phase 2 value too on next request had this CF not landed.
+
+Konnor PSA 9 unchanged at $830 (sibling-routed; sibling site is untouched by Phase 2 entirely). Non-auto cards byte-identical — `auto-corrected` / `high-tier reverts to raw` basis text never fires when `isAuto = false`.
+
+### Acknowledged residual
+
+**Gold Shimmer band (mult 7-14) still under-claimed.** The threshold is a hard step at mult 14; it doesn't capture the descent from the Blue peak. Gold Shimmer (mult 9.30) at verified ~$2,400 PSA 10 emits $1,075 — under-claim ~2.2×. The brief explicitly favored the conservative single-threshold over a curve-fit on the 2-3 high-tier data points we have. **Proper fix = tapered correction** (interpolate from `mult^0.283` at the Blue tier down to raw at Gold Refractor); deferred until more verified high-tier sales exist to fit the taper.
+
+### Re-tune lever unchanged
+
+Same as Phase 2: color-parallel data growth via eBay ingestion + marketplace expansion, not de-poison expansion. Once the mult 7-14 band has ≥10 verified sales we can fit the taper curve directly.
+
+### Basis text
+
+The basis text on the rail now distinguishes the path the engine took:
+- mult < 14: `"... × Blue auto-corrected multiplier (5.70×^0.283 = 1.636×)"`
+- mult ≥ 14: `"... × Gold multiplier (14.500× — high-tier auto reverts to raw at mult ≥ 14)"`
+- non-auto: `"... × Gold multiplier (14.500×)"` (no auto/high-tier annotation)
+
+iOS readers see the correct mechanism cited for each result.
+
+### Files (2)
+
+- `gradedPriceProjection.ts` — added `AUTO_HIGH_TIER_THRESHOLD = 14` constant + comment block; gate in `autoCorrectedBaseMultiplier`; basis text now distinguishes "high-tier raw" vs "auto-corrected".
+- `predictedRangeMultiplierAnchored.ts` — mirrored threshold + gate. Both sites have identical autoness logic.
+
+### Deploy
+
+Commit `042c9aa` + `node zip.js` + `.\scripts\deploy-with-build-info.ps1`. `/api/health` confirms `build.shaFromCodeShort == build.shaShort == 042c9aa`. Feature-probe `/api/compiq/normalization-dictionary` returned 200 OK. Live re-probe Leo Gold Refractor PSA 10 = **$8,500** (vs verified $8,100; within 5%). Cache flush (`compiq:price-by-id:v4:*`): 0 keys (auth'd surface; light traffic). Suite 2340/2340.
+
+---
+
 ## 2026-06-15 — Estimator Phase 2: auto-base multiplier correction (deployed `5c57734`)
 
 Corrects the Chrome-Draft multiplier table for prospect-auto cards where the auto IS the base. Pre-Phase-2 the table over-claimed by ~3-7× on cards routing the parallel-composed anchor path (Leo PSA 10 $3,261 vs market reality ~$1,000); Phase 2 lands Leo PSA 10 at **$936** without disturbing sibling-anchored cards (Konnor PSA 9 stays at **$830**).
