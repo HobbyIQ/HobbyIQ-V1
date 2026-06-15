@@ -6,6 +6,88 @@
 
 ---
 
+## 2026-06-15 — Estimator Phase 2: auto-base multiplier correction (deployed `5c57734`)
+
+Corrects the Chrome-Draft multiplier table for prospect-auto cards where the auto IS the base. Pre-Phase-2 the table over-claimed by ~3-7× on cards routing the parallel-composed anchor path (Leo PSA 10 $3,261 vs market reality ~$1,000); Phase 2 lands Leo PSA 10 at **$936** without disturbing sibling-anchored cards (Konnor PSA 9 stays at **$830**).
+
+### Correction shape
+
+Constrained power-law fit on 15 raw-only same-parallel sales across 8 auto cards from the Phase 2 recon, anchored at `over(1.0) = 1.0` so `Base Auto` trivially equals itself:
+```
+over(mult) = mult^0.717          R² = 0.369   n = 15
+autoCorrectedMultiplier(mult) = mult / over(mult) = mult^0.283
+```
+
+Per-tier corrected multipliers (representative):
+
+| Tier | parallelName | raw mult | corrected mult |
+|---|---|---:|---:|
+| Base | Refractor | 2.20 | 1.250 |
+| Blue | **Blue** | **5.70** | **1.636** |
+| Green | Green | 4.30 | 1.512 |
+| Gold | **Gold** | **14.50** | **2.131** |
+| Orange | Orange | 21.90 | 2.397 |
+| Black | Black | 32.00 | 2.669 |
+| Red | **Red** | **55.00** | **3.112** |
+| 1/1 | Superfractor | 125.00 | 3.926 |
+
+### Detection signal
+
+`getCardDetail(cardId).attributes.includes("AUTO")` — Cardsight-classified. Threaded as `isAuto` through `BuildGradedEstimatesInput` from `compileGradedEstimatesForCard.ts` (extracted in the same `getCardDetail` call that already fetches `cardParallels` for Phase 1's sibling-anchor). No extra round-trip; fail-safe default `isAuto = false`. Non-auto cards (Trout, Aaron Judge, etc.) take the untouched path with raw `baseMultiplier`.
+
+### Two injection sites — sibling intentionally NOT touched
+
+| Site | Action |
+|---|---|
+| `gradedPriceProjection.ts:725` — parallel-composed anchor | `baseRawMedian × autoCorrectedBaseMultiplier(entry)` when AUTO; raw `entry.baseMultiplier` when non-AUTO. The Leo path. |
+| `predictedRangeMultiplierAnchored.ts:204+236` — predicted-range surface | Symmetric correction at peer denominator AND subject numerator. Internally consistent so the implied-baseline math holds end-to-end (`impliedBaseline = peer.price / corrected_peer_mult` then `midpoint = midBaseline × corrected_subject_mult`). |
+| `gradedPriceProjection.ts:467-469` — **sibling-anchor** | **NOT corrected.** Sibling math uses parallel multiplier RATIOS (`target_mult / source_mult`). Power-law correction breaks ratio identity: `(5.7^0.283)/(4.9^0.283) = (5.7/4.9)^0.283 ≠ 5.7/4.9`. Correcting both ends would shift Phase 1's shipped Konnor PSA 9 from $830 → ~$745 — Phase 1 invariant kept by leaving sibling on raw ratios. |
+
+### Validation (in-process against deployed dist)
+
+| Card | Path | Pre-Phase-2 | Post-Phase-2 |
+|---|---|---:|---:|
+| Konnor CPA-KG Blue PSA 9 | sibling-anchor | $830 | **$830** (unchanged) ✓ |
+| Konnor CPA-KG Blue PSA 10 / BGS 9.5 / SGC 10 | sibling | $2,000 / $1,700 / $1,700 | $2,000 / $1,700 / $1,700 (unchanged) ✓ |
+| **Leo CPA-LD Blue PSA 10** | composed | $3,261 | **$936** (−71% — the win) |
+| Leo CPA-LD Blue PSA 9 / BGS 9.5 / SGC 10 | composed | $1,400 / $2,900 / $2,800 | $400 / $820 / $800 |
+| Leo CPA-LD Gold /50 PSA 10 (high-tier guardrail) | composed | ~$8,300 | **$1,220** (Gold > Blue $936 — coherent) |
+| Mike Trout 2011 Update (non-auto) | n=0 base scope | n=0 | n=0 (unchanged) ✓ |
+| Predicted-range synthetic test (subject Blue, auto vs non-auto) | both | midpoint $274 / $274 | midpoint $218 / $274 (auto corrected; non-auto unchanged) ✓ |
+
+Suite: **2340 / 2340 passing**.
+
+### Decoupled from de-poison (Phase 3)
+
+De-poison was bundled in the original Phase 2 brief but DROPPED. Reason: de-poison raises Konnor `baseRawN` from 1 → 34, flipping him onto composed. Post-Phase-2 that composed path would land Konnor PSA 9 at ~$2,074 — replacing the shipped $830 sibling-anchor value with a number Cardsight has zero Blue /150 data to adjudicate. De-poison **re-scoped as a no-data-only fix**: only fires when (poisoned base) AND (no usable sibling). A card that already has a sibling-anchor result should never get flipped to composed by de-poison alone.
+
+### Divisor re-tune levers (not via de-poison)
+
+R² = 0.369 (modest) and n = 15 (thin) — divisors are approximate. The actionable re-tune lever is **color-parallel data growth**:
+- eBay ingestion that surfaces additional same-parallel auto raw sales would expand n directly.
+- `/v1/marketplace/{cardId}` integration would add active asks as a floor (asks are upper bounds on sales → composed/ask UNDER-states over-claim, useful for the shape).
+- Re-running the HALT 1 fit on a larger sample re-derives the exponent.
+
+NOT a de-poison expansion (per-CF brief: that would mix two corrections and make either harder to validate).
+
+### Files (3)
+
+- `gradedPriceProjection.ts` — `AUTO_BASE_MULTIPLIER_EXPONENT = 0.283` constant; `autoCorrectedBaseMultiplier()` helper; `isAuto?: boolean` threaded through `ComputeGradedProjectionInput` / `BuildGradedEstimatesInput` / `resolveAnchor` opts; correction applied at composed branch only.
+- `compileGradedEstimatesForCard.ts` — `isAuto` extracted from `getCardDetail.attributes` in the same call that fetches parallels; threaded through.
+- `predictedRangeMultiplierAnchored.ts` — `subjectIsAuto?: boolean` added to `MultiplierAnchoredInput`; correction at peer denominator + subject numerator.
+
+### Deploy
+
+`5c57734` commit + `node zip.js` + `.\scripts\deploy-with-build-info.ps1`. `/api/health` confirms `build.shaFromCodeShort == build.shaShort == 5c57734`. Feature-probe `/api/compiq/normalization-dictionary` returned 200 OK. Cache flush (`compiq:price-by-id:v4:*`) matched 0 keys — auth'd surface; light traffic.
+
+### What's still open
+
+- **Phase 3 (de-poison) — re-scoped**: no-data-only application; only fires on cards that have no usable sibling AND a degenerate base-raw pool poisoned by Cardsight mis-tags (Konnor's exact profile but minus the sibling rescue). Must check for sibling BEFORE flipping to composed; otherwise the bundle problem returns.
+- **Divisor re-tune** when sample expands (see "re-tune levers" above).
+- **Phase 3-broad** (Chrome / Optic / Liberty / Holo / Silver / X-Fractor / Crackle Foil / Rainbow Foil / Laser / Teal / Diamante Foil mis-tag candidates): per-name verification required before expansion.
+
+---
+
 ## 2026-06-14 — Estimator Phase 1: observed-anchor + trend, hybrid decision B (deployed `3ca46f6`)
 
 Closes the Konnor PSA 9 no-data ("PSA 9 Blue /150 → can't estimate") AND corrects the parallel-composed over-claim on cards where the base-raw pool is a degenerate outlier. Adds a real-sale anchor path next to the existing composed path — "old anchor × trend = new price" in the brief's framing.
