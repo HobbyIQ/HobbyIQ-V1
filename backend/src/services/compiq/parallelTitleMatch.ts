@@ -213,8 +213,10 @@ export function applyParallelTitleMatch(
   }
 
   // ─── Title-match path: compute tokens + specificity guard ─────────────
-  const userTokens = tokenizeParallel(userInput);
-  if (userTokens.length === 0) {
+  const built = buildParallelTitleMatcher(userInput, input.siblingParallels, {
+    matchedParallelId: input.matchedParallelId,
+  });
+  if (built === null) {
     return {
       response: input.pricingResponse,
       priceSource: "unified-no-parallel",
@@ -224,75 +226,7 @@ export function applyParallelTitleMatch(
       excludedTokens: [],
     };
   }
-
-  const userTokenSet = new Set(userTokens);
-
-  // Specificity guard: find siblings (excluding the matched parallel
-  // itself) where userTokens is a PROPER SUBSET of siblingTokens. Such
-  // siblings produce "distinguishing tokens" we must exclude from match.
-  const otherSiblings = input.siblingParallels.filter(
-    (p) => p.id !== input.matchedParallelId,
-  );
-  const distinguishingTokens = new Set<string>();
-  for (const sibling of otherSiblings) {
-    const sTokens = tokenizeParallel(sibling.name);
-    // Proper subset: user has fewer tokens than sibling, all present in sibling.
-    if (sTokens.length <= userTokens.length) continue;
-    const allUserInSibling = userTokens.every((t) => sTokens.includes(t));
-    if (!allUserInSibling) continue;
-    for (const t of sTokens) {
-      if (!userTokenSet.has(t)) distinguishingTokens.add(t);
-    }
-  }
-  const excludedTokensList = Array.from(distinguishingTokens);
-
-  // Match function: title contains ALL userTokens AND NONE of distinguishingTokens.
-  // Word-boundary semantics (NOT substring): user token "refractor" must NOT
-  // match "superfractor" inside a title. Substring matching would over-pull
-  // fused-word parallels (SuperFractor, LogoFractor, etc.) into a generic
-  // "Refractor" filter result.
-  const wordMatchPatterns = userTokens.map((t) => buildWordBoundaryPattern(t));
-  const exclusionPatterns = Array.from(distinguishingTokens).map((t) =>
-    buildWordBoundaryPattern(t),
-  );
-  const matches = (title: string | undefined): boolean => {
-    if (!title) return false;
-    for (const pattern of wordMatchPatterns) {
-      if (!pattern.test(title)) return false;
-    }
-    for (const pattern of exclusionPatterns) {
-      if (pattern.test(title)) return false;
-    }
-    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): span-scoped finish-vocab
-    // backstop. AUGMENTS the registry-based exclusion above — never
-    // replaces it. A candidate title that carries a vocab token
-    // INTERIOR to the user-token span (strictly between the first and
-    // last user-token occurrence) is a more-specific sibling and is
-    // rejected even when detail.parallels[] didn't enumerate it.
-    //
-    // Span-scoping (not full-title) matters because color/finish
-    // tokens often appear elsewhere in real titles as TEAM context —
-    // "Toronto Blue Jays ... Gold Refractor" must NOT reject on
-    // "blue", and "Boston Red Sox ... Blue Refractor" must NOT reject
-    // on "red". By bounding the check to between the user tokens, we
-    // only catch tokens semantically PART OF the parallel descriptor.
-    const titleTokens = tokenizeParallel(title);
-    const userTokenPositions: number[] = [];
-    for (let i = 0; i < titleTokens.length; i++) {
-      if (userTokenSet.has(titleTokens[i])) userTokenPositions.push(i);
-    }
-    if (userTokenPositions.length > 0) {
-      const spanStart = userTokenPositions[0];
-      const spanEnd = userTokenPositions[userTokenPositions.length - 1];
-      for (let i = spanStart + 1; i < spanEnd; i++) {
-        const t = titleTokens[i];
-        if (userTokenSet.has(t)) continue;
-        if (CATEGORY_LABEL_TOKENS.has(t)) continue;
-        if (PARALLEL_QUALIFIER_VOCAB.has(t)) return false;
-      }
-    }
-    return true;
-  };
+  const { matches, userTokens, excludedTokens: excludedTokensList } = built;
 
   const filtered = filterPricingRecords(input.pricingResponse, matches);
   const filteredCount = countRecords(filtered);
@@ -355,6 +289,101 @@ export function applyParallelTitleMatch(
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * CF-GRADED-PRECEDENCE-OBSERVED (2026-06-15): canonical title-matcher
+ * factory. Extracted from applyParallelTitleMatch so the graded-tier
+ * precedence path (computeSameParallelRawMedian in gradedPriceProjection)
+ * can reuse the SAME word-boundary + catalog-derived sibling-exclusion +
+ * finish-vocab span-backstop semantics that the resolver already enforces
+ * for the unified-fallback comp filter.
+ *
+ * Returns null when no tokens can be derived (empty/whitespace input);
+ * otherwise returns the predicate plus the tokens/exclusions it used (the
+ * resolver caller logs them in telemetry; new graded-tier caller doesn't).
+ *
+ * `matchedParallelId` may be omitted when the caller doesn't have one
+ * (graded-tier caller passes the targetParallelId; resolver passes the
+ * already-bound matched id) — it's only used to exclude that parallel
+ * from the sibling-token derivation. Pass null to skip the self-exclusion.
+ */
+export function buildParallelTitleMatcher(
+  parallelName: string,
+  siblingParallels: ReadonlyArray<{ id: string; name: string }>,
+  opts: { matchedParallelId?: string | null } = {},
+): {
+  matches: (title: string | undefined | null) => boolean;
+  userTokens: string[];
+  excludedTokens: string[];
+} | null {
+  const userTokens = tokenizeParallel(parallelName);
+  if (userTokens.length === 0) return null;
+
+  const userTokenSet = new Set(userTokens);
+
+  // Specificity guard: find siblings where userTokens is a PROPER SUBSET
+  // of siblingTokens. Such siblings produce "distinguishing tokens" we
+  // must exclude from match.
+  const matchedId = opts.matchedParallelId ?? null;
+  const otherSiblings = siblingParallels.filter(
+    (p) => matchedId === null || p.id !== matchedId,
+  );
+  const distinguishingTokens = new Set<string>();
+  for (const sibling of otherSiblings) {
+    const sTokens = tokenizeParallel(sibling.name);
+    if (sTokens.length <= userTokens.length) continue;
+    const allUserInSibling = userTokens.every((t) => sTokens.includes(t));
+    if (!allUserInSibling) continue;
+    for (const t of sTokens) {
+      if (!userTokenSet.has(t)) distinguishingTokens.add(t);
+    }
+  }
+  const excludedTokens = Array.from(distinguishingTokens);
+
+  // Match function: title contains ALL userTokens AND NONE of distinguishingTokens.
+  // Word-boundary semantics (NOT substring): user token "refractor" must NOT
+  // match "superfractor" inside a title.
+  const wordMatchPatterns = userTokens.map((t) => buildWordBoundaryPattern(t));
+  const exclusionPatterns = excludedTokens.map((t) =>
+    buildWordBoundaryPattern(t),
+  );
+  const matches = (title: string | undefined | null): boolean => {
+    if (!title) return false;
+    for (const pattern of wordMatchPatterns) {
+      if (!pattern.test(title)) return false;
+    }
+    for (const pattern of exclusionPatterns) {
+      if (pattern.test(title)) return false;
+    }
+    // CF-PINNED-PARALLEL-RECOVERY (2026-06-11): span-scoped finish-vocab
+    // backstop. AUGMENTS the registry-based exclusion above — never
+    // replaces it. A candidate title that carries a vocab token
+    // INTERIOR to the user-token span is a more-specific sibling and is
+    // rejected even when detail.parallels[] didn't enumerate it.
+    //
+    // Span-scoping (not full-title) matters because color/finish tokens
+    // often appear elsewhere in real titles as TEAM context — "Toronto
+    // Blue Jays ... Gold Refractor" must NOT reject on "blue".
+    const titleTokens = tokenizeParallel(title);
+    const userTokenPositions: number[] = [];
+    for (let i = 0; i < titleTokens.length; i++) {
+      if (userTokenSet.has(titleTokens[i]!)) userTokenPositions.push(i);
+    }
+    if (userTokenPositions.length > 0) {
+      const spanStart = userTokenPositions[0]!;
+      const spanEnd = userTokenPositions[userTokenPositions.length - 1]!;
+      for (let i = spanStart + 1; i < spanEnd; i++) {
+        const t = titleTokens[i]!;
+        if (userTokenSet.has(t)) continue;
+        if (CATEGORY_LABEL_TOKENS.has(t)) continue;
+        if (PARALLEL_QUALIFIER_VOCAB.has(t)) return false;
+      }
+    }
+    return true;
+  };
+
+  return { matches, userTokens, excludedTokens };
+}
 
 /**
  * Build a case-insensitive word-boundary regex for a token. Word boundary

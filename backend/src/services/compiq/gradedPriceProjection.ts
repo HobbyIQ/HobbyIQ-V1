@@ -34,6 +34,7 @@ import {
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
 import { tokenizeParallel } from "./cardsight.mapper.js";
+import { buildParallelTitleMatcher } from "./parallelTitleMatch.js";
 import { cacheWrap } from "../shared/cache.service.js";
 import type { TrendIQResult, TrendIQCoverage } from "./trendIQ.types.js";
 import { computeForwardProjectionFactor } from "./forwardProjection.js";
@@ -440,6 +441,102 @@ function detectRecordGrade(co: string, gradeValue: unknown, title: string | null
  * the most recent, prefer raw over graded. Returns the parallel-raw
  * equivalent (graded sales coerced via getGraderPremium) plus metadata.
  */
+/**
+ * CF-GRADED-PRECEDENCE-OBSERVED (2026-06-15): caller-side observed-parallel-
+ * raw lookup for graded-scope requests. Used by
+ * compileGradedEstimatesForCard to compute a parallel-raw anchor median
+ * the engine's existing "parallel-observed" short-circuit can consume on
+ * graded scope (it already consumes the equivalent on raw scope via
+ * estimate.fairMarketValue). Composed remains the fallback when this
+ * returns null.
+ *
+ * Selector logic:
+ *   1. Records WITH parallel_id === targetParallelId — definitive, always
+ *      included (Cardsight already classified them).
+ *   2. Records WITH parallel_id !== targetParallelId — skipped (Cardsight
+ *      classified them as a DIFFERENT parallel; do not title-rebucket).
+ *   3. Records WITH parallel_id == null — title-matched against the
+ *      canonical buildParallelTitleMatcher (word-boundary + catalog-
+ *      derived sibling exclusion + finish-vocab span backstop). This is
+ *      the same matcher resolver-side parallelTitleMatch uses, so the
+ *      "Blue Refractor" $1,183 sale is included but "Blue Wave Refractor"
+ *      / "Reptilian Blue Refractor" titles are excluded via the
+ *      distinguishing-token guard.
+ *
+ * Median (not most-recent): approximates what the raw-scope FMV the
+ * engine would compute for the same parallel, so graded-scope and
+ * raw-scope rails stay coherent on multi-sale parallels. n=1 collapses
+ * to the single value (Blue case).
+ *
+ * CF-GRADED-PRECEDENCE-FLOOR (2026-06-15): cheap-raw / mis-tag guard.
+ * Reject the observed median when it isn't clearly above base raw
+ * (< base × OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR). A numbered parallel
+ * that "sold raw" at ~base price is either Cardsight-mis-tagged base
+ * (the base card sold, but the record got tagged to a parallel pid) or
+ * an unreliably-cheap raw sale (chase buyer didn't price the scarcity).
+ * In both cases composed (base × parallel-multiplier) is the more
+ * predictive anchor for the graded tier, where the parallel's scarcity
+ * premium DOES show up. The floor reverts those cases to composed.
+ *
+ * Returns null when no records survive the selector OR when the floor
+ * rejects the observed median — composed remains the fallback in both
+ * cases via the engine's existing precedence.
+ */
+const OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR = 1.3;
+
+export function computeSameParallelRawMedian(
+  pricing: CardsightPricingResponse,
+  targetParallelId: string,
+  targetParallelName: string | null | undefined,
+  siblingParallels: ReadonlyArray<{ id: string; name: string }>,
+): number | null {
+  const prices: number[] = [];
+
+  // 1. Tagged records — definitive parallel_id match.
+  for (const r of (pricing.raw?.records ?? [])) {
+    if (r.parallel_id !== targetParallelId) continue;
+    const p = Number(r.price);
+    if (!Number.isFinite(p) || p <= 0) continue;
+    prices.push(p);
+  }
+
+  // 2. Untagged records (parallel_id == null) — strict title match via
+  //    the canonical resolver matcher. Skip when name unknown.
+  if (targetParallelName) {
+    const built = buildParallelTitleMatcher(targetParallelName, siblingParallels, {
+      matchedParallelId: targetParallelId,
+    });
+    if (built) {
+      for (const r of (pricing.raw?.records ?? [])) {
+        if (r.parallel_id != null) continue;
+        if (!built.matches(r.title)) continue;
+        const p = Number(r.price);
+        if (!Number.isFinite(p) || p <= 0) continue;
+        prices.push(p);
+      }
+    }
+  }
+
+  const observedMedian = median(prices);
+  if (observedMedian === null) return null;
+
+  // CF-GRADED-PRECEDENCE-FLOOR: cheap-raw / mis-tag guard. Apply only
+  // when base raw is itself well-defined (uses the same isBaseRecord
+  // predicate the engine's tier-1 path uses). With no defensible base
+  // anchor, we can't decide the ratio is suspicious — fall through.
+  const baseRawRecords = (pricing.raw?.records ?? []).filter(isBaseRecord);
+  const baseRawMedian = median(baseRawRecords.map((r) => Number(r.price)));
+  if (
+    baseRawMedian !== null
+    && baseRawMedian > 0
+    && observedMedian < baseRawMedian * OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR
+  ) {
+    return null;
+  }
+
+  return observedMedian;
+}
+
 function findSameParallelObservedAnchor(
   pricing: CardsightPricingResponse,
   targetParallelId: string,
@@ -453,6 +550,14 @@ function findSameParallelObservedAnchor(
     rawEquivalent: number;
   }> = [];
 
+  // Lax matcher kept for the existing same-parallel-observed anchor path
+  // (decision-B): pid OR contains-all-tokens. This path only fires when
+  // base-raw is below the trust floor (Konnor-shape cards), where the
+  // over-permissive title match has historically not been load-bearing
+  // because composed wins for cards with strong tier-1. The new
+  // computeSameParallelRawMedian above uses the STRICTER catalog-derived
+  // matcher to avoid leaking sibling parallels into the graded-scope
+  // anchor.
   const tokens = targetParallelName ? tokenizeParallel(targetParallelName) : [];
   const patterns = tokens.map((t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"));
   const matchesTarget = (r: CardsightSaleRecord): boolean => {

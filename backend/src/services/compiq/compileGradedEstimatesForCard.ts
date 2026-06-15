@@ -32,6 +32,7 @@ import { getCardDetail } from "./cardsight.client.js";
 import {
   buildGradedEstimates,
   computeReleaseGradeCurve,
+  computeSameParallelRawMedian,
   type GradedProjectionResult,
 } from "./gradedPriceProjection.js";
 import type { TrendIQResult } from "./trendIQ.types.js";
@@ -119,18 +120,79 @@ export async function compileGradedEstimatesForCard(
         ? daysSinceNewestCompRaw
         : null;
 
+    // CF-ESTIMATOR-PHASE-1 (2026-06-14): fetch the card-level parallels[]
+    // for the sibling-observed anchor path. CF-GRADED-PRECEDENCE-OBSERVED
+    // (2026-06-15) also needs them upstream of the parallelRawFmv
+    // computation for the graded-scope observed-anchor selector's
+    // sibling-token exclusion. Fetch once, reuse for both paths.
+    //
+    // getCardDetail is cached at 24h TTL in cardsight.client; first hit
+    // per card is ~one round-trip and subsequent compile calls reuse the
+    // cached result. Skipped for base scope (no parallel target → both
+    // branches that consume parallels never fire). On failure: catch and
+    // pass empty parallels so the engine gracefully degrades.
+    //
+    // CF-ESTIMATOR-PHASE-2 (2026-06-15): the same getCardDetail call
+    // surfaces `attributes` — we extract `isAuto` here (no extra round-
+    // trip) and thread it through so the parallel-composed anchor
+    // applies the auto-base power-law correction.
+    let cardParallels: ReadonlyArray<{ id: string; name: string }> = [];
+    let isAuto = false;
+    if (parallelId) {
+      try {
+        const detail = await getCardDetail(cardId);
+        cardParallels = (detail.parallels ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+        }));
+        isAuto = (detail.attributes ?? []).some(
+          (a: string) => /\bAUTO\b/i.test(a),
+        );
+      } catch (err) {
+        console.warn(
+          `[${source}] getCardDetail failed for ${cardId} (non-fatal, sibling-anchor branch disabled): ${(err as Error)?.message ?? err}`,
+        );
+        cardParallels = [];
+      }
+    }
+
     let parallelRawFmv: number | null = null;
     let parallelRawFmvSource: "fmv" | "last-sale" | undefined;
     let parallelRawFmvAgeDays: number | null = null;
-    if (parallelId && isRawScope) {
-      if (fmv > 0) {
-        parallelRawFmv = fmv;
-        parallelRawFmvSource = "fmv";
-        parallelRawFmvAgeDays = null;
-      } else if (lastSalePrice != null) {
-        parallelRawFmv = lastSalePrice;
-        parallelRawFmvSource = "last-sale";
-        parallelRawFmvAgeDays = daysSinceNewestComp;
+    if (parallelId) {
+      if (isRawScope) {
+        if (fmv > 0) {
+          parallelRawFmv = fmv;
+          parallelRawFmvSource = "fmv";
+          parallelRawFmvAgeDays = null;
+        } else if (lastSalePrice != null) {
+          parallelRawFmv = lastSalePrice;
+          parallelRawFmvSource = "last-sale";
+          parallelRawFmvAgeDays = daysSinceNewestComp;
+        }
+      } else {
+        // CF-GRADED-PRECEDENCE-OBSERVED (2026-06-15): graded-scope used
+        // to leave parallelRawFmv null, dropping into resolveAnchor's
+        // composed branch and ignoring observed same-parallel raw sales
+        // (Leo Blue Refractor: composed PSA 10 $959 vs observed-anchored
+        // ~$3,134 from the $1,183 raw sale). Compute the median of
+        // pricing.raw records that match the target parallel via the
+        // strict catalog-derived matcher — pid match for tagged records,
+        // word-boundary + sibling-exclusion title match for untagged —
+        // so the engine's existing "parallel-observed" short-circuit
+        // fires on graded scope too. Composed remains the fallback when
+        // no observed parallel raw exists.
+        const observedMedian = computeSameParallelRawMedian(
+          pricing,
+          parallelId,
+          parallelName,
+          cardParallels,
+        );
+        if (observedMedian != null && observedMedian > 0) {
+          parallelRawFmv = observedMedian;
+          parallelRawFmvSource = "fmv";
+          parallelRawFmvAgeDays = null;
+        }
       }
     }
 
@@ -162,38 +224,11 @@ export async function compileGradedEstimatesForCard(
       }
     }
 
-    // CF-ESTIMATOR-PHASE-1 (2026-06-14): fetch the card-level parallels[]
-    // for the sibling-observed anchor path. getCardDetail is cached at
-    // 24h TTL in cardsight.client; first hit per card is ~one round-trip
-    // and subsequent compile calls reuse the cached result. Skipped for
-    // base scope (no parallel target → sibling branch never fires
-    // anyway). On failure: catch and pass empty parallels so the engine
-    // gracefully degrades to composed → none.
-    //
-    // CF-ESTIMATOR-PHASE-2 (2026-06-15): the same getCardDetail call
-    // surfaces `attributes` — we extract `isAuto` here (no extra
-    // round-trip) and thread it through so the parallel-composed anchor
-    // applies the auto-base power-law correction. Non-auto path is
-    // byte-identical. Failure to fetch ⇒ isAuto=false (safe default).
-    let cardParallels: ReadonlyArray<{ id: string; name: string }> | undefined;
-    let isAuto = false;
-    if (parallelId) {
-      try {
-        const detail = await getCardDetail(cardId);
-        cardParallels = (detail.parallels ?? []).map((p) => ({
-          id: p.id,
-          name: p.name,
-        }));
-        isAuto = (detail.attributes ?? []).some(
-          (a: string) => /\bAUTO\b/i.test(a),
-        );
-      } catch (err) {
-        console.warn(
-          `[${source}] getCardDetail failed for ${cardId} (non-fatal, sibling-anchor branch disabled): ${(err as Error)?.message ?? err}`,
-        );
-        cardParallels = [];
-      }
-    }
+    // cardParallels + isAuto already resolved upstream of parallelRawFmv
+    // computation (CF-GRADED-PRECEDENCE-OBSERVED 2026-06-15 moved the
+    // detail fetch up to feed the strict graded-scope matcher; the
+    // existing sibling-observed anchor path consumes the same values
+    // here without a re-fetch).
 
     const built = buildGradedEstimates({
       pricing,
