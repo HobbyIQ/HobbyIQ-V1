@@ -6,6 +6,81 @@
 
 ---
 
+## 2026-06-14 — Estimator Phase 1: observed-anchor + trend, hybrid decision B (deployed `3ca46f6`)
+
+Closes the Konnor PSA 9 no-data ("PSA 9 Blue /150 → can't estimate") AND corrects the parallel-composed over-claim on cards where the base-raw pool is a degenerate outlier. Adds a real-sale anchor path next to the existing composed path — "old anchor × trend = new price" in the brief's framing.
+
+### Selection order (decision B) in `resolveAnchor` parallel-target branch
+
+1. **Composed** (`base-raw median × parallel multiplier`) when `baseRawSampleCount >= BASE_RAW_TRUST_FLOOR (3)`. Cards with strong per-card calibration (Leo n=22) trust the tier-1 path and emit byte-identical values to pre-Phase-1.
+2. **Same-parallel observed** (pid match OR title-token match) — derives a parallel-raw equivalent from the sale (graded sales coerced via `getGraderPremium`). Demoted below composed in decision (B) so a single title-matched sale on a strong-tier-1 card can't preempt the calibrated path.
+3. **Sibling-parallel observed** — picks the nearest-multiplier sibling whose name resolves in `chromeDraftMultipliers`. Adjusts via `parallel_ratio = target_mult / sibling_mult` and `grade_ratio = getGraderPremium(target) / getGraderPremium(sibling)`. Ratios cancel the auto-base miscalibration.
+4. **None** → `no-data` (only when no candidate pool exists at all).
+
+### Why decision (B) (not A)
+
+Decision (A) — "same-parallel always wins" — was the brief's literal rule #1 but it preempted Leo onto a single $285 title-matched raw sale, dropping his rail ~60% even though his tier-1 path is well-calibrated. (B) gates the observed-anchor paths below the composed-floor check so cards with reliable base-raw stay on the calibrated path; cards with degenerate base-raw (Konnor n=1) fall through to same-parallel (none for Konnor) → sibling (Blue Wave PSA 10 $1,850 → ratio-adjusted to Blue Refractor).
+
+### Trend application
+
+Only fires on `parallel-observed-same` and `parallel-observed-sibling` anchors. Composed/base paths skip trend because comp-pool medians are already partially trend-aware (per-comp weighting in `computeEstimate`) and double-counting would over-claim. Uses `computeForwardProjectionFactor(est.trendIQ)` — the existing `forwardProjection.ts` clamp(0.80, 1.30, 1 + (composite - 1) × 0.6) — applied per-grade as the final multiplier so the coherence sub-raw floor reads against the pre-trend parallel-raw equivalent.
+
+### Basis prose
+
+Observed-anchor results carry their own basis built in `buildObservedAnchorBasis` and preserved verbatim by `buildGradedEstimates`. Names the actual source sale + parallel/grade ratios + trend factor. NEVER says "no related sales" when the candidate pool is non-empty (the misleading `buildNoDataBasis` text only fires for true no-anchor cases now).
+
+Sample (Konnor PSA 9):
+> `Estimated from a Blue Wave Refractor PSA 10 sale of $1850.00 (123d ago), parallel ratio 1.16× (Blue Refractor/Blue Wave Refractor = 5.70/4.90), grade ratio 0.42× (PSA 9/PSA 10), trend factor 0.91× (down, player_only) ⇒ $830.00. Indicative — derived from a single sibling-parallel sale, not a direct Blue Refractor comp.`
+
+### Validation table (in-process `compileGradedEstimatesForCard`)
+
+| Card | Old (main `1c1920d`) | New (`3ca46f6`) |
+|---|---|---|
+| Konnor CPA-KG Blue /150 PSA 10 | rough `$9,040` (composed × release-curve 1.762×) | **ballpark `$2,000`** sibling-anchor (correction) |
+| Konnor PSA 9 | **`no-data`** "no sales in PSA 9 or any related grade or parallel" | **ballpark `$830`** [$500, $1,200] sibling-anchor (the fix) |
+| Konnor BGS 9.5 | ballpark `$7,900` (carried inflated anchor) | ballpark `$1,700` [$1,000, $2,400] sibling-anchor |
+| Konnor SGC 10 | ballpark `$7,700` | ballpark `$1,700` [$1,000, $2,300] sibling-anchor |
+| Leo CPA-LD Blue /150 PSA 10 | rough `$3,260` composed × tier-1 card ratio 2.499× | rough `$3,260` (**byte-identical** — composed fires, n=22 ≥ floor) |
+| Leo PSA 9 / BGS 9.5 / SGC 10 | ballpark $1,400 / $2,900 / $2,800 | byte-identical |
+| Trout base raw | n=0 (FMV $371 + observed-skip) | n=0 (unchanged) |
+
+Suite green: **2340/2340**.
+
+### Firewall unchanged
+
+Every Phase 1 estimate output carries `fairMarketValue: null`, `marketValue: null`, `isEstimate: true`. Holding flow tier-mapping reads `valuationStatus`. Estimated dollars NEVER reach `*GainLoss` fields. Training join's structural firewall (no `PortfolioHolding` import in `compiq/`, `mlTraining/`, `compLogs/`, `corpus/`) holds — Phase 1 adds no new boundary crossings.
+
+### Files touched (4)
+
+- `backend/src/services/compiq/gradedPriceProjection.ts` — anchor kinds (`parallel-observed-same`, `parallel-observed-sibling`), `ResolvedAnchor.observedSource`, `findSameParallelObservedAnchor`, `findSiblingParallelObservedAnchor`, decision-B selection order in `resolveAnchor`, observed-anchor per-grade branch (bypasses `resolveRatio`, applies trend), `classifyObservedAnchorTier`, `buildObservedAnchorBasis`, `buildGradedEstimates` preserves observed-anchor basis verbatim. `BASE_RAW_TRUST_FLOOR = 3`.
+- `backend/src/services/compiq/compileGradedEstimatesForCard.ts` — `trendIQ` + `cardParallels` threaded into `BuildGradedEstimatesInput`; `getCardDetail` fetch for `parallels[]` (cached at 24h, ~one round-trip per card per day).
+- `backend/src/routes/compiq.routes.ts` + `backend/src/services/portfolioiq/portfolioStore.service.ts` — one-line `trendIQ?: TrendIQResult | null` widening on the call-site `estimate as { ... }` cast at each caller.
+
+### Phase 2 still open — auto-base multiplier inflation
+
+The `chromeDraftMultipliers.ts` table is calibrated against non-auto base. For prospect-auto numbered parallels (`CPA-LD`, `CPA-KG`, ...) the multiplier is inflated by the same mechanism that produced Konnor PSA 10 $9,040. **Leo's PSA 10 $3,260 (still in this commit) is inflated by the same mechanism, just less.** Phase 2 recalibrates or branches the multiplier by is-auto. Will move Leo + every prospect-auto numbered card; intentionally NOT swept into Phase 1.
+
+### Phase 3 still open — Printing-Plates de-poison
+
+Cardsight tags 110 base-auto-looking records for Konnor to `pid=3dea4f8c` ("Chrome Prospect Autograph Printing Plates") — titles say "1st Chrome Auto" / "Chrome Auto 1st Prospect", not printing plates. `isBaseRecord` strictly requires `parallel_id == null`, so this entire pool is excluded from the base-raw anchor. Phase 3 implements a local title-parse re-bucket (records pid-tagged to "Printing Plates" but titled as base auto → treated as base) and optionally submits `submit_card_feedback` to Cardsight. Phase 3 collapses Konnor's `baseRawN=1, $899.99` to `baseRawN≈35, median ≈$750`, which would let composed fire cleanly at the correct anchor.
+
+### Cardsight FETCH-LAYER findings (recon at HEAD `1c1920d`)
+
+- `_getPricingRaw` at [cardsight.client.ts:607-651](src/services/compiq/cardsight.client.ts#L607-L651) sends `GET /v1/pricing/{cardId}` (± `parallel_id`) — **no `period`, no `take`/`limit`/`skip`, no `listing_type`.** No FETCH-layer truncation.
+- Cardsight's default (no period) = `period=1y` = `period=all` for Konnor (102 records identical). Blue /150 `pid=0c0d36a1` returns ZERO records at any period. The "zero" is a Cardsight vendor coverage gap (their beta pipeline left the Blue /150 sales unmatched / mis-tagged to Printing Plates), NOT a fetch issue — confirmed by probing `/v1/pricing/{cardId}?parallel_id={Blue}&period=all` directly.
+- `listing_type` defaults to `both` (fixed + auction); already getting full coverage.
+- **`/v1/marketplace/{cardId}` exists and is uncalled in our codebase.** Returns 200 with `{card, query, raw, graded, meta}` — same shape as pricing but for active listings (auctions in flight + buy-it-now asks). Documented in Cardsight's MCP tool inventory as `get_card_marketplace`. Not in scope for Phase 1 estimator; flagging as a real signal class we currently don't see.
+
+### Deploy + verify
+
+- Commit `3ca46f6` per-CF, staged by name (`gradedPriceProjection.ts`, `compileGradedEstimatesForCard.ts`, `compiq.routes.ts`, `portfolioStore.service.ts`).
+- `node zip.js` + `.\scripts\deploy-with-build-info.ps1` — Kudu deploy success at 15s; SHA verified on `/api/health` (`build.shaFromCodeShort=3ca46f6` AND `build.shaShort=3ca46f6`).
+- Feature-probe `/api/compiq/normalization-dictionary` returned 200 OK.
+- `compiq:price-by-id:v4*` cache pattern: 0 keys in Redis (the route requires session; light recent auth'd traffic = empty cache); no flush needed.
+- Live HTTP probe of `/api/compiq/price-by-id` skipped — requires `requireSession`. In-process compile probe (against fresh dist matching deployed SHA) confirmed Konnor PSA 9 → ballpark $830 and Leo composed-byte-identical.
+
+---
+
 ## 2026-06-12 — Graded-estimator + always-a-number arc (deployed `20d57de`; commits `e18adc3` → `20d57de`)
 
 A multi-CF arc that took the graded-projection engine from "engine exists but never surfaces" to "every target grade always shows a number with confidence + range + scope-labeled prose, anchored on the card's grounded level, with a clean firewall." Eight commits, all live on HobbyIQ3.
