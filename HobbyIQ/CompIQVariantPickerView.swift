@@ -213,56 +213,55 @@ struct CompIQVariantPickerView: View {
                 // keeps its small player name instead.
                 resultsHeader
 
-                // Flat results card — no gradient stroke; reserve the hero
-                // gradient for dashboard cards. Rows are FLATTENED so each
-                // base card + each parallel is its own full row, and SORTED
-                // by relevance to the current query so the closest match
-                // ("Blue Refractor /150" when the user searched "blue")
-                // bubbles to the top.
+                // CF-FIND-CARDS-PHASE-A v2: each row is its OWN flat card
+                // with a hairline steelGray@40% border. No outer wrapper,
+                // no inter-row dividers — rows breathe individually and
+                // the tap target reads as a single discrete surface.
                 let rows = sortedPickerRows
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                        VStack(alignment: .leading, spacing: 0) {
-                            NavigationLink {
-                                CompIQPricedCardView(hit: row.hit, initialGrade: initialGrade)
-                                    .environmentObject(sessionViewModel)
-                            } label: {
-                                variantRow(row.hit)
-                            }
-                            .buttonStyle(.plain)
-
-                            if index < rows.count - 1 {
-                                Rectangle()
-                                    .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-                                    .frame(height: 1)
-                            }
+                LazyVStack(spacing: 10) {
+                    ForEach(rows, id: \.id) { row in
+                        NavigationLink {
+                            CompIQPricedCardView(hit: row.hit, initialGrade: initialGrade)
+                                .environmentObject(sessionViewModel)
+                        } label: {
+                            variantRow(row.hit)
+                                .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+                                .padding(.vertical, 8)
+                                .background(HobbyIQTheme.Colors.cardNavy)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
                         }
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(HobbyIQTheme.Spacing.medium)
-                .background(HobbyIQTheme.Colors.cardNavy)
-                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
 
                 refineHint
             }
         } else if hasSearched, !isLoading, error == nil {
-            emptyResultsCard
+            VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
+                emptyResultsCard
+                refineHint
+            }
         }
     }
 
     // MARK: - Empty results / refine hint
 
-    /// Calm zero-results card. Replaces the prior red `exclamationmark` banner
-    /// — "no matches" isn't an error, it's a refine signal. Carries the same
-    /// refine copy as the populated state so the user sees the same guidance
-    /// regardless of outcome.
+    /// CF-FIND-CARDS-PHASE-A v2: calm zero-results card. "No matches yet"
+    /// + a concrete refine sentence. No query echo (avoids re-reading the
+    /// user's typo back to them); no danger styling. The longer-form
+    /// `refineHint` renders below this for the same coaching the populated
+    /// state shows.
     private var emptyResultsCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("No matches for \u{201C}\(query.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No matches yet")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Try the card number, year, or a parallel name. Cross-sport queries are supported — narrower searches resolve better.")
+            Text("Try the set name or card number.")
                 .font(.footnote)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -270,7 +269,11 @@ struct CompIQVariantPickerView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(HobbyIQTheme.Spacing.medium)
         .background(HobbyIQTheme.Colors.cardNavy)
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
     private var refineHint: some View {
@@ -327,51 +330,61 @@ struct CompIQVariantPickerView: View {
         return normalized.isEmpty || normalized == "base set" || normalized == "base"
     }
 
-    /// CF-FIND-CARDS-REGROUND: rich identity line "{year} · {set} · #{number}".
-    /// Set prefers the explicit `set` field; falls back to `brand` when the
-    /// dispatcher only carried brand (cardsearch is uneven on this). Missing
-    /// parts drop out cleanly so the " · " separators never bracket empty
-    /// segments and a sparse row stays readable.
+    /// CF-FIND-CARDS-PHASE-A v2: single muted identity line
+    /// "{year} {brand} {set} · #{number}". Head joins year/brand/set with
+    /// spaces (brand AND set when both meaningful, not one-or-the-other);
+    /// "Base Set"/"Base"/empty set drops cleanly. The "· #{number}" tail
+    /// attaches only when the wire carries a card number — `cardNumber` is
+    /// frequently null from cardsearch, so the line degrades to just the
+    /// head ("2024 Bowman Draft") without fabricating.
     private func identityLine(for hit: CompIQVariantHit) -> String? {
         let year = hit.year.map(String.init)
-        let setOrBrand: String? = {
-            let trimmedSet = hit.set?.trimmingCharacters(in: .whitespaces)
-            if let s = trimmedSet, s.isEmpty == false, isBaseSet(s) == false {
-                return s
-            }
-            let trimmedBrand = hit.brand?.trimmingCharacters(in: .whitespaces)
-            return (trimmedBrand?.isEmpty == false) ? trimmedBrand : nil
+        let brand: String? = {
+            let trimmed = hit.brand?.trimmingCharacters(in: .whitespaces)
+            return (trimmed?.isEmpty == false) ? trimmed : nil
         }()
+        let set: String? = {
+            let trimmed = hit.set?.trimmingCharacters(in: .whitespaces)
+            guard let s = trimmed, s.isEmpty == false, isBaseSet(s) == false else { return nil }
+            return s
+        }()
+        let head = [year, brand, set].compactMap { $0 }.joined(separator: " ")
         let number: String? = {
             guard let raw = hit.number?.trimmingCharacters(in: .whitespaces),
                   raw.isEmpty == false else { return nil }
             return raw.hasPrefix("#") ? raw : "#\(raw)"
         }()
-        let parts = [year, setOrBrand, number].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        guard head.isEmpty == false else {
+            return number
+        }
+        if let number {
+            return "\(head) · \(number)"
+        }
+        return head
     }
 
-    /// CF-FIND-CARDS-REGROUND: pill set for the redesigned row. Combines
-    /// parallel-name + serial into one chip (the most common refine
-    /// disambiguator), adds RC when `attributes` carries it, keeps Auto +
-    /// grade/Raw as their own chips. Returns [] when the row is so bare
-    /// only "Raw" would render — that's fine; pills section just omits.
+    /// CF-FIND-CARDS-PHASE-A v2: max two pills per row. Parallel chip when
+    /// the hit carries one. Then exactly one of:
+    ///   • "1st Bowman" when `attributes` contains "FBC" (case-insensitive
+    ///     First Bowman Card marker — used by Bowman Chrome Prospects).
+    ///   • "RC" when `attributes` contains "RC" AND the hit is NOT also FBC.
+    /// FBC wins the mutual exclusion — a prospect's first Bowman is the
+    /// stronger signal than an eventual RC tag. Auto, grade, and Raw are
+    /// intentionally dropped from the result row; users see Auto-ness in
+    /// the parallel name (e.g. "Chrome Prospect Auto Blue Refractor") and
+    /// pick grade later on the comp page.
     private func enrichedPills(for hit: CompIQVariantHit) -> [VariantPill] {
         var pills: [VariantPill] = []
         if let parallel = parallelLine(for: hit) {
             pills.append(VariantPill(text: parallel, kind: .accent))
         }
-        if let attrs = hit.attributes,
-           attrs.contains(where: { $0.trimmingCharacters(in: .whitespaces).uppercased() == "RC" }) {
+        let attrs = hit.attributes ?? []
+        let hasFBC = attrs.contains { $0.trimmingCharacters(in: .whitespaces).uppercased() == "FBC" }
+        let hasRC = attrs.contains { $0.trimmingCharacters(in: .whitespaces).uppercased() == "RC" }
+        if hasFBC {
+            pills.append(VariantPill(text: "1st Bowman", kind: .neutral))
+        } else if hasRC {
             pills.append(VariantPill(text: "RC", kind: .neutral))
-        }
-        if hit.isAuto {
-            pills.append(VariantPill(text: "Auto", kind: .auto))
-        }
-        if let display = hit.gradeDisplay {
-            pills.append(VariantPill(text: display, kind: .grade))
-        } else {
-            pills.append(VariantPill(text: "Raw", kind: .neutral))
         }
         return pills
     }
@@ -462,7 +475,7 @@ struct CompIQVariantPickerView: View {
         }
     }
 
-    // MARK: - Row (v4 — single rich identity + pill row + CTA)
+    // MARK: - Row (Phase A v2 — muted identity + ≤2 pills + inline-chevron CTA)
 
     private func variantRow(_ hit: CompIQVariantHit) -> some View {
         let showPlayerOnRow = unifiedPlayerName == nil
@@ -470,31 +483,25 @@ struct CompIQVariantPickerView: View {
             variantThumbnail(hit)
 
             VStack(alignment: .leading, spacing: 6) {
-                // Per-row player name only when the result set is mixed-
-                // player (header already shows it on unified-player sets).
                 if showPlayerOnRow,
                    let player = hit.player?.trimmingCharacters(in: .whitespaces),
                    player.isEmpty == false {
                     Text(player)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                // Single rich identity line: "{year} · {set} · #{number}".
-                // Set falls back to brand when the dispatcher only carried
-                // brand. Missing parts collapse cleanly so the separators
-                // never bracket empty content.
-                if let identity = identityLine(for: hit) {
-                    Text(identity)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                // Pill row: parallel (variant + /run), RC, Auto, grade/Raw.
-                // Wraps via WrappingHStack so long parallel names don't
-                // truncate or push the chevron offscreen.
+                // Muted single identity line. Tail "· #{number}" attaches
+                // only when cardNumber is on the wire — degrades to just
+                // "{year} {brand} {set}" on the (frequent) null case.
+                if let identity = identityLine(for: hit) {
+                    Text(identity)
+                        .font(.system(size: 14))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 let pills = enrichedPills(for: hit)
                 if pills.isEmpty == false {
                     WrappingHStack(items: pills) { pill in
@@ -502,19 +509,16 @@ struct CompIQVariantPickerView: View {
                     }
                 }
 
-                // Quiet CTA cue so the tap affordance reads even when the
-                // chevron is overlooked.
-                Text("Tap to see pricing & comps")
+                // Inline-chevron CTA — the row reads as one calm tappable
+                // line. Trailing system chevron removed; the › glyph
+                // carries the same affordance without an extra surface.
+                Text("Tap to see pricing & comps \u{203A}")
                     .font(.caption2)
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 10)
