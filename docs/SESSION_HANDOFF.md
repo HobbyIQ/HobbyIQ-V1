@@ -6,6 +6,53 @@
 
 ---
 
+## 2026-06-15 — Graded-tier precedence fix + Cardsight coverage characterization
+
+SHIPPED (646bb14): CF-GRADED-PRECEDENCE-OBSERVED. Graded-tier estimates now anchor on an observed
+parallel-raw sale (× tier-1 grade ratio) instead of composed base×multiplier, when one exists. Cheap-raw
+floor (reject anchor < 1.3× base raw) guards mis-tagged/cheap-raw poison. Leo Blue Refractor PSA10 $959 →
+$3,030 (market ~$2,885, validated). Blue RayWave correctly reverts to composed (floor rejects its ~$233
+base-level anchor; real market $1,140). Gold Refractor + cards without observed parallel-raw byte-identical.
+2340/2340.
+
+KEY FINDINGS:
+- Estimator badly miscalibrated on prospect-auto parallels: mid ~3× low (Blue), top ~2× high (Red Wave /5
+  engine ~$30k vs ~$13–17k market); real parallel ladder is COMPRESSED vs the multiplier table's spread.
+- Cardsight ingestion depth is the bottleneck, NOT our query. Witt USC35 control returns 993 records vs Leo
+  CPA-LD's 55 from the same endpoint → 55 is genuine. Every access door checked: 14 pagination variants, 15
+  period variants, 15 alt endpoints, full 90-tool MCP catalog (no deeper sales surface; get_card_pricing
+  schema has no offset/cursor/page). Cardsight scrapes eBay only; misses auction houses/breakers where
+  prospect autos heavily sell. Coverage ≈ 2% of Blue Refractor parallel, ~15–25% card-wide for Leo.
+- Grade premium varies by parallel (Blue Refractor ~2.4×, Blue RayWave ~4.9×); base tier-1 ratio is an
+  imperfect projector. Cheap-raw floor mitigates worst cases; raw→graded projection for parallels stays noisy.
+- Roadmap external-ingestion thesis now empirically confirmed: external market data (CardLadder/SCP/own
+  ingestion) is REQUIRED for prospect-auto pricing accuracy — Cardsight is identification-first and
+  structurally thin on pricing depth for HobbyIQ's core card class.
+
+OPEN / NEXT:
+- External-source decision (strategic): stand up an external market feed for prospect-auto pricing depth.
+- Coverage characterization (cheap, ~100 read-only GETs): sweep N prospect-auto cardIds to quantify how
+  systematic the under-ingestion is. Sizes the external-source investment.
+- High-tier CPA-LD (Gold/Orange/Red/Super): zero Cardsight data, still on multiplier path (~2× high). Rare;
+  deferred to external feed.
+- Global multiplier-curve recalibration: needs multi-card external ladders to re-fit (lift mid, compress top).
+  Do NOT overfit on Leo alone.
+- MCP pricing anomaly (CardSight-side): get_card_pricing via MCP returns "no sales" where REST returns data —
+  CardSight proxy defect, not ours. Optional feedback to vendor.
+
+EXTERNAL MARKET ANCHORS (Leo CPA-LD PSA 10, for future calibration):
+Blue Refractor /150 ~$2,350 sold/$2,885 (CardLadder); Blue RayWave /150 $1,140 (Fanatics, 20 bids);
+Refractor /499 $1,420; Gold Shimmer /50 $3,159; Gold Refractor /50 ~$8,100; Red Wave /5 $7,550 PSA9
+(→ ~$13–17k PSA10); Red Refractor /5 $13,300–26,099 range.
+
+OPERATIONAL:
+- tsc cwd gotcha: rebuilds silently no-op if shell cwd drifts to repo root vs /backend. On read-only probes
+  loading dist directly, check `ls -l dist/<file>` mtime if behavior ≠ source. Deploy uses cwd-anchored
+  npm run build (unaffected).
+- compiq:price-by-id:v4:* flush often matches 0 keys (light auth'd traffic + TTL + restart settle empty).
+
+---
+
 ## 2026-06-15 — Estimator Phase 2 high-tier fix: revert mult ≥ 14 to raw (deployed `042c9aa`)
 
 The Phase 2 power-law correction `mult^0.283` (shipped earlier today as `5c57734`) over-corrected past the Blue tier and crushed real high-tier autos. Verified external cite: Leo Gold Refractor PSA 10 $8,100 (eBay/SCI); Phase 2 emitted $1,220 — under-claim 6.6×. This fix gates the correction so mult ≥ 14 reverts to raw table multipliers.
