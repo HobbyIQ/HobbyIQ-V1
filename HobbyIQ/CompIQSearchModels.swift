@@ -259,6 +259,16 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 }
 
+/// CF-FIND-CARDS-PHASE-B: typeahead suggestion list returned by
+/// GET /api/compiq/suggest. Wire shape `{ "query": String, "suggestions":
+/// [String] }`. Both fields defensive-optional, matching the project's
+/// CompIQVariantListResponse convention — a malformed payload renders as
+/// "no suggestions" rather than throwing.
+struct CompIQSuggestResponse: Codable {
+    let query: String?
+    let suggestions: [String]?
+}
+
 struct CompIQVariantListResponse: Codable {
     let success: Bool?
     let query: String?

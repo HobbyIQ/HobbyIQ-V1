@@ -17,6 +17,17 @@ struct CompIQVariantPickerView: View {
     /// catalog enrichment can run several seconds for broad queries like
     /// "Mike Trout"). Each new search supersedes the previous one.
     @State private var searchTask: Task<Void, Never>?
+    /// CF-FIND-CARDS-PHASE-B: typeahead state. `suggestions` is the
+    /// (display-capped) list rendered under the field; `suggestTask` is
+    /// the in-flight /suggest fetch that gets cancelled on every keystroke
+    /// so the latest query always wins. `suppressNextSuggest` is the loop
+    /// guard — set true when the field is set PROGRAMMATICALLY (tap a
+    /// suggestion → field = suggestion → would otherwise re-trigger
+    /// onChange → re-fetch /suggest → dropdown reopens). The flag breaks
+    /// that cycle; never disable the onChange handler itself.
+    @State private var suggestions: [String] = []
+    @State private var suggestTask: Task<Void, Never>?
+    @State private var suppressNextSuggest: Bool = false
     @Environment(\.dismiss) private var dismiss
     /// Held explicitly so the EO chain reaches the pushed CompIQPricedCardView.
     /// Intermediate views that don't hold the EO can drop it on navigation
@@ -59,6 +70,7 @@ struct CompIQVariantPickerView: View {
                 } else {
                     searchCard
                 }
+                suggestionsDropdown
                 statusSection
                 resultsSection
             }
@@ -75,10 +87,14 @@ struct CompIQVariantPickerView: View {
                 startSearch()
             }
         }
+        .onChange(of: query) { _, newValue in
+            handleQueryChange(newValue)
+        }
         .onDisappear {
-            // Cancel any in-flight search so a backgrounded view doesn't keep
+            // Cancel any in-flight search/suggest so a backgrounded view doesn't keep
             // chewing on a slow request that the user has already moved past.
             searchTask?.cancel()
+            suggestTask?.cancel()
         }
     }
 
@@ -699,11 +715,110 @@ struct CompIQVariantPickerView: View {
         .padding(.vertical, 8)
     }
 
+    // MARK: - Typeahead (CF-FIND-CARDS-PHASE-B)
+
+    /// Suggestion dropdown rendered just under the search field. Advisory
+    /// only — never substituted for the user's raw text on submit. A tap
+    /// here fills the field and runs the normal search trigger.
+    @ViewBuilder
+    private var suggestionsDropdown: some View {
+        if suggestions.isEmpty == false {
+            VStack(spacing: 0) {
+                ForEach(Array(suggestions.prefix(8).enumerated()), id: \.offset) { index, suggestion in
+                    Button {
+                        applySuggestion(suggestion)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            Text(suggestion)
+                                .font(.subheadline)
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    if index < min(suggestions.count, 8) - 1 {
+                        Rectangle()
+                            .fill(HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                            .frame(height: 1)
+                            .padding(.horizontal, 8)
+                    }
+                }
+            }
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    /// Field `onChange` handler. Loop guard: when `suppressNextSuggest`
+    /// is set (because we just programmatically wrote the field on a
+    /// suggestion tap), consume the flag and DO NOT fire /suggest — that
+    /// would re-open the dropdown immediately under a search the user
+    /// just kicked off. Otherwise: clear+hide under 3 chars, else cancel
+    /// any in-flight suggest task and debounce 250ms.
+    private func handleQueryChange(_ value: String) {
+        if suppressNextSuggest {
+            suppressNextSuggest = false
+            return
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count < 3 {
+            suggestTask?.cancel()
+            suggestions = []
+            return
+        }
+        suggestTask?.cancel()
+        suggestTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if Task.isCancelled { return }
+            do {
+                let next = try await APIService.shared.fetchSearchSuggestions(q: trimmed)
+                if Task.isCancelled { return }
+                suggestions = next
+            } catch {
+                // Typeahead is advisory — failure means no dropdown, never
+                // a user-visible error. The literal search path is untouched.
+                if Task.isCancelled == false {
+                    suggestions = []
+                }
+            }
+        }
+    }
+
+    /// Suggestion tap: write the field programmatically, arm the loop
+    /// guard so the resulting onChange does NOT re-fetch /suggest, clear
+    /// the dropdown, and run the normal cancel-aware search trigger on
+    /// the (now updated) field text.
+    private func applySuggestion(_ suggestion: String) {
+        suppressNextSuggest = true
+        query = suggestion
+        suggestions = []
+        suggestTask?.cancel()
+        startSearch()
+    }
+
     // MARK: - Load
 
     /// Cancel any in-flight search and start a fresh one. The single
     /// `searchTask` slot ensures only one request is active at a time so
     /// the skeleton state can be reliably cancelled from the UI.
+    ///
+    /// CF-FIND-CARDS-PHASE-B HARD GUARD (project_find_cards_typeahead_guard.md):
+    /// this is the ONE search trigger. Both .onSubmit on the field and the
+    /// Search button call it on the RAW `query` text. The typeahead never
+    /// auto-substitutes; "trout" submitted directly searches "trout", not
+    /// the top suggestion ("Trout & Flies"). Never read `suggestions` here.
     private func startSearch() {
         searchTask?.cancel()
         searchTask = Task { await load() }
@@ -712,6 +827,14 @@ struct CompIQVariantPickerView: View {
     private func load() async {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else { return }
+
+        // Typeahead is advisory; the moment a real search runs, the
+        // dropdown's job is done. Cancel any in-flight /suggest and clear
+        // the list. Covers .onSubmit, the Search button, the compact
+        // magnifyingglass button, and tap-a-suggestion (which routes here
+        // via applySuggestion → startSearch).
+        suggestTask?.cancel()
+        suggestions = []
 
         isLoading = true
         error = nil

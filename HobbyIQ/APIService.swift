@@ -105,6 +105,23 @@ struct APIService {
         return try await post(path: "/api/compiq/search", body: body, responseType: CompIQSearchResponse.self)
     }
 
+    /// CF-FIND-CARDS-PHASE-B: typeahead suggestions for the Find Cards
+    /// field. GET /api/compiq/suggest?q=<text>. Cardsight ignores `take`
+    /// (always returns ~10) and ignores `segment`, so we cap the display
+    /// list client-side via `.prefix(n)` at the call site. Returns an
+    /// empty array on a defensive-decode miss — the dropdown is advisory
+    /// only; a typeahead failure must NEVER block the literal search.
+    func fetchSearchSuggestions(q: String) async throws -> [String] {
+        let trimmed = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return [] }
+        let response = try await get(
+            path: "/api/compiq/suggest",
+            queryItems: [URLQueryItem(name: "q", value: trimmed)],
+            responseType: CompIQSuggestResponse.self
+        )
+        return response.suggestions ?? []
+    }
+
     func searchVariantList(query: String) async throws -> CompIQVariantListResponse {
         let body = CompIQVariantSearchRequest(query: query)
         // CF-FIND-CARDS-REGROUND: cardsearch needs headroom. Dispatcher's
