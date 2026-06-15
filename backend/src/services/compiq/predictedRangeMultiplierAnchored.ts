@@ -50,6 +50,30 @@ export interface MultiplierAnchoredInput {
   subjectRegime: Regime | null | undefined;
   /** Peer pool — same player, same set, different parallels. */
   peerComps: ReadonlyArray<MultiplierAnchoredPeerComp>;
+  /**
+   * CF-ESTIMATOR-PHASE-2 (2026-06-15): auto-base detection signal.
+   * When true, applies the auto-base power-law correction
+   * `mult^0.283` to both the peer-side denominator (line ~204) and the
+   * subject-side numerator (line ~236) so the implied-baseline math
+   * stays internally consistent on prospect-auto cards. Non-auto path
+   * is byte-identical to pre-Phase-2.
+   *
+   * Sourced from `getCardDetail(cardId).attributes.includes("AUTO")`
+   * at the caller. Optional — omitting defaults to non-auto.
+   */
+  subjectIsAuto?: boolean;
+}
+
+/**
+ * CF-ESTIMATOR-PHASE-2 (2026-06-15): power-law exponent applied to
+ * absolute base multipliers when the card is auto. Mirrors the constant
+ * + rationale in gradedPriceProjection.ts (single source of truth for
+ * the curve shape; re-tune both sites together when sample expands).
+ */
+const AUTO_BASE_MULTIPLIER_EXPONENT = 0.283;
+function autoCorrectedBaseMultiplier(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return raw;
+  return Math.pow(raw, AUTO_BASE_MULTIPLIER_EXPONENT);
 }
 
 export type MultiplierAnchoredSpreadModel =
@@ -195,13 +219,27 @@ export function computeMultiplierAnchoredRange(
     multiplier: number;
     impliedBaseline: number;
   };
+  // CF-ESTIMATOR-PHASE-2 (2026-06-15): when subjectIsAuto, apply the
+  // auto-base power-law correction to BOTH the peer-side denominator
+  // (here) and the subject-side numerator (below). Mathematically: the
+  // implied-baseline derivation `peer.price / peer.multiplier` returns
+  // the player's base auto level (since auto IS the base). If the
+  // multiplier table is calibrated for non-auto, dividing an auto peer
+  // price by an inflated multiplier yields an under-stated baseline.
+  // Correcting the divisor recovers the true base-auto baseline; the
+  // matching numerator correction below scales it back to the subject
+  // parallel's auto value. Non-auto path: untouched.
+  const isAuto = input?.subjectIsAuto === true;
   const usable: Usable[] = [];
   for (const peer of peerComps) {
     if (!peer || typeof peer.parallelName !== "string") continue;
     if (typeof peer.price !== "number" || !Number.isFinite(peer.price) || peer.price <= 0) continue;
     const peerEntry: ChromeDraftEntry | null = lookupMultiplier(peer.parallelName);
     if (!peerEntry || !Number.isFinite(peerEntry.baseMultiplier) || peerEntry.baseMultiplier <= 0) continue;
-    const impliedBaseline = peer.price / peerEntry.baseMultiplier;
+    const peerMultiplierApplied = isAuto
+      ? autoCorrectedBaseMultiplier(peerEntry.baseMultiplier)
+      : peerEntry.baseMultiplier;
+    const impliedBaseline = peer.price / peerMultiplierApplied;
     if (!Number.isFinite(impliedBaseline) || impliedBaseline <= 0) continue;
     usable.push({
       parallelName: peer.parallelName,
@@ -231,9 +269,16 @@ export function computeMultiplierAnchoredRange(
   }
 
   // (d) Median of implied baselines, then scale by subject multiplier.
+  //     CF-ESTIMATOR-PHASE-2: matching numerator correction — when auto,
+  //     scale the baseline back up by the corrected subject multiplier
+  //     so the ratio identity holds end-to-end and the midpoint reflects
+  //     the corrected auto-tier value.
   const baselines = usable.map((u) => u.impliedBaseline).sort((a, b) => a - b);
   const midBaseline = median(baselines);
-  const midpoint = midBaseline * subjectEntry.baseMultiplier;
+  const subjectMultiplierApplied = isAuto
+    ? autoCorrectedBaseMultiplier(subjectEntry.baseMultiplier)
+    : subjectEntry.baseMultiplier;
+  const midpoint = midBaseline * subjectMultiplierApplied;
 
   // (e) Regime-aware spread.
   const low = midpoint * spread.low;

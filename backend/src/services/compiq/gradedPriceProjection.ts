@@ -202,6 +202,17 @@ export interface ComputeGradedProjectionInput {
    * composed → none).
    */
   cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+  /**
+   * CF-ESTIMATOR-PHASE-2 (2026-06-15): "this card is a prospect-auto"
+   * detection signal. Sourced at the caller from
+   * `getCardDetail(cardId).attributes.includes("AUTO")` (same fetch that
+   * provides cardParallels). When true, the parallel-composed anchor
+   * applies the auto-base power-law correction `mult^0.283` instead of
+   * raw `mult` — see AUTO_BASE_MULTIPLIER_EXPONENT above. When
+   * false/undefined the composed path is byte-identical to pre-Phase-2.
+   * Does NOT affect the sibling-anchor path (raw ratios preserved).
+   */
+  isAuto?: boolean;
   /** Target grade tuples to project. Defaults to TARGET_GRADES below. */
   targetGrades?: ReadonlyArray<{ company: string; grade: string; label: string }>;
 }
@@ -242,6 +253,51 @@ const TIER2_RELEASE_MIN_CONTRIBUTING_CARDS = 3;
  * selection-order comment inside resolveAnchor.
  */
 const BASE_RAW_TRUST_FLOOR = 3;
+
+/**
+ * CF-ESTIMATOR-PHASE-2 (2026-06-15): auto-base multiplier correction.
+ *
+ * The Chrome-Draft multiplier table is calibrated against NON-auto base.
+ * For prospect-auto numbered parallels (CPA-LD, CPA-KG, etc.) the auto
+ * IS the base, and the table's multipliers over-claim systematically:
+ * a constrained power-law fit on 15 raw-only same-parallel sales across
+ * 8 auto cards gave `over(mult) = mult^0.717` (R²=0.369, n=15,
+ * constrained to over(1.0)=1.0 so Base Auto trivially equals itself).
+ *
+ * The corrected auto multiplier is therefore:
+ *   autoCorrected(mult) = mult / over(mult) = mult / mult^0.717 = mult^0.283
+ *
+ * Expected effects:
+ *   Blue (5.7×)        → 1.64× corrected   (Leo PSA 10 $3,260 → $937)
+ *   Gold (14.5×)       → 2.13× corrected
+ *   Red (55×)          → 3.11× corrected
+ *   Base Auto (1.0×)   → 1.00× corrected   (identity floor)
+ *
+ * Applied ONLY at:
+ *   (a) parallel-composed anchor in resolveAnchor (this file, ~L725)
+ *   (b) predictedRangeMultiplierAnchored.ts L204+L236 (separate consumer)
+ *
+ * NOT applied at the sibling-anchor path (this file, ~L467-L469):
+ *   sibling math uses parallel multiplier RATIOS (target_mult / source_mult).
+ *   A power-law correction breaks ratio identity:
+ *     (5.7^0.283) / (4.9^0.283) = (5.7/4.9)^0.283 ≠ 5.7/4.9
+ *   Correcting both ends would shift Phase 1's shipped sibling outputs
+ *   (Konnor PSA 9 $830 → ~$745). The sibling path stays on raw ratios.
+ *
+ * Detection signal: getCardDetail(cardId).attributes.includes("AUTO")
+ * is threaded as `isAuto` via ComputeGradedProjectionInput. Non-auto
+ * path is BYTE-IDENTICAL to pre-Phase-2 (uses raw entry.baseMultiplier).
+ *
+ * Re-tune lever: when color-parallel data grows via eBay ingestion /
+ * marketplace expansion, refit the exponent. Current 0.283 is conservative
+ * (passes the over(1.0)=1.0 safety floor at the cost of a noisier R²).
+ */
+const AUTO_BASE_MULTIPLIER_EXPONENT = 0.283;
+
+function autoCorrectedBaseMultiplier(rawBaseMultiplier: number): number {
+  if (!Number.isFinite(rawBaseMultiplier) || rawBaseMultiplier <= 0) return rawBaseMultiplier;
+  return Math.pow(rawBaseMultiplier, AUTO_BASE_MULTIPLIER_EXPONENT);
+}
 /** Release-curve cache + harvest tuning. */
 const RELEASE_CURVE_TTL_SEC = 6 * 3600;
 const RELEASE_HARVEST_CONCURRENCY = 5;
@@ -649,6 +705,12 @@ function resolveAnchor(
      * composed paths.
      */
     cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+    /**
+     * CF-ESTIMATOR-PHASE-2: auto-base detection signal. Applied ONLY in
+     * the parallel-composed branch (line ~725) — not in sibling-anchor
+     * (raw ratios must be preserved per Phase 1 invariant).
+     */
+    isAuto?: boolean;
   },
 ): ResolvedAnchor {
   // Parallel target
@@ -722,11 +784,22 @@ function resolveAnchor(
       && Number.isFinite(targetEntry.baseMultiplier)
       && targetEntry.baseMultiplier > 0
     ) {
-      const composed = round2(baseRawMedian * targetEntry.baseMultiplier);
+      // CF-ESTIMATOR-PHASE-2 (2026-06-15): apply the auto-base power-law
+      // correction when isAuto. Non-auto path is byte-identical to
+      // pre-Phase-2 (uses raw entry.baseMultiplier). Detection signal
+      // is `getCardDetail(cardId).attributes.includes("AUTO")` at the
+      // caller. See AUTO_BASE_MULTIPLIER_EXPONENT comment block.
+      const appliedMultiplier = opts.isAuto
+        ? autoCorrectedBaseMultiplier(targetEntry.baseMultiplier)
+        : targetEntry.baseMultiplier;
+      const composed = round2(baseRawMedian * appliedMultiplier);
+      const multiplierBasis = opts.isAuto
+        ? `${targetEntry.parallelName} auto-corrected multiplier (${targetEntry.baseMultiplier.toFixed(2)}×^${AUTO_BASE_MULTIPLIER_EXPONENT.toFixed(3)} = ${appliedMultiplier.toFixed(3)}×)`
+        : `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`;
       return {
         price: composed,
         kind: "parallel-composed",
-        description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`,
+        description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${multiplierBasis}`,
       };
     }
 
@@ -1196,6 +1269,7 @@ export function computeGradedProjection(
     releaseLabel = null,
     trendIQ = null,
     cardParallels = undefined,
+    isAuto = false,
     targetGrades = TARGET_GRADES,
   } = input;
 
@@ -1216,6 +1290,7 @@ export function computeGradedProjection(
     targetParallelName,
     pricing,
     cardParallels,
+    isAuto,
   });
 
   // CF-ESTIMATOR-PHASE-1 (2026-06-14): the trend factor is applied
@@ -1800,6 +1875,12 @@ export interface BuildGradedEstimatesInput {
    * (composed → none).
    */
   cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+  /**
+   * CF-ESTIMATOR-PHASE-2 (2026-06-15): auto-base detection signal,
+   * threaded to ComputeGradedProjectionInput. See
+   * AUTO_BASE_MULTIPLIER_EXPONENT block in gradedPriceProjection.ts.
+   */
+  isAuto?: boolean;
   /** Observed fields shipped on the same response. Snapshotted pre-call;
    *  asserted byte-identical post-call. The estimator never receives
    *  references to these (it takes only `pricing` + scope params), so
@@ -1839,6 +1920,7 @@ export function buildGradedEstimates(
     releaseLabel: input.releaseLabel,
     trendIQ: input.trendIQ,
     cardParallels: input.cardParallels,
+    isAuto: input.isAuto,
   });
 
   const pricingAfter = JSON.stringify(input.pricing);

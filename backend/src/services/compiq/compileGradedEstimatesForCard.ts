@@ -169,7 +169,14 @@ export async function compileGradedEstimatesForCard(
     // base scope (no parallel target → sibling branch never fires
     // anyway). On failure: catch and pass empty parallels so the engine
     // gracefully degrades to composed → none.
+    //
+    // CF-ESTIMATOR-PHASE-2 (2026-06-15): the same getCardDetail call
+    // surfaces `attributes` — we extract `isAuto` here (no extra
+    // round-trip) and thread it through so the parallel-composed anchor
+    // applies the auto-base power-law correction. Non-auto path is
+    // byte-identical. Failure to fetch ⇒ isAuto=false (safe default).
     let cardParallels: ReadonlyArray<{ id: string; name: string }> | undefined;
+    let isAuto = false;
     if (parallelId) {
       try {
         const detail = await getCardDetail(cardId);
@@ -177,6 +184,9 @@ export async function compileGradedEstimatesForCard(
           id: p.id,
           name: p.name,
         }));
+        isAuto = (detail.attributes ?? []).some(
+          (a: string) => /\bAUTO\b/i.test(a),
+        );
       } catch (err) {
         console.warn(
           `[${source}] getCardDetail failed for ${cardId} (non-fatal, sibling-anchor branch disabled): ${(err as Error)?.message ?? err}`,
@@ -196,6 +206,7 @@ export async function compileGradedEstimatesForCard(
       releaseLabel,
       trendIQ: estimate.trendIQ ?? null,
       cardParallels,
+      isAuto,
       snapshots: {
         marketTierValue: isThinMarket ? null : fmv,
         recentComps: estimate.recentComps ?? [],
