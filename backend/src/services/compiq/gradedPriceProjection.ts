@@ -35,6 +35,8 @@ import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
 import { tokenizeParallel } from "./cardsight.mapper.js";
 import { cacheWrap } from "../shared/cache.service.js";
+import type { TrendIQResult, TrendIQCoverage } from "./trendIQ.types.js";
+import { computeForwardProjectionFactor } from "./forwardProjection.js";
 
 // ── Public types ───────────────────────────────────────────────────────────
 
@@ -61,6 +63,16 @@ export type GradedProjectionRatioSource =
 export type GradedProjectionAnchorKind =
   | "base"
   | "parallel-observed"
+  // CF-ESTIMATOR-PHASE-1 (2026-06-14): observed-anchor paths. "same" =
+  // a record tagged to the target parallel (pid or title-token) at any
+  // grade; we derive a parallel-raw equivalent from it. "sibling" = a
+  // record on a different parallel of the same card, with both ends
+  // resolvable in the multiplier table so parallel ratios cancel. Both
+  // are gated by BASE_RAW_TRUST_FLOOR — "same" preempts composed
+  // unconditionally; "sibling" only fires when composed would be a
+  // degenerate-outlier anchor (baseRawSampleCount < floor).
+  | "parallel-observed-same"
+  | "parallel-observed-sibling"
   | "parallel-composed"
   | "none";
 
@@ -171,6 +183,25 @@ export interface ComputeGradedProjectionInput {
    *  ("2024 Bowman Chrome Prospects Autographs"). Optional; falls back to
    *  a generic phrasing when absent. */
   releaseLabel?: string | null;
+  /**
+   * CF-ESTIMATOR-PHASE-1 (2026-06-14): trend signal used by the observed-
+   * anchor paths to forward-project an old sibling/same-parallel sale to
+   * today. Threaded from `est.trendIQ`. When null/undefined or coverage
+   * is "insufficient", computeForwardProjectionFactor returns 1.0 → no
+   * forward shift. Composed/base anchor paths intentionally do NOT apply
+   * trend (medians are already partially trend-aware via comp-pool
+   * weighting; double-counting would over-claim).
+   */
+  trendIQ?: TrendIQResult | null;
+  /**
+   * CF-ESTIMATOR-PHASE-1 (2026-06-14): card-level parallels[] for the
+   * sibling-observed anchor. Sourced from `getCardDetail(cardId).parallels`
+   * at the caller (pricing.card doesn't carry parallels). Required for
+   * the sibling branch to map parallel_id → name → lookupMultiplier.
+   * Optional — omit and the sibling branch is skipped (falls through to
+   * composed → none).
+   */
+  cardParallels?: ReadonlyArray<{ id: string; name: string }>;
   /** Target grade tuples to project. Defaults to TARGET_GRADES below. */
   targetGrades?: ReadonlyArray<{ company: string; grade: string; label: string }>;
 }
@@ -195,6 +226,22 @@ const TIER1_MIN_BASE_SAMPLES = 3;
 const TIER2_MIN_SIBLING_BASE_SAMPLES = 5;
 /** Minimum contributing cards to trust the tier-2b release ratio. */
 const TIER2_RELEASE_MIN_CONTRIBUTING_CARDS = 3;
+/**
+ * CF-ESTIMATOR-PHASE-1 decision (B) (2026-06-14): hybrid precedence gate.
+ * Composed (baseRawMedian × parallel multiplier) only fires when the
+ * pid=null base raw pool has at least this many samples — below floor,
+ * a single anomalous base sale fully determines the result and the
+ * resulting anchor is a degenerate outlier (Konnor n=1 case). Cards
+ * above the floor (Leo n=22) stay on composed and remain byte-identical
+ * to pre-Phase-1. Tuned to 3 because that's the same threshold the
+ * tier-1 card-specific ratio uses for "enough data to trust per-card."
+ *
+ * Under decision (B), this floor is also the implicit gate that
+ * separates "trust the per-card calibration" from "fall through to the
+ * observed-anchor paths (same-parallel then sibling)" — see the
+ * selection-order comment inside resolveAnchor.
+ */
+const BASE_RAW_TRUST_FLOOR = 3;
 /** Release-curve cache + harvest tuning. */
 const RELEASE_CURVE_TTL_SEC = 6 * 3600;
 const RELEASE_HARVEST_CONCURRENCY = 5;
@@ -231,6 +278,287 @@ function isBaseRecord(r: CardsightSaleRecord): boolean {
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// ── CF-ESTIMATOR-PHASE-1 observed-anchor helpers ───────────────────────────
+//
+// findSameParallelObservedAnchor / findSiblingParallelObservedAnchor walk
+// pricing.raw + pricing.graded to find the most defensible observed sale
+// to anchor on, derive a parallel-raw equivalent for the target parallel,
+// and report the metadata needed for basis prose + tier classification.
+//
+// Both return null when no usable candidate exists; the caller falls
+// through to composed (if base-raw passes the trust floor) or no-data.
+//
+// Rules:
+//   • "raw equivalent" = sale.price / graderPremium(sale.grade) when
+//     the sale is graded, else sale.price. Coerces graded sales into
+//     a parallel-raw axis so the per-grade loop can apply target-grade
+//     multipliers consistently.
+//   • Sibling: requires lookupMultiplier(siblingParallelName) AND
+//     lookupMultiplier(targetParallelName) BOTH non-null, so the
+//     parallel ratio (target_mult / sibling_mult) is a real number,
+//     not an absolute multiplier hiding as a ratio. If either side
+//     doesn't resolve, the sibling is skipped (the "ratios cancel"
+//     property the brief depends on requires both ends in the table).
+//   • "Nearest" sibling: minimize |target_mult − sibling_mult|. Then
+//     nearest grade by graderPremium numeric distance. Then most recent.
+
+interface ObservedAnchorCandidate {
+  /** The sale's value coerced into target-parallel-raw axis. */
+  parallelRawEquivalent: number;
+  /** The actual sale we picked. */
+  sourceSale: {
+    price: number;
+    date: string | null;
+    title: string;
+  };
+  /** Detected grade label ("PSA 10", "BGS 9.5") or null if raw. */
+  saleGradeLabel: string | null;
+  /** Sale grade's GRADER_PREMIUMS value (1.0 when raw). */
+  saleGradePremium: number;
+  /** Age of the sale in whole days from now, or null when date is missing/unparseable. */
+  ageDays: number | null;
+  /** Name of the sibling parallel (null for same-parallel picks). */
+  siblingParallelName: string | null;
+  /** target_mult / source_mult (1.0 when same-parallel). */
+  parallelRatio: number;
+  /** The source-side baseMultiplier from lookupMultiplier (target-mult for same). */
+  sourceMultiplier: number;
+  /** The target-side baseMultiplier from lookupMultiplier. */
+  targetMultiplier: number;
+}
+
+function parseSaleDateToAgeDays(date: string | null | undefined): number | null {
+  if (!date) return null;
+  const t = Date.parse(date);
+  if (!Number.isFinite(t)) return null;
+  const age = (Date.now() - t) / (24 * 60 * 60 * 1000);
+  return age < 0 ? 0 : Math.round(age);
+}
+
+function detectRecordGrade(co: string, gradeValue: unknown, title: string | null | undefined): string | null {
+  // Prefer the bucket's company/grade tag (more reliable than title parsing).
+  const coTrim = String(co ?? "").toUpperCase().trim();
+  const gradeStr = String(gradeValue ?? "").trim();
+  if (coTrim && gradeStr) return `${coTrim} ${gradeStr}`;
+  // Fallback to title parsing.
+  if (!title) return null;
+  const det = detectGradeFromTitle(title);
+  return det ? `${det.company} ${det.grade}` : null;
+}
+
+/**
+ * Walk pricing for sales tagged to OR titled as the target parallel; pick
+ * the most recent, prefer raw over graded. Returns the parallel-raw
+ * equivalent (graded sales coerced via getGraderPremium) plus metadata.
+ */
+function findSameParallelObservedAnchor(
+  pricing: CardsightPricingResponse,
+  targetParallelId: string,
+  targetParallelName: string | null | undefined,
+  targetMultiplier: number,
+): ObservedAnchorCandidate | null {
+  const candidates: Array<{
+    record: CardsightSaleRecord;
+    saleGradeLabel: string | null;
+    saleGradePremium: number;
+    rawEquivalent: number;
+  }> = [];
+
+  const tokens = targetParallelName ? tokenizeParallel(targetParallelName) : [];
+  const patterns = tokens.map((t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"));
+  const matchesTarget = (r: CardsightSaleRecord): boolean => {
+    if (r.parallel_id === targetParallelId) return true;
+    if (patterns.length > 0) {
+      const title = r.title ?? "";
+      return patterns.every((p) => p.test(title));
+    }
+    return false;
+  };
+
+  // Raw records
+  for (const r of (pricing.raw?.records ?? [])) {
+    if (!Number.isFinite(r.price) || r.price <= 0) continue;
+    if (!matchesTarget(r)) continue;
+    candidates.push({
+      record: r,
+      saleGradeLabel: null,
+      saleGradePremium: 1.0,
+      rawEquivalent: Number(r.price),
+    });
+  }
+  // Graded records — every (company, grade) bucket
+  for (const co of (pricing.graded ?? [])) {
+    const coName = String(co.company_name ?? "").toUpperCase().trim();
+    if (!coName) continue;
+    for (const g of (co.grades ?? [])) {
+      const gradeStr = String(g.grade_value ?? "").trim();
+      if (!gradeStr) continue;
+      const premium = getGraderPremium(coName, gradeStr);
+      if (!(premium > 0)) continue;
+      const label = `${coName} ${gradeStr}`;
+      for (const r of (g.records ?? [])) {
+        if (!Number.isFinite(r.price) || r.price <= 0) continue;
+        if (!matchesTarget(r)) continue;
+        candidates.push({
+          record: r,
+          saleGradeLabel: label,
+          saleGradePremium: premium,
+          rawEquivalent: Number(r.price) / premium,
+        });
+      }
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  // Sort: raw before graded (saleGradeLabel null first), then most recent.
+  candidates.sort((a, b) => {
+    const aIsRaw = a.saleGradeLabel == null ? 1 : 0;
+    const bIsRaw = b.saleGradeLabel == null ? 1 : 0;
+    if (aIsRaw !== bIsRaw) return bIsRaw - aIsRaw;
+    const aDate = String(a.record.date ?? "");
+    const bDate = String(b.record.date ?? "");
+    return bDate.localeCompare(aDate);
+  });
+  const best = candidates[0]!;
+  return {
+    parallelRawEquivalent: best.rawEquivalent,
+    sourceSale: {
+      price: Number(best.record.price),
+      date: best.record.date ?? null,
+      title: best.record.title ?? "",
+    },
+    saleGradeLabel: best.saleGradeLabel,
+    saleGradePremium: best.saleGradePremium,
+    ageDays: parseSaleDateToAgeDays(best.record.date),
+    siblingParallelName: null,
+    parallelRatio: 1.0,
+    sourceMultiplier: targetMultiplier,
+    targetMultiplier,
+  };
+}
+
+/**
+ * Walk pricing for sibling-parallel sales (parallel_id != null AND !=
+ * target), ratio-adjust to the target parallel via lookupMultiplier on
+ * both ends. Skips any sibling whose parallel name doesn't resolve in
+ * the multiplier table — those couldn't cancel cleanly. Picks by
+ * minimum |target_mult − sibling_mult|, then by parallel-raw axis
+ * proximity to the resulting value space (effectively: prefer recent +
+ * matching grade), then most recent.
+ */
+function findSiblingParallelObservedAnchor(
+  pricing: CardsightPricingResponse,
+  targetParallelId: string,
+  targetParallelName: string | null | undefined,
+  targetMultiplier: number,
+  cardParallels: ReadonlyArray<{ id: string; name: string }>,
+): ObservedAnchorCandidate | null {
+  // Build parallels lookup: parallel_id → parallel name → multiplier.
+  // Parallels come from getCardDetail (passed in by the caller) because
+  // pricing.card.parallels[] is not on the CardsightPricingCard shape;
+  // CardsightCardDetail.parallels is.
+  const parallelMultByPid = new Map<string, { name: string; mult: number }>();
+  for (const p of cardParallels) {
+    const pid = p?.id;
+    const name = p?.name;
+    if (!pid || !name || pid === targetParallelId) continue;
+    const entry = lookupMultiplier(name);
+    if (!entry || !(entry.baseMultiplier > 0)) continue;
+    parallelMultByPid.set(pid, { name, mult: entry.baseMultiplier });
+  }
+  if (parallelMultByPid.size === 0) return null;
+
+  interface SiblingCandidate {
+    record: CardsightSaleRecord;
+    siblingName: string;
+    siblingMult: number;
+    saleGradeLabel: string | null;
+    saleGradePremium: number;
+    rawEquivalentSibling: number;   // sale value coerced to sibling-raw axis
+    rawEquivalentTarget: number;    // then scaled to target-parallel-raw via mult ratio
+    distance: number;               // |target_mult − siblingMult|
+  }
+
+  const candidates: SiblingCandidate[] = [];
+
+  // Raw sibling records
+  for (const r of (pricing.raw?.records ?? [])) {
+    if (!Number.isFinite(r.price) || r.price <= 0) continue;
+    const pid = r.parallel_id;
+    if (!pid) continue;
+    const sib = parallelMultByPid.get(pid);
+    if (!sib) continue;
+    const ratio = targetMultiplier / sib.mult;
+    candidates.push({
+      record: r,
+      siblingName: sib.name,
+      siblingMult: sib.mult,
+      saleGradeLabel: null,
+      saleGradePremium: 1.0,
+      rawEquivalentSibling: Number(r.price),
+      rawEquivalentTarget: Number(r.price) * ratio,
+      distance: Math.abs(targetMultiplier - sib.mult),
+    });
+  }
+
+  // Graded sibling records
+  for (const co of (pricing.graded ?? [])) {
+    const coName = String(co.company_name ?? "").toUpperCase().trim();
+    if (!coName) continue;
+    for (const g of (co.grades ?? [])) {
+      const gradeStr = String(g.grade_value ?? "").trim();
+      if (!gradeStr) continue;
+      const premium = getGraderPremium(coName, gradeStr);
+      if (!(premium > 0)) continue;
+      const label = `${coName} ${gradeStr}`;
+      for (const r of (g.records ?? [])) {
+        if (!Number.isFinite(r.price) || r.price <= 0) continue;
+        const pid = r.parallel_id;
+        if (!pid) continue;
+        const sib = parallelMultByPid.get(pid);
+        if (!sib) continue;
+        const ratio = targetMultiplier / sib.mult;
+        const siblingRaw = Number(r.price) / premium;
+        candidates.push({
+          record: r,
+          siblingName: sib.name,
+          siblingMult: sib.mult,
+          saleGradeLabel: label,
+          saleGradePremium: premium,
+          rawEquivalentSibling: siblingRaw,
+          rawEquivalentTarget: siblingRaw * ratio,
+          distance: Math.abs(targetMultiplier - sib.mult),
+        });
+      }
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  // Sort by mult distance, then most recent.
+  candidates.sort((a, b) => {
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    const aDate = String(a.record.date ?? "");
+    const bDate = String(b.record.date ?? "");
+    return bDate.localeCompare(aDate);
+  });
+  const best = candidates[0]!;
+  return {
+    parallelRawEquivalent: best.rawEquivalentTarget,
+    sourceSale: {
+      price: Number(best.record.price),
+      date: best.record.date ?? null,
+      title: best.record.title ?? "",
+    },
+    saleGradeLabel: best.saleGradeLabel,
+    saleGradePremium: best.saleGradePremium,
+    ageDays: parseSaleDateToAgeDays(best.record.date),
+    siblingParallelName: best.siblingName,
+    parallelRatio: targetMultiplier / best.siblingMult,
+    sourceMultiplier: best.siblingMult,
+    targetMultiplier,
+  };
 }
 
 /**
@@ -292,6 +620,15 @@ interface ResolvedAnchor {
   price: number | null;
   kind: GradedProjectionAnchorKind;
   description: string;
+  /**
+   * CF-ESTIMATOR-PHASE-1: present only for "parallel-observed-same" and
+   * "parallel-observed-sibling" kinds. The per-grade loop branches on
+   * this to bypass resolveRatio (which would re-apply tier-1/2/2b/3
+   * cascade and stack noise on the already-anchored value); instead it
+   * applies getGraderPremium directly per target grade. The basis
+   * builder also consumes these fields to render scope-labeled prose.
+   */
+  observedSource?: ObservedAnchorCandidate;
 }
 
 function resolveAnchor(
@@ -303,6 +640,15 @@ function resolveAnchor(
     targetParallelRawFmvSource?: "fmv" | "last-sale";
     targetParallelRawFmvAgeDays?: number | null;
     targetParallelName?: string | null;
+    pricing?: CardsightPricingResponse;
+    /**
+     * CF-ESTIMATOR-PHASE-1: card-level parallels[] for sibling resolution.
+     * Sourced from getCardDetail at the caller (pricing.card.parallels[]
+     * doesn't exist on CardsightPricingCard). Required for the sibling-
+     * observed branch; safe to omit for same-parallel-observed and
+     * composed paths.
+     */
+    cardParallels?: ReadonlyArray<{ id: string; name: string }>;
   },
 ): ResolvedAnchor {
   // Parallel target
@@ -333,26 +679,126 @@ function resolveAnchor(
         description: `parallel raw anchor ${fmtUSD(pf)} (observed single-sale or thin pool)`,
       };
     }
-    // Parallel-composed: base × parallel multiplier
+
+    // CF-ESTIMATOR-PHASE-1 (2026-06-14): hybrid precedence, decision (B).
+    // Selection order in the parallel-target branch, top to bottom:
+    //   (a) composed                  — when baseRawSampleCount >= floor
+    //                                   (the card has a well-calibrated
+    //                                   tier-1 path; trust it)
+    //   (b) same-parallel observed    — pid OR title-token match
+    //                                   (real sale in the exact parallel)
+    //   (c) sibling-parallel observed — nearest-mult sibling with both
+    //                                   ends in the multiplier table
+    //   (d) none
+    // Why (B) over (A): rule "same-parallel always wins" preempted Leo
+    // (base-raw n=22, strong tier-1 signal) onto a single title-matched
+    // $285 raw sale, dropping his rail ~60%. Decision (B) keeps composed
+    // when the base-raw pool is reliable, so cards with strong per-card
+    // calibration (Leo) stay byte-identical; cards with degenerate
+    // base-raw (Konnor n=1) fall through composed and pick up the
+    // sibling/same-parallel paths.
+    //
+    // Phase 2 caveat: the composed path uses Chrome-Draft absolute
+    // multipliers calibrated against NON-AUTO base. For prospect-auto
+    // numbered parallels (CPA-LD, CPA-KG, etc.) the multiplier is
+    // inflated — same root cause as Konnor's PSA 10 $9,040 overclaim;
+    // Leo's PSA 10 $3,260 is also (smaller) inflation by the same
+    // mechanism. Phase 2 will recalibrate or branch the multiplier by
+    // is-auto, which will move Leo too. Decision (B) intentionally
+    // doesn't sweep that fix into Phase 1.
+    const targetEntry = opts.targetParallelName ? lookupMultiplier(opts.targetParallelName) : null;
+    const targetMult =
+      targetEntry && Number.isFinite(targetEntry.baseMultiplier) && targetEntry.baseMultiplier > 0
+        ? targetEntry.baseMultiplier
+        : null;
+
+    // (a) Composed — when base-raw passes the trust floor
     if (
       baseRawMedian !== null
       && baseRawMedian > 0
+      && baseRawSampleCount >= BASE_RAW_TRUST_FLOOR
       && opts.targetParallelName
+      && targetEntry
+      && Number.isFinite(targetEntry.baseMultiplier)
+      && targetEntry.baseMultiplier > 0
     ) {
-      const entry = lookupMultiplier(opts.targetParallelName);
-      if (entry && Number.isFinite(entry.baseMultiplier) && entry.baseMultiplier > 0) {
-        const composed = round2(baseRawMedian * entry.baseMultiplier);
+      const composed = round2(baseRawMedian * targetEntry.baseMultiplier);
+      return {
+        price: composed,
+        kind: "parallel-composed",
+        description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`,
+      };
+    }
+
+    // (b) Same-parallel observed — pid OR title-token match. Demoted
+    // below composed in decision (B) so cards with strong tier-1 base
+    // calibration don't get re-anchored on a single title-matched sale.
+    if (opts.pricing && opts.targetParallelName && targetMult != null) {
+      const sameParallel = findSameParallelObservedAnchor(
+        opts.pricing,
+        opts.targetParallelId,
+        opts.targetParallelName,
+        targetMult,
+      );
+      if (sameParallel) {
+        const saleSlug = sameParallel.saleGradeLabel ? `${sameParallel.saleGradeLabel} sale` : "raw sale";
+        const ageBit =
+          sameParallel.ageDays != null
+            ? `, ${sameParallel.ageDays}d ago`
+            : "";
         return {
-          price: composed,
-          kind: "parallel-composed",
-          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${entry.parallelName} multiplier (${entry.baseMultiplier.toFixed(3)}×)`,
+          price: round2(sameParallel.parallelRawEquivalent),
+          kind: "parallel-observed-same",
+          description:
+            `anchored on a ${opts.targetParallelName} ${saleSlug} of `
+            + `${fmtUSD(sameParallel.sourceSale.price)}${ageBit}; coerced to parallel-raw axis `
+            + `(÷ ${sameParallel.saleGradePremium.toFixed(2)}× grade premium)`,
+          observedSource: sameParallel,
         };
       }
     }
+
+    // (c) Sibling-parallel observed — fires when composed unavailable
+    // (base-raw n below floor) AND no same-parallel candidate exists.
+    if (
+      opts.pricing
+      && opts.targetParallelName
+      && targetMult != null
+      && opts.cardParallels
+      && opts.cardParallels.length > 0
+    ) {
+      const sibling = findSiblingParallelObservedAnchor(
+        opts.pricing,
+        opts.targetParallelId,
+        opts.targetParallelName,
+        targetMult,
+        opts.cardParallels,
+      );
+      if (sibling) {
+        const saleSlug = sibling.saleGradeLabel ? `${sibling.saleGradeLabel} sale` : "raw sale";
+        const ageBit =
+          sibling.ageDays != null
+            ? `, ${sibling.ageDays}d ago`
+            : "";
+        return {
+          price: round2(sibling.parallelRawEquivalent),
+          kind: "parallel-observed-sibling",
+          description:
+            `anchored on a ${sibling.siblingParallelName} ${saleSlug} of `
+            + `${fmtUSD(sibling.sourceSale.price)}${ageBit}; ratio-adjusted to `
+            + `${opts.targetParallelName} (parallel ratio `
+            + `${sibling.targetMultiplier.toFixed(2)}/${sibling.sourceMultiplier.toFixed(2)} = `
+            + `${sibling.parallelRatio.toFixed(3)}×) and coerced to parallel-raw axis `
+            + `(÷ ${sibling.saleGradePremium.toFixed(2)}× grade premium)`,
+          observedSource: sibling,
+        };
+      }
+    }
+
     return {
       price: null,
       kind: "none",
-      description: `no parallel anchor (no observed raw FMV, no composable parallel multiplier)`,
+      description: `no parallel anchor (no observed same-parallel sale, base-raw n=${baseRawSampleCount} below trust floor ${BASE_RAW_TRUST_FLOOR}, no sibling with a resolvable multiplier)`,
     };
   }
   // Base target
@@ -630,6 +1076,102 @@ function classifyConfidence(
   return "rough"; // parallel-observed or parallel-composed with card ratio
 }
 
+/**
+ * CF-ESTIMATOR-PHASE-1 (2026-06-14): tier mapping for observed-anchor
+ * results. Implements the HALT-1 Q4 confidence-label table:
+ *   - sibling anchor → always ballpark (cross-parallel adjustment widens uncertainty)
+ *   - same anchor, target grade match, ≤90d, full/no_segment/no_card → estimate
+ *   - same anchor, target grade match, ≤90d, card_only/segment_only → rough
+ *   - same anchor, target grade match, ≤180d → rough
+ *   - same anchor, cross-grade, ≤180d → rough
+ *   - same anchor, >180d → ballpark
+ *   - trendIQ insufficient → downgrade one tier
+ */
+function classifyObservedAnchorTier(
+  anchorKind: "parallel-observed-same" | "parallel-observed-sibling",
+  targetGradeLabel: string,
+  saleGradeLabel: string | null,
+  ageDays: number | null,
+  trendCoverage: TrendIQCoverage | undefined,
+): "estimate" | "rough" | "ballpark" {
+  if (anchorKind === "parallel-observed-sibling") {
+    return trendCoverage === "insufficient" ? "ballpark" : "ballpark";
+  }
+  const age = ageDays ?? 365; // unknown date = old
+  const sameGrade = saleGradeLabel === targetGradeLabel;
+  const richCoverage =
+    trendCoverage === "full" || trendCoverage === "no_segment" || trendCoverage === "no_card";
+  const cardOrSegmentCoverage =
+    trendCoverage === "card_only" || trendCoverage === "segment_only";
+
+  let baseTier: "estimate" | "rough" | "ballpark";
+  if (sameGrade && age <= 90 && richCoverage) {
+    baseTier = "estimate";
+  } else if (sameGrade && age <= 90 && cardOrSegmentCoverage) {
+    baseTier = "rough";
+  } else if (sameGrade && age <= 90) {
+    baseTier = "rough"; // L1-only or no coverage
+  } else if (sameGrade && age <= 180) {
+    baseTier = "rough";
+  } else if (!sameGrade && age <= 180) {
+    baseTier = "rough";
+  } else {
+    baseTier = "ballpark"; // > 180d, regardless of grade match
+  }
+  if (trendCoverage === "insufficient") {
+    if (baseTier === "estimate") return "rough";
+    if (baseTier === "rough") return "ballpark";
+  }
+  return baseTier;
+}
+
+/**
+ * CF-ESTIMATOR-PHASE-1 (2026-06-14): basis prose for observed-anchor
+ * results. Names the actual source sale, the parallel/grade adjustments
+ * applied, and the trend factor. NEVER says "no related sales" — the
+ * caller only invokes this when a candidate pool existed.
+ */
+function buildObservedAnchorBasis(
+  anchorKind: "parallel-observed-same" | "parallel-observed-sibling",
+  targetGradeLabel: string,
+  targetParallelName: string,
+  observed: ObservedAnchorCandidate,
+  targetGradePremium: number,
+  trendFactor: number,
+  trendIQ: TrendIQResult | null | undefined,
+  estimatedValue: number | null,
+): string {
+  const saleKind = observed.saleGradeLabel ? `${observed.saleGradeLabel} sale` : "raw sale";
+  const ageBit = observed.ageDays != null ? `${observed.ageDays}d ago` : "date unknown";
+  const trendBit =
+    trendIQ && trendIQ.coverage !== "insufficient"
+      ? `trend factor ${trendFactor.toFixed(2)}× (${trendIQ.direction}, ${trendIQ.coverage})`
+      : `no trend signal (factor 1.00×)`;
+  if (anchorKind === "parallel-observed-same") {
+    const gradeBit = observed.saleGradeLabel === targetGradeLabel
+      ? `same grade as target`
+      : `grade ratio ${(targetGradePremium / observed.saleGradePremium).toFixed(2)}× (${targetGradeLabel}/${observed.saleGradeLabel ?? "raw"})`;
+    return (
+      `Estimated from a ${targetParallelName} ${saleKind} of `
+      + `${fmtUSD(observed.sourceSale.price)} (${ageBit}), `
+      + `${gradeBit}, ${trendBit}`
+      + (estimatedValue != null ? ` ⇒ ${fmtUSD(estimatedValue)}.` : `.`)
+    );
+  }
+  // sibling
+  return (
+    `Estimated from a ${observed.siblingParallelName} ${saleKind} of `
+    + `${fmtUSD(observed.sourceSale.price)} (${ageBit}), `
+    + `parallel ratio ${observed.parallelRatio.toFixed(2)}× (${targetParallelName}/${observed.siblingParallelName} = `
+    + `${observed.targetMultiplier.toFixed(2)}/${observed.sourceMultiplier.toFixed(2)}), `
+    + `grade ratio ${(targetGradePremium / observed.saleGradePremium).toFixed(2)}× `
+    + `(${targetGradeLabel}/${observed.saleGradeLabel ?? "raw"}), `
+    + `${trendBit}`
+    + (estimatedValue != null ? ` ⇒ ${fmtUSD(estimatedValue)}.` : `.`)
+    + ` Indicative — derived from a single sibling-parallel sale, not a direct ${targetParallelName} comp.`
+  );
+}
+
 /** Legacy spread reader — kept for any external consumer; new code reads
  *  GRADE_CONFIDENCE[tier].spreadPct directly. */
 function spreadFor(tier: GradedProjectionConfidenceTier): number {
@@ -652,6 +1194,8 @@ export function computeGradedProjection(
     siblingComps = [],
     releaseRatios = null,
     releaseLabel = null,
+    trendIQ = null,
+    cardParallels = undefined,
     targetGrades = TARGET_GRADES,
   } = input;
 
@@ -662,14 +1206,30 @@ export function computeGradedProjection(
   const baseRawSampleCount = baseRawRecords.length;
 
   // Anchor — resolved once per call (parallel target shares anchor across
-  // all target grades; base target shares the base raw median).
+  // all target grades; base target shares the base raw median). The new
+  // observed-anchor paths need pricing to walk pricing.raw + pricing.graded.
   const anchor = resolveAnchor(baseRawMedian, baseRawSampleCount, {
     targetParallelId,
     targetParallelRawFmv,
     targetParallelRawFmvSource,
     targetParallelRawFmvAgeDays,
     targetParallelName,
+    pricing,
+    cardParallels,
   });
+
+  // CF-ESTIMATOR-PHASE-1 (2026-06-14): the trend factor is applied
+  // ONLY when the anchor is observed-derived (same- or sibling-parallel).
+  // Composed / base / parallel-observed-by-raw-fmv paths use medians of
+  // comp pools that are already partially trend-aware via per-comp
+  // weighting in computeEstimate; double-counting trend here would
+  // over-claim. Observed-anchor paths anchor on a SINGLE old sale and
+  // genuinely need forward projection — that's the brief's "old anchor ×
+  // trend = new price" form.
+  const trendFactorForObservedAnchor: number =
+    anchor.kind === "parallel-observed-same" || anchor.kind === "parallel-observed-sibling"
+      ? (trendIQ ? computeForwardProjectionFactor(trendIQ) : 1.0)
+      : 1.0;
 
   const results: GradedProjectionResult[] = [];
   for (const tg of targetGrades) {
@@ -685,6 +1245,92 @@ export function computeGradedProjection(
       targetParallelName,
     );
     if (observedInScope > 0) continue;
+
+    // CF-ESTIMATOR-PHASE-1 (2026-06-14): observed-anchor branch. When the
+    // anchor came from a real same/sibling parallel sale, anchor.price IS
+    // already the parallel-raw equivalent — multiply by the target grade's
+    // GRADER_PREMIUMS directly (skip resolveRatio's tier-1/2/2b cascade,
+    // which would stack noise on a value that's already self-anchored).
+    // Trend factor is applied per-grade as a final multiplier so the
+    // coherence pass's sub-raw floor (which checks against anchor.price)
+    // still reads against the pre-trend parallel-raw equivalent.
+    if (
+      (anchor.kind === "parallel-observed-same" || anchor.kind === "parallel-observed-sibling")
+      && anchor.price !== null
+      && anchor.price > 0
+      && anchor.observedSource
+    ) {
+      const generic = getGraderPremium(tg.company, tg.grade);
+      const observed = anchor.observedSource;
+      if (!(generic > 0)) {
+        results.push({
+          grade: tg.label,
+          estimatedValue: null,
+          estimateLow: null,
+          estimateHigh: null,
+          basis: `No GRADER_PREMIUMS entry for ${tg.label}.`,
+          confidenceTier: "no-data",
+          ratioSource: "none",
+          anchorKind: anchor.kind,
+          isEstimate: true,
+          marketValue: null,
+          fairMarketValue: null,
+          diagnostics: {
+            anchorPrice: anchor.price,
+            cardSpecificBaseSamples: 0,
+            ratio: null,
+            targetGradeBaseMedian: null,
+            baseRawMedian,
+            baseRawSampleCount,
+          },
+        });
+        continue;
+      }
+      const tier = classifyObservedAnchorTier(
+        anchor.kind,
+        tg.label,
+        observed.saleGradeLabel,
+        observed.ageDays,
+        trendIQ?.coverage,
+      );
+      const rawValue = anchor.price * generic * trendFactorForObservedAnchor;
+      const cfg = GRADE_CONFIDENCE[tier];
+      const estimatedValue = applyTierRounding(rawValue, tier);
+      const estimateLow = applyTierRounding(rawValue * (1 - cfg.spreadPct), tier);
+      const estimateHigh = applyTierRounding(rawValue * (1 + cfg.spreadPct), tier);
+      const basis = buildObservedAnchorBasis(
+        anchor.kind,
+        tg.label,
+        targetParallelName ?? "this parallel",
+        observed,
+        generic,
+        trendFactorForObservedAnchor,
+        trendIQ,
+        estimatedValue,
+      );
+      results.push({
+        grade: tg.label,
+        estimatedValue,
+        estimateLow,
+        estimateHigh,
+        basis,
+        confidenceTier: tier,
+        ratioSource: "market",
+        anchorKind: anchor.kind,
+        isEstimate: true,
+        marketValue: null,
+        fairMarketValue: null,
+        diagnostics: {
+          anchorPrice: anchor.price,
+          cardSpecificBaseSamples: 0,
+          ratio: generic,
+          targetGradeBaseMedian: null,
+          baseRawMedian,
+          baseRawSampleCount,
+        },
+      });
+      continue;
+    }
 
     const ratio = resolveRatio(
       tg.company,
@@ -1139,6 +1785,21 @@ export interface BuildGradedEstimatesInput {
   releaseRatios?: ReleaseGradeCurve | null;
   /** Human-readable release label for the tier-2b basis string. */
   releaseLabel?: string | null;
+  /**
+   * CF-ESTIMATOR-PHASE-1 (2026-06-14): trend signal threaded through to
+   * forward-project observed-anchor results. Pass `est.trendIQ` here.
+   * Null or "insufficient" coverage → factor 1.0 (no forward shift).
+   * Only consumed when the engine picks a parallel-observed-same or
+   * parallel-observed-sibling anchor.
+   */
+  trendIQ?: TrendIQResult | null;
+  /**
+   * CF-ESTIMATOR-PHASE-1 (2026-06-14): card-level parallels[] for the
+   * sibling-observed anchor. Sourced from `getCardDetail(cardId).parallels`
+   * at the caller. Skipping this field disables the sibling branch
+   * (composed → none).
+   */
+  cardParallels?: ReadonlyArray<{ id: string; name: string }>;
   /** Observed fields shipped on the same response. Snapshotted pre-call;
    *  asserted byte-identical post-call. The estimator never receives
    *  references to these (it takes only `pricing` + scope params), so
@@ -1176,6 +1837,8 @@ export function buildGradedEstimates(
     siblingComps: input.siblingComps,
     releaseRatios: input.releaseRatios,
     releaseLabel: input.releaseLabel,
+    trendIQ: input.trendIQ,
+    cardParallels: input.cardParallels,
   });
 
   const pricingAfter = JSON.stringify(input.pricing);
@@ -1217,6 +1880,19 @@ export function buildGradedEstimates(
     : null;
 
   const estimates: GradedProjectionResult[] = all.map((r) => {
+    // CF-ESTIMATOR-PHASE-1 (2026-06-14): observed-anchor results carry
+    // their own scope-labeled basis prose built in computeGradedProjection
+    // (buildObservedAnchorBasis), which names the actual source sale +
+    // ratios + trend factor. Preserve verbatim — don't run through the
+    // generic ballpark/no-data overrides below, which would erase that
+    // detail and re-stamp "no related sales" when the candidate pool is
+    // non-empty.
+    if (
+      r.anchorKind === "parallel-observed-same"
+      || r.anchorKind === "parallel-observed-sibling"
+    ) {
+      return r;
+    }
     if (r.confidenceTier === "estimate" || r.confidenceTier === "rough") {
       return r;
     }

@@ -1573,6 +1573,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             lastSale?: { price?: number | null } | null;
             daysSinceNewestComp?: number | null;
             recentComps?: ReadonlyArray<unknown>;
+            trendIQ?: import("../services/compiq/trendIQ.types.js").TrendIQResult | null;
           },
           parallelId: resolvedParallelId ?? null,
           parallelName: resolvedParallelName ?? null,

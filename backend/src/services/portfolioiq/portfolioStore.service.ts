@@ -1050,6 +1050,7 @@ async function autoPriceHolding(
             lastSale?: { price?: number | null } | null;
             daysSinceNewestComp?: number | null;
             recentComps?: ReadonlyArray<unknown>;
+            trendIQ?: import("../compiq/trendIQ.types.js").TrendIQResult | null;
           },
           parallelId,
           parallelName,

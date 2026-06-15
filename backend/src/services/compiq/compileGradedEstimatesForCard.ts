@@ -28,11 +28,13 @@
 // try/catch (route's outer try/catch is now redundant but harmless).
 
 import type { CardsightPricingResponse } from "./cardsight.client.js";
+import { getCardDetail } from "./cardsight.client.js";
 import {
   buildGradedEstimates,
   computeReleaseGradeCurve,
   type GradedProjectionResult,
 } from "./gradedPriceProjection.js";
+import type { TrendIQResult } from "./trendIQ.types.js";
 
 export interface CompileGradedEstimatesInput {
   pricing: CardsightPricingResponse;
@@ -44,6 +46,12 @@ export interface CompileGradedEstimatesInput {
     lastSale?: { price?: number | null | undefined } | null | undefined;
     daysSinceNewestComp?: number | null;
     recentComps?: ReadonlyArray<unknown>;
+    /**
+     * CF-ESTIMATOR-PHASE-1 (2026-06-14): consumed by the new observed-
+     * anchor paths to forward-project an old sibling/same-parallel sale.
+     * Null/undefined or "insufficient" coverage = no forward shift.
+     */
+    trendIQ?: TrendIQResult | null;
   };
   /** Cardsight parallelId of the request (null/undefined for base scope). */
   parallelId: string | null;
@@ -154,6 +162,29 @@ export async function compileGradedEstimatesForCard(
       }
     }
 
+    // CF-ESTIMATOR-PHASE-1 (2026-06-14): fetch the card-level parallels[]
+    // for the sibling-observed anchor path. getCardDetail is cached at
+    // 24h TTL in cardsight.client; first hit per card is ~one round-trip
+    // and subsequent compile calls reuse the cached result. Skipped for
+    // base scope (no parallel target → sibling branch never fires
+    // anyway). On failure: catch and pass empty parallels so the engine
+    // gracefully degrades to composed → none.
+    let cardParallels: ReadonlyArray<{ id: string; name: string }> | undefined;
+    if (parallelId) {
+      try {
+        const detail = await getCardDetail(cardId);
+        cardParallels = (detail.parallels ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+        }));
+      } catch (err) {
+        console.warn(
+          `[${source}] getCardDetail failed for ${cardId} (non-fatal, sibling-anchor branch disabled): ${(err as Error)?.message ?? err}`,
+        );
+        cardParallels = [];
+      }
+    }
+
     const built = buildGradedEstimates({
       pricing,
       targetParallelId: parallelId,
@@ -163,6 +194,8 @@ export async function compileGradedEstimatesForCard(
       targetParallelRawFmvAgeDays: parallelRawFmvAgeDays,
       releaseRatios,
       releaseLabel,
+      trendIQ: estimate.trendIQ ?? null,
+      cardParallels,
       snapshots: {
         marketTierValue: isThinMarket ? null : fmv,
         recentComps: estimate.recentComps ?? [],
