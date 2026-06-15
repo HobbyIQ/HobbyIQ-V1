@@ -294,8 +294,39 @@ const BASE_RAW_TRUST_FLOOR = 3;
  */
 const AUTO_BASE_MULTIPLIER_EXPONENT = 0.283;
 
+/**
+ * CF-ESTIMATOR-PHASE-2 HIGH-TIER FIX (2026-06-15): the power-law
+ * `mult^0.283` over-corrects above the Blue tier. Phase 2 recon
+ * re-characterization confirmed the actual over-claim shape is a HUMP
+ * (peaks at Blue/Green-Atomic, descends back to ~1.0× by Gold Refractor)
+ * rather than the power law's monotonic-increase assumption. The
+ * original fit was poisoned by 9 mis-tagged low-dollar high-tier
+ * "Gold"/"Red" sales ($16-$293, almost certainly Cardsight beta-pipeline
+ * mis-bucketed base autos) that the power law extrapolated through.
+ *
+ * Verified external anchor (Leo De Vries CPA-LD):
+ *   Gold Refractor (mult 14.5×) PSA 10 = $8,100 ≈ uncorrected composed
+ *   ($228.93 × 14.5 × 2.499 = $8,295) — over-claim ≈ 1.03× (raw is right)
+ *
+ * So at mult ≥ 14 we revert to the RAW table multiplier. Below 14 we
+ * keep the power law correction (Blue $936 stays anchored; Gold Shimmer
+ * mult 9.30 remains under-claimed at ~$1,075 vs verified ~$2,400 — an
+ * ACCEPTED residual; the brief explicitly favors the conservative
+ * threshold over a curve-fit on 2-3 data points).
+ *
+ * When color-parallel data for the mult 7-14 band grows (eBay ingestion
+ * / marketplace expansion), the proper fix is a tapered correction
+ * descending from the Blue peak to ~1.0 at Gold-Refractor; that's
+ * deferred until enough verified high-tier sales exist to fit it.
+ */
+const AUTO_HIGH_TIER_THRESHOLD = 14;
+
 function autoCorrectedBaseMultiplier(rawBaseMultiplier: number): number {
   if (!Number.isFinite(rawBaseMultiplier) || rawBaseMultiplier <= 0) return rawBaseMultiplier;
+  // High-tier autos (Gold Refractor /50 and rarer) hold value — raw table
+  // multiplier is verified correct against Leo Gold Refractor $8,100.
+  // Revert to raw at and above the threshold.
+  if (rawBaseMultiplier >= AUTO_HIGH_TIER_THRESHOLD) return rawBaseMultiplier;
   return Math.pow(rawBaseMultiplier, AUTO_BASE_MULTIPLIER_EXPONENT);
 }
 /** Release-curve cache + harvest tuning. */
@@ -793,9 +824,14 @@ function resolveAnchor(
         ? autoCorrectedBaseMultiplier(targetEntry.baseMultiplier)
         : targetEntry.baseMultiplier;
       const composed = round2(baseRawMedian * appliedMultiplier);
-      const multiplierBasis = opts.isAuto
-        ? `${targetEntry.parallelName} auto-corrected multiplier (${targetEntry.baseMultiplier.toFixed(2)}×^${AUTO_BASE_MULTIPLIER_EXPONENT.toFixed(3)} = ${appliedMultiplier.toFixed(3)}×)`
-        : `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`;
+      const autoUsedHighTierRaw =
+        opts.isAuto === true
+        && targetEntry.baseMultiplier >= AUTO_HIGH_TIER_THRESHOLD;
+      const multiplierBasis = !opts.isAuto
+        ? `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`
+        : autoUsedHighTierRaw
+          ? `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}× — high-tier auto reverts to raw at mult ≥ ${AUTO_HIGH_TIER_THRESHOLD})`
+          : `${targetEntry.parallelName} auto-corrected multiplier (${targetEntry.baseMultiplier.toFixed(2)}×^${AUTO_BASE_MULTIPLIER_EXPONENT.toFixed(3)} = ${appliedMultiplier.toFixed(3)}×)`;
       return {
         price: composed,
         kind: "parallel-composed",

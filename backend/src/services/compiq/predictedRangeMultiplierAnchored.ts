@@ -69,10 +69,19 @@ export interface MultiplierAnchoredInput {
  * absolute base multipliers when the card is auto. Mirrors the constant
  * + rationale in gradedPriceProjection.ts (single source of truth for
  * the curve shape; re-tune both sites together when sample expands).
+ *
+ * CF-ESTIMATOR-PHASE-2 HIGH-TIER FIX (2026-06-15): mult ≥ 14 reverts to
+ * raw — the original fit absorbed mis-tagged low-dollar high-tier sales
+ * and over-corrected past the Blue tier; verified Leo Gold Refractor
+ * PSA 10 $8,100 confirms raw table mult is correct at mult 14.5. See
+ * gradedPriceProjection.ts for the full rationale. Both sites use the
+ * same threshold so the engine has one coherent autoness model.
  */
 const AUTO_BASE_MULTIPLIER_EXPONENT = 0.283;
+const AUTO_HIGH_TIER_THRESHOLD = 14;
 function autoCorrectedBaseMultiplier(raw: number): number {
   if (!Number.isFinite(raw) || raw <= 0) return raw;
+  if (raw >= AUTO_HIGH_TIER_THRESHOLD) return raw;
   return Math.pow(raw, AUTO_BASE_MULTIPLIER_EXPONENT);
 }
 
