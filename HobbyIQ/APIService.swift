@@ -183,13 +183,6 @@ struct APIService {
             parallelId: cleanParallelId,
             parallelName: cleanParallelName
         )
-        // CF-COMP-PAGE-RECON (2026-06-07): inline request to capture the
-        // raw response BEFORE decode so an out-of-band diff against the
-        // model can identify any silently-dropped fields. Writes
-        // Documents/price_by_id_recon.json on every call (overwrite).
-        // DEBUG-only. Mirrors the existing post() → perform() chain
-        // otherwise; on release builds we fall through to post() so the
-        // generic helper handles it.
         // CF-FIND-CARDS-REGROUND: price-by-id needs headroom too. With a
         // `query` + `parallelId` + `parallelName` (the natural shape a
         // comp-page tap produces for a graded auto parallel), backend
@@ -198,80 +191,13 @@ struct APIService {
         // The 10s default URLRequest timeout was firing before the
         // dispatcher could finish on broader queries (observed: "2024
         // bowman CHROME BLUE AUTO LEO DE VRIES" → 10s timeout).
-        #if DEBUG
-        return try await debugPriceByIdWithDump(body: body)
-        #else
         return try await post(
             path: "/api/compiq/price-by-id",
             body: body,
             responseType: CompIQPriceByIdResponse.self,
             timeoutSeconds: 30
         )
-        #endif
     }
-
-    #if DEBUG
-    private func debugPriceByIdWithDump(body: CompIQPriceByIdRequest) async throws -> CompIQPriceByIdResponse {
-        let path = "/api/compiq/price-by-id"
-        let bodyData = try encoder.encode(body)
-        // Match the release-path timeout (CF-FIND-CARDS-REGROUND) — the
-        // DEBUG dump shouldn't preempt a request the release build would
-        // happily wait on.
-        let request = try makeRequest(path: path, method: "POST", bodyData: bodyData, sessionId: nil, timeoutSeconds: 30)
-        let context = requestContext(request)
-        do {
-            let (data, response) = try await session.data(for: request)
-            let rawResponse = String(data: data, encoding: .utf8) ?? ""
-            // Build the recon dump — request + rawResponseBody (verbatim,
-            // pre-decode). Human-readable grade label so the diff target
-            // matches what the comp page would have asked for in plain
-            // English ("Raw", "PSA 10", "BGS 9.5").
-            let gradeLabel: String = {
-                guard let company = body.gradeCompany, let value = body.gradeValue else { return "Raw" }
-                let trimmed = value.truncatingRemainder(dividingBy: 1) == 0
-                    ? String(Int(value))
-                    : String(value)
-                return "\(company) \(trimmed)"
-            }()
-            let dump: [String: Any] = [
-                "request": [
-                    "cardsightCardId": body.cardsightCardId,
-                    "grade": gradeLabel,
-                ],
-                "rawResponseBody": rawResponse,
-            ]
-            if JSONSerialization.isValidJSONObject(dump),
-               let dumpData = try? JSONSerialization.data(withJSONObject: dump, options: [.prettyPrinted]) {
-                let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-                if let docs {
-                    let url = docs.appendingPathComponent("price_by_id_recon.json")
-                    try? dumpData.write(to: url, options: .atomic)
-                    print("[PRICE-BY-ID-RECON] wrote", url.path, "bytes:", dumpData.count)
-                }
-            }
-            print("[APIService] Response", context, "body:", rawResponse)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIServiceError.invalidResponse
-            }
-            print("[APIService] Status", context, httpResponse.statusCode)
-            guard 200..<300 ~= httpResponse.statusCode else {
-                throw APIServiceError.httpError(statusCode: httpResponse.statusCode, body: rawResponse)
-            }
-            do {
-                return try decoder.decode(CompIQPriceByIdResponse.self, from: data)
-            } catch {
-                print("[APIService] Decode error", context, error.localizedDescription)
-                throw APIServiceError.decodingFailed(error)
-            }
-        } catch let error as APIServiceError {
-            print("[APIService] API error", context, error.errorDescription ?? error.localizedDescription)
-            throw error
-        } catch {
-            print("[APIService] Network error", context, error.localizedDescription)
-            throw APIServiceError.networkFailed(error)
-        }
-    }
-    #endif
 
     // MARK: - CompIQ Advanced Endpoints
 
