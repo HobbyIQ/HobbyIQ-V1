@@ -55,7 +55,47 @@ struct LedgerEntryForErp: Codable, Identifiable, Hashable {
     let tradeId: String?
     let tradeRole: String?
 
+    // MARK: - CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16)
+    //
+    // Axis-2 server markers + display fields. Populated by GET
+    // /unreconciled (via enrichEntryForClient) AND by the save-costs +
+    // override mutation responses. Nil on PATCH /ledger and on legacy
+    // entries that predate the two-axis layer — decoders tolerate
+    // absence so a single LedgerEntryForErp type covers all three
+    // response shapes.
+    let userCostsProvidedAt: String?
+    let userCostsProvidedBy: String?
+    /// `ReconciledVia` raw: "ebay_finances" | "manual_override" | "manual_entry"
+    let feeSource: String?
+    let missingFields: [String]?
+    /// `CostsStatus` raw: "needs_action" | "saved_pending_fees"
+    let costsStatus: String?
+
     var isEbaySource: Bool { source?.lowercased() == "ebay" }
+
+    /// Strongly-typed view over the server-derived display bucket. Nil
+    /// when the response shape didn't include it (PATCH /ledger,
+    /// pre-CF-PR-E entries).
+    var costsStatusEnum: CostsStatus? {
+        guard let raw = costsStatus else { return nil }
+        return CostsStatus(rawValue: raw)
+    }
+
+    /// True iff the server still lists granular fee fields as missing.
+    /// Drives the "provisional — fees pending" label on the realized-gain
+    /// section in the reconcile detail view.
+    var hasPendingFees: Bool {
+        (missingFields ?? []).isEmpty == false
+    }
+}
+
+/// CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): server-derived display
+/// bucket for an unreconciled eBay entry. Finalized entries leave the
+/// /unreconciled list entirely — they never carry a costsStatus the UI
+/// renders. Keyed off `costsStatus` raw from `enrichEntryForClient`.
+enum CostsStatus: String {
+    case needsAction = "needs_action"
+    case savedPendingFees = "saved_pending_fees"
 }
 
 struct FeeAdjustment: Codable, Hashable, Identifiable {
@@ -69,9 +109,21 @@ struct FeeAdjustment: Codable, Hashable, Identifiable {
 
 // MARK: - Unreconciled List
 
+/// CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): backend wire is
+/// `{ success, entries, counts: { unreconciledTotal, dismissedHidden } }`.
+/// Legacy `count` top-level field stays here as decoder-tolerant — it's
+/// always nil on the current wire and never set by any caller; consumers
+/// prefer `counts?.unreconciledTotal` and fall back to `entries.count`.
 struct UnreconciledListResponse: Codable {
+    let success: Bool?
     let entries: [LedgerEntryForErp]
     let count: Int?
+    let counts: UnreconciledCounts?
+}
+
+struct UnreconciledCounts: Codable, Hashable {
+    let unreconciledTotal: Int
+    let dismissedHidden: Int
 }
 
 // MARK: - Aging Buckets
@@ -106,8 +158,51 @@ struct ERPOverrideFees: Codable {
 }
 
 struct ERPOverrideResponse: Codable {
+    let success: Bool?
     let entry: LedgerEntryForErp?
+    let adjustment: FeeAdjustment?
     let message: String?
+    let error: String?
+    let code: String?
+}
+
+// MARK: - Save Costs (CF-PR-E-TWO-AXIS-RECONCILIATION, 2026-06-16)
+
+/// POST body for `/api/portfolio/erp/unreconciled/:id/save-costs`. Either
+/// or both fields required; non-negative or null; 0 allowed (raw card).
+struct ERPSaveCostsRequest: Codable {
+    var gradingCost: Double?
+    var suppliesCost: Double?
+}
+
+/// Response shape mirrors `/override` — server-enriched entry carries
+/// `costsStatus` + `missingFields` so the client never re-derives display
+/// state. 409 (`ALREADY_FINALIZED`) flows through `APIServiceError.httpError`
+/// and is rendered as a calm info banner, not red.
+struct ERPSaveCostsResponse: Codable {
+    let success: Bool?
+    let entry: LedgerEntryForErp?
+    let adjustment: FeeAdjustment?
+    let error: String?
+    let code: String?
+}
+
+// MARK: - Ledger Patch (PATCH /api/portfolio/ledger/:id)
+
+/// CF-PR-E-TWO-AXIS-RECONCILIATION: the dismiss ("Quiet for now") path
+/// rides the existing ledger-patch route. Backend whitelist accepts
+/// `dismissedAt`, `dismissedReason`, `gradingCost`, `suppliesCost`, plus
+/// the sales-tracking descriptive fields. Response is the legacy shape
+/// `{ message, entry }` — no `success` flag, entry is NOT server-enriched
+/// (no `costsStatus` / `missingFields`).
+struct LedgerDismissRequest: Codable {
+    let dismissedAt: String
+    let dismissedReason: String?
+}
+
+struct LedgerEntryUpdateResponse: Codable {
+    let message: String?
+    let entry: LedgerEntryForErp?
 }
 
 // MARK: - Refetch

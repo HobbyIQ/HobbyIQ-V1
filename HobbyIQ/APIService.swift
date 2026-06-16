@@ -347,7 +347,35 @@ struct APIService {
     }
 
     func submitOverride(entryId: String, request: ERPOverrideRequest) async throws -> ERPOverrideResponse {
-        try await post(path: "/api/portfolio/erp/override/\(entryId)", body: request, responseType: ERPOverrideResponse.self)
+        // CF-PR-E-IOS-PHASE-1A (2026-06-16): backend mounts override at
+        // /api/portfolio/erp/unreconciled/:id/override. Pre-CF iOS path
+        // was /api/portfolio/erp/override/:id which 404s; correcting here
+        // so the new ReconcileDetailView's fee-edit state lands correctly
+        // (the legacy ERPOverrideSheet retires in Phase 2 — this path was
+        // unreachable in practice without that fix).
+        try await post(path: "/api/portfolio/erp/unreconciled/\(entryId)/override", body: request, responseType: ERPOverrideResponse.self)
+    }
+
+    // CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): save cost basis on an
+    // unreconciled eBay entry. Response.entry is server-enriched
+    // (costsStatus + missingFields populated). 409 with
+    // `code: "ALREADY_FINALIZED"` propagates as APIServiceError.httpError
+    // — caller renders it as a calm info banner.
+    func saveLedgerCosts(entryId: String, request: ERPSaveCostsRequest) async throws -> ERPSaveCostsResponse {
+        try await post(path: "/api/portfolio/erp/unreconciled/\(entryId)/save-costs", body: request, responseType: ERPSaveCostsResponse.self)
+    }
+
+    // PATCH /api/portfolio/ledger/:id — the dismiss ("Quiet for now")
+    // path. Backend whitelist accepts dismissedAt/dismissedReason +
+    // gradingCost/suppliesCost; here we only send the dismiss pair.
+    // Response is the legacy `{ message, entry }` shape (NOT enriched
+    // with costsStatus/missingFields — dismissed rows leave the inbox).
+    func dismissLedgerEntry(entryId: String, reason: String?) async throws -> LedgerEntryUpdateResponse {
+        let body = LedgerDismissRequest(
+            dismissedAt: ISO8601DateFormatter().string(from: Date()),
+            dismissedReason: reason
+        )
+        return try await patch(path: "/api/portfolio/ledger/\(entryId)", body: body, responseType: LedgerEntryUpdateResponse.self)
     }
 
     func refetchFinances() async throws -> ERPRefetchResponse {
