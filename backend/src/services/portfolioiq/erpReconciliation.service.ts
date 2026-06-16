@@ -240,6 +240,27 @@ export function deriveCostsStatus(entry: LedgerEntryForErp): CostsStatus {
   return entry.userCostsProvidedAt ? "saved_pending_fees" : "needs_action";
 }
 
+/**
+ * Per-entry enrichment used by the GET /unreconciled list path AND by the
+ * mutation routes (POST /save-costs, POST /override) so their response
+ * `entry` payloads carry the SAME shape clients can decode without
+ * re-deriving display state. Pricing-provenance rule: server is the source
+ * of truth for `missingFields` + `costsStatus`.
+ *
+ * `costsStatus` ALWAYS returns a valid enum value, even for entries that
+ * happen to be finalized (`needsReconciliation === false`). The client
+ * keys finalize semantics off `needsReconciliation`, not `costsStatus` —
+ * a finalized response carrying `needs_action` is harmless. This lets the
+ * iOS decoder type `costsStatus` as non-optional.
+ */
+export function enrichEntryForClient(entry: LedgerEntryForErp): UnreconciledEntry {
+  return {
+    ...entry,
+    missingFields: missingFeeFields(entry),
+    costsStatus: deriveCostsStatus(entry),
+  };
+}
+
 export interface UnreconciledListResult {
   entries: UnreconciledEntry[];
   counts: { unreconciledTotal: number; dismissedHidden: number };
@@ -256,11 +277,7 @@ export function listUnreconciled(entries: ReadonlyArray<LedgerEntryForErp>): Unr
     entries: active
       .slice()
       .sort((a, b) => a.soldAt.localeCompare(b.soldAt))
-      .map((e) => ({
-        ...e,
-        missingFields: missingFeeFields(e),
-        costsStatus: deriveCostsStatus(e),
-      })),
+      .map(enrichEntryForClient),
     counts: { unreconciledTotal: flagged.length, dismissedHidden },
   };
 }

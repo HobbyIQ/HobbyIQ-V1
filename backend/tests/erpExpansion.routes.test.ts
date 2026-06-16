@@ -337,6 +337,43 @@ describe("POST /api/portfolio/erp/unreconciled/:id/override", () => {
     expect(r.body.entry.feeAdjustments.length).toBe(1);
     expect(r.body.adjustment.priorValues.finalValueFee).toBeNull();
     expect(r.body.adjustment.newValues.finalValueFee).toBe(13);
+    // CF-PR-E-COSTSSTATUS-AUTHORITATIVE: override response also enriched.
+    // Both axes met → finalized → missingFields is empty.
+    expect(["needs_action", "saved_pending_fees"]).toContain(r.body.entry.costsStatus);
+    expect(r.body.entry.missingFields).toEqual([]);
+  });
+
+  it("override response carries costsStatus + missingFields when axis 2 unmet (partial-fee override)", async () => {
+    // Same shape as the existing 200 test but WITHOUT the axis-2 marker
+    // seeded — proves the enriched shape is on the unhappy-finalize path
+    // too (entry stays flagged, response still carries costsStatus +
+    // missingFields). Supplies only 2 fees so missingFields reflects the
+    // remaining nulls.
+    await seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id: "L-partial", userId: "u-pro_seller", holdingId: "h1",
+        playerName: "Skenes", cardTitle: "C", quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0, costBasisSold: 40,
+        realizedProfitLoss: 0, realizedProfitLossPct: 0,
+        soldAt: "2026-04-01T00:00:00Z", source: "ebay", paymentMethod: "ebay_managed",
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+        needsReconciliation: true,
+      });
+    });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-partial/override")
+      .set("x-session-id", "s")
+      .send({
+        reason: "partial",
+        fees: { finalValueFee: 10, paymentProcessingFee: 3 },
+      });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.needsReconciliation).toBe(true); // axis-2 marker absent
+    expect(r.body.entry.costsStatus).toBe("needs_action");
+    expect(r.body.entry.missingFields).toEqual([
+      "promotedListingFee", "adFee", "otherFees", "netPayout", "actualShippingCost",
+    ]);
   });
 });
 
@@ -389,6 +426,12 @@ describe("POST /api/portfolio/erp/unreconciled/:id/save-costs", () => {
     expect(r.body.adjustment.reason).toMatch(/cost basis/i);
     expect(r.body.adjustment.priorValues.gradingCost).toBeNull();
     expect(r.body.adjustment.newValues.gradingCost).toBe(15);
+    // CF-PR-E-COSTSSTATUS-AUTHORITATIVE: response carries enriched shape.
+    expect(r.body.entry.costsStatus).toBe("saved_pending_fees");
+    expect(r.body.entry.missingFields).toEqual([
+      "finalValueFee", "paymentProcessingFee", "promotedListingFee",
+      "adFee", "otherFees", "netPayout", "actualShippingCost",
+    ]);
   });
 
   it("200: gradingCost=0 (raw card) still sets marker", async () => {
@@ -412,6 +455,13 @@ describe("POST /api/portfolio/erp/unreconciled/:id/save-costs", () => {
     expect(r.status).toBe(200);
     expect(r.body.entry.needsReconciliation).toBe(false);
     expect(r.body.entry.reconciledVia).toBe("ebay_finances"); // feeSource was ebay_finances
+    // CF-PR-E-COSTSSTATUS-AUTHORITATIVE: enriched shape on the finalize
+    // path too. costsStatus is always a valid enum value; missingFields is
+    // [] for finalized entries (no nulls left). Client keys finalize off
+    // needsReconciliation, so saved_pending_fees on a finalized entry is
+    // harmless — the entry exits the inbox regardless.
+    expect(["needs_action", "saved_pending_fees"]).toContain(r.body.entry.costsStatus);
+    expect(r.body.entry.missingFields).toEqual([]);
   });
 
   it("200: idempotent re-save while still flagged — updates costs, refreshes marker, appends second audit row", async () => {

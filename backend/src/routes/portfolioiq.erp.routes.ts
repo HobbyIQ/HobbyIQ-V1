@@ -43,6 +43,7 @@ import {
 import {
   aggregatePnl,
   buildTaxExport,
+  enrichEntryForClient,
   listUnreconciled,
   VALID_GROUP_BY,
   type LedgerEntryForErp,
@@ -552,7 +553,14 @@ router.post("/unreconciled/:id/override", async (req: Request, res: Response) =>
     doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
     await writeUserDoc(userId, doc);
 
-    res.json({ success: true, entry: finalEntry, adjustment });
+    // CF-PR-E-COSTSSTATUS-AUTHORITATIVE: response carries the SAME enriched
+    // shape as GET /unreconciled (missingFields + costsStatus). Client never
+    // re-derives display state.
+    res.json({
+      success: true,
+      entry: enrichEntryForClient(finalEntry as LedgerEntryForErp),
+      adjustment,
+    });
   } catch (err: any) {
     console.error("[portfolio.erp] /unreconciled/:id/override failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to apply override" });
@@ -637,7 +645,14 @@ router.post("/unreconciled/:id/save-costs", async (req: Request, res: Response) 
     doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
     await writeUserDoc(userId, doc);
 
-    res.json({ success: true, entry: finalEntry, adjustment });
+    // CF-PR-E-COSTSSTATUS-AUTHORITATIVE: response carries the SAME enriched
+    // shape as GET /unreconciled (missingFields + costsStatus). Client never
+    // re-derives display state.
+    res.json({
+      success: true,
+      entry: enrichEntryForClient(finalEntry as LedgerEntryForErp),
+      adjustment,
+    });
   } catch (err: any) {
     console.error("[portfolio.erp] /unreconciled/:id/save-costs failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to save costs" });
