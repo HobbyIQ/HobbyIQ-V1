@@ -136,14 +136,18 @@ export async function compileGradedEstimatesForCard(
     // surfaces `attributes` — we extract `isAuto` here (no extra round-
     // trip) and thread it through so the parallel-composed anchor
     // applies the auto-base power-law correction.
-    let cardParallels: ReadonlyArray<{ id: string; name: string }> = [];
+    let cardParallels: ReadonlyArray<{ id: string; name: string; numberedTo?: number | null }> = [];
     let isAuto = false;
     if (parallelId) {
       try {
         const detail = await getCardDetail(cardId);
+        // CF-FITTED-LADDER (2026-06-16): thread numberedTo so the engine's
+        // composed branch can parse (serial, finish) → f(serial) · g(finish).
+        // Sibling-anchor + plural-equivalence pooler ignore the extra field.
         cardParallels = (detail.parallels ?? []).map((p) => ({
           id: p.id,
           name: p.name,
+          numberedTo: p.numberedTo ?? null,
         }));
         isAuto = (detail.attributes ?? []).some(
           (a: string) => /\bAUTO\b/i.test(a),

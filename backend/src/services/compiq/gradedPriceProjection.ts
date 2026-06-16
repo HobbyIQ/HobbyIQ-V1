@@ -35,6 +35,10 @@ import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
 import { tokenizeParallel } from "./cardsight.mapper.js";
 import { buildParallelTitleMatcher } from "./parallelTitleMatch.js";
+import {
+  computeFittedComposedMultiplier,
+  getPsa10BucketRatio,
+} from "./chromeFittedLadder.js";
 import { cacheWrap } from "../shared/cache.service.js";
 import type { TrendIQResult, TrendIQCoverage } from "./trendIQ.types.js";
 import { computeForwardProjectionFactor } from "./forwardProjection.js";
@@ -55,11 +59,14 @@ export type GradedProjectionConfidenceTier =
                     // (assembler, tests, iOS) have shifted off.
 
 export type GradedProjectionRatioSource =
-  | "card"        // Tier 1: card-specific base graded/raw ratio
-  | "player-set"  // Tier 2a: aggregated across sibling cards (same player, same release)
-  | "release"     // Tier 2b: median per-card ratio across the entire release (set-level curve)
-  | "market"      // Tier 3: existing GRADER_PREMIUMS table
-  | "none";       // Insufficient (no anchor or no ratio source available)
+  | "card"          // Tier 1: card-specific base graded/raw ratio
+  | "player-set"    // Tier 2a: aggregated across sibling cards (same player, same release)
+  | "release"       // Tier 2b: median per-card ratio across the entire release (set-level curve)
+  | "market"        // Tier 3: existing GRADER_PREMIUMS table
+  | "fitted-bucket" // CF-FITTED-LADDER (2026-06-16): pooled BCPA PSA 10
+                    //                    ratio per parallel-value bucket. Applied
+                    //                    only to PSA 10 + fitted composed anchor.
+  | "none";         // Insufficient (no anchor or no ratio source available)
 
 export type GradedProjectionAnchorKind =
   | "base"
@@ -202,7 +209,7 @@ export interface ComputeGradedProjectionInput {
    * Optional — omit and the sibling branch is skipped (falls through to
    * composed → none).
    */
-  cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+  cardParallels?: ReadonlyArray<{ id: string; name: string; numberedTo?: number | null }>;
   /**
    * CF-ESTIMATOR-PHASE-2 (2026-06-15): "this card is a prospect-auto"
    * detection signal. Sourced at the caller from
@@ -856,6 +863,20 @@ interface ResolvedAnchor {
    * builder also consumes these fields to render scope-labeled prose.
    */
   observedSource?: ObservedAnchorCandidate;
+  /**
+   * CF-FITTED-LADDER (2026-06-16): set on the composed branch when the
+   * fitted (serial, finish) cell is unobserved, finish has no fitted
+   * modifier, or serial ≤ 50 (top-tier player-desirability residual).
+   * Per-grade loop maps this to confidenceTier="ballpark" + ballpark
+   * spread/rounding for any grade projected off the anchor.
+   */
+  lowConfidence?: boolean;
+  /**
+   * CF-FITTED-LADDER (2026-06-16): the resolved print run (numberedTo)
+   * used to compute the fitted composed multiplier. Read by the per-
+   * grade loop to look up the PSA 10 per-bucket ratio.
+   */
+  serial?: number | null;
 }
 
 function resolveAnchor(
@@ -875,7 +896,7 @@ function resolveAnchor(
      * observed branch; safe to omit for same-parallel-observed and
      * composed paths.
      */
-    cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+    cardParallels?: ReadonlyArray<{ id: string; name: string; numberedTo?: number | null }>;
     /**
      * CF-ESTIMATOR-PHASE-2: auto-base detection signal. Applied ONLY in
      * the parallel-composed branch (line ~725) — not in sibling-anchor
@@ -945,38 +966,59 @@ function resolveAnchor(
         ? targetEntry.baseMultiplier
         : null;
 
-    // (a) Composed — when base-raw passes the trust floor
+    // (a) Composed — when base-raw passes the trust floor.
+    //
+    // CF-FITTED-LADDER (2026-06-16): swap the chrome-draft heuristic
+    // multiplier table + Phase-2 power-law patch (mult^0.283) + high-tier
+    // auto-revert (mult ≥ 14 → raw) for the empirical fitted curve from
+    // CF-LADDER-FIT. New multiplier = f(serial) · g(finish), parsed from
+    // detail.parallels.{numberedTo, name} via cardParallels. The
+    // observed-wins precedence in decision (B) is preserved unchanged —
+    // composed only fires when no parallel-raw FMV was threaded in and
+    // base-raw passes the trust floor.
+    //
+    // Retirement scope: ONLY this composed branch. The Phase-2 helper
+    // (autoCorrectedBaseMultiplier) + the heuristic table
+    // (lookupMultiplier) remain in the codebase — sibling-observed-
+    // anchor (b/c below) still uses targetMult ratios, and the
+    // predictedRangeMultiplierAnchored.ts path still applies the auto-
+    // base correction in its own composed branch (separate surface).
+    const targetParallelEntry = opts.cardParallels?.find((p) => p.id === opts.targetParallelId);
+    const targetNumberedTo = targetParallelEntry?.numberedTo ?? null;
     if (
       baseRawMedian !== null
       && baseRawMedian > 0
       && baseRawSampleCount >= BASE_RAW_TRUST_FLOOR
       && opts.targetParallelName
-      && targetEntry
-      && Number.isFinite(targetEntry.baseMultiplier)
-      && targetEntry.baseMultiplier > 0
     ) {
-      // CF-ESTIMATOR-PHASE-2 (2026-06-15): apply the auto-base power-law
-      // correction when isAuto. Non-auto path is byte-identical to
-      // pre-Phase-2 (uses raw entry.baseMultiplier). Detection signal
-      // is `getCardDetail(cardId).attributes.includes("AUTO")` at the
-      // caller. See AUTO_BASE_MULTIPLIER_EXPONENT comment block.
-      const appliedMultiplier = opts.isAuto
-        ? autoCorrectedBaseMultiplier(targetEntry.baseMultiplier)
-        : targetEntry.baseMultiplier;
-      const composed = round2(baseRawMedian * appliedMultiplier);
-      const autoUsedHighTierRaw =
-        opts.isAuto === true
-        && targetEntry.baseMultiplier >= AUTO_HIGH_TIER_THRESHOLD;
-      const multiplierBasis = !opts.isAuto
-        ? `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}×)`
-        : autoUsedHighTierRaw
-          ? `${targetEntry.parallelName} multiplier (${targetEntry.baseMultiplier.toFixed(3)}× — high-tier auto reverts to raw at mult ≥ ${AUTO_HIGH_TIER_THRESHOLD})`
-          : `${targetEntry.parallelName} auto-corrected multiplier (${targetEntry.baseMultiplier.toFixed(2)}×^${AUTO_BASE_MULTIPLIER_EXPONENT.toFixed(3)} = ${appliedMultiplier.toFixed(3)}×)`;
-      return {
-        price: composed,
-        kind: "parallel-composed",
-        description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${multiplierBasis}`,
-      };
+      const fitted = computeFittedComposedMultiplier(opts.targetParallelName, targetNumberedTo);
+      if (fitted) {
+        const composed = round2(baseRawMedian * fitted.multiplier);
+        return {
+          price: composed,
+          kind: "parallel-composed",
+          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${fitted.basis}`,
+          lowConfidence: fitted.lowConfidence,
+          serial: fitted.serial,
+        };
+      }
+      // Fitted path needs numberedTo to fire. When the catalog omits it
+      // (rare on BCPA — most parallels carry their print run), fall
+      // through to the legacy table path below as a safety net so we
+      // don't regress to no-data on missing-metadata edge cases.
+      if (
+        targetEntry
+        && Number.isFinite(targetEntry.baseMultiplier)
+        && targetEntry.baseMultiplier > 0
+      ) {
+        const composed = round2(baseRawMedian * targetEntry.baseMultiplier);
+        return {
+          price: composed,
+          kind: "parallel-composed",
+          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${targetEntry.parallelName} multiplier ${targetEntry.baseMultiplier.toFixed(3)}× [legacy table fallback — numberedTo missing for fitted path]`,
+          lowConfidence: true,
+        };
+      }
     }
 
     // (b) Same-parallel observed — pid OR title-token match. Demoted
@@ -1583,7 +1625,13 @@ export function computeGradedProjection(
       continue;
     }
 
-    const ratio = resolveRatio(
+    // CF-FITTED-LADDER (2026-06-16): for fitted composed PSA 10, replace
+    // the resolveRatio cascade (tier-1 card ratio → player-set → release
+    // → market) with the per-bucket PSA 10 ratio from CF-LADDER-FIT
+    // Step 3. PSA 9 and below stay on resolveRatio — the corpus showed
+    // base PSA 9 / raw < 1.0× (implausible), indicating the pool is too
+    // noisy for hardcoded ratios.
+    let ratio = resolveRatio(
       tg.company,
       tg.grade,
       tg.label,
@@ -1593,7 +1641,36 @@ export function computeGradedProjection(
       releaseRatios,
       releaseLabel,
     );
-    const tier = classifyConfidence(anchor.kind, ratio.source);
+    let bucketRatioApplied = false;
+    if (
+      anchor.kind === "parallel-composed"
+      && tg.label === "PSA 10"
+      && anchor.serial != null
+    ) {
+      const bucketRatio = getPsa10BucketRatio(anchor.serial);
+      if (bucketRatio) {
+        ratio = {
+          ratio: bucketRatio.ratio,
+          source: "fitted-bucket",
+          description: `${tg.label} fitted-bucket ratio ${bucketRatio.ratio.toFixed(2)}× (parallel-value bucket ${bucketRatio.bucket} pooled from CF-LADDER-FIT BCPA 2022-2025 corpus)${bucketRatio.lowConfidence ? " [low-conf: bucket had no data, used best-available proxy]" : ""}`,
+          cardSpecificBaseSamples: 0,
+          targetGradeBaseMedian: null,
+        };
+        bucketRatioApplied = true;
+      }
+    }
+    // Confidence tier: anchor-side low-conf (fitted ladder flagged top-
+    // tier or unobserved cell) downgrades the result to "ballpark" with
+    // wide spread, regardless of ratio source. PSA 10 /5-/25 bucket-side
+    // low-conf does the same. Otherwise classifyConfidence handles the
+    // standard mapping.
+    const ratioBucketLowConf = bucketRatioApplied
+      && tg.label === "PSA 10"
+      && anchor.serial != null
+      && (getPsa10BucketRatio(anchor.serial)?.lowConfidence ?? false);
+    const tier: GradedProjectionConfidenceTier = (anchor.lowConfidence === true || ratioBucketLowConf)
+      ? "ballpark"
+      : classifyConfidence(anchor.kind, ratio.source);
 
     // CF-ALWAYS-A-NUMBER (2026-06-12): emit a number for every tier
     // except "no-data" (no anchor or no ratio). Per-tier spread + sig-fig
@@ -2050,7 +2127,7 @@ export interface BuildGradedEstimatesInput {
    * at the caller. Skipping this field disables the sibling branch
    * (composed → none).
    */
-  cardParallels?: ReadonlyArray<{ id: string; name: string }>;
+  cardParallels?: ReadonlyArray<{ id: string; name: string; numberedTo?: number | null }>;
   /**
    * CF-ESTIMATOR-PHASE-2 (2026-06-15): auto-base detection signal,
    * threaded to ComputeGradedProjectionInput. See

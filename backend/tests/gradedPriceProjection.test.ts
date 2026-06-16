@@ -1504,6 +1504,119 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium cu
   });
 });
 
+describe("CF-FITTED-LADDER — composed branch uses f(serial) · g(finish) when numberedTo is threaded", () => {
+  // Base raw: 24 sales with median ≈ $228.93 (n=22 after isBaseRecord
+  // strip in the engine, well above BASE_RAW_TRUST_FLOOR=3 → composed
+  // branch fires). No observed parallel raw → no observed-wins. cardParallels
+  // threads numberedTo so the fitted path engages instead of falling
+  // through to the legacy heuristic table.
+  function makeFittedLadderInput(parallelName: string, numberedTo: number) {
+    const PID = `pid-${parallelName.toLowerCase().replace(/\s+/g, "-")}-${numberedTo}`;
+    return {
+      pricing: makeLeoPricingNoBlueRecords(),
+      targetParallelId: PID,
+      targetParallelName: parallelName,
+      cardParallels: [
+        { id: PID, name: parallelName, numberedTo },
+      ],
+    };
+  }
+
+  it("Blue Refractor /150 (high-confidence): composed multiplier ≈ 3.78×; PSA 10 uses /150-/199 bucket ratio 2.66×", () => {
+    const out = computeGradedProjection(makeFittedLadderInput("Blue Refractor", 150));
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.anchorKind).toBe("parallel-composed");
+    expect(psa10.ratioSource).toBe("fitted-bucket");
+    expect(psa10.diagnostics.ratio).toBe(2.66);
+    // Anchor price = baseRawMedian (228.93) × f(150) · g(refractor)
+    //              ≈ 228.93 × 3.78 × 1.00 ≈ 865 (engine rounds to 2dp)
+    const expectedAnchor = 228.93 * 17.059 * Math.pow(150, -0.301) * 1.00;
+    expect(psa10.diagnostics.anchorPrice).toBeCloseTo(expectedAnchor, 0);
+    // Final PSA 10 = anchor × 2.66 → ~$2,300, rough tier rounds to 3 sig figs
+    expect(psa10.confidenceTier).toBe("rough"); // /150 > 50 + observed cell
+    expect(psa10.basis).toContain("fitted parallel premium");
+    expect(psa10.basis).toContain("/150-/199");
+  });
+
+  it("Blue RayWave Refractor /150: g(raywave)=0.79× discounts vs Refractor", () => {
+    const refractorOut = computeGradedProjection(makeFittedLadderInput("Blue Refractor", 150));
+    const raywaveOut = computeGradedProjection(makeFittedLadderInput("Blue RayWave Refractor", 150));
+    const refractor10 = byGrade(refractorOut, "PSA 10");
+    const raywave10 = byGrade(raywaveOut, "PSA 10");
+    // Both anchors get the same /150-/199 bucket ratio (2.66×), so the
+    // PSA 10 spread mirrors the raw spread directly.
+    expect(refractor10.estimatedValue).toBeGreaterThan(raywave10.estimatedValue!);
+    const ratio = refractor10.estimatedValue! / raywave10.estimatedValue!;
+    expect(ratio).toBeCloseTo(1.00 / 0.79, 1); // ≈ 1.27×
+  });
+
+  it("Gold Refractor /50 flags ballpark (top-tier residual)", () => {
+    const out = computeGradedProjection(makeFittedLadderInput("Gold Refractor", 50));
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.confidenceTier).toBe("ballpark"); // serial ≤ 50
+    expect(psa10.ratioSource).toBe("fitted-bucket");
+    expect(psa10.diagnostics.ratio).toBe(2.63); // /50-/99 bucket
+    expect(psa10.basis).toContain("low-conf");
+    expect(psa10.basis).toContain("serial ≤ 50");
+  });
+
+  it("Red Refractor /5 flags ballpark (top tier + /5-/25 bucket has no data)", () => {
+    const out = computeGradedProjection(makeFittedLadderInput("Red Refractor", 5));
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.confidenceTier).toBe("ballpark");
+    expect(psa10.diagnostics.ratio).toBe(2.63); // /5-/25 bucket proxy
+    expect(psa10.basis).toContain("/5-/25");
+  });
+
+  it("PSA 9 still uses resolveRatio (not the fitted bucket) — non-PSA-10 grades unchanged", () => {
+    const out = computeGradedProjection(makeFittedLadderInput("Blue Refractor", 150));
+    const psa9 = byGrade(out, "PSA 9");
+    // Not fitted-bucket — keeps existing tier-1 → release → market cascade.
+    expect(psa9.ratioSource).not.toBe("fitted-bucket");
+  });
+
+  it("Missing numberedTo: falls back to legacy multiplier table (backward compatibility)", () => {
+    // No numberedTo on the cardParallels entry → fitted path is null →
+    // engine drops to legacy heuristic for the composed multiplier.
+    const PID = "pid-blue-legacy";
+    const out = computeGradedProjection({
+      pricing: makeLeoPricingNoBlueRecords(),
+      targetParallelId: PID,
+      targetParallelName: "Blue Refractor",
+      cardParallels: [{ id: PID, name: "Blue Refractor" }], // no numberedTo
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.anchorKind).toBe("parallel-composed");
+    // Anchor description names the legacy table fallback.
+    // Note: under the legacy table path, ratio is "card" (resolveRatio),
+    // NOT fitted-bucket — that's the override behavior we test for.
+    expect(psa10.basis).toMatch(/legacy table fallback|Blue Refractor multiplier/);
+  });
+});
+
+// Fixture for the fitted-ladder block: Leo's base raw without any
+// Blue Refractor records (so composed branch fires and we observe the
+// fitted multiplier in isolation).
+function makeLeoPricingNoBlueRecords(): CardsightPricingResponse {
+  const baseRaw: CardsightSaleRecord[] = [];
+  const prices = [
+    200, 210, 215, 218, 220, 222, 224, 226,
+    227, 228, 228.5, 228.86,
+    229,    229.5, 230, 232, 234, 236, 238, 242,
+    246, 250, 255, 260,
+  ];
+  prices.sort((a, b) => a - b);
+  for (let i = 0; i < prices.length; i++) {
+    baseRaw.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, prices[i]));
+  }
+  return {
+    card: { card_id: "leo", name: "Leo De Vries", number: "CPA-LD" } as any,
+    raw: { count: baseRaw.length, records: baseRaw },
+    graded: [],
+    meta: { total_records: baseRaw.length, last_sale_date: "2026-06-16T00:00:00Z" },
+  } as CardsightPricingResponse;
+}
+
 describe("CF-PARALLEL-PLURAL-NORMALIZE — computeSameParallelRawMedian pools singular + plural sibling pids", () => {
   // Cardsight catalogs the same physical parallel under BOTH singular
   // ("Yellow Refractor") and plural ("Yellow Refractors") names with
