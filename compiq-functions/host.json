@@ -11,5 +11,12 @@
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
-  }
+  },
+  "functions": [
+    "fn-price-floor",
+    "fn-player-score-refresh",
+    "fn-search-intent",
+    "fn-serve-signals",
+    "fn-backtest-runner"
+  ]
 }
