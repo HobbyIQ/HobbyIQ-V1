@@ -6,6 +6,50 @@
 
 ---
 
+## 2026-06-16 — D.6 backlog park, searchCatalog gotchas, prospect-search clarification
+
+### PR D.6 — PARKED (no draftable backend work)
+
+The "PR D.6 open" backlog entry is stale. Read against ground truth:
+
+- **Backend integration shipped:** PR #100 (`d0094f3`) — `markHoldingSoldFromEbay`, `webhook_events` capture-before-process, ITEM_SOLD handler wired.
+- **Reporting / reconciliation carry-forwards #1, #2, #4 shipped in `70e6110`** (ERP expansion, 2026-06-03) — `erpReconciliation.service.ts` reads granular fees + `netPayout`; `isReconciled` filter gates P&L; `/tax-export` filters unreconciled.
+- **Carry-forward #5 shipped in `fe50127`** (Finances enrichment, 2026-06-04) — `ebayFinancesEnrichment.job.ts` 6h sweep, walks unreconciled eBay entries within 90d window. Currently runs in shadow mode (`EBAY_FINANCES_ENRICHMENT_SHADOW=true` default — logs without persisting).
+- **Carry-forward #8 closed:** PR #101 (`ebf3efe`) — deploy-script EAP-scope stderr fix.
+- **Carry-forward #10 superseded:** the ITEM_SOLD webhook subscription was architecturally replaced by **EBAY-POLL-INGESTION-C1** (`d019f0e`, 2026-06-02). 1h scheduled poll via `pollEbayOrdersForUser` is the primary sale-detection signal. ITEM_SOLD webhook handler is wired but **unsubscribed at the eBay developer portal — DORMANT IN PROD** (race-safe idempotent fallback only; `ebayWebhook.routes.ts:232-265` carries the explicit annotation). MARKETPLACE_ACCOUNT_DELETION webhook subscription remains active for compliance.
+- **Carry-forwards #6 (cross-partition scan) and #7 (offline webhook replay reconciler) — deferred.** Webhook is dormant so neither is load-bearing.
+
+What's left:
+
+- **F1 — Finances enrichment shadow→active env flip.** Gated on first real eBay sale + first real `/sell/finances/v1/transaction` response captured (Track 1.4 verifies bucketing against real payload before persisting). Single env var change.
+- **F2 — EBAY-POLL-INGESTION-C2 verification CF.** Parked, auto-unparks on first `ordersFetched > 0`. Verifies join-key + price-mapping + ledger-row spec against the first real order.
+- **F3 — EBAY-FINANCES-SLICE-A/B follow-on.** Parked behind F2.
+- **iOS — PR E reconciliation UX** consumes already-shipped `/api/portfolio/erp/unreconciled` + `/pnl` + `/tax-export`; surfaces unreconciled eBay sales, captures user-entered `gradingCost`/`suppliesCost`, clears `needsReconciliation`. Closes carry-forward #3.
+- **Mac-session — Phase 6 reconciliation rendering (Track 1.7) + Phase 6.5 launch-readiness signature (Track 1.8)** — both gated on the first real sale landing.
+
+**No draftable backend D.6 work exists today.** Backlog entry parked until the first real eBay sale (Track 1.3 — Drew-paced, async days–weeks). When `ebay_poll_summary` shows `ordersFetched > 0`, F1–F3 unpark in order.
+
+### searchCatalog gotchas (banked — caused a full false "catalog gap" detour this session)
+
+The Steele Hall "catalog gap" rabbit-hole was a probe-side measurement bug, not a missing card. Every catalog re-verification CF going forward should respect these three rules:
+
+**(a) `searchCatalog` is POSITIONAL.** Signature: `searchCatalog(query: string, opts: {year?: string|number, take?: number})`. There is no `q` field and no `limit` field. Passing `searchCatalog({q: "...", limit: 20})` URL-encodes `[object Object]` as the query string and silently returns 0 results. Production callers (5 of them: `compsByPlayer.service.ts:164`, `cardsight.router.ts:316`, `cardsight.mapper.ts:426`, `gradedPriceProjection.ts:2699`, `unifiedSearch/dispatcher.ts:137`) all use the correct shape. The bug is only ever probe-side.
+
+**(b) Search response has NO `number` field.** Result shape: `{type, id, name, year, setName, releaseName, manufacturerName, relevance}`. Filtering `results.filter(r => r.number === "CPA-LD")` returns 0 — not because the card is absent, but because the field doesn't exist in the search payload. Card identity (number, parallels, attributes) is only available via `id → getCardDetail(id)`.
+
+**(c) Sanity-check before declaring a catalog gap.** If a search returns 0 results unexpectedly, first probe a known card: `searchCatalog("Mike Trout 2011 Topps Update", {take: 5})` should surface cardId `fda530ab-e925-460e-ab88-63199ef975e9`. If the canary returns 0, the probe shape is broken — not the catalog.
+
+### Find-prospects / older-card surfacing clarification
+
+Marquee or older prospects can be crowded out of name-search top-N by Cardsight's recency/relevance ranking. Observed this session:
+
+- `searchCatalog("Leo De Vries", {take: 50})` — Leo's 2024 BCPA CPA-LD anchor (`ffc4f323…`) does NOT appear in the top 50. Top 50 is dominated by 2025 + 2026 releases (newer prospect autos rank higher than the 2024 anchor).
+- `searchCatalog("Leo De Vries", {year: 2024, take: 50})` — same cardId surfaces at position #9 with `setName: "Prospects Autographs"`, `releaseName: "Bowman Chrome"`.
+
+**This is a ranking effect, not a catalog gap.** Leo's pricing pool (32 raw + 23 graded = 55 records across 24 parallels) is intact and identical to the ladder-fit anchor measurement; the bug couldn't have thinned it because the historical record count came from `getPricing(cardId)` direct, not through search. The remediation if it matters for UX is year-scoping the iOS search call and/or pinning known anchor cardIds — NOT a set-enumerated allow-list.
+
+---
+
 ## 2026-06-16 — Band honesty: composed ranges widened to empirical P10/P90 (deployed)
 
 SHIPPED (76d6e3f): CF-FITTED-RANGE-BAND-HONESTY. Composed multiplier-range bands replaced with empirical

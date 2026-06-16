@@ -600,3 +600,17 @@ This rebaseline is OPTIMISTIC about phases 1-4b (today's framing-inversion gains
 Re-check this rebaseline at end of June 2026. If Phase 4b is complete + Phase 4c has begun: HIGH confidence holds. If Phase 4b is still in flight: re-baseline again with a 1-2 week shift.
 
 End of addendum 2026-05-27.
+
+## Addendum 2026-06-16 — CardSight-only pricing decision; prominence correction parked
+
+**Decision: CardSight is the sole pricing data source.** External pricing feeds (CardLadder, PriceCharting, SportsCardsPro/SCP as a corpus source) are OUT OF SCOPE for the v1 engine and the path to launch. Cardsight provides catalog, comp pool, and pricing; the engine's observed-vs-estimated firewall is unchanged.
+
+**Implication for high-prominence cards.** The composed-multiplier estimator centers on the corpus median across cards in the same (finish, serial) ladder cell or tier. On high-prominence star parallels, the engine under-shoots true auction-market clearing prices because the corpus median pools across cards whose markets behave differently. This bias is **intentionally accepted at v1, not corrected.** Honesty about the under-shoot is delivered via the band-honesty ranges (shipped 2026-06-16, `76d6e3f`): empirical P10/P90 spreads from the 521-point ladder-fit corpus, so the range contains true market truth at ~78–88% even when the point under-shoots. The label "estimated range" reads honestly; no overclaiming.
+
+**Prominence correction — PARKED.** Probed this session (CF-PROMINENCE-CORRECTION, read-only): cannot be fit or validated from CardSight comps alone, because Cardsight's source coverage (eBay) is prominence-blind in the regime that matters — high-end star parallels clear at auction prices the eBay corpus undercounts, so the residuals we'd need to fit `g(base-raw → multiplier-correction)` are themselves biased. SCP cross-validation tried as a market-truth source produced n=5 usable cards (target ~15) at R²=0.21, with the bias direction inverted from the brief's framing — direct evidence that without a richer auction-feed source we can't tell signal from noise on the high end. **Do NOT expand the SCP corpus to chase this.** SCP is itself prominence-blind / undercounts top parallels and scraping at scale will not change the underlying coverage problem.
+
+**What unparks prominence correction:** an external auction-clearing data source whose coverage extends to the high end. Not in v1 scope. Re-evaluate post-launch only if (a) a credible source materializes and (b) the band-honesty UX is insufficient — i.e. user feedback or observed listing behavior shows the under-shoot causing real harm.
+
+**What does NOT unpark it:** "the engine is wrong on Mike Trout / Leo De Vries blue refractor." Known, accepted, surfaced via the range. Not a regression and not a CF.
+
+End of addendum 2026-06-16.
