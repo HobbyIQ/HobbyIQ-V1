@@ -6,6 +6,62 @@
 
 ---
 
+## 2026-06-16 — Signal pipeline DISABLED (host.json allow-list)
+
+DEPLOYED (`69dfb79`, `func azure functionapp publish fn-compiq --python`): the 10-function signal pipeline that's been writing into the void since CF-PLAYER-IN-SET-MOMENTUM (2026-06-09) is now off. Code retained in the repo; only the load-time filter changed.
+
+### Disabled (10) — timers no longer fire
+
+`fn-reddit-signals`, `fn-trends-signals`, `fn-news-signals`, `fn-youtube-signals`, `fn-stats-signals`, `fn-odds-signals`, `fn-ebay-signals`, `fn-comps-momentum`, `fn-signal-aggregator`, `fn-nightly-comp-prefetch`.
+
+Reason: write-only into void. TrendIQ Layer 1's source moved from the player-wide `compsMomentum.json` blob to local compute off `fetchCompsByPlayer` (compsByPlayer:v1) on 2026-06-09. Every blob the 10 functions write has zero live-pricing reader. `fn-signal-aggregator`'s `aggregated.json` was the integration point; `fetchPlayerSignals` (its backend consumer) is dead code — zero callers in `backend/src/`.
+
+### Kept (5) — still loaded + firing
+
+`fn-price-floor` (HTTP, writes Cosmos; backend `read_floor()` is a live consumer), `fn-player-score-refresh` + `fn-search-intent` (DailyIQ scope, separate concern from pricing), `fn-serve-signals` (HTTP, orphaned reader-of-aggregator but costless without timer drive), **`fn-backtest-runner`** (timer 03:30 UTC, calls MCP `/admin/backtest` to score predictions ≥7d old against later comp data).
+
+### Mechanism (and why the alternatives weren't available)
+
+`compiq-functions/host.json` `functions` allow-list — the documented v3/v4 mechanism. Other paths were dead ends:
+- **`AzureWebJobs.<name>.Disabled` app setting:** rejected by Azure App Service's app-setting-name validator for hyphenated function names (`AzureWebJobs.fn-reddit-signals.Disabled` errors `is not allowed`). Both dot and double-underscore variants rejected.
+- **`function.json` `"disabled": true`:** honored only on Functions host 1.x runtime. Python runs exclusively on v3/v4 (`FUNCTIONS_EXTENSION_VERSION=~4` confirmed), so this field is silently ignored — would have deployed as a no-op.
+- **Kudu VFS / portal toggle:** survives only until the next `func azure functionapp publish`, which silently re-enables. Real footgun for an undocumented-CI deploy path.
+
+### Reversibility
+
+`re-enable = add the function's name back to compiq-functions/host.json's functions[] array + re-deploy via func azure functionapp publish fn-compiq --python`. Repo edits only. **A timer alone does nothing without a consumer** — re-enabling a function without first building a live reader returns to the write-into-void state.
+
+### Allow-list failure mode (operating note)
+
+**Anyone adding a new function to fn-compiq must also list it in host.json's functions[].** Functions not in the allow-list are silently dormant on deploy. Failure mode is the opposite of the "new dead function quietly burns compute" world we just left — now a NEW function that someone forgets to list will silently never fire. Worth flagging in any future fn-compiq onboarding doc.
+
+### Open thread: fn-backtest-runner consumption unverified
+
+Kept running because it's the closest thing to a pre-sales accuracy read we have — it should score live predictions against later comp data, which is a proxy outcome loop that doesn't need real user sales to function. **But: this CF did NOT trace whether `/admin/backtest`'s output is actually consumed anywhere — neither the MCP server nor backend has been audited for a reader of the scored predictions.** If it turns out to be write-into-void too, the correct move is to wire a reader, not disable the function — a working backtest is the closest thing to "is the engine any good" we can produce pre-launch. Follow-up CF: trace `/admin/backtest` consumption before relying on it for accuracy signal.
+
+### Deferred backend cleanup: playerSetQueue write-side
+
+`/api/compiq/price-by-id` still calls `enqueuePlayerSetTuple` ([playerSetQueue.service.ts](backend/src/services/compiq/playerSetQueue.service.ts)) which writes to `compiq-signals/_seed/player-set-queue.json`. The drain (`fn-comps-momentum`'s `process_player_set_queue()`) is now disabled, so the queue grows unbounded within process lifetime. At sole-user volume the in-process dedupe `Set` keeps the per-process growth bounded; the next backend deploy restart resets it. **Harmless today.** Write-side disable deferred to a later backend cleanup CF rather than expanding this CF's blast radius (which was config-only, one restart, instantly reversible). A code-side enqueue disable would have required a backend deploy.
+
+### Unparking trigger
+
+Re-enable the signal pipeline when there's a credible signal-blend hypothesis backed by **enough real sales to backtest-validate the blend before deploying it** to production prediction. A signal blender that hasn't been measured against prediction-outcome ground truth is the same problem we just had — writing into the void, just at the prediction layer instead of the blob layer.
+
+### Verification (run post-deploy)
+
+```bash
+SUB=$(az account show --query id -o tsv)
+az rest --method GET \
+  --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/rg-hobbyiq-dev/providers/Microsoft.Web/sites/fn-compiq/functions?api-version=2022-09-01" \
+  --query "value[].name" -o tsv | sort
+# Expected (5 lines): fn-compiq/{fn-backtest-runner, fn-player-score-refresh,
+#                                fn-price-floor, fn-search-intent, fn-serve-signals}
+```
+
+Confirmed: management API returns exactly the 5 keep functions; the 10 omitted are not loaded.
+
+---
+
 ## 2026-06-16 — PR E SHIPPED end-to-end (two-axis reconciliation, backend + iOS converged)
 
 PR E reconciliation is live across the full stack. An eBay ledger entry now reconciles only when BOTH axes are real: eBay fees are actual numbers (not nulls) AND the user has addressed cost basis. Either axis can complete first; whichever finishes second triggers finalize. Provisional / overstated numbers stay OUT of `/pnl` and `/tax-export` until both axes are satisfied.
