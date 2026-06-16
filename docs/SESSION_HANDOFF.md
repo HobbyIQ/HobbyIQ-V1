@@ -6,6 +6,84 @@
 
 ---
 
+## 2026-06-16 — Fitted ladder + honest-ranges + provenance fix (one commit, deployed)
+
+SHIPPED (5119544 fold; predecessor fdfa9f0): CF-FITTED-LADDER + CF-FITTED-RANGE-LAYER + CF-FITTED-RANGE-
+PROVENANCE-FIX. Composed-branch parallel-premium swapped from the chrome-draft heuristic table + Phase-2
+power-law patch + high-tier auto-revert to the empirical fitted curve from CF-LADDER-FIT — `f(serial) = 17.06 ·
+serial^(-0.301)` (Refractor-only, R²=0.821) × `g(finish)` (refractor 1.00, mini-diamond 1.23, lava 0.93,
+shimmer 0.91, speckle 0.84, raywave 0.79, atomic 0.78, choice 0.66; n<10 finishes floored to 1.00). PSA 10
+ratio for fitted composed uses per-parallel-value buckets (1.74× base/499, 2.66× /150-/199, 2.63× /50-/99,
+2.63× /5-/25 flagged low-conf). Mid-tier (/75-/499) now lands empirically calibrated; top-tier (/5-/50)
+shown as estimated range, structurally treated as external-feed + player-desirability-residual territory.
+
+HONEST-RANGES LAYER: every composed/graded result now carries compSufficiency ("sufficient" | "thin" |
+"none"), estimateBasis ("comps" | "comps-thin" | "multiplier-range"), n (observed comp count), multiplierLow/
+High, rangeLow/High. Drives the iOS "Based on N sales" vs "No recent comps → estimated range" line. Top-tier
+override forces compSufficiency="none" at serial ≤ 50 regardless of n (top tier always shown as estimated
+range, never as a point lifted from a single auction-driven comp). cardPremium upper widening — median
+(observed/predicted) across the card's observed parallels, bounded [1.0, 3.0] — applied ONLY to the upper
+bound of "none" results so a Leo /1 range can stretch toward market without shifting the central point.
+
+PROVENANCE FIX: the verify CF surfaced two label bugs — RayWave /150 was labeled "sufficient/comps" with a
+fitted-derived point (its only raw sales were below the cheap-raw floor); Purple /250 was labeled
+"thin/comps-thin" with a fitted-derived point (its lone match was a single SGC 9 graded). Root cause was two
+separate counters deciding "do we have comps" with different rules — countAllObservedForParallel tallied
+records without floor + raw-vs-graded distinction, decoupled from the engine's anchor. Fix: DELETED that
+counter; added getObservedParallelCompPool as the single source of truth returning { n, median } where n is
+floor-surviving raw count and median is their median. Both the engine's anchor and the post-loop labels read
+the same helper. computeSameParallelRawMedian became a thin wrapper preserving the public signature.
+
+UNIVERSAL INVARIANT (lockbox against the bug class): `estimatedValue ∈ [rangeLow, rangeHigh]` for every
+emitted result. Test sweep across observed-thin, observed-sufficient, composed-mid, top-tier, base-scope.
+Caught a second instance during the build: cross-grade coherence guards (CF-CROSS-GRADE-COHERENCE) mutate
+r.diagnostics.ratio after the per-grade loop emits, decoupling that ratio from the final point — Yellow PSA 9
+landed outside its range under the first version of the fix. Resolution + DURABLE PATTERN: derive ranges as a
+band around the FINAL EMITTED POINT, never by recomputing from components downstream guards can mutate.
+
+KEY FINDINGS:
+- Mid-tier observed (parallel-observed via threaded FMV): point preserved (Blue Refractor /150 PSA 10 still
+  $3,030 from $1,183 anchor), range now correctly = GRADE_CONFIDENCE spread around the point ($2,420-$3,630
+  contains the $2,885 market). Range was previously fitted-band-overwritten and excluded the point.
+- Mid-tier composed (Yellow /75 PSA 10 $2,800, Green /99 $2,580, Mini Diamond /100 $3,190, HTA Choice /150
+  $1,520): empirically calibrated on Cardsight, "rough" tier, "No recent comps → estimated range".
+- Top-tier ≤/50 (12 Leo parallels): all "ballpark" + multiplier-range + estimated-range UI. Spans Red /5
+  ~$6,300 / [$3,164-$11,389], Gold /50 ~$3,200 / [$2,057-$4,746], SuperFractor /1 ~$10,000 / [$5,135-$18,488].
+  For other cards with observed parallels trading above curve, cardPremium > 1.0 stretches upper bounds
+  toward market (Leo's mixed-direction observed signal keeps him at the 1.00× floor).
+- Base card (Witt 2022 Topps Chrome Update): byte-identical. Observed-wins precedence + cheap-raw floor +
+  GUARD-skip on observed grades all intact.
+
+OPEN / NEXT:
+- Copy polish (non-blocker): "No recent comps" is slightly imprecise for parallels with floor-rejected or
+  off-grade sales (RayWave's $285 + $180.50 raw exist, just don't qualify). "No qualifying comps" is truer.
+  Deferred; doesn't gate this CF.
+- Grade-ratio-source inconsistency (non-blocker): observed-anchor parallels scale by tier-1 card ratio (Blue
+  Refractor used 2.56×) while composed parallels use the per-bucket ratio (2.66× at /150-/199) — ~4%
+  difference between paths. Pre-existing, deliberately scoped, future-polish consistency item.
+- External feed for prospect-auto top-tier price points (CardLadder / SCP / own ingestion). Not a blocker —
+  the engine now honestly shows top-tier as an estimated range with the curve + per-card-premium upper.
+  Feed becomes a later precision upgrade, not a launch dependency.
+- Top-tier g(finish) data thinness: /5-/25 cells have minimal pooled data; cells with n<3 expand range bands.
+  More corpus data (or external comp ladder) tightens these later.
+
+OPERATIONAL:
+- Durable pattern (re-emphasis worth carrying forward): for any computed range with downstream coherence
+  mutations possible, derive the range from the final emitted point + a band, never from input components.
+- New module surface: chromeFittedLadder.ts exports computeFittedComposedMultiplier (returns multiplier +
+  finish + serial + lowConfidence + basis), getPsa10BucketRatio, getFittedRangeBand. Single new ratio source
+  "fitted-bucket" added to GradedProjectionRatioSource.
+- Suite 2420/2420. Phase-2 helper (autoCorrectedBaseMultiplier) + heuristic table (lookupMultiplier) remain
+  in the codebase as fallbacks; sibling-observed anchor and predictedRangeMultiplierAnchored.ts still use
+  them (intentionally out of retirement scope).
+
+SMOKE (post-deploy 5119544): Leo Blue Refractor /150 thin / comps-thin / $3,030 / [$2,420-$3,630] ✓ ;
+Blue RayWave Refractor /150 none / multiplier-range / $1,820 / [$1,420-$2,293] ✓ ; Purple Refractor /250
+none / multiplier-range / $1,290 / [$1,097-$1,548] ✓ . Numbers byte-identical to local pre-deploy; labels
+match the provenance fix.
+
+---
+
 ## 2026-06-15 — Graded-tier precedence fix + Cardsight coverage characterization
 
 SHIPPED (646bb14): CF-GRADED-PRECEDENCE-OBSERVED. Graded-tier estimates now anchor on an observed
