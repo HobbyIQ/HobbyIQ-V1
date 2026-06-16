@@ -209,34 +209,113 @@ export function getPsa10BucketRatio(
 // ─── Per-tier residual bands ──────────────────────────────────────────
 
 /**
- * CF-FITTED-RANGE-LAYER (2026-06-17): per-tier residual band around the
- * central f(serial)·g(finish) multiplier. Returns multiplicative
- * [low, high] factors applied to the central multiplier to derive the
- * estimated price range. Wider at top tier (more cross-card variance +
- * fewer fit points); tighter at base/mid tier (large pooled sample).
+ * CF-FITTED-RANGE-BAND-HONESTY (2026-06-17): empirical P10/median +
+ * P90/median bands replace the hand-tuned ±25%-ish ladder. Shipped
+ * containment of PSA 10 market truth landed at ~45% across the
+ * validation cards (Esmerlyn 50%, Profar 29%, Albertus 44%) — the
+ * tight band overclaimed precision. Bands now reflect the actual
+ * cross-card variance from CF-LADDER-FIT's 521-point corpus.
  *
- * Values approximate the empirical residual distribution from CF-LADDER-
- * FIT Step 3 (median observed / fitted ratios across pooled cards per
- * tier): mid-tier residuals clustered in 0.78-1.26×; /5 + /10 residuals
- * 0.64-1.50× off a thin (n=2,3) pool. Bands are conservative — wider
- * than the median residual span so the range covers ~80% of in-sample
- * cards at each tier.
+ * Hierarchy (single source of truth: ladder-fit-records.json residuals):
+ *   1. (finish, serial) CELL band when n ≥ 10 AND span ≤ 3× (only 3
+ *      cells survive both gates — most cells have one outlier widening
+ *      span beyond 3, which is the brief's cap rule: cell > 3 → tier).
+ *   2. SERIAL tier band aggregated across all finishes at that serial.
+ *      Tier bands themselves can run wide (/50 = 8.58× span; /250 =
+ *      2.80×); that's genuine cross-card variance, not noise — honest
+ *      representation that the engine is more confident at /250 than /50.
+ *   3. Global residual spread when serial unknown.
+ *
+ * Empirical residual = observed_ratio / fitted_ratio, where fitted =
+ * 17.059 × serial^(-0.301) × g(finish). The band's low = P10/P50,
+ * high = P90/P50 — fitted central maps to ~1.0× by construction, so
+ * the point sits inside by definition.
  */
 export interface FittedRangeBand {
   low: number;
   high: number;
 }
 
-export function getFittedRangeBand(numberedTo: number | null | undefined): FittedRangeBand {
+/**
+ * Cells that PASSED the brief's strict cap (n ≥ 10 AND span ≤ 3) — the
+ * empirical residual is tight enough to anchor on the finish, not the
+ * tier. Everything else falls back to the tier table.
+ */
+const FITTED_RANGE_CELL_BANDS: Readonly<Record<string, FittedRangeBand>> = Object.freeze({
+  "refractor|99":     { low: 0.75, high: 1.52 }, // n=11, span 2.04×
+  "mini-diamond|100": { low: 0.69, high: 1.92 }, // n=10, span 2.79×
+  "refractor|250":    { low: 0.65, high: 1.82 }, // n=58, span 2.80×
+});
+
+/**
+ * Per-serial bands aggregated across ALL finishes — the safety net
+ * when a (finish, serial) cell is sparse OR widely-spread. Spans can
+ * legitimately exceed 3× here; that IS the data. The /50 tier at
+ * 8.58× span is the loudest signal that top-tier residuals are real
+ * cross-card variance, not artifact.
+ *
+ * Honest spans by tier (P90/P10):
+ *   /5  4.16×  (n=2  thin — fitted band derived from 2-card sample)
+ *   /10 2.84×  (n=3  thin)
+ *   /25 6.28×  (n=19)
+ *   /50 8.58×  (n=51) ← widest tier, top-tier scarcity premium variance
+ *   /75 3.87×  (n=17)
+ *   /99 3.95×  (n=52)
+ *   /100 4.48× (n=20)
+ *   /150 4.83× (n=83)
+ *   /250 2.80× (n=58) ← tightest mid tier, well-attested
+ *   /299 5.07× (n=52)
+ *   /499 4.18× (n=164)
+ */
+const FITTED_RANGE_TIER_BANDS: ReadonlyArray<{ serial: number; low: number; high: number }> = Object.freeze([
+  { serial: 5,   low: 0.39, high: 1.61 },
+  { serial: 10,  low: 0.64, high: 1.83 },
+  { serial: 25,  low: 0.35, high: 2.19 },
+  { serial: 50,  low: 0.42, high: 3.60 },
+  { serial: 75,  low: 0.66, high: 2.56 },
+  { serial: 99,  low: 0.58, high: 2.31 },
+  { serial: 100, low: 0.68, high: 3.06 },
+  { serial: 150, low: 0.48, high: 2.33 },
+  { serial: 199, low: 0.48, high: 2.33 }, // share /150 bucket — same SCP-class
+  { serial: 250, low: 0.65, high: 1.82 },
+  { serial: 299, low: 0.64, high: 3.26 },
+  { serial: 499, low: 0.57, high: 2.40 },
+]);
+
+/**
+ * Global residual spread (P10/median, P90/median across all 521 fit
+ * points). Used when serial is unknown or outside the tier table.
+ */
+const FITTED_RANGE_GLOBAL: FittedRangeBand = Object.freeze({ low: 0.55, high: 2.59 });
+
+export function getFittedRangeBand(
+  numberedTo: number | null | undefined,
+  finish?: string | null,
+): FittedRangeBand {
   if (numberedTo == null || !Number.isFinite(numberedTo) || numberedTo <= 0) {
-    return { low: 0.50, high: 2.00 };
+    return FITTED_RANGE_GLOBAL;
   }
   const serial = Math.round(numberedTo);
-  if (serial <= 5)   return { low: 0.50, high: 1.80 };
-  if (serial <= 10)  return { low: 0.55, high: 1.70 };
-  if (serial <= 25)  return { low: 0.60, high: 1.60 };
-  if (serial <= 50)  return { low: 0.65, high: 1.50 };
-  if (serial <= 99)  return { low: 0.78, high: 1.30 };
-  if (serial <= 199) return { low: 0.78, high: 1.26 };
-  return { low: 0.85, high: 1.20 };
+
+  // 1. Try (finish, serial) cell band — only present for cells that
+  //    passed n ≥ 10 AND span ≤ 3× per the brief's cap rule.
+  if (finish) {
+    const cell = FITTED_RANGE_CELL_BANDS[`${finish}|${serial}`];
+    if (cell) return cell;
+  }
+
+  // 2. Tier band — exact serial match.
+  for (const t of FITTED_RANGE_TIER_BANDS) {
+    if (t.serial === serial) return { low: t.low, high: t.high };
+  }
+
+  // 3. Tier band — nearest serial (handles cards with off-grid serials
+  //    like /35, /175 — pick the closest in-table bucket).
+  let nearest = FITTED_RANGE_TIER_BANDS[0]!;
+  let nearestDiff = Math.abs(serial - nearest.serial);
+  for (const t of FITTED_RANGE_TIER_BANDS) {
+    const d = Math.abs(serial - t.serial);
+    if (d < nearestDiff) { nearest = t; nearestDiff = d; }
+  }
+  return { low: nearest.low, high: nearest.high };
 }

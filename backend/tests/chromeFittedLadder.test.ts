@@ -184,41 +184,70 @@ describe("getPsa10BucketRatio — per-bucket PSA 10 ratios", () => {
   });
 });
 
-describe("getFittedRangeBand — per-tier residual bands", () => {
-  it("wider at top tier, tighter at base tier (monotonic in serial)", () => {
-    const b5   = getFittedRangeBand(5);
+describe("getFittedRangeBand — empirical P10/P90 residual bands (CF-FITTED-RANGE-BAND-HONESTY)", () => {
+  it("widens at high-variance tiers, tightens at well-attested mid tiers", () => {
+    // Empirical reality (cache): /50 is the widest tier (8.58× span) due
+    // to top-tier scarcity-premium variance; /250 is the tightest mid
+    // tier (2.80× span, n=58 well-attested). Monotonic-in-serial is no
+    // longer the right shape — the data isn't monotonic.
     const b50  = getFittedRangeBand(50);
-    const b150 = getFittedRangeBand(150);
-    const b499 = getFittedRangeBand(499);
-    // Higher highs at lower serials (more rarity = more spread)
-    expect(b5.high).toBeGreaterThan(b50.high);
-    expect(b50.high).toBeGreaterThan(b150.high);
-    expect(b150.high).toBeGreaterThanOrEqual(b499.high);
-    // Lower lows at lower serials too
-    expect(b5.low).toBeLessThan(b50.low);
-    expect(b50.low).toBeLessThan(b150.low);
+    const b250 = getFittedRangeBand(250);
+    const span50  = b50.high / b50.low;
+    const span250 = b250.high / b250.low;
+    expect(span50).toBeGreaterThan(span250);
   });
 
   it.each([
-    [5, 0.50, 1.80],
-    [10, 0.55, 1.70],
-    [25, 0.60, 1.60],
-    [50, 0.65, 1.50],
-    [75, 0.78, 1.30],
-    [99, 0.78, 1.30],
-    [150, 0.78, 1.26],
-    [199, 0.78, 1.26],
-    [250, 0.85, 1.20],
-    [499, 0.85, 1.20],
-  ])("serial /%i → [%f, %f]", (serial, low, high) => {
+    [5,   0.39, 1.61], // n=2 thin, tier band stands
+    [10,  0.64, 1.83], // n=3 thin
+    [25,  0.35, 2.19],
+    [50,  0.42, 3.60],
+    [75,  0.66, 2.56],
+    [99,  0.58, 2.31],
+    [100, 0.68, 3.06],
+    [150, 0.48, 2.33],
+    [199, 0.48, 2.33],
+    [250, 0.65, 1.82], // tightest mid tier
+    [299, 0.64, 3.26],
+    [499, 0.57, 2.40],
+  ])("tier-level band at serial /%i → [%f, %f]", (serial, low, high) => {
+    // No finish hint → falls back to tier band (skipping the cell layer).
     const b = getFittedRangeBand(serial);
-    expect(b.low).toBe(low);
-    expect(b.high).toBe(high);
+    expect(b.low).toBeCloseTo(low, 2);
+    expect(b.high).toBeCloseTo(high, 2);
   });
 
-  it("falls back to wide default for missing serial", () => {
+  it("cell band fires for (refractor, /99) — the n=11 span=2.04× cell that passed the cap", () => {
+    const b = getFittedRangeBand(99, "refractor");
+    expect(b.low).toBeCloseTo(0.75, 2);
+    expect(b.high).toBeCloseTo(1.52, 2);
+  });
+
+  it("cell band fires for (mini-diamond, /100) — n=10 span=2.79× cell", () => {
+    const b = getFittedRangeBand(100, "mini-diamond");
+    expect(b.low).toBeCloseTo(0.69, 2);
+    expect(b.high).toBeCloseTo(1.92, 2);
+  });
+
+  it("cell over the cap (e.g. raywave /150 span 5.85) falls back to tier — NOT a cell band", () => {
+    const tier150 = getFittedRangeBand(150);
+    const raywave150 = getFittedRangeBand(150, "raywave");
+    // raywave|150 isn't in the cell table → returns tier band.
+    expect(raywave150.low).toBeCloseTo(tier150.low, 2);
+    expect(raywave150.high).toBeCloseTo(tier150.high, 2);
+  });
+
+  it("off-grid serial falls back to nearest tier", () => {
+    // /35 is between /25 and /50; nearest is /25.
+    const b = getFittedRangeBand(35);
+    const b25 = getFittedRangeBand(25);
+    expect(b.low).toBe(b25.low);
+    expect(b.high).toBe(b25.high);
+  });
+
+  it("missing serial returns the global residual spread", () => {
     const b = getFittedRangeBand(null);
-    expect(b.low).toBe(0.50);
-    expect(b.high).toBe(2.00);
+    expect(b.low).toBeCloseTo(0.55, 2);
+    expect(b.high).toBeCloseTo(2.59, 2);
   });
 });

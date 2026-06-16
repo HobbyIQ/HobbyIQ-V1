@@ -2144,7 +2144,11 @@ export function computeGradedProjection(
     const targetEntry = siblings.find((p) => p.id === targetParallelId);
     const numberedTo = targetEntry?.numberedTo ?? null;
     const fittedAtTarget = computeFittedComposedMultiplier(targetParallelName, numberedTo);
-    const band = getFittedRangeBand(numberedTo);
+    // CF-FITTED-RANGE-BAND-HONESTY (2026-06-17): finish-aware lookup —
+    // (finish, serial) cell band when the corpus had enough data to pin
+    // that pairing, else tier band. Wider bands honestly reflect the
+    // engine's parallel-level uncertainty.
+    const band = getFittedRangeBand(numberedTo, fittedAtTarget?.finish);
     const isTopTier = numberedTo != null && numberedTo > 0 && numberedTo <= 50;
 
     // Single source of truth for the LABEL: floor-surviving raw comp

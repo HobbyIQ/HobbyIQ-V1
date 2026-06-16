@@ -1770,15 +1770,15 @@ describe("CF-FITTED-RANGE-LAYER — compSufficiency + estimateBasis + range fiel
     expect(psa10.compSufficiency).toBe("none"); // top tier
     expect(psa10.diagnostics.cardPremium).toBeGreaterThan(1.0);
     expect(psa10.diagnostics.cardPremium).toBeLessThanOrEqual(3.0);
-    // rangeHigh widened: m_high × cardPremium > m_high alone
-    // central multiplier m = f(50) × g(refractor) = ~5.26 × 1.00 ≈ 5.26
-    // m_high_pre_premium = m × 1.50 (top-tier band) ≈ 7.89
-    // m_high_post_premium = ~7.89 × cardPremium → multiplierHigh stores post-premium
+    // CF-FITTED-RANGE-BAND-HONESTY (2026-06-17): top-tier /50 tier band
+    // = [0.42, 3.60] (empirical P10/P50, P90/P50 from n=51 fit points).
+    // m_central = f(50) × g(refractor) ≈ 5.26.
+    // m_high_pre_premium = m × 3.60 ≈ 18.94; cardPremium scales further.
+    // m_low NOT touched by cardPremium → stays at m × 0.42.
     const mCentral = 17.059 * Math.pow(50, -0.301) * 1.00;
-    const expectedHighWithoutPremium = mCentral * 1.50;
+    const expectedHighWithoutPremium = mCentral * 3.60;
     expect(psa10.multiplierHigh!).toBeGreaterThan(expectedHighWithoutPremium);
-    // Lower bound NOT touched by cardPremium
-    expect(psa10.multiplierLow!).toBeCloseTo(mCentral * 0.65, 2);
+    expect(psa10.multiplierLow!).toBeCloseTo(mCentral * 0.42, 2);
   });
 
   it("observed-wins parallels at mid tier: existing point preserved, n carries through (Leo Blue Refractor /150)", () => {
