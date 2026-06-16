@@ -78,17 +78,56 @@ describe("validateFeeOverride", () => {
 });
 
 describe("applyFeeOverride — audit trail", () => {
-  it("flips needsReconciliation=false + sets reconciledVia=manual_override", () => {
+  it("flips needsReconciliation=false + sets reconciledVia=manual_override (axis-2 marker present, all 7 fees supplied)", () => {
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: under Model A, override finalizes
+    // only when both axes are met. Seed marker; supply all 7 granular fees
+    // (axis-1 complete). The without-marker variant is below.
+    const seed: LedgerEntryForErp = {
+      ...unrec(45),
+      userCostsProvidedAt: "2026-06-03T12:00:00Z",
+      userCostsProvidedBy: "u-1",
+    };
     const r = applyFeeOverride(
-      unrec(45),
+      seed,
       {
-        fees: { finalValueFee: 13, paymentProcessingFee: 4, actualShippingCost: 3 },
+        fees: {
+          finalValueFee: 13,
+          paymentProcessingFee: 4,
+          promotedListingFee: 0,
+          adFee: 0,
+          otherFees: 0,
+          netPayout: 80,
+          actualShippingCost: 3,
+        },
         reason: "from receipt",
       },
       "u-1",
     );
     expect(r.entry.needsReconciliation).toBe(false);
     expect(r.entry.reconciledVia).toBe("manual_override");
+  });
+
+  it("does NOT flip needsReconciliation when axis-2 marker absent (Model A invariant)", () => {
+    const r = applyFeeOverride(
+      unrec(45), // no userCostsProvidedAt
+      {
+        fees: {
+          finalValueFee: 13, paymentProcessingFee: 4, promotedListingFee: 0,
+          adFee: 0, otherFees: 0, netPayout: 80, actualShippingCost: 3,
+        },
+        reason: "from receipt",
+      },
+      "u-1",
+    );
+    expect(r.entry.needsReconciliation).toBe(true);
+    expect(r.entry.reconciledVia).toBeUndefined();
+    // Fees ARE persisted; feeSource records the provenance for a later
+    // save-costs finalize.
+    expect(r.entry.finalValueFee).toBe(13);
+    expect(r.entry.feeSource).toBe("manual_override");
+    // Audit row reflects the actual post-state (still flagged).
+    expect(r.adjustment.newValues.needsReconciliation).toBe(true);
+    expect(r.adjustment.newValues.reconciledVia).toBeUndefined();
   });
 
   it("APPENDS to feeAdjustments[]; preserves prior + new snapshot", () => {
@@ -115,15 +154,38 @@ describe("applyFeeOverride — audit trail", () => {
     expect(second.entry.feeAdjustments![1].newValues.finalValueFee).toBe(13);
   });
 
-  it("snapshot preserves prior reconciledVia (eg ebay_finances → manual_override transitions tracked)", () => {
+  it("snapshot preserves prior reconciledVia (audit-trail transition tracked, finalize re-evaluated under Model A)", () => {
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: an entry that was previously
+    // finalized via "ebay_finances" can be overridden to correct fees.
+    // tryFinalizeReconciliation is a no-op on already-finalized entries —
+    // reconciledVia stays as "ebay_finances" (the original truth) and the
+    // audit row records the override as historical correction. Override
+    // alone no longer rewrites reconciledVia.
     const before: LedgerEntryForErp = {
       ...unrec(10),
       needsReconciliation: false,
       reconciledVia: "ebay_finances",
+      feeSource: "ebay_finances",
       finalValueFee: 9,
+      paymentProcessingFee: 2,
+      promotedListingFee: 0,
+      adFee: 0,
+      otherFees: 0,
+      netPayout: 89,
+      actualShippingCost: 0,
+      userCostsProvidedAt: "2026-06-03T12:00:00Z",
+      userCostsProvidedBy: "u-1",
     };
     const r = applyFeeOverride(before, { fees: { finalValueFee: 13 }, reason: "audit" }, "u-1");
+    // Prior state in audit row reflects pre-override truth.
     expect(r.adjustment.priorValues.reconciledVia).toBe("ebay_finances");
-    expect(r.adjustment.newValues.reconciledVia).toBe("manual_override");
+    expect(r.adjustment.priorValues.needsReconciliation).toBe(false);
+    // feeSource flips to manual_override (override IS the new fee provenance).
+    expect(r.entry.feeSource).toBe("manual_override");
+    // Entry was already finalized; tryFinalizeReconciliation is a no-op so
+    // reconciledVia stays "ebay_finances" — fixing this kind of historical
+    // attribution is a separate concern from finalize semantics.
+    expect(r.entry.needsReconciliation).toBe(false);
+    expect(r.entry.reconciledVia).toBe("ebay_finances");
   });
 });

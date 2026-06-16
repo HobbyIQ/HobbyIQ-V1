@@ -153,7 +153,9 @@ describe("eBay ITEM_SOLD → ledger → manual-override reconcile (synthetic end
 
     const entryId = entry.id;
 
-    // ── Step 4: POST manual override to reconcile ────────────────────────
+    // ── Step 4a: POST manual override (supplies axis 1 — fees) ───────────
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: under Model A, override alone no
+    // longer finalizes. The user must also address cost basis (axis 2).
     setUser({ userId: USER_ID, email: "u@t", plan: "pro_seller", createdAt: "2026-01-01T00:00:00Z" });
     const overrideResp = await request(app)
       .post(`/api/portfolio/erp/unreconciled/${entryId}/override`)
@@ -166,26 +168,49 @@ describe("eBay ITEM_SOLD → ledger → manual-override reconcile (synthetic end
           promotedListingFee: 0,
           adFee: 0,
           otherFees: 0,
+          netPayout: 205,
           actualShippingCost: 5,
         },
       });
     expect(overrideResp.status).toBe(200);
+    // After override only: fees present, marker absent → flag stays true.
+    expect(overrideResp.body.entry.needsReconciliation).toBe(true);
+    expect(overrideResp.body.entry.feeSource).toBe("manual_override");
+
+    // ── Step 4b: POST save-costs (supplies axis 2 — user cost basis) ─────
+    const saveResp = await request(app)
+      .post(`/api/portfolio/erp/unreconciled/${entryId}/save-costs`)
+      .set("x-session-id", "s")
+      .send({ gradingCost: 0, suppliesCost: 2 });
+    expect(saveResp.status).toBe(200);
 
     // ── Step 5: verify the reconciliation result ─────────────────────────
     const doc2 = await realReadUserDoc(USER_ID);
     const recon = doc2.ledger[0] as any;
     expect(recon.needsReconciliation).toBe(false);
+    // Via attribution: fees came from manual override; save-costs supplied
+    // axis 2 only. feeSource drives reconciledVia.
     expect(recon.reconciledVia).toBe("manual_override");
+    expect(recon.feeSource).toBe("manual_override");
     expect(recon.finalValueFee).toBe(32);
     expect(recon.paymentProcessingFee).toBe(8);
     expect(recon.actualShippingCost).toBe(5);
-    // feeAdjustments[] APPENDED — exactly one row
-    expect(recon.feeAdjustments).toHaveLength(1);
+    expect(recon.suppliesCost).toBe(2);
+    expect(recon.userCostsProvidedAt).toBeTruthy();
+    expect(recon.userCostsProvidedBy).toBe(USER_ID);
+    // feeAdjustments[] — override row + save-costs row
+    expect(recon.feeAdjustments).toHaveLength(2);
     expect(recon.feeAdjustments[0].reason).toMatch(/Synthetic cascade/);
     expect(recon.feeAdjustments[0].priorValues.finalValueFee).toBeNull();
     expect(recon.feeAdjustments[0].newValues.finalValueFee).toBe(32);
-    expect(recon.feeAdjustments[0].newValues.needsReconciliation).toBe(false);
-    expect(recon.feeAdjustments[0].newValues.reconciledVia).toBe("manual_override");
+    // After the override (before save-costs), axis 2 unmet → row records
+    // flag still true.
+    expect(recon.feeAdjustments[0].newValues.needsReconciliation).toBe(true);
+    expect(recon.feeAdjustments[0].newValues.reconciledVia).toBeUndefined();
+    // save-costs row records the finalize transition.
+    expect(recon.feeAdjustments[1].reason).toMatch(/cost basis/i);
+    expect(recon.feeAdjustments[1].newValues.needsReconciliation).toBe(false);
+    expect(recon.feeAdjustments[1].newValues.reconciledVia).toBe("manual_override");
 
     // CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): net-basis fix.
     // The override path now INCLUDES actualShippingCost in the granular-fee
@@ -205,8 +230,11 @@ describe("eBay ITEM_SOLD → ledger → manual-override reconcile (synthetic end
     // netPayout directly OR set actualShippingCost: 0 — keeps the derivation
     // honest. For free-shipping listings (this test's implicit case), the
     // actualShippingCost is a real reduction in seller net.
-    expect(recon.netProceeds).toBe(205);
-    // realizedProfitLoss = netProceeds - costBasis = 205 - 80 = 125
-    expect(recon.realizedProfitLoss).toBe(125);
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: now exercises the authoritative
+    // (netPayout-supplied) branch + the save-costs suppliesCost deduction:
+    //   netProceeds = netPayout - gradingCost - suppliesCost = 205 - 0 - 2 = 203
+    expect(recon.netProceeds).toBe(203);
+    // realizedProfitLoss = 203 - 80 = 123
+    expect(recon.realizedProfitLoss).toBe(123);
   });
 });

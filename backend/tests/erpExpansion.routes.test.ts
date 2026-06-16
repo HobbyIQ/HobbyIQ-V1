@@ -303,7 +303,10 @@ describe("POST /api/portfolio/erp/trades — atomic write", () => {
 describe("POST /api/portfolio/erp/unreconciled/:id/override", () => {
   beforeEach(() => setUser(makeUser("pro_seller")));
 
-  it("flips needsReconciliation, sets reconciledVia=manual_override, appends adjustment", async () => {
+  it("flips needsReconciliation, sets reconciledVia=manual_override, appends adjustment (axis-2 marker present, full fee body)", async () => {
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: under Model A, override finalizes
+    // only when both axes are met. Seed userCostsProvidedAt + send ALL 7
+    // granular fees so axis-1 also completes; finalize fires.
     await seedUserDoc("u-pro_seller", (doc) => {
       doc.ledger.push({
         id: "L1", userId: "u-pro_seller", holdingId: "h1",
@@ -311,19 +314,345 @@ describe("POST /api/portfolio/erp/unreconciled/:id/override", () => {
         grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0, costBasisSold: 40,
         realizedProfitLoss: 0, realizedProfitLossPct: 0,
         soldAt: "2026-04-01T00:00:00Z", source: "ebay", paymentMethod: "ebay_managed",
-        finalValueFee: null, paymentProcessingFee: null, netPayout: null, actualShippingCost: null,
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
         needsReconciliation: true,
+        userCostsProvidedAt: "2026-04-02T00:00:00Z",
+        userCostsProvidedBy: "u-pro_seller",
       });
     });
     const r = await request(app)
       .post("/api/portfolio/erp/unreconciled/L1/override")
       .set("x-session-id", "s")
-      .send({ reason: "from receipt", fees: { finalValueFee: 13, paymentProcessingFee: 4, actualShippingCost: 3 } });
+      .send({
+        reason: "from receipt",
+        fees: {
+          finalValueFee: 13, paymentProcessingFee: 4, promotedListingFee: 0,
+          adFee: 0, otherFees: 0, netPayout: 80, actualShippingCost: 3,
+        },
+      });
     expect(r.status).toBe(200);
     expect(r.body.entry.needsReconciliation).toBe(false);
     expect(r.body.entry.reconciledVia).toBe("manual_override");
     expect(r.body.entry.feeAdjustments.length).toBe(1);
     expect(r.body.adjustment.priorValues.finalValueFee).toBeNull();
     expect(r.body.adjustment.newValues.finalValueFee).toBe(13);
+  });
+});
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION: save-costs route ─────────────────────
+
+describe("POST /api/portfolio/erp/unreconciled/:id/save-costs", () => {
+  beforeEach(() => setUser(makeUser("pro_seller")));
+
+  function seedEbayUnreconciled(opts: {
+    id?: string; feesPresent?: boolean; userCostsProvidedAt?: string;
+  } = {}): Promise<void> {
+    const id = opts.id ?? "L-sc";
+    return seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id, userId: "u-pro_seller", holdingId: "h1",
+        playerName: "Hall", cardTitle: "Card",
+        quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0,
+        costBasisSold: 40, realizedProfitLoss: 0, realizedProfitLossPct: 0,
+        soldAt: "2026-05-15T00:00:00Z", source: "ebay",
+        paymentMethod: "ebay_managed",
+        finalValueFee: opts.feesPresent ? 10 : null,
+        paymentProcessingFee: opts.feesPresent ? 3 : null,
+        promotedListingFee: opts.feesPresent ? 0 : null,
+        adFee: opts.feesPresent ? 0 : null,
+        otherFees: opts.feesPresent ? 0 : null,
+        netPayout: opts.feesPresent ? 87 : null,
+        actualShippingCost: opts.feesPresent ? 0 : null,
+        feeSource: opts.feesPresent ? "ebay_finances" : undefined,
+        needsReconciliation: true,
+        userCostsProvidedAt: opts.userCostsProvidedAt,
+      });
+    });
+  }
+
+  it("200: saves grading + supplies, sets marker, flag stays true when fees null, audit row appended", async () => {
+    await seedEbayUnreconciled();
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-sc/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 15, suppliesCost: 2 });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.gradingCost).toBe(15);
+    expect(r.body.entry.suppliesCost).toBe(2);
+    expect(r.body.entry.userCostsProvidedAt).toBeTruthy();
+    expect(r.body.entry.userCostsProvidedBy).toBe("u-pro_seller");
+    expect(r.body.entry.needsReconciliation).toBe(true); // axis-1 still unmet
+    expect(r.body.entry.reconciledVia).toBeUndefined();
+    expect(r.body.entry.feeAdjustments.length).toBe(1);
+    expect(r.body.adjustment.reason).toMatch(/cost basis/i);
+    expect(r.body.adjustment.priorValues.gradingCost).toBeNull();
+    expect(r.body.adjustment.newValues.gradingCost).toBe(15);
+  });
+
+  it("200: gradingCost=0 (raw card) still sets marker", async () => {
+    await seedEbayUnreconciled({ id: "L-raw" });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-raw/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 0 });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.gradingCost).toBe(0);
+    expect(r.body.entry.userCostsProvidedAt).toBeTruthy();
+    expect(r.body.entry.needsReconciliation).toBe(true);
+  });
+
+  it("200: when fees already present, save-costs finalizes the entry with reconciledVia derived from feeSource", async () => {
+    await seedEbayUnreconciled({ id: "L-fin", feesPresent: true });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-fin/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 5, suppliesCost: 1 });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.needsReconciliation).toBe(false);
+    expect(r.body.entry.reconciledVia).toBe("ebay_finances"); // feeSource was ebay_finances
+  });
+
+  it("200: idempotent re-save while still flagged — updates costs, refreshes marker, appends second audit row", async () => {
+    await seedEbayUnreconciled({ id: "L-idem" });
+    const r1 = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-idem/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 5 });
+    expect(r1.status).toBe(200);
+    const r2 = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-idem/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 7, suppliesCost: 1 });
+    expect(r2.status).toBe(200);
+    expect(r2.body.entry.gradingCost).toBe(7);
+    expect(r2.body.entry.suppliesCost).toBe(1);
+    expect(r2.body.entry.feeAdjustments.length).toBe(2);
+  });
+
+  it("400: empty body → MISSING_BODY", async () => {
+    await seedEbayUnreconciled({ id: "L-empty" });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-empty/save-costs")
+      .set("x-session-id", "s")
+      .send({});
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("MISSING_BODY");
+  });
+
+  it("400: negative value → INVALID_VALUE", async () => {
+    await seedEbayUnreconciled({ id: "L-neg" });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-neg/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: -1 });
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("INVALID_VALUE");
+  });
+
+  it("400: non-number → INVALID_VALUE", async () => {
+    await seedEbayUnreconciled({ id: "L-nan" });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-nan/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: "many" });
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("INVALID_VALUE");
+  });
+
+  it("400: manual entry → NOT_EBAY_ENTRY", async () => {
+    await seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id: "L-manual", userId: "u-pro_seller", holdingId: "h1",
+        playerName: "X", cardTitle: "C", quantitySold: 1, unitSalePrice: 50,
+        grossProceeds: 50, fees: 2, tax: 0, shipping: 0, netProceeds: 48,
+        costBasisSold: 20, realizedProfitLoss: 28, realizedProfitLossPct: 140,
+        soldAt: "2026-05-15T00:00:00Z", source: "manual",
+        needsReconciliation: true,
+      });
+    });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-manual/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 5 });
+    expect(r.status).toBe(400);
+    expect(r.body.code).toBe("NOT_EBAY_ENTRY");
+  });
+
+  it("404: nonexistent id", async () => {
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-missing/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 5 });
+    expect(r.status).toBe(404);
+  });
+
+  it("409: already-finalized entry → ALREADY_FINALIZED", async () => {
+    await seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id: "L-done", userId: "u-pro_seller", holdingId: "h1",
+        playerName: "X", cardTitle: "C", quantitySold: 1, unitSalePrice: 50,
+        grossProceeds: 50, fees: 0, tax: 0, shipping: 0, netProceeds: 47,
+        costBasisSold: 20, realizedProfitLoss: 27, realizedProfitLossPct: 135,
+        soldAt: "2026-05-15T00:00:00Z", source: "ebay",
+        finalValueFee: 2, paymentProcessingFee: 1, promotedListingFee: 0,
+        adFee: 0, otherFees: 0, netPayout: 47, actualShippingCost: 0,
+        needsReconciliation: false,
+        reconciledVia: "ebay_finances",
+      });
+    });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-done/save-costs")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 5 });
+    expect(r.status).toBe(409);
+    expect(r.body.code).toBe("ALREADY_FINALIZED");
+  });
+
+  it("401: no auth", async () => {
+    setUser(null);
+    await seedEbayUnreconciled({ id: "L-noauth" });
+    const r = await request(app)
+      .post("/api/portfolio/erp/unreconciled/L-noauth/save-costs")
+      .send({ gradingCost: 5 });
+    expect(r.status).toBe(401);
+  });
+});
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION: PATCH /ledger/:id finalize wiring ───
+//
+// Cost-touching PATCH on an UNRECONCILED eBay entry sets the marker as a
+// SERVER-DERIVED effect — the smuggle protection on the body whitelist
+// stays in place (a client-supplied needsReconciliation in the SAME body is
+// still rejected).
+
+describe("PATCH /api/portfolio/ledger/:id — two-axis finalize wiring", () => {
+  beforeEach(() => setUser(makeUser("pro_seller")));
+
+  function seedEbay(id: string, opts: { feesPresent?: boolean } = {}): Promise<void> {
+    return seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id, userId: "u-pro_seller", holdingId: "h1",
+        playerName: "X", cardTitle: "C", quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0,
+        costBasisSold: 40, realizedProfitLoss: 0, realizedProfitLossPct: 0,
+        soldAt: "2026-05-15T00:00:00Z", source: "ebay",
+        finalValueFee: opts.feesPresent ? 10 : null,
+        paymentProcessingFee: opts.feesPresent ? 3 : null,
+        promotedListingFee: opts.feesPresent ? 0 : null,
+        adFee: opts.feesPresent ? 0 : null,
+        otherFees: opts.feesPresent ? 0 : null,
+        netPayout: opts.feesPresent ? 87 : null,
+        actualShippingCost: opts.feesPresent ? 0 : null,
+        feeSource: opts.feesPresent ? "ebay_finances" : undefined,
+        needsReconciliation: true,
+      });
+    });
+  }
+
+  it("PATCH gradingCost on unreconciled eBay entry → server sets marker", async () => {
+    await seedEbay("L-marker");
+    const r = await request(app)
+      .patch("/api/portfolio/ledger/L-marker")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 12 });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.gradingCost).toBe(12);
+    expect(r.body.entry.userCostsProvidedAt).toBeTruthy();
+    expect(r.body.entry.userCostsProvidedBy).toBe("u-pro_seller");
+    expect(r.body.entry.needsReconciliation).toBe(true); // fees still null
+  });
+
+  it("PATCH gradingCost on unreconciled eBay entry with fees PRESENT → server-derived finalize fires", async () => {
+    await seedEbay("L-finalize", { feesPresent: true });
+    const r = await request(app)
+      .patch("/api/portfolio/ledger/L-finalize")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 8 });
+    expect(r.status).toBe(200);
+    expect(r.body.entry.needsReconciliation).toBe(false);
+    expect(r.body.entry.reconciledVia).toBe("ebay_finances");
+    expect(r.body.entry.userCostsProvidedAt).toBeTruthy();
+  });
+
+  it("PATCH still rejects client-supplied needsReconciliation in SAME body (smuggle protection unchanged)", async () => {
+    await seedEbay("L-smuggle", { feesPresent: true });
+    const r = await request(app)
+      .patch("/api/portfolio/ledger/L-smuggle")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 8, needsReconciliation: false });
+    expect(r.status).toBe(400);
+    expect(r.body.error.code).toBe("FIELD_NOT_ALLOWED");
+  });
+
+  it("PATCH on already-finalized eBay entry does NOT re-stamp the marker", async () => {
+    await seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id: "L-done", userId: "u-pro_seller", holdingId: "h1",
+        playerName: "X", cardTitle: "C", quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 47,
+        costBasisSold: 40, realizedProfitLoss: 7, realizedProfitLossPct: 17.5,
+        soldAt: "2026-05-15T00:00:00Z", source: "ebay",
+        finalValueFee: 10, paymentProcessingFee: 3, promotedListingFee: 0,
+        adFee: 0, otherFees: 0, netPayout: 87, actualShippingCost: 0,
+        feeSource: "ebay_finances",
+        needsReconciliation: false,
+        reconciledVia: "ebay_finances",
+        userCostsProvidedAt: "2026-05-16T00:00:00Z",
+        userCostsProvidedBy: "u-pro_seller",
+      });
+    });
+    const r = await request(app)
+      .patch("/api/portfolio/ledger/L-done")
+      .set("x-session-id", "s")
+      .send({ gradingCost: 15 }); // historical correction
+    expect(r.status).toBe(200);
+    expect(r.body.entry.gradingCost).toBe(15);
+    expect(r.body.entry.userCostsProvidedAt).toBe("2026-05-16T00:00:00Z"); // unchanged
+    expect(r.body.entry.needsReconciliation).toBe(false);
+  });
+});
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION: /unreconciled marker exposure ────────
+
+describe("GET /api/portfolio/erp/unreconciled — costsStatus + marker fields", () => {
+  beforeEach(() => setUser(makeUser("pro_seller")));
+
+  it("entry without marker → costsStatus='needs_action'; with marker + fees null → 'saved_pending_fees'", async () => {
+    await seedUserDoc("u-pro_seller", (doc) => {
+      doc.ledger.push({
+        id: "L-needs", userId: "u-pro_seller", holdingId: "h1",
+        playerName: "A", cardTitle: "C", quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0,
+        costBasisSold: 40, realizedProfitLoss: 0, realizedProfitLossPct: 0,
+        soldAt: "2026-05-01T00:00:00Z", source: "ebay",
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+        needsReconciliation: true,
+      });
+      doc.ledger.push({
+        id: "L-saved", userId: "u-pro_seller", holdingId: "h2",
+        playerName: "B", cardTitle: "C", quantitySold: 1, unitSalePrice: 100,
+        grossProceeds: 100, fees: 0, tax: 0, shipping: 0, netProceeds: 0,
+        costBasisSold: 40, realizedProfitLoss: 0, realizedProfitLossPct: 0,
+        soldAt: "2026-05-02T00:00:00Z", source: "ebay",
+        finalValueFee: null, paymentProcessingFee: null, promotedListingFee: null,
+        adFee: null, otherFees: null, netPayout: null, actualShippingCost: null,
+        needsReconciliation: true,
+        userCostsProvidedAt: "2026-05-03T00:00:00Z",
+        userCostsProvidedBy: "u-pro_seller",
+      });
+    });
+    const r = await request(app)
+      .get("/api/portfolio/erp/unreconciled")
+      .set("x-session-id", "s");
+    expect(r.status).toBe(200);
+    const byId: Record<string, any> = {};
+    for (const e of r.body.entries) byId[e.id] = e;
+    expect(byId["L-needs"].costsStatus).toBe("needs_action");
+    expect(byId["L-saved"].costsStatus).toBe("saved_pending_fees");
+    expect(byId["L-saved"].userCostsProvidedAt).toBeTruthy();
+    expect(byId["L-saved"].userCostsProvidedBy).toBe("u-pro_seller");
   });
 });

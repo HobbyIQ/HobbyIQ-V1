@@ -4,12 +4,15 @@ import { describe, expect, it } from "vitest";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 import {
   aggregatePnl,
+  allGranularFeesKnown,
   buildTaxExport,
   buildTaxExportRow,
+  deriveCostsStatus,
   isReconciled,
   listUnreconciled,
   missingFeeFields,
   TAX_EXPORT_COLUMNS,
+  tryFinalizeReconciliation,
   type LedgerEntryForErp,
   type HoldingsById,
 } from "../src/services/portfolioiq/erpReconciliation.service.js";
@@ -387,5 +390,132 @@ describe("buildTaxExport — locked columns + CSV shape", () => {
     expect(r.csv).toBe(TAX_EXPORT_COLUMNS.join(","));
     expect(r.json.rows).toEqual([]);
     expect(r.json.excluded.count).toBe(0);
+  });
+});
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16) ──────────────────────────
+
+describe("allGranularFeesKnown", () => {
+  it("all 7 fees non-null → true", () => {
+    expect(allGranularFeesKnown(ebayReconciled())).toBe(true);
+  });
+  it("any null fee → false", () => {
+    expect(allGranularFeesKnown(ebayPending())).toBe(false);
+    expect(allGranularFeesKnown(ebayReconciled({ otherFees: null }))).toBe(false);
+    expect(allGranularFeesKnown(ebayReconciled({ netPayout: null }))).toBe(false);
+  });
+});
+
+describe("tryFinalizeReconciliation", () => {
+  it("both axes met → flips flag + sets reconciledVia from feeSource", () => {
+    const seeded: LedgerEntryForErp = {
+      ...ebayPending(),
+      finalValueFee: 32, paymentProcessingFee: 8, promotedListingFee: 0,
+      adFee: 0, otherFees: 1.5, netPayout: 208.5, actualShippingCost: 5,
+      feeSource: "ebay_finances",
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+      needsReconciliation: true,
+    };
+    const r = tryFinalizeReconciliation(seeded);
+    expect(r.needsReconciliation).toBe(false);
+    expect(r.reconciledVia).toBe("ebay_finances");
+  });
+  it("axis 1 only (no marker) → flag stays true, reconciledVia undefined", () => {
+    const seeded: LedgerEntryForErp = {
+      ...ebayPending(),
+      finalValueFee: 32, paymentProcessingFee: 8, promotedListingFee: 0,
+      adFee: 0, otherFees: 1.5, netPayout: 208.5, actualShippingCost: 5,
+      feeSource: "ebay_finances",
+      needsReconciliation: true,
+    };
+    const r = tryFinalizeReconciliation(seeded);
+    expect(r.needsReconciliation).toBe(true);
+    expect(r.reconciledVia).toBeUndefined();
+  });
+  it("axis 2 only (marker set, fees null) → flag stays true", () => {
+    const r = tryFinalizeReconciliation({
+      ...ebayPending(),
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+    });
+    expect(r.needsReconciliation).toBe(true);
+  });
+  it("neither axis → flag stays true", () => {
+    const r = tryFinalizeReconciliation(ebayPending());
+    expect(r.needsReconciliation).toBe(true);
+  });
+  it("already finalized → idempotent no-op (returns input unchanged)", () => {
+    const input = ebayReconciled();
+    const r = tryFinalizeReconciliation(input);
+    expect(r.needsReconciliation).toBe(false);
+    expect(r.reconciledVia).toBe(input.reconciledVia);
+    expect(r).toBe(input); // same reference — no allocation when no-op
+  });
+  it("non-eBay (manual) entry → no-op even when both axes set", () => {
+    const r = tryFinalizeReconciliation({
+      ...manual(),
+      finalValueFee: 1, paymentProcessingFee: 1, promotedListingFee: 1,
+      adFee: 1, otherFees: 1, netPayout: 1, actualShippingCost: 1,
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+      needsReconciliation: true,
+    });
+    expect(r.needsReconciliation).toBe(true);
+  });
+  it("feeSource=manual_override → reconciledVia=manual_override", () => {
+    const r = tryFinalizeReconciliation({
+      ...ebayPending(),
+      finalValueFee: 32, paymentProcessingFee: 8, promotedListingFee: 0,
+      adFee: 0, otherFees: 0, netPayout: 210, actualShippingCost: 5,
+      feeSource: "manual_override",
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+    });
+    expect(r.reconciledVia).toBe("manual_override");
+  });
+});
+
+describe("deriveCostsStatus + listUnreconciled costsStatus + P&L exclusion (invariant a)", () => {
+  it("marker unset → 'needs_action'", () => {
+    expect(deriveCostsStatus(ebayPending())).toBe("needs_action");
+  });
+  it("marker set → 'saved_pending_fees'", () => {
+    expect(deriveCostsStatus({
+      ...ebayPending(),
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+    })).toBe("saved_pending_fees");
+  });
+  it("listUnreconciled surfaces both costsStatus buckets", () => {
+    const a = { ...ebayPending(), id: "a" }; // needs_action
+    const b = {
+      ...ebayPending(),
+      id: "b",
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+    };
+    const r = listUnreconciled([a, b]);
+    expect(r.entries.find((e) => e.id === "a")!.costsStatus).toBe("needs_action");
+    expect(r.entries.find((e) => e.id === "b")!.costsStatus).toBe("saved_pending_fees");
+  });
+  it("INVARIANT A — costs-saved-but-fees-pending entry is EXCLUDED from /pnl aggregation", () => {
+    // Costs saved (axis 2 ✓) but fees still null (axis 1 ✗) → needsReconciliation
+    // stays true → must NOT be folded into aggregatePnl totals.
+    const pending = {
+      ...ebayPending(),
+      gradingCost: 25,
+      suppliesCost: 2,
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+      userCostsProvidedBy: "u",
+      // fees still all null
+    };
+    const reconciled = ebayReconciled();
+    const pnl = aggregatePnl(
+      [pending, reconciled, manual()],
+      HOLDINGS,
+      { groupBy: "month" },
+    );
+    expect(pnl.excluded.unreconciledCount).toBe(1);
+    // Reconciled + manual entries contribute; pending one does NOT.
+    expect(pnl.totals.entryCount).toBe(2);
+    // Sanity: pending.grossProceeds (1000) did NOT enter totals.
+    expect(pnl.totals.grossProceeds).toBe(
+      reconciled.grossProceeds + manual().grossProceeds,
+    );
   });
 });

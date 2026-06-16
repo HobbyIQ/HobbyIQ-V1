@@ -9,6 +9,7 @@
 import { randomUUID } from "crypto";
 import {
   isReconciled,
+  tryFinalizeReconciliation,
   type LedgerEntryForErp,
 } from "./erpReconciliation.service.js";
 import type { LedgerFeeAdjustment, ReconciledVia } from "./portfolioStore.service.js";
@@ -150,7 +151,12 @@ export function applyFeeOverride(
     reconciledVia: entry.reconciledVia,
   };
 
-  const merged: LedgerEntryForErp = {
+  // CF-PR-E-TWO-AXIS-RECONCILIATION: write fees + feeSource provenance, then
+  // delegate finalize to tryFinalizeReconciliation. Override no longer
+  // unconditionally clears needsReconciliation — axis 2 (user costs) must
+  // also be addressed. Pre-Model-A this path hardcoded the flip; now an
+  // override on an entry without userCostsProvidedAt leaves the flag true.
+  const withFees: LedgerEntryForErp = {
     ...entry,
     finalValueFee: override.fees.finalValueFee !== undefined ? override.fees.finalValueFee : entry.finalValueFee ?? null,
     paymentProcessingFee: override.fees.paymentProcessingFee !== undefined ? override.fees.paymentProcessingFee : entry.paymentProcessingFee ?? null,
@@ -159,9 +165,9 @@ export function applyFeeOverride(
     otherFees: override.fees.otherFees !== undefined ? override.fees.otherFees : entry.otherFees ?? null,
     netPayout: override.fees.netPayout !== undefined ? override.fees.netPayout : entry.netPayout ?? null,
     actualShippingCost: override.fees.actualShippingCost !== undefined ? override.fees.actualShippingCost : entry.actualShippingCost ?? null,
-    needsReconciliation: false,
-    reconciledVia: "manual_override" as ReconciledVia,
+    feeSource: "manual_override" as ReconciledVia,
   };
+  const merged: LedgerEntryForErp = tryFinalizeReconciliation(withFees);
 
   const newValues: LedgerFeeAdjustment["newValues"] = {
     finalValueFee: merged.finalValueFee ?? null,
@@ -171,8 +177,8 @@ export function applyFeeOverride(
     otherFees: merged.otherFees ?? null,
     netPayout: merged.netPayout ?? null,
     actualShippingCost: merged.actualShippingCost ?? null,
-    needsReconciliation: false,
-    reconciledVia: "manual_override",
+    needsReconciliation: merged.needsReconciliation === true,
+    reconciledVia: merged.reconciledVia,
   };
 
   const adjustment: LedgerFeeAdjustment = {
@@ -249,7 +255,13 @@ export function applyFeeEnrichment(
     reconciledVia: entry.reconciledVia,
   };
 
-  const merged: LedgerEntryForErp = {
+  // CF-PR-E-TWO-AXIS-RECONCILIATION: write fees + feeSource, then delegate
+  // finalize to tryFinalizeReconciliation. Enrichment no longer
+  // unconditionally clears needsReconciliation — axis 2 (user costs) must
+  // also be addressed. An enrichment on an entry where the user hasn't yet
+  // saved costs writes the fees but leaves the flag true; the next
+  // save-costs call closes axis 2 and finalizes.
+  const withFees: LedgerEntryForErp = {
     ...entry,
     finalValueFee: enrichment.finalValueFee,
     paymentProcessingFee: enrichment.paymentProcessingFee,
@@ -258,9 +270,9 @@ export function applyFeeEnrichment(
     otherFees: enrichment.otherFees,
     netPayout: enrichment.netPayout,
     actualShippingCost: enrichment.actualShippingCost,
-    needsReconciliation: false,
-    reconciledVia: "ebay_finances" as ReconciledVia,
+    feeSource: "ebay_finances" as ReconciledVia,
   };
+  const merged: LedgerEntryForErp = tryFinalizeReconciliation(withFees);
 
   const newValues: LedgerFeeAdjustment["newValues"] = {
     finalValueFee: merged.finalValueFee ?? null,
@@ -270,8 +282,8 @@ export function applyFeeEnrichment(
     otherFees: merged.otherFees ?? null,
     netPayout: merged.netPayout ?? null,
     actualShippingCost: merged.actualShippingCost ?? null,
-    needsReconciliation: false,
-    reconciledVia: "ebay_finances",
+    needsReconciliation: merged.needsReconciliation === true,
+    reconciledVia: merged.reconciledVia,
   };
 
   const adjustment: LedgerFeeAdjustment = {
@@ -279,6 +291,132 @@ export function applyFeeEnrichment(
     adjustedAt: nowIso,
     adjustedBy: ENRICHMENT_ADJUSTED_BY,
     reason: ENRICHMENT_REASON,
+    priorValues: prior,
+    newValues,
+  };
+
+  merged.feeAdjustments = [...(entry.feeAdjustments ?? []), adjustment];
+
+  return { entry: merged, adjustment };
+}
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): save-costs ──────────────
+//
+// User-supplied gradingCost / suppliesCost. Sets userCostsProvidedAt +
+// userCostsProvidedBy (axis-2 marker). Costs themselves persist in the
+// existing gradingCost / suppliesCost fields. Pure function — caller
+// persists and is responsible for re-running computeLedgerFinancials.
+
+export interface ValidatedSaveCosts {
+  gradingCost?: number | null;
+  suppliesCost?: number | null;
+}
+
+export function validateSaveCosts(body: unknown):
+  | { ok: ValidatedSaveCosts }
+  | { error: string; code: string } {
+  if (!body || typeof body !== "object") {
+    return { error: "body must be an object", code: "INVALID_VALUE" };
+  }
+  const b = body as Record<string, unknown>;
+  const out: ValidatedSaveCosts = {};
+  let anyProvided = false;
+  for (const k of ["gradingCost", "suppliesCost"] as const) {
+    if (!(k in b)) continue;
+    anyProvided = true;
+    const raw = b[k];
+    if (raw === null) { out[k] = null; continue; }
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) {
+      return {
+        error: `${k} must be a non-negative number or null`,
+        code: "INVALID_VALUE",
+      };
+    }
+    out[k] = n;
+  }
+  if (!anyProvided) {
+    return {
+      error: "body must include gradingCost and/or suppliesCost",
+      code: "MISSING_BODY",
+    };
+  }
+  return { ok: out };
+}
+
+export interface AppliedSaveCosts {
+  entry: LedgerEntryForErp;
+  adjustment: LedgerFeeAdjustment;
+}
+
+const SAVE_COSTS_REASON = "User-provided cost basis";
+
+/**
+ * Apply user-provided cost basis to an UNRECONCILED eBay entry. Sets the
+ * axis-2 marker (userCostsProvidedAt + userCostsProvidedBy), persists costs,
+ * appends an audit row, and runs tryFinalizeReconciliation. If axis 1
+ * (fees) is also satisfied the entry finalizes; otherwise it stays flagged
+ * and costsStatus flips to "saved_pending_fees".
+ *
+ * Caller MUST re-run computeLedgerFinancials and persist. Idempotent
+ * re-save while still flagged: each call refreshes the marker timestamp and
+ * appends a fresh audit row. Once finalized the route returns 409 instead
+ * of calling this helper again.
+ *
+ * Pure function. Throws nothing.
+ */
+export function applySaveCosts(
+  entry: LedgerEntryForErp,
+  costs: ValidatedSaveCosts,
+  userId: string,
+  nowIso: string = new Date().toISOString(),
+): AppliedSaveCosts {
+  const prior: LedgerFeeAdjustment["priorValues"] = {
+    finalValueFee: entry.finalValueFee ?? null,
+    paymentProcessingFee: entry.paymentProcessingFee ?? null,
+    promotedListingFee: entry.promotedListingFee ?? null,
+    adFee: entry.adFee ?? null,
+    otherFees: entry.otherFees ?? null,
+    netPayout: entry.netPayout ?? null,
+    actualShippingCost: entry.actualShippingCost ?? null,
+    needsReconciliation: entry.needsReconciliation === true,
+    reconciledVia: entry.reconciledVia,
+    gradingCost: entry.gradingCost ?? null,
+    suppliesCost: entry.suppliesCost ?? null,
+    userCostsProvidedAt: entry.userCostsProvidedAt ?? null,
+  };
+
+  // Partial-update semantics: only overwrite fields actually present in the
+  // validated body (matches the override path).
+  const withCosts: LedgerEntryForErp = {
+    ...entry,
+    gradingCost: "gradingCost" in costs ? costs.gradingCost ?? null : entry.gradingCost ?? null,
+    suppliesCost: "suppliesCost" in costs ? costs.suppliesCost ?? null : entry.suppliesCost ?? null,
+    userCostsProvidedAt: nowIso,
+    userCostsProvidedBy: userId,
+  };
+  const merged: LedgerEntryForErp = tryFinalizeReconciliation(withCosts);
+
+  const newValues: LedgerFeeAdjustment["newValues"] = {
+    finalValueFee: merged.finalValueFee ?? null,
+    paymentProcessingFee: merged.paymentProcessingFee ?? null,
+    promotedListingFee: merged.promotedListingFee ?? null,
+    adFee: merged.adFee ?? null,
+    otherFees: merged.otherFees ?? null,
+    netPayout: merged.netPayout ?? null,
+    actualShippingCost: merged.actualShippingCost ?? null,
+    needsReconciliation: merged.needsReconciliation === true,
+    reconciledVia: merged.reconciledVia,
+    gradingCost: merged.gradingCost ?? null,
+    suppliesCost: merged.suppliesCost ?? null,
+    userCostsProvidedAt: merged.userCostsProvidedAt ?? null,
+  };
+
+  const adjustment: LedgerFeeAdjustment = {
+    adjustmentId: randomUUID(),
+    adjustedAt: nowIso,
+    adjustedBy: userId,
+    reason: SAVE_COSTS_REASON,
     priorValues: prior,
     newValues,
   };

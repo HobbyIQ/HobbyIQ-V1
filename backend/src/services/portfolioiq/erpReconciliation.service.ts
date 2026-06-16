@@ -71,6 +71,13 @@ export interface LedgerEntryForErp {
   dismissedAt?: string | null;
   dismissedReason?: string | null;
 
+  // CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): axis-2 marker. See
+  // PortfolioLedgerEntry for full semantics. Optional so legacy entries
+  // without the marker still load.
+  userCostsProvidedAt?: string | null;
+  userCostsProvidedBy?: string | null;
+  feeSource?: ReconciledVia;
+
   // CF-ERP-EXPANSION-#1 sales-tracking
   salesChannel?: SalesChannel;
   channelNote?: string;
@@ -119,6 +126,66 @@ export function isReconciled(entry: LedgerEntryForErp): boolean {
   return entry.needsReconciliation !== true;
 }
 
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16) ──────────────────────────
+//
+// Model A: an eBay entry is REconciled (needsReconciliation=false, folded
+// into /pnl + /tax-export) only when BOTH axes are satisfied:
+//   axis 1 — FEES: all 7 granular fee fields non-null (Finances enrichment
+//                  OR a manual override has supplied them)
+//   axis 2 — USER COSTS: userCostsProvidedAt is set (the ACTION of saving,
+//                        even with both values 0, counts as addressed)
+//
+// tryFinalizeReconciliation is called by all four mutation paths:
+//   applyFeeEnrichment, applyFeeOverride, applySaveCosts, updateLedgerEntry
+// Lives in this module (not erpAgingOverride) to avoid a runtime circular
+// dependency — portfolioStore.service.ts (PATCH path) also needs to call
+// it, and erpReconciliation only imports TYPES from portfolioStore so this
+// direction stays cycle-free.
+
+/**
+ * Axis-1 predicate. Mirrors markHoldingSoldFromEbay's allGranularKnown check
+ * at portfolioStore.service.ts:2813. Treats `null` as unknown; `0` as known.
+ */
+export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
+  return e.finalValueFee != null
+    && e.paymentProcessingFee != null
+    && e.promotedListingFee != null
+    && e.adFee != null
+    && e.otherFees != null
+    && e.netPayout != null
+    && e.actualShippingCost != null;
+}
+
+/**
+ * Two-axis finalize. Returns the entry mutated to needsReconciliation=false
+ * + reconciledVia derived from feeSource IFF both axes are satisfied.
+ *
+ * Otherwise returns entry unchanged. Idempotent: an already-finalized entry
+ * (needsReconciliation !== true) is returned as-is. Non-eBay entries are
+ * returned as-is.
+ *
+ * Pure function. Caller persists.
+ */
+export function tryFinalizeReconciliation(
+  entry: LedgerEntryForErp,
+): LedgerEntryForErp {
+  if (entry.source !== "ebay") return entry;
+  if (entry.needsReconciliation !== true) return entry;
+  if (!allGranularFeesKnown(entry)) return entry;
+  if (!entry.userCostsProvidedAt) return entry;
+  // Both axes met. Derive reconciledVia from the fee provenance marker.
+  // feeSource is set by applyFeeEnrichment / applyFeeOverride when they
+  // write fees. Absent feeSource — unusual but possible if a future path
+  // writes fees without setting it — falls back to "ebay_finances" since
+  // the Finances API is the canonical fees source.
+  const via: ReconciledVia = entry.feeSource ?? "ebay_finances";
+  return {
+    ...entry,
+    needsReconciliation: false,
+    reconciledVia: via,
+  };
+}
+
 /**
  * For unreconciled entries, surface which granular fee fields are NULL so
  * the iOS UX can show the user a precise to-do list per row.
@@ -155,8 +222,22 @@ function inWindow(soldAtIso: string, fromIso: string | null, toIso: string | nul
 
 // ─── Unreconciled listing ───────────────────────────────────────────────────
 
+/**
+ * CF-PR-E-TWO-AXIS-RECONCILIATION: derived UI bucket for iOS.
+ *   "needs_action"      — userCostsProvidedAt unset; show the "add cost basis" CTA.
+ *   "saved_pending_fees" — user has addressed cost basis; row is quieted to
+ *                           "fees pending" while Finances enrichment is in flight.
+ * Finalized entries are excluded from /unreconciled by definition.
+ */
+export type CostsStatus = "needs_action" | "saved_pending_fees";
+
 export interface UnreconciledEntry extends LedgerEntryForErp {
   missingFields: string[];
+  costsStatus: CostsStatus;
+}
+
+export function deriveCostsStatus(entry: LedgerEntryForErp): CostsStatus {
+  return entry.userCostsProvidedAt ? "saved_pending_fees" : "needs_action";
 }
 
 export interface UnreconciledListResult {
@@ -175,7 +256,11 @@ export function listUnreconciled(entries: ReadonlyArray<LedgerEntryForErp>): Unr
     entries: active
       .slice()
       .sort((a, b) => a.soldAt.localeCompare(b.soldAt))
-      .map((e) => ({ ...e, missingFields: missingFeeFields(e) })),
+      .map((e) => ({
+        ...e,
+        missingFields: missingFeeFields(e),
+        costsStatus: deriveCostsStatus(e),
+      })),
     counts: { unreconciledTotal: flagged.length, dismissedHidden },
   };
 }

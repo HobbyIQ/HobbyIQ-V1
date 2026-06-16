@@ -6,6 +6,102 @@
 
 ---
 
+## 2026-06-16 — CF-PR-E-TWO-AXIS-RECONCILIATION (Model A, shipped)
+
+SHIPPED: two-axis reconciliation. An eBay ledger entry is now REconciled (`needsReconciliation=false`, folded into `/pnl` + `/tax-export`) ONLY when BOTH axes are satisfied:
+- **axis 1 — fees**: all 7 granular fee fields non-null (Finances enrichment OR manual override has supplied them)
+- **axis 2 — user costs**: `userCostsProvidedAt` is set (the ACTION of saving, even with both values 0, counts as addressed)
+
+Either axis can complete first; whichever finishes second triggers finalize.
+
+### New backend route
+
+```
+POST /api/portfolio/erp/unreconciled/:id/save-costs
+auth: session + requireEntitlement("erpReconciliation")
+body: {
+  gradingCost?: number | null,   // non-negative or null; 0 allowed
+  suppliesCost?: number | null,  // non-negative or null; 0 allowed
+}                                 // at least one of the two required
+
+200 → { success, entry, adjustment }
+400 → { error, code: "INVALID_VALUE" | "MISSING_BODY" | "NOT_EBAY_ENTRY" }
+404 → { error: "Entry not found" }
+409 → { error: "Entry already finalized — costs locked", code: "ALREADY_FINALIZED" }
+```
+
+Persists costs, sets `userCostsProvidedAt` + `userCostsProvidedBy`, appends a `feeAdjustments[]` audit row (`reason: "User-provided cost basis"`), recomputes provisional gain (null fees → 0 → overstated until enrichment), runs `tryFinalizeReconciliation`. Idempotent re-save while still flagged: refreshes the marker timestamp and appends a fresh audit row.
+
+### Single shared finalize helper
+
+`tryFinalizeReconciliation(entry)` lives in `erpReconciliation.service.ts` (NOT `erpAgingOverride`) to avoid a runtime circular dependency — `portfolioStore.service.ts` (PATCH path) also imports it; `erpReconciliation` only imports types from `portfolioStore`, so this direction stays cycle-free. Called by all four mutation paths: `applySaveCosts`, `applyFeeOverride`, `applyFeeEnrichment`, `updateLedgerEntry` (PATCH).
+
+Pure function. Returns entry mutated to `needsReconciliation=false` + `reconciledVia` derived from `feeSource` IFF both axes met; otherwise returns input unchanged.
+
+### feeSource provenance (new field on the entry)
+
+`feeSource: "ebay_finances" | "manual_override"` — set by `applyFeeEnrichment` and `applyFeeOverride` when they write fees. `tryFinalizeReconciliation` DERIVES `reconciledVia` from `feeSource` at the moment of finalize. Reuses existing `ReconciledVia` enum values (no new enum members).
+
+**Why it matters:** without provenance, the `override → save-costs` ordering would mis-attribute fees as `ebay_finances` (because the save-costs path doesn't know who supplied the fees). With `feeSource`, finalize records `reconciledVia="manual_override"` on that ordering. The cascade synthetic E2E test pins this invariant.
+
+### Behavior change called out
+
+`applyFeeOverride` no longer unilaterally clears `needsReconciliation`. Pre-Model-A: override hardcoded `needsReconciliation=false` + `reconciledVia="manual_override"` regardless of cost-basis state. Post-Model-A: override writes fees + sets `feeSource="manual_override"` + calls `tryFinalizeReconciliation`. The flag clears ONLY if `userCostsProvidedAt` is already set. Same shape for `applyFeeEnrichment` (was hardcoded `"ebay_finances"`; now two-axis).
+
+**Override-only is no longer a finalize.** A user who manually overrides fees still has to address cost basis (via save-costs OR PATCH gradingCost/suppliesCost) for the entry to leave the unreconciled pool. Escape hatch for raw-card sales: `save-costs` with `gradingCost: 0` (or any zero combo) counts as the axis-2 action — value-agnostic, only the ACTION matters.
+
+### Audit-row `LedgerFeeAdjustment` extensions
+
+`priorValues` / `newValues` now allow `reconciledVia: ReconciledVia | undefined` (was strictly defined) and carry optional `gradingCost` / `suppliesCost` / `userCostsProvidedAt` so save-costs audit rows look distinct from fee-override rows. Audit row records the ACTUAL post-state of the entry — under Model A, `newValues.needsReconciliation` may be `true` (when one axis incomplete) and `newValues.reconciledVia` may be `undefined`.
+
+### PATCH `/api/portfolio/ledger/:id` — server-derived finalize
+
+PATCH whitelist still REJECTS client-supplied `needsReconciliation` (smuggle protection at `portfolio.ledger.patch.test.ts:288` stays green). When PATCH touches `gradingCost`/`suppliesCost` on an UNRECONCILED eBay entry, the route SERVER-DERIVES the marker + finalize — so `iOS` can PATCH costs without knowing about the save-costs route, and the two paths produce identical state. Already-finalized entries get cost edits without any marker re-stamp (historical-correction path untouched).
+
+### `/unreconciled` response — new fields per entry
+
+```
+userCostsProvidedAt: string | null    // ISO timestamp; null if unset
+userCostsProvidedBy: string | null    // userId
+feeSource: "ebay_finances" | "manual_override" | undefined
+costsStatus: "needs_action" | "saved_pending_fees"   // derived for iOS UX
+missingFields: string[]               // existing
+```
+
+`costsStatus` lets the iOS UI render two visual buckets without client-side null checks. `saved_pending_fees` iff `userCostsProvidedAt` is set; otherwise `needs_action`. Finalized entries are excluded from `/unreconciled` by definition.
+
+### `reconciledVia` vs `feeSource` semantics
+
+- **`feeSource`**: provenance of the GRANULAR FEES on the entry. Set when fees are written. Lifetime: set once when fees first land, persists across subsequent edits unless a later override re-writes fees (in which case it flips). Records "who knew the fees first."
+- **`reconciledVia`**: undefined until finalize; on finalize, derived from `feeSource`. Once set, stays set (finalize is one-way under Model A — historical corrections via PATCH/override don't re-write it). Records "what the entry's final attribution looks like in reporting / for CPA."
+
+Different concepts. Don't conflate. Override on an already-finalized entry flips `feeSource` to `manual_override` (audit-trail truth) but leaves `reconciledVia` as its original value (the original truth) — fixing this kind of historical attribution is a separate concern from finalize semantics, intentionally out of scope.
+
+### Files
+
+Code:
+- `backend/src/services/portfolioiq/erpReconciliation.service.ts` — added `tryFinalizeReconciliation`, `allGranularFeesKnown`, `deriveCostsStatus`, `CostsStatus`, `costsStatus` on `UnreconciledEntry`, new fields on `LedgerEntryForErp`
+- `backend/src/services/portfolioiq/erpAgingOverride.service.ts` — added `applySaveCosts`, `validateSaveCosts`; rewired `applyFeeOverride` + `applyFeeEnrichment` to call `tryFinalizeReconciliation` + set `feeSource`
+- `backend/src/services/portfolioiq/portfolioStore.service.ts` — new fields on `PortfolioLedgerEntry`, extended `LedgerFeeAdjustment.priorValues`/`newValues`, wired PATCH `updateLedgerEntry` to set marker + finalize on cost-touching writes to unreconciled eBay entries
+- `backend/src/routes/portfolioiq.erp.routes.ts` — new `POST /unreconciled/:id/save-costs` route
+
+Tests (suite 2426 → 2460, +34 net new):
+- `backend/tests/erpReconciliation.service.test.ts` — `tryFinalizeReconciliation` truth-table, `allGranularFeesKnown`, `deriveCostsStatus`, listUnreconciled `costsStatus` exposure, P&L exclusion invariant
+- `backend/tests/erpAgingOverride.test.ts` — without-marker variant; revised "transitions" test under Model A
+- `backend/tests/applyFeeEnrichment.test.ts` — without-marker variant; via-attribution tests (enrichment→save, override→save) + import of `tryFinalizeReconciliation`
+- `backend/tests/erpExpansion.routes.test.ts` — full save-costs route coverage (10 tests), PATCH server-derived finalize (4 tests incl. smuggle), `/unreconciled` field exposure
+- `backend/tests/ebayCascadeSynthetic.test.ts` — extended to model realistic ITEM_SOLD → override → save-costs → finalize flow with via-attribution
+- `backend/tests/ebayFinancesEnrichmentJob.test.ts` — seeded marker on the active-mode finalize test
+
+### What did NOT change
+
+- PATCH `/ledger/:id` whitelist: smuggle test green, no new whitelist members
+- Override route body shape: still fees-only
+- `ReconciledVia` enum: no new members (`feeSource` reuses the existing values)
+- Manual sales (`source !== "ebay"`): no behavior change
+
+---
+
 ## 2026-06-16 — D.6 backlog park, searchCatalog gotchas, prospect-search clarification
 
 ### PR D.6 — PARKED (no draftable backend work)

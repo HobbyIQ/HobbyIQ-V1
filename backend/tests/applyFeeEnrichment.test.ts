@@ -8,7 +8,10 @@ import {
   type FeeEnrichmentInput,
 } from "../src/services/portfolioiq/erpAgingOverride.service";
 import { computeLedgerFinancials } from "../src/services/portfolioiq/portfolioStore.service";
-import type { LedgerEntryForErp } from "../src/services/portfolioiq/erpReconciliation.service";
+import {
+  tryFinalizeReconciliation,
+  type LedgerEntryForErp,
+} from "../src/services/portfolioiq/erpReconciliation.service";
 
 function makeUnreconciledEbayEntry(
   over: Partial<LedgerEntryForErp> = {},
@@ -47,8 +50,14 @@ function makeUnreconciledEbayEntry(
 }
 
 describe("applyFeeEnrichment — fee application + audit row", () => {
-  it("applies all 7 fees, sets needsReconciliation=false, reconciledVia='ebay_finances'", () => {
-    const entry = makeUnreconciledEbayEntry();
+  it("applies all 7 fees, sets needsReconciliation=false, reconciledVia='ebay_finances' (axis-2 marker present)", () => {
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: under Model A, enrichment only
+    // finalizes when both axes are met. Seed the axis-2 marker so this test
+    // exercises the finalize path; the without-marker variant is below.
+    const entry = makeUnreconciledEbayEntry({
+      userCostsProvidedAt: "2026-06-03T12:00:00Z",
+      userCostsProvidedBy: "u-1",
+    });
     const enrichment: FeeEnrichmentInput = {
       finalValueFee: 32,
       paymentProcessingFee: 8,
@@ -122,6 +131,96 @@ describe("applyFeeEnrichment — fee application + audit row", () => {
     //   210 - 25 (grading) - 3 (supplies) = 182
     expect(financials.netProceeds).toBe(182);
     expect(financials.realizedProfitLoss).toBe(182 - 80);
+  });
+
+  // CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16)
+  it("does NOT finalize when axis-2 marker absent — fees applied, flag stays true, feeSource=ebay_finances", () => {
+    const entry = makeUnreconciledEbayEntry(); // no userCostsProvidedAt
+    const { entry: enriched, adjustment } = applyFeeEnrichment(entry, {
+      finalValueFee: 32, paymentProcessingFee: 8, promotedListingFee: 0,
+      adFee: 0, otherFees: 0, netPayout: 208.5, actualShippingCost: 5,
+    });
+    expect(enriched.needsReconciliation).toBe(true);
+    expect(enriched.reconciledVia).toBeUndefined();
+    expect(enriched.feeSource).toBe("ebay_finances");
+    expect(enriched.finalValueFee).toBe(32);
+    // Audit row reflects the actual post-state.
+    expect(adjustment.newValues.needsReconciliation).toBe(true);
+    expect(adjustment.newValues.reconciledVia).toBeUndefined();
+  });
+
+  it("via-attribution: override→enrichment finalizes as ebay_finances (last writer wins on feeSource)", () => {
+    // User override supplied fees first (feeSource=manual_override), then
+    // later Finances enrichment supplies authoritative fees and stamps
+    // feeSource=ebay_finances. Marker was set in between. Finalize derives
+    // reconciledVia from the final feeSource.
+    const seeded = makeUnreconciledEbayEntry({
+      userCostsProvidedAt: "2026-06-03T12:00:00Z",
+      userCostsProvidedBy: "u-1",
+    });
+    const { entry: afterOverride } = applyFeeOverride(
+      seeded,
+      {
+        fees: {
+          finalValueFee: 30, paymentProcessingFee: 7, promotedListingFee: 0,
+          adFee: 0, otherFees: 0, netPayout: 208, actualShippingCost: 5,
+        },
+        reason: "user receipt",
+      },
+      "u-1",
+    );
+    // Override already finalizes (both axes met) → reconciledVia=manual_override.
+    expect(afterOverride.needsReconciliation).toBe(false);
+    expect(afterOverride.reconciledVia).toBe("manual_override");
+    // (Override on an already-finalized entry would be a no-op for finalize
+    // — testing the override-FIRST ordering separately below.)
+  });
+
+  it("via-attribution: enrichment→save-costs finalizes as ebay_finances", () => {
+    const entry = makeUnreconciledEbayEntry(); // no marker
+    const { entry: afterEnrichment } = applyFeeEnrichment(entry, {
+      finalValueFee: 32, paymentProcessingFee: 8, promotedListingFee: 0,
+      adFee: 0, otherFees: 0, netPayout: 208.5, actualShippingCost: 5,
+    });
+    expect(afterEnrichment.needsReconciliation).toBe(true);
+    expect(afterEnrichment.feeSource).toBe("ebay_finances");
+    // Now simulate save-costs setting axis 2 + calling tryFinalizeReconciliation.
+    const withMarker = {
+      ...afterEnrichment,
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+      userCostsProvidedBy: "u-1",
+    };
+    const finalized = tryFinalizeReconciliation(withMarker);
+    expect(finalized.needsReconciliation).toBe(false);
+    expect(finalized.reconciledVia).toBe("ebay_finances");
+  });
+
+  it("via-attribution: override→save-costs finalizes as manual_override (NOT ebay_finances)", () => {
+    // The critical invariant from the brief: the save-costs finalize path
+    // must NOT mis-attribute fees as ebay_finances when the user supplied
+    // them via override. feeSource provenance prevents this.
+    const entry = makeUnreconciledEbayEntry(); // no marker
+    const { entry: afterOverride } = applyFeeOverride(
+      entry,
+      {
+        fees: {
+          finalValueFee: 30, paymentProcessingFee: 7, promotedListingFee: 0,
+          adFee: 0, otherFees: 0, netPayout: 208, actualShippingCost: 5,
+        },
+        reason: "user override",
+      },
+      "u-1",
+    );
+    expect(afterOverride.needsReconciliation).toBe(true);
+    expect(afterOverride.feeSource).toBe("manual_override");
+    const withMarker = {
+      ...afterOverride,
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",
+      userCostsProvidedBy: "u-1",
+    };
+    const finalized = tryFinalizeReconciliation(withMarker);
+    expect(finalized.needsReconciliation).toBe(false);
+    expect(finalized.reconciledVia).toBe("manual_override");
   });
 
   it("appends a NEW feeAdjustments[] row; never overwrites existing audit history", () => {

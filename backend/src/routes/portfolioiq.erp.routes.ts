@@ -79,8 +79,10 @@ import {
 } from "../repositories/portfolioExpenses.repository.js";
 import {
   applyFeeOverride,
+  applySaveCosts,
   buildAging,
   validateFeeOverride,
+  validateSaveCosts,
 } from "../services/portfolioiq/erpAgingOverride.service.js";
 import { computeLedgerFinancials } from "../services/portfolioiq/portfolioStore.service.js";
 
@@ -554,6 +556,91 @@ router.post("/unreconciled/:id/override", async (req: Request, res: Response) =>
   } catch (err: any) {
     console.error("[portfolio.erp] /unreconciled/:id/override failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to apply override" });
+  }
+});
+
+// ─── CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): save-costs ──────────────
+//
+// POST /api/portfolio/erp/unreconciled/:id/save-costs
+// Body: { gradingCost?: number|null, suppliesCost?: number|null }
+// Either or both fields required; non-negative or null; 0 allowed (raw card).
+//
+// Sets axis-2 marker (userCostsProvidedAt / userCostsProvidedBy), persists
+// costs, recomputes provisional financials (null fees → 0), appends a
+// feeAdjustments audit row, runs tryFinalizeReconciliation (finalizes only
+// if axis 1 fees also satisfied). 409 if entry is already finalized.
+
+router.post("/unreconciled/:id/save-costs", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+
+    const validated = validateSaveCosts(req.body);
+    if ("error" in validated) {
+      return res.status(400).json({
+        success: false,
+        error: validated.error,
+        code: validated.code,
+      });
+    }
+
+    const doc = await readUserDoc(userId);
+    const idx = doc.ledger.findIndex((e) => e.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Entry not found" });
+
+    const before = doc.ledger[idx] as unknown as LedgerEntryForErp;
+    if (before.source !== "ebay") {
+      return res.status(400).json({
+        success: false,
+        error: "save-costs applies only to eBay entries; use PATCH /ledger/:id for manual entries",
+        code: "NOT_EBAY_ENTRY",
+      });
+    }
+    if (before.needsReconciliation !== true) {
+      return res.status(409).json({
+        success: false,
+        error: "Entry already finalized — costs locked",
+        code: "ALREADY_FINALIZED",
+      });
+    }
+
+    const { entry: afterCosts, adjustment } = applySaveCosts(before, validated.ok, userId);
+
+    // Recompute provisional financials. Null fees coerce to 0 in the sum —
+    // overstated until Finances enrichment lands. Identical formula shape to
+    // /override so the two paths stay in lockstep.
+    const granularSum =
+      (afterCosts.finalValueFee ?? 0)
+      + (afterCosts.paymentProcessingFee ?? 0)
+      + (afterCosts.promotedListingFee ?? 0)
+      + (afterCosts.adFee ?? 0)
+      + (afterCosts.otherFees ?? 0)
+      + (afterCosts.actualShippingCost ?? 0);
+    const financials = computeLedgerFinancials({
+      grossProceeds: afterCosts.grossProceeds,
+      feesTotal: granularSum,
+      tax: 0,
+      shipping: 0,
+      gradingCost: afterCosts.gradingCost ?? null,
+      suppliesCost: afterCosts.suppliesCost ?? null,
+      costBasisSold: afterCosts.costBasisSold,
+      netPayoutOverride: afterCosts.netPayout ?? null,
+    });
+
+    const finalEntry = {
+      ...afterCosts,
+      netProceeds: financials.netProceeds,
+      realizedProfitLoss: financials.realizedProfitLoss,
+      realizedProfitLossPct: financials.realizedProfitLossPct,
+    };
+    doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
+    await writeUserDoc(userId, doc);
+
+    res.json({ success: true, entry: finalEntry, adjustment });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/:id/save-costs failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to save costs" });
   }
 });
 

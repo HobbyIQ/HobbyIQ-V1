@@ -72,6 +72,7 @@ function ebayEntry(opts: {
   orderId?: string;
   gross?: number;
   costBasis?: number;
+  userCostsProvidedAt?: string;
 }): any {
   return {
     id: opts.id,
@@ -98,6 +99,11 @@ function ebayEntry(opts: {
     suppliesCost: null,
     gradingCost: null,
     needsReconciliation: opts.needsRec ?? true,
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: optional axis-2 marker. Tests that
+    // expect enrichment to finalize must seed this; without it the entry
+    // stays flagged with fees applied (the new Model A invariant).
+    userCostsProvidedAt: opts.userCostsProvidedAt,
+    userCostsProvidedBy: opts.userCostsProvidedAt ? "u-1" : undefined,
   };
 }
 
@@ -252,9 +258,14 @@ describe("ebayFinancesEnrichment.job — ACTIVE mode (shadow=false)", () => {
   it("persists the enrichment + reconciledVia='ebay_finances' + recomputes netProceeds via netPayout-authoritative formula", async () => {
     process.env.EBAY_FINANCES_ENRICHMENT_SHADOW = "false";
 
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: seed userCostsProvidedAt so axis 2
+    // is met; enrichment then satisfies axis 1 and the entry finalizes.
     userDocs.set("u-1", {
       ledger: [
-        ebayEntry({ id: "e-1", ageDays: 30, gross: 250, costBasis: 80 }),
+        ebayEntry({
+          id: "e-1", ageDays: 30, gross: 250, costBasis: 80,
+          userCostsProvidedAt: "2026-05-15T00:00:00Z",
+        }),
       ],
       holdings: {},
     });

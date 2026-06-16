@@ -13,6 +13,10 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+import {
+  tryFinalizeReconciliation,
+  type LedgerEntryForErp,
+} from "./erpReconciliation.service.js";
 
 // ─── Cosmos DB client (lazy init) ─────────────────────────────────────────────
 import { CosmosClient, Container } from "@azure/cosmos";
@@ -366,10 +370,29 @@ interface PortfolioLedgerEntry {
   suppliesCost?: number | null;
   gradingCost?: number | null;
 
-  // True when the recorded netProceeds is incomplete: at least one granular
-  // fee is null AND eBay did not provide an authoritative netPayout. The
-  // reconciliation pass should re-fetch the order and update this entry.
+  // True when the entry is not yet REconciled across BOTH axes:
+  //   axis 1 — eBay fees: all 7 granular fee fields non-null
+  //   axis 2 — user costs: userCostsProvidedAt is set (the ACTION of saving,
+  //            even with zero values, counts as addressed)
+  // Cleared only by tryFinalizeReconciliation when both axes are satisfied.
+  // While true, the entry is EXCLUDED from /pnl + /tax-export totals.
   needsReconciliation?: boolean;
+
+  // CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): marker set by save-costs
+  // route AND by updateLedgerEntry (PATCH) when the user supplies grading or
+  // supplies cost on an unreconciled eBay entry. The TIMESTAMP records the
+  // action; the VALUES live in gradingCost / suppliesCost. Independent of
+  // dismissedAt (UI-quieting) and of feeSource (provenance of fees).
+  userCostsProvidedAt?: string | null;
+  userCostsProvidedBy?: string | null;
+
+  // CF-PR-E-TWO-AXIS-RECONCILIATION: provenance of the GRANULAR FEES on this
+  // entry. Set by applyFeeEnrichment ("ebay_finances") and applyFeeOverride
+  // ("manual_override"). tryFinalizeReconciliation reads this when both axes
+  // are met and DERIVES reconciledVia from it — so override-then-save-costs
+  // finalizes with reconciledVia="manual_override" (not "ebay_finances").
+  // Reuses ReconciledVia enum values; no new enum members.
+  feeSource?: ReconciledVia;
 
   // ----- User-dismissal of reconciliation prompts (CF-PR-E-BACKEND-ENDPOINTS) -
   // dismissedAt is a separate user signal from needsReconciliation: the
@@ -470,6 +493,9 @@ export interface LedgerFeeAdjustment {
     actualShippingCost: number | null;
     needsReconciliation: boolean;
     reconciledVia: ReconciledVia | undefined;
+    gradingCost?: number | null;
+    suppliesCost?: number | null;
+    userCostsProvidedAt?: string | null;
   };
   newValues: {
     finalValueFee: number | null;
@@ -479,8 +505,18 @@ export interface LedgerFeeAdjustment {
     otherFees: number | null;
     netPayout: number | null;
     actualShippingCost: number | null;
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: under Model A, a fee-write may NOT
+    // finalize (if user costs haven't been addressed). The audit row records
+    // the actual post-state — needsReconciliation can stay true, and
+    // reconciledVia stays undefined until both axes are met.
     needsReconciliation: boolean;
-    reconciledVia: ReconciledVia;
+    reconciledVia: ReconciledVia | undefined;
+    // CF-PR-E-TWO-AXIS-RECONCILIATION: cost-touching writes (save-costs +
+    // PATCH) emit audit rows too — these fields record the cost mutation.
+    // Optional so existing fee-only adjustment shapes stay valid.
+    gradingCost?: number | null;
+    suppliesCost?: number | null;
+    userCostsProvidedAt?: string | null;
   };
 }
 
@@ -2062,6 +2098,33 @@ export async function updateLedgerEntry(req: Request, res: Response) {
       realizedProfitLoss: financials.realizedProfitLoss,
       realizedProfitLossPct: financials.realizedProfitLossPct,
     };
+  }
+
+  // CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): cost-touching PATCH on an
+  // UNRECONCILED eBay entry sets the axis-2 marker and runs the shared
+  // finalize helper — so a user who edits cost basis via PATCH (instead of
+  // the dedicated save-costs route) gets the same two-axis semantics.
+  //
+  // The PATCH whitelist still rejects client-supplied needsReconciliation
+  // (smuggle protection — portfolio.ledger.patch.test.ts:288). This is a
+  // SERVER-DERIVED flag transition, not a smuggled value.
+  //
+  // Finalized entries (needsReconciliation !== true) get cost edits without
+  // any marker re-write — historical-correction path stays untouched.
+  if (
+    financialsAffected
+    && existing.source === "ebay"
+    && existing.needsReconciliation === true
+  ) {
+    const nowIso = new Date().toISOString();
+    updated = {
+      ...updated,
+      userCostsProvidedAt: nowIso,
+      userCostsProvidedBy: auth.userId,
+    };
+    updated = tryFinalizeReconciliation(
+      updated as unknown as LedgerEntryForErp,
+    ) as unknown as PortfolioLedgerEntry;
   }
 
   doc.ledger[index] = updated;
