@@ -100,6 +100,30 @@ Tests (suite 2426 → 2460, +34 net new):
 - `ReconciledVia` enum: no new members (`feeSource` reuses the existing values)
 - Manual sales (`source !== "ebay"`): no behavior change
 
+### Deploy + live verification (2026-06-16)
+
+Code SHA `385906f` deployed via `node zip.js` + `scripts/deploy-with-build-info.ps1`. Kudu deployment_id `468507ec-d24c-46db-8e59-6ac91b0968ef`, SUCCESS at 15s. `/api/health` reports `shaShort=385906f`, `shaFromCodeShort=385906f` (dist-swap verified, not just env-var). Suite 2426 → 2460 (+34) pre-deploy.
+
+Fixture smoke (`C:/tmp/two-axis-smoke.cjs`) exercised all four finalize orderings via the deployed dist in-process:
+
+| scenario | result |
+|---|---|
+| save-costs → enrichment | flag stays true after save-costs (costsStatus="saved_pending_fees", excluded from /pnl); finalizes on enrichment; reconciledVia="ebay_finances" |
+| enrichment → save-costs (reverse) | flag stays true after enrichment (costsStatus="needs_action"); finalizes on save-costs; reconciledVia="ebay_finances" |
+| override → save-costs (via-attribution) | reconciledVia="manual_override" (NOT ebay_finances) — the load-bearing provenance invariant from the brief |
+| raw card (0/0) | save-costs with `gradingCost: 0, suppliesCost: 0` sets marker + finalizes — action, not value |
+
+**Live HTTP confirmation against deployed prod** (HobbyIQ3, `385906f`):
+
+- Mint signed session for `user-199fcbc9…` (dvabulas@outlook.com) via `AUTH_SESSION_SECRET` app setting → 200 OK on `GET /api/portfolio/erp/unreconciled` (empty initial state).
+- Seed synthetic unreconciled eBay entry direct-to-Cosmos (id `L-LIVE-SMOKE-385906f`, fees all null).
+- `GET /unreconciled` → entry present with `costsStatus: "needs_action"`, `missingFields: [all 7 fee fields]`, `userCostsProvidedAt/By/feeSource` absent (correctly omitted by JSON serialization while undefined).
+- `POST /api/portfolio/erp/unreconciled/L-LIVE-SMOKE-385906f/save-costs` body `{gradingCost: 15, suppliesCost: 2}` → 200 OK. Response carries `userCostsProvidedAt: "2026-06-16T18:30:55.960Z"`, `userCostsProvidedBy: "user-199fcbc9…"`, marker persisted, adjustment audit row with `reason: "User-provided cost basis"` + extended `priorValues.gradingCost: null` / `newValues.gradingCost: 15` / `newValues.userCostsProvidedAt: "..."`.
+- `GET /unreconciled` (post-save) → `costsStatus: "saved_pending_fees"` (flipped), `userCostsProvidedAt`/`userCostsProvidedBy` present and serialized, `needsReconciliation: true` (axis 1 still pending). Invariant a verified live: `GET /pnl` returns `totals.entryCount: 0`, `excluded.unreconciledCount: 1` — the entry is OUT of P&L while flagged.
+- Cleanup: synthetic entry removed via Cosmos write; `GET /unreconciled` returns empty.
+
+iOS PR E can target this contract with confidence: `userCostsProvidedAt`, `userCostsProvidedBy`, `costsStatus` all serialize on the wire, and the marker survives the round-trip.
+
 ---
 
 ## 2026-06-16 — D.6 backlog park, searchCatalog gotchas, prospect-search clarification
