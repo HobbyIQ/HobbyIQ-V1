@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-06-16 — PR E SHIPPED end-to-end (two-axis reconciliation, backend + iOS converged)
+
+PR E reconciliation is live across the full stack. An eBay ledger entry now reconciles only when BOTH axes are real: eBay fees are actual numbers (not nulls) AND the user has addressed cost basis. Either axis can complete first; whichever finishes second triggers finalize. Provisional / overstated numbers stay OUT of `/pnl` and `/tax-export` until both axes are satisfied.
+
+### Backend (deployed to HobbyIQ3, live in prod)
+
+- **`385906f`** — CF-PR-E-TWO-AXIS-RECONCILIATION. `tryFinalizeReconciliation` + axis-2 marker (`userCostsProvidedAt` / `userCostsProvidedBy`) + `feeSource` provenance; new `POST /api/portfolio/erp/unreconciled/:id/save-costs` route; `applyFeeEnrichment` + `applyFeeOverride` + PATCH `/ledger/:id` all rewired to the shared finalize. Suite 2426 → 2460 (+34). Live HTTP-confirmed against the deployed app, including invariant a (costs-saved-but-fees-pending → EXCLUDED from `/pnl`).
+- **`00847c6`** — CF-PR-E-COSTSSTATUS-AUTHORITATIVE. `enrichEntryForClient(entry)` helper bundles `missingFields` + `costsStatus` per-entry; `GET /unreconciled`, `POST /save-costs`, and `POST /override` all emit the SAME enriched shape. Server is now the source of truth for display state — no client-side re-derivation. Suite 2460 → 2461 (+1).
+
+### iOS (merged to `main`)
+
+- **`03fdb57` / `ead31b8`** — CF-PR-E-IOS-PHASE-1A. ERPModels converged onto the real wire contract: `LedgerEntryForErp` carries `userCostsProvidedAt/By`, `feeSource`, `costsStatus` (non-optional), `missingFields`. New `ReconcileViewModel` (response-driven transitions on save/dismiss, calm 409 banner, holdings join with `playerName/cardTitle` fallback). `APIService` extended with `saveLedgerCosts` + `dismissLedgerEntry`; existing `fetchUnreconciled` return type aligned. Authored against `00847c6` so the data layer matches what prod actually serves.
+- **`5dbbb14`** (merge of `feat/pr-e-phase-1b`, head `7fba200` + polish `0db31e1`) — CF-PR-E-IOS-PHASE-1B. The views:
+  - `ERPReconciliationView` refactored onto `ReconcileViewModel`; legacy ad-hoc `@State` + `ERPOverrideSheet` row-tap retired.
+  - **`ReconcileInboxSubview`** (status chip off `costsStatus`, calm palette, never red) replaces the old `unreconciledSection` rendering. Amber chip for `needs_action`, muted chip for `saved_pending_fees`.
+  - **`ReconcileDetailView`** pushed from the inbox. Four `PortfolioContextCard` sections: Sale (read-only — "from eBay"), eBay fees (read-only in v1; muted "Pending from eBay" state when `missingFields` non-empty), Your cost basis (locked acquisition + decimal `gradingCost` / `suppliesCost` inputs; note "locked once reconciled"), Realized gain (provisional/`missingFields`-labelled when fees pending; plain when finalized).
+  - `vm.saveCosts` and `vm.dismiss` drive response-authoritative transitions; 409 surfaces a calm electric-blue info banner, never red.
+  - 7 `#Preview` blocks cover inbox empty/mixed + four detail states + focused realized-gain provisional render.
+  - Polish in the same merge (`0db31e1`): `AgingBucket` model reshaped to match the live wire shape (`bucket` / `entryIds` / `cutoffWarning`); non-fatal aging-section failures silenced. Pre-existing decode mismatch resolved as part of the Phase 1b ship.
+
+### Deferred ERP-cleanup (NOT PR E v1 — future cleanup CF)
+
+Cleanly scoped follow-ups; none gate PR E v1.
+
+a. **`FeeAdjustment` shape mismatch.** The existing `ERPOverrideSheet` audit display renders "unknown" because iOS expects the legacy `{field, oldValue, newValue}` shape while backend emits `{adjustmentId, adjustedAt, adjustedBy, reason, priorValues, newValues}`. Override-UX path; harmless while the v1 surface keeps fees read-only.
+b. **`refetchFinances` 404.** iOS POSTs `/erp/refetch`; backend mounts the route under `/erp/unreconciled/:id/refetch`. Path correction is a 1-line fix on either side.
+c. **`costsStatus`-on-finalized harmless quirk.** A finalized `save-costs` / `override` response carries `costsStatus: "saved_pending_fees"` and `missingFields: []`. Harmless under Model A — the client keys finalize off `needsReconciliation`, not `costsStatus`. A one-line gate (`if (entry.needsReconciliation === false) costsStatus = "needs_action"` — or omit the field) can fold into the next backend deploy as a cosmetic cleanup. No iOS impact.
+
+### Process notes from this arc
+
+- **Cross-agent iOS handoffs use VISIBLE pushed branches.** Never "source sync / no push." Stranded uncommitted work on the safety branch (`c52b430`) caused repeated reconciliation tangles when the next agent picked up — the prior agent's data layer wasn't visible until manually surfaced, and then collided with main's parallel ERP surface that the recon never saw.
+- **Recon runs on the target branch (main) with the base SHA confirmed up front.** A recon off a stale safety branch falsely reported "greenfield iOS reconciliation surface" and nearly produced a duplicate `ReconcileModels.swift` / `ReconcileViewModel.swift` parallel to the shipped `ERPModels.swift` / `ERPViews.swift` / `ERPReconciliationView`. Cherry-pick onto main hit a conflict (`fc2e4c6` honest-ranges + `af350ba` full surface build had moved APIService.swift), forcing an abort and re-baseline. Convergence-led-by-main saved the surface.
+- **Verify-before-write on dated ledger entries.** Prior turn caught a fabrication risk: the user's ledger CF referenced a "Phase 1b merge" that wasn't on main yet (only `feat/pr-e-erp-convergence` had landed). HALT-and-report on the gate worked — the actual merge (`5dbbb14`) landed via a separate turn before this entry was written.
+
+---
+
 ## 2026-06-16 — CF-PR-E-TWO-AXIS-RECONCILIATION (Model A, shipped)
 
 SHIPPED: two-axis reconciliation. An eBay ledger entry is now REconciled (`needsReconciliation=false`, folded into `/pnl` + `/tax-export`) ONLY when BOTH axes are satisfied:
