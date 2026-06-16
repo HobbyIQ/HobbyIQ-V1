@@ -205,3 +205,38 @@ export function getPsa10BucketRatio(
   }
   return null;
 }
+
+// ─── Per-tier residual bands ──────────────────────────────────────────
+
+/**
+ * CF-FITTED-RANGE-LAYER (2026-06-17): per-tier residual band around the
+ * central f(serial)·g(finish) multiplier. Returns multiplicative
+ * [low, high] factors applied to the central multiplier to derive the
+ * estimated price range. Wider at top tier (more cross-card variance +
+ * fewer fit points); tighter at base/mid tier (large pooled sample).
+ *
+ * Values approximate the empirical residual distribution from CF-LADDER-
+ * FIT Step 3 (median observed / fitted ratios across pooled cards per
+ * tier): mid-tier residuals clustered in 0.78-1.26×; /5 + /10 residuals
+ * 0.64-1.50× off a thin (n=2,3) pool. Bands are conservative — wider
+ * than the median residual span so the range covers ~80% of in-sample
+ * cards at each tier.
+ */
+export interface FittedRangeBand {
+  low: number;
+  high: number;
+}
+
+export function getFittedRangeBand(numberedTo: number | null | undefined): FittedRangeBand {
+  if (numberedTo == null || !Number.isFinite(numberedTo) || numberedTo <= 0) {
+    return { low: 0.50, high: 2.00 };
+  }
+  const serial = Math.round(numberedTo);
+  if (serial <= 5)   return { low: 0.50, high: 1.80 };
+  if (serial <= 10)  return { low: 0.55, high: 1.70 };
+  if (serial <= 25)  return { low: 0.60, high: 1.60 };
+  if (serial <= 50)  return { low: 0.65, high: 1.50 };
+  if (serial <= 99)  return { low: 0.78, high: 1.30 };
+  if (serial <= 199) return { low: 0.78, high: 1.26 };
+  return { low: 0.85, high: 1.20 };
+}

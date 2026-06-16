@@ -38,6 +38,7 @@ import { buildParallelTitleMatcher } from "./parallelTitleMatch.js";
 import {
   computeFittedComposedMultiplier,
   getPsa10BucketRatio,
+  getFittedRangeBand,
 } from "./chromeFittedLadder.js";
 import { cacheWrap } from "../shared/cache.service.js";
 import type { TrendIQResult, TrendIQCoverage } from "./trendIQ.types.js";
@@ -101,6 +102,42 @@ export interface GradedProjectionResult {
   /** Display-not-train discipline (mirrors trend-extrapolated). */
   marketValue: null;
   fairMarketValue: null;
+  /**
+   * CF-FITTED-RANGE-LAYER (2026-06-17): comp-sufficiency tiering that
+   * drives the iOS two-line "this is an estimated range" hint. Forced to
+   * "none" for any parallel at serial ≤ 50 regardless of n — top tier is
+   * structurally unreliable per the fit and always shows as an estimated
+   * range, never a point lifted from a single auction-driven comp.
+   *   sufficient → ≥3 observed comps for the parallel → point + "comps"
+   *   thin       → 1-2 observed → point + range + "comps-thin"
+   *   none       → 0 observed (or top-tier override) → range only +
+   *                "multiplier-range"  ← the "No recent comps" state
+   */
+  compSufficiency?: "sufficient" | "thin" | "none";
+  /** Drives the iOS basis prose. Always present alongside compSufficiency. */
+  estimateBasis?: "comps" | "comps-thin" | "multiplier-range";
+  /**
+   * Observed comp count for the target parallel (raw + every graded
+   * bucket combined, pooled across singular/plural canonical-equivalent
+   * sibling pids). iOS surfaces as "Based on N sales" when ≥1.
+   */
+  n?: number;
+  /**
+   * Fitted-multiplier range bounds. Present when a fitted composed
+   * multiplier was computed (numberedTo known); null on observed-anchor
+   * paths where the multiplier wasn't the deciding lever.
+   */
+  multiplierLow?: number | null;
+  multiplierHigh?: number | null;
+  /**
+   * Dollar range. Always present alongside compSufficiency: defaults to
+   * existing (estimateLow, estimateHigh) when no fitted multiplier was
+   * applied. For compSufficiency="none" + serial ≤ 50, rangeHigh is
+   * additionally widened by the card-level premium so high-profile
+   * cards' top-tier upper bounds reach plausible market levels.
+   */
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
   /** Ops + future calibration; safe to log, never displayed as a price. */
   diagnostics: {
     anchorPrice: number | null;
@@ -114,6 +151,13 @@ export interface GradedProjectionResult {
     baseRawMedian: number | null;
     /** Sample count behind `baseRawMedian`. */
     baseRawSampleCount: number;
+    /**
+     * CF-FITTED-RANGE-LAYER (2026-06-17): within-card premium applied to
+     * the upper bound of top-tier ranges. Median of (observed / fitted-
+     * predicted) across the card's observed parallels, bounded [1.0, 3.0],
+     * default 1.0. Surfaces here for diagnostics, never as a price.
+     */
+    cardPremium?: number | null;
   };
 }
 
@@ -506,21 +550,38 @@ function canonicalParallelKey(name: string | null | undefined): string | null {
   return [...tokens].sort().join("|");
 }
 
-export function computeSameParallelRawMedian(
+/**
+ * CF-FITTED-RANGE-PROVENANCE-FIX (2026-06-17): single source of truth
+ * for "does this parallel have qualifying observed comps?". Returns the
+ * count + median of raw records that:
+ *   (a) match the target parallel via canonical-equivalent pid OR strict
+ *       title match (CF-PARALLEL-PLURAL-NORMALIZE + the resolver-side
+ *       buildParallelTitleMatcher with sibling-distinguishing exclusion),
+ *   (b) survive the cheap-raw / mis-tag floor (price ≥ baseRawMedian ×
+ *       1.3) — same filter the precedence fix uses.
+ *
+ * Graded sales are NOT counted: they don't inform the parallel-raw
+ * anchor and the sufficiency tier asks "do we have raw comps that
+ * actually drove the engine's number?". The provenance bug surfaced by
+ * the verify CF was exactly this — counting graded + below-floor raw
+ * inflated the comp count and produced "Based on N sales" labels next
+ * to fitted-curve numbers. Now BOTH the engine's anchoring AND the
+ * post-loop sufficiency labeling read from this one helper.
+ */
+export interface ObservedParallelCompPool {
+  /** Count of raw records that survived the floor + matched the parallel. */
+  n: number;
+  /** Median of those records — null when n=0. */
+  median: number | null;
+}
+
+export function getObservedParallelCompPool(
   pricing: CardsightPricingResponse,
   targetParallelId: string,
   targetParallelName: string | null | undefined,
   siblingParallels: ReadonlyArray<{ id: string; name: string }>,
-): number | null {
-  const prices: number[] = [];
-
-  // CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): when the catalog has both
-  // a singular and a plural sibling representing the same physical
-  // parallel (e.g. "Refractor" + "Refractors", "Yellow Refractor" +
-  // "Yellow Refractors"), pool sales tagged with EITHER pid. Empirically
-  // discovered in CF-LADDER-FIT corpus audit — Cardsight double-catalogs
-  // ~40% of base/499 refractor entries this way; pre-fix the helper
-  // under-counted by missing the plural pid bucket.
+  baseRawMedian: number | null,
+): ObservedParallelCompPool {
   const targetCanonical = canonicalParallelKey(targetParallelName);
   const equivalentIds = new Set<string>([targetParallelId]);
   if (targetCanonical) {
@@ -532,8 +593,10 @@ export function computeSameParallelRawMedian(
     }
   }
 
-  // 1. Tagged records — definitive parallel_id match (target + canonical-
-  //    equivalent siblings).
+  const prices: number[] = [];
+
+  // 1. Tagged raw records — definitive pid match (target + canonical
+  //    equivalents).
   for (const r of (pricing.raw?.records ?? [])) {
     if (r.parallel_id == null) continue;
     if (!equivalentIds.has(r.parallel_id)) continue;
@@ -542,8 +605,7 @@ export function computeSameParallelRawMedian(
     prices.push(p);
   }
 
-  // 2. Untagged records (parallel_id == null) — strict title match via
-  //    the canonical resolver matcher. Skip when name unknown.
+  // 2. Untagged raw records (parallel_id == null) — strict title match.
   if (targetParallelName) {
     const built = buildParallelTitleMatcher(targetParallelName, siblingParallels, {
       matchedParallelId: targetParallelId,
@@ -559,24 +621,87 @@ export function computeSameParallelRawMedian(
     }
   }
 
-  const observedMedian = median(prices);
-  if (observedMedian === null) return null;
-
-  // CF-GRADED-PRECEDENCE-FLOOR: cheap-raw / mis-tag guard. Apply only
-  // when base raw is itself well-defined (uses the same isBaseRecord
-  // predicate the engine's tier-1 path uses). With no defensible base
-  // anchor, we can't decide the ratio is suspicious — fall through.
-  const baseRawRecords = (pricing.raw?.records ?? []).filter(isBaseRecord);
-  const baseRawMedian = median(baseRawRecords.map((r) => Number(r.price)));
-  if (
-    baseRawMedian !== null
-    && baseRawMedian > 0
-    && observedMedian < baseRawMedian * OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR
-  ) {
-    return null;
+  // 3. Cheap-raw / mis-tag floor — filter individual records, not the
+  //    median (the provenance fix). A pool with some sub-floor records
+  //    + some legit records keeps the legit ones; pre-fix the helper
+  //    rejected the entire pool if its median fell below floor, which
+  //    coupled two unrelated decisions (per-record validity vs aggregate).
+  let survivors = prices;
+  if (baseRawMedian != null && baseRawMedian > 0) {
+    const floor = baseRawMedian * OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR;
+    survivors = prices.filter((p) => p >= floor);
   }
 
-  return observedMedian;
+  return { n: survivors.length, median: median(survivors) };
+}
+
+/**
+ * Backward-compatible wrapper — preserves the existing public signature
+ * for `compileGradedEstimatesForCard` and any external callers, but now
+ * delegates to the unified pool helper so the engine's anchor decision
+ * and the post-loop sufficiency labeling are guaranteed to agree.
+ */
+export function computeSameParallelRawMedian(
+  pricing: CardsightPricingResponse,
+  targetParallelId: string,
+  targetParallelName: string | null | undefined,
+  siblingParallels: ReadonlyArray<{ id: string; name: string }>,
+): number | null {
+  const baseRawRecords = (pricing.raw?.records ?? []).filter(isBaseRecord);
+  const baseRawMedian = median(baseRawRecords.map((r) => Number(r.price)));
+  const pool = getObservedParallelCompPool(
+    pricing,
+    targetParallelId,
+    targetParallelName,
+    siblingParallels,
+    baseRawMedian,
+  );
+  return pool.median;
+}
+
+/**
+ * CF-FITTED-RANGE-LAYER (2026-06-17): within-card premium — median of
+ * (observed_parallel_raw / curve_predicted_parallel_raw) across the
+ * card's parallels that have observed comps. Bounded to [1.0, 3.0];
+ * defaults to 1.0 when the card has no observed parallels. Applied only
+ * to the UPPER bound of compSufficiency="none" results (top tier) so a
+ * Leo /1 ballpark can stretch toward market reality without shifting
+ * the central point or the lower bound.
+ *
+ * Floor at 1.0× because we never want to widen DOWNWARD — the conservative
+ * move is "the card's observed parallels trade at-or-above the pooled
+ * curve, so the upper end may also". A card whose observed parallels
+ * UNDER-trade the curve gets cardPremium=1.0 (no widening), not <1.0.
+ */
+const CARD_PREMIUM_FLOOR = 1.0;
+const CARD_PREMIUM_CEILING = 3.0;
+
+export function computeCardPremium(
+  pricing: CardsightPricingResponse,
+  cardParallels: ReadonlyArray<{ id: string; name: string; numberedTo?: number | null }>,
+  baseRawMedian: number | null,
+): number {
+  if (!cardParallels || cardParallels.length === 0) return CARD_PREMIUM_FLOOR;
+  if (baseRawMedian == null || baseRawMedian <= 0) return CARD_PREMIUM_FLOOR;
+  const ratios: number[] = [];
+  for (const p of cardParallels) {
+    const fitted = computeFittedComposedMultiplier(p.name, p.numberedTo);
+    if (!fitted) continue;
+    const predicted = baseRawMedian * fitted.multiplier;
+    if (!Number.isFinite(predicted) || predicted <= 0) continue;
+    const observed = computeSameParallelRawMedian(
+      pricing,
+      p.id,
+      p.name,
+      cardParallels,
+    );
+    if (observed == null || observed <= 0) continue;
+    ratios.push(observed / predicted);
+  }
+  if (ratios.length === 0) return CARD_PREMIUM_FLOOR;
+  const m = median(ratios);
+  if (m == null || !Number.isFinite(m)) return CARD_PREMIUM_FLOOR;
+  return Math.max(CARD_PREMIUM_FLOOR, Math.min(CARD_PREMIUM_CEILING, m));
 }
 
 function findSameParallelObservedAnchor(
@@ -2003,6 +2128,134 @@ export function computeGradedProjection(
           rebaseToGeneric(lower.result, lower.company, lower.gradeStr, reason);
         }
       }
+    }
+  }
+
+  // CF-FITTED-RANGE-LAYER (2026-06-17): post-process every result with
+  // the sufficiency tier + range fields. CF-FITTED-RANGE-PROVENANCE-FIX
+  // (2026-06-17): the SINGLE source of truth is the floor-surviving
+  // observed comp pool. Both the engine's anchor decision (above, via
+  // compileGradedEstimatesForCard → computeSameParallelRawMedian) and
+  // the labels emitted here read the SAME helper, so the count and the
+  // number always agree on which records anchored what. Universal
+  // invariant: the emitted point sits inside [rangeLow, rangeHigh].
+  if (results.length > 0 && targetParallelId && targetParallelName) {
+    const siblings = cardParallels ?? [];
+    const targetEntry = siblings.find((p) => p.id === targetParallelId);
+    const numberedTo = targetEntry?.numberedTo ?? null;
+    const fittedAtTarget = computeFittedComposedMultiplier(targetParallelName, numberedTo);
+    const band = getFittedRangeBand(numberedTo);
+    const isTopTier = numberedTo != null && numberedTo > 0 && numberedTo <= 50;
+
+    // Single source of truth for the LABEL: floor-surviving raw comp
+    // pool. In production the caller's computeSameParallelRawMedian
+    // delegates to the same helper, so pool.median != null is equivalent
+    // to "anchor.kind = parallel-observed" — but anchor.kind is what we
+    // actually consult for the range (per-result) so the invariant holds
+    // even on artificial inputs.
+    const pool = getObservedParallelCompPool(
+      pricing,
+      targetParallelId,
+      targetParallelName,
+      siblings,
+      baseRawMedian,
+    );
+
+    const cardPremium = isTopTier
+      ? computeCardPremium(pricing, siblings, baseRawMedian)
+      : 1.0;
+
+    // Sufficiency — top-tier override forces "none" (structurally
+    // unreliable per the fit); otherwise based on pool.n.
+    const compSufficiency: "sufficient" | "thin" | "none" = isTopTier
+      ? "none"
+      : pool.n >= 3
+        ? "sufficient"
+        : pool.n >= 1
+          ? "thin"
+          : "none";
+    const estimateBasis: "comps" | "comps-thin" | "multiplier-range" =
+      compSufficiency === "sufficient"
+        ? "comps"
+        : compSufficiency === "thin"
+          ? "comps-thin"
+          : "multiplier-range";
+
+    for (const r of results) {
+      r.n = pool.n;
+      r.compSufficiency = compSufficiency;
+      r.estimateBasis = estimateBasis;
+      r.diagnostics.cardPremium = cardPremium;
+
+      // Range provenance follows the POINT's provenance, decided per-
+      // result by anchor.kind (what the engine actually used to build
+      // the point) — NOT by pool.median alone. The pool drives the
+      // LABEL (n + sufficiency + basis); anchor.kind drives the RANGE.
+      // In production these always agree; the dual signal is defensive
+      // against artificial inputs (e.g., FMV threaded by caller without
+      // matching records in pricing — the invariant still holds).
+      //   • Observed-anchor kinds → range = engine's GRADE_CONFIDENCE
+      //     spread × point (already brackets point by construction).
+      //   • Composed/base/none → fitted band × multiplier × ratio (band
+      //     has low ≤ 1.0 ≤ high so it brackets the central point).
+      const isObservedAnchor =
+        r.anchorKind === "parallel-observed"
+        || r.anchorKind === "parallel-observed-same"
+        || r.anchorKind === "parallel-observed-sibling";
+      if (isObservedAnchor) {
+        r.multiplierLow = null;
+        r.multiplierHigh = null;
+        r.rangeLow = r.estimateLow;
+        r.rangeHigh = r.estimateHigh;
+      } else if (
+        fittedAtTarget != null
+        && baseRawMedian != null
+        && baseRawMedian > 0
+        && r.estimatedValue != null
+        && r.estimatedValue > 0
+      ) {
+        const m = fittedAtTarget.multiplier;
+        const mLow = m * band.low;
+        let mHigh = m * band.high;
+        // Top-tier upper widening — conservative, upper-bound only.
+        if (compSufficiency === "none") mHigh *= cardPremium;
+        r.multiplierLow = mLow;
+        r.multiplierHigh = mHigh;
+        // Range derivation: scale the EMITTED POINT by the band so the
+        // invariant (point ∈ [rangeLow, rangeHigh]) holds even when the
+        // coherence-pass guards (CROSS-GRADE-COHERENCE) mutated the
+        // per-grade-loop's anchor × ratio decoupling diagnostics.ratio
+        // from estimatedValue. Mathematically: base × m × band × ratio
+        // = (base × m × ratio) × band = point × band — same answer
+        // pre-coherence, but robust post-coherence.
+        const rangeLowMult = band.low;
+        const rangeHighMult = compSufficiency === "none"
+          ? band.high * cardPremium
+          : band.high;
+        r.rangeLow = round2(r.estimatedValue * rangeLowMult);
+        r.rangeHigh = round2(r.estimatedValue * rangeHighMult);
+      } else {
+        // No fitted multiplier (no numberedTo) AND no observed pool —
+        // fall back to the engine's existing range. Conservative.
+        r.multiplierLow = null;
+        r.multiplierHigh = null;
+        r.rangeLow = r.estimateLow;
+        r.rangeHigh = r.estimateHigh;
+      }
+    }
+  } else {
+    // BASE scope OR no parallel target — fill defaults so consumers can
+    // still read the fields without conditional checks. n=0, sufficiency
+    // doesn't apply, ranges mirror existing low/high (the engine already
+    // computed them via GRADE_CONFIDENCE spread).
+    for (const r of results) {
+      r.n = 0;
+      r.compSufficiency = "none";
+      r.estimateBasis = "multiplier-range";
+      r.multiplierLow = null;
+      r.multiplierHigh = null;
+      r.rangeLow = r.estimateLow;
+      r.rangeHigh = r.estimateHigh;
     }
   }
 

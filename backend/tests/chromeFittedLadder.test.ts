@@ -8,6 +8,7 @@ import {
   computeFittedComposedMultiplier,
   parseFinishFromParallelName,
   getPsa10BucketRatio,
+  getFittedRangeBand,
   FITTED_RARITY_A,
   FITTED_RARITY_B,
 } from "../src/services/compiq/chromeFittedLadder.js";
@@ -180,5 +181,44 @@ describe("getPsa10BucketRatio — per-bucket PSA 10 ratios", () => {
     expect(getPsa10BucketRatio(undefined)).toBeNull();
     expect(getPsa10BucketRatio(0)).toBeNull();
     expect(getPsa10BucketRatio(-5)).toBeNull();
+  });
+});
+
+describe("getFittedRangeBand — per-tier residual bands", () => {
+  it("wider at top tier, tighter at base tier (monotonic in serial)", () => {
+    const b5   = getFittedRangeBand(5);
+    const b50  = getFittedRangeBand(50);
+    const b150 = getFittedRangeBand(150);
+    const b499 = getFittedRangeBand(499);
+    // Higher highs at lower serials (more rarity = more spread)
+    expect(b5.high).toBeGreaterThan(b50.high);
+    expect(b50.high).toBeGreaterThan(b150.high);
+    expect(b150.high).toBeGreaterThanOrEqual(b499.high);
+    // Lower lows at lower serials too
+    expect(b5.low).toBeLessThan(b50.low);
+    expect(b50.low).toBeLessThan(b150.low);
+  });
+
+  it.each([
+    [5, 0.50, 1.80],
+    [10, 0.55, 1.70],
+    [25, 0.60, 1.60],
+    [50, 0.65, 1.50],
+    [75, 0.78, 1.30],
+    [99, 0.78, 1.30],
+    [150, 0.78, 1.26],
+    [199, 0.78, 1.26],
+    [250, 0.85, 1.20],
+    [499, 0.85, 1.20],
+  ])("serial /%i → [%f, %f]", (serial, low, high) => {
+    const b = getFittedRangeBand(serial);
+    expect(b.low).toBe(low);
+    expect(b.high).toBe(high);
+  });
+
+  it("falls back to wide default for missing serial", () => {
+    const b = getFittedRangeBand(null);
+    expect(b.low).toBe(0.50);
+    expect(b.high).toBe(2.00);
   });
 });

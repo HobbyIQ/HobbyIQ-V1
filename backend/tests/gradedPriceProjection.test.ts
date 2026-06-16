@@ -1617,6 +1617,403 @@ function makeLeoPricingNoBlueRecords(): CardsightPricingResponse {
   } as CardsightPricingResponse;
 }
 
+describe("CF-FITTED-RANGE-LAYER — compSufficiency + estimateBasis + range fields", () => {
+  function fixtureWithParallelSales(
+    parallelName: string,
+    numberedTo: number,
+    targetParallelSales: Array<{ price: number; pid: string | null; title?: string }>,
+  ): CardsightPricingResponse {
+    const baseRaw: CardsightSaleRecord[] = [];
+    // 24 base sales ≈ $228.93 median
+    const basePrices = [
+      200, 210, 215, 218, 220, 222, 224, 226,
+      227, 228, 228.5, 228.86,
+      229, 229.5, 230, 232, 234, 236, 238, 242,
+      246, 250, 255, 260,
+    ];
+    for (let i = 0; i < basePrices.length; i++) {
+      baseRaw.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, basePrices[i]));
+    }
+    // Add parallel-specific sales (above the 1.3× cheap-raw floor of $228.93 × 1.3 = $297)
+    for (const s of targetParallelSales) {
+      baseRaw.push(rec(
+        s.title ?? `Leo De Vries 2024 Bowman Chrome Auto ${parallelName} /${numberedTo}`,
+        s.price,
+        { parallel_id: s.pid },
+      ));
+    }
+    return {
+      card: { card_id: "leo", name: "Leo De Vries", number: "CPA-LD" } as any,
+      raw: { count: baseRaw.length, records: baseRaw },
+      graded: [],
+      meta: { total_records: baseRaw.length, last_sale_date: "2026-06-16T00:00:00Z" },
+    } as CardsightPricingResponse;
+  }
+
+  it("none-tier (composed, no observed comps): emits range + multiplier-range basis + n=0", () => {
+    const PID = "pid-yellow-refractor";
+    const out = computeGradedProjection({
+      pricing: fixtureWithParallelSales("Yellow Refractor", 75, []),
+      targetParallelId: PID,
+      targetParallelName: "Yellow Refractor",
+      cardParallels: [{ id: PID, name: "Yellow Refractor", numberedTo: 75 }],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(0);
+    expect(psa10.compSufficiency).toBe("none");
+    expect(psa10.estimateBasis).toBe("multiplier-range");
+    expect(psa10.multiplierLow).not.toBeNull();
+    expect(psa10.multiplierHigh).not.toBeNull();
+    expect(psa10.rangeLow).not.toBeNull();
+    expect(psa10.rangeHigh).not.toBeNull();
+    expect(psa10.rangeLow!).toBeLessThan(psa10.rangeHigh!);
+  });
+
+  it("thin tier: 1-2 observed comps → 'comps-thin' basis + range + n > 0", () => {
+    const PID = "pid-yellow-refractor";
+    const out = computeGradedProjection({
+      pricing: fixtureWithParallelSales("Yellow Refractor", 75, [
+        { price: 700, pid: PID },
+        { price: 800, pid: PID },
+      ]),
+      targetParallelId: PID,
+      targetParallelName: "Yellow Refractor",
+      cardParallels: [{ id: PID, name: "Yellow Refractor", numberedTo: 75 }],
+      targetParallelRawFmv: 750, // observed parallel-raw FMV threaded
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(2);
+    expect(psa10.compSufficiency).toBe("thin");
+    expect(psa10.estimateBasis).toBe("comps-thin");
+    expect(psa10.estimatedValue).not.toBeNull(); // point still emitted
+    expect(psa10.rangeLow).not.toBeNull();
+    expect(psa10.rangeHigh).not.toBeNull();
+  });
+
+  it("sufficient tier: ≥3 observed comps → 'comps' basis + n ≥ 3", () => {
+    const PID = "pid-yellow-refractor";
+    const out = computeGradedProjection({
+      pricing: fixtureWithParallelSales("Yellow Refractor", 75, [
+        { price: 700, pid: PID },
+        { price: 750, pid: PID },
+        { price: 800, pid: PID },
+        { price: 820, pid: PID },
+      ]),
+      targetParallelId: PID,
+      targetParallelName: "Yellow Refractor",
+      cardParallels: [{ id: PID, name: "Yellow Refractor", numberedTo: 75 }],
+      targetParallelRawFmv: 775,
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(4);
+    expect(psa10.compSufficiency).toBe("sufficient");
+    expect(psa10.estimateBasis).toBe("comps");
+  });
+
+  it("top-tier override: serial ≤ 50 forces 'none' regardless of n (Gold Refractor /50 with 2 comps)", () => {
+    const PID = "pid-gold-refractor-50";
+    const out = computeGradedProjection({
+      pricing: fixtureWithParallelSales("Gold Refractor", 50, [
+        { price: 3000, pid: PID },
+        { price: 3500, pid: PID },
+      ]),
+      targetParallelId: PID,
+      targetParallelName: "Gold Refractor",
+      cardParallels: [{ id: PID, name: "Gold Refractor", numberedTo: 50 }],
+      targetParallelRawFmv: 3250,
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(2); // comps DO exist
+    expect(psa10.compSufficiency).toBe("none"); // but forced by top-tier rule
+    expect(psa10.estimateBasis).toBe("multiplier-range");
+  });
+
+  it("cardPremium widens UPPER bound on top-tier none-tier; lower bound unchanged", () => {
+    // Card with an observed parallel that trades 2× above the curve.
+    // The cardPremium should land at 2.0 (within [1.0, 3.0]) and apply
+    // to rangeHigh ONLY, leaving rangeLow at base × multiplierLow × ratio.
+    const GOLD_PID = "pid-gold-50";
+    const BLUE_PID = "pid-blue-150";
+    // Blue Refractor /150: predicted = 228.93 × 17.059 × 150^(-0.301) × 1.00 ≈ $866
+    // Use observed Blue at ≈ $1,732 (2× premium) — bounded to 2.0 cardPremium.
+    const records: CardsightSaleRecord[] = [];
+    const basePrices = [
+      200, 210, 215, 218, 220, 222, 224, 226,
+      227, 228, 228.5, 228.86,
+      229, 229.5, 230, 232, 234, 236, 238, 242,
+      246, 250, 255, 260,
+    ];
+    for (let i = 0; i < basePrices.length; i++) {
+      records.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, basePrices[i]));
+    }
+    // 3 observed Blue Refractor sales averaging ~$1,732 → cardPremium ≈ 2.0
+    records.push(rec(`Leo De Vries Blue Refractor /150 #CPA-LD 1`, 1700, { parallel_id: BLUE_PID }));
+    records.push(rec(`Leo De Vries Blue Refractor /150 #CPA-LD 2`, 1750, { parallel_id: BLUE_PID }));
+    records.push(rec(`Leo De Vries Blue Refractor /150 #CPA-LD 3`, 1746, { parallel_id: BLUE_PID }));
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "leo" } as any,
+      raw: { count: records.length, records },
+      graded: [],
+      meta: { total_records: records.length, last_sale_date: "2026-06-16T00:00:00Z" },
+    } as CardsightPricingResponse;
+
+    const out = computeGradedProjection({
+      pricing,
+      targetParallelId: GOLD_PID,
+      targetParallelName: "Gold Refractor",
+      cardParallels: [
+        { id: GOLD_PID, name: "Gold Refractor", numberedTo: 50 },
+        { id: BLUE_PID, name: "Blue Refractor", numberedTo: 150 },
+      ],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.compSufficiency).toBe("none"); // top tier
+    expect(psa10.diagnostics.cardPremium).toBeGreaterThan(1.0);
+    expect(psa10.diagnostics.cardPremium).toBeLessThanOrEqual(3.0);
+    // rangeHigh widened: m_high × cardPremium > m_high alone
+    // central multiplier m = f(50) × g(refractor) = ~5.26 × 1.00 ≈ 5.26
+    // m_high_pre_premium = m × 1.50 (top-tier band) ≈ 7.89
+    // m_high_post_premium = ~7.89 × cardPremium → multiplierHigh stores post-premium
+    const mCentral = 17.059 * Math.pow(50, -0.301) * 1.00;
+    const expectedHighWithoutPremium = mCentral * 1.50;
+    expect(psa10.multiplierHigh!).toBeGreaterThan(expectedHighWithoutPremium);
+    // Lower bound NOT touched by cardPremium
+    expect(psa10.multiplierLow!).toBeCloseTo(mCentral * 0.65, 2);
+  });
+
+  it("observed-wins parallels at mid tier: existing point preserved, n carries through (Leo Blue Refractor /150)", () => {
+    // Match the existing Leo Blue Refractor /150 test fixture style.
+    const BLUE_PID = "0383bf13-523d-407d-b69e-53d33c2a775f";
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: BLUE_PID,
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+      cardParallels: [{ id: BLUE_PID, name: "Blue Refractor", numberedTo: 150 }],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.estimatedValue).toBe(3030); // observed-wins, unchanged
+    expect(psa10.anchorKind).toBe("parallel-observed");
+    expect(psa10.compSufficiency).toBeDefined();
+    expect(psa10.n).toBeDefined();
+    expect(psa10.rangeLow).not.toBeNull();
+    expect(psa10.rangeHigh).not.toBeNull();
+  });
+
+  it("base scope (no parallelId): defaults to sufficiency='none' + rangeLow/High = estimateLow/High", () => {
+    const out = computeGradedProjection({
+      pricing: makeLeoPricingNoBlueRecords(),
+    });
+    expect(out.length).toBeGreaterThan(0);
+    for (const r of out) {
+      expect(r.compSufficiency).toBe("none");
+      expect(r.estimateBasis).toBe("multiplier-range");
+      expect(r.n).toBe(0);
+      expect(r.rangeLow).toBe(r.estimateLow);
+      expect(r.rangeHigh).toBe(r.estimateHigh);
+    }
+  });
+});
+
+describe("CF-FITTED-RANGE-PROVENANCE-FIX — single source of truth + universal invariant", () => {
+  // The provenance verify CF (2026-06-17) caught two label bugs:
+  //   • Blue RayWave /150: 3 records total (2 below-floor raw + 1 PSA 9
+  //     graded) — labeled "sufficient/comps" but point was FITTED because
+  //     computeSameParallelRawMedian returned null (floor-blocked).
+  //   • Purple /250: 1 SGC 9 graded record, no raw — labeled "thin/
+  //     comps-thin" but point was FITTED because the helper needs raw.
+  // Plus a range bug: observed-anchor results had their range overwritten
+  // by fitted-curve bounds, producing point-outside-its-own-range.
+  //
+  // Fix: single source of truth (getObservedParallelCompPool) — the
+  // pool's n + median drives BOTH the engine's anchor AND the post-loop
+  // label. Universal invariant: emitted point sits inside [rangeLow,
+  // rangeHigh] for every result.
+
+  it("below-floor raw only → labeled 'none' + 'multiplier-range' (the RayWave case)", () => {
+    // Geometry: base raw median ≈ $228.93 → floor $297.61.
+    // Parallel has 2 raw sales BELOW floor ($285, $180) plus 1 PSA 9
+    // graded. Engine point comes from fitted curve; labels must reflect
+    // that no qualifying raw comp anchored anything.
+    const PID = "pid-blue-raywave";
+    const records: CardsightSaleRecord[] = [];
+    const basePrices = [
+      200, 210, 215, 218, 220, 222, 224, 226,
+      227, 228, 228.5, 228.86,
+      229, 229.5, 230, 232, 234, 236, 238, 242,
+      246, 250, 255, 260,
+    ];
+    for (let i = 0; i < basePrices.length; i++) {
+      records.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, basePrices[i]));
+    }
+    records.push(rec(`Leo De Vries Blue RayWave Refractor 1`, 285, { parallel_id: PID }));
+    records.push(rec(`Leo De Vries Blue RayWave Refractor 2`, 180.50, { parallel_id: PID }));
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "leo" } as any,
+      raw: { count: records.length, records },
+      graded: [
+        {
+          company_name: "PSA",
+          grades: [gradedBucket("9", [rec(`Leo De Vries Blue RayWave Refractor PSA 9`, 142.50, { parallel_id: PID })])],
+        },
+      ],
+      meta: { total_records: records.length + 1, last_sale_date: "2026-06-17T00:00:00Z" },
+    } as CardsightPricingResponse;
+
+    const out = computeGradedProjection({
+      pricing,
+      targetParallelId: PID,
+      targetParallelName: "Blue RayWave Refractor",
+      cardParallels: [{ id: PID, name: "Blue RayWave Refractor", numberedTo: 150 }],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(0); // no above-floor raw survived
+    expect(psa10.compSufficiency).toBe("none"); // NOT "sufficient" anymore
+    expect(psa10.estimateBasis).toBe("multiplier-range"); // NOT "comps"
+    expect(psa10.anchorKind).toBe("parallel-composed"); // fitted-curve path
+  });
+
+  it("graded-only matches → labeled 'none' + 'multiplier-range' (the Purple case)", () => {
+    // Single SGC 9 graded record, zero raw. The fitted curve produces
+    // the point; labels must say so.
+    const PID = "pid-purple-refractor";
+    const records: CardsightSaleRecord[] = [];
+    const basePrices = [
+      200, 210, 215, 218, 220, 222, 224, 226,
+      227, 228, 228.5, 228.86,
+      229, 229.5, 230, 232, 234, 236, 238, 242,
+      246, 250, 255, 260,
+    ];
+    for (let i = 0; i < basePrices.length; i++) {
+      records.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, basePrices[i]));
+    }
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "leo" } as any,
+      raw: { count: records.length, records },
+      graded: [
+        {
+          company_name: "SGC",
+          grades: [gradedBucket("9", [rec(`Leo De Vries Purple Refractor /250 SGC 9`, 390, { parallel_id: PID })])],
+        },
+      ],
+      meta: { total_records: records.length + 1, last_sale_date: "2026-06-17T00:00:00Z" },
+    } as CardsightPricingResponse;
+
+    const out = computeGradedProjection({
+      pricing,
+      targetParallelId: PID,
+      targetParallelName: "Purple Refractor",
+      cardParallels: [{ id: PID, name: "Purple Refractor", numberedTo: 250 }],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.n).toBe(0);
+    expect(psa10.compSufficiency).toBe("none");
+    expect(psa10.estimateBasis).toBe("multiplier-range");
+  });
+
+  it("observed-anchor range preserves GRADE_CONFIDENCE spread — point inside range (Blue /150 case)", () => {
+    // Leo Blue /150 with the observed $1183 raw anchor. Point = $3,030
+    // (anchor × tier-1 ratio). Range must come from GRADE_CONFIDENCE
+    // rough spread around the point, NOT from the fitted curve.
+    const BLUE_PID = "0383bf13-523d-407d-b69e-53d33c2a775f";
+    const out = computeGradedProjection({
+      pricing: makeLeoParallelPricingNoBlueGraded(),
+      targetParallelId: BLUE_PID,
+      targetParallelRawFmv: 1183,
+      targetParallelName: "Blue Refractor",
+      cardParallels: [{ id: BLUE_PID, name: "Blue Refractor", numberedTo: 150 }],
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.estimatedValue).toBe(3030);
+    // Range should match the engine's per-grade emission, not the fitted
+    // band. The rough tier spread is 20% → low ≈ 0.80×point, high ≈ 1.20×point.
+    expect(psa10.rangeLow).toBe(psa10.estimateLow);
+    expect(psa10.rangeHigh).toBe(psa10.estimateHigh);
+    expect(psa10.multiplierLow).toBeNull(); // observed path has no fitted multiplier range
+    expect(psa10.multiplierHigh).toBeNull();
+    // Universal invariant: point ∈ [rangeLow, rangeHigh]
+    expect(psa10.estimatedValue!).toBeGreaterThanOrEqual(psa10.rangeLow!);
+    expect(psa10.estimatedValue!).toBeLessThanOrEqual(psa10.rangeHigh!);
+  });
+
+  it("UNIVERSAL INVARIANT: point ∈ [rangeLow, rangeHigh] across a representative parallel set", () => {
+    // Sweep multiple parallels covering: observed-thin, observed-sufficient,
+    // composed-mid, composed-top-tier, base scope. Every emitted point
+    // must sit inside its own range.
+    const SCENARIOS = [
+      // Observed (thin)
+      { name: "Blue Refractor", numberedTo: 150, observedFmv: 1183 },
+      // Observed (sufficient — 4 above-floor raw)
+      { name: "Yellow Refractor", numberedTo: 75, observedSales: [700, 750, 800, 820] },
+      // Composed mid-tier (no observed)
+      { name: "Green Refractor", numberedTo: 99 },
+      // Composed top-tier (forced none)
+      { name: "Gold Refractor", numberedTo: 50 },
+      // Composed /5 (deepest top-tier)
+      { name: "Red Refractor", numberedTo: 5 },
+    ];
+
+    function makeFixture(s: typeof SCENARIOS[number]): { pricing: CardsightPricingResponse; pid: string } {
+      const PID = `pid-${s.name.toLowerCase().replace(/\s+/g, "-")}-${s.numberedTo}`;
+      const records: CardsightSaleRecord[] = [];
+      const basePrices = [
+        200, 210, 215, 218, 220, 222, 224, 226,
+        227, 228, 228.5, 228.86,
+        229, 229.5, 230, 232, 234, 236, 238, 242,
+        246, 250, 255, 260,
+      ];
+      for (let i = 0; i < basePrices.length; i++) {
+        records.push(rec(`Leo De Vries 2024 Bowman Chrome Auto #CPA-LD ${i}`, basePrices[i]));
+      }
+      if (s.observedSales) {
+        for (const p of s.observedSales) {
+          records.push(rec(`Leo De Vries ${s.name} /${s.numberedTo}`, p, { parallel_id: PID }));
+        }
+      }
+      const pricing: CardsightPricingResponse = {
+        card: { card_id: "leo" } as any,
+        raw: { count: records.length, records },
+        graded: [],
+        meta: { total_records: records.length, last_sale_date: "2026-06-17T00:00:00Z" },
+      } as CardsightPricingResponse;
+      return { pricing, pid: PID };
+    }
+
+    for (const s of SCENARIOS) {
+      const { pricing, pid } = makeFixture(s);
+      const out = computeGradedProjection({
+        pricing,
+        targetParallelId: pid,
+        targetParallelName: s.name,
+        cardParallels: [{ id: pid, name: s.name, numberedTo: s.numberedTo }],
+        ...("observedFmv" in s ? { targetParallelRawFmv: s.observedFmv } : {}),
+      });
+      for (const r of out) {
+        if (r.estimatedValue == null) continue; // no-data results don't have a point
+        if (r.rangeLow == null || r.rangeHigh == null) continue;
+        // INVARIANT
+        if (r.estimatedValue < r.rangeLow || r.estimatedValue > r.rangeHigh) {
+          throw new Error(
+            `Universal invariant violated on ${s.name} /${s.numberedTo} ${r.grade}: `
+            + `point=$${r.estimatedValue} outside [$${r.rangeLow}, $${r.rangeHigh}] `
+            + `(anchorKind=${r.anchorKind}, compSufficiency=${r.compSufficiency}, basis=${r.estimateBasis})`,
+          );
+        }
+      }
+    }
+  });
+
+  it("BASE scope invariant: point ∈ [rangeLow, rangeHigh]", () => {
+    const out = computeGradedProjection({ pricing: makeLeoPricing() });
+    for (const r of out) {
+      if (r.estimatedValue == null) continue;
+      if (r.rangeLow == null || r.rangeHigh == null) continue;
+      expect(r.estimatedValue!).toBeGreaterThanOrEqual(r.rangeLow!);
+      expect(r.estimatedValue!).toBeLessThanOrEqual(r.rangeHigh!);
+    }
+  });
+});
+
 describe("CF-PARALLEL-PLURAL-NORMALIZE — computeSameParallelRawMedian pools singular + plural sibling pids", () => {
   // Cardsight catalogs the same physical parallel under BOTH singular
   // ("Yellow Refractor") and plural ("Yellow Refractors") names with
