@@ -8,6 +8,7 @@ import {
   computeGradedProjection,
   buildGradedEstimates,
   aggregateReleaseGradeCurveFromPricings,
+  computeSameParallelRawMedian,
   TARGET_GRADES,
   type GradedProjectionResult,
   type ReleaseGradeCurve,
@@ -1500,6 +1501,87 @@ describe("CF-GRADED-PRICE-PROJECTION Phase 1c — release-level grade-premium cu
       expect(e.ratioSource).toBe("release");
       expect(e.fairMarketValue).toBeNull();
     }
+  });
+});
+
+describe("CF-PARALLEL-PLURAL-NORMALIZE — computeSameParallelRawMedian pools singular + plural sibling pids", () => {
+  // Cardsight catalogs the same physical parallel under BOTH singular
+  // ("Yellow Refractor") and plural ("Yellow Refractors") names with
+  // DIFFERENT parallel_ids. Pre-fix the helper only pooled records
+  // tagged with the literal targetParallelId — splitting the same
+  // physical parallel's sales across two pids and under-counting comps.
+  //
+  // Test geometry:
+  //   - base raw median: 5 sales at $10 → $10
+  //   - cheap-raw floor: 1.3 × $10 = $13. ALL parallel sales must clear it.
+  //   - parallel A "Yellow Refractor" pid="A":  prices $50, $60
+  //   - parallel B "Yellow Refractors" pid="B": prices $100, $120
+  //   - pre-fix: median([50, 60]) = $55
+  //   - post-fix: median([50, 60, 100, 120]) = $80
+  function makePluralFixture(): CardsightPricingResponse {
+    const records: CardsightSaleRecord[] = [];
+    for (const p of [9, 10, 10, 10, 11]) {
+      records.push(rec(`2024 Bowman Chrome Player Auto #CPA-XX`, p, { parallel_id: null }));
+    }
+    records.push(rec(`2024 Bowman Chrome Player Auto Yellow Refractor #CPA-XX /75`, 50, { parallel_id: "A" }));
+    records.push(rec(`2024 Bowman Chrome Player Auto Yellow Refractor #CPA-XX /75`, 60, { parallel_id: "A" }));
+    records.push(rec(`2024 Bowman Chrome Player Auto Yellow Refractors #CPA-XX /75`, 100, { parallel_id: "B" }));
+    records.push(rec(`2024 Bowman Chrome Player Auto Yellow Refractors #CPA-XX /75`, 120, { parallel_id: "B" }));
+    return {
+      card: { card_id: "card-xx" } as any,
+      raw: { count: records.length, records },
+      graded: [],
+      meta: { total_records: records.length, last_sale_date: "2026-06-16T00:00:00Z" },
+    } as CardsightPricingResponse;
+  }
+
+  it("pools sales across canonically-equivalent sibling parallels (singular + plural)", () => {
+    const pricing = makePluralFixture();
+    const siblings = [
+      { id: "A", name: "Yellow Refractor" },
+      { id: "B", name: "Yellow Refractors" },
+    ];
+    // Call with the SINGULAR id; expect the plural pid to pool in.
+    const med = computeSameParallelRawMedian(pricing, "A", "Yellow Refractor", siblings);
+    expect(med).toBe(80); // median of [50, 60, 100, 120]
+  });
+
+  it("call with the PLURAL id returns the same pooled median (order-independent)", () => {
+    const pricing = makePluralFixture();
+    const siblings = [
+      { id: "A", name: "Yellow Refractor" },
+      { id: "B", name: "Yellow Refractors" },
+    ];
+    const med = computeSameParallelRawMedian(pricing, "B", "Yellow Refractors", siblings);
+    expect(med).toBe(80);
+  });
+
+  it("a non-equivalent sibling (different finish at same color) is NOT pooled", () => {
+    // Only B is canonically-equivalent to A. A "Yellow Wave Refractor"
+    // sibling at pid "C" must stay separate even though it shares the
+    // color and the "refractor" finish token.
+    const records: CardsightSaleRecord[] = [];
+    for (const p of [9, 10, 10, 10, 11]) {
+      records.push(rec(`Player Auto #CPA-XX`, p, { parallel_id: null }));
+    }
+    records.push(rec(`Yellow Refractor /75`, 50, { parallel_id: "A" }));
+    records.push(rec(`Yellow Refractor /75`, 60, { parallel_id: "A" }));
+    records.push(rec(`Yellow Wave Refractor /75`, 200, { parallel_id: "C" }));
+    records.push(rec(`Yellow Wave Refractor /75`, 220, { parallel_id: "C" }));
+    const pricing: CardsightPricingResponse = {
+      card: { card_id: "card-xx" } as any,
+      raw: { count: records.length, records },
+      graded: [],
+      meta: { total_records: records.length, last_sale_date: "2026-06-16T00:00:00Z" },
+    } as CardsightPricingResponse;
+    const siblings = [
+      { id: "A", name: "Yellow Refractor" },
+      { id: "C", name: "Yellow Wave Refractor" }, // strict superset of A's tokens
+    ];
+    const med = computeSameParallelRawMedian(pricing, "A", "Yellow Refractor", siblings);
+    // Pool stays {50, 60}; Wave parallel rejected by canonical mismatch
+    // AND by the title matcher's distinguishing-token guard.
+    expect(med).toBe(55);
   });
 });
 

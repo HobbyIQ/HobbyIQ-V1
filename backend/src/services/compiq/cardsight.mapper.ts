@@ -233,6 +233,46 @@ export function applyCardNumberDisambiguation(
   return product;
 }
 
+// CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): Cardsight catalogs many
+// parallel finishes under BOTH singular and plural names — "Refractor"
+// AND "Refractors", "Speckle Refractor" AND "Speckle Refractors",
+// "Gold Mini Diamond Refractor" AND "Gold Mini-Diamond Refractors", etc.
+// The two spellings get distinct parallel_ids in detail.parallels[], so
+// sales of the same physical parallel split across two catalog
+// identities. The composed branch's observed-parallel-raw pooling
+// (computeSameParallelRawMedian) ignored the duplicate, under-counting
+// real comps. Empirically discovered in CF-LADDER-FIT (Step 1 audit
+// surfaced 212 records under "Refractors" / "Yellow Refractors" / etc.
+// that the matcher's `\brefractor\b` regex couldn't bind to the
+// "refractor" token).
+//
+// Singular forms of parallel-vocabulary nouns that should be normalized
+// when tokenizing. Stripping is gated by this set so non-vocab plurals
+// (player names ending in -s, set-name plurals, etc.) stay untouched.
+export const PARALLEL_SINGULAR_TOKENS: ReadonlySet<string> = new Set([
+  "refractor",
+  "fractor",        // matches "x-fractor"/"superfractor" siblings
+  "wave",
+  "shimmer",
+  "speckle",
+  "diamond",
+  "raywave",
+  "reptilian",
+  "lava",
+  "atomic",
+  "mojo",
+  "pulsar",
+  "padparadscha",
+  "sapphire",
+  "prizm",
+]);
+
+function singularize(token: string): string {
+  if (token.length < 4 || !token.endsWith("s")) return token;
+  const singular = token.slice(0, -1);
+  return PARALLEL_SINGULAR_TOKENS.has(singular) ? singular : token;
+}
+
 // Exported for parallelTitleMatch.ts (CF-CARDSIGHT-RESOLVER-REDESIGN).
 // Single source of truth for parallel tokenization shared between
 // parallelMatches (resolver-time) and applyParallelTitleMatch (comp-fetch
@@ -252,11 +292,15 @@ export function tokenizeParallel(name: string): string[] {
   // Generalizes to other wrapper patterns ("Refractor (Gold)" → ["gold"]).
   // Preserves defect #2 strict-equality semantics for non-wrapped parallels
   // (Refractor ≠ Chrome Blue Refractor remains the contract).
+  //
+  // CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): apply singularize() to each
+  // token so "Refractor" and "Refractors" tokenize identically. See the
+  // PARALLEL_SINGULAR_TOKENS comment block above.
   const wrapped = name.match(/\(([^)]+)\)/);
   const stripped = wrapped ? wrapped[1] : name;
   return stripped
     .split(/[\s\-/]+/)
-    .map((t) => t.toLowerCase())
+    .map((t) => singularize(t.toLowerCase()))
     .filter((t) => t.length > 0);
 }
 

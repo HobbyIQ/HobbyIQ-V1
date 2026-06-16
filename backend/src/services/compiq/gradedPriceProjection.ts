@@ -484,6 +484,21 @@ function detectRecordGrade(co: string, gradeValue: unknown, title: string | null
  */
 const OBSERVED_PARALLEL_RAW_PREMIUM_FLOOR = 1.3;
 
+/**
+ * CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): a parallel's "canonical key"
+ * is its sorted token set after singularization (tokenizeParallel applies
+ * the singularize step). Two siblings that catalog the same physical
+ * parallel under singular AND plural names (e.g. "Refractor" + "Refractors",
+ * "Speckle Refractor" + "Speckle Refractors") collapse to one key here,
+ * so the pooler treats them as equivalent identities.
+ */
+function canonicalParallelKey(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const tokens = tokenizeParallel(name);
+  if (tokens.length === 0) return null;
+  return [...tokens].sort().join("|");
+}
+
 export function computeSameParallelRawMedian(
   pricing: CardsightPricingResponse,
   targetParallelId: string,
@@ -492,9 +507,29 @@ export function computeSameParallelRawMedian(
 ): number | null {
   const prices: number[] = [];
 
-  // 1. Tagged records — definitive parallel_id match.
+  // CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): when the catalog has both
+  // a singular and a plural sibling representing the same physical
+  // parallel (e.g. "Refractor" + "Refractors", "Yellow Refractor" +
+  // "Yellow Refractors"), pool sales tagged with EITHER pid. Empirically
+  // discovered in CF-LADDER-FIT corpus audit — Cardsight double-catalogs
+  // ~40% of base/499 refractor entries this way; pre-fix the helper
+  // under-counted by missing the plural pid bucket.
+  const targetCanonical = canonicalParallelKey(targetParallelName);
+  const equivalentIds = new Set<string>([targetParallelId]);
+  if (targetCanonical) {
+    for (const s of siblingParallels) {
+      if (s.id === targetParallelId) continue;
+      if (canonicalParallelKey(s.name) === targetCanonical) {
+        equivalentIds.add(s.id);
+      }
+    }
+  }
+
+  // 1. Tagged records — definitive parallel_id match (target + canonical-
+  //    equivalent siblings).
   for (const r of (pricing.raw?.records ?? [])) {
-    if (r.parallel_id !== targetParallelId) continue;
+    if (r.parallel_id == null) continue;
+    if (!equivalentIds.has(r.parallel_id)) continue;
     const p = Number(r.price);
     if (!Number.isFinite(p) || p <= 0) continue;
     prices.push(p);

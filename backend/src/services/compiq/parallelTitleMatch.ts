@@ -25,7 +25,7 @@
 // approximate / broad) per design doc §3g.
 
 import type { CardsightPricingResponse } from "./cardsight.client.js";
-import { tokenizeParallel } from "./cardsight.mapper.js";
+import { tokenizeParallel, PARALLEL_SINGULAR_TOKENS } from "./cardsight.mapper.js";
 import {
   CHROME_DRAFT_MULTIPLIERS,
   BOWMAN_2022_FAMILY_ENTRIES,
@@ -390,10 +390,18 @@ export function buildParallelTitleMatcher(
  * (\b) prevents substring over-pull — `buildWordBoundaryPattern("refractor")`
  * does NOT match "superfractor" in a title. Escapes regex metacharacters in
  * the token defensively (tokens come from user input + tokenizeParallel).
+ *
+ * CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): when the token is a
+ * parallel-vocabulary noun (PARALLEL_SINGULAR_TOKENS), allow an optional
+ * trailing 's' in the title so titles spelling "Refractors" still match
+ * the (singularized) "refractor" token. Token-level singularization in
+ * tokenizeParallel handles catalog names; this handles arbitrary title
+ * strings that aren't pre-tokenized.
  */
 function buildWordBoundaryPattern(token: string): RegExp {
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${escaped}\\b`, "i");
+  const pluralTolerant = PARALLEL_SINGULAR_TOKENS.has(token) ? `${escaped}s?` : escaped;
+  return new RegExp(`\\b${pluralTolerant}\\b`, "i");
 }
 
 function countRecords(response: CardsightPricingResponse): number {

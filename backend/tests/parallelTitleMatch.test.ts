@@ -635,3 +635,57 @@ describe("applyParallelTitleMatch — graded-bucket filtering", () => {
     expect(r.response.graded[0].grades[0].records.length).toBe(3);
   });
 });
+
+describe("CF-PARALLEL-PLURAL-NORMALIZE — singular ↔ plural matcher", () => {
+  // The catalog double-catalogs many finishes (Refractor + Refractors,
+  // Speckle Refractor + Speckle Refractors, etc.). Token-side
+  // singularization (cardsight.mapper.tokenizeParallel) collapses the
+  // catalog names; regex-side `s?` (buildWordBoundaryPattern via
+  // PARALLEL_SINGULAR_TOKENS) makes title matching tolerate either
+  // spelling.
+  it("user 'Refractor' matches titles spelling 'Refractor' AND 'Refractors'", () => {
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Refractor",
+      matchedParallelId: "p-refractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: TROUT_2021_TOPPS_CHROME_PARALLELS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2021 Topps Chrome Mike Trout Refractor #1",            // singular
+          "2021 Topps Chrome Mike Trout Refractors Auto #1",      // plural
+          "2021 Topps Chrome Mike Trout Blue Refractor /150 #1",  // distinguishing-token excluded
+        ],
+      }),
+    }));
+    expect(r.priceSource).toBe("title-match-low-sample"); // < 3 records
+    expect(r.filteredCount).toBe(2); // singular + plural both pooled; Blue excluded
+  });
+
+  it("plural sibling collapses to singular canonical key — no spurious distinguishing tokens", () => {
+    // If "Refractor" and "Refractors" coexist as siblings, the plural
+    // must NOT generate distinguishing tokens against the singular
+    // (their canonical token sets are equal). The matcher's filter
+    // `sTokens.length <= userTokens.length` already handles this, but
+    // verify defensively post-singularization.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Refractor",
+      matchedParallelId: "p-refractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: [
+        ...TROUT_2021_TOPPS_CHROME_PARALLELS,
+        { id: "p-refractors", name: "Refractors" }, // plural duplicate
+      ],
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2021 Topps Chrome Mike Trout Refractor #1",
+          "2021 Topps Chrome Mike Trout Refractors Auto #1",
+          "2021 Topps Chrome Mike Trout Refractor /150 #1",
+        ],
+      }),
+    }));
+    // excludedTokens must NOT contain "refractor" / "refractors" — the
+    // plural sibling is a canonical equal, not a proper superset.
+    expect(r.excludedTokens).not.toContain("refractor");
+    expect(r.excludedTokens).not.toContain("refractors");
+  });
+});
