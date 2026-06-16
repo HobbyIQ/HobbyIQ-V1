@@ -7,6 +7,30 @@
 **Status:** SUPERSEDED 2026-05-28 — see refresh
 **Owner:** Drew
 
+## STATUS UPDATE — 2026-06-16
+
+**The critical path is no longer engineering. It's usage.**
+
+Since this roadmap was drafted (2026-05-21), the engineering arc has largely executed or hit a data wall:
+
+- **Card Hedge fully decommissioned** (Phases 1–3 done or obviated). CardSight is the sole comp vendor. The silent-regression and router-bypass concerns (Phases 1–2) are moot — those paths were removed, not patched.
+- **Cache layer (Phase 4a) is built**, not half-built. Two-layer Redis: route-level response cache with an identity validator (CF-ROUTE-CACHE-VALIDATION), client-level raw-comp cache with 6h-fresh + 24h-stale-serve (PHASE-4A-2.2). The "MCP-mediated blob-read-at-prediction" design in copilot-instructions was never built and is superseded — mcp-server calls backend HTTP; the prediction path computes fresh from cached comps. Remaining 4a gap = player-slug-keyed prefetch, which warms the cache for traffic that doesn't exist yet. Deferred until traffic justifies it.
+- **Signal pipeline (Phase 4b) disabled** (host.json allow-list, commit `3bbe605`). The signal functions were built, wired, then replaced by local comps-momentum (CF-PLAYER-IN-SET-MOMENTUM, 2026-06-09), leaving them write-only into the void. Re-introducing external signals is buildable (clean insertion: a fourth TrendIQ component in `forwardProjection`) but unmeasurable without prediction↔outcome pairs. Parked.
+- **PR E reconciliation UX (Phase 6) shipped** end-to-end — two-axis ERP reconciliation backend + iOS reconcile inbox/detail. The flow is ready for real data.
+
+**Why the gate is usage:** the ML moat (Phases 4c–4e) is defined by proprietary prediction↔outcome pairs. There are zero real sales, so zero outcomes to train or validate against. The engine is mature ahead of the data that would prove it. No amount of additional cache, signal, or ML scaffolding changes that — only real transactions do.
+
+**The unlock is the first real sale.** It simultaneously opens the backend reconciliation lane (F1/F2/F3, auto-unparking poll-ingestion verification), exercises the shipped iOS reconcile flow against real fees, and writes the first row of the outcome dataset that makes signals and ML measurable.
+
+**Parked behind the usage gate (with unparking triggers):**
+
+- 4a slug-keyed prefetch + canonical slug — unpark when traffic warms the cache enough that cold-start matters.
+- 4b external-signal blend — unpark when enough real sales exist to backtest-validate a blend before shipping it.
+- 4c–4e ML pipeline / serving / moat — unpark when the outcome dataset is large enough to train on.
+- Phase 5 pricing→portfolio movement signals — gated on 4b/4c (predictions worth surfacing) and on usage.
+
+**Open thread:** `fn-backtest-runner` (kept running) scores predictions against later comp data — a proxy outcome loop that runs without real sales. Whether its output is consumed anywhere is unverified. If it works, it's the only pre-sales read on engine accuracy we have. Worth tracing.
+
 ## Strategic context
 
 HobbyIQ is two products fused: a forward-looking card pricing engine (CompIQ) and an ERP-grade portfolio system. Each has independent value; together they're the moat. This roadmap commits to the full path: removing the legacy Card Hedge dependency, completing the half-built MCP cache architecture, wiring social/news/stats signals into live pricing, building the ML training pipeline on HobbyIQ's own prediction-vs-outcome data, deploying the trained model into production traffic, and integrating pricing intelligence into the portfolio surface.
@@ -86,7 +110,7 @@ Original scope was read-only measurement Week 1 (May 22-28). Compressed into a s
 
 **Findings captured:** see `docs/SESSION_HANDOFF.md` Phase 0 / WORKSTREAM 4 section (Findings 1-11) and `docs/phase0/SOAK_LOG.md`.
 
-### Phase 1 — Observability restore + Cardsight migration (May 22-Jun 4)
+### Phase 1 — Observability restore + Cardsight migration (May 22-Jun 4) — **OBVIATED 2026-06-16** (Card Hedge removed by CF-CARDHEDGE-HARD-CUTOVER `10ad39d`, not patched; original "silent regression" concern is structurally gone)
 
 Two tracks. Track A unblocks every later phase by making production state observable. Track B is the original "stop the bleeding" + "replace router bypasses" work, consolidated since CH router-level disconnect made the original Phase 1/Phase 2 split unnecessary.
 
@@ -107,11 +131,11 @@ Known gaps carried forward:
 - Track A: writer flowing, soak completes without backslide, Day-10 schema-gap decisions made.
 - Track B: zero `primary_mode_cardhedge_namespace_only` warns post-deploy; no direct `cardhedge.client` imports from route files; endpoint success rates unchanged. **MET 2026-06-01.** Verified zero warns over both 7d and 30d windows on App Insights; `cardhedge.client.ts` deleted entirely by CF-CARDHEDGE-HARD-CUTOVER (`10ad39d`), so no direct imports possible.
 
-### Phase 2 — REMOVED
+### Phase 2 — REMOVED — **OBVIATED 2026-06-16** (Card Hedge router-bypass concern removed structurally, not patched)
 
 Folded into Phase 1 Track B. The original Phase 2 ("replace router bypasses") and Phase 1 ("stop the bleeding via mapper") collapsed once CH was confirmed disconnected at the router — the work is one coherent PR-A2 surface, not two phases.
 
-### Phase 3 — CH cleanup (PARTIAL; blocked on picker migration)
+### Phase 3 — CH cleanup (PARTIAL; blocked on picker migration) — **COMPLETE 2026-06-16** (CardSight sole pricing vendor; CF-CARDHEDGE-HARD-CUTOVER `10ad39d`. Picker-path migration sub-status unchanged per the partial below.)
 
 **Status update 2026-05-25:** Phase 3 was over-scoped relative to what
 the Cardsight migration actually shipped. The PRICING path is fully
@@ -155,7 +179,7 @@ prerequisite picker migration is now where the real work lives.
 - Zero references to Card Hedge in active code paths.
 - Documented architecture matches deployed reality.
 
-### Phase 4a — Cache hardening (reframed 2026-06-02)
+### Phase 4a — Cache hardening (reframed 2026-06-02) — **COMPLETE — cache built; slug-prefetch deferred** (see Status Update 2026-06-16)
 
 **RESILIENCE + OBSERVABILITY HARDENING of the existing cache.** The pre-2.1 framing ("build the cache layer") carried a stale premise: a Redis-backed in-process cache was already deployed (cardId-scoped, not player-slug-scoped per the 2.1 investigation). **MCP-as-separate-service was rejected** in the 2.1 decision — no usable MCP repo was discovered in Phase 0, and the existing in-process cache already addressed substrate. **v1 = A+B+C SHIPPED 2026-06-02.**
 
@@ -178,7 +202,7 @@ prerequisite picker migration is now where the real work lives.
 
 **v1 closed 2026-06-02-FIX:** A+B+C + corpus served_stale. Server-side Risk-#2 mitigation works (stale value returned on Cardsight outage; `cache_stale_serve` warn emitted; `served_stale=true` recorded on the prediction corpus row for post-hoc analysis). **DEFERRED, iOS-gated, named carry-forward:** cache-staleness API-output marker (the iOS "approximate — Cardsight unavailable" badge). The `freshness` symbol on `computeEstimate`'s output is already taken (market-data recency schema `{status: "Live"|"Stale"|"Needs refresh", lastUpdated}`); a new field like `cacheFreshness?: "stale"` must be threaded through 5 getPricing call sites + router result types + ~5 computeEstimate return shapes (~10-30 lines). Gated on iOS surface readiness; otherwise the signal lands server-side with no consumer.
 
-### Phase 4b — Signal integration (Week 7: Jul 3-9)
+### Phase 4b — Signal integration (Week 7: Jul 3-9) — **PARKED 2026-06-16 — signal pipeline disabled `3bbe605`; data-gated** (see Status Update)
 
 **VERDICT 2026-06-02 (PHASE-4B-SLICE-1-PROOF): SIGNALS FIRE.** The wired-in-code path is end-to-end live and producing non-neutral multipliers in production. 12 fresh predictions across active MLB stars produced:
 - 9/12 non-null composites; ALL 9 differ from 1.0; range **0.741 → 1.370 in both directions**
@@ -244,7 +268,7 @@ What was actually missing was OBSERVABILITY: whether the wired-in-code path actu
 - Slice 5 (post-slice-3): roster broadened OR signal pipeline retired, based on slice 3 verdict.
 - Slices 2 / 4: only if slice 3 verdict is "keep + maintain."
 
-### Phase 4c — ML training pipeline (Weeks 8-9: Jul 10-23)
+### Phase 4c — ML training pipeline (Weeks 8-9: Jul 10-23) — **PARKED 2026-06-16 — data-gated (no real outcomes yet)** (see Status Update)
 
 **Clean Cardsight-only training data flowing. First trained model exists.**
 
@@ -262,7 +286,7 @@ What was actually missing was OBSERVABILITY: whether the wired-in-code path actu
 - At least one trained model with documented accuracy
 - Go/no-go decision made on productionization
 
-### Phase 4d — ML serving production traffic (Weeks 10-13: Jul 24-Aug 20)
+### Phase 4d — ML serving production traffic (Weeks 10-13: Jul 24-Aug 20) — **PARKED 2026-06-16 — data-gated (no real outcomes yet)** (see Status Update)
 
 **Trained model serves real predictions. Production ML reality, not scaffolding.**
 
@@ -281,7 +305,7 @@ What was actually missing was OBSERVABILITY: whether the wired-in-code path actu
 - Rollback path verified by tabletop exercise
 - Outcome tracking pipeline running with <72h latency from sale to outcome record
 
-### Phase 4e — ML moat realized (Weeks 14-16: Aug 21-Sep 17)
+### Phase 4e — ML moat realized (Weeks 14-16: Aug 21-Sep 17) — **PARKED 2026-06-16 — data-gated (no real outcomes yet)** (see Status Update)
 
 **Model serves majority of traffic. Feedback loop closed. Competitive position defensible.**
 
@@ -299,7 +323,7 @@ What was actually missing was OBSERVABILITY: whether the wired-in-code path actu
 - Outcome dataset size and quality documented; strategic value articulated
 - Moat realized: trained model with proprietary outcome data outperforms competitive alternatives
 
-### Phase 5 — Pricing × Portfolio integration (parallel with 4b-4d, Weeks 7-12)
+### Phase 5 — Pricing × Portfolio integration (parallel with 4b-4d, Weeks 7-12) — **GATED 2026-06-16 — usage-gated via 4b/4c** (see Status Update)
 
 **Pricing intelligence feeds the portfolio surface.**
 
@@ -322,7 +346,7 @@ Subsequent integrations (Weeks 10-12):
 - At least one cross-card recommendation surface shipped
 - Sales data demonstrably feeds back into model training pipeline
 
-### Phase 6 — PR E reconciliation UX (Weeks 6-8, Mac-side parallel)
+### Phase 6 — PR E reconciliation UX (Weeks 6-8, Mac-side parallel) — **COMPLETE 2026-06-16** (PR E shipped end-to-end; backend + iOS SHAs in SESSION_HANDOFF.md "PR E SHIPPED" entry)
 
 **ERP-grade ledger entries become usable for tax and business reporting.**
 
