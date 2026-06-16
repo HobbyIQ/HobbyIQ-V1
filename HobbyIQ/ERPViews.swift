@@ -578,47 +578,49 @@ struct ERPReconciliationView: View {
     }
 
     private var agingSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            erpSectionHeader("AGING BUCKETS")
+        // Only render aging when at least one bucket has entries — empty
+        // buckets are aesthetic noise on a clean inbox.
+        let visible = agingBuckets.filter { $0.count > 0 }
+        return Group {
+            if !visible.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    erpSectionHeader("AGING BUCKETS")
 
-            ForEach(agingBuckets) { bucket in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(bucket.label)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        if let gross = bucket.totalGross {
-                            Text(gross.portfolioCurrencyText)
-                                .font(.caption)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    ForEach(visible) { bucket in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(bucket.displayLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                            Spacer()
+                            Text("\(bucket.count)")
+                                .font(.subheadline.weight(.bold).monospacedDigit())
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        }
+                        .padding(12)
+                        .background(bucket.cutoffWarning == true ? HobbyIQTheme.Colors.danger.opacity(0.08) : HobbyIQTheme.Colors.cardNavy)
+                        .overlay {
+                            if bucket.cutoffWarning == true {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(HobbyIQTheme.Colors.danger.opacity(0.4), lineWidth: 1.5)
+                            } else {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        if bucket.cutoffWarning == true {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption2)
+                                Text("Entries older than 60 days — reconcile soon to ensure accurate reporting.")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(HobbyIQTheme.Colors.danger)
                         }
                     }
-                    Spacer()
-                    Text("\(bucket.count)")
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-                .padding(12)
-                .background(bucket.cutoffWarning == true ? HobbyIQTheme.Colors.danger.opacity(0.08) : HobbyIQTheme.Colors.cardNavy)
-                .overlay {
-                    if bucket.cutoffWarning == true {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(HobbyIQTheme.Colors.danger.opacity(0.4), lineWidth: 1.5)
-                    } else {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                if bucket.cutoffWarning == true {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                        Text("Entries older than 60 days — reconcile soon to ensure accurate reporting.")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.danger)
                 }
             }
         }
@@ -647,10 +649,11 @@ struct ERPReconciliationView: View {
     }
 
     private func loadAll() async {
-        // Aging buckets are fetched alongside the unreconciled list so the
-        // section appears in a single pass. Errors on aging are non-fatal
-        // (banner suppressed); VM errors render through reconcileVM's
-        // own errorMessage publisher.
+        // Aging buckets are supplementary axis-1 metadata — never surface
+        // their failure as the main inbox banner. A decode mismatch or
+        // 5xx on /unreconciled/aging logs to console only; the inbox
+        // continues to render. VM errors (the actual inbox path) render
+        // through reconcileVM's own errorMessage publisher.
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -660,7 +663,8 @@ struct ERPReconciliationView: View {
             let aging = try await APIService.shared.fetchAgingBuckets()
             agingBuckets = aging.buckets
         } catch {
-            errorMessage = APIService.errorMessage(from: error)
+            print("[Financials] aging fetch failed (non-fatal): \(APIService.errorMessage(from: error))")
+            agingBuckets = []
         }
         await inbox
     }
