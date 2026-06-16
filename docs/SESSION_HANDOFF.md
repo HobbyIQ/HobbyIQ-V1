@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-06-16 — Band honesty: composed ranges widened to empirical P10/P90 (deployed)
+
+SHIPPED (76d6e3f): CF-FITTED-RANGE-BAND-HONESTY. Composed multiplier-range bands replaced with empirical
+P10/median + P90/median residual spreads computed from the CF-LADDER-FIT 521-point corpus. Shipped
+±25%-ish bands contained PSA 10 market truth only ~45% of the time across validation cards — too tight,
+overclaiming precision on an explicitly-labeled "estimated range." New bands honestly reflect cross-card
+variance.
+
+THREE-LEVEL HIERARCHY (single source of truth: ladder-fit-records.json residuals):
+- (finish, serial) CELL band when n ≥ 10 AND span ≤ 3× — only 3 cells passed both gates: refractor|/99
+  [0.75, 1.52], mini-diamond|/100 [0.69, 1.92], refractor|/250 [0.65, 1.82]. Per the brief's cap rule,
+  cells with span > 3× (mostly 3.20× – 9.11×) fall back to tier.
+- Per-SERIAL tier band aggregated across all finishes. Spans range 2.80× (tightest, /250 n=58) to 8.57×
+  (widest, /50 — top-tier scarcity-premium variance driven by mini-diamond + shimmer outliers).
+- Global residual spread [0.55, 2.59] when serial unknown.
+
+`getFittedRangeBand` now takes an optional finish hint; gradedPriceProjection's post-loop passes the
+fitted-multiplier's finish. Observed-anchor ranges UNTOUCHED (GRADE_CONFIDENCE spread around comp-derived
+point — different basis, tighter by right). Universal invariant (point ∈ [rangeLow, rangeHigh]) holds by
+construction since all band lows ≤ 1.0 and highs ≥ 1.0.
+
+VALIDATION RE-RUN (mid-tier /75-/499 SCP PSA 10 market truth):
+  Esmerlyn Valdez (moderate prominence):  50% → 88% containment ← past ~80% target
+  Jurdrick Profar (low):                  29% → 71%
+  Alexander Albertus (very low):          44% → 78%
+Composed point split (centered/under/over) is BYTE-IDENTICAL pre/post — only ranges widened, engine
+numbers didn't move. Under-bias on stars / over-bias on low-prominence cards is the player-prominence
+correction deferred to the NEXT CF, not this one's job.
+
+SMOKE (post-deploy):
+  Esmerlyn Valdez Blue Refractor /150 PSA 10: point $422 unchanged; range $203 – $983 (was ~$329 – $532)
+  Leo De Vries Yellow Refractor /75 PSA 10:   point $2,800 unchanged; range $1,848 – $7,168 (was
+                                              ~$2,184 – $3,641)
+Both centrals byte-identical to pre-deploy; ranges widened to honest empirical bounds.
+
+KEY FINDINGS:
+- Most (finish, serial) cells fail the strict cap. Empirically, only 3 of 15 cells with n ≥ 10 have
+  spans ≤ 3× — meaning cross-card variance within a single (finish, serial) is genuinely large for
+  most parallel types. Tier-level pooling absorbs the variance into wider but honest bands.
+- /50 is the widest tier (8.57× span) — top-tier scarcity-premium variance is real, not noise. If a
+  hard cap on tier-band width becomes desirable later, a natural choice is `low = max(empirical, 0.30)`
+  and `high = min(empirical, 4.0)` capping span ~13× — left UNCAPPED here per the brief.
+- Bands widened uniformly across mid-tier — centrals didn't shift, so the engine's bias-by-prominence
+  pattern persists unchanged in this CF. That correction is the next CF's job.
+
+OPEN / NEXT:
+- Player-prominence correction (the next CF). Cross-card validation showed engine under-shoots stars
+  (Leo) and over-shoots low-prominence prospects (Profar, Albertus). Premium-centering within-card is
+  off the table per prior CF (mixed-direction signal); the natural lever is a card-level prominence
+  feature (base-raw level relative to corpus median, recent comp frequency, graduation status) feeding
+  a multiplicative correction at the composed branch's central, not the band.
+- Tier-band cap: if /50's 8.57× span feels too loose in product, the cap pattern above is the natural
+  knob. Not load-bearing for launch — the band labels itself "ballpark" / "estimated range" already.
+- Honesty copy polish carried forward from CF-FITTED-RANGE-LAYER: "No recent comps" reads slightly
+  imprecise for parallels with floor-rejected or off-grade sales; "No qualifying comps" is truer.
+
+OPERATIONAL:
+- Range hierarchy is the durable pattern: (finish, serial) cell with strict cap → tier → global. Same
+  shape as previous helper rules with a finish-aware short-circuit when the data warrants. Empirical
+  bands live as freeze'd constants in chromeFittedLadder.ts so the ladder-fit-records.json cache stays
+  a local-dev artifact (production never reads it).
+- Suite 2426/2426. Universal invariant sweep still passes — bands wider trivially contain the point.
+
+---
+
 ## 2026-06-16 — Fitted ladder + honest-ranges + provenance fix (one commit, deployed)
 
 SHIPPED (5119544 fold; predecessor fdfa9f0): CF-FITTED-LADDER + CF-FITTED-RANGE-LAYER + CF-FITTED-RANGE-
