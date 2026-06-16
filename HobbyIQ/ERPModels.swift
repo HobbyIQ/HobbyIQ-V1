@@ -13,6 +13,12 @@ struct LedgerEntryForErp: Codable, Identifiable, Hashable {
     let holdingId: String?
     let playerName: String?
     let cardName: String?
+    /// CF-PR-E-IOS-PHASE-1B (2026-06-16): backend's `PortfolioLedgerEntry`
+    /// emits `cardTitle` on the wire (never `cardName`) —
+    /// portfolioStore.service.ts:335. Decoding into `cardName` always
+    /// resolves to nil. Prefer `cardTitle` for display; legacy `cardName`
+    /// stays for tolerance.
+    let cardTitle: String?
     let year: String?
     let setName: String?
     let parallel: String?
@@ -86,6 +92,14 @@ struct LedgerEntryForErp: Codable, Identifiable, Hashable {
     /// section in the reconcile detail view.
     var hasPendingFees: Bool {
         (missingFields ?? []).isEmpty == false
+    }
+
+    /// Prefer `cardTitle` (the real wire field); fall back to `cardName`
+    /// (decoder-tolerance) when present. Nil when neither has content.
+    var displayCardTitle: String? {
+        if let t = cardTitle?.trimmingCharacters(in: .whitespaces), !t.isEmpty { return t }
+        if let n = cardName?.trimmingCharacters(in: .whitespaces), !n.isEmpty { return n }
+        return nil
     }
 }
 
