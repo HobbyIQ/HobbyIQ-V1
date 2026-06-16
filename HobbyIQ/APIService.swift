@@ -466,6 +466,66 @@ struct APIService {
         )
     }
 
+    // MARK: - ERP Reconciliation (CF-PR-E-TWO-AXIS-RECONCILIATION, backend SHA 385906f)
+    //
+    // Mirrors `fetchPortfolioHoldings` auth shape EXACTLY: no explicit
+    // sessionId is passed; `makeRequest` auto-injects from
+    // `AuthService.shared.session?.token` (line 622-626). Endpoints are
+    // session-gated server-side via `requireSession` + `requireEntitlement
+    // ("erpReconciliation")` — 401 surfaces as APIServiceError.httpError(401).
+
+    /// `GET /api/portfolio/erp/unreconciled` — list of eBay ledger entries
+    /// where either axis is unmet (fees pending and/or user costs unset).
+    /// Entries sorted `soldAt` ASC; dismissed entries excluded from
+    /// `entries[]` but reflected in `counts.dismissedHidden`.
+    func fetchUnreconciled() async throws -> UnreconciledResponse {
+        try await get(
+            path: "/api/portfolio/erp/unreconciled",
+            responseType: UnreconciledResponse.self
+        )
+    }
+
+    /// `POST /api/portfolio/erp/unreconciled/:id/save-costs` — body
+    /// `{gradingCost?, suppliesCost?}`. At least one field required server-
+    /// side; either or both with value 0 is accepted (raw-card path).
+    /// Response carries the server-authoritative post-save entry — drive
+    /// UI transitions off it (finalize → `entry.needsReconciliation == false`).
+    ///
+    /// On 409 ALREADY_FINALIZED, `APIServiceError.httpError(409, _)` surfaces;
+    /// caller should drop the entry from the inbox + refresh + show a calm
+    /// "reconciled by another device" banner per PR E spec.
+    func saveLedgerCosts(
+        entryId: String,
+        gradingCost: Double?,
+        suppliesCost: Double?
+    ) async throws -> SaveCostsResponse {
+        try await post(
+            path: "/api/portfolio/erp/unreconciled/\(entryId)/save-costs",
+            body: SaveCostsRequest(
+                gradingCost: gradingCost,
+                suppliesCost: suppliesCost
+            ),
+            responseType: SaveCostsResponse.self
+        )
+    }
+
+    /// `PATCH /api/portfolio/ledger/:id` with `{dismissedAt, dismissedReason}`
+    /// — "Quiet for now" path. Backend whitelist accepts both fields.
+    /// Does NOT clear `needsReconciliation` (smuggle protection); the
+    /// entry stays excluded from P&L but is hidden from the active inbox.
+    func dismissLedgerEntry(
+        entryId: String,
+        dismissedAt: Date = Date(),
+        reason: String? = nil
+    ) async throws -> LedgerPatchResponse {
+        let iso = ReconcileDateParser.dismissedAtISOString(from: dismissedAt)
+        return try await patch(
+            path: "/api/portfolio/ledger/\(entryId)",
+            body: DismissRequest(dismissedAt: iso, dismissedReason: reason),
+            responseType: LedgerPatchResponse.self
+        )
+    }
+
     // MARK: - Alerts
 
     func fetchAlerts() async throws -> AlertsAPIResponse {
@@ -1163,9 +1223,10 @@ struct CompIQPriceRange: Codable, Hashable {
 }
 
 /// Attribution metadata for a predicted price. Shape varies by engine code path:
-/// - Success: mechanism, anchorProduct, anchorParallel, anchorComps, anchorPrice, multiplierRange, crossProductAnchor, confidence
+/// - multiplier-anchored: mechanism, anchorProduct, anchorParallel, anchorComps, anchorPrice, multiplierRange, crossProductAnchor, confidence
+/// - trendiq-projection: mechanism, forwardProjectionFactor, trendIQComposite, trendIQDirection, trendIQCoverage
 /// - Failure: mechanism, failureReason (e.g. "uncurated-subject-parallel", "insufficient-curated-peer-parallels")
-/// All fields are optional to tolerate both shapes.
+/// All fields are optional to tolerate every shape.
 struct CompIQPredictedPriceAttribution: Codable, Hashable {
     let mechanism: String?
     let anchorProduct: String?
@@ -1176,6 +1237,78 @@ struct CompIQPredictedPriceAttribution: Codable, Hashable {
     let crossProductAnchor: Bool?
     let confidence: Double?
     let failureReason: String?
+    // CF-COMP-DETAIL-EXPAND (2026-06-07): trendiq-projection mechanism
+    // fields. Present when mechanism == "trendiq-projection".
+    let forwardProjectionFactor: Double?
+    let trendIQComposite: Double?
+    let trendIQDirection: String?
+    let trendIQCoverage: String?
+}
+
+// CF-COMP-DETAIL-EXPAND (2026-06-07): TrendIQ deep-detail struct.
+// Surfaces the full multi-layer TrendIQ breakdown (composite + per-layer
+// components + weights) on the comp page so the user can see WHY the
+// predicted price moved off FMV, not just the headline composite. All
+// fields optional — older responses + insufficient-coverage rows return
+// partial data.
+struct CompIQTrendIQDetail: Codable, Hashable {
+    let composite: Double?
+    let direction: String?    // "up" / "down" / "flat"
+    let impliedPct: Double?
+    let coverage: String?     // "card_only" / "full" / "no_card" / "insufficient" / etc.
+    let lastUpdated: String?
+    let components: Components?
+    let weights: Weights?
+
+    struct Components: Codable, Hashable {
+        let playerMomentum: PlayerMomentum?
+        let cardTrajectory: CardTrajectory?
+        let segmentTrajectory: SegmentTrajectory?
+    }
+
+    struct PlayerMomentum: Codable, Hashable {
+        let multiplier: Double?
+        let flags: [String]?
+    }
+
+    struct CardTrajectory: Codable, Hashable {
+        let multiplier: Double?
+        let pctChange: Double?
+        let recentMedian: Double?
+        let olderMedian: Double?
+        let recentCount: Int?
+        let olderCount: Int?
+        let windowRecentDays: Int?
+        let windowOlderDays: Int?
+    }
+
+    struct SegmentTrajectory: Codable, Hashable {
+        let multiplier: Double?
+        let pctChange: Double?
+    }
+
+    struct Weights: Codable, Hashable {
+        let playerMomentum: Double?
+        let cardTrajectory: Double?
+        let segmentTrajectory: Double?
+    }
+}
+
+// CF-COMP-DETAIL-EXPAND (2026-06-07): regime classifier diagnostics.
+// The regime classifier (stable/volatile/trending) tells the user how
+// noisy the comp set is. The diagnostics surface WHY a regime label
+// landed — slope %/mo, R², CoV — so iOS can show a 1-line summary
+// without re-deriving it.
+struct CompIQRegimeDiagnostics: Codable, Hashable {
+    let compsUsedForClassification: Int?
+    let windowDays: Int?
+    let slopePctPerMonth: Double?
+    let r2: Double?
+    let coefficientOfVariation: Double?
+    let recentMeanLast14d: Double?
+    let olderMean14to90d: Double?
+    let pctChangeRecentVsOlder: Double?
+    let classificationReason: String?
 }
 
 /// Backend `dataSufficiency` changed from a plain string to an object in Phase 3.
