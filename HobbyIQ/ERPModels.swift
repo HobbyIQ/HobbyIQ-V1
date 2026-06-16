@@ -13,6 +13,12 @@ struct LedgerEntryForErp: Codable, Identifiable, Hashable {
     let holdingId: String?
     let playerName: String?
     let cardName: String?
+    /// CF-PR-E-IOS-PHASE-1B (2026-06-16): backend's `PortfolioLedgerEntry`
+    /// emits `cardTitle` on the wire (never `cardName`) —
+    /// portfolioStore.service.ts:335. Decoding into `cardName` always
+    /// resolves to nil. Prefer `cardTitle` for display; legacy `cardName`
+    /// stays for tolerance.
+    let cardTitle: String?
     let year: String?
     let setName: String?
     let parallel: String?
@@ -87,6 +93,14 @@ struct LedgerEntryForErp: Codable, Identifiable, Hashable {
     var hasPendingFees: Bool {
         (missingFields ?? []).isEmpty == false
     }
+
+    /// Prefer `cardTitle` (the real wire field); fall back to `cardName`
+    /// (decoder-tolerance) when present. Nil when neither has content.
+    var displayCardTitle: String? {
+        if let t = cardTitle?.trimmingCharacters(in: .whitespaces), !t.isEmpty { return t }
+        if let n = cardName?.trimmingCharacters(in: .whitespaces), !n.isEmpty { return n }
+        return nil
+    }
 }
 
 /// CF-PR-E-TWO-AXIS-RECONCILIATION (2026-06-16): server-derived display
@@ -132,12 +146,28 @@ struct AgingBucketsResponse: Codable {
     let buckets: [AgingBucket]
 }
 
+/// CF-PR-E-IOS-PHASE-1B (2026-06-16): wire shape per erpAgingOverride.service.ts
+/// L25-32 is `{ bucket: "0-7d" | "8-30d" | "31-60d" | ">60d", count, entryIds,
+/// cutoffWarning? }`. Pre-Phase-1b iOS expected `label` (non-optional) and a
+/// `totalGross` field that never existed — first-row decode failure surfaced
+/// as a red banner on the new inbox. `entryIds` is decoded but unread today.
 struct AgingBucket: Codable, Identifiable, Hashable {
-    var id: String { label }
-    let label: String
+    var id: String { bucket }
+    let bucket: String
     let count: Int
-    let totalGross: Double?
+    let entryIds: [String]?
     let cutoffWarning: Bool?
+
+    /// Human-readable bucket label rendered in the aging section.
+    var displayLabel: String {
+        switch bucket {
+        case "0-7d":   return "0–7 days"
+        case "8-30d":  return "8–30 days"
+        case "31-60d": return "31–60 days"
+        case ">60d":   return ">60 days"
+        default:       return bucket
+        }
+    }
 }
 
 // MARK: - Manual Override

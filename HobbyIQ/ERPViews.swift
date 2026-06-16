@@ -493,27 +493,38 @@ private struct ERPHubTrendChart: View {
 // MARK: - 6.1 Reconciliation Dashboard
 
 struct ERPReconciliationView: View {
-    @State private var unreconciled: [LedgerEntryForErp] = []
+    // CF-PR-E-IOS-PHASE-1B (2026-06-16): the unreconciled list + per-
+    // entry mutations now ride ReconcileViewModel. Aging buckets +
+    // eBay-finances refetch remain ad-hoc @State siblings — they're
+    // axis-1 metadata, not part of the two-axis inbox.
+    @StateObject private var reconcileVM = ReconcileViewModel()
     @State private var agingBuckets: [AgingBucket] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var isRefetching = false
     @State private var refetchMessage: String?
-    @State private var selectedEntry: LedgerEntryForErp?
-    @State private var showOverrideSheet = false
+    @State private var detailEntry: LedgerEntryForErp?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 autoReconcileBanner
 
-                if isLoading {
+                if isLoading || reconcileVM.isLoading {
                     ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
                         .frame(maxWidth: .infinity, minHeight: 100)
                 }
 
                 if let errorMessage {
                     erpErrorBanner(errorMessage)
+                }
+
+                if let vmError = reconcileVM.errorMessage {
+                    erpErrorBanner(vmError)
+                }
+
+                if let info = reconcileVM.infoMessage {
+                    reconcileInfoBanner(info)
                 }
 
                 if let refetchMessage {
@@ -526,15 +537,20 @@ struct ERPReconciliationView: View {
 
                 refetchButton
 
-                if !unreconciled.isEmpty {
-                    unreconciledSection
-                } else if !isLoading && errorMessage == nil {
-                    erpEmptyState(icon: "checkmark.seal", title: "All Reconciled", message: "No unreconciled entries right now.")
-                }
+                ReconcileInboxSubview(
+                    entries: reconcileVM.entries,
+                    isLoading: reconcileVM.isLoading,
+                    onRowTap: { entry in detailEntry = entry }
+                )
             }
             .padding(16)
         }
-        .task { await loadData() }
+        .task { await loadAll() }
+        .navigationDestination(item: $detailEntry) { entry in
+            ReconcileDetailView(entry: entry, viewModel: reconcileVM) {
+                detailEntry = nil
+            }
+        }
     }
 
     private var autoReconcileBanner: some View {
@@ -562,47 +578,49 @@ struct ERPReconciliationView: View {
     }
 
     private var agingSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            erpSectionHeader("AGING BUCKETS")
+        // Only render aging when at least one bucket has entries — empty
+        // buckets are aesthetic noise on a clean inbox.
+        let visible = agingBuckets.filter { $0.count > 0 }
+        return Group {
+            if !visible.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    erpSectionHeader("AGING BUCKETS")
 
-            ForEach(agingBuckets) { bucket in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(bucket.label)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        if let gross = bucket.totalGross {
-                            Text(gross.portfolioCurrencyText)
-                                .font(.caption)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    ForEach(visible) { bucket in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(bucket.displayLabel)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                            }
+                            Spacer()
+                            Text("\(bucket.count)")
+                                .font(.subheadline.weight(.bold).monospacedDigit())
+                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        }
+                        .padding(12)
+                        .background(bucket.cutoffWarning == true ? HobbyIQTheme.Colors.danger.opacity(0.08) : HobbyIQTheme.Colors.cardNavy)
+                        .overlay {
+                            if bucket.cutoffWarning == true {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(HobbyIQTheme.Colors.danger.opacity(0.4), lineWidth: 1.5)
+                            } else {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        if bucket.cutoffWarning == true {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.caption2)
+                                Text("Entries older than 60 days — reconcile soon to ensure accurate reporting.")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(HobbyIQTheme.Colors.danger)
                         }
                     }
-                    Spacer()
-                    Text("\(bucket.count)")
-                        .font(.subheadline.weight(.bold).monospacedDigit())
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
-                .padding(12)
-                .background(bucket.cutoffWarning == true ? HobbyIQTheme.Colors.danger.opacity(0.08) : HobbyIQTheme.Colors.cardNavy)
-                .overlay {
-                    if bucket.cutoffWarning == true {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(HobbyIQTheme.Colors.danger.opacity(0.4), lineWidth: 1.5)
-                    } else {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                if bucket.cutoffWarning == true {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                        Text("Entries older than 60 days — reconcile soon to ensure accurate reporting.")
-                            .font(.caption2)
-                    }
-                    .foregroundStyle(HobbyIQTheme.Colors.danger)
                 }
             }
         }
@@ -630,43 +648,25 @@ struct ERPReconciliationView: View {
         .accessibilityLabel(isRefetching ? "Syncing eBay finances" : "Sync eBay finances")
     }
 
-    private var unreconciledSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            erpSectionHeader("UNRECONCILED (\(unreconciled.count))")
-
-            ForEach(unreconciled) { entry in
-                Button {
-                    selectedEntry = entry
-                    showOverrideSheet = true
-                } label: {
-                    erpLedgerRow(entry)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .sheet(isPresented: $showOverrideSheet) {
-            if let entry = selectedEntry {
-                ERPOverrideSheet(entry: entry) {
-                    Task { await loadData() }
-                }
-            }
-        }
-    }
-
-    private func loadData() async {
+    private func loadAll() async {
+        // Aging buckets are supplementary axis-1 metadata — never surface
+        // their failure as the main inbox banner. A decode mismatch or
+        // 5xx on /unreconciled/aging logs to console only; the inbox
+        // continues to render. VM errors (the actual inbox path) render
+        // through reconcileVM's own errorMessage publisher.
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
+        async let inbox: Void = reconcileVM.load()
         do {
-            async let unrec = APIService.shared.fetchUnreconciled()
-            async let aging = APIService.shared.fetchAgingBuckets()
-            let (uResult, aResult) = try await (unrec, aging)
-            unreconciled = uResult.entries
-            agingBuckets = aResult.buckets
+            let aging = try await APIService.shared.fetchAgingBuckets()
+            agingBuckets = aging.buckets
         } catch {
-            errorMessage = APIService.errorMessage(from: error)
+            print("[Financials] aging fetch failed (non-fatal): \(APIService.errorMessage(from: error))")
+            agingBuckets = []
         }
+        await inbox
     }
 
     private func refetch() async {
@@ -677,7 +677,7 @@ struct ERPReconciliationView: View {
         do {
             let response = try await APIService.shared.refetchFinances()
             refetchMessage = response.message ?? "Updated \(response.updated ?? 0) entries"
-            await loadData()
+            await loadAll()
         } catch {
             errorMessage = APIService.errorMessage(from: error)
         }
@@ -2415,3 +2415,732 @@ private func freshnessPill(_ freshness: String?) -> some View {
         .background(color.opacity(0.15))
         .clipShape(Capsule())
 }
+
+// MARK: - 6.1b Reconcile Inbox + Detail (CF-PR-E-IOS-PHASE-1B, 2026-06-16)
+//
+// The new two-axis reconciliation surface. ReconcileInboxSubview swaps in
+// where the legacy unreconciledSection used to render; ReconcileDetailView
+// is a push (not sheet) host for the four-section detail. Both consume
+// ReconcileViewModel as the single source of truth; identity helpers are
+// fileprivate so #Preview blocks can call them without a view instance.
+
+struct ReconcileInboxSubview: View {
+    let entries: [LedgerEntryForErp]
+    let isLoading: Bool
+    let onRowTap: (LedgerEntryForErp) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            erpSectionHeader("UNRECONCILED (\(entries.count))")
+
+            if entries.isEmpty {
+                if !isLoading {
+                    erpEmptyState(
+                        icon: "checkmark.seal",
+                        title: "All caught up",
+                        message: "No sales need reconciling right now."
+                    )
+                }
+            } else {
+                ForEach(entries) { entry in
+                    Button {
+                        onRowTap(entry)
+                    } label: {
+                        reconcileInboxRow(entry)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+private func reconcileInboxRow(_ entry: LedgerEntryForErp) -> some View {
+    HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(reconcileIdentityLine(for: entry))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            HStack(spacing: 6) {
+                reconcileStatusChip(for: entry)
+                Text(reconcileSoldAgoText(for: entry))
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        Spacer(minLength: 8)
+        VStack(alignment: .trailing, spacing: 4) {
+            Text((entry.salePrice ?? entry.grossProceeds ?? 0).portfolioCurrencyText)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+        }
+    }
+    .padding(12)
+    .background(HobbyIQTheme.Colors.cardNavy)
+    .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+}
+
+@ViewBuilder
+private func reconcileStatusChip(for entry: LedgerEntryForErp) -> some View {
+    // Server is the source of truth for costsStatus; chip is purely a
+    // visual translation of the enum. Calm-only palette: warning amber
+    // for needsAction, muted gray for savedPendingFees, never red.
+    switch entry.costsStatusEnum {
+    case .needsAction:
+        reconcileChip(text: "Add cost basis", color: HobbyIQTheme.Colors.warning)
+    case .savedPendingFees:
+        reconcileChip(text: "Fees pending", color: HobbyIQTheme.Colors.mutedText)
+    case .none:
+        EmptyView()
+    }
+}
+
+private func reconcileChip(text: String, color: Color) -> some View {
+    Text(text)
+        .font(.caption2.weight(.bold))
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.14))
+        .clipShape(Capsule(style: .continuous))
+}
+
+fileprivate func reconcileIdentityLine(for entry: LedgerEntryForErp) -> String {
+    // Backend's PortfolioLedgerEntry carries playerName + cardTitle only —
+    // no year/set/parallel/grade on the ledger row. v1 renders the
+    // "player — title" pair from the entry itself. A holdings join via
+    // PortfolioIQViewModel.inventoryCards (matched on holdingId) can
+    // upgrade this to a rich set/year/parallel/grade line later without
+    // touching the row layout.
+    let player = (entry.playerName ?? "").trimmingCharacters(in: .whitespaces)
+    let title = entry.displayCardTitle ?? ""
+    switch (player.isEmpty, title.isEmpty) {
+    case (false, false): return "\(player) — \(title)"
+    case (false, true):  return player
+    case (true, false):  return title
+    case (true, true):   return "Unknown sale"
+    }
+}
+
+fileprivate func reconcileSoldAgoText(for entry: LedgerEntryForErp) -> String {
+    guard let soldAt = entry.soldAt,
+          let date = reconcileParseDate(soldAt) else {
+        return "sold recently"
+    }
+    let days = Calendar.current.dateComponents([.day], from: date, to: Date()).day ?? 0
+    if days <= 0 { return "sold today" }
+    if days == 1 { return "sold 1d ago" }
+    return "sold \(days)d ago"
+}
+
+fileprivate func reconcileSoldDateText(for entry: LedgerEntryForErp) -> String {
+    guard let soldAt = entry.soldAt,
+          let date = reconcileParseDate(soldAt) else {
+        return entry.soldAt.map { String($0.prefix(10)) } ?? "—"
+    }
+    return date.formatted(.dateTime.month(.abbreviated).day().year())
+}
+
+fileprivate func reconcileParseDate(_ iso: String) -> Date? {
+    let fmtFrac = ISO8601DateFormatter()
+    fmtFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let fmtStd = ISO8601DateFormatter()
+    fmtStd.formatOptions = [.withInternetDateTime]
+    return fmtFrac.date(from: iso) ?? fmtStd.date(from: iso)
+}
+
+/// Calm info banner — used for VM-published infoMessage (e.g. 409 conflict
+/// responses). Never red. Electric-blue accent matches the autoReconcile
+/// banner so it reads as informational, not a warning.
+private func reconcileInfoBanner(_ message: String) -> some View {
+    HStack(alignment: .top, spacing: 10) {
+        Image(systemName: "info.circle")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+        Text(message)
+            .font(.caption)
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .multilineTextAlignment(.leading)
+        Spacer(minLength: 8)
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.08))
+    .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.25), lineWidth: 1)
+    )
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+}
+
+// MARK: - Reconcile Detail View
+
+struct ReconcileDetailView: View {
+    let entry: LedgerEntryForErp
+    @ObservedObject var viewModel: ReconcileViewModel
+    let onFinalized: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var gradingCostText: String
+    @State private var suppliesCostText: String
+    @State private var isSaving = false
+    @State private var isDismissing = false
+    @State private var localError: String?
+
+    init(entry: LedgerEntryForErp, viewModel: ReconcileViewModel, onFinalized: @escaping () -> Void) {
+        self.entry = entry
+        self.viewModel = viewModel
+        self.onFinalized = onFinalized
+        _gradingCostText = State(initialValue: entry.gradingCost.map { String(format: "%.2f", $0) } ?? "")
+        _suppliesCostText = State(initialValue: entry.suppliesCost.map { String(format: "%.2f", $0) } ?? "")
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                identityHeader
+
+                if let info = viewModel.infoMessage {
+                    reconcileInfoBanner(info)
+                }
+                if let err = localError {
+                    erpErrorBanner(err)
+                }
+
+                saleSection
+                ebayFeesSection
+                costBasisSection
+                realizedGainSection
+
+                actionButtons
+            }
+            .padding(16)
+        }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Reconcile sale")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
+    }
+
+    // MARK: Header
+
+    private var identityHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(reconcileIdentityLine(for: entry))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                reconcileStatusChip(for: entry)
+                Text(reconcileSoldAgoText(for: entry))
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: Sale
+
+    private var saleSection: some View {
+        PortfolioContextCard(title: "Sale · from eBay") {
+            detailDataRow(label: "Sale price", value: (entry.salePrice ?? entry.grossProceeds ?? 0).portfolioCurrencyText)
+            detailDataRow(label: "Sold", value: reconcileSoldDateText(for: entry))
+            if let order = entry.ebayOrderId, !order.isEmpty {
+                detailDataRow(label: "eBay order", value: order)
+            }
+        }
+    }
+
+    // MARK: eBay fees (read-only in v1 per scope)
+
+    private var ebayFeesSection: some View {
+        PortfolioContextCard(title: "eBay fees") {
+            feeRow(label: "Final-value fee", value: entry.finalValueFee)
+            feeRow(label: "Payment processing", value: entry.paymentProcessingFee)
+            feeRow(label: "Promoted listing", value: entry.promotedListingFee)
+            feeRow(label: "Ad fee", value: entry.adFee)
+            feeRow(label: "Other fees", value: entry.otherFees)
+            feeRow(label: "Actual shipping", value: entry.actualShippingCost)
+
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
+                .padding(.vertical, 2)
+
+            feeRow(label: "Net payout", value: entry.netPayout, emphasized: true)
+
+            if entry.hasPendingFees {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("Pending from eBay")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func feeRow(label: String, value: Double?, emphasized: Bool = false) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(emphasized ? .semibold : .medium))
+                .foregroundStyle(emphasized ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            if let value {
+                Text(value.portfolioCurrencyText)
+                    .font(.subheadline.weight(emphasized ? .bold : .medium).monospacedDigit())
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            } else {
+                Text("—")
+                    .font(.subheadline.weight(.medium).monospacedDigit())
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    // MARK: Your cost basis
+
+    private var costBasisSection: some View {
+        PortfolioContextCard(title: "Your cost basis") {
+            HStack {
+                Text("Acquisition")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                Text((entry.costBasisSold ?? 0).portfolioCurrencyText)
+                    .font(.subheadline.weight(.medium).monospacedDigit())
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Image(systemName: "lock.fill")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+            }
+
+            costInputRow(label: "Grading cost", text: $gradingCostText)
+            costInputRow(label: "Supplies cost", text: $suppliesCostText)
+
+            Text("Costs lock once reconciled.")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func costInputRow(label: String, text: Binding<String>) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer(minLength: 8)
+            TextField("0.00", text: text)
+                .keyboardType(.decimalPad)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(AppColors.surfaceElevated)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(AppColors.border, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .frame(maxWidth: 140)
+        }
+    }
+
+    // MARK: Realized gain
+
+    private var realizedGainSection: some View {
+        PortfolioContextCard(title: "Realized gain") {
+            HStack {
+                Text("Realized P&L")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                let pnl = entry.realizedProfitLoss ?? 0
+                Text(pnl.portfolioSignedCurrencyText)
+                    .font(.subheadline.weight(.bold).monospacedDigit())
+                    .foregroundStyle(pnl >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+            }
+
+            if entry.hasPendingFees {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("Provisional — fees pending")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .padding(.top, 4)
+                if let missing = entry.missingFields, !missing.isEmpty {
+                    Text("Awaiting: \(missing.joined(separator: ", "))")
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: Actions
+
+    private var actionButtons: some View {
+        VStack(spacing: 10) {
+            Button {
+                Task { await saveCosts() }
+            } label: {
+                HStack(spacing: 8) {
+                    if isSaving {
+                        ProgressView().tint(.white).controlSize(.small)
+                    }
+                    Text(isSaving ? "Saving…" : "Save cost basis")
+                        .font(.subheadline.weight(.bold))
+                }
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(HobbyIQTheme.Colors.electricBlue)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving || isDismissing)
+
+            Button {
+                Task { await quietForNow() }
+            } label: {
+                Text(isDismissing ? "Quieting…" : "Quiet for now")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving || isDismissing)
+        }
+        .padding(.top, 4)
+    }
+
+    private func detailDataRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.medium).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    // MARK: Mutations
+
+    private func saveCosts() async {
+        let g = parseCost(gradingCostText)
+        let s = parseCost(suppliesCostText)
+        if case .invalid(let label) = g {
+            localError = "\(label) must be a non-negative number."
+            return
+        }
+        if case .invalid(let label) = s {
+            localError = "\(label) must be a non-negative number."
+            return
+        }
+
+        isSaving = true
+        localError = nil
+        defer { isSaving = false }
+
+        let updated = await viewModel.saveCosts(
+            entryId: entry.id,
+            gradingCost: g.value(label: "Grading cost"),
+            suppliesCost: s.value(label: "Supplies cost")
+        )
+        // Server-authoritative finalize: needsReconciliation == false →
+        // VM removed the row, this detail leaves the stack. Otherwise the
+        // row flipped to saved_pending_fees and the user stays on detail.
+        if updated?.needsReconciliation == false {
+            onFinalized()
+            dismiss()
+        }
+    }
+
+    private func quietForNow() async {
+        isDismissing = true
+        localError = nil
+        defer { isDismissing = false }
+        await viewModel.dismiss(entryId: entry.id, reason: nil)
+        // Dismiss is optimistic — entries dropped synchronously. Leave
+        // detail regardless of error since the user's intent was "quiet."
+        // A non-409 failure restores in VM and surfaces via errorMessage
+        // on the inbox.
+        onFinalized()
+        dismiss()
+    }
+
+    private enum CostInput {
+        case value(Double?)
+        case invalid(String)
+
+        func value(label: String) -> Double? {
+            if case .value(let v) = self { return v }
+            return nil
+        }
+    }
+
+    private func parseCost(_ raw: String) -> CostInput {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return .value(nil) }
+        guard let v = Double(trimmed), v >= 0 else { return .invalid("Cost") }
+        return .value(v)
+    }
+}
+
+// MARK: - Preview fixtures (CF-PR-E-IOS-PHASE-1B)
+
+#if DEBUG
+extension LedgerEntryForErp {
+    static func mockReconcile(
+        id: String = UUID().uuidString,
+        playerName: String? = "Leo De Vries",
+        cardTitle: String? = "2024 Bowman Chrome Blue Refractor Auto /150 #BCA-LD",
+        soldAt: String? = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-86400 * 3)),
+        salePrice: Double? = 1183,
+        finalValueFee: Double? = 142.85,
+        paymentProcessingFee: Double? = -2.25,
+        promotedListingFee: Double? = 0,
+        adFee: Double? = 0,
+        otherFees: Double? = 0,
+        actualShippingCost: Double? = 4.85,
+        netPayout: Double? = 1042.55,
+        costBasisSold: Double? = 350,
+        gradingCost: Double? = nil,
+        suppliesCost: Double? = nil,
+        realizedProfitLoss: Double? = 690.15,
+        missingFields: [String]? = [],
+        costsStatus: String? = "needs_action",
+        ebayOrderId: String? = "12-34567-12345"
+    ) -> LedgerEntryForErp {
+        LedgerEntryForErp(
+            id: id,
+            userId: "u-mock",
+            holdingId: "h-mock",
+            playerName: playerName,
+            cardName: nil,
+            cardTitle: cardTitle,
+            year: nil,
+            setName: nil,
+            parallel: nil,
+            grade: nil,
+            salePrice: salePrice,
+            grossProceeds: salePrice,
+            netProceeds: netPayout,
+            netPayout: netPayout,
+            costBasisSold: costBasisSold,
+            realizedProfitLoss: realizedProfitLoss,
+            realizedProfitLossPct: nil,
+            finalValueFee: finalValueFee,
+            paymentProcessingFee: paymentProcessingFee,
+            promotedListingFee: promotedListingFee,
+            adFee: adFee,
+            otherFees: otherFees,
+            actualShippingCost: actualShippingCost,
+            totalGranularFees: nil,
+            source: "ebay",
+            ebayOrderId: ebayOrderId,
+            ebayItemId: nil,
+            soldAt: soldAt,
+            createdAt: nil,
+            updatedAt: nil,
+            reconciledAt: nil,
+            needsReconciliation: true,
+            dismissedAt: nil,
+            dismissedReason: nil,
+            fees: nil,
+            tax: nil,
+            shipping: nil,
+            gradingCost: gradingCost,
+            suppliesCost: suppliesCost,
+            feeAdjustments: nil,
+            tradeId: nil,
+            tradeRole: nil,
+            userCostsProvidedAt: costsStatus == "saved_pending_fees" ? ISO8601DateFormatter().string(from: Date()) : nil,
+            userCostsProvidedBy: nil,
+            feeSource: missingFields?.isEmpty == true ? "ebay_finances" : nil,
+            missingFields: missingFields,
+            costsStatus: costsStatus
+        )
+    }
+}
+
+private struct ReconcileDetailPreviewWrapper: View {
+    let entry: LedgerEntryForErp
+    @StateObject private var vm = ReconcileViewModel()
+
+    var body: some View {
+        NavigationStack {
+            ReconcileDetailView(entry: entry, viewModel: vm) {}
+                .background { HobbyIQBackground() }
+        }
+    }
+}
+
+#Preview("Reconcile inbox · empty") {
+    NavigationStack {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ReconcileInboxSubview(
+                    entries: [],
+                    isLoading: false,
+                    onRowTap: { _ in }
+                )
+            }
+            .padding(16)
+        }
+        .background { HobbyIQBackground() }
+    }
+}
+
+#Preview("Reconcile inbox · mixed (needs + pending)") {
+    let needs = LedgerEntryForErp.mockReconcile(
+        playerName: "Leo De Vries",
+        cardTitle: "2024 Bowman Chrome Blue Refractor Auto /150",
+        soldAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-86400 * 2)),
+        salePrice: 1183,
+        missingFields: ["finalValueFee", "netPayout"],
+        costsStatus: "needs_action"
+    )
+    let pending = LedgerEntryForErp.mockReconcile(
+        playerName: "Paul Skenes",
+        cardTitle: "2024 Bowman Chrome Refractor #BCP-PS PSA 10",
+        soldAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-86400 * 8)),
+        salePrice: 420,
+        missingFields: ["netPayout"],
+        costsStatus: "saved_pending_fees"
+    )
+    return NavigationStack {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ReconcileInboxSubview(
+                    entries: [needs, pending],
+                    isLoading: false,
+                    onRowTap: { _ in }
+                )
+            }
+            .padding(16)
+        }
+        .background { HobbyIQBackground() }
+    }
+}
+
+#Preview("Detail · needs_action + fees pending") {
+    ReconcileDetailPreviewWrapper(entry: LedgerEntryForErp.mockReconcile(
+        finalValueFee: nil,
+        paymentProcessingFee: nil,
+        netPayout: nil,
+        missingFields: ["finalValueFee", "paymentProcessingFee", "netPayout"],
+        costsStatus: "needs_action"
+    ))
+}
+
+#Preview("Detail · needs_action + fees populated") {
+    ReconcileDetailPreviewWrapper(entry: LedgerEntryForErp.mockReconcile(
+        missingFields: [],
+        costsStatus: "needs_action"
+    ))
+}
+
+#Preview("Detail · saved_pending_fees") {
+    ReconcileDetailPreviewWrapper(entry: LedgerEntryForErp.mockReconcile(
+        finalValueFee: nil,
+        netPayout: nil,
+        gradingCost: 22,
+        suppliesCost: 3.5,
+        missingFields: ["finalValueFee", "netPayout"],
+        costsStatus: "saved_pending_fees"
+    ))
+}
+
+#Preview("Detail · raw card 0/0") {
+    ReconcileDetailPreviewWrapper(entry: LedgerEntryForErp.mockReconcile(
+        playerName: "James Wood",
+        cardTitle: "2024 Bowman Chrome Aqua Refractor /199 #BCP-JW (raw)",
+        salePrice: 145,
+        gradingCost: 0,
+        suppliesCost: 0,
+        missingFields: [],
+        costsStatus: "saved_pending_fees"
+    ))
+}
+
+// CF-PR-E-IOS-PHASE-1B sim-confirmation: the provisional-label section
+// rides below the cost-basis fold in the full detail previews. This
+// isolated wrapper forces the realized-gain card to the top of the
+// canvas so the "Provisional — fees pending" + missingFields render
+// can be inspected without scrolling.
+private struct RealizedGainProvisionalPreview: View {
+    let entry: LedgerEntryForErp
+    @StateObject private var vm = ReconcileViewModel()
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                PortfolioContextCard(title: "Realized gain") {
+                    HStack {
+                        Text("Realized P&L")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Spacer()
+                        let pnl = entry.realizedProfitLoss ?? 0
+                        Text(pnl.portfolioSignedCurrencyText)
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(pnl >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                    }
+                    if entry.hasPendingFees {
+                        HStack(spacing: 6) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                            Text("Provisional — fees pending")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .padding(.top, 4)
+                        if let missing = entry.missingFields, !missing.isEmpty {
+                            Text("Awaiting: \(missing.joined(separator: ", "))")
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background { HobbyIQBackground() }
+    }
+}
+
+#Preview("Realized gain · provisional + missing fields") {
+    RealizedGainProvisionalPreview(entry: LedgerEntryForErp.mockReconcile(
+        finalValueFee: nil,
+        paymentProcessingFee: nil,
+        netPayout: nil,
+        realizedProfitLoss: 412.50,
+        missingFields: ["finalValueFee", "paymentProcessingFee", "netPayout"],
+        costsStatus: "saved_pending_fees"
+    ))
+}
+#endif
