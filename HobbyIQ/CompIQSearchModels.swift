@@ -437,6 +437,32 @@ struct CompIQGradedEstimate: Codable, Hashable, Identifiable {
     /// `tier` so the view never needs to know about it.
     let confidenceTier: String?
 
+    // MARK: - CF-IOS-HONEST-RANGES (2026-06-16)
+    // Comp-sufficiency tiering that drives the iOS state-aware estimate
+    // render. Backend is the single source of truth — never recompute
+    // sufficiency on-device. All optional + defensive-decoded; a payload
+    // without these fields degrades gracefully to the legacy `tier` path.
+
+    /// "sufficient" (≥3 comps → point + "Based on N sales"),
+    /// "thin" (1-2 comps → point + range + "Based on N sale(s)"),
+    /// "none" (0 comps OR top-tier override → range-only "No recent comps").
+    let compSufficiency: String?
+    /// Drives the basis prose: "comps", "comps-thin", or "multiplier-range".
+    /// Always present alongside compSufficiency.
+    let estimateBasis: String?
+    /// Observed comp count that anchored the estimate; surfaces as
+    /// "Based on N sale(s)" when ≥1.
+    let n: Int?
+    /// Fitted-multiplier range bounds for the "no recent comps" state's
+    /// "≈ Lo–Hi× base" tertiary line. Null on observed-anchor paths.
+    let multiplierLow: Double?
+    let multiplierHigh: Double?
+    /// Dollar range used by the honest-ranges render. Distinct from the
+    /// legacy estimateLow/High (which still ships for back-compat); when
+    /// honest-ranges is active the renderer reads rangeLow/High.
+    let rangeLow: Double?
+    let rangeHigh: Double?
+
     var id: String { grade ?? UUID().uuidString }
 
     enum Tier: String {
@@ -456,6 +482,19 @@ struct CompIQGradedEstimate: Codable, Hashable, Identifiable {
         case "ballpark": return .ballpark
         default:         return .noData
         }
+    }
+
+    /// CF-IOS-HONEST-RANGES: parsed sufficiency. Unknown / nil → nil so
+    /// the renderer can fall through to the legacy path.
+    enum CompSufficiency: String {
+        case sufficient
+        case thin
+        case none
+    }
+
+    var sufficiency: CompSufficiency? {
+        guard let raw = compSufficiency else { return nil }
+        return CompSufficiency(rawValue: raw)
     }
 }
 

@@ -976,12 +976,22 @@ struct CompIQPricedCardView: View {
                 }
             case .estimate, .rough, .ballpark:
                 if let est = estimateFor(selectedGrade) {
-                    estimateRailSlot(tier: tierForGrade(selectedGrade), estimate: est)
+                    honestRangeEstimateBlock(est)
                 } else {
                     noDataRailSlot(basis: nil)
                 }
             case .noData:
-                noDataRailSlot(basis: estimateFor(selectedGrade)?.basis)
+                // CF-IOS-HONEST-RANGES (2026-06-16): when the engine
+                // ships compSufficiency on a "no-data"-tier estimate
+                // (top-tier override forces "none" with a fitted range),
+                // route through the honest-ranges renderer so the user
+                // sees the range + multiplier hint instead of the bare
+                // "Can't estimate yet" stub.
+                if let est = estimateFor(selectedGrade), est.sufficiency != nil {
+                    honestRangeEstimateBlock(est)
+                } else {
+                    noDataRailSlot(basis: estimateFor(selectedGrade)?.basis)
+                }
             }
         }
     }
@@ -990,6 +1000,23 @@ struct CompIQPricedCardView: View {
         if selectedGrade == .raw { return nil }
         guard let raw = observedNoteFor(selectedGrade), raw.isEmpty == false else { return nil }
         return raw
+    }
+
+    // MARK: - Honest Ranges (CF-IOS-HONEST-RANGES)
+
+    /// Dispatches to the file-scope `honestRangeEstimateBlockView`, with
+    /// the legacy fallback closure wired to this view's `estimateRailSlot`
+    /// so older payloads without `compSufficiency` keep their current
+    /// rendering. Method exists so the call site at the grade rail
+    /// switch stays self-contained.
+    @ViewBuilder
+    private func honestRangeEstimateBlock(_ estimate: CompIQGradedEstimate) -> some View {
+        honestRangeEstimateBlockView(estimate) { est in
+            estimateRailSlot(
+                tier: est.tier == .noData ? .noData : .estimate,
+                estimate: est
+            )
+        }
     }
 
     /// CF-GRADED-RAIL-RENDER (2026-06-12): hedged estimate value block —
@@ -3811,3 +3838,317 @@ private struct GradeRailFlow: Layout {
     }
 }
 
+
+// MARK: - Honest Ranges file-scope helpers (CF-IOS-HONEST-RANGES)
+
+/// CF-IOS-HONEST-RANGES (2026-06-16): state-aware estimate render keyed
+/// on backend's `compSufficiency`. Backend is the single source of
+/// truth — sufficiency is NEVER recomputed on-device. File-scope so
+/// `#Preview` can render every state without instantiating the whole
+/// priced-card view.
+///
+///   • sufficient (≥3 comps)        → point + "Based on N sales"
+///   • thin (1-2 comps)             → point + "Based on N sale(s)" +
+///                                    tertiary "range $lo – $hi"
+///   • none (0 comps / top-tier)    → muted "No recent comps" +
+///                                    "This is an estimated range" +
+///                                    "$lo – $hi" + "≈ Lo–Hi× base"
+///   • none + WIDE band (high/low>5)→ replace the numeric range with
+///                                    qualitative "Very rough — chase
+///                                    territory" + tertiary advisory.
+///
+/// Comp-backed states carry NO tier badge — the contrast between a
+/// clean point ("Based on N sales") and the muted "no recent comps"
+/// block IS the visual hierarchy.
+///
+/// `legacyFallback` is the back-compat path for payloads that don't
+/// carry `compSufficiency` yet — the caller hands in their existing
+/// render so a missing field never paints a blank.
+@ViewBuilder
+fileprivate func honestRangeEstimateBlockView<Fallback: View>(
+    _ estimate: CompIQGradedEstimate,
+    legacyFallback: (CompIQGradedEstimate) -> Fallback
+) -> some View {
+    if let s = estimate.sufficiency {
+        switch s {
+        case .sufficient:
+            sufficientEstimateView(estimate)
+        case .thin:
+            thinEstimateView(estimate)
+        case .none:
+            noneEstimateView(estimate)
+        }
+    } else {
+        legacyFallback(estimate)
+    }
+}
+
+@ViewBuilder
+fileprivate func sufficientEstimateView(_ estimate: CompIQGradedEstimate) -> some View {
+    VStack(spacing: 8) {
+        if let v = estimate.estimatedValue {
+            Text(v.formatted(.currency(code: "USD")))
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+        basedOnSalesView(estimate.n)
+    }
+    .frame(maxWidth: .infinity)
+}
+
+@ViewBuilder
+fileprivate func thinEstimateView(_ estimate: CompIQGradedEstimate) -> some View {
+    VStack(spacing: 6) {
+        if let v = estimate.estimatedValue {
+            Text(v.formatted(.currency(code: "USD")))
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+        basedOnSalesView(estimate.n)
+        if let low = estimate.rangeLow, let high = estimate.rangeHigh {
+            Text("range \(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+        }
+    }
+    .frame(maxWidth: .infinity)
+}
+
+@ViewBuilder
+fileprivate func noneEstimateView(_ estimate: CompIQGradedEstimate) -> some View {
+    let isWide: Bool = {
+        guard let low = estimate.rangeLow,
+              let high = estimate.rangeHigh,
+              low > 0 else { return false }
+        return (high / low) > 5.0
+    }()
+    VStack(spacing: 6) {
+        HStack(spacing: 4) {
+            Image(systemName: "clock")
+                .font(.caption2)
+            Text("No recent comps")
+                .font(.caption)
+        }
+        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+        Text("This is an estimated range")
+            .font(.caption2)
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+
+        if isWide {
+            Text("Very rough — chase territory")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+            Text("too few comps to bound · check auction results")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            if let low = estimate.rangeLow, let high = estimate.rangeHigh {
+                Text("\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                    .padding(.top, 2)
+            }
+            if let mLow = estimate.multiplierLow, let mHigh = estimate.multiplierHigh {
+                Text("≈ \(honestRangeMultiplierLabel(mLow))–\(honestRangeMultiplierLabel(mHigh))× base")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.75))
+            }
+        }
+    }
+    .frame(maxWidth: .infinity)
+}
+
+@ViewBuilder
+fileprivate func basedOnSalesView(_ n: Int?) -> some View {
+    if let n, n >= 1 {
+        HStack(spacing: 4) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.caption2)
+            Text("Based on \(n) \(n == 1 ? "sale" : "sales")")
+                .font(.caption)
+        }
+        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+    }
+}
+
+/// 1.6 → "1.6", 5 → "5", 12 → "12". Whole numbers drop the ".0".
+fileprivate func honestRangeMultiplierLabel(_ m: Double) -> String {
+    if m >= 10 || m.truncatingRemainder(dividingBy: 1) == 0 {
+        return String(format: "%.0f", m)
+    }
+    return String(format: "%.1f", m)
+}
+
+// MARK: - Honest Ranges #Previews
+
+/// Mock-data scaffolding for `#Preview` — synthesizes a CompIQGradedEstimate
+/// directly. Synthesized memberwise initializer; never reached at runtime.
+fileprivate extension CompIQGradedEstimate {
+    static func mockHonestRange(
+        grade: String,
+        sufficiency: String?,
+        basis: String?,
+        n: Int? = nil,
+        estimatedValue: Double? = nil,
+        rangeLow: Double? = nil,
+        rangeHigh: Double? = nil,
+        multiplierLow: Double? = nil,
+        multiplierHigh: Double? = nil,
+        legacyBasis: String? = nil,
+        confidenceTier: String? = "estimate"
+    ) -> CompIQGradedEstimate {
+        CompIQGradedEstimate(
+            grade: grade,
+            estimatedValue: estimatedValue,
+            estimateLow: rangeLow,
+            estimateHigh: rangeHigh,
+            basis: legacyBasis,
+            confidenceTier: confidenceTier,
+            compSufficiency: sufficiency,
+            estimateBasis: basis,
+            n: n,
+            multiplierLow: multiplierLow,
+            multiplierHigh: multiplierHigh,
+            rangeLow: rangeLow,
+            rangeHigh: rangeHigh
+        )
+    }
+}
+
+fileprivate struct HonestRangePreviewWrapper: View {
+    let title: String
+    let estimate: CompIQGradedEstimate
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            VStack {
+                honestRangeEstimateBlockView(estimate) { _ in
+                    Text("(legacy fallback)")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .padding()
+        .background(HobbyIQTheme.Colors.appBackground)
+    }
+}
+
+#Preview("Honest Ranges · sufficient (Leo Refractor /499)") {
+    HonestRangePreviewWrapper(
+        title: "sufficient · basis: comps",
+        estimate: .mockHonestRange(
+            grade: "PSA 10",
+            sufficiency: "sufficient",
+            basis: "comps",
+            n: 4,
+            estimatedValue: 1100,
+            rangeLow: 900,
+            rangeHigh: 1300
+        )
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Honest Ranges · thin (Blue Refractor /150)") {
+    HonestRangePreviewWrapper(
+        title: "thin · basis: comps-thin",
+        estimate: .mockHonestRange(
+            grade: "PSA 9",
+            sufficiency: "thin",
+            basis: "comps-thin",
+            n: 2,
+            estimatedValue: 830,
+            rangeLow: 700,
+            rangeHigh: 960
+        )
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Honest Ranges · none mid (Gold /50)") {
+    HonestRangePreviewWrapper(
+        title: "none · basis: multiplier-range",
+        estimate: .mockHonestRange(
+            grade: "SGC 10",
+            sufficiency: "none",
+            basis: "multiplier-range",
+            n: 0,
+            rangeLow: 1900,
+            rangeHigh: 3400,
+            multiplierLow: 2.8,
+            multiplierHigh: 5
+        )
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Honest Ranges · none WIDE (SuperFractor 1/1)") {
+    HonestRangePreviewWrapper(
+        title: "none + wide band · qualitative read",
+        estimate: .mockHonestRange(
+            grade: "PSA 10",
+            sufficiency: "none",
+            basis: "multiplier-range",
+            n: 0,
+            rangeLow: 400,
+            rangeHigh: 5000,
+            multiplierLow: 1,
+            multiplierHigh: 12
+        )
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Honest Ranges · observed (comparison)") {
+    VStack(alignment: .leading, spacing: 12) {
+        Text("observed (comp-backed; reference)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        VStack(spacing: 4) {
+            Text("Market value")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Text(Double(1183).formatted(.currency(code: "USD")))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
+        }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+    .padding()
+    .background(HobbyIQTheme.Colors.appBackground)
+    .preferredColorScheme(.dark)
+}
