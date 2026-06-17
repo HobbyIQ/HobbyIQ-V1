@@ -70,6 +70,13 @@ struct EbayListingDraftView: View {
     @State private var selectedFulfillmentPolicyId: String?
     @State private var selectedReturnPolicyId: String?
 
+    // CF-EBAY-HYDRATE-FROM-CARDSIGHT (2026-06-17): one-shot hydration of
+    // empty year/setName/brand fields from the holding's cardsightCardId
+    // when present. Guards against re-fire on view re-appear; only fills
+    // EMPTY fields (never clobbers a user edit).
+    @State private var hydrationAttempted = false
+    @State private var isHydrating = false
+
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onCompleted: @escaping (PortfolioEbayListingResponse) -> Void) {
         self.viewModel = viewModel
         self.card = card
@@ -163,6 +170,7 @@ struct EbayListingDraftView: View {
         .task {
             await ebayStore.refreshConnectionStatus()
             await loadPolicies()
+            await hydrateFromCardsightIfNeeded()
         }
         .onChange(of: ebayStore.lastErrorMessage) { _, newValue in
             if let newValue {
@@ -884,6 +892,92 @@ struct EbayListingDraftView: View {
         return card.setName.isEmpty ? "Trading Card" : card.setName
     }
 
+    // MARK: - Cardsight Hydration (CF-EBAY-HYDRATE-FROM-CARDSIGHT 2026-06-17)
+    //
+    // Backend's PortfolioHolding may have empty year/setName/brand when
+    // the holding was added before the variant-picker stamped them, OR
+    // when manual entry skipped them. buildTitle on the publish path
+    // composes from structured fields — empty fields produce a sparse
+    // title ("Eric Hartman" alone). When the holding carries a
+    // cardsightCardId, /api/compiq/price-by-id returns a `cardIdentity`
+    // block (release/set/year) we can use to fill the empty draft text
+    // fields. Backend's `getCardDetail` cache is 24h so repeat opens
+    // are cheap.
+    //
+    // Hydration policy:
+    //   - Only fires once per view appearance (hydrationAttempted guard).
+    //   - Only fills EMPTY @State fields — never clobbers user edits.
+    //   - Only triggers when at least one field is missing AND we have
+    //     a cardsightCardId to query.
+    //   - Failures are non-fatal: log, fall through to the default
+    //     empty/`"Trading Card"` state. User can still type values.
+    //   - The hydrated values are local-only (do NOT PATCH the holding
+    //     here). A backend-side hoist into the holding record is the
+    //     durable follow-up; this is the same-day mitigation so the
+    //     next publish ships a good title.
+    private func hydrateFromCardsightIfNeeded() async {
+        guard !hydrationAttempted else { return }
+        hydrationAttempted = true
+
+        guard let csid = card.cardsightCardId?
+                .trimmingCharacters(in: .whitespaces),
+              csid.isEmpty == false else {
+            return
+        }
+
+        let needsYear  = yearText.trimmingCharacters(in: .whitespaces).isEmpty
+        let needsSet   = setNameText.trimmingCharacters(in: .whitespaces).isEmpty
+        let brandTrim  = brandText.trimmingCharacters(in: .whitespaces)
+        let needsBrand = brandTrim.isEmpty || brandTrim == "Trading Card"
+        guard needsYear || needsSet || needsBrand else { return }
+
+        isHydrating = true
+        defer { isHydrating = false }
+
+        do {
+            // gradeCompany/gradeValue forwarded so the call routes to the
+            // user's actual sub-market and the backend reuses any pricing
+            // cache; cardIdentity comes back identically regardless of
+            // grade scope.
+            let response = try await APIService.shared.priceByCardId(
+                cardsightCardId: csid,
+                query: nil,
+                gradeCompany: card.gradeCompany,
+                gradeValue: card.gradeValue,
+                parallelId: nil,
+                parallelName: nil
+            )
+            guard let identity = response.cardIdentity else { return }
+
+            if needsYear, let year = identity.year, year > 0 {
+                yearText = String(year)
+            }
+            // Prefer `release` (publication line, e.g. "Bowman Chrome")
+            // over `set` (subset, e.g. "Chrome Prospect Autographs") for
+            // the iOS setName field — release is what eBay sellers think
+            // of as the "set" and what buildTitle's `product` token wants.
+            if needsSet {
+                if let release = identity.release?
+                    .trimmingCharacters(in: .whitespaces),
+                   release.isEmpty == false {
+                    setNameText = release
+                } else if let set = identity.set?
+                    .trimmingCharacters(in: .whitespaces),
+                   set.isEmpty == false {
+                    setNameText = set
+                }
+            }
+            if needsBrand {
+                let sourceForBrand = setNameText.trimmingCharacters(in: .whitespaces)
+                if let derived = brandFromRelease(sourceForBrand) {
+                    brandText = derived
+                }
+            }
+        } catch {
+            print("[EbayDraft] cardsight hydration failed (non-fatal): \(APIService.errorMessage(from: error))")
+        }
+    }
+
     private static func mapCondition(for card: InventoryCard) -> EbayCardCondition {
         let grade = card.grade.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if grade.isEmpty || grade == "ungraded" || grade == "raw" {
@@ -891,6 +985,35 @@ struct EbayListingDraftView: View {
         }
         return .graded
     }
+}
+
+// MARK: - Brand-Split Map (CF-EBAY-HYDRATE-FROM-CARDSIGHT 2026-06-17)
+//
+// Cardsight's catalog returns `releaseName` (publication line — e.g.
+// "Bowman Chrome", "Topps Update") but does not split out the
+// manufacturer. eBay's title needs the manufacturer as a discrete
+// `brand` token AND the publication line as `product`. Without the
+// split, brand = product literally → buildTitle emits doubling
+// ("Bowman Bowman Chrome"). This is a small static table — the major
+// sports-card publication lines are well-known and stable. Falls back
+// to nil when the release doesn't match a known publisher so the
+// caller can leave the brand text as-is.
+fileprivate func brandFromRelease(_ release: String) -> String? {
+    let lowercased = release.lowercased()
+    if lowercased.contains("bowman")     { return "Bowman" }
+    if lowercased.contains("topps")      { return "Topps" }
+    if lowercased.contains("panini")     { return "Panini" }
+    if lowercased.contains("upper deck") { return "Upper Deck" }
+    if lowercased.contains("donruss")    { return "Panini" }       // Donruss is a Panini brand line
+    if lowercased.contains("stadium club") { return "Topps" }       // Stadium Club is Topps
+    if lowercased.contains("finest")     { return "Topps" }         // Finest is Topps
+    if lowercased.contains("allen & ginter") || lowercased.contains("allen and ginter") { return "Topps" }
+    if lowercased.contains("heritage")   { return "Topps" }         // Heritage is Topps
+    if lowercased.contains("select")     { return "Panini" }        // Select is Panini
+    if lowercased.contains("prizm")      { return "Panini" }
+    if lowercased.contains("optic")      { return "Panini" }
+    if lowercased.contains("mosaic")     { return "Panini" }
+    return nil
 }
 
 // MARK: - Listing Card Modifier
