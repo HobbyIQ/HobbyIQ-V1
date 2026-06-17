@@ -193,7 +193,12 @@ describe("buildListingPreview — never throws on policy gaps", () => {
     });
     expect(preview.missingPolicy).toBeUndefined();
     expect(preview.warnings).toEqual([]);
-    expect(preview.title).toContain("Test Player");
+    // Title contract is covered in ebayListing.buildTitle.test.ts —
+    // CF-EBAY-TITLE-HONOR-AND-FALLBACK (910264d) reshaped buildTitle into
+    // an HONOR/FALLBACK two-stage resolver, so a fixture that supplies
+    // both cardTitle and playerName lands on the HONOR PATH and returns
+    // cardTitle verbatim. These policy tests intentionally stay focused
+    // on the policy plumbing.
   });
 
   it("surfaces missingPolicy + warning instead of throwing when a policy is missing", async () => {
@@ -208,7 +213,9 @@ describe("buildListingPreview — never throws on policy gaps", () => {
     expect(preview.missingPolicy).toEqual({ policyType: "payment", reason: "none_configured" });
     expect(preview.warnings.length).toBeGreaterThan(0);
     expect(preview.warnings[0]).toMatch(/payment/i);
-    // Preview body still rendered so iOS can show the card.
-    expect(preview.title).toContain("Test Player");
+    // Preview body still rendered so iOS can show the card — sanity-check
+    // by reading a non-title field rather than asserting title shape (the
+    // title contract is owned by ebayListing.buildTitle.test.ts).
+    expect(preview.price).toBe(19.99);
   });
 });
