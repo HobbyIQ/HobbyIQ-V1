@@ -123,18 +123,18 @@ interface ScoreInput {
   actuals: number[];
 }
 
-function median(xs: number[]): number | null {
+export function median(xs: number[]): number | null {
   if (!xs.length) return null;
   const s = [...xs].sort((a, b) => a - b);
   return s[Math.floor(s.length / 2)];
 }
 
-function pctErr(predicted: number, actual: number): number {
+export function pctErr(predicted: number, actual: number): number {
   if (actual === 0) return 0;
   return ((predicted - actual) / actual) * 100;
 }
 
-function scoreActuals(
+export function scoreActuals(
   predicted: number,
   actuals: number[]
 ): { median: number | null; abs: number | null; pct: number | null; n: number } {
