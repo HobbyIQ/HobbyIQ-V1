@@ -244,7 +244,16 @@ final class EBayOAuthCoordinator: NSObject, ObservableObject {
                 }
             }
 
-            session.prefersEphemeralWebBrowserSession = false
+            // CF-EBAY-FORCE-FRESH-LOGIN (2026-06-17): ephemeral session is
+            // REQUIRED for the account-switch flow. With shared Safari
+            // cookies (prefersEphemeral = false), eBay's authorize endpoint
+            // auto-completes against whatever account is signed in to
+            // Safari and never prompts for credentials — making it
+            // impossible to connect a different eBay account than the one
+            // already in the user's Safari session. Ephemeral guarantees
+            // a cookie-free webview per connect → eBay always shows the
+            // login page.
+            session.prefersEphemeralWebBrowserSession = true
             session.presentationContextProvider = self
             authenticationSession = session
 
