@@ -77,13 +77,24 @@ struct EbayListingDraftView: View {
     @State private var hydrationAttempted = false
     @State private var isHydrating = false
 
+    // CF-EBAY-TITLE-HONOR-FROM-IOS (2026-06-17): the backend's buildTitle
+    // now honors a non-empty cardTitle verbatim (capped at 80) and only
+    // falls back to structured composition when empty. iOS therefore
+    // sends listingTitle (user-editable) as cardTitle. We track the
+    // initial seed so post-hydration we can re-seed listingTitle from
+    // the freshly-populated structured fields ONLY when the user hasn't
+    // already typed over it.
+    @State private var listingTitleInitialSeed: String = ""
+
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onCompleted: @escaping (PortfolioEbayListingResponse) -> Void) {
         self.viewModel = viewModel
         self.card = card
         self.onCompleted = onCompleted
         _frontPhotoUrl = State(initialValue: card.imageFrontUrl)
         _backPhotoUrl = State(initialValue: card.imageBackUrl)
-        _listingTitle = State(initialValue: Self.defaultTitle(for: card))
+        let seedTitle = Self.defaultTitle(for: card)
+        _listingTitle = State(initialValue: seedTitle)
+        _listingTitleInitialSeed = State(initialValue: seedTitle)
         _listingDescription = State(initialValue: Self.defaultDescription(for: card))
         _askingPriceText = State(initialValue: String(format: "%.2f", max(card.currentValue, card.highValue ?? card.currentValue)))
         _quantityText = State(initialValue: String(format: "%.0f", max(card.quantity ?? 1, 1)))
@@ -821,7 +832,11 @@ struct EbayListingDraftView: View {
         return PortfolioEbayListingRequest(
             holdingId: card.id.uuidString.lowercased(),
             playerName: playerNameText.trimmingCharacters(in: .whitespacesAndNewlines),
-            cardTitle: card.cardName.trimmingCharacters(in: .whitespacesAndNewlines),
+            // CF-EBAY-TITLE-HONOR-FROM-IOS (2026-06-17): send the user-
+            // editable listingTitle (initialized from defaultTitle and
+            // possibly re-seeded after cardsight hydration). Backend's
+            // buildTitle honors this verbatim when non-empty.
+            cardTitle: listingTitle.trimmingCharacters(in: .whitespacesAndNewlines),
             cardYear: cardYear,
             brand: brandTrimmed,
             setName: setTrimmed,
@@ -854,14 +869,72 @@ struct EbayListingDraftView: View {
         )
     }
 
+    // CF-EBAY-TITLE-HONOR-FROM-IOS (2026-06-17): mirror backend's
+    // buildTitle compose format — `[year] [set] [player]
+    // [parallel(+serial)] [Auto?]` — with the same brand-vs-set dedup
+    // so the seed title (and any post-hydration re-seed) lines up with
+    // what backend would otherwise compose on the FALLBACK path.
     private static func defaultTitle(for card: InventoryCard) -> String {
-        var parts = [card.playerName, card.cardName]
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { $0.isEmpty == false }
-        if card.isAuto {
-            parts.append("AUTO")
+        composeTitle(
+            year: card.year,
+            brand: defaultBrand(for: card),
+            setName: card.setName,
+            playerName: card.playerName,
+            parallel: card.parallel,
+            isAuto: card.isAuto
+        )
+    }
+
+    /// Mirrors `composeTitle` in `backend/src/services/ebay/ebayListing.service.ts`.
+    /// Order: [year] [set with brand-dedup] [player] [parallel] [Auto?].
+    /// Empty tokens collapsed; capped at eBay's 80-char title limit.
+    private static func composeTitle(
+        year: String,
+        brand: String,
+        setName: String,
+        playerName: String,
+        parallel: String,
+        isAuto: Bool
+    ) -> String {
+        var tokens: [String] = []
+
+        let yearTrim = year.trimmingCharacters(in: .whitespaces)
+        if !yearTrim.isEmpty, let n = Int(yearTrim), n > 0 {
+            tokens.append(yearTrim)
         }
-        return parts.joined(separator: " - ")
+
+        let set = formatSetWithBrandDedup(brand: brand, set: setName)
+        if !set.isEmpty { tokens.append(set) }
+
+        let player = playerName.trimmingCharacters(in: .whitespaces)
+        if !player.isEmpty { tokens.append(player) }
+
+        let par = parallel.trimmingCharacters(in: .whitespaces)
+        if !par.isEmpty { tokens.append(par) }
+
+        if isAuto { tokens.append("Auto") }
+
+        let joined = tokens
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .replacingOccurrences(of: "  ", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+
+        if joined.count <= 80 { return joined }
+        return String(joined.prefix(77)) + "..."
+    }
+
+    private static func formatSetWithBrandDedup(brand: String, set: String) -> String {
+        let brandTrim = brand.trimmingCharacters(in: .whitespaces)
+        let setTrim = set.trimmingCharacters(in: .whitespaces)
+        if brandTrim.isEmpty && setTrim.isEmpty { return "" }
+        if brandTrim.isEmpty { return setTrim }
+        if setTrim.isEmpty { return brandTrim }
+        let lcSet = setTrim.lowercased()
+        let lcBrand = brandTrim.lowercased()
+        if lcSet == lcBrand { return setTrim }
+        if lcSet.contains(lcBrand) { return setTrim }
+        return "\(brandTrim) \(setTrim)"
     }
 
     private static func defaultDescription(for card: InventoryCard) -> String {
@@ -971,6 +1044,27 @@ struct EbayListingDraftView: View {
                 let sourceForBrand = setNameText.trimmingCharacters(in: .whitespaces)
                 if let derived = brandFromRelease(sourceForBrand) {
                     brandText = derived
+                }
+            }
+
+            // CF-EBAY-TITLE-HONOR-FROM-IOS (2026-06-17): re-seed the
+            // listingTitle from the hydrated text fields ONLY when the
+            // user hasn't yet edited it (current value still equals the
+            // original seed). This keeps the visible title in lockstep
+            // with the now-rich year/set/brand fields while preserving
+            // any hand-typed override.
+            if listingTitle == listingTitleInitialSeed {
+                let reseed = Self.composeTitle(
+                    year: yearText,
+                    brand: brandText,
+                    setName: setNameText,
+                    playerName: playerNameText,
+                    parallel: parallelText,
+                    isAuto: isAutoToggle
+                )
+                if !reseed.isEmpty, reseed != listingTitle {
+                    listingTitle = reseed
+                    listingTitleInitialSeed = reseed
                 }
             }
         } catch {
