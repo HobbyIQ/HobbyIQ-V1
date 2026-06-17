@@ -482,6 +482,21 @@ describe("deriveCostsStatus + listUnreconciled costsStatus + P&L exclusion (inva
       userCostsProvidedAt: "2026-06-10T00:00:00Z",
     })).toBe("saved_pending_fees");
   });
+  // CF-PR-E-COSTSSTATUS-FINALIZED-GUARD (2026-06-17)
+  it("finalized (needsReconciliation=false) + marker set → 'needs_action' (was 'saved_pending_fees' pre-fix)", () => {
+    // Both axes met: fees populated + userCostsProvidedAt set. Pre-fix this
+    // returned "saved_pending_fees" — contradictory display state alongside
+    // needsReconciliation=false. The finalized guard returns "needs_action"
+    // as a sentinel (the value is never rendered for finalized entries
+    // because they exit the iOS reconcile inbox).
+    expect(deriveCostsStatus({
+      ...ebayReconciled(),                                  // needsReconciliation=false, fees populated
+      userCostsProvidedAt: "2026-06-10T00:00:00Z",          // axis 2 satisfied
+    })).toBe("needs_action");
+  });
+  it("finalized entry without marker still returns 'needs_action' (defensive — same arm)", () => {
+    expect(deriveCostsStatus(ebayReconciled())).toBe("needs_action");
+  });
   it("listUnreconciled surfaces both costsStatus buckets", () => {
     const a = { ...ebayPending(), id: "a" }; // needs_action
     const b = {

@@ -237,6 +237,21 @@ export interface UnreconciledEntry extends LedgerEntryForErp {
 }
 
 export function deriveCostsStatus(entry: LedgerEntryForErp): CostsStatus {
+  // CF-PR-E-COSTSSTATUS-FINALIZED-GUARD (2026-06-17): once an entry finalizes
+  // (BOTH axes met → needsReconciliation=false), the row leaves the iOS
+  // reconcile inbox and the costsStatus chip is never rendered. Returning
+  // "saved_pending_fees" on a finalized entry was the original pre-fix
+  // emit — semantically contradictory ("pending fees" alongside
+  // needsReconciliation=false) and a tripwire for any API consumer reading
+  // the field literally. Force "needs_action" as a sentinel: still a
+  // misleading value for a done entry, but at least it doesn't claim
+  // anything is pending. The right fix (a "finalized" enum value, or
+  // optional/null when finalized) is parked until a non-iOS consumer
+  // actually needs costsStatus to be meaningful on finalized rows —
+  // sweep at deploy-time confirmed zero backend logic reads it as a
+  // decision input today, and the listUnreconciled inclusion gate is
+  // isReconciled(), never costsStatus.
+  if (entry.needsReconciliation === false) return "needs_action";
   return entry.userCostsProvidedAt ? "saved_pending_fees" : "needs_action";
 }
 

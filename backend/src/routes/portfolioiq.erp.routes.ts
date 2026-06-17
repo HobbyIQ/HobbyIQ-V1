@@ -3,6 +3,7 @@
 //
 //   GET  /erp/unreconciled                           (CF-ERP)
 //   GET  /erp/unreconciled/aging                     (#6a)
+//   POST /erp/refetch                                (#6b-fanout — CF-PR-E-REFETCH-FANOUT)
 //   POST /erp/unreconciled/:id/refetch               (#6b)
 //   POST /erp/unreconciled/:id/override              (#6c, audit-trail append)
 //   GET  /erp/pnl?from=&to=&groupBy=&includeExpenses (CF-ERP + #5 opt-in)
@@ -44,6 +45,7 @@ import {
   aggregatePnl,
   buildTaxExport,
   enrichEntryForClient,
+  isReconciled,
   listUnreconciled,
   VALID_GROUP_BY,
   type LedgerEntryForErp,
@@ -464,6 +466,57 @@ router.get("/unreconciled/aging", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /unreconciled/aging failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to compute aging" });
+  }
+});
+
+// CF-PR-E-REFETCH-FANOUT (2026-06-17): top-level refetch fan-out.
+//
+// iOS posts to /erp/refetch from a single "Refetch Finances" button on the
+// ERP screen — no per-entry context. The existing per-entry handler below
+// (POST /unreconciled/:id/refetch) just annotates one ledger row with
+// refetchRequestedAt so the next reconciliation pass picks it up. This
+// fan-out does the same thing across EVERY unreconciled entry for the
+// caller's user doc:
+//   1. Read user doc.
+//   2. Walk doc.ledger; mark every !isReconciled(e) entry with a fresh
+//      refetchRequestedAt timestamp.
+//   3. Write back; return { success, updated, message }.
+//
+// Dismissed entries are still excluded from /pnl + /tax-export but stay
+// in doc.ledger and aren't reconciled — they're included in the sweep so
+// a user who un-dismisses later gets the latest finances pass.
+//
+// Response shape matches iOS's ERPRefetchResponse { message?, updated? }
+// (APIService.swift:381).
+router.post("/refetch", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const now = new Date().toISOString();
+    let updated = 0;
+    for (let i = 0; i < doc.ledger.length; i++) {
+      const entry = doc.ledger[i] as LedgerEntryForErp;
+      if (isReconciled(entry)) continue;
+      doc.ledger[i] = {
+        ...doc.ledger[i],
+        refetchRequestedAt: now,
+      };
+      updated += 1;
+    }
+    if (updated > 0) {
+      await writeUserDoc(userId, doc);
+    }
+    res.status(200).json({
+      success: true,
+      updated,
+      message:
+        updated === 0
+          ? "No unreconciled entries to refetch."
+          : `Refetch queued for ${updated} ${updated === 1 ? "entry" : "entries"}; next reconciliation pass will pick them up.`,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /refetch failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to queue refetch" });
   }
 });
 
