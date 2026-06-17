@@ -3220,33 +3220,28 @@ private struct FeeAdjustmentAuditPreviewWrapper: View {
 
 // MARK: - Fee Adjustment audit list (CF-PR-E-FEE-ADJUSTMENT-RESHAPE 2026-06-17)
 //
-// Renders inside a PortfolioContextCard — the same chrome the Reconcile
-// detail view's sections use ("Sale", "eBay fees", "Your cost basis",
-// "Realized gain") so it feels native to the rest of the surface. Each
-// adjustment is a compact block with:
+// Lives under the standard ERP section header (blue hairlines · TITLE ·
+// blue hairlines) and renders each adjustment as a dashboardStroke-
+// bordered card — the blue→green gradient chrome used everywhere else
+// in the app (aging buckets, ledger rows, hero panels). Native feel.
+//
+// Each adjustment card carries:
 //   • relative timestamp header ("Today", "Yesterday", "3 days ago",
-//     "Apr 15") + a quiet "audited" caption
-//   • one row per changed field: label · prior → new, with the prior
+//     "Apr 15") + quiet "audited" caption
+//   • one row per changed field — label · prior → new, with the prior
 //     muted and the new value highlighted in monospaced bold
 //   • the reason rendered once below as a quiet caption with a
 //     conversation glyph
-// Multiple adjustments separate with a thin hairline so the rows feel
-// like a single timeline rather than a list of disconnected cards.
 
 struct FeeAdjustmentAuditList: View {
     let adjustments: [FeeAdjustment]
 
     var body: some View {
-        PortfolioContextCard(title: "Override history") {
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(Array(adjustments.enumerated()), id: \.element.id) { idx, adj in
-                    FeeAdjustmentAuditRow(adjustment: adj)
-                    if idx < adjustments.count - 1 {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.06))
-                            .frame(height: 1)
-                    }
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            erpSectionHeader("OVERRIDE HISTORY")
+
+            ForEach(adjustments) { adj in
+                FeeAdjustmentAuditRow(adjustment: adj)
             }
         }
     }
@@ -3284,14 +3279,21 @@ private struct FeeAdjustmentAuditRow: View {
                 reasonBlock(adjustment.reason)
             }
         }
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var timestampHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.9))
             Text(FeeAdjustmentTime.relative(adjustment.adjustedAt))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
