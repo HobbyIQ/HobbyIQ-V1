@@ -16,6 +16,10 @@ import {
   listAllPortfolioUserIds,
   repriceHoldingsForUser,
 } from "../services/portfolioiq/portfolioStore.service.js";
+// CF-PHASE-5-COLLECTION-VALUE (2026-06-17): piggyback the daily value snapshot
+// onto the reprice job. Same cadence (6h) → 4 idempotent writes/day, last-
+// write-wins per UTC date row. No new scheduler.
+import { snapshotPortfolioValueForUser } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 
@@ -232,6 +236,17 @@ export async function runPortfolioRepriceJob(): Promise<RepriceJobSummary> {
         console.error(
           `[portfolio.reprice.job] user=${userId} failed:`,
           err?.message ?? err,
+        );
+      }
+      // CF-PHASE-5-COLLECTION-VALUE (2026-06-17): write today's value-history
+      // snapshot AFTER the per-user reprice so the snapshot reads the freshly
+      // re-priced fairMarketValue / estimatedValue. Best-effort: a Cosmos
+      // blip can't crash the reprice job — the next 6h cycle re-snapshots.
+      try {
+        await snapshotPortfolioValueForUser(userId);
+      } catch (err: any) {
+        console.warn(
+          `[portfolio.reprice.job] value-history snapshot failed user=${userId}: ${err?.message ?? err}`,
         );
       }
       if (PER_USER_DELAY_MS > 0) {

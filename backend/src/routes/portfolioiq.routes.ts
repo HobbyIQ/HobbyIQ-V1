@@ -22,6 +22,15 @@ import {
   getIdentifiableSets,
   isSetIdentifiable,
 } from "../services/cardsight/identifiableSetCache.service.js";
+// CF-PHASE-5-COLLECTION-VALUE (2026-06-17): /value-history route handler.
+import {
+  readValueHistory,
+  computeChange30d,
+  computeTopHoldings,
+  computeSnapshotFromHoldings,
+} from "../services/portfolioiq/portfolioValueHistory.service.js";
+import { readUserDoc } from "../services/portfolioiq/portfolioStore.service.js";
+import type { PortfolioHolding } from "../types/portfolioiq.types.js";
 
 const router = Router();
 
@@ -50,6 +59,57 @@ router.get("/insights/weekly-brief", requireEntitlement("predictions"), portfoli
 router.post("/feedback/recommendation", portfolio.addRecommendationFeedback);
 router.get("/ledger", portfolio.getLedger);
 router.patch("/ledger/:id", portfolio.updateLedgerEntry);
+
+// CF-PHASE-5-COLLECTION-VALUE (2026-06-17): collection-value card data.
+// Level + range + HISTORICAL change only. No forecast/direction/momentum
+// fields anywhere. Pure read; no rate limit.
+router.get("/value-history", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const [history, doc] = await Promise.all([
+      readValueHistory(userId),
+      readUserDoc(userId),
+    ]);
+
+    const items = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+    const live = computeSnapshotFromHoldings(items);
+    const topHoldings = computeTopHoldings(items, 5);
+
+    // Headline is computed from the LIVE user doc so the iOS card always
+    // matches the per-row prices iOS just rendered. The history series is the
+    // persisted daily trail (point-per-day on displayableTotal).
+    const change30d = computeChange30d(history);
+
+    const historySeries = history.map((h) => ({
+      date: h.date,
+      total: h.displayableTotal,
+    }));
+
+    res.json({
+      success: true,
+      asOf: new Date().toISOString(),
+      totalDisplayable: live.displayableTotal,
+      rangeLow: live.rangeLow,
+      rangeHigh: live.rangeHigh,
+      observedValue: live.observedValue,
+      estimatedValue: live.estimatedValue,
+      observedCount: live.observedCount,
+      estimatedCount: live.estimatedCount,
+      pendingCount: live.pendingCount,
+      totalCards: live.holdingCount,
+      change30d,
+      historySeries,
+      topHoldings,
+      framing: {
+        isEstimate: true,
+        note:
+          "Range reflects comp-sufficiency. Observed holdings are point estimates within the band; estimated holdings carry the width.",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // CF-PAYMENTS-A: POST /holdings is the cap-counted write. requireCapacity
 // reads the current holding count and 402s if creating one more would
