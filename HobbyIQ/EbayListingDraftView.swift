@@ -772,7 +772,7 @@ struct EbayListingDraftView: View {
     }
 
     private func buildRequest() -> PortfolioEbayListingRequest? {
-        guard let askingPrice = Double(askingPriceText.trimmingCharacters(in: .whitespacesAndNewlines)), askingPrice > 0 else {
+        guard let listingPrice = Double(askingPriceText.trimmingCharacters(in: .whitespacesAndNewlines)), listingPrice > 0 else {
             localError = listingFormat == .buyItNow ? "Enter a valid list price." : "Enter a valid starting price."
             return nil
         }
@@ -787,40 +787,62 @@ struct EbayListingDraftView: View {
             return nil
         }
 
-        let formatValue = listingFormat == .buyItNow ? "buyItNow" : "auction"
-        let auctionDate: String? = listingFormat == .auction
-            ? ISO8601DateFormatter().string(from: auctionStartDate)
-            : nil
+        // CF-EBAY-PUBLISH-400-FIX (2026-06-17): map to HoldingListingInput.
+        //   - holdingId = InventoryCard.id (the real holding id; the sale-
+        //     recon webhook keys on this to mark the holding sold).
+        //   - cardYear is Int on the wire; parse from the year text field
+        //     and fall back to 0 when missing/invalid so the request still
+        //     validates (backend ignores cardYear == 0 in buildTitle).
+        //   - product mirrors setName until iOS surfaces a separate field
+        //     (matches backend's shimmedProduct fallback semantics).
+        //   - gradingCompany + grade split from InventoryCard's structured
+        //     fields so buildTitle composes "PSA 10" instead of "PSA PSA 10".
+        let yearTrimmed = yearText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cardYear = Int(yearTrimmed) ?? 0
+        let setTrimmed = setNameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let brandTrimmed = brandText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parallelTrimmed = parallelText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let gradeCompanyRaw = (card.gradeCompany ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let gradingCompany: String? = gradeCompanyRaw.isEmpty ? nil : gradeCompanyRaw
+        let gradeValueString: String? = card.gradeValue.map { value in
+            value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(Int(value))
+                : String(value)
+        }
 
         return PortfolioEbayListingRequest(
-            title: listingTitle.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: listingDescription.trimmingCharacters(in: .whitespacesAndNewlines),
-            askingPrice: askingPrice,
-            quantity: quantity,
-            ebayUser: ebayStore.connectedUser,
-            cardId: card.id.uuidString,
+            holdingId: card.id.uuidString.lowercased(),
             playerName: playerNameText.trimmingCharacters(in: .whitespacesAndNewlines),
-            cardName: card.cardName.trimmingCharacters(in: .whitespacesAndNewlines),
-            year: yearText.trimmingCharacters(in: .whitespacesAndNewlines),
-            setName: setNameText.trimmingCharacters(in: .whitespacesAndNewlines),
-            parallel: parallelText.trimmingCharacters(in: .whitespacesAndNewlines),
-            grade: gradeText.trimmingCharacters(in: .whitespacesAndNewlines),
-            condition: selectedCondition.rawValue,
-            brand: brandText.trimmingCharacters(in: .whitespacesAndNewlines),
+            cardTitle: card.cardName.trimmingCharacters(in: .whitespacesAndNewlines),
+            cardYear: cardYear,
+            brand: brandTrimmed,
+            setName: setTrimmed,
+            product: setTrimmed,
+            isAuto: isAutoToggle,
+            isPatch: false,
+            isRookie: false,
+            quantity: quantity,
+            listingPrice: listingPrice,
+            bestOfferEnabled: false,
+            sport: nil,
             cardNumber: nil,
+            parallel: parallelTrimmed.isEmpty ? nil : parallelTrimmed,
+            serialNumber: nil,
+            printRun: nil,
+            variation: nil,
+            grade: gradeValueString,
+            gradingCompany: gradingCompany,
+            certNumber: nil,
+            conditionNotes: nil,
+            conditionEstimate: nil,
+            bestOfferMinPrice: nil,
             imageFrontUrl: frontPhotoUrl,
             imageBackUrl: backPhotoUrl,
-            purchasePrice: card.cost,
-            purchasePlatform: card.purchasePlatform,
-            purchaseDate: card.purchaseDate,
-            notes: card.notes,
-            summary: card.summary,
-            isAuto: isAutoToggle ? true : nil,
-            listingFormat: formatValue,
-            auctionStartDate: auctionDate,
+            description: listingDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+            categoryId: nil,
             paymentPolicyId: selectedPaymentPolicyId,
-            fulfillmentPolicyId: selectedFulfillmentPolicyId,
-            returnPolicyId: selectedReturnPolicyId
+            returnPolicyId: selectedReturnPolicyId,
+            fulfillmentPolicyId: selectedFulfillmentPolicyId
         )
     }
 

@@ -2362,59 +2362,120 @@ private struct PortfolioIQSellRequest: Codable {
     let notes: String?
 }
 
+/// CF-EBAY-PUBLISH-400-FIX (2026-06-17): wire shape matches backend's
+/// `HoldingListingInput` (ebayListing.service.ts:26-66). Pre-fix iOS sent
+/// `cardId`/`askingPrice`/`cardName`/`year: String` — route validation at
+/// `ebay.routes.ts:166` truthiness-checks `holdingId`/`playerName`/
+/// `listingPrice` and rejected the payload as 400. Renames + retypes
+/// applied here; legacy unused fields (`title`, `ebayUser`,
+/// `purchase*`, `condition`, `listingFormat`, `auctionStartDate`) dropped
+/// because the backend never reads them (`buildTitle` recomposes from
+/// structured fields; session auth identifies the user).
 struct PortfolioEbayListingRequest: Codable {
-    let title: String
-    let description: String
-    let askingPrice: Double
-    let quantity: Int
-    let ebayUser: String?
-    let cardId: String
+    // Required by HoldingListingInput + the route validator
+    let holdingId: String
     let playerName: String
-    let cardName: String
-    let year: String
+    let cardTitle: String
+    let cardYear: Int
+    let brand: String
     let setName: String
-    let parallel: String
-    let grade: String
-    let condition: String?
-    let brand: String?
+    let product: String
+    let isAuto: Bool
+    let isPatch: Bool
+    let isRookie: Bool
+    let quantity: Int
+    let listingPrice: Double
+    let bestOfferEnabled: Bool
+
+    // Optional structured fields — passed through when set
+    let sport: String?
     let cardNumber: String?
+    let parallel: String?
+    let serialNumber: String?
+    let printRun: Int?
+    let variation: String?
+    let grade: String?
+    let gradingCompany: String?
+    let certNumber: String?
+    let conditionNotes: String?
+    let conditionEstimate: String?
+    let bestOfferMinPrice: Double?
     let imageFrontUrl: String?
     let imageBackUrl: String?
-    let purchasePrice: Double
-    let purchasePlatform: String?
-    let purchaseDate: String?
-    let notes: String?
-    let summary: String?
-    let isAuto: Bool?
-    let listingFormat: String?
-    let auctionStartDate: String?
+    let description: String?
+
+    // Optional seller-side overrides
+    let categoryId: String?
     let paymentPolicyId: String?
-    let fulfillmentPolicyId: String?
     let returnPolicyId: String?
+    let fulfillmentPolicyId: String?
 
     init(
-        title: String, description: String, askingPrice: Double, quantity: Int,
-        ebayUser: String?, cardId: String, playerName: String, cardName: String,
-        year: String, setName: String, parallel: String, grade: String,
-        condition: String? = nil, brand: String? = nil, cardNumber: String? = nil,
-        imageFrontUrl: String? = nil, imageBackUrl: String? = nil,
-        purchasePrice: Double, purchasePlatform: String? = nil, purchaseDate: String? = nil,
-        notes: String? = nil, summary: String? = nil, isAuto: Bool? = nil,
-        listingFormat: String? = nil, auctionStartDate: String? = nil,
-        paymentPolicyId: String? = nil, fulfillmentPolicyId: String? = nil, returnPolicyId: String? = nil
+        holdingId: String,
+        playerName: String,
+        cardTitle: String,
+        cardYear: Int,
+        brand: String,
+        setName: String,
+        product: String,
+        isAuto: Bool = false,
+        isPatch: Bool = false,
+        isRookie: Bool = false,
+        quantity: Int,
+        listingPrice: Double,
+        bestOfferEnabled: Bool = false,
+        sport: String? = nil,
+        cardNumber: String? = nil,
+        parallel: String? = nil,
+        serialNumber: String? = nil,
+        printRun: Int? = nil,
+        variation: String? = nil,
+        grade: String? = nil,
+        gradingCompany: String? = nil,
+        certNumber: String? = nil,
+        conditionNotes: String? = nil,
+        conditionEstimate: String? = nil,
+        bestOfferMinPrice: Double? = nil,
+        imageFrontUrl: String? = nil,
+        imageBackUrl: String? = nil,
+        description: String? = nil,
+        categoryId: String? = nil,
+        paymentPolicyId: String? = nil,
+        returnPolicyId: String? = nil,
+        fulfillmentPolicyId: String? = nil
     ) {
-        self.title = title; self.description = description; self.askingPrice = askingPrice
-        self.quantity = quantity; self.ebayUser = ebayUser; self.cardId = cardId
-        self.playerName = playerName; self.cardName = cardName; self.year = year
-        self.setName = setName; self.parallel = parallel; self.grade = grade
-        self.condition = condition; self.brand = brand; self.cardNumber = cardNumber
-        self.imageFrontUrl = imageFrontUrl; self.imageBackUrl = imageBackUrl
-        self.purchasePrice = purchasePrice; self.purchasePlatform = purchasePlatform
-        self.purchaseDate = purchaseDate; self.notes = notes; self.summary = summary
-        self.isAuto = isAuto; self.listingFormat = listingFormat
-        self.auctionStartDate = auctionStartDate
-        self.paymentPolicyId = paymentPolicyId; self.fulfillmentPolicyId = fulfillmentPolicyId
+        self.holdingId = holdingId
+        self.playerName = playerName
+        self.cardTitle = cardTitle
+        self.cardYear = cardYear
+        self.brand = brand
+        self.setName = setName
+        self.product = product
+        self.isAuto = isAuto
+        self.isPatch = isPatch
+        self.isRookie = isRookie
+        self.quantity = quantity
+        self.listingPrice = listingPrice
+        self.bestOfferEnabled = bestOfferEnabled
+        self.sport = sport
+        self.cardNumber = cardNumber
+        self.parallel = parallel
+        self.serialNumber = serialNumber
+        self.printRun = printRun
+        self.variation = variation
+        self.grade = grade
+        self.gradingCompany = gradingCompany
+        self.certNumber = certNumber
+        self.conditionNotes = conditionNotes
+        self.conditionEstimate = conditionEstimate
+        self.bestOfferMinPrice = bestOfferMinPrice
+        self.imageFrontUrl = imageFrontUrl
+        self.imageBackUrl = imageBackUrl
+        self.description = description
+        self.categoryId = categoryId
+        self.paymentPolicyId = paymentPolicyId
         self.returnPolicyId = returnPolicyId
+        self.fulfillmentPolicyId = fulfillmentPolicyId
     }
 }
 
