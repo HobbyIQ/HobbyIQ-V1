@@ -6,6 +6,62 @@
 
 ---
 
+## SESSION — 2026-06-17 — Backtest accuracy arc + first-sale unblock
+
+### Strategic through-line
+Drilled "is the engine any good." The engine is a competent level estimator; the binding constraint on
+everything past level (direction, signals, ML moat) is comp sparsity + real outcomes — i.e. usage. Critical path
+is now a first real sale, not more engineering.
+
+### Backtest accuracy read (offline harness)
+- Built an offline accuracy harness (C:/tmp/score-corpus.mjs) reusing the production scorer verbatim
+  (export-only touches to mcp-server/backtest.ts: median/pctErr/scoreActuals; runVariantTierLadder/parseCardQuery
+  were already exported). Proven by reproducing the n=33 production read on shared inputs.
+- Scored prediction_log: 360 scoreable → 173 scored (44%+ skipped, no in-window comps).
+- LEVEL: pinned-id ~17.5% per-row 7d MAPE; ~41% per-unique-card on n=7; consistent +14–17% over-prediction bias.
+  Comparable to the n=33 baseline (24.6%). Engine is a decent level estimator running ~15% hot.
+- DIRECTION: at-or-below chance, but UNMEASURABLE at current density (ladder-filtering thins baselines). The
+  signals experiment (4b) is blocked by the same — can't validate a lift we can't measure.
+- METHODOLOGY LESSON: the scorer MUST replicate the engine's comp-selection (title-token parallel ladder) or it
+  manufactures phantom errors. Maddux saga (3 traces, 2 inversions): engine correctly priced a Tiffany Maddux
+  ~$1,640; the unfixed scorer measured it against base ($145) → fake 10× error. Fixed by applying
+  runVariantTierLadder to the in-window actuals.
+- META-FINDINGS: (1) predictedPrice null on 66% of prediction_log rows — forward projection fires on ~1/3;
+  (2) 325/1,645 rows have polluted playerName (compiq-price-by-id leaks cardId, compiq-trendiq-full leaks set,
+  both product=null) — self-exclude from scoring, contaminate any future ML-corpus join.
+- fn-backtest-runner kept (proxy prediction→outcome scoring vs later comps, runs without real sales); its output
+  (compiq_backtest container) is readable but consumed by nothing — open thread.
+- OPEN/SCRATCH: the offline harness (C:/tmp/score-corpus.mjs) + the backtest.ts exports — productionize or
+  discard TBD. The +15% over-bias is a calibration candidate but n=7 is too thin to act on.
+
+### Signal pipeline disabled (committed: host.json 69dfb79, handoff 3bbe605)
+9 dead signal functions + nightly-comp-prefetch disabled via host.json allow-list; backtest-runner kept.
+Unpark = enough real sales to backtest-validate a signal blend.
+
+### First-sale / listing-path unblock
+- Listing path ~80% built; was blocked by an iOS↔backend publish payload field-name mismatch (P0): iOS sends
+  cardId/askingPrice; backend HoldingListingInput wants holdingId/listingPrice + cardTitle/cardYear(Int)/product/
+  bestOfferEnabled/gradingCompany/etc. Every publish 400s before reaching eBay.
+- EbayListingManageView (D.4) built but ORPHANED (zero call sites) — no in-app post-publish status/end/revise (P1).
+- OAuth proven; backend publish/revise/end/status wired to real eBay Inventory/Offer APIs; receiving side
+  (1h order-poll → ledger → two-axis reconciliation) live, ordersFetched=0 to date.
+- ACCOUNT SWITCHED dvabs47 → justtheboysandcards (the LLC). Required an iOS fix:
+  ASWebAuthenticationSession.prefersEphemeralWebBrowserSession=true so OAuth forces a fresh login instead of
+  auto-authorizing the existing eBay session.
+- JBC Business Policies enrolled; payment (259716740020) + return (259716739020) green; fulfillment has 4 with
+  NO default — works via iOS auto-fallback + backend all-three-IDs override branch; recommend marking
+  "Our Shipping Policy" (259716734020) default in Seller Hub for robustness.
+- PUNCH LIST to first sale: P0 publish field-fix → P1 manage UX → publish a real low-stakes card → organic
+  buyer → loop fires. F1/F2/Finances auto-unpark on first sale; the real eBay Finances payload shape is the one
+  genuine unknown that resolves then.
+
+### Next steps
+- P0 publish field-fix + P1 post-publish UX (iOS) — self-serve listing path.
+- Three deferred PR E reconcile cleanups before a real sale hits the loop: FeeAdjustment audit "unknown",
+  refetchFinances 404, costsStatus-on-finalized gate.
+- Parked on data (= usage): +15% calibration nudge, playerName-pollution cleanup, direction/signals question.
+- Queued on first sale: F1/F2/Finances enrichment + Finances payload verification.
+
 ## 2026-06-16 — Signal pipeline DISABLED (host.json allow-list)
 
 DEPLOYED (`69dfb79`, `func azure functionapp publish fn-compiq --python`): the 10-function signal pipeline that's been writing into the void since CF-PLAYER-IN-SET-MOMENTUM (2026-06-09) is now off. Code retained in the repo; only the load-time filter changed.
