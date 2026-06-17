@@ -31,10 +31,8 @@ struct PortfolioDetailPhotosCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Photos")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color(hex: 0x9CA3AF))
-                .tracking(1.2)
+            // CF-UNIFY-SECTION-HEADERS (2026-06-17).
+            HIQSectionHeader("Photos")
 
             VStack(alignment: .leading, spacing: 14) {
                 Text("Tap either side to add or replace a photo. Those images are reused in the eBay draft.")

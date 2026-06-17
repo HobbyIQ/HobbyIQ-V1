@@ -748,14 +748,11 @@ struct PortfolioIQView: View {
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        HStack(spacing: 0) {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                .fixedSize()
-            Spacer()
-        }
-        .padding(.horizontal, 4)
+        // CF-UNIFY-SECTION-HEADERS (2026-06-17): delegates to the shared
+        // HIQSectionHeader so the Portfolio screen's "Portfolio value
+        // trend", "Priority actions", "Top movers" sections share the
+        // same hairline chrome as the rest of the app.
+        HIQSectionHeader(title)
     }
 
     private func actionIconName(for kind: PortfolioPriorityActionKind) -> String {

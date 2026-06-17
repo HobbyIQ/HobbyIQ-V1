@@ -322,28 +322,12 @@ struct CompIQView: View {
     }
 
     private func sectionHeader(title: String, subtitle: String) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 10) {
-                Rectangle()
-                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                    .frame(height: 1)
-
-                Text(title.uppercased())
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .tracking(1.2)
-                    .fixedSize()
-
-                Rectangle()
-                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-                    .frame(height: 1)
-            }
-
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .multilineTextAlignment(.center)
-        }
+        // CF-UNIFY-SECTION-HEADERS (2026-06-17): delegates to the shared
+        // HIQSectionHeader. The CompIQ subtitle keeps showing below the
+        // hairlines so the existing helper text ("The current value
+        // returned by Azure.", "Plain-English notes from Azure.", etc.)
+        // doesn't disappear from the comp page.
+        HIQSectionHeader(title, subtitle: subtitle)
     }
 
     private var loadingCard: some View {

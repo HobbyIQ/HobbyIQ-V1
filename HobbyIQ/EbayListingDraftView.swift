@@ -666,9 +666,11 @@ struct EbayListingDraftView: View {
     }
 
     private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
+        // CF-UNIFY-SECTION-HEADERS (2026-06-17): delegates to the shared
+        // HIQSectionHeader so the draft sheet's "Listing Type", "Photos",
+        // "Condition", "Description", etc. sections share the hairline
+        // chrome used everywhere else.
+        HIQSectionHeader(text)
     }
 
     // MARK: - Policies Section

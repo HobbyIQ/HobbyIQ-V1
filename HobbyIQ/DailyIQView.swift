@@ -811,20 +811,10 @@ struct DailyIQView: View {
     }
 }
 
+// CF-UNIFY-SECTION-HEADERS (2026-06-17): delegates to the shared
+// HIQSectionHeader.
 private func dailySectionHeader(_ title: String) -> some View {
-    HStack(spacing: 10) {
-        Rectangle()
-            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-            .frame(height: 1)
-        Text(title)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            .tracking(1.2)
-            .fixedSize()
-        Rectangle()
-            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-            .frame(height: 1)
-    }
+    HIQSectionHeader(title)
 }
 
 private struct DailyPlayerRoleSection: View {
@@ -836,10 +826,7 @@ private struct DailyPlayerRoleSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: HobbyIQTheme.Spacing.medium) {
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.2)
+            HIQSectionHeader(title)
 
             LazyVStack(spacing: HobbyIQTheme.Spacing.medium) {
                 ForEach(players.prefix(50)) { stat in
@@ -866,10 +853,7 @@ private struct FlowChipsView<Item: Hashable>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.2)
+            HIQSectionHeader(title)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

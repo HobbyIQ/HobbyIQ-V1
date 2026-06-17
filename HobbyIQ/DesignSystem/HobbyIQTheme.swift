@@ -856,13 +856,58 @@ extension View {
     }
 }
 
+/// CF-UNIFY-SECTION-HEADERS (2026-06-17): one section-header style for
+/// the whole app — blue hairline · UPPERCASE TITLE · blue hairline,
+/// with an optional muted subtitle below. Adopt by calling
+/// `HIQSectionHeader("Title")` or `HIQSectionHeader("Title", subtitle:
+/// "Helper copy here.")`. Title is auto-uppercased so callers can pass
+/// sentence-case strings.
+///
+/// Replaces five distinct pre-CF patterns:
+///   - erpSectionHeader (ERPViews)
+///   - sectionHeader(title:subtitle:) (CompIQView)
+///   - sectionHeader(_:) (PortfolioIQView)
+///   - dailySectionHeader (DailyIQView)
+///   - many ad-hoc inline `.tracking(1.2)` uppercase captions
 struct HIQSectionHeader: View {
     let title: String
+    let subtitle: String?
+
+    init(_ title: String, subtitle: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+
+    /// Legacy initializer kept so the existing labeled call style
+    /// `HIQSectionHeader(title: "Overview")` (used in the design-system
+    /// preview at L1009) keeps compiling unchanged.
+    init(title: String) {
+        self.init(title, subtitle: nil)
+    }
+
     var body: some View {
-        Text(title)
-            .font(HobbyIQTheme.Typography.sectionTitle)
-            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            .padding(.top, HobbyIQTheme.Spacing.large)
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+                Text(title.uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(1.2)
+                    .fixedSize()
+                Rectangle()
+                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
+                    .frame(height: 1)
+            }
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+        }
     }
 }
 

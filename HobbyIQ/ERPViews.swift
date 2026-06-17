@@ -2099,20 +2099,12 @@ struct ERPShareSheet: UIViewControllerRepresentable {
 
 // MARK: - Shared ERP Helpers
 
+// CF-UNIFY-SECTION-HEADERS (2026-06-17): delegates to the shared
+// HIQSectionHeader. Existing all-caps strings ("AGING BUCKETS",
+// "OVERRIDE HISTORY", etc.) round-trip cleanly through the auto-
+// uppercase pass.
 private func erpSectionHeader(_ title: String) -> some View {
-    HStack(spacing: 10) {
-        Rectangle()
-            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-            .frame(height: 1)
-        Text(title)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            .tracking(1.2)
-            .fixedSize()
-        Rectangle()
-            .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.25))
-            .frame(height: 1)
-    }
+    HIQSectionHeader(title)
 }
 
 /// Calm fallback for any failed fetch in Financials. Never surfaces raw
