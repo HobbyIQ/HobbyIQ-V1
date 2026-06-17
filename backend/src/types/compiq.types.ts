@@ -43,6 +43,27 @@ export interface CompIQEstimateRequest {
    *  "Refractor", etc.). Currently informational only — surfaced on
    *  response identity / labels; not part of any filter decision. */
   parallelName?: string;
+  /**
+   * CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when true AND
+   * `cardsightCardId` is set, the engine fires the pinned-id branch in
+   * fetchComps REGARDLESS of whether the composed cardTitle looks like a
+   * "meaningful query" different from the pinned id.
+   *
+   * Semantically: "the stored cardsightCardId is authoritative; the
+   * composed cardTitle/playerName is a derived display label, not a
+   * free-text override."
+   *
+   * Used by `autoPriceHolding` for portfolio reprice — the holding's
+   * resolved cardsightCardId is the source of truth and must not be
+   * overridden by a name-resolution fall-through, which would lead to
+   * pricing off the wrong card when identity fields are sparse (e.g. a
+   * 2011 Topps Update Trout RC mis-priced as a 2026 Bowman Trout at $2).
+   *
+   * Default behaviour (absent / false): the existing meaningful-query
+   * gate unchanged. `/search`, `/price`, and `/price-by-id` continue to
+   * let a substantive free-text query override a pinned id.
+   */
+  pinnedAuthoritative?: boolean;
 }
 
 /**

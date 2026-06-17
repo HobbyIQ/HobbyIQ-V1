@@ -1224,6 +1224,15 @@ async function fetchComps(
     trimmedPinned.length > 0 &&
     !trimmedQuery.toLowerCase().startsWith(trimmedPinned.toLowerCase());
 
+  // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): caller (e.g.
+  // autoPriceHolding) declares the stored cardsightCardId authoritative —
+  // the composed cardTitle is a derived display label, not a free-text
+  // override. Skip the meaningful-query check and fire the pinned branch
+  // even when "Mike Trout" doesn't start with the pinned UUID. Default-off:
+  // /search, /price, /price-by-id callers leave it unset and keep the
+  // existing free-text-override semantics.
+  const pinnedAuthoritative = queryContext?.pinnedAuthoritative === true;
+
   // ----- Pinned cardsightCardId path ------------------------------------
   // CF-PRICE-BY-ID-MIGRATION (first sub-CF of CF-CARDHEDGE-DECOMMISSION-
   // FULL Phase 2): when the caller has already resolved a Cardsight
@@ -1238,7 +1247,7 @@ async function fetchComps(
   // Grade filtering is client-side here (CardHedge's getCardSales did
   // it server-side). Cardsight returns raw + graded as separate
   // structures; we select records based on the requested grade string.
-  if (pinnedCardId && !hasMeaningfulQuery) {
+  if (pinnedCardId && (!hasMeaningfulQuery || pinnedAuthoritative)) {
     const pricing = await getPricing(pinnedCardId);
 
     // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): map identity from the
@@ -2486,6 +2495,10 @@ export async function computeEstimate(
     // card guard's upstream half). effectiveIsAuto was computed at L1648
     // from body.isAuto || /\b(auto|autograph|autographed)\b/.test(body.parallel).
     isAuto: effectiveIsAuto,
+    // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): forward body flag to
+    // fetchComps so reprice (autoPriceHolding) can declare the stored
+    // cardsightCardId authoritative without overloading playerName.
+    pinnedAuthoritative: body.pinnedAuthoritative === true,
   };
 
   // ── Pre-modern guard ─────────────────────────────────────────────────────

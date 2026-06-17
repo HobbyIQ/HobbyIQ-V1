@@ -990,6 +990,24 @@ async function autoPriceHolding(
       : source === "refresh"
       ? "portfolio-autoprice-refresh"
       : "portfolio-autoprice-add";
+  // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when the holding already
+  // carries a resolved cardsightCardId, pin it AND mark it authoritative so
+  // the engine takes the pinned-id branch (cardsight.client.getPricing on
+  // the stored UUID) instead of re-resolving from sparse identity fields.
+  //
+  // The bug it closes: a holding added via the iOS picker stores
+  // cardsightCardId but may leave cardYear/product/parallel/grade undefined.
+  // Without the pin + flag, fetchComps composed cardTitle = "<playerName>",
+  // hit the meaningful-query gate (player name didn't start with the
+  // pinned UUID), and fell through to findCompsRouted → name search → top
+  // catalog hit. For "Mike Trout" that was the 2026 Bowman with $1.90
+  // median, not the actual 2011 Topps Update RC with $310 median.
+  //
+  // playerName stays REAL (no UUID overload, no prediction_log
+  // pollution). The flag preserves /search and /price free-text-override
+  // semantics for every other caller (default-off).
+  const pinnedCardId =
+    String(holding.cardsightCardId ?? "").trim() || undefined;
   const estimate = await computeEstimate({
     playerName: String(holding.playerName ?? "").trim(),
     cardYear: shimmedCardYear(holding),
@@ -998,6 +1016,8 @@ async function autoPriceHolding(
     isAuto: Boolean(holding.isAuto),
     gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+    cardsightCardId: pinnedCardId,
+    pinnedAuthoritative: pinnedCardId !== undefined,
   }, {
     source: corpusSource,
     userId: userId ?? null,

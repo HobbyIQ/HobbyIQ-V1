@@ -95,6 +95,17 @@ export type QueryContext = {
   // effectiveIsAuto from compiqEstimate, threaded so resolveCardId can
   // re-select candidates whose card-number auto-prefix matches user intent.
   isAuto?: boolean;
+  // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when set true alongside
+  // a pinned cardsightCardId, fetchComps forces the pinned-id branch
+  // regardless of whether the composed cardTitle differs from the pinned
+  // id. Default-off; only set by autoPriceHolding (portfolio reprice path)
+  // where the stored cardsightCardId is authoritative and the composed
+  // cardTitle is a derived display label, not a free-text override.
+  // queryContext is the existing plumbing channel from computeEstimate
+  // down to fetchComps — adding here keeps the surface additive (other
+  // callers ignore the flag) and avoids a 6th positional param on the
+  // already-five-parameter fetchComps signature.
+  pinnedAuthoritative?: boolean;
 };
 
 export type FindCompsRoutedOptions = {
