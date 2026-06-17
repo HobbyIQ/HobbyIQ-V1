@@ -112,13 +112,93 @@ enum CostsStatus: String {
     case savedPendingFees = "saved_pending_fees"
 }
 
+// MARK: - Fee Adjustment audit row (CF-PR-E-FEE-ADJUSTMENT-RESHAPE, 2026-06-17)
+//
+// Reshape to match backend's `LedgerFeeAdjustment` wire (portfolioStore.
+// service.ts:481-521). Pre-CF iOS expected a flat `{ field, oldValue,
+// newValue, reason, adjustedAt }` that never matched the wire — backend
+// always emitted nested `priorValues` / `newValues` blocks per adjustment,
+// so the audit trail in ERPOverrideSheet rendered "unknown" rows with
+// no values. Server is the source of truth; this matches it exactly.
+
 struct FeeAdjustment: Codable, Hashable, Identifiable {
-    var id: String { "\(adjustedAt ?? "")_\(field ?? "")" }
-    let field: String?
-    let oldValue: Double?
-    let newValue: Double?
-    let reason: String?
-    let adjustedAt: String?
+    var id: String { adjustmentId }
+    let adjustmentId: String
+    let adjustedAt: String
+    let adjustedBy: String
+    let reason: String
+    let priorValues: FeeAdjustmentValues
+    let newValues: FeeAdjustmentValues
+}
+
+/// One snapshot of the fee + cost block — used for both priorValues
+/// (pre-mutation state) and newValues (post-mutation state). All
+/// fields optional: backend emits `number | null` for each fee field,
+/// and the cost-side fields (gradingCost/suppliesCost/userCostsProvidedAt)
+/// only appear on save-costs adjustments. needsReconciliation +
+/// reconciledVia are decoded for completeness but unread by the audit
+/// renderer today.
+struct FeeAdjustmentValues: Codable, Hashable {
+    let finalValueFee: Double?
+    let paymentProcessingFee: Double?
+    let promotedListingFee: Double?
+    let adFee: Double?
+    let otherFees: Double?
+    let netPayout: Double?
+    let actualShippingCost: Double?
+    let gradingCost: Double?
+    let suppliesCost: Double?
+    let userCostsProvidedAt: String?
+    let needsReconciliation: Bool?
+    let reconciledVia: String?
+}
+
+extension FeeAdjustment {
+    /// One row's worth of "this field moved" data. `prior == nil` AND
+    /// `new` non-nil means a value was filled where there was nothing
+    /// before (e.g. eBay Finances enrichment landing); a non-nil `prior`
+    /// with `new == nil` means a value was cleared back to "unknown."
+    struct ChangedField: Identifiable, Hashable {
+        var id: String { label }
+        let label: String
+        let prior: Double?
+        let new: Double?
+    }
+
+    /// The audit row enumerates only the fields that actually moved
+    /// between priorValues and newValues. Order matches the audit
+    /// renderer's preferred reading order: granular fees first, then
+    /// net payout, then shipping, then cost-axis fields.
+    var changedFields: [ChangedField] {
+        let pairs: [(String, Double?, Double?)] = [
+            ("Final Value Fee",     priorValues.finalValueFee,        newValues.finalValueFee),
+            ("Payment Processing",  priorValues.paymentProcessingFee, newValues.paymentProcessingFee),
+            ("Promoted Listing",    priorValues.promotedListingFee,   newValues.promotedListingFee),
+            ("Ad Fee",              priorValues.adFee,                newValues.adFee),
+            ("Other Fees",          priorValues.otherFees,            newValues.otherFees),
+            ("Net Payout",          priorValues.netPayout,            newValues.netPayout),
+            ("Actual Shipping",     priorValues.actualShippingCost,   newValues.actualShippingCost),
+            ("Grading Cost",        priorValues.gradingCost,          newValues.gradingCost),
+            ("Supplies Cost",       priorValues.suppliesCost,         newValues.suppliesCost),
+        ]
+        return pairs.compactMap { (label, prior, new) in
+            FeeAdjustment.didChange(prior: prior, new: new)
+                ? ChangedField(label: label, prior: prior, new: new)
+                : nil
+        }
+    }
+
+    /// nil ↔ value transitions count as a change (the audit row
+    /// surfaces "—  →  $12.34" when eBay Finances first populates a
+    /// previously-null fee field). nil ↔ nil = no change. Otherwise
+    /// strict numeric inequality.
+    fileprivate static func didChange(prior: Double?, new: Double?) -> Bool {
+        switch (prior, new) {
+        case (nil, nil):                       return false
+        case (nil, _), (_, nil):               return true
+        case let (.some(p), .some(n)):         return p != n
+        }
+    }
 }
 
 // MARK: - Unreconciled List

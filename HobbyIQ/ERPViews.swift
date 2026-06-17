@@ -790,38 +790,7 @@ private struct ERPOverrideSheet: View {
     }
 
     private func auditTrailSection(_ adjustments: [FeeAdjustment]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("OVERRIDE HISTORY")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(1.0)
-
-            ForEach(adjustments) { adj in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(adj.field ?? "unknown")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        if let reason = adj.reason {
-                            Text(reason)
-                                .font(.caption2)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        }
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        if let old = adj.oldValue, let new = adj.newValue {
-                            Text("\(old.portfolioCurrencyText) -> \(new.portfolioCurrencyText)")
-                                .font(.caption2.weight(.medium).monospacedDigit())
-                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        }
-                    }
-                }
-                .padding(8)
-                .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            }
-        }
+        FeeAdjustmentAuditList(adjustments: adjustments)
     }
 
     private func saveOverride() async {
@@ -2933,7 +2902,8 @@ extension LedgerEntryForErp {
         realizedProfitLoss: Double? = 690.15,
         missingFields: [String]? = [],
         costsStatus: String? = "needs_action",
-        ebayOrderId: String? = "12-34567-12345"
+        ebayOrderId: String? = "12-34567-12345",
+        feeAdjustments: [FeeAdjustment]? = nil
     ) -> LedgerEntryForErp {
         LedgerEntryForErp(
             id: id,
@@ -2975,7 +2945,7 @@ extension LedgerEntryForErp {
             shipping: nil,
             gradingCost: gradingCost,
             suppliesCost: suppliesCost,
-            feeAdjustments: nil,
+            feeAdjustments: feeAdjustments,
             tradeId: nil,
             tradeRole: nil,
             userCostsProvidedAt: costsStatus == "saved_pending_fees" ? ISO8601DateFormatter().string(from: Date()) : nil,
@@ -3143,4 +3113,262 @@ private struct RealizedGainProvisionalPreview: View {
         costsStatus: "saved_pending_fees"
     ))
 }
+
+// MARK: - Fee Adjustment audit fixtures (CF-PR-E-FEE-ADJUSTMENT-RESHAPE, 2026-06-17)
+
+extension FeeAdjustment {
+    /// Build a FeeAdjustmentValues snapshot by overlaying the supplied
+    /// fee fields onto the default "all nil" state. The default mirrors
+    /// the wire shape for an unenriched eBay row.
+    static func mockValues(
+        finalValueFee: Double? = nil,
+        paymentProcessingFee: Double? = nil,
+        promotedListingFee: Double? = nil,
+        adFee: Double? = nil,
+        otherFees: Double? = nil,
+        netPayout: Double? = nil,
+        actualShippingCost: Double? = nil,
+        gradingCost: Double? = nil,
+        suppliesCost: Double? = nil,
+        userCostsProvidedAt: String? = nil,
+        needsReconciliation: Bool? = true,
+        reconciledVia: String? = nil
+    ) -> FeeAdjustmentValues {
+        FeeAdjustmentValues(
+            finalValueFee: finalValueFee,
+            paymentProcessingFee: paymentProcessingFee,
+            promotedListingFee: promotedListingFee,
+            adFee: adFee,
+            otherFees: otherFees,
+            netPayout: netPayout,
+            actualShippingCost: actualShippingCost,
+            gradingCost: gradingCost,
+            suppliesCost: suppliesCost,
+            userCostsProvidedAt: userCostsProvidedAt,
+            needsReconciliation: needsReconciliation,
+            reconciledVia: reconciledVia
+        )
+    }
+
+    static func mockOverride(
+        adjustmentId: String = UUID().uuidString,
+        adjustedAt: String = ISO8601DateFormatter().string(from: Date()),
+        adjustedBy: String = "u-mock",
+        reason: String = "eBay Finances enrichment landed.",
+        priorValues: FeeAdjustmentValues = .init(
+            finalValueFee: nil, paymentProcessingFee: nil, promotedListingFee: nil,
+            adFee: nil, otherFees: nil, netPayout: nil, actualShippingCost: nil,
+            gradingCost: nil, suppliesCost: nil, userCostsProvidedAt: nil,
+            needsReconciliation: true, reconciledVia: nil
+        ),
+        newValues: FeeAdjustmentValues
+    ) -> FeeAdjustment {
+        FeeAdjustment(
+            adjustmentId: adjustmentId,
+            adjustedAt: adjustedAt,
+            adjustedBy: adjustedBy,
+            reason: reason,
+            priorValues: priorValues,
+            newValues: newValues
+        )
+    }
+}
+
+private struct FeeAdjustmentAuditPreviewWrapper: View {
+    let adjustments: [FeeAdjustment]
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                FeeAdjustmentAuditList(adjustments: adjustments)
+            }
+            .padding(16)
+        }
+        .background { HobbyIQBackground() }
+    }
+}
+
+#Preview("Audit · single-field override") {
+    // One adjustment that touched only Net Payout — typical manual
+    // override where the seller corrected a single missing fee.
+    let single = FeeAdjustment.mockOverride(
+        reason: "Corrected net payout from eBay Seller Hub.",
+        priorValues: FeeAdjustment.mockValues(netPayout: nil),
+        newValues:   FeeAdjustment.mockValues(netPayout: 1042.55)
+    )
+    return FeeAdjustmentAuditPreviewWrapper(adjustments: [single])
+}
+
+#Preview("Audit · multi-field override") {
+    // One adjustment that filled every granular fee at once — typical
+    // eBay Finances enrichment row.
+    let multi = FeeAdjustment.mockOverride(
+        reason: "eBay Finances enrichment landed — granular fees populated.",
+        priorValues: FeeAdjustment.mockValues(),
+        newValues:   FeeAdjustment.mockValues(
+            finalValueFee: 142.85,
+            paymentProcessingFee: 2.25,
+            promotedListingFee: 0,
+            adFee: 0,
+            otherFees: 0,
+            netPayout: 1042.55,
+            actualShippingCost: 4.85
+        )
+    )
+    return FeeAdjustmentAuditPreviewWrapper(adjustments: [multi])
+}
 #endif
+
+// MARK: - Fee Adjustment audit list (CF-PR-E-FEE-ADJUSTMENT-RESHAPE 2026-06-17)
+//
+// Renders inside a PortfolioContextCard — the same chrome the Reconcile
+// detail view's sections use ("Sale", "eBay fees", "Your cost basis",
+// "Realized gain") so it feels native to the rest of the surface. Each
+// adjustment is a compact block with:
+//   • relative timestamp header ("Today", "Yesterday", "3 days ago",
+//     "Apr 15") + a quiet "audited" caption
+//   • one row per changed field: label · prior → new, with the prior
+//     muted and the new value highlighted in monospaced bold
+//   • the reason rendered once below as a quiet caption with a
+//     conversation glyph
+// Multiple adjustments separate with a thin hairline so the rows feel
+// like a single timeline rather than a list of disconnected cards.
+
+struct FeeAdjustmentAuditList: View {
+    let adjustments: [FeeAdjustment]
+
+    var body: some View {
+        PortfolioContextCard(title: "Override history") {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(Array(adjustments.enumerated()), id: \.element.id) { idx, adj in
+                    FeeAdjustmentAuditRow(adjustment: adj)
+                    if idx < adjustments.count - 1 {
+                        Rectangle()
+                            .fill(Color.white.opacity(0.06))
+                            .frame(height: 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct FeeAdjustmentAuditRow: View {
+    let adjustment: FeeAdjustment
+
+    var body: some View {
+        let changes = adjustment.changedFields
+        VStack(alignment: .leading, spacing: 10) {
+            timestampHeader
+
+            if changes.isEmpty {
+                // Defensive: backend emits an adjustment row even when no
+                // fee field strictly changed (e.g. cost-only edits that
+                // only stamp userCostsProvidedAt). Surface a calm marker
+                // so the entry isn't visually empty.
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.caption2)
+                    Text("Marked addressed")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(changes) { change in
+                        changedRow(change)
+                    }
+                }
+            }
+
+            if !adjustment.reason.trimmingCharacters(in: .whitespaces).isEmpty {
+                reasonBlock(adjustment.reason)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var timestampHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.85))
+            Text(FeeAdjustmentTime.relative(adjustment.adjustedAt))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Text("·")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+            Text("audited")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder
+    private func changedRow(_ change: FeeAdjustment.ChangedField) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(change.label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            // prior — muted; arrow — muted glyph; new — white bold mono.
+            Text(formatCurrencyOrDash(change.prior))
+                .font(.caption2.weight(.medium).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Image(systemName: "arrow.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+            Text(formatCurrencyOrDash(change.new))
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+        }
+    }
+
+    @ViewBuilder
+    private func reasonBlock(_ reason: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "text.bubble")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
+                .padding(.top, 1)
+            Text(reason)
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func formatCurrencyOrDash(_ value: Double?) -> String {
+        guard let value else { return "—" }
+        return value.portfolioCurrencyText
+    }
+}
+
+/// Relative-time formatter for fee-adjustment audit headers — matches
+/// the "sold Nd ago" idiom used in the Reconcile inbox row. Today /
+/// Yesterday / N days ago up to a week; absolute month-day past that.
+enum FeeAdjustmentTime {
+    static func relative(_ iso: String) -> String {
+        let trimmed = iso.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return "Recent" }
+        let fmtFrac = ISO8601DateFormatter()
+        fmtFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let fmtStd = ISO8601DateFormatter()
+        fmtStd.formatOptions = [.withInternetDateTime]
+        guard let date = fmtFrac.date(from: trimmed) ?? fmtStd.date(from: trimmed) else {
+            return "Recent"
+        }
+        let cal = Calendar.current
+        let now = Date()
+        if cal.isDateInToday(date) { return "Today" }
+        if cal.isDateInYesterday(date) { return "Yesterday" }
+        let days = cal.dateComponents([.day], from: date, to: now).day ?? 0
+        if days >= 0 && days < 7 { return "\(days) days ago" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+}
