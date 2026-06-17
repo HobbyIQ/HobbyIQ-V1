@@ -218,30 +218,110 @@ export async function resolveSellerPolicies(
 // Title builder
 // ---------------------------------------------------------------------------
 
-function buildTitle(i: HoldingListingInput): string {
-  const parts: string[] = [];
-
-  if (i.cardYear)     parts.push(String(i.cardYear));
-  if (i.brand)        parts.push(i.brand);
-  if (i.product)      parts.push(i.product);
-  if (i.playerName)   parts.push(i.playerName);
-  if (i.cardNumber)   parts.push(`#${i.cardNumber}`);
-  if (i.parallel)     parts.push(i.parallel);
-  if (i.isRookie)     parts.push("RC");
-  if (i.isAuto)       parts.push("AUTO");
-  if (i.isPatch)      parts.push("PATCH");
-  if (i.serialNumber) parts.push(`/${i.printRun ?? i.serialNumber}`);
-
-  // Graded suffix
-  if (i.gradingCompany && i.grade && i.gradingCompany.toLowerCase() !== "raw") {
-    parts.push(`${i.gradingCompany} ${i.grade}`);
-    if (i.certNumber) parts.push(`Cert #${i.certNumber}`);
+// CF-EBAY-TITLE-HONOR-AND-FALLBACK (2026-06-17):
+//
+// Public buildTitle is now a two-stage resolver:
+//   1. HONOR PATH: when input.cardTitle is non-empty after trim, return
+//      it verbatim (capped at eBay's 80-char title limit). Lets iOS
+//      ship a user-edited title without the server overwriting it.
+//   2. FALLBACK PATH: when cardTitle is empty/absent, compose from the
+//      structured fields using the canonical format:
+//          [year] [set] [player] [parallel(+serial)] [Auto?]
+//      with brand-vs-set dedup and parallel-vs-serial dedup so iOS
+//      payloads with overlapping structured fields don't produce
+//      doubled tokens.
+//
+// Other tokens that previously appeared in the title (cardNumber,
+// RC, PATCH, graded company+grade, cert#) are no longer included.
+// They remain in buildItemAspects() — eBay's structured search relies
+// on the aspects, not the title, so the title can stay concise.
+//
+// Exported so the focused unit-test file can import and exercise both
+// paths + the dedup helpers without going through buildListingPreview.
+export function buildTitle(i: HoldingListingInput): string {
+  // HONOR PATH — caller-supplied title wins when present.
+  const provided = (i.cardTitle ?? "").trim();
+  if (provided.length > 0) {
+    return capTitleAt80(provided);
   }
+  // FALLBACK PATH — compose from structured fields.
+  return capTitleAt80(composeTitle(i));
+}
 
-  // eBay titles are max 80 chars
-  let title = parts.join(" ").trim();
-  if (title.length > 80) title = title.substring(0, 77) + "...";
-  return title;
+function composeTitle(i: HoldingListingInput): string {
+  const tokens: string[] = [];
+
+  if (i.cardYear && i.cardYear > 0) tokens.push(String(i.cardYear));
+
+  const set = formatSetWithBrandDedup(i.brand, i.product || i.setName);
+  if (set) tokens.push(set);
+
+  if (i.playerName && i.playerName.trim().length > 0) tokens.push(i.playerName.trim());
+
+  const parallel = formatParallelWithSerial(i.parallel, i.serialNumber, i.printRun);
+  if (parallel) tokens.push(parallel);
+
+  if (i.isAuto) tokens.push("Auto");
+
+  // Filter purely empty tokens (defensive) + collapse to single spaces.
+  return tokens
+    .map(t => t.trim())
+    .filter(t => t.length > 0)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * When the publication line already contains the brand name, return it
+ * alone — avoids "Bowman Bowman Chrome" doubling that the iOS payload
+ * pattern produces (brand="Bowman", product="Bowman Chrome"). Comparison
+ * is case-insensitive substring; the brand is a whole word in every
+ * cardsight publication line.
+ */
+function formatSetWithBrandDedup(brand: string | undefined, set: string | undefined): string {
+  const setTrim = (set ?? "").trim();
+  const brandTrim = (brand ?? "").trim();
+  if (!setTrim && !brandTrim) return "";
+  if (!setTrim) return brandTrim;
+  if (!brandTrim) return setTrim;
+  const lcSet = setTrim.toLowerCase();
+  const lcBrand = brandTrim.toLowerCase();
+  if (lcSet === lcBrand) return setTrim;
+  if (lcSet.includes(lcBrand)) return setTrim;
+  return `${brandTrim} ${setTrim}`;
+}
+
+/**
+ * Parallel strings often already include the print run ("Blue X-Fractor
+ * /150"), so when serialNumber/printRun are also sent we must not double
+ * the /N suffix. Parallel wins when it already encodes a serial; serial
+ * is only appended when parallel is bare. When there's no parallel at
+ * all, a serial alone returns "/N" (matches the prior behavior for
+ * print-run-only cards).
+ */
+function formatParallelWithSerial(
+  parallel: string | undefined,
+  serialNumber: string | undefined,
+  printRun: number | undefined,
+): string {
+  const parallelTrim = (parallel ?? "").trim();
+  const serialPart = printRun != null && Number.isFinite(printRun)
+    ? String(printRun)
+    : (serialNumber ?? "").trim();
+  if (!parallelTrim) {
+    return serialPart ? `/${serialPart}` : "";
+  }
+  if (!serialPart) return parallelTrim;
+  if (/\/\d+/.test(parallelTrim)) return parallelTrim;
+  return `${parallelTrim} /${serialPart}`;
+}
+
+/** eBay enforces 80 char max on listing titles. Truncate with ellipsis. */
+function capTitleAt80(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= 80) return trimmed;
+  return trimmed.substring(0, 77) + "...";
 }
 
 // ---------------------------------------------------------------------------
