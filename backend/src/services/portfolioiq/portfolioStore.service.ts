@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
 import { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import type { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 // CF-GRADED-RAIL-WIRE-IN (2026-06-14): assemble the same gradedEstimates
 // array /price-by-id surfaces, so a graded holding's stored valuation
@@ -836,6 +837,76 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18): single helper that
+// builds a CompIQEstimateRequest from a PortfolioHolding. Three sites used to
+// build this request inline — two persistence sites (autoPriceHolding,
+// repriceHoldingsForUser) plus the advanced-alerts targetFromHolding — and
+// over time the persistence sites drifted from the alerts site on seven
+// fields (cardYear shim, product order+trim, parallel trim, isAuto presence,
+// gradeCompany fallback order, gradeValue string-coerce, pinned-id +
+// authoritative-flag). The next engine-input change should touch ONE place.
+//
+// Behavior reference: returns EXACTLY the request shape that autoPriceHolding
+// (commit 3e7cf30) and repriceHoldingsForUser (commit f6fda5d) already
+// produce. Persistence-site callers (sites 1 and 2) see no behavior change.
+//
+// Site-3 (advancedAlerts.targetFromHolding) adopts the canonical shape via
+// this helper as part of CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION — that's a
+// behavior change at the alert site, the SEVEN drift corrections being:
+//
+//   1. cardYear: shimmedCardYear adds the legacy `year` (string) fallback +
+//      coerces 0 → undefined. Site 3 previously read `holding.cardYear`
+//      raw, so holdings on the legacy `year` field went into the engine
+//      with no year identity.
+//   2. product: shimmedProduct prefers canonical `product` over legacy
+//      `setName`, both trimmed. Site 3 previously read
+//      `holding.setName ?? holding.product` (setName-first, no trim) — for
+//      holdings with both populated, the engine got the older field.
+//   3. parallel: trimmed + empty-string normalized to undefined. Site 3
+//      previously passed `holding.parallel` raw (whitespace-only strings
+//      would survive as truthy).
+//   4. isAuto: declared as `Boolean(holding.isAuto)`. Site 3 OMITTED this
+//      field — the engine's variant-tier-ladder auto-exclusion never fired
+//      for alert evaluations, so auto holdings would mix with non-auto
+//      comps. THIS IS THE ONLY BEHAVIORALLY MEANINGFUL DRIFT — it makes
+//      auto alerts price correctly.
+//   5. gradeCompany: persistence fallback is `gradingCompany ?? gradeCompany`
+//      (legacy-first); site 3 was canonical-first. For any holding where
+//      these two fields disagree (rare; they're meant to be the same),
+//      this swaps which one the engine sees.
+//   6. gradeValue: `toNumber(.., 0) || undefined` coerces stringified
+//      grades (legacy data) to numbers. Site 3's type-narrow
+//      (`typeof === "number" ? ... : undefined`) dropped string grades
+//      silently.
+//   7. cardsightCardId + pinnedAuthoritative: the explicit CF goal. Site 3
+//      previously did not pin, so sparse-identity holdings re-resolved by
+//      name search in the engine — same mis-resolution shape that hit
+//      persistence sites (Trout $331 → $2) until 3e7cf30 + f6fda5d.
+//
+// Per-site `callContext` (source, userId, holdingId, routedFromHolding) is
+// the caller's concern — layered separately at each computeEstimate call.
+// ─────────────────────────────────────────────────────────────────────────────
+export function buildEstimateRequestFromHolding(
+  holding: PortfolioHolding,
+): CompIQEstimateRequest {
+  const pinnedCardId =
+    String(holding.cardsightCardId ?? "").trim() || undefined;
+  return {
+    playerName: String(holding.playerName ?? "").trim(),
+    cardYear: shimmedCardYear(holding),
+    product: shimmedProduct(holding),
+    parallel: String(holding.parallel ?? "").trim() || undefined,
+    isAuto: Boolean(holding.isAuto),
+    gradeCompany:
+      String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() ||
+      undefined,
+    gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+    cardsightCardId: pinnedCardId,
+    pinnedAuthoritative: pinnedCardId !== undefined,
+  };
+}
+
 // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: write-boundary strip for fields
 // dropped from the v1 canonical PortfolioHolding shape per contract §1.3.
 // Strip-and-warn mode (NOT 4xx) per §1.5 — after iOS rebuild + 1-week
@@ -990,40 +1061,19 @@ async function autoPriceHolding(
       : source === "refresh"
       ? "portfolio-autoprice-refresh"
       : "portfolio-autoprice-add";
-  // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when the holding already
-  // carries a resolved cardsightCardId, pin it AND mark it authoritative so
-  // the engine takes the pinned-id branch (cardsight.client.getPricing on
-  // the stored UUID) instead of re-resolving from sparse identity fields.
-  //
-  // The bug it closes: a holding added via the iOS picker stores
-  // cardsightCardId but may leave cardYear/product/parallel/grade undefined.
-  // Without the pin + flag, fetchComps composed cardTitle = "<playerName>",
-  // hit the meaningful-query gate (player name didn't start with the
-  // pinned UUID), and fell through to findCompsRouted → name search → top
-  // catalog hit. For "Mike Trout" that was the 2026 Bowman with $1.90
-  // median, not the actual 2011 Topps Update RC with $310 median.
-  //
-  // playerName stays REAL (no UUID overload, no prediction_log
-  // pollution). The flag preserves /search and /price free-text-override
-  // semantics for every other caller (default-off).
-  const pinnedCardId =
-    String(holding.cardsightCardId ?? "").trim() || undefined;
-  const estimate = await computeEstimate({
-    playerName: String(holding.playerName ?? "").trim(),
-    cardYear: shimmedCardYear(holding),
-    product: shimmedProduct(holding),
-    parallel: String(holding.parallel ?? "").trim() || undefined,
-    isAuto: Boolean(holding.isAuto),
-    gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
-    gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
-    cardsightCardId: pinnedCardId,
-    pinnedAuthoritative: pinnedCardId !== undefined,
-  }, {
-    source: corpusSource,
-    userId: userId ?? null,
-    holdingId: holding.id,
-    routedFromHolding: true,
-  });
+  // CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18): request body built
+  // via buildEstimateRequestFromHolding so the holding→engine-input mapping
+  // lives in ONE place. The pinned-id wiring + corpus-clean playerName rule
+  // shipped at 3e7cf30 are unchanged; this is a pure refactor at this site.
+  const estimate = await computeEstimate(
+    buildEstimateRequestFromHolding(holding),
+    {
+      source: corpusSource,
+      userId: userId ?? null,
+      holdingId: holding.id,
+      routedFromHolding: true,
+    },
+  );
 
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase D1: dropped the legacy
   // `toNumber(holding.currentValue, 0)` tail of this fallback chain.
@@ -3384,39 +3434,25 @@ export async function repriceHoldingsForUser(
       continue;
     }
     try {
-      // CF-REPRICE-PINNED-AUTHORITATIVE-SECOND-SITE (2026-06-17): identical
-      // wiring to autoPriceHolding (portfolioStore.service.ts:1011) so the
-      // scheduled reprice + list pull-to-refresh resolve off the stored
-      // cardsightCardId instead of re-deriving from sparse identity. Without
-      // this, the first-fix's effect on a holding (autoPriceHolding writes
-      // $331) gets overwritten back to a name-resolved wrong-card price
-      // ($2 for "Mike Trout" → 2026 Bowman) on every 6h scheduled tick.
-      //
-      // playerName stays REAL (no UUID overload) — same corpus-clean rule.
-      // Default-off on unpinned holdings: pinnedCardId undefined → flag is
-      // false → existing routed/identity path runs unchanged.
-      const reprPinnedCardId =
-        String(holding.cardsightCardId ?? "").trim() || undefined;
-      const estimate = await computeEstimate({
-        playerName: String(holding.playerName ?? "").trim(),
-        cardYear: shimmedCardYear(holding),
-        product: shimmedProduct(holding),
-        parallel: String(holding.parallel ?? "").trim() || undefined,
-        isAuto: Boolean(holding.isAuto),
-        gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
-        gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
-        cardsightCardId: reprPinnedCardId,
-        pinnedAuthoritative: reprPinnedCardId !== undefined,
-      }, {
-        // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): scheduled +
-        // manual batch reprice both flow through here; same source for
-        // both — the §4.2/4.3 join distinguishes by userId+holdingId,
-        // not by manual-vs-scheduled.
-        source: "portfolio-reprice",
-        userId,
-        holdingId: holding.id,
-        routedFromHolding: true,
-      });
+      // CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18): request body
+      // built via buildEstimateRequestFromHolding so the holding→engine-input
+      // mapping lives in ONE place. The pinned-id wiring shipped at f6fda5d
+      // is unchanged; this is a pure refactor at this site — sites 1 and 2
+      // (autoPriceHolding above + this one) produce byte-identical requests
+      // via the same helper.
+      const estimate = await computeEstimate(
+        buildEstimateRequestFromHolding(holding),
+        {
+          // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): scheduled +
+          // manual batch reprice both flow through here; same source for
+          // both — the §4.2/4.3 join distinguishes by userId+holdingId,
+          // not by manual-vs-scheduled.
+          source: "portfolio-reprice",
+          userId,
+          holdingId: holding.id,
+          routedFromHolding: true,
+        },
+      );
 
       const confidence = toNumber((estimate as any)?.confidence?.pricingConfidence, 0);
       const compsUsed = toNumber((estimate as any)?.compsUsed, 0);

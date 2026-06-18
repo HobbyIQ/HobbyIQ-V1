@@ -250,6 +250,111 @@ describe("resolveTargets — fan-out per scope", () => {
     expect(String(warnSpy.mock.calls[0][0])).toMatch(/rule overflow/);
     warnSpy.mockRestore();
   });
+
+  // ── CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18) ────────────────
+  // The four cases below pin the canonical-shape adoption at site 3
+  // (advancedAlerts.targetFromHolding) — the SEVEN drift corrections the
+  // alert site adopts when routing through buildEstimateRequestFromHolding.
+  // See the helper's doc comment in portfolioStore.service.ts for the full
+  // drift inventory.
+
+  it("CF-CONSOLIDATION: pinned holding with sparse identity carries cardsightCardId + pinnedAuthoritative=true (drift correction #7 — the explicit CF goal)", async () => {
+    // The Drew-Trout shape: cardsightCardId stored, identity fields sparse.
+    portfolioMock.mockResolvedValueOnce({
+      id: "u-1", userId: "u-1",
+      holdings: {
+        h1: {
+          id: "h1",
+          playerName: "Mike Trout",
+          cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+          // intentionally NO cardYear/product/parallel/grade — sparse identity
+        },
+      } as any,
+      ledger: [], priceHistoryByHolding: {}, alerts: [], recommendationFeedback: [],
+    });
+    const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
+    expect(r.targets.length).toBe(1);
+    const req = r.targets[0].request;
+    expect(req.cardsightCardId).toBe("fda530ab-e925-460e-ab88-63199ef975e9");
+    expect(req.pinnedAuthoritative).toBe(true);
+    // playerName preserved REAL — no UUID overload, corpus-clean rule.
+    expect(req.playerName).toBe("Mike Trout");
+  });
+
+  it("CF-CONSOLIDATION: unpinned holding (no cardsightCardId) → cardsightCardId undefined + pinnedAuthoritative=false (default-off invariant)", async () => {
+    portfolioMock.mockResolvedValueOnce({
+      id: "u-1", userId: "u-1",
+      holdings: {
+        h1: {
+          id: "h1",
+          playerName: "Paul Skenes",
+          cardYear: 2024,
+          product: "Topps Chrome",
+          // no cardsightCardId
+        },
+      } as any,
+      ledger: [], priceHistoryByHolding: {}, alerts: [], recommendationFeedback: [],
+    });
+    const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
+    expect(r.targets.length).toBe(1);
+    const req = r.targets[0].request;
+    expect(req.cardsightCardId).toBeUndefined();
+    expect(req.pinnedAuthoritative).toBe(false);
+    expect(req.playerName).toBe("Paul Skenes");
+    expect(req.cardYear).toBe(2024);
+    expect(req.product).toBe("Topps Chrome");
+  });
+
+  it("CF-CONSOLIDATION: isAuto holding declares isAuto=true (drift correction #4 — the only behaviorally meaningful drift)", async () => {
+    // Pre-consolidation: site 3 OMITTED isAuto, so the engine's variant-
+    // ladder auto-exclusion never fired for alert evaluations — auto
+    // holdings mixed with non-auto comps. Post-consolidation: the request
+    // declares isAuto and the engine's auto-comp filter kicks in.
+    portfolioMock.mockResolvedValueOnce({
+      id: "u-1", userId: "u-1",
+      holdings: {
+        h1: {
+          id: "h1",
+          playerName: "Eric Hartman",
+          cardYear: 2026,
+          product: "Bowman Chrome",
+          isAuto: true,
+        },
+      } as any,
+      ledger: [], priceHistoryByHolding: {}, alerts: [], recommendationFeedback: [],
+    });
+    const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
+    const req = r.targets[0].request;
+    expect(req.isAuto).toBe(true);
+  });
+
+  it("CF-CONSOLIDATION: legacy field shapes get shim corrections (drifts #1, #2, #5, #6)", async () => {
+    // Legacy holding with:
+    //   - `year` (string) instead of `cardYear` (number)   → drift #1: shimmedCardYear's `year` fallback + 0-coerce
+    //   - `setName` populated, no `product`               → drift #2: shimmedProduct falls back to setName, trimmed
+    //   - `gradingCompany` (legacy), no `gradeCompany`    → drift #5: fallback prefers gradingCompany
+    //   - `gradeValue` as a numeric string                → drift #6: toNumber coercion
+    portfolioMock.mockResolvedValueOnce({
+      id: "u-1", userId: "u-1",
+      holdings: {
+        h1: {
+          id: "h1",
+          playerName: "Bobby Witt Jr",
+          year: "2020",                          // legacy string year
+          setName: "  Bowman Chrome  ",          // padded, no canonical product
+          gradingCompany: "PSA",                 // legacy field
+          gradeValue: "10" as any,               // stringified grade
+        },
+      } as any,
+      ledger: [], priceHistoryByHolding: {}, alerts: [], recommendationFeedback: [],
+    });
+    const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
+    const req = r.targets[0].request;
+    expect(req.cardYear).toBe(2020);                  // drift #1: shimmed from legacy `year`
+    expect(req.product).toBe("Bowman Chrome");        // drift #2: shimmed from setName + trimmed
+    expect(req.gradeCompany).toBe("PSA");             // drift #5: shimmed from gradingCompany
+    expect(req.gradeValue).toBe(10);                  // drift #6: coerced "10" → 10
+  });
 });
 
 // ─── runAdvancedAlertsEvaluator ─────────────────────────────────────────────

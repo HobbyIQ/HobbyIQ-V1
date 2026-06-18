@@ -34,7 +34,10 @@ import type {
   PredictionCallContext,
 } from "../../types/compiq.types.js";
 import { getWatchlistEntries } from "../dailyiq/watchlistStore.service.js";
-import { readUserDoc } from "../portfolioiq/portfolioStore.service.js";
+import {
+  buildEstimateRequestFromHolding,
+  readUserDoc,
+} from "../portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 
 export const ADVANCED_ALERT_TARGETS_PER_RULE_DEFAULT = 50;
@@ -109,21 +112,20 @@ function parseGradeString(raw: string | null | undefined): {
 }
 
 function targetFromHolding(holding: PortfolioHolding): EvaluationTarget | null {
-  const player = holding.playerName?.trim();
-  if (!player) return null;
-  const company =
-    holding.gradeCompany?.trim() || holding.gradingCompany?.trim() || undefined;
-  const value = typeof holding.gradeValue === "number" ? holding.gradeValue : undefined;
+  if (!holding.playerName?.trim()) return null;
+  // CF-HOLDING-ESTIMATE-INPUT-CONSOLIDATION (2026-06-18): route through the
+  // single helper in portfolioStore.service.ts. Brings this site up to the
+  // canonical shape sites 1 and 2 already use — see the helper's doc comment
+  // for the seven drift corrections this site adopts (primarily: pinned
+  // cardsightCardId + pinnedAuthoritative flag for stored-cardId holdings,
+  // and `isAuto` declaration so auto holdings stop mixing with non-auto
+  // comps in alert pricing). Key/holdingId semantics preserved — the
+  // dedup key still includes the per-target grade suffix derived from the
+  // canonical fallback order.
+  const request = buildEstimateRequestFromHolding(holding);
   return {
-    key: `holding:${holding.id}:${gradeSuffix(company, value)}`,
-    request: {
-      playerName: player,
-      cardYear: holding.cardYear,
-      product: holding.setName ?? holding.product,
-      parallel: holding.parallel,
-      gradeCompany: company,
-      gradeValue: value,
-    },
+    key: `holding:${holding.id}:${gradeSuffix(request.gradeCompany, request.gradeValue)}`,
+    request,
     holdingId: holding.id,
   };
 }
