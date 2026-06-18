@@ -138,13 +138,22 @@ removed from `hobbyiq3` + `fn-compiq`, `ch-monitor.yml` removed.
   Workflow only updates `GIT_SHA` + `DEPLOYED_AT` env vars (not
   `GIT_SHA_SHORT` + `GIT_BRANCH`); tracked as CF-DAILY-REFRESH-CONSISTENCY.
 
-### Cosmos auth (post 2026-05-23 key-rotation incident)
+### Cosmos auth
 
-- compiq-mcp `COSMOS_CONNECTION_STRING` = SECONDARY key
-- fn-compiq `COSMOS_KEY` = SECONDARY key
-- HobbyIQ3 `COSMOS_CONNECTION_STRING` = PRIMARY key (unchanged)
-- Blast radius distributed: future PRIMARY rotation hits HobbyIQ3 only;
-  future SECONDARY rotation hits compiq-mcp + fn-compiq.
+- All three apps (compiq-mcp, fn-compiq, HobbyIQ3) read Cosmos creds from
+  their app settings. The specific primary-vs-secondary binding changes
+  with every rotation — check live, don't assume from this doc.
+  - Inspect: `az functionapp config appsettings list --name fn-compiq …`
+    and `az webapp config appsettings list --name {HobbyIQ3,compiq-mcp} …`.
+  - Compare value tails against `az cosmosdb keys list --name hobbyiq-comps …`
+    `primaryMasterKey` / `secondaryMasterKey` to identify which key each
+    holds at any moment.
+- Rotation pattern: secondary-swap. Repoint every consumer of the to-be-
+  regenerated key onto the OTHER key, verify health on each, THEN
+  regenerate. Never bare-regenerate a key that an app still holds.
+- Distribute consumers across both keys so future rotations have small
+  blast radius (which apps hold which key is rotation-dependent — see
+  inspection commands above for current state).
 
 ### MCP rewire arc: COMPLETE
 
