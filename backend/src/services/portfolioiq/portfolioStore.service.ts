@@ -907,6 +907,173 @@ export function buildEstimateRequestFromHolding(
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-IDENTITY-HYDRATION (2026-06-18): backfill identity fields on a holding
+// from the engine's resolved Cardsight catalog identity.
+//
+// Why: a holding can carry a correct cardsightCardId but empty identity
+// fields (year/set/product/parallel/cardNumber/isAuto). The pinned-id fix
+// (3e7cf30 + f6fda5d + bda96e4) makes PRICING correct on those holdings.
+// This helper makes IDENTITY correct too — titles auto-compose, holding
+// display stops showing blanks, alerts and Phase-5 reads see complete data.
+//
+// Trigger: piggyback on the existing reprice writeback (no new Cardsight
+// call). The engine already resolves the rich catalog card as part of
+// pinned-id pricing and returns it on `estimate.cardIdentity`. Both
+// persistence sites (autoPriceHolding + repriceHoldingsForUser) read
+// `estimate` already; they just call this helper to compute the patch
+// before stamping the writeback.
+//
+// Source of truth — confirmed live shape at 2026-06-18 pinned-id probe:
+//   estimate.cardIdentity = {
+//     card_id: string,
+//     title:   string | null,   // == player on pinned-id path
+//     player:  string | null,
+//     set:     string | null,   // SUBSET name ("Base Set", "Chrome Prospects Autographs")
+//     release: string | null,   // PRODUCT LINE ("Topps Update", "Bowman")
+//     year:    number | null,   // already coerced from set.year string
+//     number:  string | null,
+//     variant: string | null,
+//   }
+//
+// Safety rules:
+//   1. PIN-AUTHORITATIVE GUARD. Hydrate ONLY when the engine's resolved
+//      card_id matches the holding's stored cardsightCardId. This
+//      rejects:
+//        - unpinned holdings (engine resolves by name; resolution may
+//          land on a different card than the user intends, see the
+//          Trout-$2 bug class)
+//        - vendor flaps where the engine resolved a different card_id
+//          than requested (consistency guard at compiqEstimate.service
+//          .ts:1310 already returns stub identity for those, so this
+//          extra check is belt-and-suspenders)
+//   2. FILL-IF-EMPTY. Each candidate field is filled only when the
+//      holding's existing value is undefined / null / empty-after-trim.
+//      Never overwrite a user-entered value (Hartman's manually-typed
+//      `parallel: "Blue X-Fractor /150"` is preserved by virtue of NOT
+//      being a candidate — parallel is not in `cardIdentity` for the
+//      base card and we don't hydrate it). The product/setName/cardYear
+//      fields ARE candidates and are protected by this rule.
+//   3. isAuto TREATMENT. `undefined` → eligible for fill (heuristic from
+//      catalog set name + card number prefix matches the engine's own
+//      regex in cardQueryParser.ts). `false` → SKIP (we don't know if
+//      it was set deliberately or defaults from iOS; safer to under-
+//      hydrate than to flip a user's toggle). `true` → SKIP (already
+//      set).
+//   4. PRODUCT = `release` LITERAL. Hartman's release is `"Bowman"`,
+//      not `"Bowman Chrome"`. We store the engine's literal value. Any
+//      brand+set qualifier ("Chrome") is encoded in `setName` (the
+//      subset, e.g. "Chrome Prospects Autographs") and the eBay title
+//      composer's brand-vs-set dedup handles it. Storage stays clean.
+//
+// Returns the patch (a Partial<PortfolioHolding>) for the caller to merge.
+// Empty patch ({}) when nothing changed. Pure function — no side effects.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Mirror cardQueryParser's AUTO_PREFIX_RE (cardQueryParser.ts:319 / 394).
+// Inlined rather than imported to avoid a cross-package edge from the
+// portfolio store reaching into the compiq parser; both copies will stay
+// in lock-step by convention (and they're tested below).
+const HYDRATE_AUTO_WORD_RE = /\bauto(graph(s|ed)?|s)?\b/i;
+const HYDRATE_AUTO_PREFIX_RE =
+  /\b(cpa|bcpa|bpa|bcrra|bcra|cra|bsa|bca|tca|usa|bbpa|bspa|au|fa|roa)[-,)\s]/i;
+
+interface ResolvedCardIdentity {
+  card_id?: string | null;
+  title?: string | null;
+  player?: string | null;
+  set?: string | null;
+  release?: string | null;
+  year?: number | null;
+  number?: string | null;
+  variant?: string | null;
+}
+
+function isEmptyString(v: unknown): boolean {
+  return v === undefined || v === null || (typeof v === "string" && v.trim().length === 0);
+}
+
+export function hydrateHoldingIdentityFromEstimate(
+  holding: PortfolioHolding,
+  cardIdentity: ResolvedCardIdentity | null | undefined,
+): Partial<PortfolioHolding> {
+  // Gate 1 — must have an engine-resolved identity object.
+  if (!cardIdentity || typeof cardIdentity !== "object") return {};
+
+  // Gate 2 — pin-authoritative match. Only hydrate when the engine's
+  // resolved card_id matches what's stored on the holding. Rejects
+  // unpinned holdings (engine resolved by name) AND vendor-flap cases.
+  const storedCardId = String(holding.cardsightCardId ?? "").trim();
+  if (storedCardId.length === 0) return {};
+  const resolvedCardId = String(cardIdentity.card_id ?? "").trim();
+  if (resolvedCardId.length === 0 || resolvedCardId !== storedCardId) return {};
+
+  const patch: Partial<PortfolioHolding> = {};
+
+  // cardYear: engine already coerces set.year string → number. Fill when
+  // holding's cardYear is empty AND neither legacy `year` field is set.
+  if (
+    isEmptyString((holding as any).cardYear) &&
+    isEmptyString((holding as any).year) &&
+    typeof cardIdentity.year === "number" &&
+    Number.isFinite(cardIdentity.year) &&
+    cardIdentity.year > 0
+  ) {
+    patch.cardYear = cardIdentity.year;
+  }
+
+  // setName: the subset name (Cardsight's `set.name`).
+  if (
+    isEmptyString(holding.setName) &&
+    typeof cardIdentity.set === "string" &&
+    cardIdentity.set.trim().length > 0
+  ) {
+    patch.setName = cardIdentity.set.trim();
+  }
+
+  // product: the product line / release (Cardsight's `set.release`).
+  // LITERAL — no heuristic concat with set.name. See helper doc for why.
+  if (
+    isEmptyString(holding.product) &&
+    typeof cardIdentity.release === "string" &&
+    cardIdentity.release.trim().length > 0
+  ) {
+    patch.product = cardIdentity.release.trim();
+  }
+
+  // cardNumber: direct.
+  if (
+    isEmptyString(holding.cardNumber) &&
+    typeof cardIdentity.number === "string" &&
+    cardIdentity.number.trim().length > 0
+  ) {
+    patch.cardNumber = cardIdentity.number.trim();
+  }
+
+  // isAuto: undefined → eligible for heuristic fill. false → skip. true → skip.
+  // Heuristic: cardIdentity.set name contains an "auto" word OR
+  // cardIdentity.number matches the auto-prefix regex. Mirrors the engine's
+  // own AUTO detection in cardQueryParser.ts.
+  if (holding.isAuto === undefined) {
+    const setText = typeof cardIdentity.set === "string" ? cardIdentity.set : "";
+    const numberText = typeof cardIdentity.number === "string" ? cardIdentity.number : "";
+    const looksAuto =
+      HYDRATE_AUTO_WORD_RE.test(setText) ||
+      HYDRATE_AUTO_PREFIX_RE.test(numberText);
+    if (looksAuto) {
+      patch.isAuto = true;
+    } else {
+      // We can also confidently set isAuto=false when the catalog gives
+      // us a clear no-auto signal. This converts undefined → false on
+      // base cards (Trout 2011 Topps Update), which is honest. Skip
+      // false-set holdings (already done above; undefined gate covers it).
+      patch.isAuto = false;
+    }
+  }
+
+  return patch;
+}
+
 // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase C: write-boundary strip for fields
 // dropped from the v1 canonical PortfolioHolding shape per contract §1.3.
 // Strip-and-warn mode (NOT 4xx) per §1.5 — after iOS rebuild + 1-week
@@ -1308,8 +1475,19 @@ async function autoPriceHolding(
     isEstimate: false,
   };
 
+  // CF-IDENTITY-HYDRATION (2026-06-18): compute identity backfill from the
+  // engine's resolved card identity. Pin-authoritative guard inside the
+  // helper ensures we never propagate name-resolved data — pinned-id +
+  // resolved-card-id-matches-stored only. Patch is empty when conditions
+  // don't apply; spread is a safe no-op then.
+  const identityPatch = hydrateHoldingIdentityFromEstimate(
+    holding,
+    (estimate as any)?.cardIdentity,
+  );
+
   const updated: PortfolioHolding = {
     ...holding,
+    ...identityPatch,
     fairMarketValue: resolved.fairMarketValueOverride === null
       ? null as any  // null erases the field on display; ERP read coerces null→null
       : resolved.fairMarketValueOverride,
@@ -3546,8 +3724,19 @@ export async function repriceHoldingsForUser(
         ? (repriceTrendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
         : null;
 
+      // CF-IDENTITY-HYDRATION (2026-06-18): same one-line wire as
+      // autoPriceHolding (site 1). Single helper, two sites — duality
+      // class kept closed. Pin-authoritative guard inside the helper
+      // applies identically here; patch is empty for unpinned holdings
+      // or vendor-flap mismatches.
+      const repriceIdentityPatch = hydrateHoldingIdentityFromEstimate(
+        holding,
+        (estimate as any)?.cardIdentity,
+      );
+
       const updated: PortfolioHolding = {
         ...holding,
+        ...repriceIdentityPatch,
         fairMarketValue: fairValue,
         predictedPrice: repricePredictedPrice,
         predictedPriceLow: repricePredictedPriceLow,
