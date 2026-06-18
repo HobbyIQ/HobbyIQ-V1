@@ -1413,11 +1413,38 @@ async function autoPriceHolding(
     }
   }
 
+  // CF-IDENTITY-HYDRATION-COMPLETION (2026-06-18): compute the hydration
+  // patch BEFORE the no-FMV early return. Engine catalog resolution +
+  // cardIdentity construction happen during fetchComps regardless of
+  // whether downstream pricing succeeds — the variant-mismatch / thin-
+  // data / no-recent-comps branches all return rich cardIdentity (verified
+  // against the live deployed dist for Hartman's `source:"variant-mismatch"`
+  // shape). Hoisting the patch above the gate lets the skip path hydrate
+  // identity even when no FMV lands. The helper's pin-authoritative +
+  // card_id-match guards still apply — name-resolved skips or stub
+  // identities no-op safely.
+  const identityPatch = hydrateHoldingIdentityFromEstimate(
+    holding,
+    (estimate as any)?.cardIdentity,
+  );
+
   // For ungraded holdings: preserve the existing "abort on fairValue<=0"
   // behavior — the rail wasn't going to fire anyway, and we don't want
   // to start stamping valuationStatus on cases that previously persisted
-  // with no value at all.
+  // with no value at all. CF-IDENTITY-HYDRATION-COMPLETION: if the
+  // hydration patch is non-empty, stamp it back even on the no-FMV path
+  // so a sparse-identity holding (e.g. Hartman's variant-mismatch skip)
+  // still gains its catalog identity fields on this tick.
   if (!railResolution && fairValue <= 0) {
+    if (Object.keys(identityPatch).length > 0) {
+      const hydrated: PortfolioHolding = {
+        ...holding,
+        ...identityPatch,
+        lastUpdated: new Date().toISOString(),
+      };
+      doc.holdings[holding.id] = hydrated;
+      return hydrated;
+    }
     return holding;
   }
 
@@ -1475,16 +1502,10 @@ async function autoPriceHolding(
     isEstimate: false,
   };
 
-  // CF-IDENTITY-HYDRATION (2026-06-18): compute identity backfill from the
-  // engine's resolved card identity. Pin-authoritative guard inside the
-  // helper ensures we never propagate name-resolved data — pinned-id +
-  // resolved-card-id-matches-stored only. Patch is empty when conditions
-  // don't apply; spread is a safe no-op then.
-  const identityPatch = hydrateHoldingIdentityFromEstimate(
-    holding,
-    (estimate as any)?.cardIdentity,
-  );
-
+  // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18): identity
+  // patch already computed above (hoisted to fire on both the success path
+  // here AND the no-FMV early return). Spread is a no-op when the patch
+  // is empty.
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
@@ -3638,6 +3659,21 @@ export async function repriceHoldingsForUser(
       const estSource = String((estimate as any)?.source ?? "");
       const daysSinceNewestComp = (estimate as any)?.daysSinceNewestComp ?? null;
 
+      // CF-IDENTITY-HYDRATION-COMPLETION (2026-06-18): compute the hydration
+      // patch BEFORE the confidence gate. Engine catalog resolution +
+      // cardIdentity construction happen during fetchComps regardless of
+      // pricing outcome — the variant-mismatch / thin-data / no-recent-
+      // comps branches all return rich cardIdentity (verified live on
+      // Hartman's `source:"variant-mismatch"` shape: full
+      // {card_id, title, player, set, release, year, number} payload). The
+      // patch flows into BOTH the skip writeback below and the success
+      // writeback at L3735+. Helper's pin-authoritative + card_id-match
+      // guards still apply; name-resolved skips or stub identities no-op.
+      const repriceIdentityPatch = hydrateHoldingIdentityFromEstimate(
+        holding,
+        (estimate as any)?.cardIdentity,
+      );
+
       if (confidence < minPricingConfidence || compsUsed < minCompsUsed || fairValue <= 0) {
         skipped += 1;
         const failed: string[] = [];
@@ -3663,8 +3699,15 @@ export async function repriceHoldingsForUser(
         // movementUpdatedAt — both FROZEN here since the failure path
         // doesn't bump them, so the wire renders ≥ "Updated Today" by
         // age, never falsely "Live").
+        //
+        // CF-IDENTITY-HYDRATION-COMPLETION: spread the hydration patch
+        // here too so Hartman-style sparse-identity holdings gain their
+        // catalog identity fields even when they take the variant-mismatch
+        // skip branch on every tick (which the canary on fcf7c59 showed
+        // they do).
         doc.holdings[holding.id] = {
           ...holding,
+          ...repriceIdentityPatch,
           verdict: reasonLabel,
           recommendation: "Hold",
           lastUpdated: now,
@@ -3724,16 +3767,11 @@ export async function repriceHoldingsForUser(
         ? (repriceTrendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? now)
         : null;
 
-      // CF-IDENTITY-HYDRATION (2026-06-18): same one-line wire as
-      // autoPriceHolding (site 1). Single helper, two sites — duality
-      // class kept closed. Pin-authoritative guard inside the helper
-      // applies identically here; patch is empty for unpinned holdings
-      // or vendor-flap mismatches.
-      const repriceIdentityPatch = hydrateHoldingIdentityFromEstimate(
-        holding,
-        (estimate as any)?.cardIdentity,
-      );
-
+      // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18):
+      // repriceIdentityPatch was hoisted above the confidence-gate to fire
+      // on both the skip writeback above AND this success writeback below.
+      // Single helper, single computation per holding per tick; the same
+      // patch reaches whichever writeback branch the holding takes.
       const updated: PortfolioHolding = {
         ...holding,
         ...repriceIdentityPatch,

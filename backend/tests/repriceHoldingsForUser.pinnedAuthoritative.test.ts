@@ -203,4 +203,113 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     expect(body.cardYear).toBe(2024);
     expect(body.product).toBe("Topps Chrome");
   });
+
+  // ── CF-IDENTITY-HYDRATION-COMPLETION (2026-06-18) ─────────────────────────
+  // The success path is covered by hydrateHoldingIdentityFromEstimate.test
+  // .ts (14 cases). This test specifically pins the SKIP-PATH wire — the
+  // gap the fcf7c59 canary uncovered. Hartman's variant-mismatch return
+  // hits the confidence-gate skip branch in repriceHoldingsForUser, but
+  // the engine still returns rich cardIdentity on that branch (verified
+  // live before this CF). The hoist makes the patch flow into both
+  // writebacks; this test asserts the skip-writeback now applies it.
+
+  const HARTMAN_PINNED_ID = "befe9bcc-e7e8-458c-9cd8-ce831848b9a1";
+
+  it("CF-COMPLETION: PINNED holding that takes the confidence-gate SKIP path still hydrates identity from rich cardIdentity (the Hartman case)", async () => {
+    const { sessionId, userId } = await signIn();
+    const holdingId = `skip-path-hartman-${Date.now()}`;
+
+    await seedHolding(userId, holdingId, {
+      playerName: "Eric Hartman",
+      cardsightCardId: HARTMAN_PINNED_ID,
+      parallel: "Blue X-Fractor /150",                                   // user-entered
+      parallelId: "b83de312-609d-4d58-af41-c8766a81835f",                // system-set
+      // ALL other identity fields undefined — same as Drew's real
+      // Hartman holdings in Cosmos.
+      lastUpdated: "2026-06-17T00:00:00.000Z",
+    });
+
+    const compiqEstimateService = await import(
+      "../src/services/compiq/compiqEstimate.service.js",
+    );
+    const mockFn = compiqEstimateService.computeEstimate as unknown as ReturnType<typeof vi.fn>;
+    // Override the default mock with the Hartman variant-mismatch shape
+    // captured live on the deployed dist BEFORE this CF: rich cardIdentity
+    // present, but pricing fields all zero / source: "variant-mismatch".
+    mockFn.mockImplementationOnce(async () => ({
+      // Confidence gate triggers SKIP — all three thresholds fail.
+      fairMarketValue: 0,
+      compsUsed: 0,
+      confidence: { pricingConfidence: 0 },
+      source: "variant-mismatch",
+      verdict: "No comps found for this exact variant…",
+      // CRITICAL: rich cardIdentity even on the skip branch — engine's
+      // pinned-id path resolves catalog identity during fetchComps,
+      // independent of whether comps survive the variant filter.
+      cardIdentity: {
+        card_id: HARTMAN_PINNED_ID,
+        title: "Eric Hartman",
+        player: "Eric Hartman",
+        set: "Chrome Prospects Autographs",
+        release: "Bowman",
+        year: 2026,
+        number: "CPA-EHA",
+        variant: null,
+      },
+      premiumValue: 0,
+      quickSaleValue: 0,
+      compsAvailable: 47,
+      recentComps: [],
+      variantWarning: [],
+      effectiveFmv: 0,
+      predictedPrice: null,
+      predictedPriceRange: null,
+      predictedPriceAttribution: { mechanism: "unavailable" },
+      signalsLastUpdated: null,
+    }));
+
+    const r = await request(app)
+      .post("/api/portfolio/reprice/batch")
+      .set("x-session-id", sessionId)
+      .send({});
+    expect(r.status).toBe(200);
+
+    // Sanity: the holding was actually walked AND took the skip branch.
+    const targetUpdate = (r.body.updates ?? []).find(
+      (u: any) => u.id === holdingId,
+    );
+    expect(targetUpdate, `reprice did not touch ${holdingId}`).toBeDefined();
+    expect(targetUpdate.status).toBe("skipped");
+    expect(targetUpdate.reason).toMatch(/variant-mismatch|confidence-gate/);
+
+    // The MAIN assertion: identity fields hydrated even on the skip path.
+    const stored = await getHoldingFromStore(userId, holdingId);
+    expect(stored).not.toBeNull();
+    expect(stored.cardYear).toBe(2026);
+    expect(stored.setName).toBe("Chrome Prospects Autographs");
+    expect(stored.product).toBe("Bowman");                              // literal release
+    expect(stored.cardNumber).toBe("CPA-EHA");
+    expect(stored.isAuto).toBe(true);                                   // catalog "Autographs" → heuristic fill
+
+    // Parallel + parallelId verbatim — user-entered NOT clobbered.
+    expect(stored.parallel).toBe("Blue X-Fractor /150");
+    expect(stored.parallelId).toBe("b83de312-609d-4d58-af41-c8766a81835f");
+
+    // Pricing fields stay un-stamped on the skip path (existing contract).
+    // fairMarketValue absent OR untouched at whatever the seed value was.
+    expect(stored.fairMarketValue ?? null).toBeNull();
+
+    // Skip-path verdict / recommendation stamped as today.
+    expect(stored.verdict).toBe("Variant mismatch");
+    expect(stored.recommendation).toBe("Hold");
+  });
 });
+
+// Test helper imported locally to avoid touching shared imports.
+async function getHoldingFromStore(
+  userId: string,
+  holdingId: string,
+): Promise<any | null> {
+  const doc = await readUserDoc(userId);
+  return doc.holdings[holdingId] ?? null;
+}
