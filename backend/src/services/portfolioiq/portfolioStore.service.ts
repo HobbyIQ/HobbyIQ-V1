@@ -3384,6 +3384,19 @@ export async function repriceHoldingsForUser(
       continue;
     }
     try {
+      // CF-REPRICE-PINNED-AUTHORITATIVE-SECOND-SITE (2026-06-17): identical
+      // wiring to autoPriceHolding (portfolioStore.service.ts:1011) so the
+      // scheduled reprice + list pull-to-refresh resolve off the stored
+      // cardsightCardId instead of re-deriving from sparse identity. Without
+      // this, the first-fix's effect on a holding (autoPriceHolding writes
+      // $331) gets overwritten back to a name-resolved wrong-card price
+      // ($2 for "Mike Trout" → 2026 Bowman) on every 6h scheduled tick.
+      //
+      // playerName stays REAL (no UUID overload) — same corpus-clean rule.
+      // Default-off on unpinned holdings: pinnedCardId undefined → flag is
+      // false → existing routed/identity path runs unchanged.
+      const reprPinnedCardId =
+        String(holding.cardsightCardId ?? "").trim() || undefined;
       const estimate = await computeEstimate({
         playerName: String(holding.playerName ?? "").trim(),
         cardYear: shimmedCardYear(holding),
@@ -3392,6 +3405,8 @@ export async function repriceHoldingsForUser(
         isAuto: Boolean(holding.isAuto),
         gradeCompany: String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() || undefined,
         gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
+        cardsightCardId: reprPinnedCardId,
+        pinnedAuthoritative: reprPinnedCardId !== undefined,
       }, {
         // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): scheduled +
         // manual batch reprice both flow through here; same source for
