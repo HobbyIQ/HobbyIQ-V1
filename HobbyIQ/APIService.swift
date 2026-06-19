@@ -277,6 +277,14 @@ struct APIService {
         try await get(path: "/api/portfolio/insights/weekly-brief", responseType: WeeklyBriefResponse.self)
     }
 
+    // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): collection-value card data.
+    // Headline (`totalDisplayable`, range, counts) is computed LIVE from
+    // the user doc; `historySeries` is the persisted daily trail.
+    // Off the hot inventory path — the card loads independently.
+    func fetchCollectionValueHistory() async throws -> PortfolioValueHistoryResponse {
+        try await get(path: "/api/portfolio/value-history", responseType: PortfolioValueHistoryResponse.self)
+    }
+
     func submitRecommendationFeedback(request: RecommendationFeedbackRequest) async throws -> RecommendationFeedbackResponse {
         try await post(path: "/api/portfolio/feedback/recommendation", body: request, responseType: RecommendationFeedbackResponse.self)
     }

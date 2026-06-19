@@ -110,20 +110,37 @@ struct InventoryDisplayAggregate {
     let totalCards: Int
     let pricedCount: Int
     let unpricedCount: Int
+    // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split the unpriced bucket
+    // so the hero subtitle can read "N estimated · M pending" instead of
+    // the generic "N unpriced". `displayValue` is unchanged — still
+    // observed-only — so Story B's display-only invariant holds. The
+    // collection-value card is the surface that includes the estimated
+    // bucket in its headline; this split makes the hero's exclusion
+    // transparent rather than reframing the aggregate.
+    let estimatedCount: Int
+    let pendingCount: Int
 
     init(holdings: [InventoryCard]) {
         var value = 0.0
         var cost = 0.0
         var priced = 0
-        var unpriced = 0
+        var estimated = 0
+        var pending = 0
         for card in holdings {
             if let fmv = card.fairMarketValue {
                 let qty = max(1.0, card.quantity ?? 1.0)
                 value += fmv * qty
                 cost += card.cost
                 priced += 1
+            } else if card.valuationStatus == "estimated" {
+                estimated += 1
             } else {
-                unpriced += 1
+                // "pending", "observed" with nil fmv (backend reclassifies
+                // these as pending in computeSnapshotFromHoldings), or a
+                // legacy/null wire row that pre-dates Step 1 — all bucket
+                // as pending so the four-bucket arithmetic stays clean:
+                // priced + estimated + pending = totalCards.
+                pending += 1
             }
         }
         self.displayValue = value
@@ -132,7 +149,25 @@ struct InventoryDisplayAggregate {
         self.displayROI = cost > 0 ? ((value - cost) / cost) * 100 : 0
         self.totalCards = holdings.count
         self.pricedCount = priced
-        self.unpricedCount = unpriced
+        self.estimatedCount = estimated
+        self.pendingCount = pending
+        self.unpricedCount = estimated + pending
+    }
+
+    /// Subtitle suffix used by the InventoryIQ + PortfolioIQ heroes. Splits
+    /// when both buckets are present so the user sees the why behind the
+    /// excluded count. Empty when nothing is unpriced.
+    var unpricedSubtitleSuffix: String {
+        switch (estimatedCount, pendingCount) {
+        case (0, 0):
+            return ""
+        case (let e, 0):
+            return " · \(e) estimated"
+        case (0, let p):
+            return " · \(p) pending"
+        case (let e, let p):
+            return " · \(e) estimated · \(p) pending"
+        }
     }
 }
 

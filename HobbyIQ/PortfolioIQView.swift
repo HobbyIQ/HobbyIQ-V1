@@ -21,6 +21,12 @@ struct PortfolioIQView: View {
     @State private var topMoversExpanded = false
     @State private var priorityActionsExpanded = false
 
+    // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): scoped to this view because
+    // the card's loading/error/refresh story is independent of the hot
+    // inventory path. The hero renders immediately from `vm.inventoryCards`
+    // via `InventoryDisplayAggregate`; the card lazy-loads its own data.
+    @StateObject private var collectionValueViewModel = CollectionValueViewModel()
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -61,6 +67,7 @@ struct PortfolioIQView: View {
                     }
                     .refreshable {
                         await vm.refresh()
+                        await collectionValueViewModel.refresh()
                     }
                 }
             }
@@ -68,6 +75,9 @@ struct PortfolioIQView: View {
                 Color.clear.frame(height: 88)
             }
             .toolbar(.hidden, for: .navigationBar)
+            .task {
+                await collectionValueViewModel.load()
+            }
             .sheet(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
             }
@@ -185,7 +195,9 @@ struct PortfolioIQView: View {
         let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
         let pnlColor: Color = agg.displayPL >= 0 ? .green : .red
         let hasCostBasis = agg.displayCost > 0
-        let unpricedSuffix = agg.unpricedCount > 0 ? " · \(agg.unpricedCount) unpriced" : ""
+        // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split unpriced into
+        // "N estimated · M pending" via the aggregate helper.
+        let unpricedSuffix = agg.unpricedSubtitleSuffix
         let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
         return VStack(spacing: 10) {
@@ -379,58 +391,16 @@ struct PortfolioIQView: View {
     // Performance block (realized Sold/Fees/margin with period toggle) now
     // lives in ERPPnlView. Portfolio shows unrealized value trend below instead.
 
-    // MARK: - Value Trend
+    // MARK: - Collection Value Card
     //
-    // TODO(backend): wire to a new /api/erp/valuation/timeseries endpoint
-    // that emits daily {date, totalCurrentValue} snapshots. Until then we
-    // render an honest placeholder rather than synthesizing a line from
-    // current value + realized P&L deltas (would mislead).
+    // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): replaces the parked
+    // "Building value history" placeholder. The card's headline is the
+    // honest est. collection value (observed + estimated) — wider than
+    // the hero by design under sparse comp coverage. See
+    // CollectionValueCard.swift for the surface contract.
 
     private var valueTrendSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Portfolio value trend")
-
-            HStack(spacing: 0) {
-                ForEach(ValueTrendRange.allCases) { range in
-                    Text(range.title)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-            }
-            .padding(3)
-            .background(HobbyIQTheme.Colors.cardNavy)
-            .clipShape(Capsule(style: .continuous))
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .opacity(0.55)
-            .accessibilityLabel("Portfolio value trend ranges. Disabled while value history is being captured.")
-
-            VStack(spacing: 8) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
-                Text("Building value history")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                Text("Daily portfolio value snapshots start now. Your trend chart will appear here as history accrues.")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 12)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 160)
-            .padding(HobbyIQTheme.Spacing.medium)
-            .background(HobbyIQTheme.Colors.cardNavy)
-            .overlay(
-                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
-        }
+        CollectionValueCard(viewModel: collectionValueViewModel)
     }
 
     // MARK: - Priority Actions
@@ -780,17 +750,6 @@ struct PortfolioIQView: View {
 }
 
 // MARK: - Value Trend Range
-
-private enum ValueTrendRange: String, CaseIterable, Identifiable {
-    case today = "Today"
-    case week = "Week"
-    case month = "Month"
-    case year = "Year"
-    case all = "All"
-
-    var id: String { rawValue }
-    var title: String { rawValue }
-}
 
 // MARK: - Supporting Views
 

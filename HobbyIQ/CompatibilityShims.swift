@@ -1599,6 +1599,7 @@ extension InventoryCard {
         case predictedPrice, predictedPriceLow, predictedPriceHigh
         case predictedPriceMechanism, predictedPriceUpdatedAt
         case fairMarketValue
+        case valuationStatus
         case movementDirection, movementComposite, movementImpliedPct
         case movementCoverage, movementUpdatedAt
         case cardsightCardId
@@ -1634,6 +1635,7 @@ extension InventoryCard {
         case predictedPriceMechanism = "predicted_price_mechanism"
         case predictedPriceUpdatedAt = "predicted_price_updated_at"
         case fairMarketValue = "fair_market_value"
+        case valuationStatus = "valuation_status"
         case movementDirection = "movement_direction"
         case movementComposite = "movement_composite"
         case movementImpliedPct = "movement_implied_pct"
@@ -1807,6 +1809,12 @@ extension InventoryCard {
         self.fairMarketValue = (try? c.decode(Double.self, forKey: .fairMarketValue))
             ?? (try? s.decode(Double.self, forKey: .fairMarketValue))
             ?? (try? b.decode(Double.self, forKey: .fairMarketValue))
+        // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): legacy/absent wire field
+        // decodes nil and is treated as pending by the inventory count split
+        // when fmv is also nil. Kept as String? for forward-compat — backend
+        // may add new bucket values without an iOS decode break.
+        self.valuationStatus = (try? c.decode(String.self, forKey: .valuationStatus))
+            ?? (try? s.decode(String.self, forKey: .valuationStatus))
         self.movementDirection = (try? c.decode(String.self, forKey: .movementDirection))
             ?? (try? s.decode(String.self, forKey: .movementDirection))
             ?? (try? b.decode(String.self, forKey: .movementDirection))
@@ -1860,6 +1868,7 @@ extension InventoryCard {
         try container.encodeIfPresent(predictedPriceMechanism, forKey: .predictedPriceMechanism)
         try container.encodeIfPresent(predictedPriceUpdatedAt, forKey: .predictedPriceUpdatedAt)
         try container.encodeIfPresent(fairMarketValue, forKey: .fairMarketValue)
+        try container.encodeIfPresent(valuationStatus, forKey: .valuationStatus)
         try container.encodeIfPresent(movementDirection, forKey: .movementDirection)
         try container.encodeIfPresent(movementComposite, forKey: .movementComposite)
         try container.encodeIfPresent(movementImpliedPct, forKey: .movementImpliedPct)

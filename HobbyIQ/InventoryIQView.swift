@@ -145,9 +145,11 @@ struct InventoryIQView: View {
         let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
         let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
         let valueText = inventoryWholeDollarString(agg.displayValue)
-        let subtitleText = agg.unpricedCount > 0
-            ? "\(agg.totalCards) cards · \(valueText) · \(agg.unpricedCount) unpriced"
-            : "\(agg.totalCards) cards · \(valueText)"
+        // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): subtitle splits unpriced
+        // into "N estimated · M pending" via the aggregate helper so the
+        // hero's exclusion is transparent. Story B invariant unchanged —
+        // displayValue is still observed-only.
+        let subtitleText = "\(agg.totalCards) cards · \(valueText)\(agg.unpricedSubtitleSuffix)"
 
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {

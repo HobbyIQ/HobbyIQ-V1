@@ -104,6 +104,20 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     // Anchor field (already persisted backend-side)
     let fairMarketValue: Double?
 
+    // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): backend valuation bucket.
+    // "observed" → row has comp-anchored FMV (fairMarketValue is set).
+    // "estimated" → row has a model estimate but no observed comp (fmv=nil,
+    //   estimateLow/High would carry the band — not decoded on iOS yet).
+    // "pending" → no estimate at all (fmv=nil, no estimate fields).
+    // nil → legacy wire row pre-Step-1; treat as pending when fmv is also nil.
+    //
+    // Used ONLY for the inventory hero's "N estimated · M pending" subtitle
+    // count split — Story B's display-only contract holds: every row with
+    // fairMarketValue == nil still renders "—" regardless of bucket. The
+    // collection-value card is the surface that includes the estimated
+    // bucket in its headline.
+    let valuationStatus: String?
+
     // Movement fields (CF-AUTOPRICE-PERSIST-TRENDIQ)
     let movementDirection: String?
     let movementComposite: Double?
@@ -156,6 +170,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         predictedPriceMechanism: String? = nil,
         predictedPriceUpdatedAt: String? = nil,
         fairMarketValue: Double? = nil,
+        valuationStatus: String? = nil,
         movementDirection: String? = nil,
         movementComposite: Double? = nil,
         movementImpliedPct: Double? = nil,
@@ -195,6 +210,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.predictedPriceMechanism = predictedPriceMechanism
         self.predictedPriceUpdatedAt = predictedPriceUpdatedAt
         self.fairMarketValue = fairMarketValue
+        self.valuationStatus = valuationStatus
         self.movementDirection = movementDirection
         self.movementComposite = movementComposite
         self.movementImpliedPct = movementImpliedPct
