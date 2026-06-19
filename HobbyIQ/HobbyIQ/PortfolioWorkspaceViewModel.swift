@@ -181,7 +181,8 @@ final class PortfolioWorkspaceViewModel: ObservableObject {
                     card.method ?? "Local estimate",
                     card.summary ?? "SellIQ suggestion generated from portfolio data."
                 ],
-                lastSellIQAt: card.purchaseDate ?? ISO8601DateFormatter().string(from: .now)
+                lastSellIQAt: card.purchaseDate ?? ISO8601DateFormatter().string(from: .now),
+                fairMarketValueTotal: card.fairMarketValue.map { $0 * max(1.0, card.quantity ?? 1.0) }
             )
         }
         sellIQPortfolioErrorMessage = nil

@@ -246,7 +246,7 @@ struct ProfitIQCardDetailView: View {
                 cardName: card.cardName,
                 roiText: card.roi.portfolioPercentString,
                 roiColor: signalColor(for: card.signal),
-                valueText: card.currentValue.portfolioCurrencyString,
+                valueText: card.displayValueFormatted,
                 listText: card.listPrice.portfolioCurrencyString,
                 accent: signalColor(for: card.signal),
                 reasoning: card.reasoning

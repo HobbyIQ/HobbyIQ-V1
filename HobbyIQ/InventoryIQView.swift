@@ -137,8 +137,17 @@ struct InventoryIQView: View {
     // MARK: - Header
 
     private var header: some View {
-        let hero = vm.heroSummary
+        // Reaggregate at render time on the priced subset so the subtitle's
+        // dollar figure and card count reconcile honestly. Unpriced holdings
+        // are surfaced as a separate count rather than silently contributing
+        // 0 to a displayed total. Producer sums on `vm.heroSummary` are left
+        // untouched for non-hero consumers (P/L derivations stay stable).
+        let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
         let canAdd = sessionViewModel.subscriptionManager.capAllows(.holdingsCap, used: vm.inventoryCards.count)
+        let valueText = inventoryWholeDollarString(agg.displayValue)
+        let subtitleText = agg.unpricedCount > 0
+            ? "\(agg.totalCards) cards · \(valueText) · \(agg.unpricedCount) unpriced"
+            : "\(agg.totalCards) cards · \(valueText)"
 
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -146,7 +155,7 @@ struct InventoryIQView: View {
                     .font(HobbyIQTheme.Typography.title)
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                Text("\(hero.totalCards) cards · \(inventoryWholeDollarString(hero.totalValue))")
+                Text(subtitleText)
                     .font(.subheadline)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }

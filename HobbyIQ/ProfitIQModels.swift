@@ -69,8 +69,15 @@ struct ProfitIQCardResult: Identifiable, Codable, Hashable {
     let format: String
     let reasoning: [String]
     let lastSellIQAt: String
+    // FMV × quantity propagated from `InventoryCard` via SellIQPortfolioCard.
+    // Display-only: existing `currentValue` and P/L derivations are unchanged.
+    let fairMarketValueTotal: Double?
 
     var id: String { cardId }
+
+    var displayValueFormatted: String {
+        fairMarketValueTotal.map { portfolioCurrencyString($0) } ?? "—"
+    }
 
     init(from card: SellIQPortfolioCard) {
         cardId = card.cardId
@@ -89,6 +96,7 @@ struct ProfitIQCardResult: Identifiable, Codable, Hashable {
         format = card.format
         reasoning = card.reasoning
         lastSellIQAt = card.lastSellIQAt
+        fairMarketValueTotal = card.fairMarketValueTotal
     }
 
     var asSellIQPortfolioCard: SellIQPortfolioCard {
@@ -108,7 +116,8 @@ struct ProfitIQCardResult: Identifiable, Codable, Hashable {
             quickSalePrice: quickSalePrice,
             format: format,
             reasoning: reasoning,
-            lastSellIQAt: lastSellIQAt
+            lastSellIQAt: lastSellIQAt,
+            fairMarketValueTotal: fairMarketValueTotal
         )
     }
 }

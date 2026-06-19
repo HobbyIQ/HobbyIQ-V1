@@ -230,7 +230,7 @@ private struct ActionIQCardRow: View {
                 Text("Value")
                     .foregroundStyle(AppColors.textMuted)
                 Spacer()
-                Text(card.currentValue.portfolioCurrencyString)
+                Text(card.displayValueFormatted)
                     .foregroundStyle(AppColors.textPrimary)
                     .fontWeight(.semibold)
             }

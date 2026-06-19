@@ -1510,6 +1510,11 @@ struct SellIQPortfolioCard: Codable, Hashable, Identifiable {
     let format: String
     let reasoning: [String]
     let lastSellIQAt: String
+    // FMV × quantity propagated from the source `InventoryCard` at producer
+    // time. Optional so Codable decode of a wire payload without the field
+    // (legacy or any future producer) falls through to nil → "—" in the
+    // derived ProfitIQCardResult.displayValueFormatted helper.
+    let fairMarketValueTotal: Double?
 
     var id: String { cardId }
 }
@@ -3130,7 +3135,8 @@ extension APIService {
                 minAcceptableOffer: card.currentValue * 0.9,
                 quickSalePrice: card.currentValue * 0.85,
                 format: card.grade.isEmpty ? nil : card.grade,
-                reasoning: ["Lower priority position in the current set."]
+                reasoning: ["Lower priority position in the current set."],
+                fairMarketValueTotal: card.fairMarketValue.map { $0 * max(1.0, card.quantity ?? 1.0) }
             )
         }
         let watch = Array(inventory.prefix(2)).map { card in
@@ -3147,7 +3153,8 @@ extension APIService {
                 minAcceptableOffer: card.currentValue * 0.95,
                 quickSalePrice: card.currentValue * 0.9,
                 format: card.grade.isEmpty ? nil : card.grade,
-                reasoning: ["Keep on the radar if market momentum changes."]
+                reasoning: ["Keep on the radar if market momentum changes."],
+                fairMarketValueTotal: card.fairMarketValue.map { $0 * max(1.0, card.quantity ?? 1.0) }
             )
         }
         let hold = Array(sortedByGain.prefix(2)).map { card in
@@ -3164,7 +3171,8 @@ extension APIService {
                 minAcceptableOffer: card.currentValue * 0.97,
                 quickSalePrice: card.currentValue * 0.93,
                 format: card.grade.isEmpty ? nil : card.grade,
-                reasoning: ["Still healthy and worth patience."]
+                reasoning: ["Still healthy and worth patience."],
+                fairMarketValueTotal: card.fairMarketValue.map { $0 * max(1.0, card.quantity ?? 1.0) }
             )
         }
 

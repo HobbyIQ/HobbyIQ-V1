@@ -88,6 +88,54 @@ struct PortfolioHeroSummary: Hashable {
     let lastRefreshText: String
 }
 
+// Display-only hero aggregate computed from the holdings array at render
+// time. Excludes unpriced holdings (`fairMarketValue == nil`) from the
+// displayed dollar figures and reports them as a separate count. Used by
+// the InventoryIQ header subtitle and the PortfolioIQ hero VStack so the
+// "$X · +Y · Z% ROI" line stays arithmetically honest — the top number,
+// the P/L, and the cost-basis subtitle are all reaggregated against the
+// priced subset so they reconcile.
+//
+// Does NOT replace `PortfolioHeroSummary.totalValue`/`unrealizedPnL`/`roi`,
+// which keep their cost-proxy-inclusive sums for non-hero consumers
+// (DailyIQ rollups, account snapshot, exports, etc.). The seven producer
+// sums at PortfolioIQViewModel:681/:755-756, DashboardService:56,
+// AppSupport:547, APIService:644, CompatibilityShims:2699/:3027 are
+// unchanged so P/L logic and the −100%-loss guard hold.
+struct InventoryDisplayAggregate {
+    let displayValue: Double
+    let displayCost: Double
+    let displayPL: Double
+    let displayROI: Double
+    let totalCards: Int
+    let pricedCount: Int
+    let unpricedCount: Int
+
+    init(holdings: [InventoryCard]) {
+        var value = 0.0
+        var cost = 0.0
+        var priced = 0
+        var unpriced = 0
+        for card in holdings {
+            if let fmv = card.fairMarketValue {
+                let qty = max(1.0, card.quantity ?? 1.0)
+                value += fmv * qty
+                cost += card.cost
+                priced += 1
+            } else {
+                unpriced += 1
+            }
+        }
+        self.displayValue = value
+        self.displayCost = cost
+        self.displayPL = value - cost
+        self.displayROI = cost > 0 ? ((value - cost) / cost) * 100 : 0
+        self.totalCards = holdings.count
+        self.pricedCount = priced
+        self.unpricedCount = unpriced
+    }
+}
+
 enum PortfolioPriorityActionKind: String, Hashable {
     case sellWatch
     case highRisk
@@ -342,6 +390,26 @@ extension InventoryCard {
     var currentValueFormatted: String {
         portfolioCurrencyString(currentValue)
     }
+
+    // Display-only value text matching `currentValue`'s TOTAL magnitude
+    // (FMV × quantity). Returns "—" when `fairMarketValue` is nil so the row
+    // does not render a cost-proxy dollar number for unpriced holdings.
+    // `currentValue` and every P/L derivation are untouched so the
+    // −100%-loss guard inside `currentValue`'s cost-proxy fallback still
+    // holds. `fairMarketValue == 0` is a genuine price and renders as "$0".
+    var displayValueText: String {
+        guard let fmv = fairMarketValue else { return "—" }
+        let qty = max(1.0, quantity ?? 1.0)
+        return inventoryWholeDollarString(fmv * qty)
+    }
+
+    var displayValueFormatted: String {
+        guard let fmv = fairMarketValue else { return "—" }
+        let qty = max(1.0, quantity ?? 1.0)
+        return portfolioCurrencyString(fmv * qty)
+    }
+
+    var isUnpriced: Bool { fairMarketValue == nil }
 
     var profitFormatted: String {
         portfolioSignedCurrencyString(profitLoss)
@@ -737,18 +805,26 @@ extension View {
 
 // MARK: - Shared Helper Functions
 
-func detailRow(title: String, value: String, valueColor: Color = .white) -> some View {
+func detailRow(title: String, value: String, valueColor: Color = .white, subtitle: String? = nil) -> some View {
     HStack(alignment: .top, spacing: 12) {
         Text(title)
             .font(.caption.weight(.semibold))
             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             .frame(width: 120, alignment: .leading)
 
-        Text(value)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(valueColor)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .multilineTextAlignment(.trailing)
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(value)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(valueColor)
+                .multilineTextAlignment(.trailing)
+            if let subtitle, subtitle.isEmpty == false {
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.85))
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
     .padding(.vertical, 2)
 }
@@ -807,7 +883,11 @@ struct PortfolioHoldingDetailSheet: View {
                             if let predicted = card.predictedPriceFormatted {
                                 detailRow(title: "Predicted Price", value: predicted, valueColor: HobbyIQTheme.Colors.electricBlue)
                             }
-                            detailRow(title: "Fair Market", value: card.fairMarketValueFormatted ?? card.currentValueFormatted)
+                            detailRow(
+                                title: "Fair Market",
+                                value: card.displayValueFormatted,
+                                subtitle: card.isUnpriced ? card.method : nil
+                            )
                             detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
                             detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
                             if let low = card.predictedPriceLow, let high = card.predictedPriceHigh {
@@ -1087,7 +1167,7 @@ struct PortfolioHoldingHeroCard: View {
             HStack(spacing: 0) {
                 heroStat(label: "Purchase Price", value: card.costFormatted, color: .white)
                 Spacer()
-                heroStat(label: "Current Value", value: card.currentValueFormatted, color: .white)
+                heroStat(label: "Current Value", value: card.displayValueFormatted, color: .white)
                 Spacer()
                 heroStat(label: "P/L", value: portfolioCurrencyString(card.profitLoss), color: plColor)
             }
@@ -1427,7 +1507,7 @@ struct PortfolioCardGridCard: View {
             Spacer(minLength: 6)
 
             HStack(alignment: .center, spacing: 4) {
-                Text(inventoryWholeDollarString(card.currentValue))
+                Text(card.displayValueText)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .lineLimit(1)
@@ -1481,7 +1561,7 @@ private func inventoryGradePill(text: String) -> some View {
 @ViewBuilder
 private func inventoryRightColumn(card: InventoryCard) -> some View {
     VStack(alignment: .trailing, spacing: 3) {
-        Text(inventoryWholeDollarString(card.currentValue))
+        Text(card.displayValueText)
             .font(.subheadline.weight(.medium))
             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             .monospacedDigit()

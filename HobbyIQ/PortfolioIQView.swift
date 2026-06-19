@@ -178,8 +178,15 @@ struct PortfolioIQView: View {
 
     private var header: some View {
         let summary = vm.heroSummary
-        let pnlColor: Color = summary.unrealizedPnL >= 0 ? .green : .red
-        let hasCostBasis = summary.costBasis > 0
+        // Reaggregate at render time on the priced subset so the displayed
+        // dollar number, P/L, and ROI reconcile honestly. The producer sums
+        // on `summary` are left untouched for non-hero consumers (P/L logic
+        // stays stable across the seven sum sites — this is display-only).
+        let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
+        let pnlColor: Color = agg.displayPL >= 0 ? .green : .red
+        let hasCostBasis = agg.displayCost > 0
+        let unpricedSuffix = agg.unpricedCount > 0 ? " · \(agg.unpricedCount) unpriced" : ""
+        let pricedQualifier = agg.unpricedCount > 0 ? " (of \(agg.pricedCount) priced)" : ""
 
         return VStack(spacing: 10) {
             HStack(alignment: .top) {
@@ -192,7 +199,7 @@ struct PortfolioIQView: View {
                         Circle()
                             .fill(HobbyIQTheme.Colors.hobbyGreen)
                             .frame(width: 7, height: 7)
-                        Text(vm.heroSummary.lastRefreshText)
+                        Text(summary.lastRefreshText)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                     }
@@ -220,20 +227,20 @@ struct PortfolioIQView: View {
 
             // Hero value
             VStack(spacing: 6) {
-                Text(summary.totalValue.portfolioCurrencyText)
+                Text(agg.displayValue.portfolioCurrencyText)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .minimumScaleFactor(0.7)
 
                 if hasCostBasis {
                     HStack(spacing: 4) {
-                        Image(systemName: summary.unrealizedPnL >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        Image(systemName: agg.displayPL >= 0 ? "arrow.up.right" : "arrow.down.right")
                             .font(.caption2.weight(.bold))
-                        Text(summary.unrealizedPnL.portfolioSignedCurrencyText)
+                        Text(agg.displayPL.portfolioSignedCurrencyText)
                             .font(.subheadline.weight(.semibold))
                         Text("•")
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Text(summary.roi.portfolioSignedPercentText + " " + Labels.roi)
+                        Text(agg.displayROI.portfolioSignedPercentText + " " + Labels.roi)
                             .font(.subheadline.weight(.semibold))
                     }
                     .foregroundStyle(pnlColor)
@@ -247,12 +254,12 @@ struct PortfolioIQView: View {
             // Inventory so they can edit each card's cost from the row
             // detail sheet.
             if hasCostBasis {
-                Text("Cost basis \(portfolioCurrencyString(summary.costBasis)) · \(summary.totalCards) cards")
+                Text("Cost basis \(portfolioCurrencyString(agg.displayCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
                     .font(.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             } else {
                 HStack(spacing: 8) {
-                    Text("Cost basis not set · \(summary.totalCards) cards")
+                    Text("Cost basis not set · \(agg.totalCards) cards\(unpricedSuffix)")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
 
@@ -1826,10 +1833,10 @@ struct PortfolioMovementDetailView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     .lineLimit(1)
                 HStack(spacing: 4) {
-                    Text(card.currentValueFormatted)
+                    Text(card.displayValueFormatted)
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    if let fmv = card.fairMarketValueFormatted, fmv != card.currentValueFormatted {
+                    if let fmv = card.fairMarketValueFormatted, fmv != card.displayValueFormatted {
                         Text("FMV \(fmv)")
                             .font(.caption2)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
