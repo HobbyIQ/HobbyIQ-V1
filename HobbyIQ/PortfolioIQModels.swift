@@ -893,7 +893,6 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var showingSoldSheet = false
     @State private var showingEbayListingSheet = false
     @State private var showingRemoveModal = false
-    @State private var showingCompIQAnalysis = false
     @State private var lastEbayListingResponse: PortfolioEbayListingResponse?
     @State private var localError: String?
 
@@ -914,10 +913,15 @@ struct PortfolioHoldingDetailSheet: View {
 
                         PortfolioDetailPhotosCard(viewModel: viewModel, card: card, onUpdated: onUpdated)
 
+                        // CF-IOS-DIRECTION-CLEANUP (2026-06-18): direction
+                        // sites pruned. Removed Predicted Price, Predicted
+                        // Range, Verdict (statusChipText reads the backend
+                        // action recommendation — direction-class). Movement
+                        // Signal card entirely removed; backtest established
+                        // direction is at-chance. Fair Market row's `method`
+                        // subtitle is comp-status (from the null-FMV PR) and
+                        // stays.
                         PortfolioContextCard(title: "Pricing Context") {
-                            if let predicted = card.predictedPriceFormatted {
-                                detailRow(title: "Predicted Price", value: predicted, valueColor: HobbyIQTheme.Colors.electricBlue)
-                            }
                             detailRow(
                                 title: "Fair Market",
                                 value: card.displayValueFormatted,
@@ -925,52 +929,16 @@ struct PortfolioHoldingDetailSheet: View {
                             )
                             detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
                             detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
-                            if let low = card.predictedPriceLow, let high = card.predictedPriceHigh {
-                                detailRow(title: "Predicted Range", value: "\(portfolioCurrencyString(low)) – \(portfolioCurrencyString(high))")
-                            }
-                            detailRow(title: "Verdict", value: card.statusChipText)
-                        }
-
-                        if card.movementDirection != nil {
-                            PortfolioContextCard(title: "Movement Signal") {
-                                if let dir = card.movementDirection {
-                                    let dirColor: Color = dir == "up" ? HobbyIQTheme.Colors.successGreen : dir == "down" ? HobbyIQTheme.Colors.danger : HobbyIQTheme.Colors.mutedText
-                                    detailRow(title: "Direction", value: dir.capitalized, valueColor: dirColor)
-                                }
-                                if let pct = card.movementImpliedPct {
-                                    detailRow(title: "Implied Change", value: String(format: "%+.1f%%", pct), valueColor: pct >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
-                                }
-                                if let composite = card.movementComposite {
-                                    detailRow(title: "Composite", value: String(format: "%.3f", composite))
-                                }
-                                detailRow(title: "Coverage", value: card.movementCoverageLabel)
-                                if card.movementIsStale {
-                                    detailRow(title: "Freshness", value: "Stale (>48h)", valueColor: .orange)
-                                }
-
-                                Button {
-                                    showingCompIQAnalysis = true
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "chart.line.uptrend.xyaxis")
-                                            .font(.caption.weight(.semibold))
-                                        Text("View full analysis")
-                                            .font(.caption.weight(.semibold))
-                                    }
-                                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                                    .clipShape(Capsule(style: .continuous))
-                                }
-                                .buttonStyle(.plain)
-                            }
                         }
 
                         PortfolioContextCard(title: "Actionability") {
+                            // Trend / Risk read profitLoss sign (historical
+                            // P/L, not direction). Freshness is comp-data
+                            // age. Expected Days was direction-in-days-to-
+                            // sell clothing (gated on status sell_now/hold/
+                            // watch) and was pruned with Verdict.
                             detailRow(title: "Trend", value: card.trendChipText)
                             detailRow(title: "Risk", value: card.profitLoss < 0 ? "Review" : "Low")
-                            detailRow(title: "Expected Days", value: card.expectedDaysToSellText)
                             detailRow(title: "Freshness", value: card.freshnessChipText)
 
                             VStack(alignment: .leading, spacing: 8) {
@@ -1097,12 +1065,6 @@ struct PortfolioHoldingDetailSheet: View {
                         onUpdated()
                     }
                 }
-                .sheet(isPresented: $showingCompIQAnalysis) {
-                    NavigationStack {
-                        PortfolioCompIQBridgeView(holding: card)
-                    }
-                }
-
                 if showingRemoveModal {
                     CenteredRemoveConfirmationModal(
                         title: "Remove this card?",
@@ -1637,24 +1599,17 @@ private func inventoryGridMovement(card: InventoryCard) -> some View {
     }
 }
 
-/// Picks the canonical movement indicator. Returns nil when there's nothing
-/// trustworthy to show (no movement signal AND no cost basis to derive ROI
-/// from) — caller renders the "Set cost" affordance instead of fabricating
-/// "+$X / +0.0%".
+/// Returns the ROI sign chip (`%+.1f%%` from `profitLoss / cost`) for a
+/// holding with a cost basis. Returns nil when cost is unset — caller
+/// renders the "Set cost" affordance instead of fabricating "+$X / +0.0%".
+///
+/// CF-IOS-DIRECTION-CLEANUP (2026-06-18): the prior implementation had a
+/// `movementDirection`-gated direction branch that rendered a forecast
+/// chip when the backend movement signal was present. That branch was
+/// removed — backtest established direction is at-chance and unmeasurable.
+/// The ROI sign read remaining here is historical P/L, not a forecast,
+/// and stays.
 private func inventoryMovementDescriptor(for card: InventoryCard) -> (icon: String, label: String, color: Color)? {
-    if card.shouldShowMovementChip,
-       let pct = card.movementImpliedPct,
-       let direction = card.movementDirection,
-       direction == "up" || direction == "down" {
-        let isUp = direction == "up"
-        let baseColor: Color = isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-        let color = card.movementIsStale ? baseColor.opacity(0.55) : baseColor
-        return (
-            isUp ? "arrow.up.right" : "arrow.down.right",
-            String(format: "%+.1f%%", pct),
-            color
-        )
-    }
     guard card.cost > 0 else { return nil }
     let roi = (card.profitLoss / card.cost) * 100
     let isUp = roi >= 0
