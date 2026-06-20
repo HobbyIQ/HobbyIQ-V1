@@ -32,6 +32,21 @@ export interface MultiplierAnchoredAttribution {
   multiplierRange?: { low: number; high: number };
   confidence?: number;
   crossProductAnchor?: boolean;
+  /**
+   * CF-X (2026-06-20): per-row provenance for the subject's multiplier entry.
+   *
+   *   "empirical"          — multiplier derived from observed sales data
+   *                          (54 pre-CF-X rows; default when absent).
+   *   "sibling_provisional" — curated by analogy to a sibling parallel
+   *                          (X-Fractor rainbow placeholder rows added in
+   *                          CF-X; values to be refined empirically).
+   *
+   * Engine response wiring reads this to decide
+   * estimateBasis: "multiplier" | "multiplier_provisional",
+   * which iOS surfaces as the badge text. Populated only when
+   * predictedPrice is non-null (i.e., subject row exists).
+   */
+  subjectProvenance?: "empirical" | "sibling_provisional";
   failureReason?:
     | "no-anchor-comps"
     | "insufficient-anchor-data"
@@ -167,10 +182,15 @@ export function normalizeSubjectParallel(parallelName: string): string {
 }
 
 function resolveSubjectEntry(subject: MultiplierAnchoredSubject): BowmanFamilyEntry | null {
+  // CF-X (2026-06-20): subject-side lookup is year-strict. Hartman is 2026
+  // and the X-Fractor rainbow added in CF-X is year=2026; locking the
+  // match prevents accidental resolution to a 2022 entry of the same
+  // parallel name in a future expansion.
   const direct = lookupBowmanFamilyEntry({
     product: subject.product,
     subset: subject.subset,
     parallelName: subject.parallelName,
+    year: subject.year,
   });
   if (direct) return direct;
   const normalized = normalizeSubjectParallel(subject.parallelName);
@@ -179,6 +199,7 @@ function resolveSubjectEntry(subject: MultiplierAnchoredSubject): BowmanFamilyEn
     product: subject.product,
     subset: subject.subset,
     parallelName: normalized,
+    year: subject.year,
   });
 }
 
@@ -390,6 +411,11 @@ export function computeMultiplierAnchoredPredictedPrice(params: {
       multiplierRange: { low: multiplierLow, high: multiplierHigh },
       confidence,
       crossProductAnchor,
+      // CF-X (2026-06-20): surface the subject row's provenance so the
+      // engine response wire can decide estimateBasis: "multiplier" vs
+      // "multiplier_provisional". Default "empirical" preserves the
+      // semantic of pre-CF-X rows (54 entries without the flag).
+      subjectProvenance: subjectEntry.provenance ?? "empirical",
     },
   };
 }

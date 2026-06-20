@@ -46,7 +46,10 @@ import {
   computeMultiplierAnchoredRange,
   type MultiplierAnchoredResult,
 } from "./predictedRangeMultiplierAnchored.js";
-import { computeMultiplierAnchoredPredictedPrice } from "../../agents/multiplierAnchoredPredictedPrice.js";
+import {
+  computeMultiplierAnchoredPredictedPrice,
+  type MultiplierAnchoredPredictedPriceResult,
+} from "../../agents/multiplierAnchoredPredictedPrice.js";
 // TrendIQ Phase 1 (docs/phase0/trendiq_design.md) — forward-looking
 // composite score. B.4.a wires Layer 1 only (player momentum from the
 // signal aggregator); Layers 2 and 3 follow in B.4.b/c. The composite
@@ -3002,11 +3005,29 @@ export async function computeEstimate(
   // tries T0→T3 progressively; we only short-circuit when T3 also yields <3
   // comps OR Cardsight self-reported wrong-card resolution (Q8' above).
   if (everythingFilteredOut) {
+    // CF-X (2026-06-20): preserve the actual product when it matches the
+    // BowmanFamilyProduct union ("Bowman" / "Bowman Chrome" / "Bowman Draft").
+    // Pre-CF-X the product was clamped to "Bowman Chrome" | "Bowman Draft"
+    // based on a substring check, which silently rerouted "Bowman"
+    // flagship-release holdings (e.g. Hartman's BCP-EHA) to the wrong
+    // product bucket and missed the curated multiplier table even when
+    // the row existed under product:"Bowman".
+    const rawProduct = String(body.product ?? "").trim();
+    const subjectProduct: "Bowman" | "Bowman Chrome" | "Bowman Draft" =
+      rawProduct === "Bowman Draft" ? "Bowman Draft" :
+      rawProduct === "Bowman Chrome" ? "Bowman Chrome" :
+      rawProduct === "Bowman" ? "Bowman" :
+      // Legacy substring fallback for unrecognized product strings —
+      // matches pre-CF-X behavior so we don't break holdings whose
+      // product field carries free-text like "2024 Bowman Chrome RC".
+      rawProduct.includes("Draft") ? "Bowman Draft" :
+      "Bowman Chrome";
+
     const mechanism1 = computeMultiplierAnchoredPredictedPrice({
       subject: {
         playerName: body.playerName ?? fetched.card?.player ?? "",
         year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-        product: (body.product?.includes("Draft") ? "Bowman Draft" : "Bowman Chrome") as "Bowman Chrome" | "Bowman Draft",
+        product: subjectProduct,
         subset: "Chrome Prospect Autographs",
         parallelName: normalizedParallel ?? body.parallel ?? "",
         isAutograph: effectiveIsAuto,
@@ -3017,6 +3038,28 @@ export async function computeEstimate(
         soldDate: c.soldDate,
       })),
     });
+
+    // CF-X (2026-06-20): when mechanism1 produces a multiplier-anchored
+    // predicted price, surface estimated-tier fields so the writer
+    // (autoPriceHolding / repriceHoldingsForUser) routes the holding into
+    // Phase 5's estimated bucket — identical wire shape to CF-A(a)'s T3
+    // base-auto-floor rebucket. estimateBasis flips on the subject row's
+    // provenance flag so iOS can render the "provisional" badge for
+    // sibling-provisional rows (X-Fractor rainbow today).
+    const m1HasPrice = mechanism1.predictedPrice !== null;
+    const m1IsProvisional =
+      mechanism1.predictedPriceAttribution.subjectProvenance === "sibling_provisional";
+    const m1EstimatedValue: number | null = m1HasPrice ? mechanism1.predictedPrice : null;
+    const m1EstimateLow: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.low ?? null) : null;
+    const m1EstimateHigh: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.high ?? null) : null;
+    const m1EstimateBasis: string | null = m1HasPrice
+      ? (m1IsProvisional ? "multiplier_provisional" : "multiplier")
+      : null;
+    const m1EstimateConfidence:
+      | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
+      m1HasPrice ? "rough" : null;
+    const m1ValuationStatus: "observed" | "estimated" | null =
+      m1HasPrice ? "estimated" : null;
 
     const guardReasons: string[] = [];
     if (variantWarningTokens.length > 0) guardReasons.push(...variantWarningTokens);
@@ -3148,12 +3191,23 @@ export async function computeEstimate(
       // a separate state and shouldn't render last-sale prose here.
       lastSale: null,
       estimateSource: null,
-      // CF-TREND-EXTRAPOLATED (2026-06-10): variant-mismatch never
-      // emits an estimatedValue — the comps belong to a different
-      // variant of the card.
-      estimatedValue: null,
+      // CF-X (2026-06-20): when the multiplier-anchored mechanism returns
+      // a non-null predicted price (subject's parallel is curated),
+      // emit estimated-tier fields so the writer routes the holding into
+      // Phase 5's estimated bucket — identical wire shape to CF-A(a)'s
+      // T3 rebucket. When mechanism1.predictedPrice is null, this entire
+      // block emits null/observed (legacy variant-mismatch behavior
+      // preserved). The legacy estimateRange field stays null in both
+      // cases (it's the last-sale fallback's range; orthogonal to the
+      // multiplier-anchored estimateLow/High emitted above).
+      estimatedValue: m1EstimatedValue,
       estimateRange: null,
-      estimateBasis: null,
+      estimateLow: m1EstimateLow,
+      estimateHigh: m1EstimateHigh,
+      estimateBasis: m1EstimateBasis,
+      estimateConfidence: m1EstimateConfidence,
+      isEstimate: m1HasPrice,
+      valuationStatus: m1ValuationStatus,
       variantWarning: fetched.variantWarning,
       // CF-VARIANT-MISMATCH-PRICESOURCE-PARITY (2026-05-28): propagate
       // the router's parallel-resolution attribution onto the variant-
@@ -4474,21 +4528,101 @@ export async function computeEstimate(
   // That's a labeled estimate, not an observed market value. Re-bucket the
   // dollars from fairMarketValue → estimatedValue + valuationStatus="estimated"
   // so the writer and Phase 5 route them as estimated. T0/T1/T2 unchanged.
-  const isT3Estimate = chosenTier === "T3" && typeof fairMarketValue === "number";
-  const responseFmv: number | null = isT3Estimate
+  //
+  // CF-X COLLISION RESOLUTION (2026-06-20): on T3 success, also call the
+  // multiplier-anchored mechanism. When mechanism1 produces a non-null
+  // predicted price (subject's parallel is curated AND ≥3 curated peer
+  // parallels exist), it wins over the T3 base-auto floor. Reasoning:
+  //
+  //   - T3 base-auto is anchored on the WRONG comp pool (base autos for
+  //     a parallel/serialed request). Known-weak estimate.
+  //   - Multiplier-anchored uses peer sibling-parallel comps × subject's
+  //     curated multiplier. Empirically grounded for the specific parallel.
+  //   - When both are available, multiplier carries more parallel-specific
+  //     signal. T3 base-auto is a strict downgrade.
+  //
+  // When mechanism1 returns null (uncurated parallel OR insufficient peer
+  // pool), the T3 base-auto path fires exactly as CF-A(a) shipped.
+  // estimateBasis distinguishes the path the iOS badge surfaces.
+  const isT3Eligible = chosenTier === "T3" && typeof fairMarketValue === "number";
+  let collisionM1: MultiplierAnchoredPredictedPriceResult | null = null;
+  if (isT3Eligible) {
+    // Subject construction mirrors the variant-mismatch short-circuit's
+    // product mapping — preserve "Bowman" when applicable so flagship
+    // releases with curated rows under product:"Bowman" can match.
+    const rawProduct = String(body.product ?? "").trim();
+    const subjectProduct: "Bowman" | "Bowman Chrome" | "Bowman Draft" =
+      rawProduct === "Bowman Draft" ? "Bowman Draft" :
+      rawProduct === "Bowman Chrome" ? "Bowman Chrome" :
+      rawProduct === "Bowman" ? "Bowman" :
+      rawProduct.includes("Draft") ? "Bowman Draft" :
+      "Bowman Chrome";
+    collisionM1 = computeMultiplierAnchoredPredictedPrice({
+      subject: {
+        playerName: body.playerName ?? fetched.card?.player ?? "",
+        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+        product: subjectProduct,
+        subset: "Chrome Prospect Autographs",
+        parallelName: normalizedParallel ?? body.parallel ?? "",
+        isAutograph: effectiveIsAuto,
+      },
+      comps: fetched.comps.map((c) => ({
+        title: c.title,
+        price: c.price,
+        soldDate: c.soldDate,
+      })),
+    });
+  }
+  // CF-X COLLISION GATE (2026-06-20 — owner-locked): multiplier wins over
+  // the T3 base-auto floor ONLY when the subject row is `provenance:
+  // "empirical"`. Sibling-provisional multipliers (X-Fractor rainbow
+  // placeholders; values curated by analogy to known sibling parallels)
+  // are analogy guesses — they fire where there's no alternative (the
+  // variant-mismatch short-circuit path) but they DON'T override a real-
+  // data base-auto floor in the collision. The base-auto floor uses real
+  // sales from a wrong pool — known-low but grounded; a sibling-
+  // provisional multiplier is grounded in an analogy that may or may not
+  // hold. Don't trade real-if-wrong for guess-that-might-be-better.
+  //
+  // To flip a placeholder row into the collision-winner: re-curate it as
+  // `provenance: "empirical"` once you have direct X-Fractor sales data.
+  // No code change required — the gate reads the row's provenance flag.
+  const m1HasPrice = collisionM1 !== null && collisionM1.predictedPrice !== null;
+  const m1IsEmpirical =
+    collisionM1?.predictedPriceAttribution.subjectProvenance === "empirical";
+  const m1Wins = m1HasPrice && m1IsEmpirical;
+  const isT3BaseAuto = isT3Eligible && !m1Wins;
+  const isT3MultEstimate = isT3Eligible && m1Wins;
+  const isAnyEstimate = isT3BaseAuto || isT3MultEstimate;
+
+  const responseFmv: number | null = isAnyEstimate
     ? null
     : (typeof fairMarketValue === "number" ? fairMarketValue : null);
-  const responseFmvLow: number | null = isT3Estimate ? null : mainFmvBand.low;
-  const responseFmvHigh: number | null = isT3Estimate ? null : mainFmvBand.high;
-  const responseEstimatedValue: number | null = isT3Estimate ? fairMarketValue as number : null;
-  const responseEstimateLow: number | null = isT3Estimate ? mainFmvBand.low : null;
-  const responseEstimateHigh: number | null = isT3Estimate ? mainFmvBand.high : null;
-  const responseValuationStatus: "observed" | "estimated" = isT3Estimate ? "estimated" : "observed";
-  const responseEstimateBasis: string | null = isT3Estimate ? "base_auto_floor" : null;
+  const responseFmvLow: number | null = isAnyEstimate ? null : mainFmvBand.low;
+  const responseFmvHigh: number | null = isAnyEstimate ? null : mainFmvBand.high;
+  const responseEstimatedValue: number | null =
+    isT3MultEstimate ? (collisionM1!.predictedPrice as number) :
+    isT3BaseAuto ? (fairMarketValue as number) :
+    null;
+  const responseEstimateLow: number | null =
+    isT3MultEstimate ? (collisionM1!.predictedPriceRange?.low ?? null) :
+    isT3BaseAuto ? mainFmvBand.low :
+    null;
+  const responseEstimateHigh: number | null =
+    isT3MultEstimate ? (collisionM1!.predictedPriceRange?.high ?? null) :
+    isT3BaseAuto ? mainFmvBand.high :
+    null;
+  const responseValuationStatus: "observed" | "estimated" = isAnyEstimate ? "estimated" : "observed";
+  const responseEstimateBasis: string | null =
+    isT3MultEstimate
+      ? (collisionM1!.predictedPriceAttribution.subjectProvenance === "sibling_provisional"
+          ? "multiplier_provisional"
+          : "multiplier")
+      : (isT3BaseAuto ? "base_auto_floor" : null);
   const responseEstimateConfidence:
     | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
-    isT3Estimate ? "rough" : null;
-  const responseIsEstimate: boolean = isT3Estimate;
+    isAnyEstimate ? "rough" : null;
+  const responseIsEstimate: boolean = isAnyEstimate;
 
   return {
     cardTitle,

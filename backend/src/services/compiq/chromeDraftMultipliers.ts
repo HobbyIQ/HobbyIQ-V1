@@ -225,7 +225,12 @@ export interface BowmanFamilyRange {
 }
 
 export interface BowmanFamilyEntry {
-  year: 2022;
+  // CF-X (2026-06-20): year is now `number` (was literal `2022`). Allows
+  // additive entries for new release years (2026 X-Fractor rainbow first;
+  // future Bowman product cycles next). Subject-side lookup is year-strict
+  // — peer-side lookup remains year-agnostic for back-compat (see
+  // lookupBowmanFamilyEntry's year-optional context).
+  year: number;
   product: BowmanFamilyProduct;
   subset: BowmanFamilySubset;
   parallelName: string;
@@ -238,6 +243,26 @@ export interface BowmanFamilyEntry {
   note?: string;
   newFor2022?: boolean;
   serialGlitchCaveat?: boolean;
+  /**
+   * CF-X (2026-06-20): per-row provenance flag.
+   *
+   *   "empirical"          — multiplier derived from observed sales data
+   *                          the curator had in hand at curation time
+   *                          (the existing default — all 54 pre-CF-X rows
+   *                          inherit this).
+   *   "sibling_provisional" — curated by analogy to a known sibling parallel
+   *                          (e.g. Blue X-Fractor /150 inherited from
+   *                          Blue Refractor /150 because they trade at
+   *                          similar street value but no direct X-Fractor
+   *                          sales data was available at curation time).
+   *
+   * Flows through MultiplierAnchoredAttribution.subjectProvenance → engine
+   * response → writer → estimateBasis ("multiplier" | "multiplier_provisional")
+   * → iOS badge. Same shape as CF-A(a)'s "base_auto_floor" honesty mechanism.
+   *
+   * Default: "empirical" when omitted (back-compat for 54 pre-CF-X rows).
+   */
+  provenance?: "empirical" | "sibling_provisional";
 }
 
 function normalizeBowmanFamilyParallelName(input: string): string {
@@ -441,6 +466,34 @@ const RAW_BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = [
   { year: 2022, product: "Bowman Draft", subset: "Chrome Prospect Autographs", parallelName: "Orange Refractor", printRun: "/25", baselineMultiplier: midpoint(makeRange(15.0, 22.0)), range: makeRange(15.0, 22.0), directCompOnly: false, tierQualifier: "Hobby", isAutograph: true },
   { year: 2022, product: "Bowman Draft", subset: "Chrome Prospect Autographs", parallelName: "Red Refractor", printRun: "/5", baselineMultiplier: midpoint(makeRange(45.0, 65.0)), range: makeRange(45.0, 65.0), directCompOnly: false, tierQualifier: null, isAutograph: true },
   { year: 2022, product: "Bowman Draft", subset: "Chrome Prospect Autographs", parallelName: "Superfractor", printRun: "1/1", baselineMultiplier: 300.0, range: makeRange(300.0, null), directCompOnly: true, tierQualifier: null, isAutograph: true, note: "direct-comp-only" },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CF-X (2026-06-20): 2026 Bowman — Chrome Prospect Autographs X-Fractor
+  // rainbow. PLACEHOLDER multipliers anchored to the closest sibling
+  // parallels of the same print run (Blue X-Fractor /150 ← Blue RayWave
+  // Refractor /150; Yellow X-Fractor /75 ← Yellow Refractor /75; etc.).
+  //
+  // CURATION TODO (owner-track): refine baselineMultiplier + range with
+  // empirical X-Fractor sales data when available. The `provenance:
+  // "sibling_provisional"` flag flows through the engine's
+  // estimateBasis: "multiplier_provisional" → iOS "provisional" badge,
+  // so users see the honesty marker even with placeholder values.
+  //
+  // Subject lookup is year-strict on year=2026, so these rows don't
+  // collide with any 2022 entry. Hartman's actual holding
+  // (cardsightCardId befe9bcc…) carries:
+  //   year=2026, product="Bowman", subset="Chrome Prospects Autographs"
+  //   (Cardsight uses plural "Prospects"; engine hardcodes singular
+  //   "Prospect" — known string mismatch, out of CF-X scope. Engine
+  //   lookup uses the singular form; these rows match that form.)
+  //
+  // Drake Baldwin integration test targets "Blue Refractor" parallel,
+  // not "Blue X-Fractor" — additive add, no test conflict.
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Blue X-Fractor",   printRun: "/150", baselineMultiplier: midpoint(makeRange(3.2, 4.5)), range: makeRange(3.2, 4.5), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Blue RayWave Refractor /150" },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Yellow X-Fractor", printRun: "/75",  baselineMultiplier: midpoint(makeRange(5.0, 6.0)), range: makeRange(5.0, 6.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Yellow Refractor /75" },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Orange X-Fractor", printRun: "/25",  baselineMultiplier: midpoint(makeRange(15.0, 22.0)), range: makeRange(15.0, 22.0), directCompOnly: false, tierQualifier: "Hobby", isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Orange Refractor /25" },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Black X-Fractor",  printRun: "/10",  baselineMultiplier: midpoint(makeRange(30.0, 45.0)), range: makeRange(30.0, 45.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — no 2022 /10 CPA sibling; rough scarcity extrapolation" },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Red X-Fractor",    printRun: "/5",   baselineMultiplier: midpoint(makeRange(45.0, 65.0)), range: makeRange(45.0, 65.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Red Refractor /5" },
 ];
 
 export const BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = Object.freeze(
@@ -525,6 +578,16 @@ export interface BowmanFamilyLookupContext {
   subset: BowmanFamilySubset;
   parallelName: string;
   tierQualifier?: BowmanFamilyTierQualifier;
+  /**
+   * CF-X (2026-06-20): year-strict match when provided. Subject-side
+   * callers should always pass year so a 2026 X-Fractor request can't
+   * accidentally resolve to a 2022 entry. Peer-side callers (comp-pool
+   * resolution in buildParsedCompPool) may omit year — in that case the
+   * lookup matches any year (back-compat). Once peer-year-strict mode is
+   * supported (own CF, requires parsing year from comp titles), this
+   * field becomes effectively required.
+   */
+  year?: number;
 }
 
 function resolveBowman2022Alias(
@@ -546,20 +609,27 @@ export function lookupBowmanFamilyEntry(
     resolveBowman2022Alias(normalized, ctx.parallelName),
   );
 
+  // CF-X (2026-06-20): year-strict match when ctx.year is provided. The
+  // pre-built STRICT_INDEX doesn't include year in its key (back-compat),
+  // so a tiered hit is verified against ctx.year before being returned.
   const tieredKey = makeLookupKey({
     product: ctx.product,
     subset: ctx.subset,
     normalizedParallel: aliased,
     tierQualifier: ctx.tierQualifier ?? null,
   });
-  if (BOWMAN_2022_STRICT_INDEX[tieredKey]) return BOWMAN_2022_STRICT_INDEX[tieredKey]!;
+  const tieredHit = BOWMAN_2022_STRICT_INDEX[tieredKey];
+  if (tieredHit && (ctx.year === undefined || tieredHit.year === ctx.year)) {
+    return tieredHit;
+  }
 
   if (!ctx.tierQualifier) {
     const candidates = BOWMAN_2022_FAMILY_ENTRIES.filter(
       (entry) =>
         entry.product === ctx.product &&
         entry.subset === ctx.subset &&
-        normalizeBowmanFamilyParallelName(entry.parallelName) === aliased,
+        normalizeBowmanFamilyParallelName(entry.parallelName) === aliased &&
+        (ctx.year === undefined || entry.year === ctx.year),
     );
     if (candidates.length === 1) return candidates[0]!;
   }
