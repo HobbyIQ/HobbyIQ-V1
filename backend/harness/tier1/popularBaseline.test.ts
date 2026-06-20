@@ -102,16 +102,32 @@ describeTier("Tier 1 · popular-baseline (cases 12-14)", () => {
         }
       );
 
-      // SOFT: Issue #8 — Skenes / Elly under-anchored at ~$10–12.
-      // When #8 ships, FMV should be ≥ $50; until then we skip.
-      // Also skipped when ANY blocker is active (e.g., issue #55 thinned
-      // Card Hedge comp supply for case-14, leaving FMV null entirely).
+      // CF-B.A.2 (2026-06-20): case-12/13 anchor assertions were shelved
+      // to harness/tier1/tier1-anchor-blocked-by-vendor.test.ts. The
+      // original framing in issue #8 ("Skenes / Elly under-anchored,
+      // comp inclusion too broad") didn't survive the Cardsight migration:
+      //   - USC88 / US33 base RCs aren't in Cardsight's catalog
+      //   - resolver shows " RC" suffix sensitivity (different cards from
+      //     trivial query variants)
+      //   - 500 errors on slight query variants
+      // The shelved assertion preserves intent (FMV ≥ $50 raw base RC)
+      // for re-enablement after vendor escalation (Option C) lands a
+      // stable target. case-14 (Wander Franco) retains its existing
+      // blockedBy:[55] skip — Card Hedge comp supply thinning is a
+      // separate axis.
+      const isShelvedAnchor =
+        c.id === "case-12-paul-skenes-2024-topps-chrome-rc-raw" ||
+        c.id === "case-13-elly-de-la-cruz-2023-topps-update-rc-raw";
       const blockReason = c.blockedBy?.length
         ? `blocked by ${c.blockedBy.map((n) => `issue #${n}`).join(", ")}`
         : null;
-      const itAnchor = blockReason ? it.skip : it;
+      const itAnchor = (isShelvedAnchor || blockReason) ? it.skip : it;
       itAnchor(
-        `FMV reflects market reality${blockReason ? ` (SOFT: ${blockReason})` : ""}`,
+        `FMV reflects market reality${
+          isShelvedAnchor
+            ? " (SHELVED: see tier1-anchor-blocked-by-vendor.test.ts — Cardsight catalog gap)"
+            : (blockReason ? ` (SOFT: ${blockReason})` : "")
+        }`,
         () => {
           const fmv = ctx.search!.fairMarketValueLive as number | null;
           expect(typeof fmv).toBe("number");
