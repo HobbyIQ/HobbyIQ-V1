@@ -46,7 +46,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # CF-HARNESS (2026-06-20): --legacy-peer-deps reconciles the
+        # openai@4.104.0 peer pin on zod@^3.23.8 with the root project's
+        # zod@^4.4.3. Local `npm install` uses the same default so this
+        # makes CI match local behavior. Deeper zod 3↔4 alignment is a
+        # separate dependency CF.
+        run: npm ci --legacy-peer-deps
 
       - name: Type-check production sources
         run: npx tsc --noEmit
@@ -91,7 +96,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # CF-HARNESS (2026-06-20): --legacy-peer-deps reconciles the
+        # openai@4.104.0 peer pin on zod@^3.23.8 with the root project's
+        # zod@^4.4.3. Local `npm install` uses the same default so this
+        # makes CI match local behavior. Deeper zod 3↔4 alignment is a
+        # separate dependency CF.
+        run: npm ci --legacy-peer-deps
 
       - name: Run Tier 1 production harness
         env:
