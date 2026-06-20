@@ -202,9 +202,25 @@ describe("CF-FMV-NOWCAST Ship 1", () => {
       // Sibling-pool path emits a computed band.
       expect(text).toMatch(/fairMarketValueLow: siblingFmvBand\.low/);
       expect(text).toMatch(/fairMarketValueHigh: siblingFmvBand\.high/);
-      // Main-success path emits mainFmvBand.
-      expect(text).toMatch(/fairMarketValueLow: mainFmvBand\.low/);
-      expect(text).toMatch(/fairMarketValueHigh: mainFmvBand\.high/);
+      // Main-success path emits mainFmvBand — either directly OR via an
+      // intermediate response-prep const that conditionally reroutes to the
+      // estimate band on the T3 base-auto-floor rebucket (CF-A(a) 2026-06-20).
+      // Loosened from `fairMarketValueLow: mainFmvBand\.low` literal-match to
+      // a presence-check on `mainFmvBand.low`/`mainFmvBand.high` so the band
+      // can't be silently dropped from the success-path source.
+      expect(text).toMatch(/mainFmvBand\.low/);
+      expect(text).toMatch(/mainFmvBand\.high/);
+      // CF-A(a) PAIR-BINDING (2026-06-20): the loosened presence-check above
+      // would not catch a low/high swap (e.g. fairMarketValueHigh accidentally
+      // bound to mainFmvBand.low). These four assertions lock the canonical
+      // pairing low→.low and high→.high at BOTH the response (responseFmvLow/
+      // High → mainFmvBand.{low,high} declaration) AND the wire return
+      // (fairMarketValueLow → responseFmvLow / fairMarketValueHigh →
+      // responseFmvHigh). Together they bind low to low and high to high.
+      expect(text).toMatch(/responseFmvLow[^=]*=[^;]*mainFmvBand\.low/);
+      expect(text).toMatch(/responseFmvHigh[^=]*=[^;]*mainFmvBand\.high/);
+      expect(text).toMatch(/fairMarketValueLow: responseFmvLow/);
+      expect(text).toMatch(/fairMarketValueHigh: responseFmvHigh/);
       // CompIQEstimateResponse typed interface declares both optionals.
       const typedInterface = await fs.readFile(
         new URL("../src/types/compiq.types.ts", import.meta.url),

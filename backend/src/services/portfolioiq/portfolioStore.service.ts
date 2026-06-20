@@ -1488,19 +1488,38 @@ async function autoPriceHolding(
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): merge railResolution into the
   // stamped holding. Ungraded / no-cardsightCardId path: railResolution
-  // is null → fairMarketValue = fairValue (existing behavior),
-  // valuationStatus = "observed". Graded with rail match: fields per
-  // the resolution tree.
-  const resolved = railResolution ?? {
-    fairMarketValueOverride: fairValue,
-    valuationStatus: "observed" as const,
-    estimatedValue: null,
-    estimateLow: null,
-    estimateHigh: null,
-    estimateConfidence: null,
-    estimateBasis: null,
-    isEstimate: false,
-  };
+  // is null → fall back to engine-classification reading below.
+  //
+  // CF-A(a) — T3 BASE-AUTO FLOOR RE-BUCKET: when railResolution is null
+  // (Raw / non-rail path) AND the engine response carries
+  // valuationStatus === "estimated" (set by the engine at T3 — see
+  // compiqEstimate.service.ts T3 re-bucket block), persist as an estimate
+  // with fairMarketValue=null + estimatedValue=<T3 pool value>. Otherwise
+  // keep the pre-CF behavior: stamp fairValue as observed.
+  const engineValuationStatus = (estimate as any)?.valuationStatus;
+  const resolved = railResolution ?? (
+    engineValuationStatus === "estimated"
+      ? {
+          fairMarketValueOverride: null,
+          valuationStatus: "estimated" as const,
+          estimatedValue: (estimate as any)?.estimatedValue ?? null,
+          estimateLow: (estimate as any)?.estimateLow ?? null,
+          estimateHigh: (estimate as any)?.estimateHigh ?? null,
+          estimateConfidence: (estimate as any)?.estimateConfidence ?? null,
+          estimateBasis: (estimate as any)?.estimateBasis ?? null,
+          isEstimate: true,
+        }
+      : {
+          fairMarketValueOverride: fairValue,
+          valuationStatus: "observed" as const,
+          estimatedValue: null,
+          estimateLow: null,
+          estimateHigh: null,
+          estimateConfidence: null,
+          estimateBasis: null,
+          isEstimate: false,
+        }
+  );
 
   // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18): identity
   // patch already computed above (hoisted to fire on both the success path
@@ -3673,6 +3692,62 @@ export async function repriceHoldingsForUser(
         holding,
         (estimate as any)?.cardIdentity,
       );
+
+      // CF-A(a) — T3 BASE-AUTO FLOOR RE-BUCKET: when the engine emits
+      // valuationStatus === "estimated" (set at T3 ladder success in
+      // compiqEstimate.service.ts), bypass the FMV-based confidence gate
+      // (engine.fairMarketValue is null by design) and persist as an
+      // estimate. Mirrors autoPriceHolding's railResolution-style routing
+      // so both persistence sites agree on the wire shape Phase 5 reads.
+      const engineT3 = (estimate as any)?.valuationStatus === "estimated"
+        && (estimate as any)?.estimateBasis === "base_auto_floor";
+      if (engineT3) {
+        const t3Now = new Date().toISOString();
+        const t3PredictedPrice = typeof (estimate as any)?.predictedPrice === "number"
+          && Number.isFinite((estimate as any).predictedPrice)
+          ? (estimate as any).predictedPrice
+          : null;
+        const t3PredictedRange = (estimate as any)?.predictedPriceRange ?? null;
+        const t3PredictedLow = typeof t3PredictedRange?.low === "number"
+          && Number.isFinite(t3PredictedRange.low) ? t3PredictedRange.low : null;
+        const t3PredictedHigh = typeof t3PredictedRange?.high === "number"
+          && Number.isFinite(t3PredictedRange.high) ? t3PredictedRange.high : null;
+        const t3PredictedMechanism = (estimate as any)?.predictedPriceAttribution?.mechanism ?? null;
+        const t3PredictedUpdatedAt = (estimate as any)?.signalsLastUpdated ?? null;
+        const t3TrendIQ = (estimate as any)?.trendIQ ?? null;
+        const t3MovementDirection = typeof t3TrendIQ?.direction === "string" ? t3TrendIQ.direction : null;
+        const t3MovementUpdatedAt = t3TrendIQ
+          ? (t3TrendIQ.lastUpdated ?? (estimate as any)?.signalsLastUpdated ?? t3Now)
+          : null;
+        const t3Previous = doc.holdings[holding.id];
+        const t3Updated: PortfolioHolding = {
+          ...holding,
+          ...repriceIdentityPatch,
+          fairMarketValue: null as any,  // engine classified as estimated, not observed
+          estimatedValue: (estimate as any)?.estimatedValue ?? null,
+          estimateLow: (estimate as any)?.estimateLow ?? null,
+          estimateHigh: (estimate as any)?.estimateHigh ?? null,
+          estimateConfidence: (estimate as any)?.estimateConfidence ?? null,
+          estimateBasis: (estimate as any)?.estimateBasis ?? null,
+          isEstimate: true,
+          valuationStatus: "estimated",
+          predictedPrice: t3PredictedPrice,
+          predictedPriceLow: t3PredictedLow,
+          predictedPriceHigh: t3PredictedHigh,
+          predictedPriceMechanism: t3PredictedMechanism,
+          predictedPriceUpdatedAt: t3PredictedUpdatedAt,
+          movementDirection: t3MovementDirection,
+          movementUpdatedAt: t3MovementUpdatedAt,
+          verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
+          recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
+          lastUpdated: t3Now,
+        };
+        evaluateHoldingAlerts(doc, t3Previous, t3Updated);
+        doc.holdings[holding.id] = t3Updated;
+        repriced += 1;
+        updates.push({ id: holding.id, status: "repriced" });
+        continue;
+      }
 
       if (confidence < minPricingConfidence || compsUsed < minCompsUsed || fairValue <= 0) {
         skipped += 1;

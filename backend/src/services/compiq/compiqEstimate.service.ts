@@ -4349,8 +4349,17 @@ export async function computeEstimate(
   // TITLE-MATCHED-PARALLEL (≥3 comps post-recovery) stays trainable —
   // that's a clean isolated pool large enough to anchor a realized
   // return.
+  // CF-A(a): T3 ladder anchored on base-auto comps for a parallel request
+  // is a labeled estimate — NOT a training-eligible observed FMV. Emit
+  // corpus.fairMarketValue=null so the accuracy track excludes the row
+  // (mirroring title-match-low-sample's exclusion intent). The local
+  // `fairMarketValue` variable stays unchanged for the engine's internal
+  // band/confidence/selling-guidance computations; only the corpus +
+  // wire-response views null it out.
   const corpusFmv =
     fetched.priceSourceInternal === "title-match-low-sample"
+      ? null
+      : chosenTier === "T3"
       ? null
       : typeof fairMarketValue === "number"
       ? fairMarketValue
@@ -4459,16 +4468,48 @@ export async function computeEstimate(
     },
   );
 
+  // CF-A(a) — T3 BASE-AUTO FLOOR RE-BUCKET: when the variant tier ladder
+  // selected T3 (loosest tier — accepts parallel_mismatch + print_run_mismatch),
+  // the FMV is anchored on base-auto comps for a parallel/serialed request.
+  // That's a labeled estimate, not an observed market value. Re-bucket the
+  // dollars from fairMarketValue → estimatedValue + valuationStatus="estimated"
+  // so the writer and Phase 5 route them as estimated. T0/T1/T2 unchanged.
+  const isT3Estimate = chosenTier === "T3" && typeof fairMarketValue === "number";
+  const responseFmv: number | null = isT3Estimate
+    ? null
+    : (typeof fairMarketValue === "number" ? fairMarketValue : null);
+  const responseFmvLow: number | null = isT3Estimate ? null : mainFmvBand.low;
+  const responseFmvHigh: number | null = isT3Estimate ? null : mainFmvBand.high;
+  const responseEstimatedValue: number | null = isT3Estimate ? fairMarketValue as number : null;
+  const responseEstimateLow: number | null = isT3Estimate ? mainFmvBand.low : null;
+  const responseEstimateHigh: number | null = isT3Estimate ? mainFmvBand.high : null;
+  const responseValuationStatus: "observed" | "estimated" = isT3Estimate ? "estimated" : "observed";
+  const responseEstimateBasis: string | null = isT3Estimate ? "base_auto_floor" : null;
+  const responseEstimateConfidence:
+    | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
+    isT3Estimate ? "rough" : null;
+  const responseIsEstimate: boolean = isT3Estimate;
+
   return {
     cardTitle,
     verdict: verdictText,
     action: result.action ?? "Hold",
     dealScore: result.dealScore ?? 50,
     quickSaleValue,
-    fairMarketValue,
-    fairMarketValueLow: mainFmvBand.low,
-    fairMarketValueHigh: mainFmvBand.high,
-    marketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+    fairMarketValue: responseFmv,
+    fairMarketValueLow: responseFmvLow,
+    fairMarketValueHigh: responseFmvHigh,
+    marketValue: responseFmv,
+    // CF-A(a): T3 re-bucket fields. populated only when chosenTier==="T3"
+    // AND the engine computed a positive fairMarketValue from the base-auto
+    // pool. T0/T1/T2 and the variant-mismatch short-circuit emit nulls here.
+    estimatedValue: responseEstimatedValue,
+    estimateLow: responseEstimateLow,
+    estimateHigh: responseEstimateHigh,
+    estimateConfidence: responseEstimateConfidence,
+    estimateBasis: responseEstimateBasis,
+    isEstimate: responseIsEstimate,
+    valuationStatus: responseValuationStatus,
     predictedPrice: __predicted.predictedPrice,
     predictedPriceRange: __predicted.predictedPriceRange,
     predictedPriceAttribution: __predicted.predictedPriceAttribution,
@@ -4530,7 +4571,10 @@ export async function computeEstimate(
     confidenceInterval,
     sellingGuidance,
     crossParallelAnchor,
-    effectiveFmv,
+    // CF-A(a): effectiveFmv mirrors fairMarketValue's T3 nullification so
+    // downstream consumers reading effectiveFmv don't see a value the
+    // engine has classified as estimated rather than observed.
+    effectiveFmv: responseFmv,
     compQuality: compQualityInfo,
     graderPremium: {
       applied: targetPremium,
@@ -4539,7 +4583,8 @@ export async function computeEstimate(
       normalizedAnchor: normalizedAnchorRaw,
     },
     dataSufficiency,
-    estimate: fairMarketValue,
+    // CF-A(a): legacy `estimate` field tracks the same response FMV.
+    estimate: responseFmv,
     compsUsed: comps.length,
     // CF-COMP-TITLE-EXCLUSIONS-EXPAND (2026-06-07): surface the
     // pre-quality-filter Cardsight count as the denominator iOS shows
@@ -4631,13 +4676,13 @@ export async function computeEstimate(
         : lastSale !== null
         ? ("last-sale" as const)
         : null,
-    // CF-TREND-EXTRAPOLATED (2026-06-10): the success path always has
-    // a numeric fairMarketValue, so estimateSource is "observed" and
-    // these fields are null by definition. They're here for response-
-    // shape consistency across all 4 return branches.
-    estimatedValue: null,
+    // CF-TREND-EXTRAPOLATED (2026-06-10): legacy estimateRange field for
+    // the last-sale fallback path. The success path doesn't populate it.
+    // CF-A(a) (2026-06-20): estimatedValue and estimateBasis are now
+    // declared above the return as part of the T3 re-bucket; they MUST
+    // NOT be re-emitted here as nulls because that would clobber the
+    // T3 value with null at object-spread evaluation.
     estimateRange: null,
-    estimateBasis: null,
     variantWarning: fetched.variantWarning,
     // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. iOS
     // reads `priceSource` (3-category: exact / approximate / broad).

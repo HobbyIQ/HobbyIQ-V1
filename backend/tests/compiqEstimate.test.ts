@@ -153,7 +153,17 @@ describe("/api/compiq/estimate", () => {
       res.body.fairMarketValue === null || typeof res.body.fairMarketValue === "number"
     ).toBe(true);
     if (res.body.fairMarketValue === null) {
-      expect(res.body.dataSufficiency?.sufficient).toBe(false);
+      // CF-A(a) 2026-06-20: FMV is also nullable when the T3 base-auto-floor
+      // rebucket fires — the dollars live in estimatedValue, dataSufficiency
+      // stays sufficient because the pool was anchored. Two valid shapes:
+      // (a) insufficiency (legacy) — dataSufficiency.sufficient: false
+      // (b) T3 estimate (CF-A(a)) — valuationStatus: "estimated"
+      const isT3Estimate =
+        res.body.valuationStatus === "estimated" &&
+        res.body.estimateBasis === "base_auto_floor";
+      if (!isT3Estimate) {
+        expect(res.body.dataSufficiency?.sufficient).toBe(false);
+      }
     }
   });
 
