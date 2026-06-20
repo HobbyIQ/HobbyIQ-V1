@@ -99,6 +99,37 @@ interface UserDoc {
   trades?: TradeTransaction[];
 }
 
+// CF-D1 (2026-06-20) — case-insensitive holding-key lookup.
+//
+// VERIFY (Cosmos-wide audit): 14/14 existing holding keys are uniformly
+// lowercase. Existing data tolerates a lookup-side case-fold without
+// backfill. New writes continue to use the iOS-supplied id verbatim
+// (iOS sends lowercase UUIDs consistently); only LOOKUP is case-folded
+// so a stray uppercase id from a future caller can't silently miss.
+//
+// `findHoldingKey` returns the actual stored key (or null), so callers
+// that need to mutate via `doc.holdings[<canonicalKey>] = …` get the
+// right key — preventing the duplicate-under-different-case write that
+// would otherwise happen if the caller did `doc.holdings[incomingId] = …`
+// after a successful case-folded lookup.
+function findHoldingKey(doc: UserDoc, holdingId: string): string | null {
+  if (!holdingId) return null;
+  if (Object.prototype.hasOwnProperty.call(doc.holdings, holdingId)) return holdingId;
+  const lower = holdingId.toLowerCase();
+  if (lower !== holdingId && Object.prototype.hasOwnProperty.call(doc.holdings, lower)) {
+    return lower;
+  }
+  for (const k of Object.keys(doc.holdings)) {
+    if (k.toLowerCase() === lower) return k;
+  }
+  return null;
+}
+
+function getHolding(doc: UserDoc, holdingId: string): PortfolioHolding | undefined {
+  const key = findHoldingKey(doc, holdingId);
+  return key ? doc.holdings[key] : undefined;
+}
+
 // ── CF-ERP-EXPANSION-#7 trade transaction shape ─────────────────────────────
 
 export interface TradeTransaction {
@@ -2058,9 +2089,12 @@ export async function getHoldingPriceHistory(req: Request, res: Response) {
   if (!auth) return;
   const id = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
-  if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
-  const points = doc.priceHistoryByHolding[id] ?? [];
-  res.json({ holdingId: id, count: points.length, points });
+  // CF-D1: case-insensitive lookup. priceHistoryByHolding is keyed by the
+  // same id as holdings (one-to-one), so we resolve via holdings first.
+  const canonical = findHoldingKey(doc, id);
+  if (!canonical) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
+  const points = doc.priceHistoryByHolding[canonical] ?? [];
+  res.json({ holdingId: canonical, count: points.length, points });
 }
 
 export async function getAlerts(req: Request, res: Response) {
@@ -2575,7 +2609,8 @@ export async function getHoldingById(req: Request, res: Response) {
 
   const id = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
-  const holding = doc.holdings[id];
+  // CF-D1: case-insensitive lookup.
+  const holding = getHolding(doc, id);
   if (!holding) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; this endpoint runs no estimate, so β fields are null here too.
@@ -2587,9 +2622,12 @@ export async function updateHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
 
-  const id = String(req.params.id ?? "").trim();
+  const rawId = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
-  if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
+  // CF-D1: case-insensitive lookup; mutate via the canonical stored key
+  // so spread + writeback hit the same slot.
+  const id = findHoldingKey(doc, rawId);
+  if (!id) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
   const previous = doc.holdings[id];
   const cleanBody = stripDeprecatedHoldingKeys(
@@ -2646,9 +2684,11 @@ export async function deleteHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
 
-  const id = String(req.params.id ?? "").trim();
+  const rawId = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
-  if (!doc.holdings[id]) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
+  // CF-D1: case-insensitive lookup; delete via the canonical stored key.
+  const id = findHoldingKey(doc, rawId);
+  if (!id) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
   // Best-effort: drop any blob photos owned by this holding before discarding
   // the record. A failure here must not block the holding deletion (the photo
@@ -2702,8 +2742,10 @@ export async function linkEbayListing(
 ): Promise<PortfolioHolding | null> {
   if (!userId || !holdingId || !link?.offerId || !link?.listingId) return null;
   const doc = await readUserDoc(userId);
-  const holding = doc.holdings[holdingId];
-  if (!holding) return null;
+  // CF-D1: case-insensitive lookup; mutate via the canonical stored key.
+  const canonicalKey = findHoldingKey(doc, holdingId);
+  if (!canonicalKey) return null;
+  const holding = doc.holdings[canonicalKey];
   const updated: PortfolioHolding = {
     ...holding,
     ebayOfferId: link.offerId,
@@ -2711,7 +2753,7 @@ export async function linkEbayListing(
     ebayListingPublishedAt: link.publishedAt ?? new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
   };
-  doc.holdings[holdingId] = updated;
+  doc.holdings[canonicalKey] = updated;
   await writeUserDoc(userId, doc);
   return updated;
 }
@@ -2935,10 +2977,12 @@ export async function sellHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
 
-  const id = String(req.params.id ?? "").trim();
+  const rawId = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
+  // CF-D1: case-insensitive lookup; mutate via the canonical stored key.
+  const id = findHoldingKey(doc, rawId);
+  if (!id) return res.status(404).json({ error: { message: "Holding not found", code: "NOT_FOUND" } });
   const holding = doc.holdings[id];
-  if (!holding) return res.status(404).json({ error: { message: "Holding not found", code: "NOT_FOUND" } });
 
   const quantityOwned = Math.max(1, toNumber(holding.quantity, 1));
   const quantitySold = Math.floor(toNumber(req.body?.quantity, 0));
@@ -3108,16 +3152,24 @@ export async function markHoldingSoldFromEbay(
 
   const doc = await readUserDoc(userId);
 
+  // CF-D1: case-insensitive lookup. Canonicalize once; subsequent ledger
+  // idempotency comparison + holding mutate both use the canonical key.
+  // For ledgers created pre-CF-D1, holdingId stored on the ledger entry
+  // matches whatever case the doc.holdings key was at the time — the
+  // VERIFY (14/14 lowercase) means existing ledger entries are also
+  // lowercase, so the canonical-key comparison is sound on existing data.
+  const canonicalHoldingId = findHoldingKey(doc, holdingId);
+
   // 1. Idempotency check — required per Step 3 decision #3 carry-forward.
   //    Replay must return the existing entry, not mutate, not throw.
   const existing = doc.ledger.find(
     (e) =>
-      e.holdingId === holdingId &&
+      e.holdingId === (canonicalHoldingId ?? holdingId) &&
       e.source === "ebay" &&
       e.ebayOrderId === trimmedOrderId,
   );
   if (existing) {
-    const currentHolding = doc.holdings[holdingId];
+    const currentHolding = canonicalHoldingId ? doc.holdings[canonicalHoldingId] : undefined;
     return {
       status: "marked-sold-deduped",
       entry: existing,
@@ -3127,10 +3179,10 @@ export async function markHoldingSoldFromEbay(
   }
 
   // 2. Holding existence.
-  const holding = doc.holdings[holdingId];
-  if (!holding) {
+  if (!canonicalHoldingId) {
     return { status: "holding-not-found" };
   }
+  const holding = doc.holdings[canonicalHoldingId];
 
   // 3. Validate quantity / price.
   const quantityOwned = Math.max(1, toNumber(holding.quantity, 1));
@@ -3193,7 +3245,7 @@ export async function markHoldingSoldFromEbay(
   const ledgerEntry: PortfolioLedgerEntry = {
     id: randomUUID(),
     userId,
-    holdingId,
+    holdingId: canonicalHoldingId,
     playerName: String(holding.playerName ?? ""),
     cardTitle: shimmedCardTitle(holding),
     quantitySold,
@@ -3237,13 +3289,13 @@ export async function markHoldingSoldFromEbay(
   // 6. Mutate holding state (mirrors sellHolding).
   const remainingQty = quantityOwned - quantitySold;
   if (remainingQty <= 0) {
-    delete doc.holdings[holdingId];
+    delete doc.holdings[canonicalHoldingId];
   } else {
     const updatedCostBasis = avgUnitCost * remainingQty;
     // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: same currentValue / P&L
     // writer-stop as sellHolding. Wire computes the post-sale display value
     // and P&L from cached fairMarketValue + the decremented quantity.
-    doc.holdings[holdingId] = {
+    doc.holdings[canonicalHoldingId] = {
       ...holding,
       quantity: remainingQty,
       purchasePrice: avgUnitCost,
@@ -3333,7 +3385,8 @@ export async function recordTradeTransaction(
     costBasis: number;
   }> = [];
   for (const leg of input.outgoing) {
-    const h = doc.holdings[leg.holdingId];
+    // CF-D1: case-insensitive lookup.
+    const h = getHolding(doc, leg.holdingId);
     if (!h) throw new Error(`outgoing holding not found: ${leg.holdingId}`);
     if (!Number.isFinite(leg.fmvAtTrade) || leg.fmvAtTrade < 0) {
       throw new Error(`outgoing fmvAtTrade must be >= 0 for holding ${leg.holdingId}`);
@@ -3502,10 +3555,12 @@ export async function refreshHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
 
-  const id = String(req.params.id ?? "").trim();
+  const rawId = String(req.params.id ?? "").trim();
   const doc = await readUserDoc(auth.userId);
+  // CF-D1: case-insensitive lookup; mutate via the canonical stored key.
+  const id = findHoldingKey(doc, rawId);
+  if (!id) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
   const holding = doc.holdings[id];
-  if (!holding) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
 
   doc.holdings[id] = await populateCardsightGradeId(holding);
 
