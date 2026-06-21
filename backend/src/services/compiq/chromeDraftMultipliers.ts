@@ -263,6 +263,49 @@ export interface BowmanFamilyEntry {
    * Default: "empirical" when omitted (back-compat for 54 pre-CF-X rows).
    */
   provenance?: "empirical" | "sibling_provisional";
+
+  /**
+   * CF-CAT-ENGINE (2026-06-21): base-auto-relative premium, the axis Build B
+   * consumes (distinct from `baselineMultiplier`, which stays Refractor/499-
+   * relative for mechanism1). Populated by the calibration engine's
+   * worksheet → owner-PR-review flow; never auto-applied.
+   *
+   * Why two axes: CF-X2-ANCHOR showed base-auto is ~2× denser than Ref/499
+   * for per-card paired calibration; mechanism1's anchor lookup remains
+   * Ref-relative; Build B reads base-relative directly so it can price
+   * holdings whose pool can't reach mechanism1 (e.g. Hartman). The engine
+   * computes each axis from its own paired data — derivation between axes
+   * is lossy and never auto-applied between them.
+   *
+   *   value         — centerpoint (paired-ratio median when convergent)
+   *   range         — honest spread (typically the relaxed-set IQR)
+   *   n             — strict-paired card count (≥2 sales of BOTH the target
+   *                   parallel AND the base anchor on the same card)
+   *   basis         — currently only "base_auto_paired"; reserved for
+   *                   future expansion to other paired bases
+   *   provenance    — "empirical" requires n ≥ 5 strict; otherwise
+   *                   "sibling_provisional" (CF-XMULT pattern)
+   *   calibratedAt  — ISO date the engine generated the value; supports
+   *                   staleness checks + scheduled refresh cadence
+   *
+   * Omitted when no calibration has run for this row yet — Build B treats
+   * `undefined` the same as a row missing from its lookup.
+   */
+  baseRelativePremium?: BaseRelativePremium;
+}
+
+/**
+ * CF-CAT-ENGINE (2026-06-21): base-auto-relative premium calibrated by the
+ * multiplier-calibration engine. See `BowmanFamilyEntry.baseRelativePremium`
+ * for the full semantic spec.
+ */
+export interface BaseRelativePremium {
+  value: number;
+  range: [number, number];
+  n: number;
+  basis: "base_auto_paired";
+  provenance: "empirical" | "sibling_provisional";
+  calibratedAt: string;
 }
 
 function normalizeBowmanFamilyParallelName(input: string): string {
