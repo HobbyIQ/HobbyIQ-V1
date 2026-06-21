@@ -51,6 +51,10 @@ import {
   type MultiplierAnchoredPredictedPriceResult,
 } from "../../agents/multiplierAnchoredPredictedPrice.js";
 import { type BowmanFamilyProduct } from "./chromeDraftMultipliers.js";
+import {
+  computeBaseAnchoredParallelFMV,
+  type BaseAnchoredFmvResult,
+} from "../../agents/baseAnchoredParallelFMV.js";
 // TrendIQ Phase 1 (docs/phase0/trendiq_design.md) — forward-looking
 // composite score. B.4.a wires Layer 1 only (player momentum from the
 // signal aggregator); Layers 2 and 3 follow in B.4.b/c. The composite
@@ -3099,20 +3103,54 @@ export async function computeEstimate(
     // base-auto-floor rebucket. estimateBasis flips on the subject row's
     // provenance flag so iOS can render the "provisional" badge for
     // sibling-provisional rows (X-Fractor rainbow today).
-    const m1HasPrice = mechanism1.predictedPrice !== null;
-    const m1IsProvisional =
+    //
+    // CF-BUILD-B (2026-06-21): when mechanism1 returns null (curated row
+    // missing OR pool can't anchor — Hartman's shape), try Build B as a
+    // base-anchored fallback. Build B is provenance-gated to empirical
+    // baseRelativePremium rows — ships DORMANT (zero rows carry the new
+    // field at ship), activates per-tier as the worksheet PRs land.
+    let m1HasPrice = mechanism1.predictedPrice !== null;
+    let m1IsProvisional =
       mechanism1.predictedPriceAttribution.subjectProvenance === "sibling_provisional";
-    const m1EstimatedValue: number | null = m1HasPrice ? mechanism1.predictedPrice : null;
-    const m1EstimateLow: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.low ?? null) : null;
-    const m1EstimateHigh: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.high ?? null) : null;
-    const m1EstimateBasis: string | null = m1HasPrice
+    let m1EstimatedValue: number | null = m1HasPrice ? mechanism1.predictedPrice : null;
+    let m1EstimateLow: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.low ?? null) : null;
+    let m1EstimateHigh: number | null = m1HasPrice ? (mechanism1.predictedPriceRange?.high ?? null) : null;
+    let m1EstimateBasis: string | null = m1HasPrice
       ? (m1IsProvisional ? "multiplier_provisional" : "multiplier")
       : null;
-    const m1EstimateConfidence:
+    let m1EstimateConfidence:
       | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
       m1HasPrice ? "rough" : null;
-    const m1ValuationStatus: "observed" | "estimated" | null =
+    let m1ValuationStatus: "observed" | "estimated" | null =
       m1HasPrice ? "estimated" : null;
+
+    // CF-BUILD-B fallback: when mechanism1 yielded no price AND the
+    // holding is Bowman-family (the classifier returned non-null above),
+    // try Build B against the curated baseRelativePremium row. Dormant
+    // until the worksheet PRs land empirical values + sampleBaseRange.
+    let buildBResult: BaseAnchoredFmvResult | null = null;
+    if (!m1HasPrice && subjectProduct !== null) {
+      buildBResult = computeBaseAnchoredParallelFMV({
+        subject: {
+          playerName: body.playerName ?? fetched.card?.player ?? "",
+          year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+          product: subjectProduct,
+          subset: "Chrome Prospect Autographs",
+          parallelName: normalizedParallel ?? body.parallel ?? "",
+        },
+        comps: fetched.comps.map((c) => ({ title: c.title, price: c.price })),
+      });
+      if (buildBResult.isEstimate) {
+        m1HasPrice = true;
+        m1IsProvisional = false; // Build B requires empirical provenance
+        m1EstimatedValue = buildBResult.estimatedValue;
+        m1EstimateLow = buildBResult.estimateLow;
+        m1EstimateHigh = buildBResult.estimateHigh;
+        m1EstimateBasis = buildBResult.estimateBasis;
+        m1EstimateConfidence = buildBResult.confidence;
+        m1ValuationStatus = "estimated";
+      }
+    }
 
     const guardReasons: string[] = [];
     if (variantWarningTokens.length > 0) guardReasons.push(...variantWarningTokens);
@@ -4608,18 +4646,20 @@ export async function computeEstimate(
   // estimateBasis distinguishes the path the iOS badge surfaces.
   const isT3Eligible = chosenTier === "T3" && typeof fairMarketValue === "number";
   let collisionM1: MultiplierAnchoredPredictedPriceResult | null = null;
+  // CF-DECOUPLE (2026-06-21): null-safe product classification. When the
+  // holding is non-Bowman, collisionM1 stays null → CF-A(a)'s
+  // base_auto_floor wins the T3 collision (its correct behavior when no
+  // curated multiplier applies). Subset stays hardcoded per (B) scope.
+  // CF-BUILD-B (2026-06-21): hoisted out of the `if (isT3Eligible)` block
+  // so the Build B fallback below can reuse it.
+  const collisionSubjectProduct = classifyBowmanFamilyProduct(body.product);
   if (isT3Eligible) {
-    // CF-DECOUPLE (2026-06-21): null-safe product classification. When the
-    // holding is non-Bowman, collisionM1 stays null → CF-A(a)'s
-    // base_auto_floor wins the T3 collision (its correct behavior when no
-    // curated multiplier applies). Subset stays hardcoded per (B) scope.
-    const subjectProduct = classifyBowmanFamilyProduct(body.product);
-    if (subjectProduct !== null) {
+    if (collisionSubjectProduct !== null) {
       collisionM1 = computeMultiplierAnchoredPredictedPrice({
         subject: {
           playerName: body.playerName ?? fetched.card?.player ?? "",
           year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-          product: subjectProduct,
+          product: collisionSubjectProduct,
           subset: "Chrome Prospect Autographs",
           parallelName: normalizedParallel ?? body.parallel ?? "",
           isAutograph: effectiveIsAuto,
@@ -4650,9 +4690,30 @@ export async function computeEstimate(
   const m1IsEmpirical =
     collisionM1?.predictedPriceAttribution.subjectProvenance === "empirical";
   const m1Wins = m1HasPrice && m1IsEmpirical;
-  const isT3BaseAuto = isT3Eligible && !m1Wins;
+
+  // CF-BUILD-B (2026-06-21): Build B fallback in the T3 collision path.
+  // Slots BETWEEN mechanism1.empirical-win and the CF-A(a) base_auto_floor:
+  //   mechanism1.empirical wins → Build B (empirical baseRelativePremium) → base_auto_floor → null
+  // Dormant at ship (zero rows carry sampleBaseRange); activates per-tier
+  // as worksheet PRs land empirical baseRelativePremium values.
+  let collisionBuildB: BaseAnchoredFmvResult | null = null;
+  if (isT3Eligible && !m1Wins && collisionSubjectProduct !== null) {
+    collisionBuildB = computeBaseAnchoredParallelFMV({
+      subject: {
+        playerName: body.playerName ?? fetched.card?.player ?? "",
+        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+        product: collisionSubjectProduct,
+        subset: "Chrome Prospect Autographs",
+        parallelName: normalizedParallel ?? body.parallel ?? "",
+      },
+      comps: fetched.comps.map((c) => ({ title: c.title, price: c.price })),
+    });
+  }
+  const buildBWins = collisionBuildB !== null && collisionBuildB.isEstimate;
+  const isT3BuildB = isT3Eligible && !m1Wins && buildBWins;
+  const isT3BaseAuto = isT3Eligible && !m1Wins && !buildBWins;
   const isT3MultEstimate = isT3Eligible && m1Wins;
-  const isAnyEstimate = isT3BaseAuto || isT3MultEstimate;
+  const isAnyEstimate = isT3BaseAuto || isT3MultEstimate || isT3BuildB;
 
   const responseFmv: number | null = isAnyEstimate
     ? null
@@ -4661,14 +4722,17 @@ export async function computeEstimate(
   const responseFmvHigh: number | null = isAnyEstimate ? null : mainFmvBand.high;
   const responseEstimatedValue: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPrice as number) :
+    isT3BuildB ? collisionBuildB!.estimatedValue :
     isT3BaseAuto ? (fairMarketValue as number) :
     null;
   const responseEstimateLow: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPriceRange?.low ?? null) :
+    isT3BuildB ? collisionBuildB!.estimateLow :
     isT3BaseAuto ? mainFmvBand.low :
     null;
   const responseEstimateHigh: number | null =
     isT3MultEstimate ? (collisionM1!.predictedPriceRange?.high ?? null) :
+    isT3BuildB ? collisionBuildB!.estimateHigh :
     isT3BaseAuto ? mainFmvBand.high :
     null;
   const responseValuationStatus: "observed" | "estimated" = isAnyEstimate ? "estimated" : "observed";
@@ -4677,9 +4741,11 @@ export async function computeEstimate(
       ? (collisionM1!.predictedPriceAttribution.subjectProvenance === "sibling_provisional"
           ? "multiplier_provisional"
           : "multiplier")
+      : isT3BuildB ? collisionBuildB!.estimateBasis
       : (isT3BaseAuto ? "base_auto_floor" : null);
   const responseEstimateConfidence:
     | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null =
+    isT3BuildB ? collisionBuildB!.confidence :
     isAnyEstimate ? "rough" : null;
   const responseIsEstimate: boolean = isAnyEstimate;
 

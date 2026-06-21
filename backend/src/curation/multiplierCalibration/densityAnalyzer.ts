@@ -44,6 +44,20 @@ export interface TierPremiumCandidate {
   /** Per-card detail for audit. */
   pairedStrict: PairedRatio[];
   pairedRelaxed: PairedRatio[];
+  /**
+   * CF-BUILD-B (2026-06-21): [min, max] of base-auto medians (denominator
+   * medians) across the strict-paired set. Used by Build B to detect
+   * off-sample holdings. null when the strict-paired set is empty.
+   */
+  sampleBaseRange: [number, number] | null;
+  /**
+   * CF-BUILD-B (2026-06-21): observed median paired-ratio over the top
+   * third of the strict-paired set sorted by base-auto-median descending.
+   * Emitted only when the top bucket has ≥3 cards (the threshold rule
+   * locked in docs/build-b-off-sample-tier-handling.md §3). Build B's
+   * off-sample low-end anchor.
+   */
+  topBaseBucketRatio: number | null;
 }
 
 export interface TierProvenanceVerdict {
@@ -113,6 +127,19 @@ export function computeTierPremium(
   const range: [number, number] | null =
     p25 !== null && p75 !== null ? [p25, p75] : null;
 
+  // CF-BUILD-B: sampleBaseRange + topBaseBucketRatio.
+  const strictByBaseAsc = [...strict].sort(
+    (a, b) => a.denominatorMedian - b.denominatorMedian,
+  );
+  const sampleBaseRange: [number, number] | null =
+    strictByBaseAsc.length > 0
+      ? [
+          strictByBaseAsc[0]!.denominatorMedian,
+          strictByBaseAsc[strictByBaseAsc.length - 1]!.denominatorMedian,
+        ]
+      : null;
+  const topBaseBucketRatio = computeTopBaseBucketRatio(strict);
+
   return {
     tierKey,
     basis,
@@ -122,7 +149,34 @@ export function computeTierPremium(
     nRelaxed: relaxed.length,
     pairedStrict: strict,
     pairedRelaxed: relaxed,
+    sampleBaseRange,
+    topBaseBucketRatio,
   };
+}
+
+/**
+ * CF-BUILD-B (2026-06-21) — top-third bucket median paired-ratio. Per the
+ * locked threshold rule in docs/build-b-off-sample-tier-handling.md §3:
+ *   - Sort strict-paired by base-auto-median (denominatorMedian) DESCENDING.
+ *   - Take the top third (ceiling(n_strict / 3)) as the bucket.
+ *   - If the bucket has ≥3 cards, return the median of those cards' ratios.
+ *   - Else return null (Build B falls back to a flagged round haircut).
+ *
+ * The n=5 floor tiers (Aqua/125, Green/99, Green Lava/99) fall to the
+ * haircut-fallback bucket: top-third of 5 = 2 cards = below the 3-card gate.
+ * That's intentional — the n=5 floor is where we shouldn't claim "top-base
+ * cards showed X" because the bucket is too thin to read.
+ */
+export function computeTopBaseBucketRatio(strict: ReadonlyArray<PairedRatio>): number | null {
+  if (strict.length === 0) return null;
+  const bucketSize = Math.ceil(strict.length / 3);
+  if (bucketSize < 3) return null;
+  const byBaseDesc = [...strict].sort(
+    (a, b) => b.denominatorMedian - a.denominatorMedian,
+  );
+  const topBucket = byBaseDesc.slice(0, bucketSize);
+  const ratios = topBucket.map((p) => p.ratio);
+  return median(ratios);
 }
 
 /**

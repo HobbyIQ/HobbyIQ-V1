@@ -350,7 +350,7 @@ describe("CF-DECOUPLE — subset hardcode boundary (the (B) scope marker)", () =
   // and runtime asserting via a mock would require deeper test plumbing
   // than this CF's budget.
 
-  it("DOCUMENT: subset hardcoded at all 3 mechanism1 call sites (CF-DECOUPLE-2 target)", async () => {
+  it("DOCUMENT: subset hardcoded at the 5 mechanism1 + Build-B call sites (CF-DECOUPLE-2 target)", async () => {
     // Read the source and assert the hardcode is present. When
     // CF-DECOUPLE-2 lands, this test should be deleted (not relaxed).
     const fs = await import("node:fs/promises");
@@ -359,7 +359,9 @@ describe("CF-DECOUPLE — subset hardcode boundary (the (B) scope marker)", () =
       "utf8",
     );
     const occurrences = (src.match(/subset:\s*"Chrome Prospect Autographs"/g) ?? []).length;
-    // Three call sites: variant-mismatch (#1), insufficient (#2), T3 collision (#3).
-    expect(occurrences).toBe(3);
+    // 3 mechanism1 sites (variant-mismatch #1, insufficient #2, T3 collision #3) +
+    // 2 Build B fallback sites (CF-BUILD-B 2026-06-21 inherits the same hardcode
+    // for the same reason — subset normalization is still budgeted to CF-DECOUPLE-2).
+    expect(occurrences).toBe(5);
   });
 });

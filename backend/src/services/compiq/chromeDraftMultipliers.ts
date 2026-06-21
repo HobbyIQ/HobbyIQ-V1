@@ -298,6 +298,25 @@ export interface BowmanFamilyEntry {
  * CF-CAT-ENGINE (2026-06-21): base-auto-relative premium calibrated by the
  * multiplier-calibration engine. See `BowmanFamilyEntry.baseRelativePremium`
  * for the full semantic spec.
+ *
+ * CF-BUILD-B (2026-06-21): added `sampleBaseRange` + `topBaseBucketRatio`
+ * for off-sample tier-handling. See docs/build-b-off-sample-tier-handling.md
+ * for the full design lock; in brief:
+ *
+ *   sampleBaseRange:     [min, max] of base-auto medians across the cards
+ *                        that fed the strict-paired set (the empirical-gate
+ *                        cards). Build B uses this to detect off-sample
+ *                        holdings (holding.baseMedian > sampleBaseRange[1]).
+ *
+ *   topBaseBucketRatio:  observed median paired-ratio over the top third
+ *                        (ceiling(n_strict / 3)) of the strict-paired set
+ *                        sorted by base descending. null when the bucket
+ *                        has <3 cards. Build B's off-sample low-end anchors
+ *                        to this when present; falls back to a flagged
+ *                        round haircut when null.
+ *
+ * Both fields are optional. Build B requires `provenance === "empirical"`
+ * AND `sampleBaseRange !== undefined` to fire — the dormancy guarantee.
  */
 export interface BaseRelativePremium {
   value: number;
@@ -306,6 +325,8 @@ export interface BaseRelativePremium {
   basis: "base_auto_paired";
   provenance: "empirical" | "sibling_provisional";
   calibratedAt: string;
+  sampleBaseRange?: [number, number];
+  topBaseBucketRatio?: number | null;
 }
 
 function normalizeBowmanFamilyParallelName(input: string): string {

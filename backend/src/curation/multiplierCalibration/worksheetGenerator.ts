@@ -47,6 +47,8 @@ export function buildWorksheet(
   analyses: ReadonlyArray<TierAnalysisResult>,
 ): Worksheet {
   const proposals: WorksheetTierProposal[] = analyses.map((a) => {
+    const sampleBaseRange = a.baseRelative.sampleBaseRange;
+    const topBaseBucketRatio = a.baseRelative.topBaseBucketRatio;
     const proposed: BaseRelativePremium | null =
       a.baseRelative.centerpoint !== null && a.baseRelative.range !== null
         ? {
@@ -56,6 +58,11 @@ export function buildWorksheet(
             basis: "base_auto_paired",
             provenance: a.provenance.provenance,
             calibratedAt: meta.generatedAt,
+            // CF-BUILD-B fields — optional in schema, always emitted by engine.
+            ...(sampleBaseRange !== null
+              ? { sampleBaseRange: [round2(sampleBaseRange[0]), round2(sampleBaseRange[1])] as [number, number] }
+              : {}),
+            topBaseBucketRatio: topBaseBucketRatio !== null ? round3(topBaseBucketRatio) : null,
           }
         : null;
     return {
@@ -83,6 +90,10 @@ export function buildWorksheet(
 
 function round3(x: number): number {
   return Math.round(x * 1000) / 1000;
+}
+
+function round2(x: number): number {
+  return Math.round(x * 100) / 100;
 }
 
 /**
@@ -166,6 +177,12 @@ function renderProposal(p: WorksheetTierProposal): string[] {
     lines.push(`//       basis: "base_auto_paired",`);
     lines.push(`//       provenance: "${p.proposed.provenance}",`);
     lines.push(`//       calibratedAt: "${p.proposed.calibratedAt}",`);
+    if (p.proposed.sampleBaseRange !== undefined) {
+      lines.push(`//       sampleBaseRange: [${p.proposed.sampleBaseRange[0]}, ${p.proposed.sampleBaseRange[1]}],`);
+    }
+    if (p.proposed.topBaseBucketRatio !== undefined) {
+      lines.push(`//       topBaseBucketRatio: ${p.proposed.topBaseBucketRatio === null ? "null" : p.proposed.topBaseBucketRatio},`);
+    }
     lines.push(`//     },`);
   }
   lines.push("");
