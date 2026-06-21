@@ -50,6 +50,7 @@ import {
   computeMultiplierAnchoredPredictedPrice,
   type MultiplierAnchoredPredictedPriceResult,
 } from "../../agents/multiplierAnchoredPredictedPrice.js";
+import { type BowmanFamilyProduct } from "./chromeDraftMultipliers.js";
 // TrendIQ Phase 1 (docs/phase0/trendiq_design.md) — forward-looking
 // composite score. B.4.a wires Layer 1 only (player momentum from the
 // signal aggregator); Layers 2 and 3 follow in B.4.b/c. The composite
@@ -79,6 +80,64 @@ import type { TrendIQResult } from "./trendIQ.types.js";
 // TrendIQ-driven forward projection layer on top of fairMarketValue.
 import { computePredictedPrice } from "./forwardProjection.js";
 import { writePredictionLog } from "./predictionCorpus.service.js";
+
+// CF-DECOUPLE (2026-06-21): classify a free-text `body.product` string into
+// the strict `BowmanFamilyProduct` union, returning `null` when the input is
+// not Bowman-family (Topps Chrome, Panini Prizm, etc.). The 3 mechanism1
+// call sites below short-circuit and skip the mechanism1 call entirely when
+// this returns null — non-Bowman holdings then route through observed FMV /
+// CF-A(a) base_auto_floor / honest null instead of being silently mis-routed
+// to a Bowman row by the previous clamp.
+//
+// Replaces the pre-CF-DECOUPLE clamp `rawProduct.includes("Draft") ? "Bowman
+// Draft" : "Bowman Chrome"` at the 3 sites, which force-fit ANY non-Bowman
+// product (and bare "Bowman" at site #2) to "Bowman Chrome" — the silent
+// mis-route the CF-PROD-RECON HALT surfaced.
+//
+// Preserves the legit half of the legacy fallback: Bowman free-text variants
+// like "2024 Bowman Chrome RC" still normalize to "Bowman Chrome". The
+// substring matching REQUIRES a "Bowman" word boundary so non-Bowman strings
+// that incidentally contain "Draft" or "Chrome" (e.g. "Topps Chrome") no
+// longer mis-resolve.
+//
+// Subset is intentionally NOT decoupled here — the spec's (B) scope leaves
+// the hardcoded "Chrome Prospect Autographs" in place at all 3 sites. Bowman
+// non-CPA holdings remain force-fit to CPA subset, a narrower residual
+// addressed in CF-DECOUPLE-2 once a `cardsightSetName → BowmanFamilySubset`
+// normalizer is properly budgeted.
+export function classifyBowmanFamilyProduct(
+  raw: string | undefined | null,
+): BowmanFamilyProduct | null {
+  const r = String(raw ?? "").trim();
+  if (r.length === 0) return null;
+  // Canonical strict matches first — direct passes for already-canonical input.
+  if (r === "Bowman Draft") return "Bowman Draft";
+  if (r === "Bowman Chrome") return "Bowman Chrome";
+  if (r === "Bowman") return "Bowman";
+  // Free-text Bowman normalization (preserves the legit half of the legacy
+  // fallback). Order matters: more specific Bowman variants checked first.
+  // Word-boundary anchored so non-Bowman strings can't sneak through via
+  // incidental "Draft" / "Chrome" substrings (the pre-CF-DECOUPLE bug).
+  if (/\bBowman\s+Draft\b/i.test(r)) return "Bowman Draft";
+  if (/\bBowman\s+Chrome\b/i.test(r)) return "Bowman Chrome";
+  if (/\bBowman\b/i.test(r)) return "Bowman";
+  return null;
+}
+
+// CF-DECOUPLE (2026-06-21): null mechanism1 result emitted when the holding
+// is non-Bowman (classifyBowmanFamilyProduct returns null at sites #1 and
+// #2). Same shape `computeMultiplierAnchoredPredictedPrice` returns when no
+// curated row matches — downstream `m1HasPrice` / `collisionM1 !== null`
+// checks already null-handle this. Inlined as a constant to keep type
+// drift impossible.
+const NULL_MECHANISM1_RESULT: MultiplierAnchoredPredictedPriceResult = {
+  predictedPrice: null,
+  predictedPriceRange: null,
+  predictedPriceAttribution: {
+    mechanism: "multiplier-anchored",
+    failureReason: "uncurated-subject-parallel",
+  },
+};
 
 // Issue #25 Phase 3 — trim peer-pool diagnostics for the wire response.
 // We keep counts only; sample comp data is not surfaced to the client.
@@ -3005,39 +3064,33 @@ export async function computeEstimate(
   // tries T0→T3 progressively; we only short-circuit when T3 also yields <3
   // comps OR Cardsight self-reported wrong-card resolution (Q8' above).
   if (everythingFilteredOut) {
-    // CF-X (2026-06-20): preserve the actual product when it matches the
-    // BowmanFamilyProduct union ("Bowman" / "Bowman Chrome" / "Bowman Draft").
-    // Pre-CF-X the product was clamped to "Bowman Chrome" | "Bowman Draft"
-    // based on a substring check, which silently rerouted "Bowman"
-    // flagship-release holdings (e.g. Hartman's BCP-EHA) to the wrong
-    // product bucket and missed the curated multiplier table even when
-    // the row existed under product:"Bowman".
-    const rawProduct = String(body.product ?? "").trim();
-    const subjectProduct: "Bowman" | "Bowman Chrome" | "Bowman Draft" =
-      rawProduct === "Bowman Draft" ? "Bowman Draft" :
-      rawProduct === "Bowman Chrome" ? "Bowman Chrome" :
-      rawProduct === "Bowman" ? "Bowman" :
-      // Legacy substring fallback for unrecognized product strings —
-      // matches pre-CF-X behavior so we don't break holdings whose
-      // product field carries free-text like "2024 Bowman Chrome RC".
-      rawProduct.includes("Draft") ? "Bowman Draft" :
-      "Bowman Chrome";
-
-    const mechanism1 = computeMultiplierAnchoredPredictedPrice({
-      subject: {
-        playerName: body.playerName ?? fetched.card?.player ?? "",
-        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-        product: subjectProduct,
-        subset: "Chrome Prospect Autographs",
-        parallelName: normalizedParallel ?? body.parallel ?? "",
-        isAutograph: effectiveIsAuto,
-      },
-      comps: fetched.comps.map((c) => ({
-        title: c.title,
-        price: c.price,
-        soldDate: c.soldDate,
-      })),
-    });
+    // CF-DECOUPLE (2026-06-21): null-safe product classification. Replaces
+    // the pre-CF-DECOUPLE clamp (preserved CF-X "Bowman" semantics for
+    // Bowman-family input but force-routed non-Bowman to "Bowman Chrome").
+    // When the holding is non-Bowman, mechanism1 is skipped entirely —
+    // emit a null result so downstream m1HasPrice checks behave as if
+    // the lookup returned no curated row. Non-Bowman holdings then route
+    // through observed FMV / CF-A(a) base_auto_floor / honest null.
+    // Subset stays hardcoded "Chrome Prospect Autographs" per (B) scope;
+    // CF-DECOUPLE-2 addresses the Bowman-non-CPA residual.
+    const subjectProduct = classifyBowmanFamilyProduct(body.product);
+    const mechanism1: MultiplierAnchoredPredictedPriceResult = subjectProduct === null
+      ? NULL_MECHANISM1_RESULT
+      : computeMultiplierAnchoredPredictedPrice({
+          subject: {
+            playerName: body.playerName ?? fetched.card?.player ?? "",
+            year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+            product: subjectProduct,
+            subset: "Chrome Prospect Autographs",
+            parallelName: normalizedParallel ?? body.parallel ?? "",
+            isAutograph: effectiveIsAuto,
+          },
+          comps: fetched.comps.map((c) => ({
+            title: c.title,
+            price: c.price,
+            soldDate: c.soldDate,
+          })),
+        });
 
     // CF-X (2026-06-20): when mechanism1 produces a multiplier-anchored
     // predicted price, surface estimated-tier fields so the writer
@@ -3367,21 +3420,30 @@ export async function computeEstimate(
     ));
 
   if (insufficient) {
-    const mechanism1 = computeMultiplierAnchoredPredictedPrice({
-      subject: {
-        playerName: body.playerName ?? fetched.card?.player ?? "",
-        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-        product: (body.product?.includes("Draft") ? "Bowman Draft" : "Bowman Chrome") as "Bowman Chrome" | "Bowman Draft",
-        subset: "Chrome Prospect Autographs",
-        parallelName: normalizedParallel ?? body.parallel ?? "",
-        isAutograph: effectiveIsAuto,
-      },
-      comps: fetched.comps.map((c) => ({
-        title: c.title,
-        price: c.price,
-        soldDate: c.soldDate,
-      })),
-    });
+    // CF-DECOUPLE (2026-06-21): null-safe product classification. This site
+    // never got CF-X's "Bowman" preservation — pre-CF-DECOUPLE it force-fit
+    // EVEN bare "Bowman" flagship to "Bowman Chrome" (the worst of the 3
+    // clamp sites). Post-classifier: bare "Bowman" routes to "Bowman" and
+    // matches the correct curated row when one exists. Non-Bowman holdings
+    // skip mechanism1 entirely. Subset stays hardcoded per (B) scope.
+    const subjectProduct = classifyBowmanFamilyProduct(body.product);
+    const mechanism1: MultiplierAnchoredPredictedPriceResult = subjectProduct === null
+      ? NULL_MECHANISM1_RESULT
+      : computeMultiplierAnchoredPredictedPrice({
+          subject: {
+            playerName: body.playerName ?? fetched.card?.player ?? "",
+            year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+            product: subjectProduct,
+            subset: "Chrome Prospect Autographs",
+            parallelName: normalizedParallel ?? body.parallel ?? "",
+            isAutograph: effectiveIsAuto,
+          },
+          comps: fetched.comps.map((c) => ({
+            title: c.title,
+            price: c.price,
+            soldDate: c.soldDate,
+          })),
+        });
 
     const ageNote =
       daysSinceNewest != null
@@ -4547,31 +4609,28 @@ export async function computeEstimate(
   const isT3Eligible = chosenTier === "T3" && typeof fairMarketValue === "number";
   let collisionM1: MultiplierAnchoredPredictedPriceResult | null = null;
   if (isT3Eligible) {
-    // Subject construction mirrors the variant-mismatch short-circuit's
-    // product mapping — preserve "Bowman" when applicable so flagship
-    // releases with curated rows under product:"Bowman" can match.
-    const rawProduct = String(body.product ?? "").trim();
-    const subjectProduct: "Bowman" | "Bowman Chrome" | "Bowman Draft" =
-      rawProduct === "Bowman Draft" ? "Bowman Draft" :
-      rawProduct === "Bowman Chrome" ? "Bowman Chrome" :
-      rawProduct === "Bowman" ? "Bowman" :
-      rawProduct.includes("Draft") ? "Bowman Draft" :
-      "Bowman Chrome";
-    collisionM1 = computeMultiplierAnchoredPredictedPrice({
-      subject: {
-        playerName: body.playerName ?? fetched.card?.player ?? "",
-        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-        product: subjectProduct,
-        subset: "Chrome Prospect Autographs",
-        parallelName: normalizedParallel ?? body.parallel ?? "",
-        isAutograph: effectiveIsAuto,
-      },
-      comps: fetched.comps.map((c) => ({
-        title: c.title,
-        price: c.price,
-        soldDate: c.soldDate,
-      })),
-    });
+    // CF-DECOUPLE (2026-06-21): null-safe product classification. When the
+    // holding is non-Bowman, collisionM1 stays null → CF-A(a)'s
+    // base_auto_floor wins the T3 collision (its correct behavior when no
+    // curated multiplier applies). Subset stays hardcoded per (B) scope.
+    const subjectProduct = classifyBowmanFamilyProduct(body.product);
+    if (subjectProduct !== null) {
+      collisionM1 = computeMultiplierAnchoredPredictedPrice({
+        subject: {
+          playerName: body.playerName ?? fetched.card?.player ?? "",
+          year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+          product: subjectProduct,
+          subset: "Chrome Prospect Autographs",
+          parallelName: normalizedParallel ?? body.parallel ?? "",
+          isAutograph: effectiveIsAuto,
+        },
+        comps: fetched.comps.map((c) => ({
+          title: c.title,
+          price: c.price,
+          soldDate: c.soldDate,
+        })),
+      });
+    }
   }
   // CF-X COLLISION GATE (2026-06-20 — owner-locked): multiplier wins over
   // the T3 base-auto floor ONLY when the subject row is `provenance:
