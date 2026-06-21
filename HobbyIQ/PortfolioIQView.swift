@@ -26,6 +26,18 @@ struct PortfolioIQView: View {
     // via `InventoryDisplayAggregate`; the card lazy-loads its own data.
     @StateObject private var collectionValueViewModel = CollectionValueViewModel()
 
+    // CF-IOS-EXPORT-BUILD (2026-06-21): holdings export state.
+    // `isExporting` gates the format chooser to prevent double-fire
+    // while the request is in flight. `exportFileURL` is the temp file
+    // the share sheet presents (reuses the file-system / temp dir
+    // idiom from the ERP exports); cleared on share-sheet dismiss.
+    @State private var showExportFormatChooser = false
+    @State private var isExporting = false
+    @State private var exportFileURL: URL?
+    @State private var showExportShareSheet = false
+    @State private var exportErrorMessage: String?
+    @State private var showExportError = false
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -97,6 +109,31 @@ struct PortfolioIQView: View {
                 BatchRepriceView()
                     .environmentObject(sessionViewModel)
             }
+            // CF-IOS-EXPORT-BUILD (2026-06-21): share-sheet present after
+            // the export bytes are written to a temp file. Reuses the
+            // existing private LedgerShareSheet wrapper :1441 — generic
+            // UIActivityViewController(activityItems: [url]).
+            .sheet(isPresented: $showExportShareSheet) {
+                if let url = exportFileURL {
+                    LedgerShareSheet(url: url)
+                }
+            }
+            .confirmationDialog(
+                "Export holdings",
+                isPresented: $showExportFormatChooser,
+                titleVisibility: .visible
+            ) {
+                Button("Excel (.xlsx)") { Task { await runHoldingsExport(format: "xlsx") } }
+                Button("CSV (.csv)") { Task { await runHoldingsExport(format: "csv") } }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Choose the export format. The file will be written and shared via the system share sheet.")
+            }
+            .alert("Export failed", isPresented: $showExportError, presenting: exportErrorMessage) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { message in
+                Text(message)
+            }
             .scanFlow(isPresented: $showCardIdentify, sessionViewModel: sessionViewModel)
             .onAppear {
                 if vm.summary == nil {
@@ -117,7 +154,59 @@ struct PortfolioIQView: View {
                 portfolioToolButton(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
                 portfolioToolButton(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
             }
+            // CF-IOS-EXPORT-BUILD (2026-06-21): Export holdings.
+            // Third tools row lives alone until CF-IOS-IMPORT-BUILD adds
+            // an Import button to the right — the layout becomes a
+            // proper 2-up grid then. For v1, full-row Export is fine
+            // and matches the existing tools chrome.
+            HStack(spacing: 8) {
+                portfolioToolButton(
+                    title: isExporting ? "Exporting…" : "Export holdings",
+                    icon: isExporting ? "hourglass" : "square.and.arrow.up",
+                    action: {
+                        guard isExporting == false else { return }
+                        showExportFormatChooser = true
+                    }
+                )
+            }
         }
+    }
+
+    // CF-IOS-EXPORT-BUILD (2026-06-21): run the export request, write
+    // the bytes verbatim to a temp file, present the share sheet. iOS
+    // never inspects the body — it's transport only.
+    private func runHoldingsExport(format: String) async {
+        isExporting = true
+        defer { isExporting = false }
+        do {
+            let payload = try await APIService.shared.fetchExportFile(format: format)
+            let filename = payload.suggestedFilename ?? defaultExportFilename(for: format)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+            // .write(to:options:) replaces silently — repeated exports
+            // overwrite the same temp slot rather than accumulating
+            // garbage in tmpdir.
+            try payload.data.write(to: tempURL, options: .atomic)
+            exportFileURL = tempURL
+            showExportShareSheet = true
+        } catch {
+            exportErrorMessage = APIService.errorMessage(from: error)
+            showExportError = true
+        }
+    }
+
+    /// Fallback filename when the backend's `Content-Disposition` header
+    /// is missing or malformed. Uses YYYY-MM-DD in UTC so two devices
+    /// exporting on the same day produce the same name. The extension
+    /// must match the requested format so the share sheet's "Open in
+    /// Numbers" affordance picks the right UTType.
+    private func defaultExportFilename(for format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        let datestamp = formatter.string(from: Date())
+        let ext = format == "csv" ? "csv" : "xlsx"
+        return "hobbyiq-holdings-\(datestamp).\(ext)"
     }
 
     private func portfolioToolButton(title: String, icon: String, action: @escaping () -> Void) -> some View {

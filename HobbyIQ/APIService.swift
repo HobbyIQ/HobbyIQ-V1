@@ -496,6 +496,75 @@ struct APIService {
         )
     }
 
+    // CF-IOS-EXPORT-BUILD (2026-06-21): holdings export.
+    //
+    // GET /api/portfolio/export?format=xlsx|csv — backend responds with
+    // a BINARY xlsx or text/csv file, not JSON. Two response-shape facts
+    // make this distinct from the surrounding ERP exports:
+    //
+    //   1. Body is raw file bytes, transport-only. iOS does NOT parse
+    //      the contents — the file is written verbatim to a temp URL
+    //      and handed off to UIActivityViewController.
+    //   2. Custom response header `X-Holdings-Count: <int>` carries the
+    //      row count and `Content-Disposition: attachment; filename="..."`
+    //      carries the backend-chosen filename. Both are best-effort —
+    //      missing values return nil and the caller falls back to a
+    //      default filename.
+    //
+    // `sendData` at :1515 dropped HTTPURLResponse after the status check.
+    // `sendDataWithResponse` below mirrors its flow but exposes the
+    // response so the export call site can read these headers. The
+    // existing `sendData` / `fetchData` signatures and their four callers
+    // (:548, :563, :808, :1286) are untouched.
+    func fetchExportFile(format: String = "xlsx") async throws -> HoldingsExportPayload {
+        let (data, response) = try await sendDataWithResponse(
+            path: "/api/portfolio/export",
+            queryItems: [URLQueryItem(name: "format", value: format)],
+            method: "GET",
+            bodyData: nil
+        )
+        return HoldingsExportPayload(
+            data: data,
+            holdingsCount: HoldingsExportHeaderParser.parseHoldingsCount(
+                from: response.value(forHTTPHeaderField: "X-Holdings-Count")
+            ),
+            suggestedFilename: HoldingsExportHeaderParser.parseFilename(
+                fromContentDisposition: response.value(forHTTPHeaderField: "Content-Disposition")
+            )
+        )
+    }
+
+    /// Header-aware variant of `sendData`. Returns the `(Data, HTTPURLResponse)`
+    /// pair so callers can read custom response headers
+    /// (`X-Holdings-Count`, `Content-Disposition`, etc.) that the JSON-
+    /// decoding helpers throw away. Same status-validation + 401 hook as
+    /// `sendData` so revoked sessions still surface globally.
+    private func sendDataWithResponse(
+        path: String,
+        queryItems: [URLQueryItem] = [],
+        method: String,
+        bodyData: Data?,
+        sessionId: String? = nil
+    ) async throws -> (Data, HTTPURLResponse) {
+        let request = try makeRequest(path: path, queryItems: queryItems, method: method, bodyData: bodyData, sessionId: sessionId)
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIServiceError.invalidResponse
+            }
+            guard 200..<300 ~= httpResponse.statusCode else {
+                let rawResponse = String(data: data, encoding: .utf8) ?? ""
+                notifySessionInvalidatedIfNeeded(statusCode: httpResponse.statusCode, url: request.url)
+                throw APIServiceError.httpError(statusCode: httpResponse.statusCode, body: rawResponse)
+            }
+            return (data, httpResponse)
+        } catch let error as APIServiceError {
+            throw error
+        } catch {
+            throw APIServiceError.networkFailed(error)
+        }
+    }
+
     func healthCheck() async throws -> HealthStatusResponse {
         try await get(path: "/api/health", responseType: HealthStatusResponse.self)
     }
