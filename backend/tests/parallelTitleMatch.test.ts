@@ -12,6 +12,7 @@ import {
   type ParallelTitleMatchInput,
 } from "../src/services/compiq/parallelTitleMatch.js";
 import type { CardsightPricingResponse } from "../src/services/compiq/cardsight.client.js";
+import { tokenizeParallel } from "../src/services/compiq/cardsight.mapper.js";
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -687,5 +688,206 @@ describe("CF-PARALLEL-PLURAL-NORMALIZE — singular ↔ plural matcher", () => {
     // plural sibling is a canonical equal, not a proper superset.
     expect(r.excludedTokens).not.toContain("refractor");
     expect(r.excludedTokens).not.toContain("refractors");
+  });
+});
+
+// CF-X3 (2026-06-20) — X-Fractor family token canonicalization.
+//
+// Audit (cf-x2-audit-3.cjs, full 2026 Bowman release sweep): Cardsight
+// spells the X-Fractor parallel in three forms in title strings:
+//   • "X-Fractor"  (hyphen, mixed/lower case)         — 261/393 ~66%
+//   • "Xfractor"   (smooshed, no separator)           —  36/393 ~9%
+//   • "x fractor"  (space)                            —   3/393 ~1%
+//   • "X-FRACTOR"  (CAPS hyphen)                      —  93/393 ~24%, case-insensitive variant of #1
+//   • "X-fractors" (plural)                           —   1/393, recovered via PARALLEL_SINGULAR_TOKENS
+//
+// Pre-fix: `tokenizeParallel("Blue X-Fractor /150")` split on hyphen to
+// `["blue", "x", "fractor", "150"]`. `\bx\b` then failed to find the
+// "x" inside a smooshed "Xfractor" title (no word boundary between x and
+// f) — 6 of 49 Blue X-Fractor /150 auto sales silently skipped (~12%),
+// with the wider X-Fractor pool seeing a ~9% miss.
+//
+// Fix: tokenizeParallel pre-replaces `\bx[-\s]?fractor\b` → `xfractor`
+// (word-boundary anchored so "Lex-Fractor"-shaped strings stay
+// untouched); buildWordBoundaryPattern special-cases the `xfractor`
+// token to emit `\bx[-\s]?fractors?\b` covering all five title shapes.
+describe("CF-X3 — X-Fractor family token canonicalization", () => {
+  const BOWMAN_CPA_2026_SIBLINGS = [
+    { id: "p-blue-xfractor", name: "Blue X-Fractor" },
+    { id: "p-yellow-xfractor", name: "Yellow X-Fractor" },
+    { id: "p-orange-xfractor", name: "Orange X-Fractor" },
+    { id: "p-blue-refractor", name: "Blue RayWave Refractor" },
+    { id: "p-base-auto", name: "Base" },
+  ];
+
+  it("recovers the 6 known SKIPS from cf-x2-audit-3 (Blue Xfractor smoosh + plural)", () => {
+    // These six titles are the actual SKIPPED sales from the wider
+    // 2026 Bowman release probe — pre-fix the engine missed all six.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue X-Fractor /150",
+      matchedParallelId: "p-blue-xfractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: BOWMAN_CPA_2026_SIBLINGS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2026 Bowman Chrome Andrew Tess 1st Bowman  Blue Xfractor Auto /150 #CPA-AT CLEAN",
+          "2026 Bowman Chrome Andrew Tess 1st Bowman  Blue Xfractor Auto /150 #CPA-AT CLEAN",
+          "2026 Bowman Baseball Daniel Dickinson 1st Bowman Auto Blue Xfractor /150 #CPA-DD",
+          "2026 Bowman Chrome Kehden Hettiger 1st Blue Xfractor Auto /150 #CPA-KHE",
+          "2026 Bowman Pablo Nunez 1st Blue Xfractor Auto /150 - Reds #CPA-PN",
+          "2026 Bowman Chrome Konnor Griffin #BCP-92 Blue Xfractor /150",
+        ],
+      }),
+    }));
+    expect(r.priceSource).toBe("title-matched-parallel");
+    expect(r.filteredCount).toBe(6);
+  });
+
+  it("matches all three spellings (hyphen / smoosh / space) and CAPS / plural forms", () => {
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue X-Fractor /150",
+      matchedParallelId: "p-blue-xfractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: BOWMAN_CPA_2026_SIBLINGS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2026 Bowman Chrome Adrian Gil #CPA-AG Blue X-Fractor Auto /150 RC",   // hyphen
+          "2026 Bowman Chrome Andrew Tess 1st Blue Xfractor Auto /150 #CPA-AT",  // smoosh
+          "2026 Bowman Player Name 1st Blue X Fractor /150 #CPA-XY",             // space
+          "ETHAN HOLLIDAY 2026 BOWMAN CHROME BLUE X-FRACTOR /150 #CPA-EH",       // CAPS hyphen
+          "2026 Bowman - Wehiwa Aloy 1st Bowman Chrome Blue X-fractors /150 #CPA-WA", // plural
+        ],
+      }),
+    }));
+    expect(r.priceSource).toBe("title-matched-parallel");
+    expect(r.filteredCount).toBe(5);
+  });
+
+  it("cross-family guard: 'Blue Refractor' query does NOT match X-Fractor titles", () => {
+    // The critical anti-regression: a user querying a Refractor must
+    // never accidentally match X-Fractor titles after the
+    // canonicalization. Different tokens, different regex.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue Refractor",
+      matchedParallelId: "p-blue-refractor-real", // pretend a separate parallel exists
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: [
+        ...BOWMAN_CPA_2026_SIBLINGS,
+        { id: "p-blue-refractor-real", name: "Blue Refractor" },
+      ],
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2026 Bowman Chrome Player Blue X-Fractor /150 #CPA-XX",         // X-Fractor — must NOT match
+          "2026 Bowman Chrome Player Blue Xfractor Auto /150 #CPA-YY",     // X-Fractor smoosh — must NOT match
+          "2026 Bowman Chrome Player Blue Refractor /150 #CPA-ZZ",         // genuine Refractor — must match
+        ],
+      }),
+    }));
+    expect(r.filteredCount).toBe(1);
+  });
+
+  it("anti-regression: existing 'Blue X-Fractor /150' hyphen titles still match", () => {
+    // Pre-fix this case worked. The fix must not regress the 261/393
+    // hyphen-spelled titles that were already matching.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue X-Fractor /150",
+      matchedParallelId: "p-blue-xfractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: BOWMAN_CPA_2026_SIBLINGS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "2026 Bowman Chrome 1st Anthony Frobose Auto /150 Blue X-Fractor #BCP-85 Mets",
+          "2026 Bowman Chrome Breyson Guedez #CPA-BG 1st Auto Blue X-Fractor /150 Athletics",
+          "2026 Topps Bowman Chrome Auto Charlie Condon 13/150 Blue X-Fractor #CPA-CC",
+        ],
+      }),
+    }));
+    expect(r.priceSource).toBe("title-matched-parallel");
+    expect(r.filteredCount).toBe(3);
+  });
+
+  it("Yellow X-Fractor sibling produces 'yellow' as distinguishing token; Blue X-Fractor query rejects Yellow titles", () => {
+    // Specificity guard still works on color tokens post-canonicalization:
+    // 'Blue X-Fractor' siblings include 'Yellow X-Fractor' → 'yellow'
+    // is excluded → titles with 'Yellow X-Fractor' (any spelling) are rejected.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue X-Fractor",
+      matchedParallelId: "p-blue-xfractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: BOWMAN_CPA_2026_SIBLINGS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "Player Blue X-Fractor Auto /150 #CPA",
+          "Player Blue Xfractor /150 #CPA",
+          "Player Blue X Fractor /150 #CPA",        // all three Blue → match (≥3 = title-matched-parallel)
+          "Player Yellow X-Fractor Auto /75 #CPA",  // Yellow → reject (no 'blue' in title)
+          "Player Yellow Xfractor /75 #CPA",        // Yellow smoosh → reject
+        ],
+      }),
+    }));
+    expect(r.priceSource).toBe("title-matched-parallel");
+    expect(r.filteredCount).toBe(3);
+  });
+
+  it("Lex-Fractor-shaped strings (hypothetical adjacency) are NOT normalized — word-boundary anchor holds", () => {
+    // The pre-replace uses \b before 'x' to ensure that a substring
+    // ending in 'x' (preceded by a word char) is NOT consumed. There's
+    // no real "Lex-Fractor" parallel — this is purely a guard test.
+    const r = applyParallelTitleMatch(baseInput({
+      userParallelInput: "Blue X-Fractor",
+      matchedParallelId: "p-blue-xfractor",
+      pricingCameFromUnifiedFallback: true,
+      siblingParallels: BOWMAN_CPA_2026_SIBLINGS,
+      pricingResponse: pricingResponse({
+        rawTitles: [
+          "Player Blue Lex-Fractor /150 #CPA",   // 'Lex-Fractor' must NOT be treated as X-Fractor → no match
+          "Player Blue X-Fractor /150 #CPA",     // genuine → match
+        ],
+      }),
+    }));
+    expect(r.filteredCount).toBe(1);
+  });
+});
+
+// CF-X3 — direct tokenizeParallel unit tests (the input-side half of the fix).
+describe("CF-X3 — tokenizeParallel canonicalizes X-Fractor family to a single token", () => {
+  it("'Blue X-Fractor' → ['blue', 'xfractor']", () => {
+    expect(tokenizeParallel("Blue X-Fractor")).toEqual(["blue", "xfractor"]);
+  });
+
+  it("'Blue Xfractor' → ['blue', 'xfractor'] (smoosh equals hyphen)", () => {
+    expect(tokenizeParallel("Blue Xfractor")).toEqual(["blue", "xfractor"]);
+  });
+
+  it("'Blue X Fractor' → ['blue', 'xfractor'] (space equals hyphen)", () => {
+    expect(tokenizeParallel("Blue X Fractor")).toEqual(["blue", "xfractor"]);
+  });
+
+  it("'BLUE X-FRACTOR' → ['blue', 'xfractor'] (CAPS folds to canonical)", () => {
+    expect(tokenizeParallel("BLUE X-FRACTOR")).toEqual(["blue", "xfractor"]);
+  });
+
+  it("strict equality: 'Blue X-Fractor' tokens equal 'Blue Xfractor' tokens (the parallel-binding load-bearing case)", () => {
+    expect(tokenizeParallel("Blue X-Fractor")).toEqual(tokenizeParallel("Blue Xfractor"));
+  });
+
+  it("'Lex-Fractor' is NOT normalized (word-boundary guard)", () => {
+    // 'e' before 'x' blocks \b — the pre-replace does not fire.
+    // Note: split on hyphen will still produce ["lex", "fractor"]; the
+    // assertion is that "lexfractor" does NOT appear.
+    const tokens = tokenizeParallel("Lex-Fractor");
+    expect(tokens).not.toContain("lexfractor");
+  });
+
+  it("'Refractor' is unchanged (cross-family guard)", () => {
+    expect(tokenizeParallel("Refractor")).toEqual(["refractor"]);
+  });
+
+  it("'Superfractor' is unchanged (no X-Fractor regex hit)", () => {
+    expect(tokenizeParallel("Superfractor")).toEqual(["superfractor"]);
+  });
+
+  it("'Blue Refractor' is unchanged (Refractor family untouched)", () => {
+    expect(tokenizeParallel("Blue Refractor")).toEqual(["blue", "refractor"]);
   });
 });

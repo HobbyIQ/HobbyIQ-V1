@@ -399,6 +399,14 @@ export function buildParallelTitleMatcher(
  * strings that aren't pre-tokenized.
  */
 function buildWordBoundaryPattern(token: string): RegExp {
+  // CF-X3 (2026-06-20): the canonical "xfractor" token (produced by
+  // tokenizeParallel's X-Fractor pre-replace) must match Cardsight's three
+  // title spellings — "X-Fractor" / "Xfractor" / "x fractor" — and their
+  // plural form. Keep the same plural-tolerance semantics as the standard
+  // PARALLEL_SINGULAR_TOKENS branch below.
+  if (token === "xfractor") {
+    return /\bx[-\s]?fractors?\b/i;
+  }
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pluralTolerant = PARALLEL_SINGULAR_TOKENS.has(token) ? `${escaped}s?` : escaped;
   return new RegExp(`\\b${pluralTolerant}\\b`, "i");

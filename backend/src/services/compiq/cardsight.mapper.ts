@@ -251,7 +251,8 @@ export function applyCardNumberDisambiguation(
 // (player names ending in -s, set-name plurals, etc.) stay untouched.
 export const PARALLEL_SINGULAR_TOKENS: ReadonlySet<string> = new Set([
   "refractor",
-  "fractor",        // matches "x-fractor"/"superfractor" siblings
+  "fractor",        // matches "superfractor" siblings (X-Fractor handled via xfractor below)
+  "xfractor",       // CF-X3: canonicalized X-Fractor token, plural-tolerant ("X-fractors")
   "wave",
   "shimmer",
   "speckle",
@@ -296,8 +297,18 @@ export function tokenizeParallel(name: string): string[] {
   // CF-PARALLEL-PLURAL-NORMALIZE (2026-06-16): apply singularize() to each
   // token so "Refractor" and "Refractors" tokenize identically. See the
   // PARALLEL_SINGULAR_TOKENS comment block above.
+  // CF-X3 (2026-06-20): canonicalize the X-Fractor family — Cardsight titles
+  // spell it three ways ("X-Fractor"/"Xfractor"/"x fractor") and the hyphen-
+  // split below would otherwise produce ["x", "fractor"], where `\bx\b` then
+  // fails to find the "x" inside a smooshed "Xfractor" (no word boundary
+  // between x and f). Pre-collapsing the three forms to "xfractor" makes the
+  // input side single-token; buildWordBoundaryPattern's matching regex covers
+  // the title side. Word-boundary anchored so "Lex-Fractor"-shaped strings
+  // (the "e" before "x" blocks \b) are untouched. Audit (2026-06-20):
+  // 392/393 X-Fractor title spellings normalize cleanly; the 393rd ("X-fractors"
+  // plural) matches via xfractor's PARALLEL_SINGULAR_TOKENS membership.
   const wrapped = name.match(/\(([^)]+)\)/);
-  const stripped = wrapped ? wrapped[1] : name;
+  const stripped = (wrapped ? wrapped[1] : name).replace(/\bx[-\s]?fractor\b/gi, "xfractor");
   return stripped
     .split(/[\s\-/]+/)
     .map((t) => singularize(t.toLowerCase()))
