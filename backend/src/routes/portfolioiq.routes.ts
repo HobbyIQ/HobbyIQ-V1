@@ -36,6 +36,15 @@ import type { PortfolioHolding } from "../types/portfolioiq.types.js";
 // contract. See exportHoldings.service.ts for the column lock.
 import { buildHoldingsExport, type ExportFormat } from "../services/portfolioiq/exportHoldings.service.js";
 import { composePortfolioListResponse } from "../services/portfolioiq/responseAssembly.js";
+// CF-IMPORT-BE (2026-06-21): preview + commit endpoints. File arrives as
+// base64-encoded body (multipart not configured); preview is read-only,
+// commit is idempotency-token-gated. See importService.ts.
+import {
+  buildPreview,
+  commitImport,
+  type CommitRequest,
+} from "../services/portfolioiq/import/importService.js";
+import type { FileFormat } from "../services/portfolioiq/import/fileParser.js";
 
 const router = Router();
 
@@ -78,6 +87,63 @@ router.get("/export", async (req, res, next) => {
     res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
     res.setHeader("X-Holdings-Count", String(wire.length));
     res.send(payload.buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-IMPORT-BE (2026-06-21):
+//   POST /api/portfolio/import/preview — read-only; parse + resolve + bucket.
+//   POST /api/portfolio/import/commit  — write; idempotency-token-gated.
+//
+// File is base64-encoded in the body (multipart not configured; see
+// app.ts:47 — 12mb json limit covers ~9MB raw file).
+router.post("/import/preview", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const userTier = (req.user as { tier?: string } | undefined)?.tier ?? "free";
+    const body = req.body as { file?: string; format?: string } | undefined;
+    if (!body?.file || typeof body.file !== "string") {
+      return res.status(400).json({ error: "Missing 'file' field (base64-encoded xlsx or csv body)" });
+    }
+    const formatRaw = String(body.format ?? "xlsx").toLowerCase();
+    const format: FileFormat = formatRaw === "csv" ? "csv" : "xlsx";
+    let fileBuffer: Buffer | string;
+    if (format === "csv") {
+      // Allow either base64 or plain text on CSV
+      try {
+        fileBuffer = Buffer.from(body.file, "base64").toString("utf8");
+      } catch {
+        fileBuffer = body.file;
+      }
+    } else {
+      fileBuffer = Buffer.from(body.file, "base64");
+    }
+
+    const result = await buildPreview(userId, fileBuffer, format, userTier);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/import/commit", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const body = req.body as Partial<CommitRequest> | undefined;
+    if (!body?.idempotencyToken || typeof body.idempotencyToken !== "string") {
+      return res.status(400).json({ error: "Missing 'idempotencyToken'" });
+    }
+    if (!Array.isArray(body.envelopes)) {
+      return res.status(400).json({ error: "Missing 'envelopes' array" });
+    }
+    const request: CommitRequest = {
+      idempotencyToken: body.idempotencyToken,
+      envelopes: body.envelopes,
+      actions: body.actions,
+    };
+    const result = await commitImport(userId, request);
+    res.json({ ok: true, ...result });
   } catch (err) {
     next(err);
   }
