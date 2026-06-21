@@ -90,8 +90,11 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
 
   it("capacity projection surfaces wouldExceed flag", async () => {
     const { sessionId } = await signIn();
-    // Free tier = 25 cap. Make a sheet with 100 rows.
-    const rows: unknown[][] = Array.from({ length: 100 }, (_, i) => [
+    // Free tier = 25 cap. Make a sheet with 30 rows — over cap, but
+    // under the CF-IMPORT-ASYNC SYNC_PREVIEW_ROW_THRESHOLD (40) so it
+    // stays in the sync path and returns the `summary` object the
+    // assertions below read.
+    const rows: unknown[][] = Array.from({ length: 30 }, (_, i) => [
       `import-bulk-${i}`,
       `cardId-${i}`,
       `Player ${i}`,

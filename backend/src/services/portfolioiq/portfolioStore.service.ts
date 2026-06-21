@@ -58,9 +58,18 @@ async function getContainer(): Promise<Container | null> {
         client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
       }
       const { database } = await client.databases.createIfNotExists({ id: dbName });
+      // CF-IMPORT-ASYNC (2026-06-21): defaultTtl: -1 means "TTL enabled,
+      // no default expiration." User holdings docs don't set `ttl`, so
+      // they live forever. Import job docs set `ttl: 86400` per-doc and
+      // expire 24h after last modification. This only applies to fresh
+      // container creation — the prod portfolio container was updated
+      // separately via `az cosmosdb sql container update --ttl -1`
+      // 2026-06-21 (audit: 0/4 user docs carried a ttl property before
+      // the change; the activation is no-op for them).
       const { container } = await database.containers.createIfNotExists({
         id: "portfolio",
         partitionKey: { paths: ["/userId"] },
+        defaultTtl: -1,
       });
       _container = container;
       console.log("[portfolio] Cosmos DB connected");
@@ -71,6 +80,14 @@ async function getContainer(): Promise<Container | null> {
   })();
   return _initPromise;
 }
+
+// CF-IMPORT-ASYNC (2026-06-21): expose the container handle so the
+// import-job store can write its own doc shape against the same
+// `portfolio` container. Same partition key (/userId), distinct doc ids
+// ("import-job-<jobId>"); coexists with the user doc, no race with
+// concurrent holding writes. Test-mode null is preserved.
+export const getPortfolioContainer = getContainer;
+export const isPortfolioTestMode = isTestMode;
 
 // ─── In-process 30-second read cache ─────────────────────────────────────────
 const readCache = new Map<string, { doc: UserDoc; expiresAt: number }>();

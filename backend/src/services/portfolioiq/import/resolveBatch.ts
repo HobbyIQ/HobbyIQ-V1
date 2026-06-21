@@ -75,6 +75,13 @@ export interface ResolveBatchOptions {
   existingHoldings: Record<string, PortfolioHolding>;
   /** Test hook — inject a resolver replacement (defaults to real resolveCardId). */
   resolver?: (input: CompIQQueryInput) => Promise<{ cardId: string | null }>;
+  /**
+   * CF-IMPORT-ASYNC (2026-06-21): fires after each row's envelope is
+   * computed (clean, collision, ambiguous, unresolved — anything). The
+   * async preview path uses this to throttle progress writes to the
+   * import-job doc. Never thrown; per-call errors are caught and logged.
+   */
+  onRowComplete?: () => Promise<void>;
 }
 
 /**
@@ -96,6 +103,13 @@ export async function resolveBatch(
     while (next < rows.length) {
       const idx = next++;
       envelopes[idx] = await processRow(rows[idx]!, opts, resolver);
+      // CF-IMPORT-ASYNC: per-row progress hook. Errors swallowed —
+      // progress reporting must never sink the resolver.
+      if (opts.onRowComplete) {
+        try { await opts.onRowComplete(); } catch (err: unknown) {
+          console.warn("[resolveBatch] onRowComplete threw:", err);
+        }
+      }
     }
   }
   await Promise.all(Array.from({ length: RESOLVE_CONCURRENCY }, () => worker()));

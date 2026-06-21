@@ -17,6 +17,14 @@ import {
   type NormalizedHoldingPayload,
   type ImportBucket,
 } from "./resolveBatch.js";
+import {
+  readImportJob,
+  writeImportJob,
+  markStaleIfNeeded,
+  PROGRESS_WRITE_THROTTLE_MS,
+  IMPORT_JOB_TTL_SECONDS,
+  type ImportJobDoc,
+} from "./importJobStore.service.js";
 import type { PortfolioHolding } from "../../../types/portfolioiq.types.js";
 import {
   readUserDoc,
@@ -45,6 +53,27 @@ function idempotencyKey(userId: string, token: string): string {
   return `import-commit:${userId}:${token}`;
 }
 const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24h
+
+/**
+ * CF-IMPORT-ASYNC (2026-06-21): sync vs async threshold.
+ *
+ * Sized off p95 latency, not p50. Step-0 probe: sequential p95 ~2300ms,
+ * 4-way concurrent ~2 req/s effective. 50 rows / 4-way → ~12.5 serialized
+ * units × 2300ms ≈ 29s — on the 30s Express timeout edge. 40 rows clears
+ * with margin (~23s p95 worst-case at 4-way × 2300ms).
+ *
+ * Above this, preview returns a jobId immediately and kicks an in-process
+ * Promise. Below or equal, preview resolves inline as the original sync
+ * path.
+ */
+export const SYNC_PREVIEW_ROW_THRESHOLD = 40;
+
+function generateJobId(): string {
+  // 16 hex chars; collision-resistant per-user and short enough for UI display.
+  const hex = (n: number) => Math.floor(Math.random() * n).toString(16).padStart(2, "0");
+  const part = (n: number) => Array.from({ length: n }, () => hex(256)).join("");
+  return part(8);
+}
 
 // CF-IMPORT-BE inlined helpers (mirrors portfolioStore conventions —
 // not exported from there, but duplication is cheaper than refactoring
@@ -85,6 +114,21 @@ export interface PreviewResult {
   envelopes: ImportRowEnvelope[];
   unmappedHeaders: string[];
   /** Auto-map proposal — user can override before commit. */
+  proposedMapping: Record<string, string | null>;
+}
+
+/**
+ * CF-IMPORT-ASYNC (2026-06-21): kick-off result returned when a preview
+ * exceeds SYNC_PREVIEW_ROW_THRESHOLD. The client polls the status endpoint
+ * with the jobId until status === "ready" then reads envelopes off the
+ * polled doc; from there the commit flow is unchanged.
+ */
+export interface PreviewKickoffResult {
+  async: true;
+  jobId: string;
+  totalRows: number;
+  isRoundTrip: boolean;
+  unmappedHeaders: string[];
   proposedMapping: Record<string, string | null>;
 }
 
@@ -136,16 +180,30 @@ export interface CommitResult {
 }
 
 /**
- * Preview: read-only orchestration. NO writes.
+ * Preview: read-only orchestration. NO writes to user doc.
+ *
+ * CF-IMPORT-ASYNC (2026-06-21): forks on row count.
+ *   - ≤ SYNC_PREVIEW_ROW_THRESHOLD → resolve inline, return PreviewResult (sync path; unchanged).
+ *   - >  SYNC_PREVIEW_ROW_THRESHOLD → create job doc + kick in-process resolve,
+ *     return PreviewKickoffResult with jobId for status-polling.
+ *
+ * The async path writes ONLY to the separate import-job doc — never the
+ * user doc — per the substrate decision. The commit flow is unchanged.
  */
 export async function buildPreview(
   userId: string,
   fileBuffer: Buffer | string,
   format: FileFormat,
   userTier: string,
-): Promise<PreviewResult> {
+): Promise<PreviewResult | PreviewKickoffResult> {
   const parsed: FileParseResult = parseHoldingsFile(fileBuffer, format);
 
+  // Async fork: above threshold, return jobId + kick detached job
+  if (parsed.totalRows > SYNC_PREVIEW_ROW_THRESHOLD) {
+    return await kickAsyncPreview(userId, fileBuffer, format, userTier, parsed);
+  }
+
+  // Sync path (unchanged): resolve inline
   const doc = await readUserDoc(userId);
   const envelopes = await resolveBatch(parsed.rows, {
     isRoundTrip: parsed.isRoundTrip,
@@ -163,11 +221,9 @@ export async function buildPreview(
   let defaultCommitCount = 0;
   for (const env of envelopes) {
     bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
-    // Default-commit logic: clean rows commit; collision/edited/unresolved/ambiguous default to skip
     if (env.bucket === "resolved-clean") defaultCommitCount += 1;
   }
 
-  // Capacity projection
   const currentCount = Object.keys(doc.holdings ?? {}).length;
   const cap = holdingsCapFor(userTier);
   const incomingDelta = defaultCommitCount;
@@ -192,6 +248,200 @@ export async function buildPreview(
     unmappedHeaders: parsed.autoMap.unmapped,
     proposedMapping: parsed.autoMap.mapping,
   };
+}
+
+/**
+ * CF-IMPORT-ASYNC (2026-06-21): create the job doc, kick the in-process
+ * Promise, return the kickoff result. The Promise itself runs detached
+ * from the response — Always-On + autoHeal=false on HobbyIQ3 keep it
+ * alive across the typical ~4-min lifetime.
+ */
+async function kickAsyncPreview(
+  userId: string,
+  fileBuffer: Buffer | string,
+  format: FileFormat,
+  userTier: string,
+  parsed: FileParseResult,
+): Promise<PreviewKickoffResult> {
+  const jobId = generateJobId();
+  const now = new Date().toISOString();
+
+  // Initial job doc — pending, no envelopes yet. TTL set at construction
+  // so even if writeImportJob's defensive default ever drops, this doc
+  // expires cleanly 24h after last modification.
+  const initialDoc: ImportJobDoc = {
+    id: `import-job-${jobId}`,
+    userId,
+    jobId,
+    status: "pending",
+    progress: { rowsProcessed: 0, rowsTotal: parsed.totalRows, lastProgressAt: now },
+    ttl: IMPORT_JOB_TTL_SECONDS,
+    proposedMapping: parsed.autoMap.mapping,
+    unmappedHeaders: parsed.autoMap.unmapped,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await writeImportJob(initialDoc);
+
+  // Capture for the resolver's existingHoldings argument; computed once
+  // at kick time so the job's collision view is consistent for its run.
+  // Subsequent commit-time fresh-collision re-check handles new dupes
+  // that landed AFTER kickoff.
+  const doc = await readUserDoc(userId);
+  const existingHoldings = doc.holdings ?? {};
+  const currentCount = Object.keys(existingHoldings).length;
+  const cap = holdingsCapFor(userTier);
+
+  // Detached: do NOT await. The HTTP response returns to the client
+  // immediately after this function returns the kickoff result.
+  void runAsyncResolve({
+    userId,
+    jobId,
+    parsed,
+    existingHoldings,
+    currentCount,
+    cap,
+  });
+
+  return {
+    async: true,
+    jobId,
+    totalRows: parsed.totalRows,
+    isRoundTrip: parsed.isRoundTrip,
+    unmappedHeaders: parsed.autoMap.unmapped,
+    proposedMapping: parsed.autoMap.mapping,
+  };
+}
+
+/**
+ * CF-IMPORT-ASYNC (2026-06-21): the detached resolver. Runs resolveBatch
+ * with a throttled progress callback that updates the job doc every
+ * PROGRESS_WRITE_THROTTLE_MS. On completion, writes status:"ready" with
+ * the envelopes; on error, status:"failed" with the message.
+ */
+async function runAsyncResolve(args: {
+  userId: string;
+  jobId: string;
+  parsed: FileParseResult;
+  existingHoldings: Record<string, PortfolioHolding>;
+  currentCount: number;
+  cap: number | null;
+}): Promise<void> {
+  const { userId, jobId, parsed, existingHoldings, currentCount, cap } = args;
+  const startedAt = new Date().toISOString();
+  const totalRows = parsed.totalRows;
+
+  // Mark processing
+  await safeWriteJob(userId, jobId, (doc) => ({
+    ...doc,
+    status: "processing",
+    progress: { rowsProcessed: 0, rowsTotal: totalRows, lastProgressAt: startedAt },
+    updatedAt: startedAt,
+  }));
+
+  try {
+    let processed = 0;
+    let lastWriteAt = Date.now();
+
+    const envelopes = await resolveBatch(parsed.rows, {
+      isRoundTrip: parsed.isRoundTrip,
+      existingHoldings,
+      onRowComplete: async () => {
+        processed += 1;
+        const now = Date.now();
+        if (now - lastWriteAt < PROGRESS_WRITE_THROTTLE_MS) return;
+        lastWriteAt = now;
+        await safeWriteJob(userId, jobId, (doc) => ({
+          ...doc,
+          progress: {
+            rowsProcessed: processed,
+            rowsTotal: totalRows,
+            lastProgressAt: new Date().toISOString(),
+          },
+          updatedAt: new Date().toISOString(),
+        }));
+      },
+    });
+
+    // Compute summary + capacity projection mirror
+    const bucketCounts: Record<string, number> = {
+      "resolved-clean": 0,
+      "resolved-collision": 0,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "identity-edited": 0,
+    };
+    let defaultCommitCount = 0;
+    for (const env of envelopes) {
+      bucketCounts[env.bucket] = (bucketCounts[env.bucket] ?? 0) + 1;
+      if (env.bucket === "resolved-clean") defaultCommitCount += 1;
+    }
+    const projectedTotal = currentCount + defaultCommitCount;
+    const wouldExceed = cap !== null && projectedTotal > cap;
+
+    await safeWriteJob(userId, jobId, (doc) => ({
+      ...doc,
+      status: "ready",
+      progress: {
+        rowsProcessed: totalRows,
+        rowsTotal: totalRows,
+        lastProgressAt: new Date().toISOString(),
+      },
+      envelopes,
+      summaryAtReady: {
+        totalRows,
+        isRoundTrip: parsed.isRoundTrip,
+        bucketCounts,
+        defaultCommitCount,
+      },
+      capacityProjectionAtKickoff: {
+        currentCount,
+        cap,
+        wouldBeTotal: projectedTotal,
+        wouldExceed,
+      },
+      updatedAt: new Date().toISOString(),
+    }));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    await safeWriteJob(userId, jobId, (doc) => ({
+      ...doc,
+      status: "failed",
+      errorMessage: message,
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+}
+
+/**
+ * Safe job-doc updater: read, mutate, write. Single-writer per job by
+ * design (only the runAsyncResolve owner writes progress), so blind
+ * upsert is safe — concurrent commit flows write the user doc, never the
+ * job doc. The mutation closure receives the latest read.
+ */
+async function safeWriteJob(
+  userId: string,
+  jobId: string,
+  mutate: (doc: ImportJobDoc) => ImportJobDoc,
+): Promise<void> {
+  const existing = await readImportJob(userId, jobId);
+  if (!existing) return; // job vanished; nothing to update
+  const next = mutate(existing);
+  await writeImportJob(next);
+}
+
+/**
+ * Read job status. Materializes a stale verdict on-the-fly if the job
+ * stalled (the importer Promise can't mark itself stale; the read side
+ * decides).
+ */
+export async function readImportJobStatus(
+  userId: string,
+  jobId: string,
+): Promise<ImportJobDoc | null> {
+  const doc = await readImportJob(userId, jobId);
+  if (!doc) return null;
+  return await markStaleIfNeeded(doc);
 }
 
 /**

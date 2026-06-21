@@ -45,6 +45,7 @@ import { composePortfolioListResponse } from "../services/portfolioiq/responseAs
 import {
   buildPreview,
   commitImport,
+  readImportJobStatus,
   type CommitRequest,
 } from "../services/portfolioiq/import/importService.js";
 import type { FileFormat } from "../services/portfolioiq/import/fileParser.js";
@@ -126,6 +127,27 @@ router.post("/import/preview", async (req, res, next) => {
 
     const result = await buildPreview(userId, fileBuffer, format, userTier);
     res.json({ ok: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// CF-IMPORT-ASYNC (2026-06-21): status poll for jobs the preview kicked
+// asynchronously (>40-row imports). Status semantics:
+//   pending     — job created, not yet started
+//   processing  — resolving in flight; progress.rowsProcessed advances
+//   ready       — envelopes available; client proceeds to commit
+//   failed      — resolver errored; errorMessage carries the reason
+//   stale       — no progress within 10min; instance likely recycled,
+//                 retry the import
+router.get("/import/jobs/:jobId", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const jobId = String(req.params.jobId ?? "").trim();
+    if (!jobId) return res.status(400).json({ error: "Missing jobId" });
+    const job = await readImportJobStatus(userId, jobId);
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    res.json({ ok: true, ...job });
   } catch (err) {
     next(err);
   }
