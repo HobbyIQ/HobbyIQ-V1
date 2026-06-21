@@ -407,6 +407,149 @@ function isAutoPrefix(cardNumber: string | null | undefined): boolean {
   return CARD_NUMBER_AUTO_PREFIX_RE.test(cardNumber.trim());
 }
 
+// ───── CF-69-RESOLVER-FIX helpers (2026-06-21) ───────────────────────────────
+//
+// Two-shape catalog retry + post-fetch filtering pipeline for the hot RC
+// resolver class (Skenes 2024 Topps Chrome, Judge 2017 Topps Chrome,
+// Ohtani 2018 Topps Chrome, Acuna 2018 Topps Chrome). Replaces the prior
+// single-shape `{playerName} {releaseName}` query + case-insensitive
+// substring release filter, which mis-ranked Topps Heritage above Topps
+// Chrome (substring "Topps" wins both) and collided same-surname players
+// (Ronald Acuna Jr ↔ Luisangel Acuna).
+//
+// Helpers are exported for unit-test coverage. Each is pure and side-effect
+// free; the orchestration lives in _resolveCardId where the retry decision
+// is made.
+
+/**
+ * Build Shape Y primary catalog query: `{cardYear} {releaseName} {playerName} RC`.
+ * No `year=` filter is passed to searchCatalog because the API's year filter
+ * was empirically flaky on Skenes-class cards (CF-69 spec C2). The "RC"
+ * suffix biases the lexical relevance toward the rookie class. Returns
+ * null when releaseName is missing (forces caller to skip Shape Y and
+ * fall through to legacy).
+ */
+export function buildShapeYQuery(
+  cardYear: number | string | undefined,
+  releaseName: string | null,
+  playerName: string,
+): string | null {
+  if (!releaseName) return null;
+  const trimmedPlayer = playerName.trim();
+  if (!trimmedPlayer) return null;
+  const yearStr = cardYear != null ? String(cardYear).trim() : "";
+  const parts = [yearStr, releaseName, trimmedPlayer, "RC"].filter((p) => p.length > 0);
+  return parts.join(" ");
+}
+
+/**
+ * Build Shape S fallback catalog query: `{surname} {releaseName}`.
+ * Surname is the last whitespace-delimited token of playerName, AFTER
+ * stripping generational suffixes (Jr, Sr, II, III, IV). Without the
+ * strip, "Ronald Acuna Jr" → surname "Jr"; query "Jr Topps Chrome" —
+ * the same false-positive class as the Heritage-substring-above-Chrome
+ * inversion (Cardsight fuzzy-matches "Jr" globally).
+ *
+ * Suffixes handled: case-insensitive Jr, Sr, II, III, IV, with optional
+ * trailing period (e.g. "Jr.", "Sr."). When the only remaining token IS
+ * a suffix, surname falls back to that token (degenerate case — caller
+ * shouldn't construct a playerName of just "Jr" but we don't crash).
+ *
+ * Fires only after Shape Y exhausts (zero exact-release matches post-
+ * filter). Returns null when releaseName missing or playerName empty.
+ */
+const GENERATIONAL_SUFFIX_RE = /^(jr|sr|ii|iii|iv)\.?$/i;
+
+export function buildShapeSQuery(
+  releaseName: string | null,
+  playerName: string,
+): string | null {
+  if (!releaseName) return null;
+  const tokens = playerName.trim().split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return null;
+  // Strip trailing generational suffixes — "Ronald Acuna Jr" → surname "Acuna",
+  // "Cal Ripken Jr." → "Ripken", "Ken Griffey Jr" → "Griffey". When the player
+  // name is JUST a suffix (degenerate), keep the suffix as surname.
+  let surnameIdx = tokens.length - 1;
+  while (surnameIdx > 0 && GENERATIONAL_SUFFIX_RE.test(tokens[surnameIdx])) {
+    surnameIdx--;
+  }
+  const surname = tokens[surnameIdx];
+  return `${surname} ${releaseName}`;
+}
+
+/**
+ * Case-insensitive equality filter on releaseName. Substring match (the
+ * legacy semantic) is what mis-ranked "Topps Heritage" above "Topps Chrome"
+ * when expectedRelease was "Topps Chrome" — both contain the substring
+ * "Topps". This filter rejects Heritage on the equality check.
+ */
+export function filterExactRelease(
+  candidates: CardsightCatalogResult[],
+  expectedRelease: string,
+): CardsightCatalogResult[] {
+  const target = expectedRelease.toLowerCase().trim();
+  if (!target) return candidates;
+  return candidates.filter((c) => (c.releaseName ?? "").toLowerCase().trim() === target);
+}
+
+/**
+ * Identify "canonical base" setName values vs autograph / relic / buyback
+ * / dual / insert / variant. Needed alongside filterExactRelease because
+ * Cardsight's "2022 Topps Chrome Refractor MVP Buybacks" shares releaseName
+ * "Topps Chrome" with the canonical Judge base — only setName disambiguates.
+ *
+ * Matches: "base set", bare "base", "rookie cup".
+ * Empty/null/undefined → false (treat as non-canonical so a known canonical
+ * still gets preferred when present).
+ */
+export function isCanonicalSetName(setName: string | null | undefined): boolean {
+  if (!setName) return false;
+  const s = setName.toLowerCase().trim();
+  if (!s) return false;
+  if (s === "base") return true;
+  return /\b(base set|base|rookie cup)\b/i.test(s);
+}
+
+/**
+ * String-compare cardYear against candidate.year. CardsightCatalogResult
+ * types `year` as number, but per CF-69 C2 the wire value is a string.
+ * `String()` coercion handles both. Candidates with missing/zero/empty
+ * year PASS — don't reject for missing data (throwback/buyback edge).
+ */
+export function filterByYearMatch(
+  candidates: CardsightCatalogResult[],
+  expectedYear: number | string | undefined,
+): CardsightCatalogResult[] {
+  if (expectedYear == null || expectedYear === "") return candidates;
+  const target = String(expectedYear).trim();
+  if (!target) return candidates;
+  return candidates.filter((c) => {
+    const candYear = c.year == null || c.year === 0 ? "" : String(c.year).trim();
+    if (!candYear) return true; // missing year → don't reject
+    return candYear === target;
+  });
+}
+
+/**
+ * Name guard: every whitespace-delimited token of input.playerName must
+ * appear (case-insensitive substring) in candidate.name. Rejects the
+ * Luisangel Acuna ↔ Ronald Acuna Jr collision when playerName="Ronald
+ * Acuna Jr" — Luisangel's catalog name doesn't contain "Ronald". For a
+ * single-token playerName ("Acuna" alone), that single token must
+ * appear — same contract.
+ */
+export function passesNameGuard(
+  candidate: CardsightCatalogResult,
+  parsedPlayerName: string,
+): boolean {
+  const tokens = parsedPlayerName.toLowerCase().trim().split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length === 0) return true;
+  const candName = (candidate.name ?? "").toLowerCase();
+  if (!candName) return false;
+  return tokens.every((t) => candName.includes(t));
+}
+
 // ───── Internal: resolution worker (uncached) ────────────────────────────────
 
 async function _resolveCardId(
@@ -430,52 +573,203 @@ async function _resolveCardId(
     );
   }
 
-  const queryParts = [input.playerName.trim()];
-  if (releaseName) queryParts.push(releaseName);
-  const query = queryParts.join(" ");
+  // ───── CF-69-RESOLVER-FIX: 2-shape retry + progressive post-fetch filter ───
+  //
+  // Replaces the prior single-shape `{playerName} {releaseName}` query +
+  // case-insensitive substring release filter. The single-shape pipeline
+  // mis-ranked Topps Heritage above Topps Chrome (substring "Topps" matched
+  // both) and collided same-surname players (Ronald Acuna Jr ↔ Luisangel
+  // Acuna). The new pipeline:
+  //   1. Shape Y primary: `{year} {releaseName} {playerName} RC` (no year=
+  //      filter — empirically flaky for Skenes-class cards per CF-69 C2).
+  //   2. Filter chain: exact-release → year → name-guard → setName-canonical,
+  //      cascading down to the looser non-empty set when each tighter filter
+  //      empties.
+  //   3. Shape S fallback: `{surname} {releaseName}` — fires only when
+  //      Shape Y empties post-filter.
+  //   4. Legacy fallback: when both Y and S yield zero, run the original
+  //      `{playerName} {releaseName}` query with year= filter and the
+  //      original substring release filter (back-compat for non-flagship
+  //      queries that don't fit the 2-shape pattern).
 
-  const results = await searchCatalog(query, {
-    year: input.cardYear,
-    take: 25,
-  });
-
-  if (results.length === 0) {
-    log.warn("catalog_zero_results", {
-      query,
-      playerName: input.playerName,
-      product: input.product ?? null,
-      cardYear: input.cardYear ?? null,
-      endpoint: "resolveCardId",
-    });
-    warnings.push(`No Cardsight catalog results for query "${query}".`);
-    return { cardId: null, parallelId: null, matchConfidence: "none", warnings };
+  /** Apply the full progressive filter chain to a candidate set and return
+   * the most-filtered non-empty result. Returns [] when EITHER:
+   *   - exact-release gate empties (no candidates match the user-stated
+   *     release), OR
+   *   - name-guard empties (no candidate's name contains all user-tokens —
+   *     i.e. only namesakes like Luisangel survived when user meant Ronald
+   *     Acuna Jr).
+   *
+   * Name-guard is a SAFETY filter, not a relevance tier — when it empties,
+   * we never fall back to the namesake-containing yearFiltered set. Better
+   * to return [] (caller retries Shape S or falls through to legacy with
+   * potentially-wrong-but-different-shape match) than to ship the wrong
+   * person silently. CF-69-FINISH refinement after the agent's initial
+   * pass cascaded to yearFiltered on name-guard empty — that would have
+   * shipped Luisangel when only Luisangel matched release+year and the
+   * user typed Ronald. Drew caught it pre-commit. */
+  function applyFilterChain(
+    pool: CardsightCatalogResult[],
+    expectedRelease: string,
+  ): CardsightCatalogResult[] {
+    const releaseFiltered = filterExactRelease(pool, expectedRelease);
+    if (releaseFiltered.length === 0) return [];
+    const yearFiltered = filterByYearMatch(releaseFiltered,
+      typeof input.cardYear === "string" ? input.cardYear : input.cardYear);
+    // Year cascade — fall back to releaseFiltered when year-match empties
+    // (year is a relevance tier, not safety; candidate without year metadata
+    // shouldn't be discarded).
+    const nameGuardInput = yearFiltered.length > 0 ? yearFiltered : releaseFiltered;
+    const nameGuarded = nameGuardInput.filter((c) => passesNameGuard(c, input.playerName));
+    // Name-guard SAFETY: when empty, return [] — do NOT fall back to
+    // yearFiltered / releaseFiltered (which would contain rejected namesakes).
+    // Caller (Shape S or legacy) handles the empty case.
+    if (nameGuarded.length === 0) return [];
+    // setName-canonical preference on the name-guarded set; fall back to
+    // name-guarded when canonical empties (canonical might just not
+    // pattern-match — e.g. "Chrome Prospects" — don't lose the name-guarded
+    // set just because setName isn't strictly "Base Set").
+    const canonical = nameGuarded.filter((c) => isCanonicalSetName(c.setName));
+    return canonical.length > 0 ? canonical : nameGuarded;
   }
 
-  let candidates: CardsightCatalogResult[] = results;
+  let candidates: CardsightCatalogResult[] = [];
+  let query = "";
+  let resultsForDownstream: CardsightCatalogResult[] = [];
 
-  // Release-name filter (case-insensitive exact match). Falls through to
-  // effectiveProduct (post-dispatch) when the dictionary misses — gives
-  // unmapped products a chance to still narrow against catalog's releaseName
-  // field. Using effectiveProduct rather than input.product so the dispatch
-  // also informs the post-fetch narrowing step, not just the dictionary lookup.
-  if (effectiveProduct) {
-    const expectedRelease = (releaseName ?? effectiveProduct).toLowerCase().trim();
-    const exactMatch = results.filter(
-      (r) => r.releaseName?.toLowerCase() === expectedRelease,
-    );
-    if (exactMatch.length > 0) {
-      candidates = exactMatch;
+  const expectedRelease = releaseName ?? effectiveProduct ?? null;
+  const shapeYQuery = effectiveProduct
+    ? buildShapeYQuery(input.cardYear as number | string | undefined, releaseName, input.playerName)
+    : null;
+
+  if (shapeYQuery && expectedRelease) {
+    const shapeYResults = await searchCatalog(shapeYQuery, { take: 20 });
+    const filteredY = applyFilterChain(shapeYResults, expectedRelease);
+    if (filteredY.length > 0) {
+      candidates = filteredY;
+      resultsForDownstream = shapeYResults;
+      query = shapeYQuery;
     } else {
-      log.warn("release_filter_no_exact_match", {
-        query,
-        expectedRelease,
-        dictHit: releaseName !== null,
-        topCandidates: results.slice(0, 3).map((r) => r.releaseName ?? "").join(" | "),
-        endpoint: "resolveCardId",
-      });
-      warnings.push(`No candidates matched release "${expectedRelease}" — picking from top-ranked results.`);
+      // Shape Y empty post-filter — try Shape S.
+      const shapeSQuery = buildShapeSQuery(releaseName, input.playerName);
+      if (shapeSQuery) {
+        log.info("cf69_two_shape_retry_used", {
+          shapeYQuery,
+          shapeSQuery,
+          shapeYResultCount: shapeYResults.length,
+          endpoint: "resolveCardId",
+        });
+        const shapeSResults = await searchCatalog(shapeSQuery, { take: 20 });
+        const filteredS = applyFilterChain(shapeSResults, expectedRelease);
+        if (filteredS.length > 0) {
+          candidates = filteredS;
+          resultsForDownstream = shapeSResults;
+          query = shapeSQuery;
+        } else {
+          log.warn("cf69_zero_exact_release_after_filters", {
+            shapeYQuery,
+            shapeSQuery,
+            shapeYResultCount: shapeYResults.length,
+            shapeSResultCount: shapeSResults.length,
+            expectedRelease,
+            endpoint: "resolveCardId",
+          });
+        }
+      }
     }
   }
+
+  // Legacy fallback — both shapes failed (or shape-Y was never built because
+  // no effectiveProduct). Run the original single-shape pipeline so non-
+  // flagship queries that don't fit the 2-shape pattern still resolve.
+  if (candidates.length === 0) {
+    const legacyParts = [input.playerName.trim(), releaseName].filter(Boolean) as string[];
+    const legacyQuery = legacyParts.join(" ");
+    query = legacyQuery;
+    const legacyResults = await searchCatalog(legacyQuery, {
+      year: input.cardYear,
+      take: 25,
+    });
+
+    if (legacyResults.length === 0) {
+      log.warn("catalog_zero_results", {
+        query: legacyQuery,
+        playerName: input.playerName,
+        product: input.product ?? null,
+        cardYear: input.cardYear ?? null,
+        endpoint: "resolveCardId",
+      });
+      warnings.push(`No Cardsight catalog results for query "${legacyQuery}".`);
+      return { cardId: null, parallelId: null, matchConfidence: "none", warnings };
+    }
+
+    resultsForDownstream = legacyResults;
+    candidates = legacyResults;
+
+    // Legacy release-name filter (case-insensitive exact match — preserves
+    // the pre-CF-69 contract for back-compat).
+    if (effectiveProduct) {
+      const expectedReleaseLegacy = (releaseName ?? effectiveProduct).toLowerCase().trim();
+      const exactMatch = legacyResults.filter(
+        (r) => r.releaseName?.toLowerCase() === expectedReleaseLegacy,
+      );
+      if (exactMatch.length > 0) {
+        candidates = exactMatch;
+      } else {
+        log.warn("release_filter_no_exact_match", {
+          query: legacyQuery,
+          expectedRelease: expectedReleaseLegacy,
+          dictHit: releaseName !== null,
+          topCandidates: legacyResults.slice(0, 3).map((r) => r.releaseName ?? "").join(" | "),
+          endpoint: "resolveCardId",
+        });
+        warnings.push(`No candidates matched release "${expectedReleaseLegacy}" — picking from top-ranked results.`);
+      }
+    }
+    // CF-69-FINISH: legacy name-guard SAFETY filter — gated on 2+ token
+    // playerName.
+    //
+    // Rationale: the name-guard only DISAMBIGUATES a namesake when the
+    // query carries the distinguishing token. "Ronald Acuna" (2 tokens)
+    // rejects Luisangel because Luisangel's candidate name doesn't
+    // contain "Ronald". But bare "Acuna" (1 token) matches both Ronald
+    // AND Luisangel — both candidate names contain "acuna" — so the
+    // guard is structurally INERT on single-token namesake collisions.
+    //
+    // Gating on 2+ tokens applies the guard exactly where it can do its
+    // job and skips it where it'd no-op. Covers the named-namesake
+    // classes (Acuña Jr, Tatis Jr, Guerrero Jr — all multi-token).
+    //
+    // Known residual (intentional, documented by single-token-namesake
+    // test): single-token playerName at this legacy escape-hatch can
+    // ship (a) a single-token namesake best-guess (intended: query is
+    // genuinely ambiguous), or (b) a gross fuzzy mismatch (pre-CF-69
+    // legacy semantics retained; not a regression).
+    const playerTokens = input.playerName.trim().split(/\s+/).filter((t) => t.length > 0);
+    if (playerTokens.length >= 2) {
+      const legacyNameGuarded = candidates.filter((c) => passesNameGuard(c, input.playerName));
+      if (legacyNameGuarded.length === 0) {
+        log.warn("cf69_legacy_name_guard_empty", {
+          query: legacyQuery,
+          playerName: input.playerName,
+          rejectedCount: candidates.length,
+          rejectedSample: candidates.slice(0, 3).map((c) => c.name ?? "?").join(" | "),
+          endpoint: "resolveCardId",
+        });
+        warnings.push(
+          `Legacy fallback had ${candidates.length} candidates but none matched playerName "${input.playerName}" — refusing to ship namesake.`,
+        );
+        return { cardId: null, parallelId: null, matchConfidence: "none", warnings };
+      }
+      candidates = legacyNameGuarded;
+    }
+  }
+
+  // `results` retained as alias for any downstream code that referenced it
+  // (sub-pattern filter, etc.) — points at the raw catalog response of the
+  // shape we ultimately used.
+  const results = resultsForDownstream;
+  void results;
 
   // Sub-pattern filter (existing CARDSIGHT_SET_PATTERNS).
   if (input.product) {

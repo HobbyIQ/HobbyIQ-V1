@@ -25,8 +25,22 @@ type Catalog = Awaited<ReturnType<typeof cs.searchCatalog>>[number];
 type Detail = Awaited<ReturnType<typeof cs.getCardDetail>>;
 type Pricing = Awaited<ReturnType<typeof cs.getPricing>>;
 
-function catalog(id: string, releaseName: string, setName = "Base Set", year = "2017"): Catalog {
-  return { id, name: "x", number: "", releaseName, setName, year: Number(year) };
+/**
+ * CF-69-FINISH: module-level mutable for the current test's input
+ * playerName. catalog() defaults `name` to this so candidates pass the
+ * legacy name-guard (CF-69-FINISH 2+ token gate) without per-call
+ * boilerplate. Multi-token tests set at top; `beforeEach` resets to "x".
+ */
+let _testPlayer = "x";
+
+function catalog(
+  id: string,
+  releaseName: string,
+  setName = "Base Set",
+  year = "2017",
+  name?: string,
+): Catalog {
+  return { id, name: name ?? _testPlayer, number: "", releaseName, setName, year: Number(year) };
 }
 
 function detail(id: string, number: string, parallels: Detail["parallels"] = []): Detail {
@@ -49,13 +63,28 @@ function pricing(totalRecords: number): Pricing {
   };
 }
 
+// CF-69-RESOLVER-FIX: helper for warming-target mocks. Shape Y is
+// `{year} {releaseName} {playerName} RC` — extracting the canonical
+// releaseName lets the mock return a matching candidate so the filter
+// chain exits on Shape Y (no Shape S / legacy fallback retry).
+function releaseNameForQuery(query: string): string {
+  if (query.includes("Topps Chrome Update")) return "Topps Chrome Update";
+  if (query.includes("Bowman Draft Chrome")) return "Bowman Draft Chrome";
+  if (query.includes("Topps Update")) return "Topps Update";
+  if (query.includes("Bowman Chrome")) return "Bowman Chrome";
+  return "Topps Update";
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   __resolveCardIdInternals.clearCache();
+  // CF-69-FINISH: reset to placeholder. Multi-token tests override.
+  _testPlayer = "x";
 });
 
 describe("resolveCardId — defect #1 (single candidate picked) + defect #5 (catalog duplicates)", () => {
   it("picks the single candidate when release filter narrows to one — no pricing probe", async () => {
+    _testPlayer = "Player X";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("bowman-1", "Bowman", "Topps 100"),
       catalog("topps-update-1", "Topps Update", "Base Set"),
@@ -71,6 +100,7 @@ describe("resolveCardId — defect #1 (single candidate picked) + defect #5 (cat
   });
 
   it("picks the highest-records candidate when multiple data-bearing siblings exist", async () => {
+    _testPlayer = "Player X";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("dup-1", "Topps Update"),
       catalog("dup-2", "Topps Update"),
@@ -90,6 +120,7 @@ describe("resolveCardId — defect #1 (single candidate picked) + defect #5 (cat
   });
 
   it("skips empty siblings and picks the only data-bearing candidate (defect #5 core)", async () => {
+    _testPlayer = "Mike Trout";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("empty-1", "Topps Update"),
       catalog("data-bearing", "Topps Update"),
@@ -107,6 +138,7 @@ describe("resolveCardId — defect #1 (single candidate picked) + defect #5 (cat
   });
 
   it("falls back to candidates[0] (with warning) when all top-3 are empty", async () => {
+    _testPlayer = "Player Z";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("empty-1", "Topps Update"),
       catalog("empty-2", "Topps Update"),
@@ -134,6 +166,7 @@ describe("resolveCardId — defect #1 (single candidate picked) + defect #5 (cat
 
 describe("resolveCardId — cardNumber disambiguation via detail probe", () => {
   it("narrows duplicate candidates by detail.number when cardNumber provided", async () => {
+    _testPlayer = "Mike Trout";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("dup-a", "Topps Update"),
       catalog("dup-b", "Topps Update"),
@@ -198,7 +231,12 @@ describe("resolveCardId — cardNumber disambiguation via detail probe", () => {
 
 describe("resolveCardId — LRU cache behavior", () => {
   it("returns cached result on second call without re-hitting searchCatalog", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([catalog("only-id", "Topps Update")]);
+    // CF-69-FINISH: candidate name must include the playerName tokens so
+    // name-guard passes on Shape Y (otherwise the resolver falls through to
+    // S + legacy, inflating call count past 1).
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("only-id", "Topps Update", "Base Set", "2017", "Cache Test"),
+    ]);
 
     const input = { playerName: "Cache Test", cardYear: 2017, product: "topps update" };
     const r1 = await resolveCardId(input);
@@ -217,7 +255,11 @@ describe("resolveCardId — LRU cache behavior", () => {
     await resolveCardId(input);
     await resolveCardId(input);
 
-    expect(cs.searchCatalog).toHaveBeenCalledTimes(2);
+    // CF-69-RESOLVER-FIX: each resolveCardId call fires up to 3
+    // searchCatalog calls (Shape Y → Shape S retry → legacy fallback)
+    // when all return zero results. Two cold calls × 3 = 6. The core
+    // assertion is that the cache stays empty (no null pinning).
+    expect(cs.searchCatalog).toHaveBeenCalledTimes(6);
     expect(__resolveCardIdInternals.cacheSize()).toBe(0);
   });
 
@@ -234,7 +276,12 @@ describe("resolveCardId — LRU cache behavior", () => {
   });
 
   it("normalizes player-name whitespace + casing in cache key", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([catalog("c", "Topps Update")]);
+    // CF-69-FINISH: name-guard requires candidate name to contain "mike"+"trout"
+    // tokens; the placeholder "x" would fall through to S+legacy and inflate
+    // the searchCatalog count to 3 per cold call (6 total here vs expected 1).
+    (cs.searchCatalog as any).mockResolvedValue([
+      catalog("c", "Topps Update", "Base Set", "2011", "Mike Trout"),
+    ]);
 
     await resolveCardId({ playerName: "Mike Trout", cardYear: 2011, product: "topps update" });
     await resolveCardId({ playerName: "  mike   trout  ", cardYear: 2011, product: "TOPPS UPDATE" });
@@ -245,6 +292,7 @@ describe("resolveCardId — LRU cache behavior", () => {
 
 describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RELEASES)", () => {
   it("'topps update' maps to 'Topps Update' (new entry — covers Trout/Ohtani/Judge demo cards)", async () => {
+    _testPlayer = "Mike Trout";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("trout-tu", "Topps Update"),
     ]);
@@ -256,15 +304,17 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
     });
 
     expect(r.cardId).toBe("trout-tu");
-    // searchCatalog should have been called with query containing the
-    // dictionary-resolved release name (not the raw product string).
+    // CF-69-RESOLVER-FIX: query is now Shape Y format
+    // `{year} {releaseName} {playerName} RC` (no year= filter — flaky for
+    // Skenes-class cards per CF-69 C2).
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Mike Trout Topps Update",
-      expect.objectContaining({ year: 2011 }),
+      "2011 Topps Update Mike Trout RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
   it("'bowman chrome' maps to 'Bowman Chrome' (corrected from prior 'Bowman Draft Chrome' mismap)", async () => {
+    _testPlayer = "Mike Trout";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("trout-bc", "Bowman Chrome"),
     ]);
@@ -277,12 +327,13 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
 
     expect(r.cardId).toBe("trout-bc");
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Mike Trout Bowman Chrome",
-      expect.objectContaining({ year: 2024 }),
+      "2024 Bowman Chrome Mike Trout RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
   it("'bowman draft chrome' still maps to 'Bowman Draft Chrome' (existing entry — no regression)", async () => {
+    _testPlayer = "Caleb Bonemer";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("bonemer-bdc", "Bowman Draft Chrome"),
     ]);
@@ -295,12 +346,13 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
 
     expect(r.cardId).toBe("bonemer-bdc");
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Caleb Bonemer Bowman Draft Chrome",
-      expect.objectContaining({ year: 2024 }),
+      "2024 Bowman Draft Chrome Caleb Bonemer RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
   it("'topps chrome update' still maps to 'Topps Chrome Update' (existing entry — no regression)", async () => {
+    _testPlayer = "Bobby Witt Jr";
     (cs.searchCatalog as any).mockResolvedValue([
       catalog("witt-tcu", "Topps Chrome Update"),
     ]);
@@ -313,8 +365,8 @@ describe("resolveCardId — Phase 2 dictionary additions (COMPIQ_TO_CARDSIGHT_RE
 
     expect(r.cardId).toBe("witt-tcu");
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Bobby Witt Jr Topps Chrome Update",
-      expect.objectContaining({ year: 2022 }),
+      "2022 Topps Chrome Update Bobby Witt Jr RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 });
@@ -339,8 +391,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
     });
 
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Bobby Witt Jr Bowman Draft Chrome",
-      expect.objectContaining({ year: 2020 }),
+      "2020 Bowman Draft Chrome Bobby Witt Jr RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
@@ -355,8 +407,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
     });
 
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Caleb Bonemer Bowman Draft Chrome",
-      expect.objectContaining({ year: 2024 }),
+      "2024 Bowman Draft Chrome Caleb Bonemer RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
@@ -371,8 +423,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
     });
 
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Mike Trout Bowman Chrome",
-      expect.objectContaining({ year: 2024 }),
+      "2024 Bowman Chrome Mike Trout RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
@@ -387,8 +439,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
     });
 
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Mike Trout Topps Update",
-      expect.objectContaining({ year: 2011 }),
+      "2011 Topps Update Mike Trout RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
@@ -402,8 +454,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
     });
 
     expect(cs.searchCatalog).toHaveBeenCalledWith(
-      "Bobby Witt Jr Bowman Chrome",
-      expect.objectContaining({ year: 2024 }),
+      "2024 Bowman Chrome Bobby Witt Jr RC",
+      expect.objectContaining({ take: 20 }),
     );
   });
 
@@ -422,8 +474,8 @@ describe("resolveCardId — Phase 2 v2 defect #12 (Bowman Chrome cardNumber-patt
       });
 
       expect(cs.searchCatalog).toHaveBeenCalledWith(
-        "Test Player Bowman Draft Chrome",
-        expect.objectContaining({ year: 2024 }),
+        "2024 Bowman Draft Chrome Test Player RC",
+        expect.objectContaining({ take: 20 }),
       );
     }
   });
@@ -480,19 +532,30 @@ describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load red
   // MAX_DETAIL_PROBES=5 getCardDetail calls per target = 50 extra Cardsight
   // calls = rate-limit storm).
 
+  // CF-69-RESOLVER-FIX: warming mocks now infer releaseName from the
+  // canonical strings present in the Shape Y query so the filter chain
+  // exits on Shape Y and avoids the legacy fallback retry path (which
+  // would inflate searchCatalog call counts beyond the 10-per-warming
+  // contract). See module-level `releaseNameForQuery`.
+
   it("calls searchCatalog once per warming target and never calls getCardDetail (no cardNumber means no detail-probe)", async () => {
     // Mock searchCatalog to return a single candidate per warming target so
     // the cardNumber detail-probe step (`candidates.length > 1`) doesn't fire
     // for an unrelated reason.
+    // CF-69-FINISH: pass the full query as candidate name so the warming
+    // target's player tokens are present and pass the name-guard safety
+    // filter (otherwise resolver falls through to S+legacy on every warming
+    // target, inflating call count 3×).
     (cs.searchCatalog as any).mockImplementation((query: string) =>
-      Promise.resolve([catalog(`only-${query.slice(0, 10)}`, "Topps Update")]),
+      Promise.resolve([catalog(`only-${query.slice(0, 10)}`, releaseNameForQuery(query), "Base Set", "2017", query)]),
     );
     (cs.getCardDetail as any).mockResolvedValue(detail("x", "?"));
     (cs.getPricing as any).mockResolvedValue(pricing(0));
 
     await warmResolveCardIdCache();
 
-    // 10 warming targets x 1 searchCatalog call each
+    // 10 warming targets x 1 searchCatalog call each (Shape Y resolves
+    // because releaseName matches; no Shape S or legacy fallback fires).
     expect(cs.searchCatalog).toHaveBeenCalledTimes(10);
     // Defect #10 acceptance — NO detail probes during warming
     expect(cs.getCardDetail).not.toHaveBeenCalled();
@@ -506,7 +569,8 @@ describe("warmResolveCardIdCache — Phase 2 v2 defect #10 (warming API load red
     const inputs: Array<{ query: string; year: unknown }> = [];
     (cs.searchCatalog as any).mockImplementation((query: string, opts: any) => {
       inputs.push({ query, year: opts?.year });
-      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+      // CF-69-FINISH: candidate name = query so player tokens pass name-guard.
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, releaseNameForQuery(query), "Base Set", "2017", query)]);
     });
 
     await warmResolveCardIdCache();
@@ -536,7 +600,8 @@ describe("warmResolveCardIdCache — defect #13 v2 (serialized warming, single-c
       // Add small delay to amplify the parallel-vs-serial signal
       await new Promise((r) => setTimeout(r, 5));
       callOrder.push(`end:${query.slice(0, 20)}`);
-      return [catalog(`c-${query.slice(0, 8)}`, "x")];
+      // CF-69-FINISH: candidate name = query so player tokens pass name-guard.
+      return [catalog(`c-${query.slice(0, 8)}`, releaseNameForQuery(query), "Base Set", "2017", query)];
     });
     (cs.getPricing as any).mockResolvedValue(pricing(0));
 
@@ -555,13 +620,14 @@ describe("warmResolveCardIdCache — defect #13 v2 (serialized warming, single-c
   });
 
   it("warming uses full MAX_PRICING_PROBES=8 (same as request-side — no asymmetric cap)", async () => {
+    _testPlayer = "Shohei Ohtani";
     const cands = Array.from({ length: 16 }, (_, i) => catalog(`w${i}`, "Topps Update"));
     // Catalog mock returns 16 candidates only for one specific warming target;
     // other targets get single-candidate (no pricing-probe fanout) to keep
     // the math clean.
     (cs.searchCatalog as any).mockImplementation((query: string) => {
       if (query.includes("Shohei Ohtani")) return Promise.resolve(cands);
-      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, releaseNameForQuery(query))]);
     });
     (cs.getPricing as any).mockResolvedValue(pricing(10));
 
@@ -574,11 +640,12 @@ describe("warmResolveCardIdCache — defect #13 v2 (serialized warming, single-c
   });
 
   it("Ohtani-shape deep-ranked card resolves correctly during warming (defect #13 v2 acceptance)", async () => {
+    _testPlayer = "Shohei Ohtani";
     // 16 candidates; data-bearing at position 4 (o3). Cap=8 reaches it.
     const cands = Array.from({ length: 16 }, (_, i) => catalog(`o${i}`, "Topps Update"));
     (cs.searchCatalog as any).mockImplementation((query: string) => {
       if (query.includes("Shohei Ohtani")) return Promise.resolve(cands);
-      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, "x")]);
+      return Promise.resolve([catalog(`c-${query.slice(0, 8)}`, releaseNameForQuery(query))]);
     });
     (cs.getPricing as any).mockImplementation((id: string) => {
       const recs = id === "o3" ? 600 : id === "o9" ? 1200 : 0;
@@ -602,6 +669,7 @@ describe("warmResolveCardIdCache — defect #13 v2 (serialized warming, single-c
   });
 
   it("request-side resolution uses MAX_PRICING_PROBES=8 (single cap, no asymmetry)", async () => {
+    _testPlayer = "Different Player";
     const cands = Array.from({ length: 16 }, (_, i) => catalog(`r${i}`, "Topps Update"));
     (cs.searchCatalog as any).mockResolvedValue(cands);
     (cs.getPricing as any).mockResolvedValue(pricing(10));
@@ -725,6 +793,7 @@ describe("resolveCardId — parallel resolution preserved", () => {
 // parallels: "Refractor" still does NOT match "Chrome Blue Refractor".
 describe("resolveCardId — parallelMatches strips parenthesized wrappers (Tiffany case)", () => {
   it("Tiffany input matches 'Limited Edition (Tiffany)' parallel via wrapper-strip", async () => {
+    _testPlayer = "Greg Maddux";
     (cs.searchCatalog as any).mockResolvedValue([catalog("maddux-card", "Topps Traded")]);
     (cs.getCardDetail as any).mockResolvedValue({
       id: "maddux-card",

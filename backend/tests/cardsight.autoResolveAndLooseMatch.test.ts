@@ -43,14 +43,25 @@ type Catalog = Awaited<ReturnType<typeof cs.searchCatalog>>[number];
 type Detail = Awaited<ReturnType<typeof cs.getCardDetail>>;
 type Pricing = Awaited<ReturnType<typeof cs.getPricing>>;
 
+/**
+ * CF-69-FINISH: module-level mutable for the current test's input
+ * playerName. catalogEntry / catalogEntryLite default `name` to this so
+ * candidates pass the legacy name-guard (CF-69-FINISH 2+ token gate)
+ * without per-call boilerplate. Each multi-token test sets `_testPlayer`
+ * at its top; `beforeEach` resets to "x" for single-token tests (where
+ * the gate is inert and the placeholder is fine).
+ */
+let _testPlayer = "x";
+
 function catalogEntry(
   id: string,
   number: string,
   releaseName: string,
   setName = "Base Set",
   year = 2024,
+  name?: string,
 ): Catalog {
-  return { id, name: "x", number, releaseName, setName, year };
+  return { id, name: name ?? _testPlayer, number, releaseName, setName, year };
 }
 
 /**
@@ -68,8 +79,9 @@ function catalogEntryLite(
   releaseName: string,
   setName = "Base Set",
   year = 2024,
+  name?: string,
 ): Catalog {
-  return { id, name: "x", number: "", releaseName, setName, year };
+  return { id, name: name ?? _testPlayer, number: "", releaseName, setName, year };
 }
 
 function detailWithParallels(
@@ -103,6 +115,10 @@ function pricing(totalRecords: number): Pricing {
 beforeEach(() => {
   vi.clearAllMocks();
   __resolveCardIdInternals.clearCache();
+  // CF-69-FINISH: reset _testPlayer to placeholder. Multi-token tests
+  // override at their top; single-token tests leave it (legacy name-guard
+  // 2+ token gate skips them).
+  _testPlayer = "x";
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -111,6 +127,7 @@ beforeEach(() => {
 
 describe("② RE-RESOLVE — auto-prefix correction picks the RIGHT card", () => {
   it("Bonemer (user wants BASE Gold, scored picks AUTO CPA-CBO) → re-resolves to BASE BD-CBO", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Catalog returns the AUTO base prefix card first (Cardsight's ranking
     // priors), but the BASE prospect card is also present in the candidate
     // pool. With user.isAuto=false, the re-resolve guard must swap to the
@@ -158,6 +175,7 @@ describe("② RE-RESOLVE — auto-prefix correction picks the RIGHT card", () =>
   });
 
   it("Tommy White (user wants AUTO Mini-Diamond, scored picks BASE BCP-251) → re-resolves to AUTO CPA-251", async () => {
+    _testPlayer = "Tommy White";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("bcp-251-id", "BCP-251", "Bowman Chrome", "Prospects", 2025),
       catalogEntry("cpa-251-id", "CPA-251", "Bowman Chrome", "Prospect Autographs", 2025),
@@ -202,6 +220,7 @@ describe("② RE-RESOLVE — auto-prefix correction picks the RIGHT card", () =>
   });
 
   it("Gage Wood (user wants AUTO Gold, scored picks BASE BDC-4) → re-resolves to AUTO CPA-GW", async () => {
+    _testPlayer = "Gage Wood";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("bdc-4-id", "BDC-4", "Bowman Draft", "Chrome", 2025),
       catalogEntry("cpa-gw-id", "CPA-GW", "Bowman Draft", "Chrome Auto", 2025),
@@ -249,6 +268,7 @@ describe("② RE-RESOLVE — auto-prefix correction picks the RIGHT card", () =>
 
 describe("① TOKENIZATION — loose contiguous-prefix match with shortest-name preference", () => {
   it('"gold" binds to "Gold Refractor" when no exact-match parallel exists', async () => {
+    _testPlayer = "Some Player";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("only-id", "BD-X", "Bowman Draft"),
     ]);
@@ -273,6 +293,7 @@ describe("① TOKENIZATION — loose contiguous-prefix match with shortest-name 
   });
 
   it('shorter-name preference: "gold" picks "Gold Refractor" over "Gold Wave Refractor" / "Shimmer Gold Refractor"', async () => {
+    _testPlayer = "Some Player";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("only-id", "BD-X", "Bowman Draft"),
     ]);
@@ -300,6 +321,7 @@ describe("① TOKENIZATION — loose contiguous-prefix match with shortest-name 
   });
 
   it('hyphen + space + case-fold: "mini diamond" matches "MIni-Diamond Refractor"', async () => {
+    _testPlayer = "Some Player";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("only-id", "BD-X", "Bowman Chrome"),
     ]);
@@ -329,6 +351,7 @@ describe("① TOKENIZATION — loose contiguous-prefix match with shortest-name 
 
 describe("③ GUARD HARDENING — when re-resolve can't correct the auto/base mismatch, loose matcher is DISABLED", () => {
   it("Bonemer-style with NO base alternative in pool → parallelId stays null + parallelNotFound warning emitted (Q8'' guard preserved)", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Only the AUTO base card exists in the candidate pool. The
     // re-resolve guard can't find a base-side alternative, so it
     // forces allowLooseParallelMatch=false. The strict matcher then
@@ -369,6 +392,7 @@ describe("③ GUARD HARDENING — when re-resolve can't correct the auto/base mi
   });
 
   it("auto/base match: when chosen card's auto-prefix MATCHES input.isAuto, loose matcher stays ENABLED (Bonemer auto + Gold)", async () => {
+    _testPlayer = "Caleb Bonemer";
     // User asked for AUTO + Gold; the resolver landed on CPA-CBO which
     // IS auto. allowLoose=true → loose prefix-match binds "gold" →
     // "Gold Refractor". No re-resolve needed; matcher loosens; no
@@ -404,6 +428,7 @@ describe("③ GUARD HARDENING — when re-resolve can't correct the auto/base mi
 
 describe("SAFETY — no false matches + sales-sparsity unaffected", () => {
   it("genuinely-absent parallel: user 'Aqua' on a card with no Aqua-prefixed parallel → parallelNotFound (no false bind)", async () => {
+    _testPlayer = "Some Player";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("only-id", "BD-X", "Bowman Draft"),
     ]);
@@ -433,6 +458,7 @@ describe("SAFETY — no false matches + sales-sparsity unaffected", () => {
   });
 
   it('defect-#2 spirit preserved by PREFIX semantics: "Wave" does NOT bind to "Blue Wave Refractor" (catalog tokens[0]="blue")', async () => {
+    _testPlayer = "Some Player";
     (cs.searchCatalog as any).mockResolvedValue([
       catalogEntry("only-id", "BD-X", "Bowman Draft"),
     ]);
@@ -459,6 +485,7 @@ describe("SAFETY — no false matches + sales-sparsity unaffected", () => {
   });
 
   it("sales-sparsity case (47% bucket): parallel binds, sparse-comps fate is downstream — resolver itself unaffected", async () => {
+    _testPlayer = "Jackson Holliday";
     // Models the breadth probe's "no-recent-comps" bucket: resolver
     // correctly identifies BD-X with a Blue Refractor parallel, binds
     // the parallel via strict match; the eventual 0-comp outcome is a
@@ -505,6 +532,7 @@ describe("SAFETY — no false matches + sales-sparsity unaffected", () => {
 
 describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCatalog results", () => {
   it("Bonemer-class repro: searchCatalog number='' + getCardDetail populates 'CPA-CBO' → probe fires → mismatch detected → no pool correction → allowLoose=false → parallelId null", async () => {
+    _testPlayer = "Caleb Bonemer";
     // 2 candidates, BOTH returned as lite records (number="") from
     // searchCatalog. Both have pricing data → pool.length>1 → probe
     // condition satisfied. Detail probe populates SKU for chosen only;
@@ -566,6 +594,7 @@ describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCata
   });
 
   it("probe-skip when chosen.number already populated: guard runs synchronously on the search-time SKU; no extra getCardDetail call for the probe", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Single candidate with SKU populated from searchCatalog — the fast
     // path. The probe gate (chosen.number==="") is NOT met → no probe.
     // resolveParallelOnCandidate will call getCardDetail ONCE for the
@@ -598,6 +627,7 @@ describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCata
   });
 
   it("probe-skip when input.isAuto is undefined: guard short-circuits at the input check, no probe even on lite record", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Legacy caller (no isAuto signal) → guard returns immediately at
     // the input.isAuto===undefined gate → no probe, regardless of
     // chosen.number being empty.
@@ -633,6 +663,7 @@ describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCata
   });
 
   it("probe-skip when pool.length === 1: probe gate requires pool.length > 1 (swap is impossible with one candidate)", async () => {
+    _testPlayer = "Some Player";
     // Single-candidate path (Step B). pool=[] at the guard call site.
     // Probe gate `pool.length > 1` not met → no probe. allowLoose
     // depends on isAutoPrefix(""), which is false. input.isAuto=false
@@ -669,6 +700,7 @@ describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCata
   });
 
   it("probe failure (notFound): defensive allowLoose=false fallback locks the safe path", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Probe fires but Cardsight detail returns notFound (e.g. cardId
     // exists in catalog index but detail endpoint 404s). We can't
     // verify auto-ness → treat as uncorrectable mismatch.
@@ -707,6 +739,7 @@ describe("CATALOG-NUMBER-PROBE — gated detail probe for lite-record searchCata
   });
 
   it("probe returns ALSO-empty number: defensive allowLoose=false (degraded-but-safe path)", async () => {
+    _testPlayer = "Caleb Bonemer";
     // Cardsight detail endpoint exists for this cardId but returns
     // a record where the `number` field is also empty (Cardsight has
     // catalog records that are not fully populated). Probe can't get
