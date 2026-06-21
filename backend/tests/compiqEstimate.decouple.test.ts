@@ -332,36 +332,119 @@ describe("CF-DECOUPLE — anti-regression: Bowman CPA at sites #1/#3 unchanged",
   });
 });
 
-describe("CF-DECOUPLE — subset hardcode boundary (the (B) scope marker)", () => {
-  // These tests document the explicit (B) scope decision: subset stays
-  // hardcoded to "Chrome Prospect Autographs" at all 3 sites. The
-  // Bowman-non-CPA residual is the CF-DECOUPLE-2 target — once a
-  // cardsightSetName → BowmanFamilySubset normalizer is properly
-  // budgeted (it's the same normalizer the calibration engine will
-  // want — see CF-CAT-RECON HALT step 3 + CF-X header comment plural/
-  // singular note).
-  //
-  // If these tests start failing, CF-DECOUPLE-2 either landed (intended)
-  // or the subset hardcode was accidentally touched (unintended). The
-  // test failure message points the next reviewer at CF-DECOUPLE-2.
-  //
-  // We assert the subset hardcode by code grep rather than a runtime
-  // wire assertion — the engine doesn't surface the subset to the wire,
-  // and runtime asserting via a mock would require deeper test plumbing
-  // than this CF's budget.
+describe("CF-DECOUPLE-2 — production-accurate integration coverage", () => {
+  beforeAll(async () => {
+    adminSession = await signIn("HobbyIQ", "Baseball25");
+  });
 
-  it("DOCUMENT: subset hardcoded at the 5 mechanism1 + Build-B call sites (CF-DECOUPLE-2 target)", async () => {
-    // Read the source and assert the hardcode is present. When
-    // CF-DECOUPLE-2 lands, this test should be deleted (not relaxed).
+  it("CPA HOLDING — production-accurate Cardsight setName 'Chrome Prospects Autographs' (plural) normalizes to 'Chrome Prospect Autographs' (singular), Hartman path unchanged", async () => {
+    // Pre-CF-DECOUPLE-2 fixtures used set:"Bowman" (the release) which
+    // was incorrect — production `fetched.card.set` carries the SUBSET
+    // (compiqEstimate.service.ts:1345 explicitly: "c.set.name is the
+    // literal subset name 'Base Set'"). This test uses the production-
+    // accurate fixture and asserts the normalizer + lookup roundtrip.
+    process.env.CARD_HEDGE_API_KEY = "test-key";
+    const now = Date.now();
+    const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      card: {
+        card_id: "card-hartman-blue-xfractor-150",
+        title: "2026 Bowman Eric Hartman",
+        player: "Eric Hartman",
+        set: "Chrome Prospects Autographs", // ← production-accurate subset name
+        year: 2026,
+        number: "CPA-EHA",
+        variant: "Blue X-Fractor /150",
+      },
+      sales: [
+        { price: 60, date: isoDaysAgo(8),  title: "2026 Bowman Refractor Auto Eric Hartman CPA-EHA /499" },
+        { price: 65, date: isoDaysAgo(12), title: "2026 Bowman Refractor Auto Eric Hartman CPA-EHA /499" },
+      ],
+      variantWarning: [],
+      aiCategory: "Baseball",
+    });
+
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send({
+        playerName: "Eric Hartman",
+        cardYear: 2026,
+        product: "Bowman /150",
+        parallel: "Blue X-Fractor",
+        isAuto: true,
+      });
+
+    expect(res.status).toBe(200);
+    // Hartman's pool can't anchor mechanism1 (curatedParallelCount < 3).
+    // Same outcome as pre-CF-DECOUPLE-2: no estimated value emitted.
+    expect(res.body.fairMarketValue).toBeNull();
+    expect(res.body.estimatedValue ?? null).toBeNull();
+  });
+
+  it("BOWMAN-NON-CPA — 'Base Set' (ambiguous) normalizes to null, mechanism1 skipped, no wrong-CPA route", async () => {
+    // The bare-Bowman flagship case CF-DECOUPLE-2 specifically addressed.
+    // Pre-CF-DECOUPLE-2: 'Base Set' would have been ignored (subset
+    // hardcoded to CPA) → mechanism1 invoked with wrong subset → could
+    // accidentally match a CPA row by parallel name. Post-fix: normalizer
+    // returns null → mechanism1 skipped → observed FMV from comps wins
+    // honestly.
+    process.env.CARD_HEDGE_API_KEY = "test-key";
+    const now = Date.now();
+    const isoDaysAgo = (days: number) => new Date(now - days * 86_400_000).toISOString();
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      card: {
+        card_id: "card-bowman-flagship-base",
+        title: "2026 Bowman Some Player Base",
+        player: "Some Player",
+        set: "Base Set", // ← Cardsight's ambiguous setName for flagship base
+        year: 2026,
+        number: "BCP-99",
+        variant: "Base",
+      },
+      sales: [
+        { price: 10, date: isoDaysAgo(5),  title: "2026 Bowman Some Player BCP-99" },
+        { price: 12, date: isoDaysAgo(10), title: "2026 Bowman Some Player BCP-99" },
+      ],
+      variantWarning: [],
+      aiCategory: "Baseball",
+    });
+
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send({
+        playerName: "Some Player",
+        cardYear: 2026,
+        product: "Bowman",
+        parallel: "Base",
+        isAuto: false,
+      });
+
+    expect(res.status).toBe(200);
+    // No multiplier basis — mechanism1 was skipped (null subset).
+    expect(res.body.estimateBasis).not.toBe("multiplier");
+    expect(res.body.estimateBasis).not.toBe("multiplier_provisional");
+  });
+});
+
+describe("CF-DECOUPLE-2 — subset hardcode retired (boundary marker flipped)", () => {
+  // CF-DECOUPLE-2 (2026-06-21) replaced the 5 hardcoded subset literals
+  // with `normalizeCardsightSetName(fetched.card?.set ?? null)`. The
+  // boundary-marker test from CF-DECOUPLE asserted occurrences === 5;
+  // it has flipped to asserting === 0. This is the spec-locked "clean
+  // signal CF-DECOUPLE-2 landed" — the hardcode is gone.
+  //
+  // Future CF that intentionally re-introduces a subset literal for any
+  // reason should delete THIS test (not relax it) and document why.
+
+  it("ANTI-REGRESSION: subset hardcode is fully removed at all 5 mechanism1 + Build-B sites", async () => {
     const fs = await import("node:fs/promises");
     const src = await fs.readFile(
       new URL("../src/services/compiq/compiqEstimate.service.ts", import.meta.url),
       "utf8",
     );
     const occurrences = (src.match(/subset:\s*"Chrome Prospect Autographs"/g) ?? []).length;
-    // 3 mechanism1 sites (variant-mismatch #1, insufficient #2, T3 collision #3) +
-    // 2 Build B fallback sites (CF-BUILD-B 2026-06-21 inherits the same hardcode
-    // for the same reason — subset normalization is still budgeted to CF-DECOUPLE-2).
-    expect(occurrences).toBe(5);
+    expect(occurrences).toBe(0);
   });
 });

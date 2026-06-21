@@ -50,7 +50,8 @@ import {
   computeMultiplierAnchoredPredictedPrice,
   type MultiplierAnchoredPredictedPriceResult,
 } from "../../agents/multiplierAnchoredPredictedPrice.js";
-import { type BowmanFamilyProduct } from "./chromeDraftMultipliers.js";
+import { type BowmanFamilyProduct, type BowmanFamilySubset } from "./chromeDraftMultipliers.js";
+import { normalizeCardsightSetName } from "./cardsightSubsetNormalizer.js";
 import {
   computeBaseAnchoredParallelFMV,
   type BaseAnchoredFmvResult,
@@ -3068,24 +3069,24 @@ export async function computeEstimate(
   // tries T0→T3 progressively; we only short-circuit when T3 also yields <3
   // comps OR Cardsight self-reported wrong-card resolution (Q8' above).
   if (everythingFilteredOut) {
-    // CF-DECOUPLE (2026-06-21): null-safe product classification. Replaces
-    // the pre-CF-DECOUPLE clamp (preserved CF-X "Bowman" semantics for
-    // Bowman-family input but force-routed non-Bowman to "Bowman Chrome").
-    // When the holding is non-Bowman, mechanism1 is skipped entirely —
-    // emit a null result so downstream m1HasPrice checks behave as if
-    // the lookup returned no curated row. Non-Bowman holdings then route
-    // through observed FMV / CF-A(a) base_auto_floor / honest null.
-    // Subset stays hardcoded "Chrome Prospect Autographs" per (B) scope;
-    // CF-DECOUPLE-2 addresses the Bowman-non-CPA residual.
+    // CF-DECOUPLE (2026-06-21): null-safe product classification.
+    // CF-DECOUPLE-2 (2026-06-21): null-safe subset normalization via
+    // normalizeCardsightSetName(fetched.card.set). Replaces the previous
+    // hardcoded "Chrome Prospect Autographs" — Bowman-non-CPA holdings
+    // (flagship/Sterling/Platinum) used to mis-route to a CPA lookup;
+    // now they normalize to their actual subset (when curated) or null
+    // (when ambiguous/unmappable → mechanism1 skipped). Same null-safe
+    // pattern as the product classifier.
     const subjectProduct = classifyBowmanFamilyProduct(body.product);
-    const mechanism1: MultiplierAnchoredPredictedPriceResult = subjectProduct === null
+    const subjectSubset: BowmanFamilySubset | null = normalizeCardsightSetName(fetched.card?.set ?? null);
+    const mechanism1: MultiplierAnchoredPredictedPriceResult = (subjectProduct === null || subjectSubset === null)
       ? NULL_MECHANISM1_RESULT
       : computeMultiplierAnchoredPredictedPrice({
           subject: {
             playerName: body.playerName ?? fetched.card?.player ?? "",
             year: Number(body.cardYear ?? fetched.card?.year ?? 0),
             product: subjectProduct,
-            subset: "Chrome Prospect Autographs",
+            subset: subjectSubset,
             parallelName: normalizedParallel ?? body.parallel ?? "",
             isAutograph: effectiveIsAuto,
           },
@@ -3128,14 +3129,15 @@ export async function computeEstimate(
     // holding is Bowman-family (the classifier returned non-null above),
     // try Build B against the curated baseRelativePremium row. Dormant
     // until the worksheet PRs land empirical values + sampleBaseRange.
+    // CF-DECOUPLE-2: same null-safe subjectSubset as mechanism1 above.
     let buildBResult: BaseAnchoredFmvResult | null = null;
-    if (!m1HasPrice && subjectProduct !== null) {
+    if (!m1HasPrice && subjectProduct !== null && subjectSubset !== null) {
       buildBResult = computeBaseAnchoredParallelFMV({
         subject: {
           playerName: body.playerName ?? fetched.card?.player ?? "",
           year: Number(body.cardYear ?? fetched.card?.year ?? 0),
           product: subjectProduct,
-          subset: "Chrome Prospect Autographs",
+          subset: subjectSubset,
           parallelName: normalizedParallel ?? body.parallel ?? "",
         },
         comps: fetched.comps.map((c) => ({ title: c.title, price: c.price })),
@@ -3463,16 +3465,20 @@ export async function computeEstimate(
     // EVEN bare "Bowman" flagship to "Bowman Chrome" (the worst of the 3
     // clamp sites). Post-classifier: bare "Bowman" routes to "Bowman" and
     // matches the correct curated row when one exists. Non-Bowman holdings
-    // skip mechanism1 entirely. Subset stays hardcoded per (B) scope.
+    // skip mechanism1 entirely.
+    // CF-DECOUPLE-2 (2026-06-21): null-safe subset normalization. When
+    // fetched.card.set normalizes to null (ambiguous or unmappable),
+    // mechanism1 is skipped — no wrong-subset CPA route.
     const subjectProduct = classifyBowmanFamilyProduct(body.product);
-    const mechanism1: MultiplierAnchoredPredictedPriceResult = subjectProduct === null
+    const subjectSubset: BowmanFamilySubset | null = normalizeCardsightSetName(fetched.card?.set ?? null);
+    const mechanism1: MultiplierAnchoredPredictedPriceResult = (subjectProduct === null || subjectSubset === null)
       ? NULL_MECHANISM1_RESULT
       : computeMultiplierAnchoredPredictedPrice({
           subject: {
             playerName: body.playerName ?? fetched.card?.player ?? "",
             year: Number(body.cardYear ?? fetched.card?.year ?? 0),
             product: subjectProduct,
-            subset: "Chrome Prospect Autographs",
+            subset: subjectSubset,
             parallelName: normalizedParallel ?? body.parallel ?? "",
             isAutograph: effectiveIsAuto,
           },
@@ -4646,21 +4652,20 @@ export async function computeEstimate(
   // estimateBasis distinguishes the path the iOS badge surfaces.
   const isT3Eligible = chosenTier === "T3" && typeof fairMarketValue === "number";
   let collisionM1: MultiplierAnchoredPredictedPriceResult | null = null;
-  // CF-DECOUPLE (2026-06-21): null-safe product classification. When the
-  // holding is non-Bowman, collisionM1 stays null → CF-A(a)'s
-  // base_auto_floor wins the T3 collision (its correct behavior when no
-  // curated multiplier applies). Subset stays hardcoded per (B) scope.
+  // CF-DECOUPLE (2026-06-21): null-safe product classification.
   // CF-BUILD-B (2026-06-21): hoisted out of the `if (isT3Eligible)` block
   // so the Build B fallback below can reuse it.
+  // CF-DECOUPLE-2 (2026-06-21): null-safe subset normalization, also hoisted.
   const collisionSubjectProduct = classifyBowmanFamilyProduct(body.product);
+  const collisionSubjectSubset: BowmanFamilySubset | null = normalizeCardsightSetName(fetched.card?.set ?? null);
   if (isT3Eligible) {
-    if (collisionSubjectProduct !== null) {
+    if (collisionSubjectProduct !== null && collisionSubjectSubset !== null) {
       collisionM1 = computeMultiplierAnchoredPredictedPrice({
         subject: {
           playerName: body.playerName ?? fetched.card?.player ?? "",
           year: Number(body.cardYear ?? fetched.card?.year ?? 0),
           product: collisionSubjectProduct,
-          subset: "Chrome Prospect Autographs",
+          subset: collisionSubjectSubset,
           parallelName: normalizedParallel ?? body.parallel ?? "",
           isAutograph: effectiveIsAuto,
         },
@@ -4696,14 +4701,15 @@ export async function computeEstimate(
   //   mechanism1.empirical wins → Build B (empirical baseRelativePremium) → base_auto_floor → null
   // Dormant at ship (zero rows carry sampleBaseRange); activates per-tier
   // as worksheet PRs land empirical baseRelativePremium values.
+  // CF-DECOUPLE-2 (2026-06-21): same null-safe collisionSubjectSubset.
   let collisionBuildB: BaseAnchoredFmvResult | null = null;
-  if (isT3Eligible && !m1Wins && collisionSubjectProduct !== null) {
+  if (isT3Eligible && !m1Wins && collisionSubjectProduct !== null && collisionSubjectSubset !== null) {
     collisionBuildB = computeBaseAnchoredParallelFMV({
       subject: {
         playerName: body.playerName ?? fetched.card?.player ?? "",
         year: Number(body.cardYear ?? fetched.card?.year ?? 0),
         product: collisionSubjectProduct,
-        subset: "Chrome Prospect Autographs",
+        subset: collisionSubjectSubset,
         parallelName: normalizedParallel ?? body.parallel ?? "",
       },
       comps: fetched.comps.map((c) => ({ title: c.title, price: c.price })),
