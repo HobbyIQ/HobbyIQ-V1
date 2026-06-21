@@ -31,6 +31,11 @@ import {
 } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import { readUserDoc } from "../services/portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../types/portfolioiq.types.js";
+// CF-EXPORT-BE (2026-06-21): holdings export → .xlsx/.csv. Ships the
+// canonical 28-column schema CF-IMPORT-BE will consume as round-trip
+// contract. See exportHoldings.service.ts for the column lock.
+import { buildHoldingsExport, type ExportFormat } from "../services/portfolioiq/exportHoldings.service.js";
+import { composePortfolioListResponse } from "../services/portfolioiq/responseAssembly.js";
 
 const router = Router();
 
@@ -50,6 +55,33 @@ router.use(requireSession);
 router.get("/", portfolio.getPortfolioWithSummary);
 
 router.get("/holdings", portfolio.getHoldings);
+
+// CF-EXPORT-BE (2026-06-21): GET /api/portfolio/export?format=xlsx|csv
+//   - format defaults to xlsx; "csv" supported (RFC-4180-ish).
+//   - Reads holdings via the same composePortfolioListResponse wire path
+//     getHoldings uses, so exported computed values match what the iOS
+//     dashboard displays.
+//   - Returns as attachment (Content-Disposition) — caller (iOS share
+//     sheet, browser download) handles the file from the response.
+router.get("/export", async (req, res, next) => {
+  try {
+    const userId = req.user!.userId;
+    const formatRaw = typeof req.query.format === "string" ? req.query.format.toLowerCase() : "xlsx";
+    const format: ExportFormat = formatRaw === "csv" ? "csv" : "xlsx";
+
+    const doc = await readUserDoc(userId);
+    const items: PortfolioHolding[] = Object.values(doc.holdings ?? {});
+    const wire = composePortfolioListResponse(items);
+    const payload = buildHoldingsExport(wire, format);
+
+    res.setHeader("Content-Type", payload.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${payload.filename}"`);
+    res.setHeader("X-Holdings-Count", String(wire.length));
+    res.send(payload.buffer);
+  } catch (err) {
+    next(err);
+  }
+});
 router.get("/alerts", portfolio.getAlerts);
 router.get("/health/score", portfolio.getPortfolioHealth);
 // CF-PAYMENTS-A: analytics + insights are prediction-class features
