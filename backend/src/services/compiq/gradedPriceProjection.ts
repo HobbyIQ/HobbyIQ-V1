@@ -1102,12 +1102,23 @@ function resolveAnchor(
     // composed only fires when no parallel-raw FMV was threaded in and
     // base-raw passes the trust floor.
     //
-    // Retirement scope: ONLY this composed branch. The Phase-2 helper
-    // (autoCorrectedBaseMultiplier) + the heuristic table
-    // (lookupMultiplier) remain in the codebase — sibling-observed-
-    // anchor (b/c below) still uses targetMult ratios, and the
-    // predictedRangeMultiplierAnchored.ts path still applies the auto-
-    // base correction in its own composed branch (separate surface).
+    // CF-DEVRIES-FIX (2026-06-21): restore the auto-base correction in
+    // this branch. CF-FITTED-LADDER (2026-06-16) retired
+    // `autoCorrectedBaseMultiplier` here on the premise that the fitted
+    // ladder produced calibrated multipliers. CF-DEVRIES-RECON verified
+    // the fitted ladder emits the SAME 5.700× for Blue /150 the
+    // heuristic table did — the retirement removed the correction
+    // without the fitted ladder actually correcting anything. Result:
+    // Leo De Vries PSA 10 over-claimed $3,260 vs observed $664 (4.91×
+    // over-claim). The canonical anchor at line 323 ("Leo PSA 10
+    // $3,260 → $937") is now re-honored.
+    //
+    // Surface scope verified (CF-DEVRIES-RECON):
+    //   - sibling-observed-anchor (b/c below): by-design uncorrected;
+    //     ratios cancel the correction (preserved unchanged).
+    //   - predictedRangeMultiplierAnchored.ts:248-250: still applies the
+    //     correction in its composed branch (verified positively).
+    //   - this composed branch: regressed — restored now.
     const targetParallelEntry = opts.cardParallels?.find((p) => p.id === opts.targetParallelId);
     const targetNumberedTo = targetParallelEntry?.numberedTo ?? null;
     if (
@@ -1118,11 +1129,17 @@ function resolveAnchor(
     ) {
       const fitted = computeFittedComposedMultiplier(opts.targetParallelName, targetNumberedTo);
       if (fitted) {
-        const composed = round2(baseRawMedian * fitted.multiplier);
+        const effectiveMultiplier = opts.isAuto
+          ? autoCorrectedBaseMultiplier(fitted.multiplier)
+          : fitted.multiplier;
+        const composed = round2(baseRawMedian * effectiveMultiplier);
+        const correctionNote = opts.isAuto && effectiveMultiplier !== fitted.multiplier
+          ? ` → corrected ${effectiveMultiplier.toFixed(3)}× via mult^${AUTO_BASE_MULTIPLIER_EXPONENT} (auto-base)`
+          : "";
         return {
           price: composed,
           kind: "parallel-composed",
-          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${fitted.basis}`,
+          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${fitted.basis}${correctionNote}`,
           lowConfidence: fitted.lowConfidence,
           serial: fitted.serial,
         };
@@ -1136,11 +1153,16 @@ function resolveAnchor(
         && Number.isFinite(targetEntry.baseMultiplier)
         && targetEntry.baseMultiplier > 0
       ) {
-        const composed = round2(baseRawMedian * targetEntry.baseMultiplier);
+        const rawMult = targetEntry.baseMultiplier;
+        const effectiveMult = opts.isAuto ? autoCorrectedBaseMultiplier(rawMult) : rawMult;
+        const composed = round2(baseRawMedian * effectiveMult);
+        const correctionNote = opts.isAuto && effectiveMult !== rawMult
+          ? ` → corrected ${effectiveMult.toFixed(3)}× via mult^${AUTO_BASE_MULTIPLIER_EXPONENT} (auto-base)`
+          : "";
         return {
           price: composed,
           kind: "parallel-composed",
-          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${targetEntry.parallelName} multiplier ${targetEntry.baseMultiplier.toFixed(3)}× [legacy table fallback — numberedTo missing for fitted path]`,
+          description: `composed parallel anchor ${fmtUSD(composed)} = base raw median ${fmtUSD(baseRawMedian)} (n=${baseRawSampleCount}) × ${targetEntry.parallelName} multiplier ${rawMult.toFixed(3)}×${correctionNote} [legacy table fallback — numberedTo missing for fitted path]`,
           lowConfidence: true,
         };
       }

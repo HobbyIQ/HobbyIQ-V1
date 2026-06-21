@@ -1594,6 +1594,99 @@ describe("CF-FITTED-LADDER — composed branch uses f(serial) · g(finish) when 
   });
 });
 
+describe("CF-DEVRIES-FIX — composed branch re-applies mult^0.283 auto-base correction when isAuto", () => {
+  // CF-DEVRIES-FIX (2026-06-21): re-apply the Phase-2 power-law correction
+  // in the composed-parallel-anchor branch when the subject is an auto
+  // (BCPA, BDP, etc.). CF-FITTED-LADDER (2026-06-16) retired the
+  // correction on the premise that the fitted ladder's empirically-
+  // fitted multipliers were already calibrated; recon (CF-DEVRIES-RECON)
+  // found the fitted ladder still emits the pre-correction multiplier
+  // for mid-tier parallels, so the over-claim returned (Leo De Vries
+  // PSA 10 $3,260 observed vs $664 FMV — 4.91× over-claim). The
+  // canonical anchor at gradedPriceProjection.ts:323 ("Leo PSA 10
+  // $3,260 → $937") is now guarded by these tests so a future refactor
+  // can't silently re-drop the correction.
+
+  // Local helper (mirrors makeFittedLadderInput in the CF-FITTED-LADDER
+  // block above; redeclared here because that helper is block-scoped).
+  function makeAutoFittedInput(parallelName: string, numberedTo: number) {
+    const PID = `pid-${parallelName.toLowerCase().replace(/\s+/g, "-")}-${numberedTo}`;
+    return {
+      pricing: makeLeoPricingNoBlueRecords(),
+      targetParallelId: PID,
+      targetParallelName: parallelName,
+      cardParallels: [{ id: PID, name: parallelName, numberedTo }],
+    };
+  }
+
+  it("isAuto=true compresses the fitted multiplier and surfaces it in the basis", () => {
+    const out = computeGradedProjection({
+      ...makeAutoFittedInput("Blue Refractor", 150),
+      isAuto: true,
+    });
+    const psa10 = byGrade(out, "PSA 10");
+
+    // Anchor path unchanged: still composed-parallel-anchor, still
+    // fitted-bucket ratio (2.66× for /150-/199).
+    expect(psa10.anchorKind).toBe("parallel-composed");
+    expect(psa10.ratioSource).toBe("fitted-bucket");
+
+    // Multiplier compresses under the auto-base correction:
+    //   raw fitted     = f(150) · g(refractor) = 17.059 × 150^-0.301 × 1.00 ≈ 3.776×
+    //   corrected      = raw^0.283                                         ≈ 1.457×
+    //   anchor (raw)   = 228.93 × 3.776 ≈ 864 — what the non-isAuto branch produces
+    //   anchor (auto)  = 228.93 × 1.457 ≈ 333 — what this test verifies
+    const rawMultiplier = 17.059 * Math.pow(150, -0.301) * 1.00;
+    const correctedMultiplier = Math.pow(rawMultiplier, 0.283);
+    const expectedAnchor = 228.93 * correctedMultiplier;
+    expect(psa10.diagnostics.anchorPrice).toBeCloseTo(expectedAnchor, 0);
+
+    // Description surfaces the correction so a future re-read sees the
+    // power-law was applied — silent re-regression caught here.
+    expect(psa10.basis).toContain("→ corrected");
+    expect(psa10.basis).toContain("via mult^0.283");
+
+    // isAuto value meaningfully lower than the non-isAuto value, and the
+    // compression factor matches the raw/corrected multiplier ratio.
+    const nonAutoOut = computeGradedProjection(makeAutoFittedInput("Blue Refractor", 150));
+    const nonAutoPsa10 = byGrade(nonAutoOut, "PSA 10");
+    expect(psa10.estimatedValue!).toBeLessThan(nonAutoPsa10.estimatedValue!);
+    const compressionFactor = nonAutoPsa10.estimatedValue! / psa10.estimatedValue!;
+    expect(compressionFactor).toBeCloseTo(rawMultiplier / correctedMultiplier, 1);
+  });
+
+  it("isAuto=false (default) preserves byte-identical pre-fix behavior — no correction, no suffix", () => {
+    // Symmetry guard: the fix is gated on isAuto, so non-auto holdings
+    // must produce identical results to the pre-fix code path. Pins the
+    // fitted ladder's raw output unchanged for non-autos.
+    const out = computeGradedProjection(makeAutoFittedInput("Blue Refractor", 150));
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.basis).not.toContain("→ corrected");
+    expect(psa10.basis).not.toContain("via mult^0.283");
+    const rawMultiplier = 17.059 * Math.pow(150, -0.301) * 1.00;
+    expect(psa10.diagnostics.anchorPrice).toBeCloseTo(228.93 * rawMultiplier, 0);
+  });
+
+  it("isAuto=true + missing numberedTo: legacy table fallback also applies the correction", () => {
+    // Symmetry between fitted and legacy-table paths — both must apply
+    // the auto-base correction when isAuto so a numberedTo-missing edge
+    // case doesn't silently revert to the raw multiplier.
+    const PID = "pid-blue-legacy-auto";
+    const out = computeGradedProjection({
+      pricing: makeLeoPricingNoBlueRecords(),
+      targetParallelId: PID,
+      targetParallelName: "Blue Refractor",
+      cardParallels: [{ id: PID, name: "Blue Refractor" }], // no numberedTo
+      isAuto: true,
+    });
+    const psa10 = byGrade(out, "PSA 10");
+    expect(psa10.anchorKind).toBe("parallel-composed");
+    expect(psa10.basis).toContain("→ corrected");
+    expect(psa10.basis).toContain("via mult^0.283");
+    expect(psa10.basis).toMatch(/legacy table fallback|Blue Refractor multiplier/);
+  });
+});
+
 // Fixture for the fitted-ladder block: Leo's base raw without any
 // Blue Refractor records (so composed branch fires and we observe the
 // fitted multiplier in isolation).
