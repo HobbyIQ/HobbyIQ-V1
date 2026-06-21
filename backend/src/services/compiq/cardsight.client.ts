@@ -290,9 +290,41 @@ export async function fetchWithRetry(
 // ─── Exported Functions ───────────────────────────────────────────────────────
 
 /**
+ * CF-70-GRADE-STRIP (2026-06-21): Cardsight's /catalog/search returns []
+ * when the query contains a grade token (PSA/BGS/SGC/CGC/HGA/TAG/BCCG
+ * followed by a number). Confirmed via direct probe — both modern (Skenes
+ * "PSA 10") and vintage (Griffey "PSA 9") queries dropped to 0 results
+ * vs full results for the un-graded variant. This is a Cardsight API
+ * quirk (pre-Cardsight Card Hedge tolerated grade tokens; the migration
+ * regressed it).
+ *
+ * Fix: strip the grade token at the catalog layer. The grade survives
+ * independently for downstream comp-filter via parseCardQuery's
+ * structured (gradeCompany, gradeValue) fields → cardsightGradesTaxonomy
+ * → selectSalesByGrade pipeline. Architecture for parse-extract-reapply
+ * already exists; this CF closes the leak at the catalog query.
+ *
+ * Word-boundary anchored so non-grader words ("PSALM", "BGSomething")
+ * don't match. Requires a digit after the grader token, so bare
+ * "PSA grading" or "BGS submission" don't match either.
+ */
+const CATALOG_GRADE_TOKEN_RE = /\b(PSA|BGS|SGC|CGC|HGA|TAG|BCCG)\s*[0-9]+(?:\.[0-9])?\b/gi;
+
+export function stripGradeTokensForCatalog(query: string): string {
+  return query
+    .replace(CATALOG_GRADE_TOKEN_RE, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Search Cardsight catalog for cards.
  * Always includes segment=baseball — non-baseball cards excluded at the API layer.
  * Returns [] when CARDSIGHT_API_KEY is missing, on HTTP errors, or on network failure.
+ *
+ * CF-70-GRADE-STRIP: grade tokens stripped from query before lookup;
+ * cache key uses the stripped query so graded and ungraded variants of
+ * the same card share one cache entry.
  */
 export async function searchCatalog(
   query: string,
@@ -302,10 +334,21 @@ export async function searchCatalog(
     log.warn("api_key_missing", { endpoint: "searchCatalog", query });
     return [];
   }
+  const stripped = stripGradeTokensForCatalog(query);
+  if (stripped.length === 0) {
+    // Grade-only query (e.g. "PSA 10" alone). Stripping leaves nothing to
+    // search on — return [] cleanly rather than calling Cardsight with an
+    // empty q (which would either error or return junk fallback).
+    log.warn("catalog_query_empty_after_grade_strip", {
+      originalQuery: query,
+      endpoint: "searchCatalog",
+    });
+    return [];
+  }
   const take = opts.take ?? 20;
   return cacheWrap(
-    cKey("cs:catalog", query, String(opts.year ?? ""), String(take)),
-    () => _searchCatalog(query, opts),
+    cKey("cs:catalog", stripped, String(opts.year ?? ""), String(take)),
+    () => _searchCatalog(stripped, opts),
     CATALOG_TTL_SEC,
   );
 }
