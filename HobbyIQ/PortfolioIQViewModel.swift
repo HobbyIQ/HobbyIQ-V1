@@ -85,51 +85,10 @@ final class PortfolioIQViewModel: ObservableObject {
 
     var topMovers: [PortfolioMover] { cachedTopMovers }
 
-    var hasMovementSignals: Bool {
-        inventoryCards.contains { $0.movementDirection != nil }
-    }
-
-    var movementPulseSummary: (rising: Int, falling: Int, stable: Int) {
-        let active = inventoryCards.filter { $0.status.lowercased() != "sold" }
-        var rising = 0, falling = 0, stable = 0
-        for card in active {
-            switch card.movementDirection {
-            case "up": rising += 1
-            case "down": falling += 1
-            default: stable += 1
-            }
-        }
-        return (rising, falling, stable)
-    }
-
-    /// Portfolio-level forward-movement percentage, value-weighted by FMV.
-    ///
-    ///   portfolioImpliedPct = Σ(predictedPrice − fairMarketValue) / Σ(fairMarketValue) × 100
-    ///
-    /// Reads only wire-available fields (`predictedPrice`, `fairMarketValue`)
-    /// — the prior `movementComposite` read returned nil now that the field
-    /// is pruned from the holdings wire (CF-PORTFOLIOHOLDING-FIELD-PRUNE
-    /// Phase B). When no card has both fields stamped, returns 0 ("Holding
-    /// steady" — honest pre-launch state, not a fake number).
-    var portfolioImpliedPct: Double {
-        let pairs = inventoryCards.compactMap { card -> (gap: Double, fmv: Double)? in
-            guard let predicted = card.predictedPrice,
-                  let fmv = card.fairMarketValue,
-                  fmv > 0 else { return nil }
-            return (predicted - fmv, fmv)
-        }
-        let totalFmv = pairs.reduce(0) { $0 + $1.fmv }
-        guard totalFmv > 0 else { return 0 }
-        let totalGap = pairs.reduce(0) { $0 + $1.gap }
-        return (totalGap / totalFmv) * 100
-    }
-
-    /// Multiplicative composite derived from `portfolioImpliedPct` so any
-    /// remaining callers that read this property continue to compile.
-    /// `1.0` means flat — matches the prior contract.
-    var portfolioComposite: Double {
-        1.0 + portfolioImpliedPct / 100
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): hasMovementSignals,
+    // movementPulseSummary, portfolioImpliedPct, portfolioComposite
+    // removed — all four derived from movementDirection /
+    // predictedPrice and fed the now-removed Movement Pulse card.
 
     private func recomputeCachedProperties() {
         // Priority actions
@@ -180,108 +139,45 @@ final class PortfolioIQViewModel: ObservableObject {
 
         cachedPriorityActions = actions
 
-        // Top movers — TrendIQ-driven dollar-weighted ranking
-        let qualityCoverages: Set<String> = ["full", "card_only", "no_segment"]
+        // CF-IOS-DIRECTION-SWEEP (2026-06-18): top-movers is now always
+        // P/L-ranked (Gainers / Losers). The prior `hasMovementSignals`
+        // branch ranked by direction-derived $ impact (predictedPrice
+        // − fairMarketValue) — direction-class. Backtest established
+        // direction is at-chance; honest historical P/L sign read
+        // replaces it.
         let activeCards = inventoryCards.filter { $0.status.lowercased() != "sold" }
 
-        let hasMovementSignals = activeCards.contains { $0.movementDirection != nil && $0.movementDirection != "flat" }
+        let gainers = activeCards
+            .sorted { $0.profitLoss > $1.profitLoss }
+            .prefix(3)
+            .map { card in
+                PortfolioMover(
+                    id: "gain-\(card.id.uuidString)",
+                    playerName: card.playerName,
+                    cardName: card.cardName,
+                    currentValue: card.currentValue,
+                    profitLoss: card.profitLoss,
+                    trendLabel: "Gainer",
+                    trendDetail: card.trendChipText
+                )
+            }
 
-        if hasMovementSignals {
-            let rising = activeCards
-                .filter { $0.movementDirection == "up" && !$0.movementIsExpired }
-                // Coverage was pruned from the holdings wire per
-                // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B (composite,
-                // impliedPct, coverage are estimate-only now). Treat nil
-                // / empty coverage as quality-OK so the filter still
-                // works if coverage ever returns to the wire.
-                .filter { hasQualityCoverage($0.movementCoverage, quality: qualityCoverages) }
-                .sorted { $0.dollarImpact > $1.dollarImpact }
-                .prefix(3)
-                .map { card in
-                    PortfolioMover(
-                        id: "rise-\(card.id.uuidString)",
-                        playerName: card.playerName,
-                        cardName: card.cardName,
-                        currentValue: card.currentValue,
-                        profitLoss: card.profitLoss,
-                        trendLabel: "Trending Up",
-                        trendDetail: card.movementChipText ?? "",
-                        movementDirection: card.movementDirection,
-                        movementImpliedPct: card.movementImpliedPct,
-                        movementComposite: card.movementComposite,
-                        dollarImpact: card.dollarImpact,
-                        movementCoverage: card.movementCoverage
-                    )
-                }
+        let losers = activeCards
+            .sorted { $0.profitLoss < $1.profitLoss }
+            .prefix(3)
+            .map { card in
+                PortfolioMover(
+                    id: "loss-\(card.id.uuidString)",
+                    playerName: card.playerName,
+                    cardName: card.cardName,
+                    currentValue: card.currentValue,
+                    profitLoss: card.profitLoss,
+                    trendLabel: "Loser",
+                    trendDetail: card.trendChipText
+                )
+            }
 
-            let falling = activeCards
-                .filter { $0.movementDirection == "down" && !$0.movementIsExpired }
-                .filter { hasQualityCoverage($0.movementCoverage, quality: qualityCoverages) }
-                .sorted { $0.dollarImpact < $1.dollarImpact }
-                .prefix(3)
-                .map { card in
-                    PortfolioMover(
-                        id: "fall-\(card.id.uuidString)",
-                        playerName: card.playerName,
-                        cardName: card.cardName,
-                        currentValue: card.currentValue,
-                        profitLoss: card.profitLoss,
-                        trendLabel: "Trending Down",
-                        trendDetail: card.movementChipText ?? "",
-                        movementDirection: card.movementDirection,
-                        movementImpliedPct: card.movementImpliedPct,
-                        movementComposite: card.movementComposite,
-                        dollarImpact: card.dollarImpact,
-                        movementCoverage: card.movementCoverage
-                    )
-                }
-
-            cachedTopMovers = Array(rising) + Array(falling)
-        } else {
-            // Fallback: static P&L ranking when no movement signals exist
-            let gainers = activeCards
-                .sorted { $0.profitLoss > $1.profitLoss }
-                .prefix(3)
-                .map { card in
-                    PortfolioMover(
-                        id: "gain-\(card.id.uuidString)",
-                        playerName: card.playerName,
-                        cardName: card.cardName,
-                        currentValue: card.currentValue,
-                        profitLoss: card.profitLoss,
-                        trendLabel: "Gainer",
-                        trendDetail: card.trendChipText
-                    )
-                }
-
-            let losers = activeCards
-                .sorted { $0.profitLoss < $1.profitLoss }
-                .prefix(3)
-                .map { card in
-                    PortfolioMover(
-                        id: "loss-\(card.id.uuidString)",
-                        playerName: card.playerName,
-                        cardName: card.cardName,
-                        currentValue: card.currentValue,
-                        profitLoss: card.profitLoss,
-                        trendLabel: "Loser",
-                        trendDetail: card.trendChipText
-                    )
-                }
-
-            cachedTopMovers = Array(gainers) + Array(losers)
-        }
-    }
-
-    /// Permissive coverage check used by the top-movers filter. The
-    /// `movementCoverage` field was pruned from the holdings wire
-    /// (CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B) so nil / empty must
-    /// pass through; otherwise the filter rejects every card. If
-    /// coverage ever returns to the wire, the explicit allow-list
-    /// resumes filtering on the documented quality values.
-    private func hasQualityCoverage(_ coverage: String?, quality: Set<String>) -> Bool {
-        guard let coverage, coverage.isEmpty == false else { return true }
-        return quality.contains(coverage)
+        cachedTopMovers = Array(gainers) + Array(losers)
     }
 
     var ledgerEntries: [PortfolioLedgerEntry] {
@@ -561,17 +457,8 @@ final class PortfolioIQViewModel: ObservableObject {
                 isAuto: card.isAuto,
                 photos: card.photos,
                 clientId: card.clientId,
-                predictedPrice: card.predictedPrice,
-                predictedPriceLow: card.predictedPriceLow,
-                predictedPriceHigh: card.predictedPriceHigh,
-                predictedPriceMechanism: card.predictedPriceMechanism,
-                predictedPriceUpdatedAt: card.predictedPriceUpdatedAt,
                 fairMarketValue: card.fairMarketValue,
-                movementDirection: card.movementDirection,
-                movementComposite: card.movementComposite,
-                movementImpliedPct: card.movementImpliedPct,
-                movementCoverage: card.movementCoverage,
-                movementUpdatedAt: card.movementUpdatedAt
+                valuationStatus: card.valuationStatus
             )
 
             let currentInventory = inventoryCards.isEmpty ? await LocalPortfolioProvider.shared.getInventory() : inventoryCards

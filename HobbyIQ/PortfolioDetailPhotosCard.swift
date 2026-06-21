@@ -265,17 +265,8 @@ struct PortfolioDetailPhotosCard: View {
             isAuto: card.isAuto,
             photos: card.photos,
             clientId: card.clientId,
-            predictedPrice: card.predictedPrice,
-            predictedPriceLow: card.predictedPriceLow,
-            predictedPriceHigh: card.predictedPriceHigh,
-            predictedPriceMechanism: card.predictedPriceMechanism,
-            predictedPriceUpdatedAt: card.predictedPriceUpdatedAt,
             fairMarketValue: card.fairMarketValue,
-            movementDirection: card.movementDirection,
-            movementComposite: card.movementComposite,
-            movementImpliedPct: card.movementImpliedPct,
-            movementCoverage: card.movementCoverage,
-            movementUpdatedAt: card.movementUpdatedAt
+            valuationStatus: card.valuationStatus
         )
 
         do {

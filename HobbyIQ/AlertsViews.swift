@@ -25,8 +25,6 @@ final class AlertsInboxViewModel: ObservableObject {
             return alerts
         case .buy:
             return alerts.filter { $0.severity == .buy }
-        case .trimSell:
-            return alerts.filter { $0.actionLabel?.localizedCaseInsensitiveContains("trim") == true || $0.actionLabel?.localizedCaseInsensitiveContains("sell") == true }
         case .risk:
             return alerts.filter { $0.severity == .risk }
         case .player:
@@ -950,7 +948,11 @@ struct AlertRow: View {
 
             HStack(spacing: Theme.Spacing.small) {
                 if let actionLabel = alert.actionLabel {
-                    MetricPillView(title: "Action", value: actionLabel, accent: severityColor)
+                    // CF-IOS-DIRECTION-SWEEP (2026-06-18): pill relabeled
+                    // "Action" → "Comp basis" so the label agrees with
+                    // the new value (card.method — comp-status fact,
+                    // not action recommendation).
+                    MetricPillView(title: "Comp basis", value: actionLabel, accent: severityColor)
                 }
                 MetricPillView(
                     title: "Time",
@@ -1027,7 +1029,9 @@ struct AlertDetailView: View {
                             MetricPillView(title: "Significance", value: significance, accent: severityColor)
                         }
                         if let actionLabel = alert.actionLabel {
-                            MetricPillView(title: "Suggested Action", value: actionLabel, accent: severityColor)
+                            // CF-IOS-DIRECTION-SWEEP (2026-06-18): pill
+                            // relabeled "Suggested Action" → "Comp basis".
+                            MetricPillView(title: "Comp basis", value: actionLabel, accent: severityColor)
                         }
                         Text(RelativeDateTimeFormatter().localizedString(for: alert.triggeredAt, relativeTo: Date()))
                             .font(.caption)

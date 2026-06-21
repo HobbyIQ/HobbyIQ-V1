@@ -215,7 +215,6 @@ struct CompIQView: View {
                 buyWindowRow(result)
                 summaryCard(result)
                 explanationCard(result)
-                broaderTrendRow(result)
                 exitStrategyRow(result)
                 freshnessRow(result)
 
@@ -587,20 +586,8 @@ struct CompIQView: View {
         }
     }
 
-    @ViewBuilder
-    private func broaderTrendRow(_ result: CompIQEstimateResult) -> some View {
-        if let label = result.broaderTrendLabel, label.isEmpty == false {
-            HStack {
-                Text("Broader Trend")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                Spacer()
-                Text(label)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            }
-        }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): broaderTrendRow removed —
+    // surfaced result.broaderTrendLabel directly (direction-class read).
 
     @ViewBuilder
     private func exitStrategyRow(_ result: CompIQEstimateResult) -> some View {

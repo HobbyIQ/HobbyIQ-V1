@@ -752,14 +752,10 @@ struct CompIQPricedCardView: View {
                 }
             }
 
-            // CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11):
-            // always-on Overall Trend section. Falls through trendIQ →
-            // broaderTrend → "flat" so a thin slot never reads as blank.
-            // Directional: "<arrow> <direction> · ±X%". Flat: text only
-            // ("Holding steady, no clear direction") — no bare "0.0%".
-            cardGroup(title: "Overall Trend", icon: "arrow.triangle.swap") {
-                overallTrendContent(response)
-            }
+            // CF-IOS-DIRECTION-SWEEP (2026-06-18): "Overall Trend"
+            // cardGroup removed (was overallTrendContent — direction
+            // headline). CompIQ comp surface no longer surfaces
+            // forecast/direction reads.
 
             // CF-PRICEHISTORY-60D (2026-06-10): 60d chart series for
             // the comp page. Rendered as its own section card so the
@@ -796,19 +792,17 @@ struct CompIQPricedCardView: View {
             // Advanced pricing tools.
             advancedToolsSection(response)
 
-            // Market Analysis group.
-            cardGroup(title: "Market Analysis", icon: "chart.bar.fill") {
-                predictedPriceContent(response)
+            // CF-IOS-DIRECTION-SWEEP (2026-06-18): renamed Market
+            // Analysis → Comp Analysis (forecast content gone — only
+            // zones + confidence remain, both comp-derived). The
+            // sibling "Trends" cardGroup was direction-by-construction
+            // and is removed. zonesCard kept as comp-distribution
+            // pending product call on the Buy/Hold/Sell label framing —
+            // a follow-up CF can relabel if the action framing reads
+            // as direction.
+            cardGroup(title: "Comp Analysis", icon: "chart.bar.fill") {
                 zonesCard(response)
-                buyWindowContent(response)
                 confidenceContent(response)
-            }
-
-            // Trends group.
-            cardGroup(title: "Trends", icon: "arrow.triangle.swap") {
-                trendContent(response)
-                trendIQDetailContent(response)
-                broaderTrendContent(response)
             }
 
             // Regime group — only when the backend produced regime
@@ -1131,70 +1125,29 @@ struct CompIQPricedCardView: View {
     /// Holding steady" — text only, never an invented number. The 0.5%
     /// floor kills "Next sale ~$430 · 0.0%" tautologies; the text-only
     /// flat copy keeps the shell intact instead of stripping the row.
+    /// CF-IOS-DIRECTION-SWEEP (2026-06-18): the prior implementation had
+    /// a `predictedPrice + trendIQ.direction + broaderTrend.direction`
+    /// branch that rendered "Next sale ~$Y · ±X%" + range. The direction
+    /// branch is gone; the function collapses to the flat-state line so
+    /// the value-block shell still renders consistently across all
+    /// observed / trend-extrapolated / last-sale / no-sales price slots.
     @ViewBuilder
     private func valueBlockFollower(_ response: CompIQPriceByIdResponse) -> some View {
-        let pct: Double? = response.trendIQ?.impliedPct ?? response.broaderTrend?.impliedTrendPct
-        let direction: String? = response.trendIQ?.direction ?? response.broaderTrend?.direction
-        if let predicted = response.predictedPrice,
-           let range = response.predictedPriceRange,
-           let low = range.low, let high = range.high,
-           let p = pct, abs(p) >= 0.5 {
-            let tint = trendColor(direction)
-            VStack(spacing: 2) {
-                HStack(spacing: 6) {
-                    Image(systemName: trendArrow(direction))
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(tint)
-                    Text("Next sale ~\(predicted.formatted(.currency(code: "USD"))) · \(String(format: "%+.1f%%", p))")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(tint)
-                }
-                Text("range \(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            .padding(.top, 4)
-        } else {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                Text("Holding steady")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            .padding(.top, 4)
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.right")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Holding steady")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
+        .padding(.top, 4)
     }
 
-    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): always-on
-    /// overall-trend body. Fall-through: trendIQ → broaderTrend → flat.
-    /// Directional only when abs(pct) >= 0.5 AND direction is up/down;
-    /// otherwise renders the text-only "Holding steady" line so the
-    /// section never blanks and never surfaces a bare "0.0%".
-    @ViewBuilder
-    private func overallTrendContent(_ response: CompIQPriceByIdResponse) -> some View {
-        let rawDirection = (response.trendIQ?.direction ?? response.broaderTrend?.direction ?? "flat").lowercased()
-        let pct = response.trendIQ?.impliedPct ?? response.broaderTrend?.impliedTrendPct ?? 0.0
-        let isDirectional = abs(pct) >= 0.5 && (rawDirection == "up" || rawDirection == "down")
-        if isDirectional {
-            let tint = trendColor(rawDirection)
-            HStack(spacing: 10) {
-                Image(systemName: trendArrow(rawDirection))
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(tint)
-                Text("\(rawDirection.capitalized) · \(String(format: "%+.1f%%", pct))")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(tint)
-                Spacer()
-            }
-        } else {
-            Text("Holding steady, no clear direction")
-                .font(.subheadline)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): overallTrendContent removed
+    // with its dedicated "Overall Trend" cardGroup. The flat fallback
+    // had no role outside the directional context — the whole group
+    // exists to render trendIQ.direction / broaderTrend.direction.
 
     private func observedHeadlineString(_ response: CompIQPriceByIdResponse) -> String {
         // CF-GRADED-RAIL-RENDER (2026-06-12): the canonical PSA/10 send
@@ -1506,46 +1459,11 @@ struct CompIQPricedCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
     }
 
-    // MARK: - Buy Window (inner content, no card wrapper)
-
-    @ViewBuilder
-    private func buyWindowContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let bw = response.buyWindow, bw.label != nil || bw.score != nil {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Buy Window")
-
-                HStack(spacing: 12) {
-                    if let label = bw.label {
-                        Text(label)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(buyWindowColor(bw.score))
-                    }
-                    Spacer()
-                    if let score = bw.score {
-                        Text(String(format: "%.0f", score))
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(buyWindowColor(score))
-                    }
-                }
-
-                if let reasons = bw.reasons, reasons.isEmpty == false {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(reasons, id: \.self) { reason in
-                            HStack(alignment: .top, spacing: 6) {
-                                Circle()
-                                    .fill(HobbyIQTheme.Colors.electricBlue)
-                                    .frame(width: 5, height: 5)
-                                    .padding(.top, 6)
-                                Text(reason)
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): buyWindowContent removed —
+    // "Buy Window" label + score + reasons are an action-timing
+    // recommendation, direction-class. The standalone buyWindowScore
+    // chip on CompIQ search (CompIQView:581-584) keeps for now —
+    // separate surface, separate CF if you want it.
 
     // MARK: - Confidence (inner content)
 
@@ -1587,76 +1505,9 @@ struct CompIQPricedCardView: View {
         }
     }
 
-    // MARK: - Trend (inner content)
-
-    @ViewBuilder
-    private func trendContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let trend = response.trendAnalysis {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Trend")
-
-                HStack(spacing: 12) {
-                    Image(systemName: trendArrow(trend.marketDirection))
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(trendColor(trend.marketDirection))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(trend.marketDirection?.capitalized ?? "Flat")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                        if let pct = response.trendPercent {
-                            Text(String(format: "%+.1f%%", pct))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(trendColor(trend.marketDirection))
-                        }
-                    }
-
-                    Spacer()
-
-                    if let liquidity = trend.liquidity, liquidity.isEmpty == false {
-                        Text(liquidity)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.5))
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Broader Trend (inner content)
-
-    @ViewBuilder
-    private func broaderTrendContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let bt = response.broaderTrend, bt.label != nil || bt.direction != nil {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Broader Trend")
-
-                HStack(spacing: 10) {
-                    Image(systemName: trendArrow(bt.direction))
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(trendColor(bt.direction))
-                    VStack(alignment: .leading, spacing: 2) {
-                        if let label = bt.label {
-                            Text(label)
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        }
-                        if let note = bt.note {
-                            Text(note)
-                                .font(.caption)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        }
-                    }
-                    Spacer()
-                }
-            }
-        }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): trendContent + broaderTrendContent
+    // removed — both rendered market-direction (up / down / flat) +
+    // pct change. Direction-class by construction.
 
     // MARK: - TrendIQ
 
@@ -2485,174 +2336,17 @@ struct CompIQPricedCardView: View {
     /// nil or `abs(impliedPct) < 0.5`), the card collapses to a single
     /// neutral line so the page never says "$X market value" beside
     /// "$X projected" with no narrative tying them together.
-    @ViewBuilder
-    private func predictedPriceContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let predicted = response.predictedPrice {
-            let fmv = response.marketTier?.value ?? response.marketValue ?? response.estimatedValue
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Where it's heading")
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): predictedPriceContent +
+    // derivationRow removed — "Where it's heading" was the projected-
+    // next-sale forecast derivation ("Market value today" + "Recent-sales
+    // trend" + "Projected next sale" + "Likely range"). Whole surface
+    // is direction-class.
 
-                if let pct = response.trendIQ?.impliedPct,
-                   abs(pct) >= 0.5,
-                   let range = response.predictedPriceRange,
-                   let low = range.low, let high = range.high {
-                    let direction = response.trendIQ?.direction
-                    VStack(alignment: .leading, spacing: 8) {
-                        derivationRow(
-                            label: "Market value today",
-                            value: fmv.map { $0.formatted(.currency(code: "USD")) } ?? "—"
-                        )
-                        derivationRow(
-                            label: "Recent-sales trend",
-                            value: String(format: "%+.1f%%", pct),
-                            valueColor: trendColor(direction),
-                            leadingIcon: trendArrow(direction)
-                        )
-                        derivationRow(
-                            label: "Projected next sale",
-                            value: predicted.formatted(.currency(code: "USD"))
-                        )
-                        derivationRow(
-                            label: "Likely range",
-                            value: "\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))"
-                        )
-                    }
-                } else if let fmv {
-                    Text("Recent sales are holding around \(fmv.formatted(.currency(code: "USD"))).")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
-    /// CF-ELEVATE-PROJECTION (2026-06-11): one row of the "Where it's
-    /// heading" derivation — label left, value right, optional leading
-    /// arrow icon for the trend row.
-    @ViewBuilder
-    private func derivationRow(
-        label: String,
-        value: String,
-        valueColor: Color = HobbyIQTheme.Colors.pureWhite.opacity(0.9),
-        leadingIcon: String? = nil
-    ) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Spacer()
-            if let icon = leadingIcon {
-                Image(systemName: icon)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(valueColor)
-            }
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(valueColor)
-        }
-    }
-
-    // MARK: - TrendIQ Detail (CF-COMP-DETAIL-EXPAND, 2026-06-07)
-
-    @ViewBuilder
-    private func trendIQDetailContent(_ response: CompIQPriceByIdResponse) -> some View {
-        if let trendIQ = response.trendIQ {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "TrendIQ")
-
-                // Composite + direction + impliedPct + coverage row.
-                HStack(spacing: 12) {
-                    Image(systemName: trendArrow(trendIQ.direction))
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(trendColor(trendIQ.direction))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        if let composite = trendIQ.composite {
-                            Text(String(format: "Composite %.3f", composite))
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        }
-                        if let pct = trendIQ.impliedPct {
-                            Text(String(format: "%+.1f%%", pct))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(trendColor(trendIQ.direction))
-                        }
-                    }
-
-                    Spacer()
-
-                    if let coverage = trendIQ.coverage {
-                        Text(coverage)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .tracking(0.6)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-                            .clipShape(Capsule())
-                    }
-                }
-
-                // Card Trajectory detail — recent vs older median.
-                if let card = trendIQ.components?.cardTrajectory {
-                    Divider().background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Card Trajectory")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .tracking(0.4)
-
-                        if let recent = card.recentMedian, let older = card.olderMedian {
-                            HStack(spacing: 6) {
-                                Text("Recent median")
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                Spacer()
-                                Text(recent.formatted(.currency(code: "USD")))
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                            }
-                            HStack(spacing: 6) {
-                                Text("Older median")
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                Spacer()
-                                Text(older.formatted(.currency(code: "USD")))
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                            }
-                        }
-
-                        if let pctChange = card.pctChange {
-                            HStack(spacing: 6) {
-                                Text("Δ recent vs older")
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                Spacer()
-                                Text(String(format: "%+.1f%%", pctChange))
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(trendColor(trendIQ.direction))
-                            }
-                        }
-
-                        if let rc = card.recentCount, let oc = card.olderCount {
-                            HStack(spacing: 6) {
-                                Text("Sample sizes (recent / older)")
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                Spacer()
-                                Text("\(rc) / \(oc)")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): trendIQDetailContent removed —
+    // entire surface was a TrendIQ direction deep-dive (composite +
+    // direction + impliedPct + Δ recent vs older). Backtest established
+    // direction is at-chance; the comp surface no longer renders any
+    // forecast or directional read.
 
     // MARK: - Regime (CF-COMP-DETAIL-EXPAND, 2026-06-07)
 
@@ -2876,35 +2570,12 @@ struct CompIQPricedCardView: View {
         return "pause.circle.fill"
     }
 
-    private func trendArrow(_ direction: String?) -> String {
-        switch direction?.lowercased() {
-        case "up": return "arrow.up.right"
-        case "down": return "arrow.down.right"
-        default: return "arrow.right"
-        }
-    }
-
-    private func trendColor(_ direction: String?) -> Color {
-        switch direction?.lowercased() {
-        case "up": return HobbyIQTheme.Colors.successGreen
-        case "down": return HobbyIQTheme.Colors.danger
-        default: return HobbyIQTheme.Colors.warning
-        }
-    }
-
     private func confidenceBarColor(_ value: Double) -> Color {
         switch value {
         case 0.7...: return HobbyIQTheme.Colors.successGreen
         case 0.4..<0.7: return HobbyIQTheme.Colors.warning
         default: return HobbyIQTheme.Colors.danger
         }
-    }
-
-    private func buyWindowColor(_ score: Double?) -> Color {
-        guard let score else { return HobbyIQTheme.Colors.mutedText }
-        if score >= 70 { return HobbyIQTheme.Colors.successGreen }
-        if score >= 40 { return HobbyIQTheme.Colors.warning }
-        return HobbyIQTheme.Colors.danger
     }
 
     // MARK: - Segment Trajectory Full

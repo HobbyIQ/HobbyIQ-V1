@@ -187,6 +187,11 @@ struct PortfolioPriorityAction: Identifiable, Hashable {
 }
 
 struct PortfolioMover: Identifiable, Hashable {
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): PortfolioMover stripped to
+    // P/L-only. The prior shape carried movementDirection / impliedPct /
+    // composite / dollarImpact / coverage to feed the now-removed
+    // movement-branch sort + render. profitLoss + trendLabel /
+    // trendDetail are sufficient under the P/L-always ranking.
     let id: String
     let playerName: String
     let cardName: String
@@ -194,11 +199,6 @@ struct PortfolioMover: Identifiable, Hashable {
     let profitLoss: Double
     let trendLabel: String
     let trendDetail: String
-    let movementDirection: String?
-    let movementImpliedPct: Double?
-    let movementComposite: Double?
-    let dollarImpact: Double
-    let movementCoverage: String?
 
     init(
         id: String,
@@ -207,12 +207,7 @@ struct PortfolioMover: Identifiable, Hashable {
         currentValue: Double,
         profitLoss: Double,
         trendLabel: String,
-        trendDetail: String,
-        movementDirection: String? = nil,
-        movementImpliedPct: Double? = nil,
-        movementComposite: Double? = nil,
-        dollarImpact: Double = 0,
-        movementCoverage: String? = nil
+        trendDetail: String
     ) {
         self.id = id
         self.playerName = playerName
@@ -221,11 +216,6 @@ struct PortfolioMover: Identifiable, Hashable {
         self.profitLoss = profitLoss
         self.trendLabel = trendLabel
         self.trendDetail = trendDetail
-        self.movementDirection = movementDirection
-        self.movementImpliedPct = movementImpliedPct
-        self.movementComposite = movementComposite
-        self.dollarImpact = dollarImpact
-        self.movementCoverage = movementCoverage
     }
 }
 
@@ -521,74 +511,14 @@ extension InventoryCard {
         }
     }
 
-    var movementIsStale: Bool {
-        guard let ts = movementUpdatedAt else { return false }
-        guard let date = portfolioParseISO(ts) else { return false }
-        return Date().timeIntervalSince(date) > 48 * 3600
-    }
-
-    var movementIsExpired: Bool {
-        guard let ts = movementUpdatedAt else { return false }
-        guard let date = portfolioParseISO(ts) else { return false }
-        return Date().timeIntervalSince(date) > 7 * 24 * 3600
-    }
-
-    var shouldShowMovementChip: Bool {
-        guard let dir = movementDirection, dir == "up" || dir == "down" else { return false }
-        return !movementIsExpired
-    }
-
-    /// Direction label always shown when a direction is set. Adds the
-    /// `(predicted − FMV) / FMV` percent when both are stamped. With
-    /// `movementImpliedPct` pruned from the holdings wire, the wire
-    /// percent is no longer available — but the predicted-vs-FMV gap
-    /// gives the same forward-looking signal from fields we DO have.
-    /// Never returns a blank chip while `shouldShowMovementChip` is true.
-    var movementChipText: String? {
-        guard shouldShowMovementChip, let direction = movementDirection else { return nil }
-        let label = direction == "up" ? "Trending up" : "Trending down"
-        if let predicted = predictedPrice, let fmv = fairMarketValue, fmv > 0 {
-            let pct = ((predicted - fmv) / fmv) * 100
-            return "\(label) \(String(format: "%+.1f%%", pct))"
-        }
-        return label
-    }
-
-    var movementChipColor: Color {
-        movementDirection == "up" ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-    }
-
-    /// Movement magnitude used by the top-movers sort. With
-    /// `movementImpliedPct` pruned from the wire, derive the gap
-    /// from `predictedPrice − fairMarketValue` × quantity when both
-    /// are stamped. Fall back to lifetime P&L (`currentValue − cost`)
-    /// so the sort never degenerates to all-zero ties for cards
-    /// without predictions. The primary key remains the forward
-    /// predicted-vs-FMV move; lifetime P&L is the safety net only.
-    var dollarImpact: Double {
-        let qty = max(1.0, quantity ?? 1.0)
-        if let predicted = predictedPrice, let fmv = fairMarketValue {
-            return (predicted - fmv) * qty
-        }
-        return currentValue - cost
-    }
-
-    var predictedPriceFormatted: String? {
-        predictedPrice.map { portfolioCurrencyString($0) }
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): movementIsStale,
+    // movementIsExpired, shouldShowMovementChip, movementChipText,
+    // movementChipColor, dollarImpact, predictedPriceFormatted,
+    // movementCoverageLabel all removed — every consumer was a
+    // direction render site stripped in this same CF.
 
     var fairMarketValueFormatted: String? {
         fairMarketValue.map { portfolioCurrencyString($0) }
-    }
-
-    var movementCoverageLabel: String {
-        switch movementCoverage {
-        case "full": return "Full coverage"
-        case "card_only": return "Card history only"
-        case "no_segment": return "No segment data"
-        case "player_only": return "Player-level only"
-        default: return "Unknown"
-        }
     }
 
     var costBasisImpactFormatted: String {
@@ -893,6 +823,12 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var showingSoldSheet = false
     @State private var showingEbayListingSheet = false
     @State private var showingRemoveModal = false
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): re-added after CompIQ
+    // direction strip. PortfolioCompIQBridgeView destination is now
+    // comp-only (zones + confidence; no predictedPrice / trendIQ /
+    // broaderTrend / buyWindow). Routes the Pricing Context "View
+    // comp analysis" footer button.
+    @State private var showingCompIQAnalysis = false
     @State private var lastEbayListingResponse: PortfolioEbayListingResponse?
     @State private var localError: String?
 
@@ -929,6 +865,25 @@ struct PortfolioHoldingDetailSheet: View {
                             )
                             detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
                             detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
+
+                            // CF-IOS-DIRECTION-SWEEP (2026-06-18): footer
+                            // entry into the now-comp-only CompIQ bridge.
+                            Button {
+                                showingCompIQAnalysis = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "doc.text.magnifyingglass")
+                                        .font(.caption.weight(.semibold))
+                                    Text("View comp analysis")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                                .clipShape(Capsule(style: .continuous))
+                            }
+                            .buttonStyle(.plain)
                         }
 
                         PortfolioContextCard(title: "Actionability") {
@@ -1065,6 +1020,12 @@ struct PortfolioHoldingDetailSheet: View {
                         onUpdated()
                     }
                 }
+                .sheet(isPresented: $showingCompIQAnalysis) {
+                    NavigationStack {
+                        PortfolioCompIQBridgeView(holding: card)
+                    }
+                }
+
                 if showingRemoveModal {
                     CenteredRemoveConfirmationModal(
                         title: "Remove this card?",
@@ -1774,23 +1735,9 @@ private var gridThumbnailPlaceholder: some View {
     }
 }
 
-struct PortfolioInventoryChips: View {
-    let card: InventoryCard
-
-    var body: some View {
-        HStack(spacing: 6) {
-            PortfolioChip(label: card.statusChipText, tint: .blue)
-            PortfolioChip(label: card.gradeChipText, tint: .gray)
-            PortfolioChip(label: card.trendChipText, tint: card.profitLoss >= 0 ? .green : .red)
-            PortfolioChip(label: card.freshnessChipText, tint: card.freshnessChipText == "Fresh" ? .green : .orange)
-
-            if let badge = card.dailyTrendBadgeText {
-                PortfolioChip(label: badge, tint: .purple)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
+// CF-IOS-DIRECTION-SWEEP (2026-06-18): PortfolioInventoryChips struct
+// removed — was dead code (no instantiation in the iOS source) and
+// rendered statusChipText as a "Verdict" pill (direction-class).
 
 struct PortfolioChip: View {
     let label: String

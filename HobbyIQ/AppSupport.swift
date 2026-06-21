@@ -34,9 +34,11 @@ enum AlertSeverity: String, Codable, CaseIterable, Identifiable {
 }
 
 enum AlertFilter: String, CaseIterable, Identifiable {
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): trimSell removed — it
+    // filtered alerts by direction-class actionLabel verbs (trim/sell).
+    // Risk filter on severity == .risk replaces it.
     case all = "All"
     case buy = "Buy"
-    case trimSell = "Trim/Sell"
     case risk = "Risk"
     case player = "Player"
     case card = "Card"
@@ -478,7 +480,13 @@ final class OperationalDataService {
                     detail: holding.actionabilityBullets.first ?? "Live backend data suggests this holding should be reviewed.",
                     severity: holding.profitLoss < 0 ? .risk : .caution,
                     category: .card,
-                    actionLabel: holding.statusChipText,
+                    // CF-IOS-DIRECTION-SWEEP (2026-06-18): label swapped
+                    // from statusChipText (sell_now/hold/watch — direction-
+                    // class action recommendation) to card.method, the
+                    // honest comp-status fact (e.g. "PSA10 multiplier",
+                    // "Variant mismatch"). Pill is relabeled "Comp basis"
+                    // at AlertsViews.swift so label + value agree.
+                    actionLabel: holding.method,
                     triggeredAt: Date(),
                     confidence: holding.confidence.map { Int($0 * 100) },
                     significance: holding.summary,

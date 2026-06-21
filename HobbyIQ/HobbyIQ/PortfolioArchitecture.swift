@@ -94,12 +94,12 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let photos: [String]?
     let clientId: String?
 
-    // Prediction fields (CF-NEXT-SALE-PREDICTION-LAYER)
-    let predictedPrice: Double?
-    let predictedPriceLow: Double?
-    let predictedPriceHigh: Double?
-    let predictedPriceMechanism: String?
-    let predictedPriceUpdatedAt: String?
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): predictedPrice* fields removed
+    // from InventoryCard. Backtest established direction is at-chance;
+    // every render site of these fields was stripped in this same CF
+    // (per-card detail / list / grid chips + Movement modal + portfolio
+    // pulse card + CompIQ Market Analysis group). Wire keys silently
+    // ignored on decode (Codable init uses `try?` for every field).
 
     // Anchor field (already persisted backend-side)
     let fairMarketValue: Double?
@@ -118,12 +118,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     // bucket in its headline.
     let valuationStatus: String?
 
-    // Movement fields (CF-AUTOPRICE-PERSIST-TRENDIQ)
-    let movementDirection: String?
-    let movementComposite: Double?
-    let movementImpliedPct: Double?
-    let movementCoverage: String?
-    let movementUpdatedAt: String?
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): movement* fields removed —
+    // direction-class signals every render site of which was stripped
+    // in this same CF. Wire keys silently ignored on decode.
 
     /// Cardsight catalog UUID resolved at identify / cert-resolve time. When
     /// present, the backend can comp the holding without re-matching from
@@ -164,18 +161,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         isAuto: Bool = false,
         photos: [String]? = nil,
         clientId: String? = nil,
-        predictedPrice: Double? = nil,
-        predictedPriceLow: Double? = nil,
-        predictedPriceHigh: Double? = nil,
-        predictedPriceMechanism: String? = nil,
-        predictedPriceUpdatedAt: String? = nil,
         fairMarketValue: Double? = nil,
         valuationStatus: String? = nil,
-        movementDirection: String? = nil,
-        movementComposite: Double? = nil,
-        movementImpliedPct: Double? = nil,
-        movementCoverage: String? = nil,
-        movementUpdatedAt: String? = nil,
         cardsightCardId: String? = nil
     ) {
         self.id = id
@@ -204,18 +191,8 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.isAuto = isAuto
         self.photos = photos
         self.clientId = clientId
-        self.predictedPrice = predictedPrice
-        self.predictedPriceLow = predictedPriceLow
-        self.predictedPriceHigh = predictedPriceHigh
-        self.predictedPriceMechanism = predictedPriceMechanism
-        self.predictedPriceUpdatedAt = predictedPriceUpdatedAt
         self.fairMarketValue = fairMarketValue
         self.valuationStatus = valuationStatus
-        self.movementDirection = movementDirection
-        self.movementComposite = movementComposite
-        self.movementImpliedPct = movementImpliedPct
-        self.movementCoverage = movementCoverage
-        self.movementUpdatedAt = movementUpdatedAt
         self.cardsightCardId = cardsightCardId
     }
 

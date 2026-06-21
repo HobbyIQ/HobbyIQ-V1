@@ -13,7 +13,6 @@ struct PortfolioIQView: View {
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @State private var selectedCard: InventoryCard?
     @State private var showingLedger = false
-    @State private var showingMovementDetail = false
     @State private var showCalibration = false
     @State private var showWeeklyBrief = false
     @State private var showBatchReprice = false
@@ -43,10 +42,6 @@ struct PortfolioIQView: View {
 
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
-                            }
-
-                            if vm.hasMovementSignals {
-                                movementPulseCard
                             }
 
                             PortfolioHealthCard()
@@ -80,12 +75,6 @@ struct PortfolioIQView: View {
             }
             .sheet(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
-            }
-            .sheet(isPresented: $showingMovementDetail) {
-                PortfolioMovementDetailView(viewModel: vm) { card in
-                    showingMovementDetail = false
-                    selectedCard = card
-                }
             }
             .sheet(item: $selectedCard) { card in
                 PortfolioHoldingDetailSheet(
@@ -302,91 +291,12 @@ struct PortfolioIQView: View {
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
     }
 
-    // MARK: - Movement Pulse
-
-    private var movementPulseCard: some View {
-        let pulse = vm.movementPulseSummary
-        let composite = vm.portfolioComposite
-        let impliedPct = vm.portfolioImpliedPct
-        let directionColor: Color = impliedPct >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
-        let arrowIcon = impliedPct >= 0 ? "arrow.up.right" : "arrow.down.right"
-
-        return Button {
-            showingMovementDetail = true
-        } label: {
-            VStack(spacing: 12) {
-                HStack(spacing: 6) {
-                    Image(systemName: "waveform.path.ecg")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    Text("Movement pulse")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
-                }
-
-                HStack(spacing: 4) {
-                    Image(systemName: arrowIcon)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(directionColor)
-                    Text(String(format: "%+.1f%%", impliedPct))
-                        .font(.title2.weight(.bold).monospacedDigit())
-                        .foregroundStyle(directionColor)
-                }
-
-                HStack(spacing: 12) {
-                    if pulse.rising > 0 {
-                        pulseChip(count: pulse.rising, label: "rising", color: HobbyIQTheme.Colors.successGreen)
-                    }
-                    if pulse.falling > 0 {
-                        pulseChip(count: pulse.falling, label: "falling", color: HobbyIQTheme.Colors.danger)
-                    }
-                    if pulse.stable > 0 {
-                        pulseChip(count: pulse.stable, label: "stable", color: HobbyIQTheme.Colors.mutedText)
-                    }
-                }
-
-                HIQMetricLabel(
-                    title: "Portfolio trend",
-                    value: portfolioTrendLabel(for: composite),
-                    help: "A plain-English read on how your active cards are moving overall. Tap any individual card for its own trend. Composite score for power users: \(String(format: "%.3f", composite)) (1.000 is neutral, above 1.000 leans positive, below leans negative).",
-                    alignment: .center,
-                    valueFont: HobbyIQTheme.Typography.captionEmphasis
-                )
-                .frame(maxWidth: .infinity)
-            }
-            .frame(maxWidth: .infinity)
-            .portfolioSectionShell()
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Plain-English read on the portfolio composite — surfaced on the
-    /// Movement Pulse card while the raw numeric value tucks into the ?
-    /// popover for power users.
-    private func portfolioTrendLabel(for composite: Double) -> String {
-        if composite >= 1.03 { return "Trending up" }
-        if composite <= 0.97 { return "Trending down" }
-        return "Holding steady"
-    }
-
-    private func pulseChip(count: Int, label: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Text("\(count)")
-                .font(.caption.weight(.bold).monospacedDigit())
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(color.opacity(0.8))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(color.opacity(0.12))
-        .clipShape(Capsule(style: .continuous))
-    }
+    // CF-IOS-DIRECTION-SWEEP (2026-06-18): movementPulseCard +
+    // portfolioTrendLabel + pulseChip removed. The pulse card was the
+    // trigger for PortfolioMovementDetailView (also removed) and
+    // rendered portfolioImpliedPct / portfolioComposite — both direction
+    // derivations from predicted-vs-FMV gaps. Backtest established
+    // direction is at-chance.
 
     // Performance block (realized Sold/Fees/margin with period toggle) now
     // lives in ERPPnlView. Portfolio shows unrealized value trend below instead.
@@ -493,14 +403,13 @@ struct PortfolioIQView: View {
     // MARK: - Top Movers
 
     private var topMoversSection: some View {
-        let hasSignals = vm.hasMovementSignals
-        let upLabel = hasSignals ? "Trending up" : Labels.gainers
-        let downLabel = hasSignals ? "Trending down" : Labels.losers
-        let upColor: Color = hasSignals ? HobbyIQTheme.Colors.successGreen : .green
-        let downColor: Color = hasSignals ? HobbyIQTheme.Colors.danger : .red
-
-        let allRising = vm.topMovers.filter { ($0.movementDirection == "up") || (!hasSignals && $0.profitLoss >= 0) }
-        let allFalling = vm.topMovers.filter { ($0.movementDirection == "down") || (!hasSignals && $0.profitLoss < 0) }
+        // CF-IOS-DIRECTION-SWEEP (2026-06-18): always P/L-ranked
+        // (Gainers / Losers). The prior `hasMovementSignals` switch
+        // showed "Trending up/down" labels when the backend movement
+        // signal was present — direction-class framing on the same
+        // section. Drop the switch; honest P/L sign labels always.
+        let allRising = vm.topMovers.filter { $0.profitLoss >= 0 }
+        let allFalling = vm.topMovers.filter { $0.profitLoss < 0 }
         let collapseLimit = 3
         let totalCount = allRising.count + allFalling.count
         let rising = topMoversExpanded ? allRising : Array(allRising.prefix(collapseLimit))
@@ -517,13 +426,13 @@ struct PortfolioIQView: View {
             } else {
                 VStack(spacing: 0) {
                     if !rising.isEmpty {
-                        moverSubheader(title: upLabel, icon: "arrow.up.right", color: upColor)
+                        moverSubheader(title: Labels.gainers, icon: "arrow.up.right", color: .green)
 
                         ForEach(Array(rising.enumerated()), id: \.element.id) { index, mover in
                             Button {
                                 selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
                             } label: {
-                                moverRow(mover: mover, hasSignals: hasSignals)
+                                moverRow(mover: mover)
                             }
                             .buttonStyle(.plain)
 
@@ -536,13 +445,13 @@ struct PortfolioIQView: View {
                     }
 
                     if !falling.isEmpty {
-                        moverSubheader(title: downLabel, icon: "arrow.down.right", color: downColor)
+                        moverSubheader(title: Labels.losers, icon: "arrow.down.right", color: .red)
 
                         ForEach(Array(falling.enumerated()), id: \.element.id) { index, mover in
                             Button {
                                 selectedCard = vm.inventoryCards.first { $0.playerName == mover.playerName && $0.cardName == mover.cardName }
                             } label: {
-                                moverRow(mover: mover, hasSignals: hasSignals)
+                                moverRow(mover: mover)
                             }
                             .buttonStyle(.plain)
 
@@ -615,10 +524,12 @@ struct PortfolioIQView: View {
         .padding(.bottom, 4)
     }
 
-    private func moverRow(mover: PortfolioMover, hasSignals: Bool = false) -> some View {
-        let isUp: Bool = hasSignals
-            ? (mover.movementDirection == "up")
-            : (mover.profitLoss >= 0)
+    private func moverRow(mover: PortfolioMover) -> some View {
+        // CF-IOS-DIRECTION-SWEEP (2026-06-18): up/down derives from
+        // profitLoss sign only — historical P/L. The prior hasSignals
+        // branch read movementDirection (direction-class) when the
+        // backend movement signal was present.
+        let isUp: Bool = mover.profitLoss >= 0
         let valueColor: Color = isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
         let arrowIcon = isUp ? "arrow.up.right" : "arrow.down.right"
 
@@ -635,29 +546,13 @@ struct PortfolioIQView: View {
 
             Spacer(minLength: 12)
 
-            if hasSignals, let pct = mover.movementImpliedPct {
-                HStack(spacing: 6) {
-                    Image(systemName: arrowIcon)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(valueColor)
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(String(format: "%+.1f%%", pct))
-                            .font(.subheadline.weight(.bold).monospacedDigit())
-                            .foregroundStyle(valueColor)
-                        Text(mover.dollarImpact.portfolioSignedCurrencyText)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                }
-            } else {
-                HStack(spacing: 6) {
-                    Image(systemName: arrowIcon)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(valueColor)
-                    Text(mover.profitLoss.portfolioSignedCurrencyText)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(valueColor)
-                }
+            HStack(spacing: 6) {
+                Image(systemName: arrowIcon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(valueColor)
+                Text(mover.profitLoss.portfolioSignedCurrencyText)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(valueColor)
             }
         }
         .padding(.horizontal, 12)
@@ -1648,182 +1543,12 @@ private extension PortfolioSummaryResponse {
     }
 }
 
-// MARK: - Movement Detail View
-
-struct PortfolioMovementDetailView: View {
-    @ObservedObject var viewModel: PortfolioIQViewModel
-    let onSelectCard: (InventoryCard) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var sortMode: MovementSortMode = .magnitude
-    @State private var filterMode: MovementFilterMode = .all
-
-    private enum MovementSortMode: String, CaseIterable {
-        case magnitude = "Magnitude"
-        case dollarImpact = "$ Impact"
-        case value = "Value"
-        case name = "Name"
-    }
-
-    private enum MovementFilterMode: String, CaseIterable {
-        case all = "All"
-        case rising = "Rising"
-        case falling = "Falling"
-    }
-
-    private var filteredCards: [InventoryCard] {
-        let active = viewModel.inventoryCards.filter { $0.status.lowercased() != "sold" }
-        let withSignals = active.filter { $0.movementDirection != nil }
-
-        let filtered: [InventoryCard]
-        switch filterMode {
-        case .all: filtered = withSignals
-        case .rising: filtered = withSignals.filter { $0.movementDirection == "up" }
-        case .falling: filtered = withSignals.filter { $0.movementDirection == "down" }
-        }
-
-        switch sortMode {
-        case .magnitude:
-            return filtered.sorted { abs($0.movementImpliedPct ?? 0) > abs($1.movementImpliedPct ?? 0) }
-        case .dollarImpact:
-            return filtered.sorted { abs($0.dollarImpact) > abs($1.dollarImpact) }
-        case .value:
-            return filtered.sorted { $0.currentValue > $1.currentValue }
-        case .name:
-            return filtered.sorted { $0.playerName.localizedCompare($1.playerName) == .orderedAscending }
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Picker("Filter", selection: $filterMode) {
-                        ForEach(MovementFilterMode.allCases, id: \.self) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    Menu {
-                        ForEach(MovementSortMode.allCases, id: \.self) { mode in
-                            Button {
-                                sortMode = mode
-                            } label: {
-                                if sortMode == mode {
-                                    Label(mode.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(mode.rawValue)
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                            .frame(width: 34, height: 34)
-                            .background(HobbyIQTheme.Colors.cardNavy)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.3), lineWidth: 1.4))
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if filteredCards.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "waveform.path.ecg")
-                                    .font(.system(size: 30, weight: .semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                Text("No movement signals")
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.white)
-                                Text("Cards will show movement data after their next reprice.")
-                                    .font(.caption)
-                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(40)
-                        } else {
-                            ForEach(filteredCards) { card in
-                                Button {
-                                    onSelectCard(card)
-                                } label: {
-                                    movementDetailRow(card: card)
-                                }
-                                .buttonStyle(.plain)
-
-                                Divider()
-                                    .overlay(Color.white.opacity(0.06))
-                                    .padding(.leading, 12)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                }
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Movement Signals")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-            }
-        }
-    }
-
-    private func movementDetailRow(card: InventoryCard) -> some View {
-        HStack(spacing: 10) {
-            cardThumbnail(urlString: card.imageFrontUrl)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(card.playerName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(card.cardName)
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .lineLimit(1)
-                HStack(spacing: 4) {
-                    Text(card.displayValueFormatted)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    if let fmv = card.fairMarketValueFormatted, fmv != card.displayValueFormatted {
-                        Text("FMV \(fmv)")
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
-                    }
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if let chipText = card.movementChipText {
-                    Text(chipText)
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundStyle(card.movementChipColor)
-                }
-                Text(card.dollarImpact.portfolioSignedCurrencyText)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                if card.movementIsStale {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.orange)
-                }
-            }
-        }
-        .padding(.vertical, 10)
-    }
-}
+// CF-IOS-DIRECTION-SWEEP (2026-06-18): PortfolioMovementDetailView
+// removed entirely. The modal listed cards by movement direction
+// (Rising / Falling / All) sorted by magnitude / $ Impact / value /
+// name, with per-row movementChipText + dollarImpact + stale icon —
+// all direction surfaces. The trigger (movementPulseCard) is also
+// gone; nothing else opened this modal.
 
 #Preview {
     PortfolioIQView(
