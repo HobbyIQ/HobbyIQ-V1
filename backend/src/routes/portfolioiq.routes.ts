@@ -39,12 +39,16 @@ import { composePortfolioListResponse } from "../services/portfolioiq/responseAs
 // CF-IMPORT-BE (2026-06-21): preview + commit endpoints. File arrives as
 // base64-encoded body (multipart not configured); preview is read-only,
 // commit is idempotency-token-gated. See importService.ts.
+// CF-IMPORT-VOLUME (2026-06-21): commit now passes the user's effective
+// plan so capacity is re-enforced server-side, independent of the
+// client-honored preview wouldExceed flag.
 import {
   buildPreview,
   commitImport,
   type CommitRequest,
 } from "../services/portfolioiq/import/importService.js";
 import type { FileFormat } from "../services/portfolioiq/import/fileParser.js";
+import { effectivePlanFor } from "../config/entitlements.js";
 
 const router = Router();
 
@@ -142,7 +146,12 @@ router.post("/import/commit", async (req, res, next) => {
       envelopes: body.envelopes,
       actions: body.actions,
     };
-    const result = await commitImport(userId, request);
+    const userPlan = effectivePlanFor(req.user!);
+    const result = await commitImport(userId, request, userPlan);
+    // 402 on capacity-rejected batches; everything else 200.
+    if (result.capacityExceeded) {
+      return res.status(402).json({ ok: false, error: "capacity_exceeded", ...result });
+    }
     res.json({ ok: true, ...result });
   } catch (err) {
     next(err);

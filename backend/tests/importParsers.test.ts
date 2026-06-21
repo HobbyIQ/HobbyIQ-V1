@@ -47,9 +47,18 @@ describe("CF-IMPORT-BE — parseNumeric lenient mode (arbitrary path)", () => {
     expect(parseNumeric("$1,234,567.89", "lenient")).toEqual({ value: 1234567.89, outcome: "ok" });
   });
 
-  it("trailing % divides by 100", () => {
-    expect(parseNumeric("50%", "lenient")).toEqual({ value: 0.5, outcome: "ok" });
-    expect(parseNumeric("12.5%", "lenient")).toEqual({ value: 0.125, outcome: "ok" });
+  it("CF-IMPORT-VOLUME: trailing % → FLAGGED (don't-guess, replaces pre-volume ÷100 coercion)", () => {
+    // Pre-CF-IMPORT-VOLUME: "50%" → 0.5 (silently coerced).
+    // Post:  no user-editable column has percentage semantics, so this is
+    // a user typo, not a ratio. Flag for review.
+    const r1 = parseNumeric("50%", "lenient");
+    expect(r1.outcome).toBe("flagged");
+    expect(r1.value).toBeNull();
+    expect(r1.reason).toContain("trailing %");
+
+    const r2 = parseNumeric("12.5%", "lenient");
+    expect(r2.outcome).toBe("flagged");
+    expect(r2.value).toBeNull();
   });
 
   it("parenthesized negatives (accounting)", () => {

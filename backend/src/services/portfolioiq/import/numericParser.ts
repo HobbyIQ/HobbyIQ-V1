@@ -32,8 +32,14 @@ const EMPTY_SENTINELS = new Set(["", "-", "n/a", "na", "null", "none", "—", "�
  * `lenient` mode (arbitrary path):
  *   - Plain numbers parse cleanly.
  *   - Empty / null / sentinel-empty → outcome="empty", value=null.
- *   - Strip $, €, £ prefix; thousands separators (,); trailing %; whitespace.
- *   - Trailing % → divides by 100 (interprets as ratio).
+ *   - Strip $, €, £ prefix; thousands separators (,); whitespace.
+ *   - Trailing % → FLAGGED (CF-IMPORT-VOLUME refinement, 2026-06-21).
+ *     No user-editable column has percentage semantics — the only %-
+ *     semantic columns are computed and on the always-ignore set, so a
+ *     stray "12.5%" in a price column is almost certainly a user typo,
+ *     not "0.125". Same don't-guess discipline as ambiguous dates: flag
+ *     for review, never silently coerce. (Pre-CF-IMPORT-VOLUME this
+ *     branch divided by 100.)
  *   - Genuinely non-numeric (e.g. "about $20") → outcome="flagged" with reason; never throws or rejects the batch.
  */
 export function parseNumeric(input: unknown, mode: NumericParseMode): NumericParseResult {
@@ -62,9 +68,17 @@ export function parseNumeric(input: unknown, mode: NumericParseMode): NumericPar
   // Lenient mode: strip unambiguous formatting and re-parse.
   let s = trimmed;
 
-  // Track whether the cell ended with % so we can /100 after parsing.
-  const wasPercent = s.endsWith("%");
-  if (wasPercent) s = s.slice(0, -1).trim();
+  // CF-IMPORT-VOLUME (2026-06-21): trailing % → FLAG, don't coerce.
+  // No user-editable column carries percentage semantics, so a stray
+  // "12.5%" in a price column is a user typo, not "0.125". Flag for
+  // review (same don't-guess discipline as ambiguous dates).
+  if (s.endsWith("%")) {
+    return {
+      value: null,
+      outcome: "flagged",
+      reason: `trailing % in "${raw}" — no user-editable column has percentage semantics; review during reconciliation`,
+    };
+  }
 
   // Strip leading currency symbols.
   s = s.replace(/^[\$€£¥]+/, "").trim();
@@ -91,6 +105,5 @@ export function parseNumeric(input: unknown, mode: NumericParseMode): NumericPar
     return { value: null, outcome: "flagged", reason: `unparseable numeric "${raw}"` };
   }
   if (negate) value = -value;
-  if (wasPercent) value = value / 100;
   return { value, outcome: "ok" };
 }

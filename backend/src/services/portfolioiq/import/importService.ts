@@ -18,12 +18,33 @@ import {
   type ImportBucket,
 } from "./resolveBatch.js";
 import type { PortfolioHolding } from "../../../types/portfolioiq.types.js";
-import { readUserDoc, writeUserDoc } from "../portfolioStore.service.js";
+import {
+  readUserDoc,
+  writeUserDoc,
+  countHoldingsForUser,
+} from "../portfolioStore.service.js";
+import { cacheGet, cacheSet } from "../../shared/cache.service.js";
+import {
+  effectivePlanFor,
+  getCap,
+  type Plan,
+} from "../../../config/entitlements.js";
+import { detectCollision } from "./collisionDetector.js";
 
 /** Minimal UserDoc shape we touch (the real type lives inside portfolioStore as an internal interface). */
 interface UserDocShape {
   holdings: Record<string, PortfolioHolding>;
 }
+
+/**
+ * CF-IMPORT-VOLUME (2026-06-21): Redis-backed idempotency cache key.
+ * 24h TTL — covers retry windows; per-user scoped so token namespaces
+ * don't collide across users.
+ */
+function idempotencyKey(userId: string, token: string): string {
+  return `import-commit:${userId}:${token}`;
+}
+const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24h
 
 // CF-IMPORT-BE inlined helpers (mirrors portfolioStore conventions —
 // not exported from there, but duplication is cheaper than refactoring
@@ -94,6 +115,24 @@ export interface CommitResult {
     skipped: number;
     failed: number;
   };
+  /**
+   * CF-IMPORT-VOLUME (2026-06-21): set when commit-side capacity check
+   * rejected the commit before any writes. Distinct from the per-row
+   * "failed" outcome — this is a batch-level rejection.
+   */
+  capacityExceeded?: {
+    currentCount: number;
+    cap: number;
+    wouldBeTotal: number;
+  };
+  /**
+   * CF-IMPORT-VOLUME (2026-06-21): count of envelopes whose action was
+   * downgraded to "skip" by the fresh collision re-check (envelope was
+   * generated before a prior commit's writes and would now create a
+   * dupe). Surfaces in the response so the caller's UI can render
+   * "N rows skipped because they were just added in a prior commit."
+   */
+  freshCollisionsBlocked?: number;
 }
 
 /**
@@ -156,33 +195,114 @@ export async function buildPreview(
 }
 
 /**
- * Commit: writes confirmed envelopes. Idempotency-token-gated so a
- * retried commit doesn't double-ingest a bulk import.
+ * Commit: writes confirmed envelopes. Three CF-IMPORT-VOLUME hardenings:
+ *   1. Redis-backed idempotency (replaces the prior in-doc last-50 cache
+ *      that evicted on instance recycle / scale-out).
+ *   2. Fresh collision re-check against LIVE holdings — defeats the
+ *      stale-envelope-from-pre-commit race that the token alone can't.
+ *   3. Commit-side capacity re-enforcement — don't trust the client to
+ *      honor the preview's wouldExceed.
+ *
+ * The `userPlan` argument is the caller's effectivePlan (route handler
+ * passes it from req.user); commit reads the holdings cap from it.
  */
 export async function commitImport(
   userId: string,
   request: CommitRequest,
+  userPlan: Plan,
 ): Promise<CommitResult> {
-  const doc = await readUserDoc(userId);
-
-  // Idempotency check: if we've seen this token in the user's recent
-  // import-commit log, return the cached result rather than re-applying.
-  const recentTokens = (doc as unknown as { importCommits?: Array<{ token: string; result: CommitResult }> }).importCommits ?? [];
-  const prior = recentTokens.find((t) => t.token === request.idempotencyToken);
-  if (prior) {
-    return { ...prior.result, cached: true };
+  // ─── §1.b Redis-backed idempotency: check first, before any reads ──
+  const cacheKey = idempotencyKey(userId, request.idempotencyToken);
+  const cachedJson = await cacheGet(cacheKey);
+  if (cachedJson) {
+    try {
+      const prior = JSON.parse(cachedJson) as CommitResult;
+      return { ...prior, cached: true };
+    } catch {
+      // Corrupt cache entry — fall through and reprocess. Worst case is
+      // a re-write that the fresh-collision check + Redis-set-after-write
+      // pattern will still keep idempotent.
+    }
   }
 
-  const actions = request.actions ?? {};
-  const outcomes: CommitOutcome[] = [];
+  const doc = await readUserDoc(userId);
+  const liveHoldings = doc.holdings ?? {};
 
-  for (const env of request.envelopes) {
+  // ─── §1.c Commit-side capacity re-enforcement ─────────────────────
+  // Project the impact assuming the request's actions (or the envelope
+  // default when actions omit a rowNumber). Reject UP FRONT — never
+  // mid-stream — so the user sees a clean 402 before any writes happen.
+  const actions = request.actions ?? {};
+  const projectedAdds = request.envelopes.filter((env) => {
     const action = actions[env.rowNumber] ?? defaultActionFor(env);
+    // "commit" on a "new" lane creates a new holding; "add-as-copy" also
+    // creates new. "update-cost" and "skip" don't grow the count.
+    if (action === "skip" || action === "update-cost") return false;
+    if (env.lane === "update" && action === "commit") return false;
+    return true;
+  }).length;
+
+  const currentCount = await countHoldingsForUser(userId);
+  const cap = getCap(userPlan, "holdingsCap");
+  if (cap !== "unlimited") {
+    const wouldBeTotal = currentCount + projectedAdds;
+    if (wouldBeTotal > cap) {
+      const rejection: CommitResult = {
+        idempotencyToken: request.idempotencyToken,
+        cached: false,
+        outcomes: request.envelopes.map((env) => ({
+          rowNumber: env.rowNumber,
+          action: "skip" as CommitAction,
+          outcome: "skipped" as const,
+          reason: "capacity_exceeded — batch rejected before any writes",
+        })),
+        totals: { added: 0, updated: 0, skipped: request.envelopes.length, failed: 0 },
+        capacityExceeded: { currentCount, cap, wouldBeTotal },
+      };
+      // DO cache the rejection too — a retry of an over-capacity import
+      // is also over-capacity; deterministic.
+      await cacheSet(cacheKey, JSON.stringify(rejection), IDEMPOTENCY_TTL_SECONDS);
+      return rejection;
+    }
+  }
+
+  // ─── §1.a Fresh collision re-check + apply ────────────────────────
+  // For each NEW-lane envelope that wasn't already marked collision,
+  // re-run the detector against live holdings (which may include rows
+  // added by a prior commit since the envelope was generated). Fresh
+  // collisions downgrade to "skip" silently — preserves the "default
+  // skip on collision" safety from the preview phase + structurally
+  // blocks mass-dupe on a re-commit with stale envelopes.
+  const outcomes: CommitOutcome[] = [];
+  let freshCollisionsBlocked = 0;
+  for (const env of request.envelopes) {
+    let action = actions[env.rowNumber] ?? defaultActionFor(env);
+
+    if (env.lane === "new" && env.cardsightCardId && (action === "commit" || action === "add-as-copy")) {
+      const freshCollision = detectCollision(
+        {
+          cardsightCardId: env.cardsightCardId,
+          holdingId: env.payload.id ?? null,
+          parallel: env.payload.parallel ?? null,
+          gradeCompany: env.payload.gradeCompany ?? null,
+          gradeValue: env.payload.gradeValue ?? null,
+          serialNumber: env.payload.serialNumber ?? null,
+        },
+        doc.holdings,
+      );
+      // Only "fresh" if the envelope didn't already carry a collision.
+      // Envelopes that arrived with bucket "resolved-collision" already
+      // had their action explicitly chosen by the user — respect it.
+      if (freshCollision.collides && env.bucket !== "resolved-collision") {
+        action = "skip";
+        freshCollisionsBlocked += 1;
+      }
+    }
+
     const result = await applyAction(doc, env, action);
     outcomes.push(result);
   }
 
-  // Persist with idempotency log
   const totals = {
     added: outcomes.filter((o) => o.outcome === "added").length,
     updated: outcomes.filter((o) => o.outcome === "updated").length,
@@ -194,16 +314,19 @@ export async function commitImport(
     cached: false,
     outcomes,
     totals,
+    ...(freshCollisionsBlocked > 0 ? { freshCollisionsBlocked } : {}),
   };
 
-  // Append to import-commit log (keep last 50)
-  const updatedLog = [
-    ...recentTokens,
-    { token: request.idempotencyToken, result },
-  ].slice(-50);
-  (doc as unknown as { importCommits?: typeof updatedLog }).importCommits = updatedLog;
-
   await writeUserDoc(userId, doc);
+  // §1.b Redis token AFTER successful write — the retry-replay invariant.
+  // If the write fails above, we never set the token; a retry then runs
+  // the commit afresh against live state (and fresh-collision blocks the
+  // dupes that earlier partial writes may have created).
+  await cacheSet(cacheKey, JSON.stringify(result), IDEMPOTENCY_TTL_SECONDS);
+
+  // The liveHoldings reference is kept for diagnostics — surfaced via
+  // process logs if useful. (Intentional pin against lint dead-code rule.)
+  void liveHoldings;
 
   return result;
 }
