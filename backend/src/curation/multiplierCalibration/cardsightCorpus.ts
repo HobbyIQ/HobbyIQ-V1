@@ -81,10 +81,17 @@ export async function fetchCardSales(
   cardId: string,
   apiKey: string,
 ): Promise<Array<{ price: number; title: string }>> {
-  const r = (await cs(`/pricing/${cardId}`, apiKey)) as
-    | { __http?: number }
-    | PricingShape;
-  if ("__http" in r) return [];
+  // cs() returns either { __http: number } on HTTP failure or the JSON
+  // pricing shape. Cast through unknown so the discriminant check below
+  // narrows cleanly under strict TS.
+  const raw = await cs(`/pricing/${cardId}`, apiKey) as unknown;
+  if (
+    typeof raw === "object" && raw !== null && "__http" in raw &&
+    typeof (raw as { __http: unknown }).__http === "number"
+  ) {
+    return [];
+  }
+  const r = raw as PricingShape;
   const sales: Array<{ price: number; title: string }> = [];
   for (const rec of r.raw?.records ?? []) {
     if (typeof rec.price === "number" && typeof rec.title === "string") {
