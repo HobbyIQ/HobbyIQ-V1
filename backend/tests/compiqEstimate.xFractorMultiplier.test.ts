@@ -189,6 +189,155 @@ describe("CF-X — X-Fractor multiplier rows + provenance flag", () => {
   });
 });
 
+// CF-XMULT (2026-06-20) — empirical recalibration of Blue X-Fractor /150
+// using within-card paired BXF/150 ÷ Ref/499 ratio (CF-X2-ANCHOR probe).
+// Strict n=2 (≥2/≥2) median 1.57×; relaxed n=16 (≥1/≥1) median 1.62×,
+// IQR 1.08–2.03×. Convergent at ~1.6×. Provenance HELD at
+// sibling_provisional (n=2 strict below the ≥5 threshold for empirical
+// promotion). The other four 2026 X-Fractor rows share the same 2022
+// lineage that overshot ~2.4× on BXF/150; they are NOT empirically
+// recalibrated (no probe data for /75, /25, /10, /5) — left as-is with
+// a known-overshoot flag in the note.
+describe("CF-XMULT — Blue X-Fractor /150 empirical recalibration", () => {
+  it("Blue X-Fractor /150 row carries the recalibrated multiplier (1.6×) and IQR range (1.08–2.03)", () => {
+    const row = lookupBowmanFamilyEntry({
+      product: "Bowman",
+      subset: "Chrome Prospect Autographs",
+      parallelName: "Blue X-Fractor",
+      year: 2026,
+    });
+    expect(row).not.toBeNull();
+    expect(row!.baselineMultiplier).toBe(1.6);
+    expect(row!.range.low).toBe(1.08);
+    expect(row!.range.high).toBe(2.03);
+  });
+
+  it("Blue X-Fractor /150 provenance remains sibling_provisional (n=2 strict below ≥5 threshold)", () => {
+    const row = lookupBowmanFamilyEntry({
+      product: "Bowman",
+      subset: "Chrome Prospect Autographs",
+      parallelName: "Blue X-Fractor",
+      year: 2026,
+    });
+    expect(row).not.toBeNull();
+    expect(row!.provenance).toBe("sibling_provisional");
+    // Anti-regression: the row MUST NOT be empirical. If it were, T3
+    // collision-win would unlock on thin n=2 calibration — exactly the
+    // condition the gate was designed to prevent.
+    expect(row!.provenance).not.toBe("empirical");
+  });
+
+  it("Blue X-Fractor /150 note records the n=2 strict / n=16 relaxed calibration explicitly", () => {
+    const row = lookupBowmanFamilyEntry({
+      product: "Bowman",
+      subset: "Chrome Prospect Autographs",
+      parallelName: "Blue X-Fractor",
+      year: 2026,
+    });
+    expect(row!.note).toContain("CF-XMULT");
+    expect(row!.note).toContain("n=2 strict");
+    expect(row!.note).toContain("n=16 relaxed");
+  });
+
+  it("the 4 OTHER 2026 X-Fractor rows are unchanged from the CF-X placeholder values", () => {
+    // Yellow /75 — midpoint(makeRange(5.0, 6.0)) = 5.5
+    const yellow = lookupBowmanFamilyEntry({
+      product: "Bowman", subset: "Chrome Prospect Autographs",
+      parallelName: "Yellow X-Fractor", year: 2026,
+    });
+    expect(yellow!.baselineMultiplier).toBe(5.5);
+    expect(yellow!.range.low).toBe(5.0);
+    expect(yellow!.range.high).toBe(6.0);
+
+    // Orange /25 — midpoint(makeRange(15.0, 22.0)) = 18.5
+    const orange = lookupBowmanFamilyEntry({
+      product: "Bowman", subset: "Chrome Prospect Autographs",
+      parallelName: "Orange X-Fractor", year: 2026,
+    });
+    expect(orange!.baselineMultiplier).toBe(18.5);
+    expect(orange!.range.low).toBe(15.0);
+    expect(orange!.range.high).toBe(22.0);
+
+    // Black /10 — midpoint(makeRange(30.0, 45.0)) = 37.5
+    const black = lookupBowmanFamilyEntry({
+      product: "Bowman", subset: "Chrome Prospect Autographs",
+      parallelName: "Black X-Fractor", year: 2026,
+    });
+    expect(black!.baselineMultiplier).toBe(37.5);
+
+    // Red /5 — midpoint(makeRange(45.0, 65.0)) = 55
+    const red = lookupBowmanFamilyEntry({
+      product: "Bowman", subset: "Chrome Prospect Autographs",
+      parallelName: "Red X-Fractor", year: 2026,
+    });
+    expect(red!.baselineMultiplier).toBe(55.0);
+  });
+
+  it("the other 4 X-Fractor rows carry the KNOWN LIKELY OVERSHOOT flag in their notes", () => {
+    for (const name of ["Yellow X-Fractor", "Orange X-Fractor", "Black X-Fractor", "Red X-Fractor"]) {
+      const row = lookupBowmanFamilyEntry({
+        product: "Bowman", subset: "Chrome Prospect Autographs",
+        parallelName: name, year: 2026,
+      });
+      expect(row).not.toBeNull();
+      expect(row!.note).toContain("KNOWN LIKELY OVERSHOOT");
+      expect(row!.note).toContain("CF-XMULT");
+      expect(row!.provenance).toBe("sibling_provisional");
+    }
+  });
+
+  it("2022 Blue RayWave Refractor /150 row (the cloned-from source) UNCHANGED — year-strict isolation holds", () => {
+    // The 2022 sibling-anchor row that the CF-X 2026 BXF placeholder
+    // was cloned from. CF-XMULT does NOT touch the 2022 lineage.
+    const raywave2022 = lookupBowmanFamilyEntry({
+      product: "Bowman Chrome",
+      subset: "Chrome Prospect Autographs",
+      parallelName: "Blue RayWave Refractor",
+      year: 2022,
+    });
+    expect(raywave2022).not.toBeNull();
+    expect(raywave2022!.range.low).toBe(3.2);
+    expect(raywave2022!.range.high).toBe(4.5);
+  });
+
+  it("2022 Refractor /499 unit anchor row (1.55×) UNCHANGED", () => {
+    // The 2022 CPA Refractor /499 anchor that the multiplier ladder
+    // scales from. CF-XMULT does NOT touch the 2022 lineage.
+    const ref499_2022 = lookupBowmanFamilyEntry({
+      product: "Bowman Chrome",
+      subset: "Chrome Prospect Autographs",
+      parallelName: "Refractor",
+      year: 2022,
+    });
+    expect(ref499_2022).not.toBeNull();
+    expect(ref499_2022!.baselineMultiplier).toBe(1.55);
+  });
+
+  it("Hartman's actual pricing is unchanged — pool still can't anchor mechanism1", async () => {
+    // The CF-XMULT recalibration changes the MULTIPLIER VALUE but not
+    // the pool-composition gates. Hartman's holding has 0 Refractor /499
+    // sales on his cardId AND base autos parse as null parallel, so
+    // mechanism1 still fails at curatedParallelCount < 3 → no FMV
+    // change. (Verified empirically against the live portfolio via the
+    // CF-XMULT step-4 Cosmos blast-radius probe: 4 Hartman holdings,
+    // all null FMV pre-edit, all null FMV post-edit.)
+    process.env.CARD_HEDGE_API_KEY = "test-key";
+    adminSession = await signIn("HobbyIQ", "Baseball25");
+    mockVariantMismatchHartmanLike();
+
+    const res = await request(app)
+      .post("/api/compiq/estimate")
+      .set("x-session-id", adminSession)
+      .send(HARTMAN_BODY_CURATED);
+
+    expect(res.status).toBe(200);
+    expect(res.body.fairMarketValue).toBeNull();
+    // Pool fails curatedParallelCount gate → no predictedPrice → no
+    // estimated value emitted. Same as pre-CF-XMULT.
+    expect(res.body.estimatedValue ?? null).toBeNull();
+  });
+});
+
 describe("CF-X — variant-mismatch path multiplier emit", () => {
   beforeAll(async () => {
     adminSession = await signIn("HobbyIQ", "Baseball25");

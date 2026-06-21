@@ -473,11 +473,18 @@ const RAW_BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = [
   // parallels of the same print run (Blue X-Fractor /150 ← Blue RayWave
   // Refractor /150; Yellow X-Fractor /75 ← Yellow Refractor /75; etc.).
   //
-  // CURATION TODO (owner-track): refine baselineMultiplier + range with
-  // empirical X-Fractor sales data when available. The `provenance:
-  // "sibling_provisional"` flag flows through the engine's
-  // estimateBasis: "multiplier_provisional" → iOS "provisional" badge,
-  // so users see the honesty marker even with placeholder values.
+  // CF-XMULT (2026-06-20): Blue X-Fractor /150 recalibrated empirically off
+  // CF-X2-ANCHOR's 173-CPA-card probe. Within-card paired BXF/150 ÷ Ref/499
+  // ratio: strict n=2 (≥2/≥2) median 1.57×; relaxed n=16 (≥1/≥1) median
+  // 1.62×, IQR 1.08–2.03×. Convergent at ~1.6×. Provenance HELD at
+  // sibling_provisional (n=2 strict is below the ≥5 threshold for empirical
+  // promotion — no T3 collision-win unlock on thin calibration). The
+  // cloned-from-2022 placeholder 3.85× overshot by ~2.4×. The other four
+  // rows (Yellow /75, Orange /25, Black /10, Red /5) share that 2022 lineage
+  // and LIKELY overshoot similarly, but no empirical data exists for those
+  // print runs yet — left as-is with a known-overshoot flag in each row's
+  // note rather than model-rescaled (which would launder the assumption
+  // into something that looks measured).
   //
   // Subject lookup is year-strict on year=2026, so these rows don't
   // collide with any 2022 entry. Hartman's actual holding
@@ -489,11 +496,11 @@ const RAW_BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = [
   //
   // Drake Baldwin integration test targets "Blue Refractor" parallel,
   // not "Blue X-Fractor" — additive add, no test conflict.
-  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Blue X-Fractor",   printRun: "/150", baselineMultiplier: midpoint(makeRange(3.2, 4.5)), range: makeRange(3.2, 4.5), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Blue RayWave Refractor /150" },
-  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Yellow X-Fractor", printRun: "/75",  baselineMultiplier: midpoint(makeRange(5.0, 6.0)), range: makeRange(5.0, 6.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Yellow Refractor /75" },
-  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Orange X-Fractor", printRun: "/25",  baselineMultiplier: midpoint(makeRange(15.0, 22.0)), range: makeRange(15.0, 22.0), directCompOnly: false, tierQualifier: "Hobby", isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Orange Refractor /25" },
-  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Black X-Fractor",  printRun: "/10",  baselineMultiplier: midpoint(makeRange(30.0, 45.0)), range: makeRange(30.0, 45.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — no 2022 /10 CPA sibling; rough scarcity extrapolation" },
-  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Red X-Fractor",    printRun: "/5",   baselineMultiplier: midpoint(makeRange(45.0, 65.0)), range: makeRange(45.0, 65.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Red Refractor /5" },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Blue X-Fractor",   printRun: "/150", baselineMultiplier: 1.6, range: makeRange(1.08, 2.03), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "CF-XMULT 2026-06-20 — empirical within-card paired (n=2 strict / n=16 relaxed); centerpoint 1.6× (strict 1.57× ≈ relaxed 1.62×); range = relaxed IQR. Provenance held sibling_provisional pending n≥5 strict. REFRESHABLE." },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Yellow X-Fractor", printRun: "/75",  baselineMultiplier: midpoint(makeRange(5.0, 6.0)), range: makeRange(5.0, 6.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Yellow Refractor /75. KNOWN LIKELY OVERSHOOT: CF-XMULT showed the same-lineage BXF/150 row overshot ~2.4×; this row likely overshoots similarly. No empirical /75 X-Fractor data yet — recalibration TBD." },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Orange X-Fractor", printRun: "/25",  baselineMultiplier: midpoint(makeRange(15.0, 22.0)), range: makeRange(15.0, 22.0), directCompOnly: false, tierQualifier: "Hobby", isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Orange Refractor /25. KNOWN LIKELY OVERSHOOT: CF-XMULT showed the same-lineage BXF/150 row overshot ~2.4×; this row likely overshoots similarly. No empirical /25 X-Fractor data yet — recalibration TBD." },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Black X-Fractor",  printRun: "/10",  baselineMultiplier: midpoint(makeRange(30.0, 45.0)), range: makeRange(30.0, 45.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — no 2022 /10 CPA sibling; rough scarcity extrapolation. KNOWN LIKELY OVERSHOOT: CF-XMULT showed the same-lineage BXF/150 row overshot ~2.4×; this row likely overshoots similarly. No empirical /10 X-Fractor data yet — recalibration TBD." },
+  { year: 2026, product: "Bowman", subset: "Chrome Prospect Autographs", parallelName: "Red X-Fractor",    printRun: "/5",   baselineMultiplier: midpoint(makeRange(45.0, 65.0)), range: makeRange(45.0, 65.0), directCompOnly: false, tierQualifier: null, isAutograph: true, provenance: "sibling_provisional", note: "PLACEHOLDER — sibling anchor: Red Refractor /5. KNOWN LIKELY OVERSHOOT: CF-XMULT showed the same-lineage BXF/150 row overshot ~2.4×; this row likely overshoots similarly. No empirical /5 X-Fractor data yet — recalibration TBD." },
 ];
 
 export const BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = Object.freeze(
