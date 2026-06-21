@@ -151,7 +151,17 @@ describe("CF-X — X-Fractor multiplier rows + provenance flag", () => {
     ]);
     for (const row of xfractors) {
       expect(row.provenance).toBe("sibling_provisional");
-      expect(row.directCompOnly).toBe(false);
+      // CF-BUILDB-FAMILY-ACTIVATE (2026-06-21): Blue X-Fractor /150 is the
+      // only X-Fractor flipped to directCompOnly:true (to retire its
+      // sibling_provisional 1.6× and route through Build B's empirical
+      // 2.974× unconditionally). The other 4 X-Fractor placeholders
+      // (Yellow/Orange/Black/Red) stay directCompOnly:false pending their
+      // own empirical baseRelativePremium calibration.
+      if (row.parallelName === "Blue X-Fractor") {
+        expect(row.directCompOnly).toBe(true);
+      } else {
+        expect(row.directCompOnly).toBe(false);
+      }
     }
   });
 

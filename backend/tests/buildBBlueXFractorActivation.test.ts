@@ -62,7 +62,7 @@ describe("CF-BUILDB-BLUE-ACTIVATE (A) — real-table lookup carries the workshee
     expect(p.topBaseBucketRatio).toBe(3.254);
   });
 
-  it("row-level provenance UNCHANGED (sibling_provisional) — the merge touched only baseRelativePremium", () => {
+  it("row-level provenance UNCHANGED (sibling_provisional); CF-BUILDB-FAMILY-ACTIVATE flipped directCompOnly→true", () => {
     const row = lookupBowmanFamilyEntry({
       product: "Bowman",
       subset: "Chrome Prospect Autographs",
@@ -70,10 +70,13 @@ describe("CF-BUILDB-BLUE-ACTIVATE (A) — real-table lookup carries the workshee
       year: 2026,
     });
     // Row-level provenance is the m1 axis; baseRelativePremium.provenance is
-    // the Build B axis. They're independent. Confirms "touch nothing else".
+    // the Build B axis. They're independent.
     expect(row!.provenance).toBe("sibling_provisional");
     expect(row!.baselineMultiplier).toBe(1.6);
-    expect(row!.directCompOnly).toBe(false);
+    // CF-BUILDB-FAMILY-ACTIVATE: flipped to true to retire the m1
+    // sibling_provisional 1.6× and route this tier through Build B's empirical
+    // 2.974× unconditionally (resolves watch-item (3) m1-pre-emption).
+    expect(row!.directCompOnly).toBe(true);
   });
 });
 
@@ -223,5 +226,104 @@ describe("CF-BUILDB-BLUE-ACTIVATE (C) — m1 pre-emption check (integration)", (
     expect(result.source).toBe("variant-mismatch");
     expect(result.fairMarketValue ?? null).toBeNull();
     expect(result.estimatedValue ?? null).toBeNull();
+  });
+});
+
+// ─── CF-BUILDB-FAMILY-ACTIVATE §3 — coverage test through computeEstimate ──
+//
+// CRITICAL design discovery (recon §1 follow-on): the m1+Build B block at
+// compiqEstimate.service.ts:3082-3155 sits INSIDE `if (everythingFilteredOut)`
+// — Build B fires ONLY on the variant-mismatch rescue path (when all comps
+// fail the variant filter at T3). For a holding whose comp pool is healthy
+// (≥3 comps survive variant filter), the main FMV pipeline runs and Build B
+// is never consulted, even with directCompOnly:true on the row. This is the
+// existing service-layer wiring — out of scope to change here, but worth
+// surfacing in the HALT.
+//
+// Activation reality therefore: Build B's empirical premium fires for
+// THIN-POOL CPA holdings — Hartman-shape — where variant-mismatch trips
+// and m1+Build B is the rescue. For a typical CPA card with a clean
+// comp pool, Build B's premium isn't consulted.
+//
+// §3 verifies the rescue-path activation end-to-end: comp pool entirely
+// fails variant filter (no curated parallel survives), everythingFilteredOut
+// triggers, m1 returns null via directCompOnly short-circuit, Build B fires.
+
+describe("CF-BUILDB-FAMILY-ACTIVATE §3 — Build B fires via variant-mismatch rescue when directCompOnly:true", () => {
+  beforeEach(() => {
+    process.env.CARD_HEDGE_API_KEY = "test-key";
+  });
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("Purple Refractor /250 CPA, thin pool (no direct parallel sales): Build B emits estimatedValue ≈ baseMedian × 1.928", async () => {
+    const now = Date.now();
+    const isoDaysAgo = (d: number) => new Date(now - d * 86_400_000).toISOString();
+
+    (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      card: {
+        card_id: "synth-buildb-purple-250",
+        title: "2026 Bowman Charlie Condon Chrome Prospects Autographs",
+        player: "Charlie Condon",
+        set: "Chrome Prospects Autographs",
+        year: 2026,
+        number: "CPA-CC",
+        variant: "Purple Refractor /250",
+      },
+      sales: [
+        // 10 base autos with a DIFFERENT player name in title (not
+        // "Condon"): pass isBaseAutoTitle (Auto, no Refractor, no print
+        // run, no color exclusion) → counted by Build B's Gate 5 from
+        // fetched.comps; FAIL the variant filter's player.lastname
+        // includes check at T3 (lastName "condon" not in title) →
+        // everythingFilteredOut=true → variant-mismatch rescue branch
+        // runs → m1 returns null via directCompOnly short-circuit on
+        // the 2026 Purple Refractor /250 row → Build B fires.
+        //
+        // Semantic note: in a real Cardsight pool, "Condon's base autos"
+        // would carry "Condon" in the title and pass variant filter. This
+        // synthetic fixture intentionally uses a non-matching player to
+        // force the variant-mismatch path the engine wires Build B to.
+        // The math (baseMedian × 1.928) is anchor-agnostic at the comp
+        // level — Build B only filters by isBaseAutoTitle, not player.
+        // Median ≈ 28.75.
+        ...Array.from({ length: 10 }, (_, i) => ({
+          price: 22 + i * 1.5,
+          date: isoDaysAgo(i),
+          title: `2026 Bowman Chrome Prospects Auto CPA-XX Some Other`,
+        })),
+        // No direct Purple /250 sales — pure base-auto rescue.
+      ],
+      variantWarning: [],
+      aiCategory: "Baseball",
+    });
+
+    const result = (await computeEstimate(
+      {
+        playerName: "Charlie Condon",
+        cardYear: 2026,
+        product: "Bowman",
+        parallel: "Purple Refractor",
+        isAuto: true,
+      } as any,
+      testCallContext,
+    )) as Record<string, any>;
+
+    // EXPECTED: variant-mismatch trip → rescue branch runs → m1 returns null
+    // via directCompOnly short-circuit → Build B fires with empirical 1.928×.
+    // estimatedValue ≈ 28.75 × 1.928 ≈ $55.43 (worksheet centerpoint),
+    // range [28.75 × 1.459, 28.75 × 2.332] ≈ [41.95, 67.05].
+    expect(result.source).toBe("variant-mismatch");
+    expect(result.estimatedValue).not.toBeNull();
+    expect(typeof result.estimatedValue).toBe("number");
+    expect(result.estimateBasis).toContain("base_anchored");
+
+    const baseMedian = 28.75; // (28 + 29.5) / 2
+    expect(result.estimatedValue).toBeGreaterThan(baseMedian * 1.459); // worksheet low
+    expect(result.estimatedValue).toBeLessThan(baseMedian * 2.332); // worksheet high
+    // Tighter centerpoint: should land near baseMedian × 1.928 ≈ 55.43
+    expect(result.estimatedValue).toBeGreaterThan(45);
+    expect(result.estimatedValue).toBeLessThan(70);
   });
 });
