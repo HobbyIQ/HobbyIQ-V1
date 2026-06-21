@@ -76,7 +76,7 @@ function variantMismatchRouterResponse(over: {
       card_id: "bonemer-card-id",
       title: "2024 Bowman Chrome Caleb Bonemer",
       player: "Caleb Bonemer",
-      set: "Bowman Chrome",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: sales titles + auto narrative → CPA subset (watch: confirm variant-mismatch still BITES post-rewrite)
       year: 2024,
       number: null,
       variant: null,

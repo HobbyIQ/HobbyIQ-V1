@@ -63,7 +63,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
             card_id: "blake-burke",
             title: "2024 Bowman Chrome Blake Burke PSA 10 Auto",
             player: "Blake Burke",
-            set: "Bowman Chrome",
+            set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: variant "Orange Wave Auto" + title "Auto" → CPA subset
             year: 2024,
             number: null,
             variant: "Orange Wave Auto",

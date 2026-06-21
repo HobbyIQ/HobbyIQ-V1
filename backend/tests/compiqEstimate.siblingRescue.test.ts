@@ -31,7 +31,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
         card_id: "exact-card-uuid",
         title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
         player: "Caleb Bonemer",
-        set: "Bowman Draft Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-CBO prefix → CPA subset (Bowman Draft Chrome release)
         year: 2024,
         number: "CPA-CBO",
         variant: "Chrome Prospect Autograph",
@@ -42,7 +42,7 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
         card_id: "exact-card-uuid",
         title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
         player: "Caleb Bonemer",
-        set: "Bowman Draft Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-CBO prefix → CPA subset (Bowman Draft Chrome release)
         year: 2024,
         number: "CPA-CBO",
         variant: "Chrome Prospect Autograph",

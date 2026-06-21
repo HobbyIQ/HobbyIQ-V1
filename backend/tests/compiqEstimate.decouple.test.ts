@@ -165,7 +165,7 @@ function mockInsufficientBowmanFlagship() {
       card_id: "card-hartman-bowman-flagship",
       title: "2026 Bowman Eric Hartman BCP-EHA",
       player: "Eric Hartman",
-      set: "Bowman",
+      set: "Paper Prospects", // CF-FIXTURE-AUDIT: production-accurate Cardsight setName (paper flagship, BCP subset). Pre-audit "Bowman" was the release name.
       year: 2026,
       number: "BCP-EHA",
       variant: "Refractor",
@@ -284,19 +284,20 @@ describe("CF-DECOUPLE — anti-regression: Bowman CPA at sites #1/#3 unchanged",
   });
 
   it("Hartman shape (bare 'Bowman' + Blue X-Fractor + auto) through site #1 produces same response shape as pre-CF-DECOUPLE", async () => {
-    // Hartman routes through site #1 (variant-mismatch short-circuit).
-    // CF-X already preserved "Bowman" there pre-CF-DECOUPLE, so the
-    // classifier returns the same "Bowman" value → same lookup → same
-    // mechanism1 outcome. This is the load-bearing Hartman regression
-    // guard the CF spec called out: "Hartman unchanged" holds as the
-    // headline.
+    // Hartman routes through site #1 via the variant-mismatch short-
+    // circuit (2 comps < T3 floor of 3), which fires upstream of
+    // mechanism1. The "Hartman unchanged" headline the CF spec called
+    // out holds via this short-circuit, not via m1 subset routing —
+    // m1 doesn't run on this path. (Post-CF-FIXTURE-AUDIT, 2026-06-21:
+    // card.set is now the production-accurate "Chrome Prospects
+    // Autographs"; the short-circuit still fires identically.)
     process.env.CARD_HEDGE_API_KEY = "test-key";
     (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       card: {
         card_id: "card-hartman-blue-xfractor-150",
         title: "2026 Bowman Eric Hartman Chrome Prospects Autographs",
         player: "Eric Hartman",
-        set: "Bowman",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT
         year: 2026,
         number: "CPA-EHA",
         variant: "Blue X-Fractor /150",
@@ -325,9 +326,12 @@ describe("CF-DECOUPLE — anti-regression: Bowman CPA at sites #1/#3 unchanged",
     expect(res.body.source).toBe("variant-mismatch");
     expect(res.body.fairMarketValue).toBeNull();
     // CF-XMULT's CF-X2-ANCHOR established Hartman can't anchor m1
-    // (pool fails curatedParallelCount < 3); post-CF-DECOUPLE that
-    // STILL holds — the classifier returns "Bowman" (same as pre-fix),
-    // so mechanism1's failure mode is identical. No estimated value emitted.
+    // (pool fails curatedParallelCount < 3). Post-CF-FIXTURE-AUDIT,
+    // the classifier now returns the valid subset "Chrome Prospect
+    // Autographs" (was null pre-audit), but m1 still can't anchor on
+    // the pool-thin constraint — same null end state via a different
+    // failure point. The variant-mismatch short-circuit upstream
+    // reaches the same outcome regardless. No estimated value emitted.
     expect(res.body.estimatedValue ?? null).toBeNull();
   });
 });

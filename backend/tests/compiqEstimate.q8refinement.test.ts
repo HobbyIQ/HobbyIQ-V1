@@ -47,7 +47,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
         card_id: "26fae2a4-2f50-460a-9f74-175f4840faef",
         title: "Gage Wood",
         player: "Gage Wood",
-        set: "Bowman Draft",
+        set: "Chrome Prospects", // CF-FIXTURE-AUDIT: BDC- (Bowman Draft Chrome) base prefix → "Chrome Prospects" subset
         year: 2025,
         // BDC-4 = Bowman Draft Chrome BASE (NOT an auto prefix). With
         // user.isAuto=true, this is autoPrefixMismatch=true.
@@ -96,7 +96,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
         card_id: "496a7e19-b26d-4f48-9fae-e66d6961c27a",
         title: "Caleb Bonemer",
         player: "Caleb Bonemer",
-        set: "Bowman Draft",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA- prefix → CPA subset
         year: 2024,
         // CPA-CBO = Chrome Prospect Autograph (AUTO prefix). With
         // user.isAuto=false, this is autoPrefixMismatch=true (other direction).
@@ -190,7 +190,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
         card_id: "card-some-auto",
         title: "Some Prospect Auto",
         player: "Some Prospect",
-        set: "Bowman Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-XYZ prefix → CPA subset
         year: 2025,
         number: "CPA-XYZ", // AUTO prefix, matches user.isAuto=true
         variant: null,
@@ -233,7 +233,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
         card_id: "card-drake-blue-auto-150",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
         player: "Drake Baldwin",
-        set: "Bowman Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
         year: 2022,
         number: "CPA-DBN",
         variant: "Blue Refractor Auto /150",
@@ -272,7 +272,7 @@ describe("Q8'' — Cardsight wrong-card-resolution short-circuit (parallelNotFou
         card_id: "card-x",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
         player: "Drake Baldwin",
-        set: "Bowman Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
         year: 2022,
         number: "CPA-DBN",
         variant: "Blue Refractor Auto /150",

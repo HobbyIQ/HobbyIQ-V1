@@ -277,7 +277,7 @@ describe("computeEstimate — pinnedAuthoritative flag (CF-REPRICE-PINNED-AUTHOR
         card_id: "some-resolved-id",
         title: "Mike Trout",
         player: "Mike Trout",
-        set: "Bowman",
+        set: "Paper Base", // CF-FIXTURE-AUDIT: production-accurate setName (variant: "Base" → paper base subset)
         year: 2026,
         number: null,
         variant: "Base",

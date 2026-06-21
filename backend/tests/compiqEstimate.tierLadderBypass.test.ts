@@ -70,7 +70,7 @@ function mockDrakeBaldwinT1Fixture() {
       card_id: "card-drake-blue-auto-150",
       title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
       player: "Drake Baldwin",
-      set: "Bowman Chrome",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN-style auto → CPA subset
       year: 2022,
       number: "CPA-DBN",
       variant: "Blue Refractor Auto /150",

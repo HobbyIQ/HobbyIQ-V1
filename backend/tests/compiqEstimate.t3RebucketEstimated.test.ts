@@ -70,7 +70,7 @@ function mockT3BaseAutoFixture() {
       card_id: "card-baldwin-blue-150",
       title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
       player: "Drake Baldwin",
-      set: "Bowman Chrome",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
       year: 2022,
       number: "CPA-DBN",
       variant: "Blue Refractor /150",
@@ -99,7 +99,7 @@ function mockTooThinForT3() {
       card_id: "card-baldwin-blue-150",
       title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
       player: "Drake Baldwin",
-      set: "Bowman Chrome",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
       year: 2022,
       number: "CPA-DBN",
       variant: "Blue Refractor /150",
@@ -188,7 +188,7 @@ describe("CF-A(a) — T3 base-auto floor → estimated bucket", () => {
         card_id: "card-baldwin-blue-150",
         title: "2022 Bowman Chrome Drake Baldwin Blue Refractor Auto /150",
         player: "Drake Baldwin",
-        set: "Bowman Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
         year: 2022,
         number: "CPA-DBN",
         variant: "Blue Refractor /150",

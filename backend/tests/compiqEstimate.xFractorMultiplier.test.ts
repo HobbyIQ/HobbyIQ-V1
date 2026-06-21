@@ -67,7 +67,7 @@ function mockVariantMismatchHartmanLike() {
       card_id: "card-hartman-blue-xfractor-150",
       title: "2026 Bowman Eric Hartman Chrome Prospects Autographs",
       player: "Eric Hartman",
-      set: "Bowman",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-EHA prefix → CPA subset
       year: 2026,
       number: "CPA-EHA",
       variant: "Blue X-Fractor /150",
@@ -92,7 +92,7 @@ function mockT3HartmanLike() {
       card_id: "card-hartman-blue-xfractor-150",
       title: "2026 Bowman Eric Hartman Chrome Prospects Autographs",
       player: "Eric Hartman",
-      set: "Bowman",
+      set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-EHA prefix → CPA subset
       year: 2026,
       number: "CPA-EHA",
       variant: "Blue X-Fractor /150",
@@ -474,7 +474,7 @@ describe("CF-X — T3 collision: multiplier wins when curated", () => {
         card_id: "card-baldwin-blue-raywave-150-2022",
         title: "2022 Bowman Chrome Drake Baldwin Blue RayWave Refractor Auto /150",
         player: "Drake Baldwin",
-        set: "Bowman Chrome",
+        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-DBN prefix → CPA subset
         year: 2022,
         number: "CPA-DBN",
         variant: "Blue RayWave Refractor /150",
