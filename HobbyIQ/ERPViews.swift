@@ -377,7 +377,9 @@ struct ERPHubView: View {
             timeseries = tr
             unreconciledCount = ur.count ?? ur.entries.count
         } catch {
+            #if DEBUG
             print("[Financials] hub load error: \(APIService.errorMessage(from: error))")
+            #endif
             loadFailed = true
         }
     }
@@ -391,7 +393,9 @@ struct ERPHubView: View {
             syncToast = response.message ?? "Updated \(response.updated ?? 0) entries"
             await loadAll()
         } catch {
+            #if DEBUG
             print("[Financials] sync error: \(APIService.errorMessage(from: error))")
+            #endif
             syncToast = "Couldn't sync — try again."
         }
     }
@@ -663,7 +667,9 @@ struct ERPReconciliationView: View {
             let aging = try await APIService.shared.fetchAgingBuckets()
             agingBuckets = aging.buckets
         } catch {
+            #if DEBUG
             print("[Financials] aging fetch failed (non-fatal): \(APIService.errorMessage(from: error))")
+            #endif
             agingBuckets = []
         }
         await inbox
@@ -834,7 +840,9 @@ private struct ERPOverrideSheet: View {
             onSaved()
             dismiss()
         } catch {
+            #if DEBUG
             print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            #endif
             localError = "Couldn't save — try again."
         }
     }
@@ -1401,7 +1409,9 @@ private struct ERPExpenseFormSheet: View {
             onSaved()
             dismiss()
         } catch {
+            #if DEBUG
             print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            #endif
             localError = "Couldn't save — try again."
         }
     }
@@ -1414,7 +1424,9 @@ private struct ERPExpenseFormSheet: View {
             onSaved()
             dismiss()
         } catch {
+            #if DEBUG
             print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            #endif
             localError = "Couldn't save — try again."
         }
         isDeleting = false
@@ -1662,7 +1674,9 @@ private struct ERPRecordTradeSheet: View {
             onSaved()
             dismiss()
         } catch {
+            #if DEBUG
             print("[Financials] save error: \(APIService.errorMessage(from: error))")
+            #endif
             localError = "Couldn't save — try again."
         }
     }
@@ -2110,7 +2124,9 @@ private func erpSectionHeader(_ title: String) -> some View {
 /// Calm fallback for any failed fetch in Financials. Never surfaces raw
 /// route/HTTP strings — `message` is logged to the console only.
 private func erpErrorBanner(_ message: String, onRetry: (() -> Void)? = nil) -> some View {
+    #if DEBUG
     let _ = { print("[Financials] load error: \(message)") }()
+    #endif
     return HStack(spacing: 10) {
         Image(systemName: "exclamationmark.circle")
             .font(.subheadline.weight(.semibold))
