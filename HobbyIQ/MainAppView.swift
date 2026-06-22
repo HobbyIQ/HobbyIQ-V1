@@ -224,11 +224,13 @@ private struct LegacyTabButton: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: isSelected ? tab.selectedSystemImage : tab.systemImage)
-                    .font(.system(size: 17, weight: isSelected ? .bold : .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .symbolRenderingMode(.hierarchical)
+                    .frame(width: 22, height: 22)
                 Text(tab.title)
-                    .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                    .font(.system(size: 10, weight: .semibold))
                     .lineLimit(1)
+                    .frame(height: 12)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)

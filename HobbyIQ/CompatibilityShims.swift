@@ -157,7 +157,7 @@ enum MainTab: String, CaseIterable, Identifiable, Codable, Hashable {
         case .comp: return "magnifyingglass.circle.fill"
         case .player: return "person.crop.circle.fill"
         case .inventory: return "archivebox.fill"
-        case .portfolio: return "chart.bar.xaxis"
+        case .portfolio: return "chart.bar.fill"
         case .erp: return "briefcase.fill"
         }
     }
