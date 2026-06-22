@@ -65,9 +65,10 @@ struct AccountView: View {
     // MARK: - Profile Card
 
     private var profileCard: some View {
-        HStack(spacing: 14) {
+        let currentImage = profileImageStore.image
+        return HStack(spacing: 14) {
             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                if let uiImage = profileImageStore.image {
+                if let uiImage = currentImage {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
