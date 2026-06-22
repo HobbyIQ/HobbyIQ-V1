@@ -534,6 +534,42 @@ struct APIService {
         )
     }
 
+    // CF-IOS-IMPORT-BUILD (2026-06-21): holdings import — preview / poll / commit.
+    //
+    // POST /import/preview is JSON {file:<base64>, format} (NOT multipart).
+    // Backend dispatches inline (≤40 rows) vs async (>40 rows) via the
+    // `async:true` discriminator on the response — decoded by
+    // PreviewResponseEnvelope into a Swift enum so the caller switches
+    // on `.inline` vs `.asyncJob`.
+    //
+    // POST /import/commit is JSON; 402 carries the capacity-exceeded
+    // payload as a DISTINCT branch (not a generic error) — callers must
+    // route to PaywallView, not the generic .failed state.
+
+    func importPreview(body: ImportPreviewRequest) async throws -> PreviewResponse {
+        let envelope: PreviewResponseEnvelope = try await post(
+            path: "/api/portfolio/import/preview",
+            body: body,
+            responseType: PreviewResponseEnvelope.self
+        )
+        return envelope.payload
+    }
+
+    func fetchImportJob(jobId: String) async throws -> ImportJobDoc {
+        try await get(
+            path: "/api/portfolio/import/jobs/\(jobId)",
+            responseType: ImportJobDoc.self
+        )
+    }
+
+    func importCommit(body: ImportCommitRequest) async throws -> ImportCommitResponse {
+        try await post(
+            path: "/api/portfolio/import/commit",
+            body: body,
+            responseType: ImportCommitResponse.self
+        )
+    }
+
     /// Header-aware variant of `sendData`. Returns the `(Data, HTTPURLResponse)`
     /// pair so callers can read custom response headers
     /// (`X-Holdings-Count`, `Content-Disposition`, etc.) that the JSON-

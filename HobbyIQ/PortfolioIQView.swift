@@ -38,6 +38,9 @@ struct PortfolioIQView: View {
     @State private var exportErrorMessage: String?
     @State private var showExportError = false
 
+    // CF-IOS-IMPORT-BUILD (2026-06-21): holdings import sheet state.
+    @State private var showHoldingsImport = false
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -134,6 +137,11 @@ struct PortfolioIQView: View {
             } message: { message in
                 Text(message)
             }
+            // CF-IOS-IMPORT-BUILD (2026-06-21): import sheet.
+            .sheet(isPresented: $showHoldingsImport) {
+                HoldingsImportView()
+                    .environmentObject(sessionViewModel)
+            }
             .scanFlow(isPresented: $showCardIdentify, sessionViewModel: sessionViewModel)
             .onAppear {
                 if vm.summary == nil {
@@ -154,11 +162,8 @@ struct PortfolioIQView: View {
                 portfolioToolButton(title: "Reprice All", icon: "arrow.triangle.2.circlepath", action: { showBatchReprice = true })
                 portfolioToolButton(title: "Scan Card", icon: "camera.viewfinder", action: { showCardIdentify = true })
             }
-            // CF-IOS-EXPORT-BUILD (2026-06-21): Export holdings.
-            // Third tools row lives alone until CF-IOS-IMPORT-BUILD adds
-            // an Import button to the right — the layout becomes a
-            // proper 2-up grid then. For v1, full-row Export is fine
-            // and matches the existing tools chrome.
+            // CF-IOS-EXPORT-BUILD (2026-06-21) + CF-IOS-IMPORT-BUILD
+            // (2026-06-21): Export + Import row. Completes the 2x3 grid.
             HStack(spacing: 8) {
                 portfolioToolButton(
                     title: isExporting ? "Exporting…" : "Export holdings",
@@ -167,6 +172,11 @@ struct PortfolioIQView: View {
                         guard isExporting == false else { return }
                         showExportFormatChooser = true
                     }
+                )
+                portfolioToolButton(
+                    title: "Import file",
+                    icon: "square.and.arrow.down",
+                    action: { showHoldingsImport = true }
                 )
             }
         }
