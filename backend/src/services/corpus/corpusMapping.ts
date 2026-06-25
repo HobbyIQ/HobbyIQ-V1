@@ -27,10 +27,15 @@
  *   corpus entry stores that query with querySource: "free_text".
  *
  *   If the request doesn't include `query` (the /price-by-id case
- *   where the caller pinned the request to a Card Hedge card_id), the
- *   corpus entry stores `cardHedgeCardId` in the `query` field with
+ *   where the caller pinned the request to a Cardsight UUID), the
+ *   corpus entry stores `cardsightCardId` in the `query` field with
  *   querySource: "card_id". This is "self-describing semantics" —
  *   the discriminator tells downstream analysts how to read the slot.
+ *   (Pre-2026-05-30 this slot held a Card Hedge cardHedgeCardId; the
+ *   CF-CARDHEDGE-HARD-CUTOVER migration moved the pinned-id namespace
+ *   to Cardsight UUIDs. CF-CH-P5/P6 re-introduced CardHedge as a comp
+ *   vendor — provenance is captured on response.chProvenance and the
+ *   pinned id remains the Cardsight UUID for stable analytics joins.)
  *
  *   All other endpoints (/search, /price, /bulk) only carry free-text
  *   queries and so always pass querySource: "free_text". Callers are
@@ -59,6 +64,17 @@ interface PricingRouteResult {
   pricingEngine?: string;
   engineVersion?: string;
   compsUsed?: number | null;
+  // CF-CH-P6-CORPUS: the engine attribution from P5. When set to
+  // "cardhedge" this mapper synthesizes chProvenance on the corpus row;
+  // any other value (including null/undefined) emits a Cardsight-style
+  // row byte-identical to pre-P6 behavior (additive invariant).
+  estimateSource?: string | null;
+  // CF-CH-P6-CORPUS: optional richer CH attribution surfaced by the
+  // engine when available. Both fields are forward-compat hooks — the
+  // engine doesn't surface them yet; when it does, the chProvenance
+  // block on the corpus row will pick them up without a mapper change.
+  chCardId?: string | null;
+  chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong" | string | null;
   // ...other fields exist on the real result object; this helper ignores them.
 }
 
@@ -96,6 +112,35 @@ export interface CorpusEntryFromPricingResultArgs {
 export function corpusEntryFromPricingResult(
   args: CorpusEntryFromPricingResultArgs,
 ): CorpusEntry {
+  // CF-CH-P6-CORPUS: when the engine attributed this estimate to
+  // CardHedge (estimateSource === "cardhedge", set by P5), synthesize
+  // a chProvenance block carrying vendor + the optional id/trust hooks.
+  // For any other estimateSource (or undefined) the block is omitted
+  // entirely, preserving byte-identical Cardsight-row emission.
+  //
+  // Explicit construction (not conditional-spread) keeps the inferred
+  // type aligned with BuildCorpusEntryOptions.response.chProvenance —
+  // conditional spreads produce `string | undefined` keys which tsc
+  // strict rejects against a `chCardId?: string` field.
+  type ChProv = {
+    vendor: "cardhedge";
+    chCardId?: string;
+    trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+  };
+  let chProvenance: ChProv | undefined;
+  if (args.result?.estimateSource === "cardhedge") {
+    chProvenance = { vendor: "cardhedge" };
+    if (typeof args.result.chCardId === "string" && args.result.chCardId) {
+      chProvenance.chCardId = args.result.chCardId;
+    }
+    if (
+      args.result.chTrustReason === "prices_by_card_honest" ||
+      args.result.chTrustReason === "title_cohesion_strong"
+    ) {
+      chProvenance.trustReason = args.result.chTrustReason;
+    }
+  }
+
   return buildCorpusEntry({
     query: args.query,
     querySource: args.querySource,
@@ -110,6 +155,7 @@ export function corpusEntryFromPricingResult(
       marketState: null,
       marketStateSchemaVersion: 0,
       sampleSize: args.result?.compsUsed ?? null,
+      ...(chProvenance ? { chProvenance } : {}),
     },
   });
 }
