@@ -1613,7 +1613,7 @@ struct CompIQPricedCardView: View {
 
     @ViewBuilder
     private func trendIQSection(_ response: CompIQPriceByIdResponse) -> some View {
-        if let trendIQ = response.trendIQ {
+        if let trendIQ = response.trendIQ, trendIQHasMeaningfulSignal(trendIQ) {
             cardGroup(title: "TrendIQ", icon: "waveform.path.ecg") {
                 trendIQHeadline(trendIQ)
                 trendIQCoverageRow(trendIQ)
@@ -1625,6 +1625,19 @@ struct CompIQPricedCardView: View {
                 showUpgradePaywall = true
             }
         }
+    }
+
+    /// CF-IOS-CLEANUP-CHAIN Stage 3 (2026-06-25): suppress the TrendIQ
+    /// card entirely when the engine has no actionable signal — both
+    /// `direction` missing/unrecognized AND `impliedPct` nil. The prior
+    /// render-anyway path landed on the "Trend signal unavailable"
+    /// fallback inside trendIQHeadlineCopy, which gave the user an
+    /// empty card and the paywall lockedOverlay a hollow target.
+    /// Direction vocabulary matches trendIQHeadlineCopy's switch.
+    private func trendIQHasMeaningfulSignal(_ trendIQ: TrendIQResponse) -> Bool {
+        if trendIQ.impliedPct != nil { return true }
+        let direction = (trendIQ.direction ?? "").lowercased()
+        return ["rising", "falling", "flat", "stable"].contains(direction)
     }
 
     /// CF-BUYER-COPY (2026-06-10): rewritten for buyer-readability.
