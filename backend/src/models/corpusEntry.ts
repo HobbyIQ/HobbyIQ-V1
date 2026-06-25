@@ -104,9 +104,14 @@ export interface CorpusEntry {
    * Semantics depend on the sibling `querySource` field:
    *   - querySource === "free_text": this is the user's literal query
    *     string (e.g. "luka prizm rookie auto").
-   *   - querySource === "card_id": this is a Card Hedge `cardHedgeCardId`
+   *   - querySource === "card_id": this is a Cardsight `cardsightCardId`
    *     stored in the `query` slot because the pricing request was
-   *     pinned by ID and carried no free-text query.
+   *     pinned by ID and carried no free-text query. (Pre-2026-05-30
+   *     this was a Card Hedge cardHedgeCardId; the CF-CARDHEDGE-HARD-
+   *     CUTOVER migration switched the pinned-id namespace to Cardsight
+   *     UUIDs. CF-CH-P5/P6 reintroduced CardHedge as a comp vendor but
+   *     the `query` slot still carries the Cardsight UUID — CH
+   *     provenance is captured separately on response.chProvenance.)
    */
   query: string;
 
@@ -114,9 +119,12 @@ export interface CorpusEntry {
    * Discriminator describing how to interpret the `query` field.
    *
    *   - "free_text": query is the user's literal search string.
-   *   - "card_id":   query is a Card Hedge cardHedgeCardId; the request
-   *                  was pinned to a specific catalog entry and carried
-   *                  no free-text query.
+   *   - "card_id":   query is a Cardsight cardsightCardId (UUID); the
+   *                  request was pinned to a specific catalog entry and
+   *                  carried no free-text query. When CardHedge served
+   *                  the comps for this row, vendor provenance is on
+   *                  response.chProvenance — the `query` slot remains
+   *                  the Cardsight UUID for stable cross-vendor joins.
    *
    * Added in schema v2 to disambiguate /price-by-id traffic, which can
    * arrive either with or without a free-text query. Without this
@@ -232,6 +240,41 @@ export interface CorpusEntry {
      * response. `null` when the engine path did not surface a count.
      */
     sampleSize: number | null;
+
+    /**
+     * CF-CH-P6-CORPUS (2026-06-25): CardHedge vendor provenance for this
+     * row. PRESENT ONLY when the comps that produced the response came
+     * from CardHedger (via the P3 router seam + P5 engine wire-in).
+     * ABSENT (omitted from the serialized JSON, NOT set to null) when
+     * Cardsight served the comps — this preserves byte-identical
+     * emission for Cardsight-sourced rows pre/post-P6 (additive
+     * invariant).
+     *
+     * Fields:
+     *   - vendor:        literal "cardhedge"; presence of the parent
+     *                    object IS the vendor signal but the field is
+     *                    explicit so analysts don't have to special-case
+     *                    presence checks.
+     *   - chCardId:      CardHedger's per-parallel card_id (the bridged
+     *                    identity from `/v1/cards/card-match`). Optional
+     *                    in this version — the engine surfaces it only
+     *                    when the router exposes it on the routed
+     *                    result, future passes will fill this in.
+     *   - trustReason:   which trust-guard signal accepted the data —
+     *                    "prices_by_card_honest" (primary) or
+     *                    "title_cohesion_strong" (defense-in-depth).
+     *                    Optional in this version for the same reason
+     *                    as chCardId.
+     *
+     * Privacy: CardHedger card_id is an opaque vendor catalog ID, NOT
+     * user-identifying data — analogous to engineVersion. The
+     * trustReason enum carries no user content.
+     */
+    chProvenance?: {
+      vendor: "cardhedge";
+      chCardId?: string;
+      trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+    };
   };
 }
 
@@ -267,8 +310,8 @@ export interface BuildCorpusEntryOptions {
 
   /**
    * Discriminator for the `query` field. "free_text" when query is the
-   * user's literal search string; "card_id" when query holds a Card
-   * Hedge cardHedgeCardId because the request was pinned by ID.
+   * user's literal search string; "card_id" when query holds a
+   * Cardsight cardsightCardId because the request was pinned by ID.
    */
   querySource: "free_text" | "card_id";
 
@@ -294,6 +337,17 @@ export interface BuildCorpusEntryOptions {
     marketState: string | null;
     marketStateSchemaVersion: number;
     sampleSize: number | null;
+    /**
+     * CF-CH-P6-CORPUS: when present, builder copies through verbatim;
+     * when undefined the field is omitted from the emitted entry
+     * (preserves CS-row byte-identicality). See CorpusEntry.response
+     * .chProvenance for full semantics.
+     */
+    chProvenance?: {
+      vendor: "cardhedge";
+      chCardId?: string;
+      trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+    };
   };
 }
 
@@ -332,6 +386,29 @@ function truncateQuery(q: string): string {
 export function buildCorpusEntry(
   opts: BuildCorpusEntryOptions,
 ): CorpusEntry {
+  // CF-CH-P6-CORPUS: chProvenance is whitelisted from a fresh literal —
+  // the same anti-spread discipline applied to the rest of the builder.
+  // Constructed conditionally so a CS row (chProvenance undefined on
+  // input) produces an output WITHOUT the key at all; this preserves
+  // byte-identical Cardsight-row emission pre/post P6 (additive
+  // invariant; see corpusEntry.test.ts privacy contract).
+  const ch = opts.response.chProvenance;
+  const chPart =
+    ch && ch.vendor === "cardhedge"
+      ? {
+          chProvenance: {
+            vendor: "cardhedge" as const,
+            ...(typeof ch.chCardId === "string" && ch.chCardId
+              ? { chCardId: ch.chCardId }
+              : {}),
+            ...(ch.trustReason === "prices_by_card_honest" ||
+            ch.trustReason === "title_cohesion_strong"
+              ? { trustReason: ch.trustReason }
+              : {}),
+          },
+        }
+      : {};
+
   return {
     corpusEntrySchemaVersion: 2,
     capturedAt: opts.clock.iso(),
@@ -347,6 +424,7 @@ export function buildCorpusEntry(
       marketState: opts.response.marketState,
       marketStateSchemaVersion: opts.response.marketStateSchemaVersion,
       sampleSize: opts.response.sampleSize,
+      ...chPart,
     },
   };
 }

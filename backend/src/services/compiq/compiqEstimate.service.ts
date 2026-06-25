@@ -3,7 +3,7 @@ import { CompIQEstimateRequest, type PredictionCallContext } from "../../types/c
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./cardsight.mapper.js";
-import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext, type RoutedCard } from "./cardsight.router.js";
+import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
 import {
   getPricing,
   getCardDetail,
@@ -297,6 +297,30 @@ interface FetchedComps {
    * sport guard in computeEstimate.
    */
   aiCategory: string | null;
+  /**
+   * CF-CH-P5-PRIMARY (2026-06-25): which vendor served the comps.
+   * "cardhedge" — CH won via the router's trust-guard.
+   * "cardsight" — CS served (CH miss, blob, low-confidence bridge, or no
+   *               identity to bridge).
+   * null      — pre-P5 callers / unwired paths; treated as "cardsight" by
+   *             the estimateSource mapping.
+   */
+  vendor?: "cardhedge" | "cardsight" | null;
+  /**
+   * CF-CH-P8-TESTS (2026-06-25): CardHedger's per-parallel card_id when CH
+   * served the comps (from the bridge's identifyCard match). Undefined on
+   * Cardsight rows. The engine response forwards this onto the corpus row's
+   * chProvenance block; consumers can audit which CH catalog id served a
+   * specific row.
+   */
+  chCardId?: string;
+  /**
+   * CF-CH-P8-TESTS (2026-06-25): trust-guard signal that accepted CH's data.
+   *   "prices_by_card_honest" — primary signal (daily series non-empty)
+   *   "title_cohesion_strong" — secondary (>=80% title cohesion on player+year)
+   * Undefined on Cardsight rows.
+   */
+  chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong";
   // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution.
   // Internal fine-grained source for telemetry/debugging; user-facing
   // 3-category collapse for response shape (exact/approximate/broad).
@@ -306,6 +330,137 @@ interface FetchedComps {
   priceSource?: "exact" | "approximate" | "broad";
   parallelMatchFilteredCount?: number;
   parallelMatchUnifiedCount?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-P5-PRIMARY helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build a CardIdentityHint from queryContext (the structured identity that
+ * compiqEstimate threads down to fetchComps). Returns null when the
+ * context isn't carrying enough to bridge over to CardHedge — playerName
+ * is the hard floor (CH's card-match is fuzzy-text-driven and an empty
+ * query cannot resolve usefully).
+ */
+function buildIdentityHintFromContext(
+  ctx: QueryContext | undefined,
+): CardIdentityHint | null {
+  if (!ctx) return null;
+  const playerName = (ctx.playerName ?? "").trim();
+  if (!playerName) return null;
+  return {
+    playerName,
+    cardYear: ctx.cardYear,
+    product: ctx.product,
+    parallel: ctx.parallel,
+    number: ctx.cardNumber,
+    isAuto: ctx.isAuto,
+  };
+}
+
+/**
+ * Build a FetchedComps.card identity from queryContext when CardHedge
+ * serves comps on the pinned-id path. CH gives us comps but not the rich
+ * Cardsight card metadata (set.name, set.release, etc.), so we synthesize
+ * identity from the structured fields the caller already supplied. Same
+ * shape as the stub-identity path used when Cardsight's pricing.card is
+ * absent.
+ */
+function buildIdentityFromContext(
+  ctx: QueryContext | undefined,
+  pinnedCardId: string,
+): NonNullable<FetchedComps["card"]> {
+  return {
+    card_id: pinnedCardId,
+    title: null,
+    player: ctx?.playerName ?? null,
+    set: ctx?.product ?? null,
+    release: ctx?.product ?? null,
+    year: ctx?.cardYear ?? null,
+    number: ctx?.cardNumber ?? null,
+    variant: ctx?.parallel ?? null,
+  };
+}
+
+/** Median of a numeric array. Returns null on empty input. */
+function chComputeMedian(values: number[]): number | null {
+  if (!values.length) return null;
+  const s = values.slice().sort((a, b) => a - b);
+  return s.length % 2
+    ? s[(s.length - 1) / 2]
+    : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+}
+
+/**
+ * Map CardHedge RoutedSale[] (from getCardSalesRouted) to the engine's
+ * RawComp[] shape. The fields match the free-text path's mapping at line
+ * ~1714. listingType comes from CH's sale_type ("Auction" | "Best Offer");
+ * imageUrl is null because CardHedge does not surface card images.
+ */
+function chSalesToRawComps(
+  sales: Array<{ price: number; date: string | null; title: string | null; sale_type: string | null }>,
+  bodyIdentity: { year?: string | number; product?: string; playerName?: string; parallel?: string; cardNumber?: string },
+): RawComp[] {
+  return sales
+    .map((s) => ({
+      price: s.price,
+      title: s.title || [
+        bodyIdentity.year,
+        bodyIdentity.product,
+        bodyIdentity.playerName,
+        bodyIdentity.cardNumber,
+        bodyIdentity.parallel,
+      ].filter(Boolean).join(" "),
+      soldDate: s.date ?? "",
+      listingType: s.sale_type ?? null,
+      imageUrl: null,
+    }))
+    .filter((c) => c.price > 0);
+}
+
+const CH_CS_DIVERGENCE_THRESHOLD = 0.40;  // >40% delta logs ch_cs_divergence
+const CH_CS_DIVERGENCE_MIN_CS_COMPS = 5;  // need CS dense enough to be a real signal
+
+/**
+ * Fire-and-forget Cardsight divergence telemetry. Called when CardHedge wins
+ * a comp request — pulls Cardsight pricing in parallel + compares medians.
+ * Logs "ch_cs_divergence" only when:
+ *   - CS has >= CH_CS_DIVERGENCE_MIN_CS_COMPS comps (otherwise too noisy)
+ *   - |delta| / max(chMedian, csMedian) > CH_CS_DIVERGENCE_THRESHOLD
+ * Never throws; never blocks the response.
+ */
+async function maybeLogChCsDivergence(
+  csCardId: string,
+  chMedian: number,
+  grade: string,
+): Promise<void> {
+  if (!chMedian || chMedian <= 0) return;
+  try {
+    const pricing = await getPricing(csCardId);
+    const csSales = selectSalesByGrade(pricing, grade);
+    if (csSales.length < CH_CS_DIVERGENCE_MIN_CS_COMPS) return;
+    const csPrices = csSales
+      .map((s) => Number((s as { price?: unknown }).price))
+      .filter((p): p is number => Number.isFinite(p) && p > 0);
+    if (csPrices.length < CH_CS_DIVERGENCE_MIN_CS_COMPS) return;
+    const csMedian = chComputeMedian(csPrices);
+    if (!csMedian || csMedian <= 0) return;
+    const delta = Math.abs(chMedian - csMedian) / Math.max(chMedian, csMedian);
+    if (delta > CH_CS_DIVERGENCE_THRESHOLD) {
+      console.log(JSON.stringify({
+        event: "ch_cs_divergence",
+        source: "compiqEstimate.fetchComps",
+        csCardId,
+        chMedian,
+        csMedian,
+        delta: Number(delta.toFixed(3)),
+        csCompCount: csPrices.length,
+      }));
+    }
+  } catch {
+    // Non-blocking telemetry — swallow.
+  }
 }
 
 /**
@@ -1315,6 +1470,74 @@ async function fetchComps(
   // it server-side). Cardsight returns raw + graded as separate
   // structures; we select records based on the requested grade string.
   if (pinnedCardId && (!hasMeaningfulQuery || pinnedAuthoritative)) {
+    // ── CF-CH-P5-PRIMARY: try CardHedge first via the router seam ─────────
+    // When the request carries enough identity to bridge over to
+    // CardHedge, attempt CH first. If trusted, return CH-sourced comps
+    // and skip the Cardsight pricing call entirely. The router's
+    // getCardSalesRouted falls back to Cardsight internally if anything
+    // fails, BUT we want to keep the existing Cardsight pinned-id flow
+    // (with parallel filter + title-match recovery + identity from
+    // pricing.card) on CH miss — so we DON'T pass identity to the inner
+    // router call here; instead we attempt CH explicitly and check the
+    // source on the returned sales.
+    const chIdentity = buildIdentityHintFromContext(queryContext);
+    if (chIdentity) {
+      try {
+        // CF-CH-P8-TESTS: use the provenance-aware sibling so chCardId +
+        // chTrustReason flow onto FetchedComps and ultimately the corpus row.
+        const chResult = await getCardSalesRoutedWithProvenance(
+          pinnedCardId,
+          grade,
+          25,
+          chIdentity,
+        );
+        const chServed =
+          chResult.sales.length > 0 && chResult.sales[0]?.source === "cardhedge";
+        if (chServed) {
+          const mapped = chSalesToRawComps(chResult.sales, {
+            year: queryContext?.cardYear,
+            product: queryContext?.product,
+            playerName: queryContext?.playerName,
+            parallel: queryContext?.parallel,
+            cardNumber: queryContext?.cardNumber,
+          });
+          const identity = buildIdentityFromContext(queryContext, pinnedCardId);
+          const chMedian = chComputeMedian(mapped.map((c) => c.price));
+          if (chMedian) {
+            // Fire-and-forget divergence telemetry against Cardsight.
+            maybeLogChCsDivergence(pinnedCardId, chMedian, grade).catch(() => {});
+          }
+          console.log(JSON.stringify({
+            event: "compiq.fetchComps.ch_served",
+            source: "compiqEstimate.fetchComps",
+            path: "pinned",
+            csCardId: pinnedCardId,
+            chCardId: chResult.chCardId ?? null,
+            chTrustReason: chResult.chTrustReason ?? null,
+            chCompCount: mapped.length,
+            chMedian,
+          }));
+          return {
+            comps: mapped,
+            card: identity,
+            variantWarning: [],
+            aiCategory: null,
+            vendor: "cardhedge",
+            chCardId: chResult.chCardId,
+            chTrustReason: chResult.chTrustReason,
+          };
+        }
+      } catch (err) {
+        // Non-blocking: any CH error falls through to the existing
+        // Cardsight pinned-id path. Logged at warn for telemetry.
+        console.warn(
+          `[compiq.fetchComps] CH pinned-path threw, falling through to Cardsight: ${
+            (err as Error)?.message ?? err
+          }`,
+        );
+      }
+    }
+
     const pricing = await getPricing(pinnedCardId);
 
     // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): map identity from the
@@ -1370,7 +1593,7 @@ async function fetchComps(
 
     if (pricing.notFound) {
       console.warn(`[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not found in catalog`);
-      return { comps: [], card: identity, variantWarning: [], aiCategory: null };
+      return { comps: [], card: identity, variantWarning: [], aiCategory: null, vendor: "cardsight" };
     }
 
     // CF-CARDSIGHT-PRICING-CONSISTENCY-GUARD (2026-06-07): if Cardsight ever
@@ -1398,6 +1621,7 @@ async function fetchComps(
         card: buildStubIdentity(pinnedCardId),
         variantWarning: [],
         aiCategory: null,
+        vendor: "cardsight",
       };
     }
 
@@ -1594,6 +1818,7 @@ async function fetchComps(
         card: identity,
         variantWarning: [],
         aiCategory: null,
+        vendor: "cardsight",
         ...priceSourceFields,
       };
     }
@@ -1623,6 +1848,7 @@ async function fetchComps(
       card: identity,
       variantWarning: [],
       aiCategory: null,
+      vendor: "cardsight",
       ...priceSourceFields,
     };
   }
@@ -1636,7 +1862,38 @@ async function fetchComps(
     priceSourceInternal,
     parallelMatchFilteredCount,
     parallelMatchUnifiedCount,
+    chCardId: routedChCardId,
+    chTrustReason: routedChTrustReason,
   } = await findCompsRouted(query, { grade, limit: 25, queryContext });
+
+  // CF-CH-P5-PRIMARY: detect which vendor the router served from. The
+  // router (P3) layers CH on top of CS via the bridge; sales carry
+  // source="cardhedge" when CH won and source="cardsight" when CS served.
+  // An empty sales array is treated as Cardsight (no comps to attribute).
+  const routedVendor: "cardhedge" | "cardsight" =
+    sales.length > 0 && sales[0]?.source === "cardhedge"
+      ? "cardhedge"
+      : "cardsight";
+
+  if (routedVendor === "cardhedge" && card?.card_id) {
+    const chMedian = chComputeMedian(
+      sales.map((s) => s.price).filter((p) => Number.isFinite(p) && p > 0),
+    );
+    if (chMedian) {
+      maybeLogChCsDivergence(card.card_id, chMedian, grade).catch(() => {});
+    }
+    console.log(JSON.stringify({
+      event: "compiq.fetchComps.ch_served",
+      source: "compiqEstimate.fetchComps",
+      path: "free-text",
+      query,
+      csCardId: card.card_id,
+      chCardId: routedChCardId ?? null,
+      chTrustReason: routedChTrustReason ?? null,
+      chCompCount: sales.length,
+      chMedian,
+    }));
+  }
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
@@ -1645,6 +1902,7 @@ async function fetchComps(
       card: null,
       variantWarning: [],
       aiCategory,
+      vendor: routedVendor,
       priceSource,
       priceSourceInternal,
       parallelMatchFilteredCount,
@@ -1678,6 +1936,7 @@ async function fetchComps(
       card: identity,
       variantWarning,
       aiCategory,
+      vendor: routedVendor,
       priceSource,
       priceSourceInternal,
       parallelMatchFilteredCount,
@@ -1704,6 +1963,7 @@ async function fetchComps(
       card: identity,
       variantWarning,
       aiCategory,
+      vendor: routedVendor,
       priceSource,
       priceSourceInternal,
       parallelMatchFilteredCount,
@@ -1734,6 +1994,9 @@ async function fetchComps(
     card: identity,
     variantWarning,
     aiCategory,
+    vendor: routedVendor,
+    chCardId: routedVendor === "cardhedge" ? routedChCardId : undefined,
+    chTrustReason: routedVendor === "cardhedge" ? routedChTrustReason : undefined,
     priceSource,
     priceSourceInternal,
     parallelMatchFilteredCount,
@@ -2145,7 +2408,7 @@ export function emitPredictionToCorpus(params: {
   // flag. Required field on every emit so analysts can assert the
   // invariant: no row with estimateSource="trend-extrapolated" has a
   // non-null fairMarketValue.
-  estimateSource?: "observed" | "trend-extrapolated" | "last-sale" | null;
+  estimateSource?: "observed" | "cardhedge" | "trend-extrapolated" | "last-sale" | null;
   estimatedValue?: number | null;
 }): void {
   try {
@@ -3852,8 +4115,14 @@ export async function computeEstimate(
       lastSale !== null && daysSinceNewest !== null
         ? repriceTrendExtrapolated(lastSale, daysSinceNewest, playerMomentum.multiplier)
         : null;
-    const resolvedEstimateSource: "trend-extrapolated" | "last-sale" | null =
-      trendEstimate !== null
+    // CF-CH-P5-PRIMARY: when CardHedge served comps but the engine couldn't
+    // ground a confident FMV (n=1 thin-parallel case), still attribute the
+    // path to CH so iOS / corpus know the data came from CardHedger. CH-thin
+    // takes precedence over trend-extrapolated and last-sale.
+    const resolvedEstimateSource: "cardhedge" | "trend-extrapolated" | "last-sale" | null =
+      fetched.vendor === "cardhedge" && lastSale !== null
+        ? "cardhedge"
+        : trendEstimate !== null
         ? "trend-extrapolated"
         : lastSale !== null
         ? "last-sale"
@@ -3965,6 +4234,11 @@ export async function computeEstimate(
       // when no anchor at all.
       lastSale,
       estimateSource: resolvedEstimateSource,
+      // CF-CH-P8-TESTS: provenance also on the thin-comp/trend-extrapolated
+      // branch when fetched.vendor === "cardhedge". Omitted otherwise so
+      // CS-sourced trend-extrap rows stay byte-identical pre/post P8.
+      chCardId: fetched.vendor === "cardhedge" ? fetched.chCardId : undefined,
+      chTrustReason: fetched.vendor === "cardhedge" ? fetched.chTrustReason : undefined,
       // CF-THIN-CARD-FULL-DETAIL-PARITY (2026-06-12): shape parity with
       // the live branch — surface trendIQ + broaderTrend (and the trendIQ
       // lastUpdated as signalsLastUpdated, mirroring the live path at
@@ -4935,9 +5209,14 @@ export async function computeEstimate(
     // a fallback when fmv is null but a lastSale exists.
     daysSinceNewestComp: daysSinceNewest,
     lastSale,
+    // CF-CH-P8-TESTS: surface CH provenance on the response when CH served.
+    // corpusMapping reads these alongside estimateSource to build the
+    // chProvenance block on the corpus row. Omitted when vendor !== cardhedge.
+    chCardId: fetched.vendor === "cardhedge" ? fetched.chCardId : undefined,
+    chTrustReason: fetched.vendor === "cardhedge" ? fetched.chTrustReason : undefined,
     estimateSource:
       typeof fairMarketValue === "number"
-        ? ("observed" as const)
+        ? (fetched.vendor === "cardhedge" ? ("cardhedge" as const) : ("observed" as const))
         : lastSale !== null
         ? ("last-sale" as const)
         : null,
