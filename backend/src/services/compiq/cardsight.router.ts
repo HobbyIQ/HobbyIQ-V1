@@ -25,6 +25,7 @@ import {
   findCompsByQuery,
   type CardHedgeCard,
   type CardHedgeSale,
+  type TrendAdjustment,
 } from "./cardhedge.client.js";
 import { searchCatalog, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
 import { resolveCardId } from "./cardsight.mapper.js";
@@ -46,6 +47,12 @@ type RoutedResult = {
   sales: CardHedgeSale[];
   variantWarning: string[];
   aiCategory: string | null;
+  // CF-TREND-ADJUSTED-PRICING: time-adjusted thin-parallel price. Populated
+  // only on the CardHedger path (where the base-sibling resolver runs);
+  // always null on the Cardsight-fallback path because Cardsight bundles
+  // parallels under a single card_id and has no equivalent per-parallel
+  // momentum structure.
+  trendAdjustment: TrendAdjustment | null;
 };
 
 export type QueryContext = {
@@ -122,6 +129,7 @@ function emptyCardsightResult(warnings: string[] = []): RoutedResult {
     sales: [],
     variantWarning: warnings,
     aiCategory: null,
+    trendAdjustment: null,
   };
 }
 
@@ -201,6 +209,7 @@ async function findCompsViaCardsight(
         sales: [],
         variantWarning: ["cardsight_no_pricing_data", ...mapped.warnings],
         aiCategory: null,
+        trendAdjustment: null,
       };
     }
 
@@ -220,6 +229,7 @@ async function findCompsViaCardsight(
       })),
       variantWarning: mapped.warnings,
       aiCategory: null,
+      trendAdjustment: null,
     };
   } catch (err) {
     outcome = err instanceof CardsightTimeoutError ? "timeout" : "error";

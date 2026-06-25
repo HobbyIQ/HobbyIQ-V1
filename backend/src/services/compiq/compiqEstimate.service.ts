@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
-import { type CardHedgeCard } from "./cardhedge.client.js";
+import { type CardHedgeCard, type TrendAdjustment } from "./cardhedge.client.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
 import { parseCardQuery } from "./cardQueryParser.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
@@ -151,6 +151,15 @@ interface FetchedComps {
    * sport guard in computeEstimate.
    */
   aiCategory: string | null;
+  /**
+   * CF-TREND-ADJUSTED-PRICING: time-adjusted price for thin-comp parallels.
+   * Populated only when the CardHedger path resolved a non-base parallel
+   * with 1-2 sales AND its base sibling card has dense daily price data.
+   * Null on base cards, dense parallels, Cardsight-fallback path, or the
+   * pinned-card-id path. Surfaced in the API response so iOS can render
+   * BOTH the raw comp price and the trend-adjusted estimate.
+   */
+  trendAdjustment: TrendAdjustment | null;
 }
 
 /**
@@ -702,7 +711,7 @@ async function fetchComps(
 ): Promise<FetchedComps> {
   if (!process.env.CARD_HEDGE_API_KEY) {
     console.warn("[compiq.fetchComps] CARD_HEDGE_API_KEY missing — returning []");
-    return { comps: [], card: null, variantWarning: [], aiCategory: null };
+    return { comps: [], card: null, variantWarning: [], aiCategory: null, trendAdjustment: null };
   }
 
   // ----- Phase 2 — meaningful-query fall-through ------------------------
@@ -765,7 +774,7 @@ async function fetchComps(
 
     if (sales.length === 0) {
       console.warn(`[compiq.fetchComps] pinned card_id=${pinnedCardId} returned 0 comps`);
-      return { comps: [], card: identity, variantWarning: [], aiCategory: null };
+      return { comps: [], card: identity, variantWarning: [], aiCategory: null, trendAdjustment: null };
     }
 
     const mapped: RawComp[] = sales
@@ -777,14 +786,14 @@ async function fetchComps(
       .filter((c) => c.price > 0);
 
     console.log(`[compiq.fetchComps] pinned card_id=${pinnedCardId} comps=${mapped.length}`);
-    return { comps: mapped, card: identity, variantWarning: [], aiCategory: null };
+    return { comps: mapped, card: identity, variantWarning: [], aiCategory: null, trendAdjustment: null };
   }
 
-  const { card, sales, variantWarning, aiCategory } = await findCompsRouted(query, { grade, limit: 25, queryContext });
+  const { card, sales, variantWarning, aiCategory, trendAdjustment } = await findCompsRouted(query, { grade, limit: 25, queryContext });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);
-    return { comps: [], card: null, variantWarning: [], aiCategory };
+    return { comps: [], card: null, variantWarning: [], aiCategory, trendAdjustment: null };
   }
 
   const identity = {
@@ -801,7 +810,7 @@ async function fetchComps(
     console.warn(
       `[compiq.fetchComps] Card Hedge returned 0 comps for card_id=${card.card_id} query="${query}" grade=${grade}`
     );
-    return { comps: [], card: identity, variantWarning, aiCategory };
+    return { comps: [], card: identity, variantWarning, aiCategory, trendAdjustment: null };
   }
 
   const mapped: RawComp[] = sales
@@ -813,9 +822,9 @@ async function fetchComps(
     .filter((c) => c.price > 0);
 
   console.log(
-    `[compiq.fetchComps] Card Hedge: query="${query}" card_id=${card.card_id} comps=${mapped.length}`
+    `[compiq.fetchComps] Card Hedge: query="${query}" card_id=${card.card_id} comps=${mapped.length}${trendAdjustment ? ` trendAdj=$${trendAdjustment.trendAdjustedPrice} (raw=$${trendAdjustment.rawCompPrice}, momentum=${trendAdjustment.momentum})` : ""}`
   );
-  return { comps: mapped, card: identity, variantWarning, aiCategory };
+  return { comps: mapped, card: identity, variantWarning, aiCategory, trendAdjustment };
 }
 
 /**
@@ -1215,6 +1224,7 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
         card: null,
         variantWarning: [...(fetched.variantWarning ?? []), "player_mismatch"],
         aiCategory: fetched.aiCategory,
+        trendAdjustment: null,
       };
     }
   }
@@ -2010,6 +2020,15 @@ export async function computeEstimate(body: CompIQEstimateRequest): Promise<Reco
     gradeUsed: cardHedgeGrade,
     source: comps.length > 0 ? "live" : "fallback",
     variantWarning: fetched.variantWarning,
+    // CF-TREND-ADJUSTED-PRICING: surfaces BOTH the raw most-recent parallel
+    // comp price AND the time-adjusted estimate (rawCompPrice +
+    // trendAdjustedPrice fields). Populated only when the CardHedger path
+    // resolved a thin-comp parallel with a dense base sibling series — null
+    // on base cards, dense parallels, Cardsight-fallback path, and the
+    // pinned-card-id path. iOS renders both: "last sold $450 → today's est
+    // $648 (±15%)" when present, otherwise falls back to the existing
+    // estimate/predictedRange display.
+    trendAdjustment: fetched.trendAdjustment,
   };
 }
 

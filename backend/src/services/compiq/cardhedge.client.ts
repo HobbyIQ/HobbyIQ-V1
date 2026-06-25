@@ -22,6 +22,13 @@ const MIN_IDENTITY_CONFIDENCE = 0.8;
 const MATCH_TTL_SEC = 6 * 3600;        // 6h — shorter than CH's 7d so titles refresh same-day
 const COMPS_TTL_SEC = 12 * 3600;
 const SEARCH_TTL_SEC = 6 * 3600;
+const PRICES_BY_CARD_TTL_SEC = 4 * 3600;  // daily series — 4h
+const BASE_SIBLING_TTL_SEC = 24 * 3600;   // card_id mapping — 24h (very stable)
+
+// CF-TREND-ADJUSTED-PRICING: hard cap on momentum scaling. Base-card movement
+// above ±200% per 30 days is treated as a spike, not signal — capped to
+// 3.0× (or 1/3×) before the cap window scales with days-since-comp.
+const MAX_MOMENTUM_PER_30D = 3.0;
 
 function cacheKey(prefix: string, ...parts: string[]): string {
   return [prefix, ...parts.map((p) => p.toLowerCase().replace(/\s+/g, " ").trim())].join(":");
@@ -60,6 +67,38 @@ export interface CardHedgeSale {
   sale_type: string | null;
   title: string | null;
   url: string | null;
+}
+
+/** Daily closing price for a card_id from /v1/cards/prices-by-card. */
+export interface DailyPrice {
+  closing_date: string;  // ISO date, slice(0,10)
+  price: number;
+}
+
+/**
+ * Trend-adjusted price for a thin-comp parallel card.
+ *
+ * Fired when a target parallel has 1-2 sales in the comp window but the BASE
+ * card of the same player/year/product has dense daily price data. The most
+ * recent parallel sale is treated as the anchor; the base card's momentum
+ * since that sale date is applied to extrapolate forward.
+ *
+ * Momentum is hard-capped per MAX_MOMENTUM_PER_30D before the cap window
+ * scales with days-since-comp. Confidence band widens to ±15% when momentum
+ * exceeds 1.2× or drops below 0.8×; ±8% otherwise.
+ */
+export interface TrendAdjustment {
+  rawCompPrice: number;          // The most-recent parallel sale price (anchor)
+  rawCompDate: string;           // The date of that sale (ISO YYYY-MM-DD)
+  trendAdjustedPrice: number;    // rawCompPrice * cappedMomentum
+  momentum: number;              // basePriceToday / basePriceAtCompDate (capped)
+  momentumWasCapped: boolean;    // true if raw momentum exceeded the cap
+  basePriceAtCompDate: number;   // base card's closing price on the anchor date
+  basePriceToday: number;        // base card's most recent closing price
+  baseCardId: string;            // CH card_id of the base sibling used
+  daysSinceComp: number;         // integer days between rawCompDate and series last
+  confidenceBandLow: number;     // trendAdjustedPrice * (1 - band)
+  confidenceBandHigh: number;    // trendAdjustedPrice * (1 + band)
 }
 
 /** POST /cards/card-search — free-text card lookup (Baseball). */
@@ -211,6 +250,59 @@ async function _getCardSales(
       .filter((s) => s.price > 0);
   } catch (err: any) {
     console.warn(`[cardhedge.client] comps threw for card_id=${cardId}:`, err?.message ?? err);
+    return [];
+  }
+}
+
+/**
+ * POST /cards/prices-by-card — daily closing-price time series for a card_id.
+ *
+ * Returns an array of { closing_date, price } sorted ascending by date.
+ * Empty array on auth failure, missing key, network error, or no data.
+ * Cached 4h. Consumed by the trend-adjustment path.
+ */
+export async function getPricesByCard(
+  cardId: string,
+  grade: string = "Raw",
+  days: number = 30,
+): Promise<DailyPrice[]> {
+  const h = headers();
+  if (!h || !cardId) return [];
+  return cacheWrap(
+    cacheKey("ch:prices-by-card", cardId, grade, String(days)),
+    async () => _getPricesByCard(cardId, grade, days, h),
+    PRICES_BY_CARD_TTL_SEC,
+  );
+}
+
+async function _getPricesByCard(
+  cardId: string,
+  grade: string,
+  days: number,
+  h: Record<string, string>,
+): Promise<DailyPrice[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/prices-by-card`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify({ card_id: cardId, grade, days }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] prices-by-card HTTP ${res.status} for card_id=${cardId}`);
+      return [];
+    }
+    const body: any = await res.json();
+    const arr: any[] = Array.isArray(body?.prices) ? body.prices : [];
+    return arr
+      .map((p) => ({
+        closing_date: typeof p?.closing_date === "string" ? p.closing_date.slice(0, 10) : "",
+        price: toFloat(p?.price),
+      }))
+      .filter((p) => p.closing_date && p.price > 0)
+      .sort((a, b) => a.closing_date.localeCompare(b.closing_date));
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] prices-by-card threw for card_id=${cardId}:`, err?.message ?? err);
     return [];
   }
 }
@@ -392,10 +484,21 @@ export async function findCompsByQuery(
    * silently mis-priced.
    */
   aiCategory: string | null;
+  /**
+   * CF-TREND-ADJUSTED-PRICING: time-adjusted price for thin-comp parallels.
+   * Populated when the resolved card is a non-base parallel with 1-2 sales
+   * AND the base sibling card has dense daily price data. null otherwise
+   * (base cards, dense parallels with 3+ comps, no base sibling found,
+   * thin base series). Opportunistic — internal failures return null.
+   * See computeTrendAdjustment() for the algorithm.
+   */
+  trendAdjustment: TrendAdjustment | null;
 }> {
   const grade = opts.grade ?? "Raw";
   const limit = opts.limit ?? 20;
-  if (!query?.trim()) return { card: null, sales: [], variantWarning: [], aiCategory: null };
+  if (!query?.trim()) {
+    return { card: null, sales: [], variantWarning: [], aiCategory: null, trendAdjustment: null };
+  }
 
   // Strip grade tokens (PSA 10, BGS 9.5, SGC 10, "Gem Mint", bare "Raw") from
   // the query before any Card Hedge call. CH card_ids are grade-agnostic —
@@ -493,7 +596,9 @@ export async function findCompsByQuery(
     }
   }
 
-  if (!card?.card_id) return { card: null, sales: [], variantWarning: [], aiCategory };
+  if (!card?.card_id) {
+    return { card: null, sales: [], variantWarning: [], aiCategory, trendAdjustment: null };
+  }
   const allSales = await getCardSales(card.card_id, grade, limit);
 
   // Post-filter sales by required tokens (only when we had an exact card match;
@@ -518,7 +623,177 @@ export async function findCompsByQuery(
     sales = filteredSales.length >= 1 ? filteredSales : allSales;
   }
 
-  return { card, sales, variantWarning, aiCategory };
+  // CF-TREND-ADJUSTED-PRICING: opportunistic time-adjustment for thin parallels.
+  // Always-on (per design). Returns null on base cards, dense parallels (3+
+  // sales), missing base sibling, thin base series, or any internal failure.
+  const trendAdjustment = await computeTrendAdjustment(card, sales);
+
+  return { card, sales, variantWarning, aiCategory, trendAdjustment };
+}
+
+// ---------------------------------------------------------------------------
+// CF-TREND-ADJUSTED-PRICING — trend-adjusted parallel pricing
+// ---------------------------------------------------------------------------
+
+/**
+ * Find the BASE variant card_id for the same player/year/product/number.
+ *
+ * Used by the trend-adjustment path to anchor parallel-card momentum to its
+ * base sibling's denser daily series. Cached 24h — card_id mappings are
+ * stable. Returns null when no Base variant exists in CH for the sibling
+ * (some sets have no base entry, or the parallel card lacks the identity
+ * fields needed for a sibling search).
+ */
+async function findBaseCardSibling(card: CardHedgeCard): Promise<CardHedgeCard | null> {
+  if (!card?.player || !card?.set || !card?.number) return null;
+  const cacheK = cacheKey(
+    "ch:base-sibling",
+    String(card.player),
+    String(card.year ?? ""),
+    String(card.set),
+    String(card.number),
+  );
+  const raw = await cacheWrap(
+    cacheK,
+    async () => {
+      const query = [card.year, card.set, card.player].filter(Boolean).join(" ");
+      const hits = await searchCards(query, 50);
+      const targetNumber = String(card.number).toUpperCase();
+      const match = hits.find(
+        (h) =>
+          (h.number ?? "").toString().toUpperCase() === targetNumber &&
+          (h.variant ?? "").toLowerCase() === "base",
+      );
+      return match ? JSON.stringify(match) : "";
+    },
+    BASE_SIBLING_TTL_SEC,
+  );
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as CardHedgeCard;
+  } catch {
+    return null;
+  }
+}
+
+/** Find the closest-dated closing price to a target date in a sorted series. */
+function findClosestPrice(series: DailyPrice[], targetDate: string): number | null {
+  if (!series.length || !targetDate) return null;
+  const exact = series.find((p) => p.closing_date === targetDate);
+  if (exact) return exact.price;
+  const target = new Date(targetDate).getTime();
+  if (!Number.isFinite(target)) return null;
+  let bestDiff = Infinity;
+  let bestPrice: number | null = null;
+  for (const p of series) {
+    const d = new Date(p.closing_date).getTime();
+    if (!Number.isFinite(d)) continue;
+    const diff = Math.abs(d - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestPrice = p.price;
+    }
+  }
+  return bestPrice;
+}
+
+function daysBetween(d1: string, d2: string): number {
+  const t1 = new Date(d1).getTime();
+  const t2 = new Date(d2).getTime();
+  if (!Number.isFinite(t1) || !Number.isFinite(t2)) return 0;
+  return Math.round(Math.abs(t2 - t1) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Apply the magnitude cap. The cap scales with days-since-comp: a 6-day-old
+ * comp is capped at 3.0^(6/30) ≈ 1.245× momentum; a 30-day-old comp is
+ * capped at the full 3.0×. Below MAX_MOMENTUM_PER_30D the raw momentum
+ * passes through untouched.
+ */
+function capMomentum(
+  momentum: number,
+  daysSinceComp: number,
+): { capped: number; wasCapped: boolean } {
+  const cap = Math.pow(MAX_MOMENTUM_PER_30D, Math.max(daysSinceComp, 1) / 30);
+  const lo = 1 / cap;
+  if (momentum > cap) return { capped: cap, wasCapped: true };
+  if (momentum < lo) return { capped: lo, wasCapped: true };
+  return { capped: momentum, wasCapped: false };
+}
+
+/**
+ * Compute trend-adjusted price for a target parallel card.
+ *
+ * Returns null when:
+ *   - parallel card or sales are missing
+ *   - parallel has 0 or 3+ sales (use direct comp instead)
+ *   - parallelCard is itself the Base variant (it IS the anchor)
+ *   - base sibling cannot be resolved in CH
+ *   - base sibling has <7 daily price points (insufficient signal)
+ *   - the most recent parallel sale lacks a usable date or price
+ *
+ * Otherwise returns the full TrendAdjustment payload with capped momentum
+ * and a confidence band (±15% if |momentum-1| > 0.2; ±8% otherwise).
+ *
+ * Opportunistic: any internal failure returns null. Never throws.
+ */
+export async function computeTrendAdjustment(
+  parallelCard: CardHedgeCard | null,
+  parallelSales: CardHedgeSale[],
+): Promise<TrendAdjustment | null> {
+  if (!parallelCard?.card_id) return null;
+  if (parallelSales.length === 0 || parallelSales.length >= 3) return null;
+  if ((parallelCard.variant ?? "").toLowerCase() === "base") return null;
+
+  try {
+    const baseCard = await findBaseCardSibling(parallelCard);
+    if (!baseCard?.card_id || baseCard.card_id === parallelCard.card_id) return null;
+
+    const baseSeries = await getPricesByCard(baseCard.card_id, "Raw", 30);
+    if (baseSeries.length < 7) return null;
+
+    const sorted = parallelSales
+      .filter((s) => s.date && s.price > 0)
+      .slice()
+      .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+    if (!sorted.length) return null;
+    const recent = sorted[0];
+    const compDate = (recent.date ?? "").slice(0, 10);
+    if (!compDate) return null;
+
+    const basePriceAtComp = findClosestPrice(baseSeries, compDate);
+    const basePriceToday = baseSeries[baseSeries.length - 1].price;
+    if (!basePriceAtComp || !basePriceToday) return null;
+
+    const seriesLastDate = baseSeries[baseSeries.length - 1].closing_date;
+    const daysSinceComp = daysBetween(compDate, seriesLastDate);
+
+    const rawMomentum = basePriceToday / basePriceAtComp;
+    const { capped: momentum, wasCapped } = capMomentum(rawMomentum, daysSinceComp);
+
+    const trendAdjustedPrice = recent.price * momentum;
+    const bandPct = momentum > 1.2 || momentum < 0.8 ? 0.15 : 0.08;
+
+    return {
+      rawCompPrice: recent.price,
+      rawCompDate: compDate,
+      trendAdjustedPrice: Math.round(trendAdjustedPrice * 100) / 100,
+      momentum: Math.round(momentum * 1000) / 1000,
+      momentumWasCapped: wasCapped,
+      basePriceAtCompDate: basePriceAtComp,
+      basePriceToday,
+      baseCardId: baseCard.card_id,
+      daysSinceComp,
+      confidenceBandLow: Math.round(trendAdjustedPrice * (1 - bandPct) * 100) / 100,
+      confidenceBandHigh: Math.round(trendAdjustedPrice * (1 + bandPct) * 100) / 100,
+    };
+  } catch (err: any) {
+    console.warn(
+      `[cardhedge.client] computeTrendAdjustment threw for card_id=${parallelCard.card_id}:`,
+      err?.message ?? err,
+    );
+    return null;
+  }
 }
 
 /**
