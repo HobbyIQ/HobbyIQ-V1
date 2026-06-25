@@ -91,14 +91,17 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
         }()
 
         let body = AddHoldingRequest(
-            playerName: hit.player ?? hit.resolvedLabel,
+            playerName: resolvedAddPlayerName(),
             cardsightCardId: hit.cardsightCardId,
             parallel: parallelName,
             parallelId: hit.parallelId,
             gradeCompany: selectedGrade.gradeCompany,
             gradeValue: selectedGrade.gradeValue,
             purchasePrice: purchasePrice,
-            quantity: max(1, quantity)
+            quantity: max(1, quantity),
+            year: resolvedAddYear(),
+            setName: resolvedAddSetName(),
+            cardNumber: resolvedAddCardNumber()
         )
 
         saveState = .saving
@@ -112,6 +115,73 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
                 self.saveState = .failed(APIService.errorMessage(from: error))
             }
         }
+    }
+
+    // MARK: - CF-IOS-HOLDING-METADATA-CAPTURE (2026-06-25)
+    // Structured-identity resolvers used at save-time. The engine's
+    // `response.cardIdentity` is the authoritative source — Cardsight
+    // catalog dispatcher may not surface `player` on every variant hit
+    // (brand-new releases / unparsed candidates) but the pricing engine
+    // resolves the catalog identity and ships it back. Fall back to the
+    // picker hit's per-field values, and as an absolute last resort to
+    // a "Card #abcdef12" placeholder built from the cardsightCardId
+    // prefix. NEVER emit a full UUID as a holding's playerName.
+
+    private func resolvedAddPlayerName() -> String {
+        if let p = response.cardIdentity?.player?.trimmingCharacters(in: .whitespacesAndNewlines),
+           p.isEmpty == false, isLikelyUUID(p) == false {
+            return p
+        }
+        if let p = hit.player?.trimmingCharacters(in: .whitespacesAndNewlines),
+           p.isEmpty == false, isLikelyUUID(p) == false {
+            return p
+        }
+        let label = hit.resolvedLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if label.isEmpty == false, isLikelyUUID(label) == false {
+            return label
+        }
+        let shortId = hit.cardsightCardId.replacingOccurrences(of: "-", with: "").prefix(8)
+        return "Card #\(shortId)"
+    }
+
+    private func resolvedAddYear() -> String? {
+        if let y = response.cardIdentity?.year, y > 0 {
+            return String(y)
+        }
+        if let y = hit.year, y > 0 {
+            return String(y)
+        }
+        return nil
+    }
+
+    private func resolvedAddSetName() -> String? {
+        // `release` is the user-facing publication line (e.g. "Topps
+        // Update"). Prefer it over `.set` which is the subset name
+        // ("Base Set" / "Chrome Prospect Autographs") — the
+        // CF-RELEASE-IDENTITY (2026-06-10) backend ships both fields
+        // and the header prefers release for the same reason.
+        if let r = response.cardIdentity?.release?.trimmingCharacters(in: .whitespacesAndNewlines),
+           r.isEmpty == false { return r }
+        if let s = response.cardIdentity?.set?.trimmingCharacters(in: .whitespacesAndNewlines),
+           s.isEmpty == false { return s }
+        if let s = hit.set?.trimmingCharacters(in: .whitespacesAndNewlines),
+           s.isEmpty == false { return s }
+        return nil
+    }
+
+    private func resolvedAddCardNumber() -> String? {
+        if let n = response.cardIdentity?.number?.trimmingCharacters(in: .whitespacesAndNewlines),
+           n.isEmpty == false { return n }
+        if let n = hit.number?.trimmingCharacters(in: .whitespacesAndNewlines),
+           n.isEmpty == false { return n }
+        return nil
+    }
+
+    /// UUID-shape detector. Defends against accidentally storing a raw
+    /// cardsightCardId (8-4-4-4-12 hex) as a holding's display name.
+    private func isLikelyUUID(_ s: String) -> Bool {
+        let pattern = #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"#
+        return s.range(of: pattern, options: .regularExpression) != nil
     }
 
     // MARK: - Per-grade lookup (mirrors the comp-page rail)

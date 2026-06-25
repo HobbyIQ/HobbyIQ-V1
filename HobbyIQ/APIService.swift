@@ -2434,6 +2434,18 @@ struct AddHoldingRequest: Encodable {
     let gradeValue: Double?
     let purchasePrice: Double?
     let quantity: Int
+    /// CF-IOS-HOLDING-METADATA-CAPTURE (2026-06-25): structured card-
+    /// identity fields captured at add-time so the holding renders as
+    /// "{Year} · {Set}" subtitle + real player title instead of a raw
+    /// UUID. Sourced (in priority order) from
+    /// CompIQPriceByIdResponse.cardIdentity, then CompIQVariantHit
+    /// fields. Backend persists these onto the holding record and
+    /// returns them in the auto-priced response. All three are
+    /// optional — older clients omit them and the backend treats the
+    /// fields as nil (no behavior change for legacy callers).
+    let year: String?
+    let setName: String?
+    let cardNumber: String?
 }
 
 /// CF-ADD-TO-INVENTORY (2026-06-12): backend returns 201 with the
