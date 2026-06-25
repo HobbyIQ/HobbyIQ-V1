@@ -953,6 +953,7 @@ struct CompIQPricedCardView: View {
             case "observed":              observedPriceSlot(response)
             case "trend-extrapolated":    trendExtrapolatedPriceSlot(response)
             case "last-sale":             lastSalePriceSlot(response)
+            case "cardhedge":             cardHedgePriceSlot(response)
             case "no-sales", "no_sales", "none": noSalesYetPriceSlot()
             case .some, nil:              fallbackPriceSlot(response)
             }
@@ -975,13 +976,23 @@ struct CompIQPricedCardView: View {
                     noDataRailSlot(basis: nil)
                 }
             case .noData:
-                // CF-IOS-HONEST-RANGES (2026-06-16): when the engine
-                // ships compSufficiency on a "no-data"-tier estimate
-                // (top-tier override forces "none" with a fitted range),
-                // route through the honest-ranges renderer so the user
-                // sees the range + multiplier hint instead of the bare
-                // "Can't estimate yet" stub.
-                if let est = estimateFor(selectedGrade), est.sufficiency != nil {
+                // CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25):
+                // when the backend marks this response as
+                // CardHedge-served AND the selected grade has no rail
+                // data, render the cardhedge slot (real LAST COMP +
+                // momentum half) instead of "Can't estimate yet." All
+                // other rail tiers — observed / estimate / rough /
+                // ballpark — still win; CardHedge only fills the
+                // no-data gap.
+                if response.estimateSource == "cardhedge" {
+                    cardHedgePriceSlot(response)
+                } else if let est = estimateFor(selectedGrade), est.sufficiency != nil {
+                    // CF-IOS-HONEST-RANGES (2026-06-16): when the engine
+                    // ships compSufficiency on a "no-data"-tier estimate
+                    // (top-tier override forces "none" with a fitted range),
+                    // route through the honest-ranges renderer so the user
+                    // sees the range + multiplier hint instead of the bare
+                    // "Can't estimate yet" stub.
                     honestRangeEstimateBlock(est)
                 } else {
                     noDataRailSlot(basis: estimateFor(selectedGrade)?.basis)
@@ -1274,6 +1285,95 @@ struct CompIQPricedCardView: View {
                     .font(.subheadline)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             }
+        }
+    }
+
+    /// CardHedge-primary estimate (CF-IOS-RENDER-CARDHEDGE 2026-06-25,
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM 2026-06-25).
+    /// Renders the canonical CardHedge frame: two CO-EQUAL columns —
+    /// LAST COMP on the left, MOMENTUM on the right — with a small
+    /// "CardHedge" attribution pill below.
+    ///
+    /// LAST COMP: `response.lastSale.price` + `daysSinceSold`.
+    /// MOMENTUM: derived via `cardHedgeDerivedMomentum(_:)` — prefers
+    /// a backend-supplied `momentum` envelope, falls back to deriving
+    /// from the `pricesByCard` series (first/last pct + day count).
+    /// When neither field is surfaced (backend momentum CF not yet
+    /// deployed) renders a muted "Trend pending" labeled fallback at
+    /// the same column frame so the co-equal layout reads as
+    /// intentional, not a load failure.
+    @ViewBuilder
+    private func cardHedgePriceSlot(_ response: CompIQPriceByIdResponse) -> some View {
+        let priceStr = response.lastSale?.price.map { $0.formatted(.currency(code: "USD")) } ?? "—"
+        let daysAgo = response.lastSale?.daysSinceSold
+        let momentum = cardHedgeDerivedMomentum(response)
+        VStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 4) {
+                    Text("Last comp")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    Text(priceStr)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(daysAgo.map(daysAgoCopy) ?? " ")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    Text("Momentum")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    if let m = momentum {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(m.arrow)
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundStyle(m.color)
+                            Text(m.valueText)
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundStyle(m.color)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
+                        Text(m.windowText.isEmpty ? " " : m.windowText)
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    } else {
+                        Text("Trend pending")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Text(" ")
+                            .font(.subheadline)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Text(cardHedgePillText(response))
+                .font(.caption2.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                .clipShape(Capsule())
         }
     }
 
@@ -3821,5 +3921,353 @@ fileprivate struct HonestRangePreviewWrapper: View {
     }
     .padding()
     .background(HobbyIQTheme.Colors.appBackground)
+    .preferredColorScheme(.dark)
+}
+
+// MARK: - CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM helpers
+
+/// Display-ready summary of the CardHedge momentum half of the
+/// cardhedge slot. Built by `cardHedgeDerivedMomentum(_:)` which
+/// prefers a backend-supplied `momentum` envelope and falls back to
+/// deriving from the `pricesByCard` series first/last delta.
+fileprivate struct CardHedgeMomentumDisplay {
+    let valueText: String   // "+4.2%" / "-1.8%" / "0.0%"
+    let arrow: String       // "↑" / "↓" / "→"
+    let color: Color
+    let windowText: String  // "30d" / "7d" / "" when unknown
+}
+
+/// Returns the display-ready CardHedge momentum summary, or nil when
+/// the response carries neither a `momentum` envelope nor a
+/// `pricesByCard` series with ≥2 priced points. Backend-emitted
+/// `momentum` wins over client-side derivation so a pre-computed
+/// authoritative value can't drift from a recomputed one.
+fileprivate func cardHedgeDerivedMomentum(_ response: CompIQPriceByIdResponse) -> CardHedgeMomentumDisplay? {
+    if let m = response.momentum, let pct = m.pctChange {
+        return CardHedgeMomentumDisplay(
+            valueText: cardHedgePctText(pct),
+            arrow: cardHedgeArrow(direction: m.direction, pct: pct),
+            color: cardHedgeColor(direction: m.direction, pct: pct),
+            windowText: m.window ?? ""
+        )
+    }
+    if let series = response.pricesByCard,
+       series.count >= 2,
+       let firstPrice = series.first?.price,
+       let lastPrice = series.last?.price,
+       firstPrice > 0 {
+        let pct = (lastPrice - firstPrice) / firstPrice * 100.0
+        let window: String = {
+            if let firstDate = CompIQCompDateParser.parse(series.first?.date),
+               let lastDate = CompIQCompDateParser.parse(series.last?.date) {
+                let days = Calendar.current.dateComponents([.day], from: firstDate, to: lastDate).day ?? 0
+                if days > 0 { return "\(days)d" }
+            }
+            return ""
+        }()
+        return CardHedgeMomentumDisplay(
+            valueText: cardHedgePctText(pct),
+            arrow: cardHedgeArrow(direction: nil, pct: pct),
+            color: cardHedgeColor(direction: nil, pct: pct),
+            windowText: window
+        )
+    }
+    return nil
+}
+
+fileprivate func cardHedgePctText(_ pct: Double) -> String {
+    let sign = pct > 0 ? "+" : ""
+    return "\(sign)\(String(format: "%.1f%%", pct))"
+}
+
+fileprivate func cardHedgeArrow(direction: String?, pct: Double) -> String {
+    if let d = direction?.lowercased() {
+        switch d {
+        case "up":   return "↑"
+        case "down": return "↓"
+        case "flat": return "→"
+        default:     break
+        }
+    }
+    if pct >  0.5 { return "↑" }
+    if pct < -0.5 { return "↓" }
+    return "→"
+}
+
+fileprivate func cardHedgeColor(direction: String?, pct: Double) -> Color {
+    switch cardHedgeArrow(direction: direction, pct: pct) {
+    case "↑": return HobbyIQTheme.Colors.successGreen
+    case "↓": return Color.red
+    default:  return HobbyIQTheme.Colors.mutedText
+    }
+}
+
+/// "CardHedge" alone, or "CardHedge · 30d" when chProvenance.window is
+/// supplied. Trimmed defensively so a whitespace-only field doesn't
+/// produce "CardHedge · ".
+fileprivate func cardHedgePillText(_ response: CompIQPriceByIdResponse) -> String {
+    if let raw = response.chProvenance?.window?.trimmingCharacters(in: .whitespacesAndNewlines),
+       raw.isEmpty == false {
+        return "CardHedge · \(raw)"
+    }
+    return "CardHedge"
+}
+
+// MARK: - CF-IOS-RENDER-CARDHEDGE #Previews
+
+/// Card-chrome wrapper for the 5-state `estimateSource` previews. Inline
+/// rendering: `CompIQPriceByIdResponse` has a `Decodable`-only init, so
+/// previews mirror the live slot visuals using the same theme tokens and
+/// font sizes the runtime slots use. Eyeball-parity, not source-parity.
+fileprivate struct EstimateSourcePreviewWrapper<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            VStack {
+                content()
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .padding()
+        .background(HobbyIQTheme.Colors.appBackground)
+    }
+}
+
+#Preview("cardhedge · Hartman BXF (momentum absent → Trend pending)") {
+    EstimateSourcePreviewWrapper(title: "cardhedge · $450 last comp · Trend pending (no backend momentum field yet)") {
+        VStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 4) {
+                    Text("Last comp")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    Text(Double(450).formatted(.currency(code: "USD")))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("3 days ago")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    Text("Momentum")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    Text("Trend pending")
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(" ")
+                        .font(.subheadline)
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Text("CardHedge")
+                .font(.caption2.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                .clipShape(Capsule())
+        }
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("cardhedge · Hartman BXF (momentum present → +4.2% ↑ 30d)") {
+    EstimateSourcePreviewWrapper(title: "cardhedge · $450 last comp · +4.2% ↑ 30d (pricesByCard sample)") {
+        VStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 4) {
+                    Text("Last comp")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    Text(Double(450).formatted(.currency(code: "USD")))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("3 days ago")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 4) {
+                    Text("Momentum")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .textCase(.uppercase)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("↑")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                        Text("+4.2%")
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.successGreen)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    Text("30d")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Text("CardHedge · 30d")
+                .font(.caption2.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                .clipShape(Capsule())
+        }
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("estimateSource · observed") {
+    EstimateSourcePreviewWrapper(title: "observed · confident headline") {
+        VStack(spacing: 4) {
+            Text("Market value")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Text(Double(1183).formatted(.currency(code: "USD")))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
+        }
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("estimateSource · trend-extrapolated") {
+    EstimateSourcePreviewWrapper(title: "trend-extrapolated · hedged ~$X + range") {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Text("Estimated value")
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.0)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .textCase(.uppercase)
+                Text("est.")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.warning)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(HobbyIQTheme.Colors.warning.opacity(0.18))
+                    .clipShape(Capsule())
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("~")
+                    .font(.system(size: 34, weight: .regular, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.7))
+                Text(Double(620).formatted(.currency(code: "USD")))
+                    .font(.system(size: 38, weight: .regular, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+            }
+            Text("range \(Double(540).formatted(.currency(code: "USD")))–\(Double(720).formatted(.currency(code: "USD")))")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("From the last sale ($580.00, 12 days ago), adjusted for the set's recent trend.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+                .padding(.top, 2)
+        }
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("estimateSource · last-sale") {
+    EstimateSourcePreviewWrapper(title: "last-sale · 48pt + days-ago") {
+        VStack(spacing: 4) {
+            Text("Last sale")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Text(Double(295).formatted(.currency(code: "USD")))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 16, x: 0, y: 0)
+            Text("5 days ago")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("estimateSource · null (no data)") {
+    EstimateSourcePreviewWrapper(title: "null · no sales yet empty-state") {
+        VStack(spacing: 4) {
+            Text("No sales yet")
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite.opacity(0.85))
+                .multilineTextAlignment(.center)
+            Text("The first one sets the market.")
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
     .preferredColorScheme(.dark)
 }

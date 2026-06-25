@@ -743,6 +743,40 @@ struct TrendIQWeights: Codable {
     let segmentTrajectory: Double?
 }
 
+/// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): one point in the
+/// CardHedge prices-by-card daily series. Wire shape per the backend
+/// momentum-surface contract: `{ date: ISO8601 string, price: Double }`.
+/// Series is sorted ascending by date when backend ships it; iOS does
+/// not re-sort defensively — the trend computation reads `first` and
+/// `last` in order.
+struct CardHedgePricePoint: Codable, Hashable {
+    let date: String?
+    let price: Double?
+}
+
+/// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): compact momentum
+/// envelope the backend MAY emit as an alternative to (or alongside)
+/// `pricesByCard`. iOS prefers `momentum` when both are present so a
+/// pre-computed backend value wins over client-side recomputation;
+/// falls back to deriving from `pricesByCard` when only the series
+/// shipped. `direction` carries the canonical "up" | "down" | "flat"
+/// vocabulary the cardhedge slot uses to pick the arrow glyph.
+struct CardHedgeMomentum: Codable, Hashable {
+    let pctChange: Double?
+    let direction: String?
+    let window: String?
+}
+
+/// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): provenance object
+/// the backend MAY ship to describe the CardHedge surface that drove
+/// the estimate. Optional; surfaces in the attribution pill when
+/// `window` is present (e.g. "CardHedge · 30d").
+struct CardHedgeProvenance: Codable, Hashable {
+    let window: String?
+    let asOf: String?
+    let source: String?
+}
+
 struct CompIQPriceByIdResponse: Codable {
     let success: Bool?
     let cardsightCardId: String?
@@ -856,6 +890,22 @@ struct CompIQPriceByIdResponse: Codable {
     /// with per-tier confidence styling.
     let gradedEstimates: [CompIQGradedEstimate]?
 
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): CardHedge
+    /// prices-by-card daily series. Present on `estimateSource ==
+    /// "cardhedge"` responses once the backend momentum-surface CF
+    /// deploys; nil on Cardsight-source responses. iOS derives the
+    /// momentum half of the cardhedge slot from first/last when
+    /// `momentum` is absent.
+    let pricesByCard: [CardHedgePricePoint]?
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): pre-computed
+    /// compact momentum. iOS prefers this over deriving from
+    /// `pricesByCard` so a backend-authoritative number wins.
+    let momentum: CardHedgeMomentum?
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): CardHedge
+    /// provenance object. When `window` is present, the cardhedge
+    /// attribution pill upgrades from "CardHedge" to "CardHedge · 30d".
+    let chProvenance: CardHedgeProvenance?
+
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
     }
@@ -959,6 +1009,9 @@ struct CompIQPriceByIdResponse: Codable {
         lastSale = try? container.decodeIfPresent(CompIQLastSale.self, forKey: .lastSale)
         gradeBreakdown = try? container.decodeIfPresent([CompIQGradeBreakdownEntry].self, forKey: .gradeBreakdown)
         gradedEstimates = try? container.decodeIfPresent([CompIQGradedEstimate].self, forKey: .gradedEstimates)
+        pricesByCard = try? container.decodeIfPresent([CardHedgePricePoint].self, forKey: .pricesByCard)
+        momentum = try? container.decodeIfPresent(CardHedgeMomentum.self, forKey: .momentum)
+        chProvenance = try? container.decodeIfPresent(CardHedgeProvenance.self, forKey: .chProvenance)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -976,5 +1029,6 @@ struct CompIQPriceByIdResponse: Codable {
         case marketRead, marketReadDisclaimer, marketReadFactPack
         case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
         case gradeBreakdown, gradedEstimates
+        case pricesByCard, momentum, chProvenance
     }
 }
