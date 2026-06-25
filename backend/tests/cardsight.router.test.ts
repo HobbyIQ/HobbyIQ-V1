@@ -202,6 +202,68 @@ describe("cardsight.router", () => {
     expect(mockFindCompsByQuery).toHaveBeenCalledTimes(1);
   });
 
+  it("cardhedge_primary returns cardhedge result when CH has sales", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out).toEqual(chResult);
+    expect(mockFindCompsByQuery).toHaveBeenCalledTimes(1);
+    expect(mockResolveCardId).not.toHaveBeenCalled();
+  });
+
+  it("cardhedge_primary falls back to cardsight when CH returns empty", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockFindCompsByQuery.mockResolvedValueOnce({
+      card: null,
+      sales: [],
+      variantWarning: [],
+      aiCategory: null,
+    } as any);
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out.sales).toHaveLength(1);
+    expect(out.sales[0].title).toBe("CS Comp 1");
+    expect(mockFindCompsByQuery).toHaveBeenCalledTimes(1);
+    expect(mockResolveCardId).toHaveBeenCalledTimes(1);
+  });
+
+  it("cardhedge_primary falls back to cardsight when CH throws", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockFindCompsByQuery.mockRejectedValueOnce(new Error("ch fail"));
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out.sales).toHaveLength(1);
+    expect(out.sales[0].title).toBe("CS Comp 1");
+    expect(mockResolveCardId).toHaveBeenCalledTimes(1);
+  });
+
+  it("cardhedge_primary returns empty when both vendors fail", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockFindCompsByQuery.mockRejectedValueOnce(new Error("ch fail"));
+    mockResolveCardId.mockRejectedValueOnce(new Error("cs fail"));
+
+    const out = await findCompsRouted("Mike Trout", { grade: "Raw" });
+
+    expect(out.sales).toEqual([]);
+    expect(out.variantWarning).toContain("cardhedge_primary_both_vendors_empty_or_failed");
+  });
+
+  it("cardhedge_primary propagates CardsightTimeoutError from fallback", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockFindCompsByQuery.mockResolvedValueOnce({
+      card: null,
+      sales: [],
+      variantWarning: [],
+      aiCategory: null,
+    } as any);
+    mockResolveCardId.mockRejectedValueOnce(new CardsightTimeoutError("timeout"));
+
+    await expect(findCompsRouted("Mike Trout", { grade: "Raw" })).rejects.toThrow("timeout");
+  });
+
   it("exclusive uses only cardsight even when empty", async () => {
     process.env.CARDSIGHT_MODE = "exclusive";
     mockTranslateResponse.mockReturnValue([] as any);
@@ -377,6 +439,34 @@ describe("searchCardsRouted", () => {
     expect(result.length).toBe(0);
   });
 
+  it("cardhedge_primary returns cardhedge result when non-empty", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    const result = await searchCardsRouted("q", 20);
+    expect(mockSearchCards).toHaveBeenCalledWith("q", 20);
+    expect(mockSearchCatalog).not.toHaveBeenCalled();
+    expect(result).toEqual([
+      { card_id: "ch_1", player: "Test Player", set: "Topps Chrome", year: "2024" },
+    ]);
+  });
+
+  it("cardhedge_primary falls back to cardsight when cardhedge empty", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockSearchCards.mockResolvedValueOnce([]);
+    const result = await searchCardsRouted("q", 20);
+    expect(mockSearchCards).toHaveBeenCalled();
+    expect(mockSearchCatalog).toHaveBeenCalled();
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("card_id");
+  });
+
+  it("cardhedge_primary falls back to cardsight when cardhedge throws", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    mockSearchCards.mockRejectedValueOnce(new Error("ch search fail"));
+    const result = await searchCardsRouted("q", 20);
+    expect(mockSearchCatalog).toHaveBeenCalled();
+    expect(result.length).toBeGreaterThan(0);
+  });
+
   it("shape mapping translates cardsight result to CardHedgeCard fields", async () => {
     process.env.CARDSIGHT_MODE = "exclusive";
     mockSearchCatalog.mockResolvedValueOnce([
@@ -469,6 +559,23 @@ describe("getCardSalesRouted", () => {
     process.env.CARDSIGHT_MODE = "primary";
     const result = await getCardSalesRouted("cs_uuid", "PSA 10", 25, { cardIdSource: "cardsight" });
     expect(mockGetCardSales).not.toHaveBeenCalled();
+    expect(result.length).toBe(1);
+    expect(result[0].source).toBe("cardsight");
+  });
+
+  it("cardhedge_primary with cardIdSource cardhedge calls only cardhedge", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    const result = await getCardSalesRouted("ch_1", "PSA 10", 25, { cardIdSource: "cardhedge" });
+    expect(mockGetCardSales).toHaveBeenCalledWith("ch_1", "PSA 10", 25);
+    expect(mockGetPricing).not.toHaveBeenCalled();
+    expect(result.length).toBe(1);
+  });
+
+  it("cardhedge_primary with cardIdSource cardsight calls only cardsight", async () => {
+    process.env.CARDSIGHT_MODE = "cardhedge_primary";
+    const result = await getCardSalesRouted("cs_uuid", "PSA 10", 25, { cardIdSource: "cardsight" });
+    expect(mockGetCardSales).not.toHaveBeenCalled();
+    expect(mockGetPricing).toHaveBeenCalled();
     expect(result.length).toBe(1);
     expect(result[0].source).toBe("cardsight");
   });

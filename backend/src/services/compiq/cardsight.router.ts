@@ -39,7 +39,7 @@ const log = {
     console.log(JSON.stringify({ event, source: "cardsight.router", level: "debug", ...fields }), fields),
 };
 
-type CardsightMode = "off" | "shadow" | "primary" | "exclusive";
+type CardsightMode = "off" | "shadow" | "primary" | "exclusive" | "cardhedge_primary";
 
 type RoutedResult = {
   card: CardHedgeCard | null;
@@ -73,7 +73,13 @@ export type FindCompsRoutedOptions = {
 
 function normalizeMode(value: string | undefined): CardsightMode {
   const raw = (value ?? "off").toLowerCase();
-  if (raw === "off" || raw === "shadow" || raw === "primary" || raw === "exclusive") {
+  if (
+    raw === "off" ||
+    raw === "shadow" ||
+    raw === "primary" ||
+    raw === "exclusive" ||
+    raw === "cardhedge_primary"
+  ) {
     return raw;
   }
   log.warn("invalid_mode", { mode: value ?? null, fallbackMode: "off" });
@@ -261,6 +267,24 @@ export async function findCompsRouted(
     }
   }
 
+  if (mode === "cardhedge_primary") {
+    // CH-primary, Cardsight-fallback. Try CH first; fall back to Cardsight if
+    // CH returns empty (no comps for this card) or throws.
+    try {
+      const ch = (await findCompsByQuery(query, chOpts)) as RoutedResult;
+      if (ch.sales.length > 0) return ch;
+    } catch (err: any) {
+      log.warn("cardhedge_error", { mode, query, error: err?.message ?? String(err) });
+    }
+    try {
+      return await findCompsViaCardsight(query, opts);
+    } catch (err: any) {
+      if (err instanceof CardsightTimeoutError) throw err;
+      log.warn("cardsight_error", { mode, query, error: err?.message ?? String(err) });
+      return emptyCardsightResult(["cardhedge_primary_both_vendors_empty_or_failed"]);
+    }
+  }
+
   // shadow
   const [ch, cs] = await Promise.all([
     timed(() => findCompsByQuery(query, chOpts) as Promise<RoutedResult>)
@@ -325,6 +349,21 @@ export async function searchCardsRouted(
     const cs = await searchCatalog(query, { take: limit });
     if (cs.length > 0) return cs.map(csToChCard);
     return searchCards(query, limit);
+  }
+  if (mode === "cardhedge_primary") {
+    try {
+      const ch = await searchCards(query, limit);
+      if (ch.length > 0) return ch;
+    } catch (err: any) {
+      log.warn("cardhedge_search_error", { mode, query, error: err?.message ?? String(err) });
+    }
+    try {
+      const cs = await searchCatalog(query, { take: limit });
+      return cs.map(csToChCard);
+    } catch (err: any) {
+      log.warn("cardsight_search_error", { mode, query, error: err?.message ?? String(err) });
+      return [];
+    }
   }
   // shadow
   const [ch, cs] = await Promise.all([
@@ -394,6 +433,14 @@ export async function getCardSalesRouted(
   if (mode === "primary") {
     if (cardIdSource === "cardhedge") {
       log.warn("primary_mode_cardhedge_namespace_only", { cardId });
+      return getCardSales(cardId, grade, limit);
+    }
+    return cardsightSales();
+  }
+  if (mode === "cardhedge_primary") {
+    // Namespace-aware: cardId namespace dictates which vendor to call. No
+    // cross-vendor fallback because card_ids are vendor-specific opaque IDs.
+    if (cardIdSource === "cardhedge") {
       return getCardSales(cardId, grade, limit);
     }
     return cardsightSales();
