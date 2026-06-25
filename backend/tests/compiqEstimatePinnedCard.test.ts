@@ -41,6 +41,10 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
     ...actual,
     findCompsRouted: vi.fn(),
     getCardSalesRouted: vi.fn(),
+    // CF-CH-P8-TESTS: pinned-id path now calls this sibling first. Default
+    // returns CH-miss shape so the engine falls through to the existing
+    // Cardsight pinned branch the rest of this suite tests.
+    getCardSalesRoutedWithProvenance: vi.fn().mockResolvedValue({ sales: [] }),
     searchCardsRouted: vi.fn(),
   };
 });

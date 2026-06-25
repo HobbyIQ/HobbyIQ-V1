@@ -110,6 +110,12 @@ type RoutedResult = {
   parallelMatchFilteredCount?: number;
   /** Total records in unified bucket before filter (for "N of M" disclosure). */
   parallelMatchUnifiedCount?: number;
+  // CF-CH-P8-TESTS (2026-06-25): CardHedge vendor provenance. Populated
+  // only on the CH-served branch; absent (undefined) on Cardsight rows.
+  // The engine reads these to surface chCardId / chTrustReason onto the
+  // corpus row's chProvenance block.
+  chCardId?: string;
+  chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong";
 };
 
 export type QueryContext = {
@@ -486,9 +492,20 @@ export async function findCompsRouted(
           trustReason: ch.trustReason,
           via: "findCompsRouted",
         });
+        // CF-CH-P8-TESTS: surface CH provenance for the engine to read.
+        // Only one of "prices_by_card_honest" | "title_cohesion_strong" is
+        // possible at this point (the only trusted reasons getTrustedComps
+        // returns); narrow defensively.
+        const chTrustReason: RoutedResult["chTrustReason"] =
+          ch.trustReason === "prices_by_card_honest" ||
+          ch.trustReason === "title_cohesion_strong"
+            ? ch.trustReason
+            : undefined;
         return {
           ...csResult,
           sales: ch.sales,
+          chCardId: ch.chCardId,
+          chTrustReason,
         };
       }
     }
@@ -521,6 +538,12 @@ export async function searchCardsRouted(
  * byte-for-byte unchanged until P5 threads identity through.
  *
  * Each returned RoutedSale carries `source` ("cardhedge" | "cardsight").
+ *
+ * For callers that ALSO need vendor provenance metadata (chCardId,
+ * chTrustReason) — typically the engine's corpus emit path — use
+ * {@link getCardSalesRoutedWithProvenance} instead. This function preserves
+ * the bare-array signature for backward-compat callers that only consume
+ * sales[].
  */
 export async function getCardSalesRouted(
   cardId: string,
@@ -528,6 +551,29 @@ export async function getCardSalesRouted(
   limit: number,
   identity?: CardIdentityHint,
 ): Promise<RoutedSale[]> {
+  const result = await getCardSalesRoutedWithProvenance(cardId, grade, limit, identity);
+  return result.sales;
+}
+
+/**
+ * CF-CH-P8-TESTS: provenance-aware sibling of {@link getCardSalesRouted}.
+ * Returns the same sales[] plus the CardHedge attribution metadata when CH
+ * served (chCardId from the bridge, chTrustReason from getTrustedComps).
+ * On Cardsight floor or no-identity calls, those fields are undefined.
+ *
+ * The engine's pinned-id path uses this to thread provenance through to the
+ * corpus row's chProvenance block (CF-CH-P6-CORPUS field).
+ */
+export async function getCardSalesRoutedWithProvenance(
+  cardId: string,
+  grade: string,
+  limit: number,
+  identity?: CardIdentityHint,
+): Promise<{
+  sales: RoutedSale[];
+  chCardId?: string;
+  chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+}> {
   void limit; // Cardsight returns the full record set; caller slices.
 
   // P3: try CardHedge first when identity is provided.
@@ -540,22 +586,33 @@ export async function getCardSalesRouted(
         count: ch.sales.length,
         trustReason: ch.trustReason,
       });
-      return ch.sales;
+      const chTrustReason: "prices_by_card_honest" | "title_cohesion_strong" | undefined =
+        ch.trustReason === "prices_by_card_honest" ||
+        ch.trustReason === "title_cohesion_strong"
+          ? ch.trustReason
+          : undefined;
+      return {
+        sales: ch.sales,
+        chCardId: ch.chCardId,
+        chTrustReason,
+      };
     }
   }
 
   // Cardsight floor (unchanged behavior).
   const pricing = await getPricing(cardId);
   const translated = translateResponse(pricing, {});
-  return translated.map((t) => ({
-    price: t.price,
-    date: t.soldDate ?? null,
-    grade,
-    source: "cardsight",
-    sale_type: null,
-    title: t.title ?? null,
-    url: null,
-  }));
+  return {
+    sales: translated.map((t) => ({
+      price: t.price,
+      date: t.soldDate ?? null,
+      grade,
+      source: "cardsight",
+      sale_type: null,
+      title: t.title ?? null,
+      url: null,
+    })),
+  };
 }
 
 /** Build a CardIdentityHint from the FindCompsRouted queryContext. */

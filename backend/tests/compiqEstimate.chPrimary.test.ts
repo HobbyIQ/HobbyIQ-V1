@@ -20,6 +20,10 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importOriginal) => 
   return {
     ...actual,
     getCardSalesRouted: vi.fn(),
+    // CF-CH-P8-TESTS: the engine's pinned-id CH path now calls this sibling
+    // so chCardId/chTrustReason flow through to the corpus row. Tests mock
+    // it to control the CH path while still exercising the engine wire-in.
+    getCardSalesRoutedWithProvenance: vi.fn(),
     findCompsRouted: vi.fn(),
     searchCardsRouted: vi.fn(),
   };
@@ -35,11 +39,12 @@ vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => 
   };
 });
 
-import { getCardSalesRouted, findCompsRouted } from "../src/services/compiq/cardsight.router.js";
+import { getCardSalesRouted, getCardSalesRoutedWithProvenance, findCompsRouted } from "../src/services/compiq/cardsight.router.js";
 import { getPricing, getCardDetail } from "../src/services/compiq/cardsight.client.js";
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service.js";
 
 const mockGetCardSalesRouted = vi.mocked(getCardSalesRouted);
+const mockGetCardSalesRoutedWithProvenance = vi.mocked(getCardSalesRoutedWithProvenance);
 const mockFindCompsRouted = vi.mocked(findCompsRouted);
 const mockGetPricing = vi.mocked(getPricing);
 const mockGetCardDetail = vi.mocked(getCardDetail);
@@ -89,7 +94,11 @@ afterEach(() => {
 
 describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='cardhedge'", () => {
   it("Hartman /99 Green Shimmer: CH returns 11 sales → response.vendor='cardhedge', estimateSource='cardhedge'", async () => {
-    mockGetCardSalesRouted.mockResolvedValue(buildSales(11, "cardhedge", 240));
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: buildSales(11, "cardhedge", 240),
+      chCardId: "1778542093014x623522278065749040",
+      chTrustReason: "prices_by_card_honest",
+    });
     // CS still mocked for the divergence-check background call (best-effort).
     mockGetPricing.mockResolvedValue(buildPricingResponse(
       Array.from({ length: 3 }, (_, i) => ({ price: 245 + i, date: `2026-06-2${i}` })),
@@ -112,7 +121,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     expect(result.fairMarketValue as number).toBeGreaterThan(200);
     expect(result.fairMarketValue as number).toBeLessThan(300);
     // CH wins → router was called with identity
-    expect(mockGetCardSalesRouted).toHaveBeenCalledWith(
+    expect(mockGetCardSalesRoutedWithProvenance).toHaveBeenCalledWith(
       HARTMAN_CS_ID,
       "Raw",
       25,
@@ -126,7 +135,11 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     // even when CH-served. Use n=3 to cross the threshold and validate
     // the CH-served attribution end-to-end while keeping the data shape
     // realistic for thin-parallel parallels.
-    mockGetCardSalesRouted.mockResolvedValue(buildSales(3, "cardhedge", 450));
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: buildSales(3, "cardhedge", 450),
+      chCardId: "1778542140951x283396404010038530",
+      chTrustReason: "prices_by_card_honest",
+    });
     mockGetPricing.mockResolvedValue(buildPricingResponse([]));
 
     const result = await computeEstimate({
@@ -141,7 +154,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     });
 
     // Router was called with CH identity → CH path attempted on the pinned-id branch.
-    expect(mockGetCardSalesRouted).toHaveBeenCalledWith(
+    expect(mockGetCardSalesRoutedWithProvenance).toHaveBeenCalledWith(
       HARTMAN_CS_ID,
       "Raw",
       25,
@@ -166,7 +179,7 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
   it("Ohtani blob: router returns 0 sales (CH rejected, no Cardsight floor in test) → fall through to existing Cardsight pinned path; vendor='cardsight'", async () => {
     // Router returns [] (CH attempted, trust-guard rejected, NO Cardsight floor because
     // the engine layer also has its own Cardsight code path immediately following).
-    mockGetCardSalesRouted.mockResolvedValue([]);
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({ sales: [] });
     mockGetPricing.mockResolvedValue(buildPricingResponse(
       Array.from({ length: 12 }, (_, i) => ({ price: 5 + i, date: `2026-06-${10 + i}` })),
     ));
@@ -195,8 +208,9 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
     });
 
     expect(result.estimateSource).not.toBe("cardhedge");
-    // getCardSalesRouted should NOT be called when there's no identity hint.
-    expect(mockGetCardSalesRouted).not.toHaveBeenCalled();
+    // The provenance-aware router fn should NOT be called when there's no
+    // identity hint.
+    expect(mockGetCardSalesRoutedWithProvenance).not.toHaveBeenCalled();
   });
 });
 
@@ -206,7 +220,11 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
 
 describe("CF-CH-P5-PRIMARY — divergence telemetry (non-blocking)", () => {
   it("logs 'ch_cs_divergence' when CH wins with $250 median and CS has dense comps at $100 median (>40% delta)", async () => {
-    mockGetCardSalesRouted.mockResolvedValue(buildSales(11, "cardhedge", 250));
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: buildSales(11, "cardhedge", 250),
+      chCardId: "1778542093014x623522278065749040",
+      chTrustReason: "prices_by_card_honest",
+    });
     // CS dense pool with median $100 — 60% below CH's $250 = clear divergence.
     mockGetPricing.mockResolvedValue(buildPricingResponse(
       Array.from({ length: 10 }, (_, i) => ({ price: 95 + i, date: `2026-06-${10 + i}` })),
@@ -229,7 +247,11 @@ describe("CF-CH-P5-PRIMARY — divergence telemetry (non-blocking)", () => {
   });
 
   it("does NOT log divergence when CS has fewer than 5 comps (too thin to compare)", async () => {
-    mockGetCardSalesRouted.mockResolvedValue(buildSales(11, "cardhedge", 250));
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: buildSales(11, "cardhedge", 250),
+      chCardId: "1778542093014x623522278065749040",
+      chTrustReason: "prices_by_card_honest",
+    });
     mockGetPricing.mockResolvedValue(buildPricingResponse(
       Array.from({ length: 3 }, (_, i) => ({ price: 100, date: `2026-06-${10 + i}` })),
     ));
@@ -249,7 +271,11 @@ describe("CF-CH-P5-PRIMARY — divergence telemetry (non-blocking)", () => {
   });
 
   it("does NOT log divergence when delta is below 40% threshold", async () => {
-    mockGetCardSalesRouted.mockResolvedValue(buildSales(11, "cardhedge", 250));
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: buildSales(11, "cardhedge", 250),
+      chCardId: "1778542093014x623522278065749040",
+      chTrustReason: "prices_by_card_honest",
+    });
     // CS at $230 → ~8% delta, below threshold.
     mockGetPricing.mockResolvedValue(buildPricingResponse(
       Array.from({ length: 10 }, (_, i) => ({ price: 225 + i, date: `2026-06-${10 + i}` })),
