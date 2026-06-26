@@ -951,6 +951,15 @@ export function buildEstimateRequestFromHolding(
       undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
     cardsightCardId: pinnedCardId,
+    // CF-HOLDING-REFRESH-PARALLELID-THREAD (2026-06-26): thread the
+    // holding's stored parallelId into the engine input so the CH
+    // bridge canonicalize step fires on every refresh path (autoPrice
+    // for add/update/refresh + the repriceHoldingsForUser background
+    // job). Without this, only the comp-tap /price-by-id path carried
+    // parallelId, and pull-to-refresh on a holding silently bypassed
+    // canonicalize — landing on BASE or null for parallel cards whose
+    // loose `holding.parallel` string lacked the variant token.
+    parallelId: holding.parallelId ?? undefined,
     pinnedAuthoritative: pinnedCardId !== undefined,
   };
 }
