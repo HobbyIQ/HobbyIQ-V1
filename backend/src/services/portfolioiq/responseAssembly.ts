@@ -212,6 +212,33 @@ export interface PortfolioHoldingWire {
     n: number;
     baseAutoMedian: number;
     baseAutoCount: number;
+    // CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): wire-side
+    // mirror of PortfolioHolding.modelExpectation. Same shape; absent
+    // when null on the holding (the conditional-spread emit OMITS the
+    // parent block entirely when null, so these are transitively
+    // absent too — no extra wire-shape gating needed here).
+    trendAnchor?: {
+      direction: "up" | "down";
+      slopePctPerDay: number;
+      trendConfidence: number;
+      windowDays: number;
+      daysWithSales: number;
+      projectedBaseAtSale: number;
+      projectedBaseToday: number;
+      allTimeBaseMedian: number;
+    } | null;
+    forwardProjection?: {
+      low: number;
+      high: number;
+      basis: string;
+      confidence: number;
+    } | null;
+    positionSignal?: {
+      purchasePrice: number;
+      gainVsLastSale: number;
+      gainVsExpectation: number;
+      gainPct: number;
+    } | null;
   } | null;
   modelSignal?: {
     lean: "buy" | "hold" | "sell";
