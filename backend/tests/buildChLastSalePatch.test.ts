@@ -386,6 +386,10 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("buildChLastSalePatch — modelExpectation + modelSignal persistence", () => {
+  // CF-CH-PERSISTENCE-PATCH (2026-06-26): validateModelExpectation now ALWAYS
+  // emits trendAnchor/forwardProjection/positionSignal (null on missing/malformed)
+  // so the writeback spread CLEARS stale sub-blocks. The "verbatim" expectation
+  // therefore includes the three null keys for any input that omits them.
   const validExpectation = {
     value: 266,
     range: [254, 278] as [number, number],
@@ -395,6 +399,9 @@ describe("buildChLastSalePatch — modelExpectation + modelSignal persistence", 
     n: 9,
     baseAutoMedian: 85.5,
     baseAutoCount: 20,
+    trendAnchor: null,
+    forwardProjection: null,
+    positionSignal: null,
   };
   const validSignal = {
     lean: "sell" as const,
@@ -503,5 +510,341 @@ describe("buildChLastSalePatch — modelExpectation + modelSignal persistence", 
       modelSignal: validSignal,
     });
     expect(patch).toEqual({});
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-PERSISTENCE-PATCH (2026-06-26) — modelExpectation sub-block round-trip
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// PRIOR-CF GAP: validateModelExpectation never emitted the three trend-aware
+// sub-blocks (trendAnchor, forwardProjection, positionSignal) — the helper
+// computed them, the wire type declared them, but the persistence-layer
+// return whitelist omitted them. Result: Cosmos stored only the 8 baseline
+// fields. Observable in the post-CF-CH-MODEL-EXPECTATION-TREND-ANCHOR
+// 22:01:03Z Hartman reprice (engine math fired @ $314.74 but Cosmos doc had
+// no trendAnchor/forwardProjection/positionSignal keys).
+//
+// THIS BLOCK PINS THE FIX:
+//   1. Well-formed sub-blocks survive validation verbatim.
+//   2. Missing sub-blocks emit as `null` (NOT undefined / omitted) — so the
+//      writeback spread CLEARS stale prior sub-blocks, matching the existing
+//      modelExpectation/modelSignal null-clear semantic.
+//   3. Malformed sub-blocks coerce to `null` (NEVER partial / NEVER strip).
+//   4. Sibling sub-blocks validate independently — one bad block doesn't
+//      contaminate the others.
+//   5. All three keys are ALWAYS present on every populated patch's
+//      modelExpectation — never omitted.
+
+describe("buildChLastSalePatch — CF-CH-PERSISTENCE-PATCH sub-block round-trip", () => {
+  const baseExpectation = {
+    value: 314.74,
+    range: [234.31, 401.62] as [number, number],
+    multiplier: 2.974,
+    multiplierRange: [2.214, 3.795] as [number, number],
+    basis: "base_anchored_off_sample_paired_premium",
+    n: 9,
+    baseAutoMedian: 85.5,
+    baseAutoCount: 20,
+  };
+  const validSignal = {
+    lean: "sell" as const,
+    deltaPct: 43,
+    expectation: 314.74,
+    effectiveMultiplier: 5.357,
+  };
+  // Mirror the helper's exact return shape (cardhedgeLastSaleSignal.service.ts
+  // L304-381). These are the literal numbers the helper would have emitted
+  // for the Hartman 22:01:03Z reprice IF the persistence layer had kept them.
+  const validTrendAnchor = {
+    direction: "up" as const,
+    slopePctPerDay: 1.85,
+    trendConfidence: 0.42,
+    windowDays: 21,
+    daysWithSales: 17,
+    projectedBaseAtSale: 105.81,
+    projectedBaseToday: 108.92,
+    allTimeBaseMedian: 84,
+  };
+  const validForwardProjection = {
+    low: 280.41,
+    high: 360.83,
+    basis: "trend-projection-prediction-interval",
+    confidence: 0.42,
+  };
+  const validPositionSignal = {
+    purchasePrice: 200,
+    gainVsLastSale: 250,
+    gainVsExpectation: 114.74,
+    gainPct: 125,
+  };
+
+  const baseEstimate = {
+    estimateSource: "cardhedge-last-sale",
+    lastSale: { price: 450, soldDate: "2026-06-19" },
+    chCompCount: 1,
+    modelSignal: validSignal,
+  };
+
+  // ───────────────── 1. Well-formed sub-blocks round-trip ────────────────
+
+  it("all three sub-blocks well-formed → patch carries them verbatim", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: validTrendAnchor,
+        forwardProjection: validForwardProjection,
+        positionSignal: validPositionSignal,
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toEqual(validTrendAnchor);
+    expect(patch.modelExpectation?.forwardProjection).toEqual(validForwardProjection);
+    expect(patch.modelExpectation?.positionSignal).toEqual(validPositionSignal);
+  });
+
+  // ───────────────── 2. Missing keys → null (writeback-clear) ────────────
+
+  it("trendAnchor key absent from input → patch emits trendAnchor: null (KEY PRESENT, not omitted)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: baseExpectation,  // ← no trendAnchor key
+    });
+    expect(patch.modelExpectation).not.toBeNull();
+    // CRITICAL: the key MUST exist and be null. Omitting it would leave
+    // stale Cosmos sub-blocks intact through the writeback spread.
+    expect("trendAnchor" in patch.modelExpectation!).toBe(true);
+    expect(patch.modelExpectation?.trendAnchor).toBeNull();
+  });
+
+  it("forwardProjection key absent → patch emits forwardProjection: null (KEY PRESENT)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: baseExpectation,
+    });
+    expect("forwardProjection" in patch.modelExpectation!).toBe(true);
+    expect(patch.modelExpectation?.forwardProjection).toBeNull();
+  });
+
+  it("positionSignal key absent → patch emits positionSignal: null (KEY PRESENT)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: baseExpectation,
+    });
+    expect("positionSignal" in patch.modelExpectation!).toBe(true);
+    expect(patch.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  it("explicit null in input → patch propagates as null (no upgrade to undefined)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: null,
+        forwardProjection: null,
+        positionSignal: null,
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toBeNull();
+    expect(patch.modelExpectation?.forwardProjection).toBeNull();
+    expect(patch.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  // ───────────────── 3. Malformed → null (no partial / no strip) ─────────
+
+  it("trendAnchor with invalid direction → null (not partial / not stripped)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: { ...validTrendAnchor, direction: "sideways" },  // ← bad enum
+        forwardProjection: validForwardProjection,
+        positionSignal: validPositionSignal,
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toBeNull();
+    // Siblings unaffected.
+    expect(patch.modelExpectation?.forwardProjection).toEqual(validForwardProjection);
+    expect(patch.modelExpectation?.positionSignal).toEqual(validPositionSignal);
+  });
+
+  it("trendAnchor with NaN slope → null", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: { ...validTrendAnchor, slopePctPerDay: NaN },
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toBeNull();
+  });
+
+  it("trendAnchor with non-positive projectedBaseAtSale → null", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: { ...validTrendAnchor, projectedBaseAtSale: 0 },
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toBeNull();
+  });
+
+  it("forwardProjection with high < low → null (range invariant)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        forwardProjection: { ...validForwardProjection, high: 100, low: 200 },
+      },
+    });
+    expect(patch.modelExpectation?.forwardProjection).toBeNull();
+  });
+
+  it("forwardProjection with empty basis → null", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        forwardProjection: { ...validForwardProjection, basis: "" },
+      },
+    });
+    expect(patch.modelExpectation?.forwardProjection).toBeNull();
+  });
+
+  it("positionSignal with zero purchasePrice → null (can't compute gainPct)", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        positionSignal: { ...validPositionSignal, purchasePrice: 0 },
+      },
+    });
+    expect(patch.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  it("positionSignal with NaN gainPct → null", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        positionSignal: { ...validPositionSignal, gainPct: NaN },
+      },
+    });
+    expect(patch.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  // ───────────────── 4. Sibling-independence: mixed valid/malformed ──────
+
+  it("only trendAnchor valid; forwardProjection + positionSignal malformed → trendAnchor present, others null", () => {
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: validTrendAnchor,
+        forwardProjection: { low: -5 },          // malformed
+        positionSignal: { purchasePrice: "x" },  // malformed
+      },
+    });
+    expect(patch.modelExpectation?.trendAnchor).toEqual(validTrendAnchor);
+    expect(patch.modelExpectation?.forwardProjection).toBeNull();
+    expect(patch.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  // ───────────────── 5. Writeback CLEAR semantic (stale sub-blocks) ──────
+
+  it("STALE SUB-BLOCK CLEAR — holding has prior trendAnchor; reprice emits expectation WITHOUT trendAnchor → spread clears it", () => {
+    // Simulates the 22:01:03Z bug scenario: the helper computed trendAnchor
+    // on a prior reprice, persisted to Cosmos. A subsequent reprice (e.g.
+    // pool went thin, slope flattened to dead-band) emits modelExpectation
+    // WITHOUT trendAnchor. The patch must SET trendAnchor: null so the
+    // writeback spread CLEARS the stale value.
+    const staleHolding = {
+      id: "test-stale-trend",
+      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: validTrendAnchor,         // ← stale
+        forwardProjection: validForwardProjection, // ← stale
+        positionSignal: validPositionSignal,   // ← stale
+      },
+    };
+
+    const patch = buildChLastSalePatch({
+      ...baseEstimate,
+      modelExpectation: baseExpectation,  // ← engine emitted bare (no sub-blocks)
+    });
+
+    // Spread merge. Because patch.modelExpectation is a NEW OBJECT (not a
+    // merge), it WHOLESALE replaces staleHolding.modelExpectation — the
+    // sub-blocks emit as null and the stale values are gone.
+    const merged = { ...staleHolding, ...patch };
+    expect(merged.modelExpectation?.trendAnchor).toBeNull();
+    expect(merged.modelExpectation?.forwardProjection).toBeNull();
+    expect(merged.modelExpectation?.positionSignal).toBeNull();
+  });
+
+  // ───────────────── 6. All-keys-always-present invariant ────────────────
+
+  it("ALWAYS-EMIT INVARIANT — every populated patch's modelExpectation has all 3 sub-block keys present", () => {
+    // 4 scenario sweep: none, some, all, all-malformed.
+    const scenarios = [
+      { name: "none", subBlocks: {} },
+      { name: "trend-only", subBlocks: { trendAnchor: validTrendAnchor } },
+      {
+        name: "all",
+        subBlocks: {
+          trendAnchor: validTrendAnchor,
+          forwardProjection: validForwardProjection,
+          positionSignal: validPositionSignal,
+        },
+      },
+      {
+        name: "all-malformed",
+        subBlocks: { trendAnchor: { x: 1 }, forwardProjection: { y: 2 }, positionSignal: { z: 3 } },
+      },
+    ];
+    for (const { name, subBlocks } of scenarios) {
+      const patch = buildChLastSalePatch({
+        ...baseEstimate,
+        modelExpectation: { ...baseExpectation, ...subBlocks },
+      });
+      expect(patch.modelExpectation, `scenario=${name}`).not.toBeNull();
+      const keys = Object.keys(patch.modelExpectation!);
+      expect(keys, `scenario=${name}`).toContain("trendAnchor");
+      expect(keys, `scenario=${name}`).toContain("forwardProjection");
+      expect(keys, `scenario=${name}`).toContain("positionSignal");
+    }
+  });
+
+  // ───────────────── 7. Helper→persistence shape-compat sanity ───────────
+
+  it("INTEGRATION — helper-shape estimate (mirrors computeCardhedgeLastSaleSignal output) round-trips through buildChLastSalePatch", () => {
+    // This is the shape the engine actually constructs: spread the helper
+    // result's modelExpectation directly into the estimate response. If THIS
+    // round-trips, the Cosmos write boundary will carry the sub-blocks.
+    const helperReturn = {
+      modelExpectation: {
+        ...baseExpectation,
+        trendAnchor: validTrendAnchor,
+        forwardProjection: validForwardProjection,
+        positionSignal: validPositionSignal,
+      },
+      modelSignal: validSignal,
+    };
+    const estimate = {
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      ...helperReturn,
+    };
+    const patch = buildChLastSalePatch(estimate);
+    expect(patch.modelExpectation).toEqual({
+      ...baseExpectation,
+      trendAnchor: validTrendAnchor,
+      forwardProjection: validForwardProjection,
+      positionSignal: validPositionSignal,
+    });
+    expect(patch.modelSignal).toEqual(validSignal);
   });
 });
