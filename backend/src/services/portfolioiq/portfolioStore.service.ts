@@ -1315,6 +1315,96 @@ async function populateCardsightGradeId<T extends PortfolioHolding>(
  * the holding (clearing any stale prior value), not a partially-
  * populated object that would silently render wrong.
  */
+// CF-CH-PERSISTENCE-PATCH (2026-06-26): structural validators for the three
+// trend-aware sub-blocks the helper emits on modelExpectation. Each returns
+// the validated literal OR `null`; the parent validator ALWAYS includes the
+// key in its return (null on missing/malformed), so a writeback CLEARS any
+// stale prior sub-block — same pattern as modelExpectation/modelSignal at
+// the patch layer. Field shapes mirror the helper's return at
+// cardhedgeLastSaleSignal.service.ts:304-381 and the wire-type contract at
+// portfolioiq.types.ts:225-246.
+type ValidTrendAnchor = NonNullable<
+  NonNullable<PortfolioHolding["modelExpectation"]>["trendAnchor"]
+>;
+type ValidForwardProjection = NonNullable<
+  NonNullable<PortfolioHolding["modelExpectation"]>["forwardProjection"]
+>;
+type ValidPositionSignal = NonNullable<
+  NonNullable<PortfolioHolding["modelExpectation"]>["positionSignal"]
+>;
+
+function validateTrendAnchor(raw: unknown): ValidTrendAnchor | null {
+  if (!raw || typeof raw !== "object") return null;
+  const t = raw as Record<string, unknown>;
+  const direction = t.direction;
+  const slopePctPerDay = t.slopePctPerDay;
+  const trendConfidence = t.trendConfidence;
+  const windowDays = t.windowDays;
+  const daysWithSales = t.daysWithSales;
+  const projectedBaseAtSale = t.projectedBaseAtSale;
+  const projectedBaseToday = t.projectedBaseToday;
+  const allTimeBaseMedian = t.allTimeBaseMedian;
+  if (
+    (direction !== "up" && direction !== "down") ||
+    typeof slopePctPerDay !== "number" || !Number.isFinite(slopePctPerDay) ||
+    typeof trendConfidence !== "number" || !Number.isFinite(trendConfidence) ||
+    typeof windowDays !== "number" || !Number.isFinite(windowDays) || windowDays <= 0 ||
+    typeof daysWithSales !== "number" || !Number.isFinite(daysWithSales) || daysWithSales < 0 ||
+    typeof projectedBaseAtSale !== "number" || !Number.isFinite(projectedBaseAtSale) || projectedBaseAtSale <= 0 ||
+    typeof projectedBaseToday !== "number" || !Number.isFinite(projectedBaseToday) || projectedBaseToday <= 0 ||
+    typeof allTimeBaseMedian !== "number" || !Number.isFinite(allTimeBaseMedian) || allTimeBaseMedian <= 0
+  ) {
+    return null;
+  }
+  return {
+    direction,
+    slopePctPerDay,
+    trendConfidence,
+    windowDays: Math.floor(windowDays),
+    daysWithSales: Math.floor(daysWithSales),
+    projectedBaseAtSale,
+    projectedBaseToday,
+    allTimeBaseMedian,
+  };
+}
+
+function validateForwardProjection(raw: unknown): ValidForwardProjection | null {
+  if (!raw || typeof raw !== "object") return null;
+  const f = raw as Record<string, unknown>;
+  const low = f.low;
+  const high = f.high;
+  const basis = f.basis;
+  const confidence = f.confidence;
+  if (
+    typeof low !== "number" || !Number.isFinite(low) || low <= 0 ||
+    typeof high !== "number" || !Number.isFinite(high) || high <= 0 ||
+    high < low ||
+    typeof basis !== "string" || basis.length === 0 ||
+    typeof confidence !== "number" || !Number.isFinite(confidence)
+  ) {
+    return null;
+  }
+  return { low, high, basis, confidence };
+}
+
+function validatePositionSignal(raw: unknown): ValidPositionSignal | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const purchasePrice = p.purchasePrice;
+  const gainVsLastSale = p.gainVsLastSale;
+  const gainVsExpectation = p.gainVsExpectation;
+  const gainPct = p.gainPct;
+  if (
+    typeof purchasePrice !== "number" || !Number.isFinite(purchasePrice) || purchasePrice <= 0 ||
+    typeof gainVsLastSale !== "number" || !Number.isFinite(gainVsLastSale) ||
+    typeof gainVsExpectation !== "number" || !Number.isFinite(gainVsExpectation) ||
+    typeof gainPct !== "number" || !Number.isFinite(gainPct)
+  ) {
+    return null;
+  }
+  return { purchasePrice, gainVsLastSale, gainVsExpectation, gainPct };
+}
+
 function validateModelExpectation(
   raw: unknown,
 ): NonNullable<PortfolioHolding["modelExpectation"]> | null {
@@ -1343,6 +1433,13 @@ function validateModelExpectation(
     return null;
   }
   const basis = typeof m.basis === "string" ? m.basis : null;
+  // CF-CH-PERSISTENCE-PATCH (2026-06-26): ALWAYS emit the three sub-block
+  // keys. Missing-or-malformed → null (not undefined / omitted). The patch
+  // layer spreads this object straight onto the holding, so emitting null
+  // CLEARS any stale prior sub-block — same writeback semantics as the
+  // patch-layer modelExpectation/modelSignal null-clear at buildChLastSalePatch.
+  // Omitting the key would leave stale Cosmos sub-blocks intact through
+  // the next reprice; emitting null overwrites them.
   return {
     value,
     range: [range[0], range[1]],
@@ -1352,6 +1449,9 @@ function validateModelExpectation(
     n: Math.floor(n),
     baseAutoMedian,
     baseAutoCount: Math.floor(baseAutoCount),
+    trendAnchor: validateTrendAnchor(m.trendAnchor),
+    forwardProjection: validateForwardProjection(m.forwardProjection),
+    positionSignal: validatePositionSignal(m.positionSignal),
   };
 }
 
