@@ -1313,8 +1313,35 @@ export function buildChLastSalePatch(
     typeof rawCompCount === "number" && Number.isFinite(rawCompCount) && rawCompCount > 0
       ? Math.floor(rawCompCount)
       : 1;
+  // CF-CH-THIN-COMP-FMV-CLEAR (2026-06-26): explicitly clear the FMV-class
+  // fields the engine emitted as null on the cardhedge-last-sale path.
+  // The writeback sites (autoPriceHolding fairValue<=0 abort + the
+  // repriceHoldingsForUser branch) BOTH spread `...holding` before the
+  // patch, so any stale FMV from a prior reprice carries forward unless
+  // the patch explicitly overrides it. The 2026-06-26 18:38Z sibling-pool
+  // rescue write left `fairMarketValue=8.5` on the Hartman BXF /150
+  // holding, and the cardhedge-last-sale writeback at 19:03 surfaced
+  // lastSaleSurface correctly but didn't clear the residue — the iOS
+  // LIST view kept showing $8.50.
+  //
+  // The clear fields match exactly what the engine emitted (null /
+  // false), so this just PERSISTS the engine's intent. `null as any` for
+  // fairMarketValue mirrors the precedent at autoPriceHolding's engineT3
+  // writeback — PortfolioHolding types it as optional-number, but Cosmos
+  // accepts null (and `undefined` would silently get omitted in the
+  // spread, leaving the stale value behind). The ADDITIVE INVARIANT
+  // holds because this clear ONLY fires inside the cardhedge-last-sale
+  // patch — every other source returns {} from the early-exit above; no
+  // other holding's FMV is ever touched (locked by the existing 22
+  // additive tests in buildChLastSalePatch.test.ts).
   return {
     lastSaleSurface: { price: rawPrice, date, compCount },
+    fairMarketValue: null as any,
+    estimatedValue: null,
+    estimateLow: null,
+    estimateHigh: null,
+    estimateBasis: null,
+    isEstimate: false,
   };
 }
 
