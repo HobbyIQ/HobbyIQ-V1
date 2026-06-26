@@ -570,6 +570,35 @@ struct CardHedgeLastSaleSurface: Codable, Hashable {
     let compCount: Int?
 }
 
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): trend-anchor sub-block on
+/// `CardHedgeModelExpectation`. Renders the "Base market rising/falling"
+/// chip when `direction` resolves to up/down (flat suppressed). View
+/// dims the chip opacity by `rSquared` so low-confidence trends fade.
+struct CardHedgeTrendAnchor: Codable, Hashable {
+    let direction: String?
+    let slopePctPerDay: Double?
+    let rSquared: Double?
+}
+
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): forward-projection range
+/// sub-block. View renders "Next likely $L–$H if trend holds" when both
+/// range bounds decode cleanly. Read as range[0]/[1] matching the
+/// existing model-expectation range pattern.
+struct CardHedgeForwardProjection: Codable, Hashable {
+    let range: [Double]?
+
+    var low: Double? { range?.first }
+    var high: Double? { (range?.count ?? 0) > 1 ? range?[1] : nil }
+}
+
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): position-signal sub-block.
+/// Backend-computed gain/loss vs the holding's purchase price — view
+/// renders a signed dollar line when `gainLoss` is present.
+struct CardHedgePositionSignal: Codable, Hashable {
+    let gainLoss: Double?
+    let gainLossPct: Double?
+}
+
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model expectation
 /// envelope shared by the comp page (`CompIQPriceByIdResponse`) and the
 /// holding wire (`InventoryCard`). All fields optional/nullable per the
@@ -584,6 +613,42 @@ struct CardHedgeModelExpectation: Codable, Hashable {
     let n: Int?
     let baseAutoMedian: Double?
     let baseAutoCount: Int?
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): three new optional
+    /// sub-blocks. Each renders independently; null AND absent → block
+    /// suppressed without affecting the others.
+    let trendAnchor: CardHedgeTrendAnchor?
+    let forwardProjection: CardHedgeForwardProjection?
+    let positionSignal: CardHedgePositionSignal?
+
+    /// Explicit init so existing call sites (previews, mock builders)
+    /// that don't pass the new sub-block args keep compiling. Codable
+    /// decode path is unaffected — the synthesized decoder reads each
+    /// key independently and ignores this initializer.
+    init(
+        value: Double? = nil,
+        range: [Double]? = nil,
+        multiplier: Double? = nil,
+        multiplierRange: [Double]? = nil,
+        basis: String? = nil,
+        n: Int? = nil,
+        baseAutoMedian: Double? = nil,
+        baseAutoCount: Int? = nil,
+        trendAnchor: CardHedgeTrendAnchor? = nil,
+        forwardProjection: CardHedgeForwardProjection? = nil,
+        positionSignal: CardHedgePositionSignal? = nil
+    ) {
+        self.value = value
+        self.range = range
+        self.multiplier = multiplier
+        self.multiplierRange = multiplierRange
+        self.basis = basis
+        self.n = n
+        self.baseAutoMedian = baseAutoMedian
+        self.baseAutoCount = baseAutoCount
+        self.trendAnchor = trendAnchor
+        self.forwardProjection = forwardProjection
+        self.positionSignal = positionSignal
+    }
 
     var rangeLow: Double? { range?.first }
     var rangeHigh: Double? { (range?.count ?? 0) > 1 ? range?[1] : nil }

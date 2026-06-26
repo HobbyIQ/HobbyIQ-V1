@@ -346,8 +346,12 @@ struct CardHedgeModelSignalView: View {
         let head = headlineString()
         let model = modelLineString()
         let signal = resolvedSignal()
+        let trend = resolvedTrendAnchor()
+        let projection = forwardProjectionString()
+        let position = positionSignalString()
 
-        if head != nil || model != nil || signal != nil {
+        if head != nil || model != nil || signal != nil
+            || trend != nil || projection != nil || position != nil {
             VStack(alignment: .leading, spacing: 4) {
                 if let head {
                     Text(head)
@@ -376,6 +380,32 @@ struct CardHedgeModelSignalView: View {
                                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         }
                     }
+                }
+                if let trend {
+                    // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26):
+                    // trendAnchor chip. Direction "rising"/"falling" only
+                    // (flat suppressed). Opacity = R² floored at 0.35 so
+                    // a near-zero R² still reads as deliberately faded
+                    // rather than invisible.
+                    Text(trend.text)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(trend.tint)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(trend.tint.opacity(0.18))
+                        .clipShape(Capsule(style: .continuous))
+                        .opacity(trend.dimming)
+                }
+                if let projection {
+                    Text(projection)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let position {
+                    Text(position.text)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(position.tint)
                 }
             }
         }
@@ -418,6 +448,52 @@ struct CardHedgeModelSignalView: View {
         let sign = pct >= 0 ? "+" : "−"
         let direction = pct >= 0 ? "above" : "below"
         return "\(sign)\(String(format: "%.0f%%", absPct)) \(direction) model"
+    }
+
+    /// trendAnchor → chip text/tint/opacity. Only fires on rising/falling
+    /// (CF: "up/down only"); flat/unknown/missing → nil → no chip.
+    private func resolvedTrendAnchor() -> (text: String, tint: Color, dimming: Double)? {
+        guard let trend = modelExpectation?.trendAnchor,
+              let raw = trend.direction?.lowercased() else { return nil }
+        let isUp = (raw == "rising" || raw == "up")
+        let isDown = (raw == "falling" || raw == "down")
+        guard isUp || isDown else { return nil }
+        var text = "Base market \(isUp ? "rising" : "falling")"
+        if let slope = trend.slopePctPerDay {
+            let sign = slope >= 0 ? "+" : "−"
+            text += " \(sign)\(String(format: "%.2f%%", abs(slope)))/day"
+        }
+        // R² dims the chip: high R² = full opacity, low R² = faded.
+        // Floor at 0.35 so a near-zero R² still reads as intentional fade.
+        let dimming = trend.rSquared.map { max(0.35, min(1.0, $0)) } ?? 0.7
+        let tint = isUp ? HobbyIQTheme.Colors.successGreen : Color.red
+        return (text, tint, dimming)
+    }
+
+    /// forwardProjection → "Next likely $L–$H if trend holds" when both
+    /// range bounds decode cleanly. Nil if either bound missing.
+    private func forwardProjectionString() -> String? {
+        guard let proj = modelExpectation?.forwardProjection,
+              let low = proj.low, let high = proj.high else { return nil }
+        let loStr = low.formatted(.currency(code: "USD"))
+        let hiStr = high.formatted(.currency(code: "USD"))
+        return "Next likely \(loStr)–\(hiStr) if trend holds"
+    }
+
+    /// positionSignal → gain/loss vs purchase line. Signed; green when
+    /// positive, red when negative. Suppressed when `gainLoss` is nil.
+    private func positionSignalString() -> (text: String, tint: Color)? {
+        guard let pos = modelExpectation?.positionSignal,
+              let gainLoss = pos.gainLoss else { return nil }
+        let sign = gainLoss >= 0 ? "+" : "−"
+        let absDollar = abs(gainLoss).formatted(.currency(code: "USD"))
+        var text = "\(sign)\(absDollar) vs purchase"
+        if let pct = pos.gainLossPct {
+            let pctSign = pct >= 0 ? "+" : "−"
+            text += " (\(pctSign)\(String(format: "%.0f%%", abs(pct))))"
+        }
+        let tint = gainLoss >= 0 ? HobbyIQTheme.Colors.successGreen : Color.red
+        return (text, tint)
     }
 }
 
@@ -532,6 +608,79 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
             lastSaleCompCount: 11,
             modelExpectation: nil,
             modelSignal: nil
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("CardHedge · trendAnchor up chip (R²=0.74, +0.42%/day)") {
+    CardHedgeSignalPreviewWrapper(title: "trendAnchor rising — R² dims chip opacity") {
+        CardHedgeModelSignalView(
+            lastSalePrice: 450,
+            lastSaleCompCount: 1,
+            modelExpectation: CardHedgeModelExpectation(
+                value: 262,
+                range: [250, 273],
+                basis: "prices_by_card_honest",
+                n: 11,
+                trendAnchor: CardHedgeTrendAnchor(
+                    direction: "rising",
+                    slopePctPerDay: 0.42,
+                    rSquared: 0.74
+                )
+            ),
+            modelSignal: nil
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("CardHedge · forwardProjection range ($460–$490 if trend holds)") {
+    CardHedgeSignalPreviewWrapper(title: "forwardProjection — \"Next likely\" range line") {
+        CardHedgeModelSignalView(
+            lastSalePrice: 450,
+            lastSaleCompCount: 1,
+            modelExpectation: CardHedgeModelExpectation(
+                value: 262,
+                range: [250, 273],
+                basis: "prices_by_card_honest",
+                n: 11,
+                forwardProjection: CardHedgeForwardProjection(range: [460, 490])
+            ),
+            modelSignal: nil
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("CardHedge · all sub-blocks together (Hartman BXF full shape)") {
+    CardHedgeSignalPreviewWrapper(title: "headline + model + badge + trendAnchor + projection + position") {
+        CardHedgeModelSignalView(
+            lastSalePrice: 450,
+            lastSaleCompCount: 1,
+            modelExpectation: CardHedgeModelExpectation(
+                value: 262,
+                range: [250, 273],
+                multiplier: 3.20,
+                multiplierRange: [3.05, 3.33],
+                basis: "prices_by_card_honest",
+                n: 11,
+                baseAutoMedian: 82,
+                baseAutoCount: 69,
+                trendAnchor: CardHedgeTrendAnchor(
+                    direction: "rising",
+                    slopePctPerDay: 0.42,
+                    rSquared: 0.74
+                ),
+                forwardProjection: CardHedgeForwardProjection(range: [460, 490]),
+                positionSignal: CardHedgePositionSignal(gainLoss: 188, gainLossPct: 71.97)
+            ),
+            modelSignal: CardHedgeModelSignal(
+                lean: "sell",
+                deltaPct: 72,
+                expectation: 262,
+                effectiveMultiplier: 3.20
+            )
         )
     }
     .preferredColorScheme(.dark)
