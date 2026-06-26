@@ -4317,11 +4317,22 @@ export async function computeEstimate(
     let modelExpectation: ModelExpectation | null = null;
     let modelSignal: ModelSignal | null = null;
     if (isChTrustedSingleSale && body.cardsightCardId && subjectProduct !== null && lastSale !== null) {
+      // CF-CH-MODEL-SIGNAL-PARALLEL-INPUT-FIX (2026-06-26): pass the RAW
+      // user-facing parallel string to the helper. The helper's print-run
+      // strip (\s*\/\s*\d+\s*$) requires the SLASH; normalizeParallel
+      // upstream strips non-alphanum, so normalizedParallel is "blue x
+      // fractor 150" (no slash) which the strip can't handle.
+      // The live 2026-06-26 20:23Z reprice on the Hartman BXF /150
+      // holding surfaced this: previous call site preferred normalized
+      // → helper's strip didn't fire → lookup missed → modelExpectation
+      // and modelSignal both persisted as null in Cosmos. Fix: body.parallel
+      // first, normalizedParallel only as a fallback for callers that
+      // didn't populate body.parallel.
       const sig = await computeCardhedgeLastSaleSignal({
         cardsightCardId: body.cardsightCardId,
         lastSalePrice: lastSale.price,
         product: subjectProduct,
-        parallelName: normalizedParallel ?? body.parallel ?? "",
+        parallelName: body.parallel ?? normalizedParallel ?? "",
         year: Number(body.cardYear ?? fetched.card?.year ?? 0),
       });
       if (sig) {

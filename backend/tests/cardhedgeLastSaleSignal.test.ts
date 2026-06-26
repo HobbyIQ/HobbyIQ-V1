@@ -338,3 +338,82 @@ describe("computeCardhedgeLastSaleSignal — edge cases", () => {
     expect(result).toBeNull();
   });
 });
+
+// ============================================================================
+// CF-CH-MODEL-SIGNAL-PARALLEL-INPUT-FIX (2026-06-26) — both-input-shape
+// contract tests. The helper's design contract is "take the raw user-facing
+// parallel string with print-run suffix (e.g. 'Blue X-Fractor /150')". Live
+// 2026-06-26 20:23Z reprice surfaced that the engine call site was passing
+// the engine-normalized form ('blue x fractor 150'), so the strip didn't
+// fire and lookup missed. The CF moves the call site to pass the raw form
+// AND pins the contract from both sides here.
+// ============================================================================
+
+describe("computeCardhedgeLastSaleSignal — parallel input contract (CF-CH-MODEL-SIGNAL-PARALLEL-INPUT-FIX)", () => {
+  it("RAW form 'Blue X-Fractor /150' (the contract) → SUCCESS (lookup matches)", async () => {
+    // Identical to test 1's prod-case shape — re-asserted as the contract
+    // anchor. If this test breaks, the helper's strip is broken; if test
+    // below breaks, the helper accidentally started handling the normalized
+    // form too (drift away from the contract).
+    const result = await computeCardhedgeLastSaleSignal(
+      {
+        cardsightCardId: HARTMAN_CS_ID,
+        lastSalePrice: 450,
+        product: "Bowman",
+        parallelName: "Blue X-Fractor /150", // ← raw, with slash
+        year: 2026,
+      },
+      {
+        getCardDetail: async () => buildHartmanDetail(),
+        getPricing: async () => buildHartmanBaseAutoPricing(20, 82),
+      },
+    );
+    expect(result).not.toBeNull();
+    if (!result) throw new Error("unreachable");
+    expect(result.modelExpectation.multiplier).toBe(2.974);
+    expect(result.modelSignal.lean).toBe("sell");
+  });
+
+  it("NORMALIZED form 'blue x fractor 150' (NOT the contract) → null (helper does NOT handle the post-normalize form by design)", async () => {
+    // This is the EXACT input shape the engine call site was passing pre-
+    // CF-CH-MODEL-SIGNAL-PARALLEL-INPUT-FIX. The helper returns null because
+    // its strip regex requires the slash. The fix is at the call site (pass
+    // raw); the helper deliberately does NOT add a post-normalize strip
+    // because no safe regex exists for "trailing digits that are a print
+    // run vs digits that are part of the parallel name". The integration
+    // test (engineCallSite-shape) is what proves the call site passes raw.
+    const result = await computeCardhedgeLastSaleSignal(
+      {
+        cardsightCardId: HARTMAN_CS_ID,
+        lastSalePrice: 450,
+        product: "Bowman",
+        parallelName: "blue x fractor 150", // ← normalized, slash-stripped
+        year: 2026,
+      },
+      {
+        getCardDetail: async () => buildHartmanDetail(),
+        getPricing: async () => buildHartmanBaseAutoPricing(20, 82),
+      },
+    );
+    expect(result).toBeNull();
+  });
+
+  it("CASING — 'blue x-fractor /150' (lowercased + dash preserved) → SUCCESS (lookup is case-insensitive on this path)", async () => {
+    const result = await computeCardhedgeLastSaleSignal(
+      {
+        cardsightCardId: HARTMAN_CS_ID,
+        lastSalePrice: 450,
+        product: "Bowman",
+        parallelName: "blue x-fractor /150",
+        year: 2026,
+      },
+      {
+        getCardDetail: async () => buildHartmanDetail(),
+        getPricing: async () => buildHartmanBaseAutoPricing(20, 82),
+      },
+    );
+    expect(result).not.toBeNull();
+    if (!result) throw new Error("unreachable");
+    expect(result.modelExpectation.multiplier).toBe(2.974);
+  });
+});
