@@ -64,6 +64,16 @@ export interface CompIQEstimateRequest {
    * let a substantive free-text query override a pinned id.
    */
   pinnedAuthoritative?: boolean;
+  /**
+   * CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): holding's
+   * purchasePrice, threaded so the cardhedge-last-sale signal helper
+   * can compute the positionSignal (gain/loss vs lastSale + vs
+   * expectation). Optional + nullable — when absent, positionSignal
+   * is omitted from the response. Set by buildEstimateRequestFromHolding;
+   * unset on the public /api/compiq/price-by-id route (no per-call
+   * cost-basis input there by design).
+   */
+  purchasePrice?: number | null;
 }
 
 /**

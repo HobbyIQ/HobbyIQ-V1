@@ -961,6 +961,17 @@ export function buildEstimateRequestFromHolding(
     // loose `holding.parallel` string lacked the variant token.
     parallelId: holding.parallelId ?? undefined,
     pinnedAuthoritative: pinnedCardId !== undefined,
+    // CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): thread the
+    // holding's purchasePrice so the cardhedge-last-sale signal helper
+    // can compute positionSignal (gain/loss vs lastSale + vs expectation).
+    // Optional — null when the holding has no purchasePrice; positionSignal
+    // is then absent from the response shape.
+    purchasePrice:
+      typeof holding.purchasePrice === "number" &&
+      Number.isFinite(holding.purchasePrice) &&
+      holding.purchasePrice > 0
+        ? holding.purchasePrice
+        : null,
   };
 }
 

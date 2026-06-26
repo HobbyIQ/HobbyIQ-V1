@@ -4334,6 +4334,13 @@ export async function computeEstimate(
         product: subjectProduct,
         parallelName: body.parallel ?? normalizedParallel ?? "",
         year: Number(body.cardYear ?? fetched.card?.year ?? 0),
+        // CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): thread the
+        // sale date (the trend regression's projection target) and the
+        // holding's purchasePrice (for positionSignal). Helper handles
+        // null gracefully — trendAnchor / positionSignal absent from
+        // the response shape when their inputs aren't present.
+        lastSaleDate: lastSale.soldDate ?? null,
+        purchasePrice: body.purchasePrice ?? null,
       });
       if (sig) {
         modelExpectation = sig.modelExpectation;

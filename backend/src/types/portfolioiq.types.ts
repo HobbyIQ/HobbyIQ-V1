@@ -219,6 +219,31 @@ export interface PortfolioHolding {
     n: number;
     baseAutoMedian: number;
     baseAutoCount: number;
+    // CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): trend-aware
+    // additions. All three are optional + nullable; absent when the
+    // helper couldn't compute (flat trend / thin pool / no purchasePrice).
+    trendAnchor?: {
+      direction: "up" | "down";
+      slopePctPerDay: number;
+      trendConfidence: number;
+      windowDays: number;
+      daysWithSales: number;
+      projectedBaseAtSale: number;
+      projectedBaseToday: number;
+      allTimeBaseMedian: number;
+    } | null;
+    forwardProjection?: {
+      low: number;
+      high: number;
+      basis: string;
+      confidence: number;
+    } | null;
+    positionSignal?: {
+      purchasePrice: number;
+      gainVsLastSale: number;
+      gainVsExpectation: number;
+      gainPct: number;
+    } | null;
   } | null;
 
   // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): buy/sell signal

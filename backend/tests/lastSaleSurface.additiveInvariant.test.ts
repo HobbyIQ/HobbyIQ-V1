@@ -337,3 +337,96 @@ describe("ADDITIVE INVARIANT — composeHoldingWireShape: modelExpectation / mod
     expect("modelSignal" in composeHoldingWireShape(chLsNoSignal)).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): trendAnchor /
+// forwardProjection / positionSignal sub-block additive invariant
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("ADDITIVE INVARIANT — modelExpectation sub-blocks (trendAnchor, forwardProjection, positionSignal)", () => {
+  it("CH-last-sale + signal holding WITHOUT trend/forward/position sub-blocks → wire's modelExpectation has NO trendAnchor/forwardProjection/positionSignal keys", () => {
+    // The "trend didn't fit" case — modelExpectation present, but no
+    // trendAnchor sub-block. The wire mirrors the holding doc: sub-keys
+    // OMITTED, not surfaced as null.
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: {
+        value: 250, range: [200, 300], multiplier: 2.974,
+        multiplierRange: [2.214, 3.795], basis: "base_anchored_paired_premium",
+        n: 9, baseAutoMedian: 85, baseAutoCount: 70,
+        // no trendAnchor, no forwardProjection, no positionSignal
+      },
+      modelSignal: { lean: "sell", deltaPct: 80, expectation: 250, effectiveMultiplier: 5.3 },
+    };
+    const wire = composeHoldingWireShape(chLs);
+    expect(wire.modelExpectation).toBeDefined();
+    expect("trendAnchor" in (wire.modelExpectation as object)).toBe(false);
+    expect("forwardProjection" in (wire.modelExpectation as object)).toBe(false);
+    expect("positionSignal" in (wire.modelExpectation as object)).toBe(false);
+  });
+
+  it("CH-last-sale + FULL signal holding (trend + forward + position present) → all three sub-keys round-trip verbatim", () => {
+    const trendAnchor = {
+      direction: "up" as const,
+      slopePctPerDay: 3.0,
+      trendConfidence: 0.45,
+      windowDays: 21,
+      daysWithSales: 18,
+      projectedBaseAtSale: 118,
+      projectedBaseToday: 130,
+      allTimeBaseMedian: 84,
+    };
+    const forwardProjection = {
+      low: 320, high: 410, basis: "trend-projection-prediction-interval",
+      confidence: 0.45,
+    };
+    const positionSignal = {
+      purchasePrice: 200, gainVsLastSale: 250, gainVsExpectation: 150,
+      gainPct: 125,
+    };
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: {
+        value: 351, range: [261, 448], multiplier: 2.974,
+        multiplierRange: [2.214, 3.795], basis: "base_anchored_off_sample_paired_premium",
+        n: 9, baseAutoMedian: 84, baseAutoCount: 73,
+        trendAnchor, forwardProjection, positionSignal,
+      },
+      modelSignal: { lean: "sell", deltaPct: 28, expectation: 351, effectiveMultiplier: 5.36 },
+    };
+    const wire = composeHoldingWireShape(chLs);
+    const me = wire.modelExpectation as any;
+    expect(me.trendAnchor).toEqual(trendAnchor);
+    expect(me.forwardProjection).toEqual(forwardProjection);
+    expect(me.positionSignal).toEqual(positionSignal);
+  });
+
+  it("JSON of normal holding (no signal at all) does NOT contain trendAnchor/forwardProjection/positionSignal substrings", () => {
+    const json = JSON.stringify(composeHoldingWireShape(baseHolding()));
+    expect(json).not.toContain("trendAnchor");
+    expect(json).not.toContain("forwardProjection");
+    expect(json).not.toContain("positionSignal");
+  });
+
+  it("JSON of CH-last-sale-no-trend holding does NOT contain trendAnchor/forwardProjection/positionSignal substrings", () => {
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: {
+        value: 250, range: [200, 300], multiplier: 2.974,
+        multiplierRange: [2.214, 3.795], basis: null, n: 9,
+        baseAutoMedian: 85, baseAutoCount: 70,
+      },
+      modelSignal: { lean: "sell", deltaPct: 80, expectation: 250, effectiveMultiplier: 5.3 },
+    };
+    const json = JSON.stringify(composeHoldingWireShape(chLs));
+    expect(json).not.toContain("trendAnchor");
+    expect(json).not.toContain("forwardProjection");
+    expect(json).not.toContain("positionSignal");
+  });
+});
