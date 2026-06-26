@@ -274,6 +274,13 @@ export interface CorpusEntry {
       vendor: "cardhedge";
       chCardId?: string;
       trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+      /**
+       * CF-CH-THIN-COMP-PRIMARY (2026-06-26): how many CardHedge sales
+       * the trust-guard accepted. Surfaced so analysts can stratify CH-
+       * served rows by depth (n=1 thin "cardhedge-last-sale" vs n>=2
+       * "cardhedge" with FMV). Optional — older rows omit it.
+       */
+      compCount?: number;
     };
   };
 }
@@ -347,6 +354,8 @@ export interface BuildCorpusEntryOptions {
       vendor: "cardhedge";
       chCardId?: string;
       trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+      /** CF-CH-THIN-COMP-PRIMARY (2026-06-26): see CorpusEntry.response.chProvenance.compCount. */
+      compCount?: number;
     };
   };
 }
@@ -404,6 +413,16 @@ export function buildCorpusEntry(
             ...(ch.trustReason === "prices_by_card_honest" ||
             ch.trustReason === "title_cohesion_strong"
               ? { trustReason: ch.trustReason }
+              : {}),
+            // CF-CH-THIN-COMP-PRIMARY (2026-06-26): compCount whitelisted
+            // when the engine surfaces a positive finite integer. Older
+            // rows (engine pre-2026-06-26) emit no compCount and the
+            // field is omitted entirely — additive against the existing
+            // chProvenance byte shape.
+            ...(typeof ch.compCount === "number" &&
+            Number.isFinite(ch.compCount) &&
+            ch.compCount > 0
+              ? { compCount: Math.floor(ch.compCount) }
               : {}),
           },
         }

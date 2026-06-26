@@ -75,6 +75,11 @@ interface PricingRouteResult {
   // block on the corpus row will pick them up without a mapper change.
   chCardId?: string | null;
   chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong" | string | null;
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): comp count from CH's getCardSales
+  // (the count the trust-guard accepted). Read into chProvenance.compCount
+  // when the engine surfaces it. Older engines emit no value and the
+  // chProvenance block omits the field entirely.
+  chCompCount?: number | null;
   // ...other fields exist on the real result object; this helper ignores them.
 }
 
@@ -126,18 +131,35 @@ export function corpusEntryFromPricingResult(
     vendor: "cardhedge";
     chCardId?: string;
     trustReason?: "prices_by_card_honest" | "title_cohesion_strong";
+    compCount?: number;
   };
   let chProvenance: ChProv | undefined;
-  if (args.result?.estimateSource === "cardhedge") {
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): "cardhedge-last-sale" is the
+  // n==1 thin-CH variant of "cardhedge" — same vendor provenance, with
+  // chProvenance.compCount carrying the singular sale's count. Both
+  // estimateSource values synthesize the same chProvenance block; any
+  // other value (or undefined) emits a Cardsight-shape row byte-identical
+  // to pre-P6 behavior (additive invariant preserved).
+  const isChSource =
+    args.result?.estimateSource === "cardhedge" ||
+    args.result?.estimateSource === "cardhedge-last-sale";
+  if (isChSource) {
     chProvenance = { vendor: "cardhedge" };
-    if (typeof args.result.chCardId === "string" && args.result.chCardId) {
+    if (typeof args.result?.chCardId === "string" && args.result.chCardId) {
       chProvenance.chCardId = args.result.chCardId;
     }
     if (
-      args.result.chTrustReason === "prices_by_card_honest" ||
-      args.result.chTrustReason === "title_cohesion_strong"
+      args.result?.chTrustReason === "prices_by_card_honest" ||
+      args.result?.chTrustReason === "title_cohesion_strong"
     ) {
       chProvenance.trustReason = args.result.chTrustReason;
+    }
+    if (
+      typeof args.result?.chCompCount === "number" &&
+      Number.isFinite(args.result.chCompCount) &&
+      args.result.chCompCount > 0
+    ) {
+      chProvenance.compCount = Math.floor(args.result.chCompCount);
     }
   }
 

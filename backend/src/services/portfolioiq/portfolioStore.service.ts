@@ -1267,6 +1267,57 @@ async function populateCardsightGradeId<T extends PortfolioHolding>(
   return holding;
 }
 
+/**
+ * CF-CH-THIN-COMP-PRIMARY (2026-06-26) — build a writeback patch carrying
+ * the persisted "last sold" surface when (AND ONLY WHEN) the engine
+ * emitted estimateSource === "cardhedge-last-sale".
+ *
+ * The estimate response carries a single trusted CardHedge sale on the
+ * parallel-specific chCardId (see CF commit 1/2). fairMarketValue stays
+ * null by design — n=1 isn't FMV-grade data — but the list/detail views
+ * still need SOMETHING on the holding doc so they can render
+ * "Last sold $X via N comp(s)" instead of "Can't estimate yet."
+ *
+ * THE GUARD IS SURGICAL — every other estimateSource ("observed",
+ * "cardhedge" n>=2, "trend-extrapolated", "last-sale", "no-recent-comps",
+ * variant-mismatch, T3 base-auto-floor, low-confidence skip, undefined,
+ * null) returns the empty object {}. Callers spread the patch into their
+ * writeback; an empty patch is a no-op. This is the source of the
+ * ADDITIVE INVARIANT: a non-CH-last-sale row's persisted shape is
+ * byte-identical pre/post this CF.
+ *
+ * The single-source predicate is the engine's `estimateSource` field
+ * (set in compiqEstimate.service.ts:4220 — the cardhedge-last-sale ladder
+ * arm). The presence of a `lastSale.price` numeric is REQUIRED — when
+ * the engine emitted the source but couldn't compute a sale (degenerate
+ * shape), we return {} rather than write garbage.
+ */
+export function buildChLastSalePatch(
+  estimate: unknown,
+): Partial<PortfolioHolding> {
+  const est = estimate as {
+    estimateSource?: string | null;
+    lastSale?: { price?: unknown; soldDate?: unknown } | null;
+    chCompCount?: unknown;
+  } | null | undefined;
+  if (!est || est.estimateSource !== "cardhedge-last-sale") return {};
+  const rawPrice = est.lastSale?.price;
+  if (typeof rawPrice !== "number" || !Number.isFinite(rawPrice) || rawPrice <= 0) {
+    return {};
+  }
+  const rawDate = est.lastSale?.soldDate;
+  const date =
+    typeof rawDate === "string" && rawDate.trim().length > 0 ? rawDate : null;
+  const rawCompCount = est.chCompCount;
+  const compCount =
+    typeof rawCompCount === "number" && Number.isFinite(rawCompCount) && rawCompCount > 0
+      ? Math.floor(rawCompCount)
+      : 1;
+  return {
+    lastSaleSurface: { price: rawPrice, date, compCount },
+  };
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -1492,11 +1543,34 @@ async function autoPriceHolding(
   // hydration patch is non-empty, stamp it back even on the no-FMV path
   // so a sparse-identity holding (e.g. Hartman's variant-mismatch skip)
   // still gains its catalog identity fields on this tick.
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): build a lastSaleSurface patch
+  // when (AND ONLY WHEN) the engine emitted estimateSource ===
+  // "cardhedge-last-sale" (single trusted CH sale, parallel-specific
+  // chCardId, FMV null by design). Every other estimateSource leaves
+  // this patch empty — the additive invariant is preserved by
+  // construction: a CS-sourced / observed / trend-extrapolated / variant-
+  // mismatch / no-recent-comps holding's persisted shape is byte-identical
+  // pre/post this CF.
+  const chLastSalePatch = buildChLastSalePatch(estimate);
+
   if (!railResolution && fairValue <= 0) {
-    if (Object.keys(identityPatch).length > 0) {
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): scoped writeback bypass.
+    // When `chLastSalePatch` is non-empty, the engine produced a single
+    // trusted CardHedge sale we want to PERSIST so the list view can
+    // render "Last sold $X via N comp(s)" instead of "Can't estimate
+    // yet." The fairValue<=0 abort still fires for every other source
+    // (variant-mismatch, no-recent-comps, low-confidence CS) — exactly
+    // as before. The patch merge order matters: identityPatch first
+    // (catalog backfill), chLastSalePatch second (the new surface),
+    // lastUpdated stamped last so both sites can read the freshness.
+    if (
+      Object.keys(identityPatch).length > 0 ||
+      Object.keys(chLastSalePatch).length > 0
+    ) {
       const hydrated: PortfolioHolding = {
         ...holding,
         ...identityPatch,
+        ...chLastSalePatch,
         lastUpdated: new Date().toISOString(),
       };
       doc.holdings[holding.id] = hydrated;
@@ -3825,6 +3899,37 @@ export async function repriceHoldingsForUser(
         };
         evaluateHoldingAlerts(doc, t3Previous, t3Updated);
         doc.holdings[holding.id] = t3Updated;
+        repriced += 1;
+        updates.push({ id: holding.id, status: "repriced" });
+        continue;
+      }
+
+      // CF-CH-THIN-COMP-PRIMARY (2026-06-26): scoped gate bypass for
+      // estimateSource === "cardhedge-last-sale". The buildChLastSalePatch
+      // helper returns {} for every other source — `repriceChLastSalePatch`
+      // being non-empty is itself the scope predicate, and the helper IS
+      // the gate (no separate source-string check needed here). When set,
+      // we persist lastSaleSurface and count this as a successful reprice
+      // so the holding stops being marked "insufficient-comps" on every
+      // tick. Every other source still hits the existing confidence /
+      // compsUsed / fairValue<=0 gate exactly as before.
+      const repriceChLastSalePatch = buildChLastSalePatch(estimate);
+      if (Object.keys(repriceChLastSalePatch).length > 0) {
+        const chLsNow = new Date().toISOString();
+        const chLsPrevious = doc.holdings[holding.id];
+        const chLsUpdated: PortfolioHolding = {
+          ...holding,
+          ...repriceIdentityPatch,
+          ...repriceChLastSalePatch,
+          // fairMarketValue stays whatever it was (typically null for
+          // this source). We're not inventing an FMV; we're persisting a
+          // single trusted CH last-sale that iOS renders separately.
+          verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
+          recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
+          lastUpdated: chLsNow,
+        };
+        evaluateHoldingAlerts(doc, chLsPrevious, chLsUpdated);
+        doc.holdings[holding.id] = chLsUpdated;
         repriced += 1;
         updates.push({ id: holding.id, status: "repriced" });
         continue;

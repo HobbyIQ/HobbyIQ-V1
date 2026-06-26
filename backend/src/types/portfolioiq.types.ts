@@ -171,4 +171,29 @@ export interface PortfolioHolding {
   //                rail. fairMarketValue + estimatedValue both null;
   //                iOS surfaces estimateBasis prose explaining the gap.
   valuationStatus?: "observed" | "estimated" | "pending" | null;
+
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): persisted "last sold" surface for
+  // holdings whose engine response carried estimateSource ===
+  // "cardhedge-last-sale" — a SINGLE trusted CardHedge sale on a parallel-
+  // specific chCardId. fairMarketValue STAYS null (the single CH sale is
+  // not FMV-grade data), but the list/detail views can render "Last sold
+  // $X via N comp(s)" off this block instead of "Can't estimate yet."
+  //
+  // ADDITIVE INVARIANT: this field is OPTIONAL and OMITTED on every
+  // existing holding. The autoPriceHolding + repriceHoldingsForUser
+  // writebacks only touch it when the engine emits
+  // estimateSource === "cardhedge-last-sale"; every other code path
+  // leaves the field absent. CS-sourced rows, observed-FMV rows, T3
+  // base-auto rows, variant-mismatch skips, and low-confidence skips all
+  // remain byte-identical pre/post this CF.
+  //
+  // compCount carries the singular CH count (always 1 today, but the
+  // shape is forward-compat for "view 'via N comp(s)' generally"). date
+  // is the soldDate string from the engine's lastSale.soldDate; null
+  // when the engine couldn't determine the timestamp.
+  lastSaleSurface?: {
+    price: number;
+    date: string | null;
+    compCount: number;
+  } | null;
 }
