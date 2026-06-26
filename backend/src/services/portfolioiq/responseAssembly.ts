@@ -186,6 +186,17 @@ export interface PortfolioHoldingWire {
   // estimated-aware row treatment.
   displayableValue: number | null;
   displayableValueSource: "observed" | "estimated" | null;
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): persisted single trusted CardHedge
+  // sale for holdings whose engine returned estimateSource ===
+  // "cardhedge-last-sale". Surfaced as optional + nullable so the existing
+  // wire payload stays byte-identical when the field is absent on the
+  // holding doc (the universal case for non-CH-last-sale holdings).
+  // iOS renders "Last sold $X via N comp(s)" off this block.
+  lastSaleSurface?: {
+    price: number;
+    date: string | null;
+    compCount: number;
+  } | null;
 }
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
@@ -287,6 +298,13 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     freshnessStatus: freshnessFromPricingTimestamp(holding),
     displayableValue,
     displayableValueSource: displayable.source,
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): conditional spread so the key
+    // is OMITTED entirely on every non-CH-last-sale holding (the universal
+    // case). Preserves byte-identical wire emission for the existing
+    // population — additive invariant locked by the wire-shape test.
+    ...(holding.lastSaleSurface
+      ? { lastSaleSurface: holding.lastSaleSurface }
+      : {}),
   };
 }
 
