@@ -56,7 +56,24 @@ export interface CardIdentityHint {
   playerName: string;
   cardYear?: string | number;
   product?: string;
+  /**
+   * Parallel/variant string as supplied by the caller (typically an iOS
+   * holding's stored string). Used as the bridge query's parallel token
+   * UNLESS {@link parallelId} resolves to an authoritative Cardsight
+   * catalog name (see CF-ENGINE-PARALLEL-CANONICALIZE), in which case the
+   * canonical name + numberedTo overrides this loose string.
+   */
   parallel?: string;
+  /**
+   * CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): when present alongside
+   * the parent cardsightCardId, the router resolves this Cardsight UUID
+   * to the catalog's authoritative parallel name + numberedTo (via
+   * getCardDetail's parallels[]) and uses THAT in the CH card-match
+   * query — eliminating loose iOS parallel-string variability as a CH
+   * bridge failure mode. Falls back to {@link parallel} if the id can't
+   * be resolved.
+   */
+  parallelId?: string;
   number?: string;
   isAuto?: boolean;
 }
@@ -210,6 +227,56 @@ function buildCardHedgeQuery(identity: CardIdentityHint): string {
   return parts.join(" ").trim();
 }
 
+/**
+ * CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): resolve a Cardsight
+ * parallel UUID to the catalog's authoritative parallel name +
+ * numberedTo suffix (e.g. `"Green Shimmer Refractor /99"`).
+ *
+ * The CH card-match bridge ranks dramatically better on the catalog's
+ * canonical phrasing than on iOS-stored parallel strings (which vary
+ * — `"Green Shimmer Refractor /99"` resolves at conf 0.97 while
+ * `"/99"` alone or empty resolves to the BASE card_id). Using the
+ * Cardsight catalog as the source of truth makes the bridge
+ * deterministic.
+ *
+ * Returns null when:
+ *   - parentCardId or parallelId is empty
+ *   - getCardDetail throws or returns notFound
+ *   - the parallels[] array doesn't contain the requested id
+ *   - the matched parallel has no usable name
+ *
+ * Caller falls back to the iOS-sent parallel string on null. getCardDetail
+ * is itself cached at the cardsight.client.ts layer, so steady-state
+ * cost is essentially zero per resolve.
+ */
+async function resolveCanonicalParallel(
+  parentCardId: string,
+  parallelId: string,
+): Promise<string | null> {
+  if (!parentCardId || !parallelId) return null;
+  try {
+    const detail = await getCardDetail(parentCardId);
+    if (!detail || detail.notFound) return null;
+    const parallels = detail.parallels ?? [];
+    const match = parallels.find((p) => p.id === parallelId);
+    if (!match || !match.name) return null;
+    const name = match.name.trim();
+    if (!name) return null;
+    const numberedTo = match.numberedTo;
+    if (typeof numberedTo === "number" && numberedTo > 0) {
+      return `${name} /${numberedTo}`;
+    }
+    return name;
+  } catch (err: any) {
+    log.warn("canonicalize_parallel_failed", {
+      parentCardId,
+      parallelId,
+      error: err?.message ?? String(err),
+    });
+    return null;
+  }
+}
+
 const GENERATIONAL_SUFFIX_RE = /^(jr|sr|ii|iii|iv)\.?$/i;
 
 /**
@@ -242,7 +309,27 @@ async function bridgeCsToCh(
   csCardId: string,
   identity: CardIdentityHint,
 ): Promise<{ chCardId: string; confidence: number } | null> {
-  const query = buildCardHedgeQuery(identity);
+  // CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): when the caller carries
+  // a Cardsight parallel UUID, replace the loose iOS parallel string
+  // with the catalog's authoritative `{name} /{numberedTo}` before
+  // building the CH bridge query. Falls back to the iOS-sent string when
+  // the id doesn't resolve. Additive: when no parallelId is present,
+  // behavior is byte-identical to the pre-CF path.
+  let effectiveIdentity: CardIdentityHint = identity;
+  if (identity.parallelId) {
+    const canonical = await resolveCanonicalParallel(csCardId, identity.parallelId);
+    if (canonical) {
+      effectiveIdentity = { ...identity, parallel: canonical };
+      log.info("router.parallel_canonicalized", {
+        csCardId,
+        parallelId: identity.parallelId,
+        iosSent: identity.parallel ?? null,
+        canonical,
+      });
+    }
+  }
+
+  const query = buildCardHedgeQuery(effectiveIdentity);
   if (!query) return null;
 
   const raw = await cacheWrap(
