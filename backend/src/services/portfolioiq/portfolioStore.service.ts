@@ -1292,6 +1292,78 @@ async function populateCardsightGradeId<T extends PortfolioHolding>(
  * the engine emitted the source but couldn't compute a sale (degenerate
  * shape), we return {} rather than write garbage.
  */
+/**
+ * CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26) — structural validators
+ * for the engine response's modelExpectation + modelSignal blocks.
+ * Return the validated object literal (matching the PortfolioHolding
+ * shape) or null when the input is malformed or absent.
+ *
+ * Strict — every numeric field must be a finite number; every enum
+ * field must match the literal union; lean must be one of "buy" /
+ * "hold" / "sell". A malformed engine response persists as `null` on
+ * the holding (clearing any stale prior value), not a partially-
+ * populated object that would silently render wrong.
+ */
+function validateModelExpectation(
+  raw: unknown,
+): NonNullable<PortfolioHolding["modelExpectation"]> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const m = raw as Record<string, unknown>;
+  const value = m.value;
+  const range = m.range;
+  const multiplier = m.multiplier;
+  const multiplierRange = m.multiplierRange;
+  const n = m.n;
+  const baseAutoMedian = m.baseAutoMedian;
+  const baseAutoCount = m.baseAutoCount;
+  if (
+    typeof value !== "number" || !Number.isFinite(value) ||
+    !Array.isArray(range) || range.length !== 2 ||
+    typeof range[0] !== "number" || typeof range[1] !== "number" ||
+    !Number.isFinite(range[0]) || !Number.isFinite(range[1]) ||
+    typeof multiplier !== "number" || !Number.isFinite(multiplier) ||
+    !Array.isArray(multiplierRange) || multiplierRange.length !== 2 ||
+    typeof multiplierRange[0] !== "number" || typeof multiplierRange[1] !== "number" ||
+    !Number.isFinite(multiplierRange[0]) || !Number.isFinite(multiplierRange[1]) ||
+    typeof n !== "number" || !Number.isFinite(n) || n <= 0 ||
+    typeof baseAutoMedian !== "number" || !Number.isFinite(baseAutoMedian) || baseAutoMedian <= 0 ||
+    typeof baseAutoCount !== "number" || !Number.isFinite(baseAutoCount) || baseAutoCount < 0
+  ) {
+    return null;
+  }
+  const basis = typeof m.basis === "string" ? m.basis : null;
+  return {
+    value,
+    range: [range[0], range[1]],
+    multiplier,
+    multiplierRange: [multiplierRange[0], multiplierRange[1]],
+    basis,
+    n: Math.floor(n),
+    baseAutoMedian,
+    baseAutoCount: Math.floor(baseAutoCount),
+  };
+}
+
+function validateModelSignal(
+  raw: unknown,
+): NonNullable<PortfolioHolding["modelSignal"]> | null {
+  if (!raw || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  const lean = s.lean;
+  const deltaPct = s.deltaPct;
+  const expectation = s.expectation;
+  const effectiveMultiplier = s.effectiveMultiplier;
+  if (
+    (lean !== "buy" && lean !== "hold" && lean !== "sell") ||
+    typeof deltaPct !== "number" || !Number.isFinite(deltaPct) ||
+    typeof expectation !== "number" || !Number.isFinite(expectation) ||
+    typeof effectiveMultiplier !== "number" || !Number.isFinite(effectiveMultiplier)
+  ) {
+    return null;
+  }
+  return { lean, deltaPct, expectation, effectiveMultiplier };
+}
+
 export function buildChLastSalePatch(
   estimate: unknown,
 ): Partial<PortfolioHolding> {
@@ -1299,6 +1371,8 @@ export function buildChLastSalePatch(
     estimateSource?: string | null;
     lastSale?: { price?: unknown; soldDate?: unknown } | null;
     chCompCount?: unknown;
+    modelExpectation?: unknown;
+    modelSignal?: unknown;
   } | null | undefined;
   if (!est || est.estimateSource !== "cardhedge-last-sale") return {};
   const rawPrice = est.lastSale?.price;
@@ -1313,6 +1387,16 @@ export function buildChLastSalePatch(
     typeof rawCompCount === "number" && Number.isFinite(rawCompCount) && rawCompCount > 0
       ? Math.floor(rawCompCount)
       : 1;
+  // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): also persist the
+  // multiplier-model signal when the engine emitted it. Both fields are
+  // ALWAYS set in the patch (to validated value OR explicit null) so the
+  // spread CLEARS any stale value from a prior reprice — mirrors the
+  // FMV-clear pattern from CF-CH-THIN-COMP-FMV-CLEAR. When the engine
+  // didn't emit (helper returned null because the curated row was
+  // missing, subset unresolvable, etc.), both persist as null on the
+  // holding; iOS shows no buy/sell signal.
+  const modelExpectation = validateModelExpectation(est.modelExpectation);
+  const modelSignal = validateModelSignal(est.modelSignal);
   // CF-CH-THIN-COMP-FMV-CLEAR (2026-06-26): explicitly clear the FMV-class
   // fields the engine emitted as null on the cardhedge-last-sale path.
   // The writeback sites (autoPriceHolding fairValue<=0 abort + the
@@ -1342,6 +1426,8 @@ export function buildChLastSalePatch(
     estimateHigh: null,
     estimateBasis: null,
     isEstimate: false,
+    modelExpectation,
+    modelSignal,
   };
 }
 
