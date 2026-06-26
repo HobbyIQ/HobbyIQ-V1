@@ -345,6 +345,7 @@ interface FetchedComps {
  */
 function buildIdentityHintFromContext(
   ctx: QueryContext | undefined,
+  parallelId?: string | null,
 ): CardIdentityHint | null {
   if (!ctx) return null;
   const playerName = (ctx.playerName ?? "").trim();
@@ -354,6 +355,13 @@ function buildIdentityHintFromContext(
     cardYear: ctx.cardYear,
     product: ctx.product,
     parallel: ctx.parallel,
+    // CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): thread the Cardsight
+    // parallel UUID into the bridge so the router can substitute the
+    // catalog's authoritative parallel name + numberedTo for iOS's
+    // loose `parallel` string. iOS's `/api/compiq/price-by-id` body
+    // carries parallelId as a top-level field (NOT inside queryContext),
+    // so the caller must pass it explicitly.
+    parallelId: parallelId ?? undefined,
     number: ctx.cardNumber,
     isAuto: ctx.isAuto,
   };
@@ -1480,7 +1488,12 @@ async function fetchComps(
     // pricing.card) on CH miss — so we DON'T pass identity to the inner
     // router call here; instead we attempt CH explicitly and check the
     // source on the returned sales.
-    const chIdentity = buildIdentityHintFromContext(queryContext);
+    // CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): pass parallelId so the
+    // router resolves it to the catalog's authoritative parallel name +
+    // numberedTo, replacing iOS's loose `parallel` string in the CH bridge
+    // query. fetchComps' 5th positional argument is `parallelId` — already
+    // threaded through from /price-by-id's body.
+    const chIdentity = buildIdentityHintFromContext(queryContext, parallelId);
     if (chIdentity) {
       try {
         // CF-CH-P8-TESTS: use the provenance-aware sibling so chCardId +

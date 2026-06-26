@@ -261,7 +261,12 @@ describe("CF-PINNED-PARALLEL-RECOVERY — Leo De Vries Blue Refractor /150", () 
       testCallContext,
     )) as Record<string, unknown>;
 
-    expect(detailMock).not.toHaveBeenCalled();
+    // CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): getCardDetail is now
+    // legitimately called by the CH bridge's canonicalize step on every
+    // pinned-id request that carries a parallelId — recovery or not. The
+    // original `not.toHaveBeenCalled()` assertion was a stale proxy for
+    // "the recovery branch didn't fire"; the truer signal is
+    // priceSourceInternal === "cardsight-parallel-id" below.
     expect(result.priceSourceInternal).toBe("cardsight-parallel-id");
     expect(result.priceSource).toBe("exact");
     expect(result.compsUsed).toBeGreaterThanOrEqual(3);
