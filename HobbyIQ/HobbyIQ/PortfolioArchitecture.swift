@@ -128,6 +128,16 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     /// with this as nil and continue to work via text-based matching.
     let cardsightCardId: String?
 
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
+    /// model-line + lean-badge wire fields surfaced on the holdings
+    /// list. All three independently optional — render whichever blocks
+    /// arrive populated. `lastSaleSurface` uses `date` (not `soldDate`)
+    /// per the holding wire contract; the view layer maps it to a
+    /// shared display value.
+    let lastSaleSurface: CardHedgeLastSaleSurface?
+    let modelExpectation: CardHedgeModelExpectation?
+    let modelSignal: CardHedgeModelSignal?
+
     // The Codable conformance + CodingKeys for InventoryCard live in the
     // extension at CompatibilityShims.swift:1584 — that extension defines
     // its own custom init(from:) which wins over any struct-level synthesized
@@ -163,7 +173,10 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         clientId: String? = nil,
         fairMarketValue: Double? = nil,
         valuationStatus: String? = nil,
-        cardsightCardId: String? = nil
+        cardsightCardId: String? = nil,
+        lastSaleSurface: CardHedgeLastSaleSurface? = nil,
+        modelExpectation: CardHedgeModelExpectation? = nil,
+        modelSignal: CardHedgeModelSignal? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -194,6 +207,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.fairMarketValue = fairMarketValue
         self.valuationStatus = valuationStatus
         self.cardsightCardId = cardsightCardId
+        self.lastSaleSurface = lastSaleSurface
+        self.modelExpectation = modelExpectation
+        self.modelSignal = modelSignal
     }
 
     var profitLoss: Double {

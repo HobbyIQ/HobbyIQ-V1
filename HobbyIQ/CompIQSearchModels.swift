@@ -560,6 +560,57 @@ struct CompIQLastSale: Codable, Hashable {
     }
 }
 
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): list-shape last-sale envelope
+/// that ships on holding wire (vs `CompIQLastSale` used by the comp page).
+/// `date` here is the field on the list; the comp page's `soldDate` field
+/// maps to the same display value via the view layer.
+struct CardHedgeLastSaleSurface: Codable, Hashable {
+    let price: Double?
+    let date: String?
+    let compCount: Int?
+}
+
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model expectation
+/// envelope shared by the comp page (`CompIQPriceByIdResponse`) and the
+/// holding wire (`InventoryCard`). All fields optional/nullable per the
+/// contract — render only when `value` is present, range pair only when
+/// both `range[0]` and `range[1]` decode cleanly.
+struct CardHedgeModelExpectation: Codable, Hashable {
+    let value: Double?
+    let range: [Double]?
+    let multiplier: Double?
+    let multiplierRange: [Double]?
+    let basis: String?
+    let n: Int?
+    let baseAutoMedian: Double?
+    let baseAutoCount: Int?
+
+    var rangeLow: Double? { range?.first }
+    var rangeHigh: Double? { (range?.count ?? 0) > 1 ? range?[1] : nil }
+    var multiplierLow: Double? { multiplierRange?.first }
+    var multiplierHigh: Double? { (multiplierRange?.count ?? 0) > 1 ? multiplierRange?[1] : nil }
+}
+
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge "lean" badge driver.
+/// `lean` is a CLOSED 3-value enum on the wire (`"buy" | "hold" | "sell"`);
+/// unknown literals decode as nil and suppress the badge — the view must
+/// never render the raw string. `deltaPct` carries a signed percent where
+/// positive = above model, negative = below.
+struct CardHedgeModelSignal: Codable, Hashable {
+    let lean: String?
+    let deltaPct: Double?
+    let expectation: Double?
+    let effectiveMultiplier: Double?
+}
+
+/// CLOSED enum mirroring the `lean` literals — `init?(rawValue:)` returns
+/// nil for any unknown string, which the view treats as "no badge."
+enum CardHedgeLean: String, Codable {
+    case buy
+    case hold
+    case sell
+}
+
 /// CF-PRICEHISTORY-60D (2026-06-10): 60-day chart series point on
 /// `/api/compiq/price-by-id` for the comp-page price-history chart.
 /// Wire shape per backend SHA 9441dcc:
@@ -906,6 +957,20 @@ struct CompIQPriceByIdResponse: Codable {
     /// attribution pill upgrades from "CardHedge" to "CardHedge · 30d".
     let chProvenance: CardHedgeProvenance?
 
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model
+    /// expectation envelope. Renders the "Model expects $X (range
+    /// $L–$H)" line beneath the last-sale headline on the comp page.
+    let modelExpectation: CardHedgeModelExpectation?
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge lean badge
+    /// driver. `lean` is closed-enum (`buy`/`hold`/`sell`); deltaPct is
+    /// signed (+ above, − below model).
+    let modelSignal: CardHedgeModelSignal?
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): comp-page-side comp
+    /// count for the CardHedge last-sale headline ("via N comps"). The
+    /// holdings-list wire emits the same number on
+    /// `lastSaleSurface.compCount` instead.
+    let chCompCount: Int?
+
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
     }
@@ -1012,6 +1077,9 @@ struct CompIQPriceByIdResponse: Codable {
         pricesByCard = try? container.decodeIfPresent([CardHedgePricePoint].self, forKey: .pricesByCard)
         momentum = try? container.decodeIfPresent(CardHedgeMomentum.self, forKey: .momentum)
         chProvenance = try? container.decodeIfPresent(CardHedgeProvenance.self, forKey: .chProvenance)
+        modelExpectation = try? container.decodeIfPresent(CardHedgeModelExpectation.self, forKey: .modelExpectation)
+        modelSignal = try? container.decodeIfPresent(CardHedgeModelSignal.self, forKey: .modelSignal)
+        chCompCount = try? container.decodeIfPresent(Int.self, forKey: .chCompCount)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1030,5 +1098,6 @@ struct CompIQPriceByIdResponse: Codable {
         case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
         case gradeBreakdown, gradedEstimates
         case pricesByCard, momentum, chProvenance
+        case modelExpectation, modelSignal, chCompCount
     }
 }

@@ -733,6 +733,16 @@ struct CompIQPricedCardView: View {
             // Hero price slot (FMV $ or "No current estimate").
             fmvCard(response)
 
+            // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge
+            // headline + model line + lean badge. Self-suppresses when
+            // all three blocks are absent.
+            CardHedgeModelSignalView(
+                lastSalePrice: response.lastSale?.price,
+                lastSaleCompCount: response.chCompCount,
+                modelExpectation: response.modelExpectation,
+                modelSignal: response.modelSignal
+            )
+
             // CF-ADD-TO-INVENTORY (2026-06-12): action button right under
             // the value block so the user can save the card they just
             // valued into inventory without leaving the comp page. The

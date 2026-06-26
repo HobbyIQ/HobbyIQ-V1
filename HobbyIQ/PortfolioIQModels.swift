@@ -1406,30 +1406,42 @@ struct PortfolioCardRow: View {
     let card: InventoryCard
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            inventoryRowThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                inventoryRowThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(card.playerName)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                if let details = inventoryCardSubtitle(for: card) {
-                    Text(details)
-                        .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(card.playerName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         .lineLimit(1)
                         .truncationMode(.tail)
+
+                    if let details = inventoryCardSubtitle(for: card) {
+                        Text(details)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
+                    inventoryGradePill(text: card.gradeChipText)
                 }
 
-                inventoryGradePill(text: card.gradeChipText)
+                Spacer(minLength: 8)
+
+                inventoryRightColumn(card: card)
             }
 
-            Spacer(minLength: 8)
-
-            inventoryRightColumn(card: card)
+            // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline
+            // + model line + lean badge. Self-suppresses when all three
+            // blocks are absent (legacy holdings, or non-CardHedge cards).
+            CardHedgeModelSignalView(
+                lastSalePrice: card.lastSaleSurface?.price,
+                lastSaleCompCount: card.lastSaleSurface?.compCount,
+                modelExpectation: card.modelExpectation,
+                modelSignal: card.modelSignal
+            )
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -1491,6 +1503,42 @@ struct PortfolioCardGridCard: View {
 /// Composes the muted secondary line: "Year · Set". Falls back to the legacy
 /// cardName when neither structured field is present so we never render a
 /// blank line in legacy data.
+// MARK: - CF-IOS-MODEL-SIGNAL-RENDER list-cell preview (2026-06-26)
+
+#Preview("PortfolioCardRow · Hartman sell (model-signal on list)") {
+    let card = InventoryCard(
+        playerName: "Eric Hartman",
+        cardName: "Green Shimmer Refractor /99 Auto",
+        cost: 0,
+        currentValue: 450,
+        status: "active",
+        year: "2026",
+        setName: "Bowman",
+        parallel: "Green Shimmer Refractor",
+        grade: "",
+        isAuto: true,
+        lastSaleSurface: CardHedgeLastSaleSurface(price: 450, date: "2026-06-20T12:00:00Z", compCount: 1),
+        modelExpectation: CardHedgeModelExpectation(
+            value: 262, range: [250, 273], multiplier: 3.20, multiplierRange: [3.05, 3.33],
+            basis: "prices_by_card_honest", n: 11, baseAutoMedian: 82, baseAutoCount: 69
+        ),
+        modelSignal: CardHedgeModelSignal(
+            lean: "sell", deltaPct: 72, expectation: 262, effectiveMultiplier: 3.20
+        )
+    )
+    return VStack(spacing: 12) {
+        Text("List row — Hartman Green Shimmer /99 Auto (sell signal)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        PortfolioCardRow(card: card)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+    }
+    .padding()
+    .background(HobbyIQTheme.Colors.appBackground)
+    .preferredColorScheme(.dark)
+}
+
 private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
     let parts = [card.year, card.setName]
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

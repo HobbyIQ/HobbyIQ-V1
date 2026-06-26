@@ -1589,6 +1589,8 @@ extension InventoryCard {
         case fairMarketValue
         case valuationStatus
         case cardsightCardId
+        // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
+        case lastSaleSurface, modelExpectation, modelSignal
     }
 
     // snake_case alternatives the backend may return
@@ -1774,6 +1776,13 @@ extension InventoryCard {
             ?? (try? s.decode(String.self, forKey: .valuationStatus))
         self.cardsightCardId = (try? c.decode(String.self, forKey: .cardsightCardId))
             ?? (try? s.decode(String.self, forKey: .cardsightCardId))
+        // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
+        // model + lean badge wire envelope. All three independently
+        // optional; defensive `try?` so any absent/null/malformed entry
+        // collapses to nil without breaking the row.
+        self.lastSaleSurface = try? c.decodeIfPresent(CardHedgeLastSaleSurface.self, forKey: .lastSaleSurface)
+        self.modelExpectation = try? c.decodeIfPresent(CardHedgeModelExpectation.self, forKey: .modelExpectation)
+        self.modelSignal = try? c.decodeIfPresent(CardHedgeModelSignal.self, forKey: .modelSignal)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1807,6 +1816,9 @@ extension InventoryCard {
         try container.encodeIfPresent(fairMarketValue, forKey: .fairMarketValue)
         try container.encodeIfPresent(valuationStatus, forKey: .valuationStatus)
         try container.encodeIfPresent(cardsightCardId, forKey: .cardsightCardId)
+        try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
+        try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
+        try container.encodeIfPresent(modelSignal, forKey: .modelSignal)
     }
 }
 
