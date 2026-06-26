@@ -197,6 +197,28 @@ export interface PortfolioHoldingWire {
     date: string | null;
     compCount: number;
   } | null;
+
+  // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): multiplier-model
+  // expectation + buy/sell signal. Surfaced as optional + nullable. Same
+  // additive invariant as lastSaleSurface — wire key omitted when absent
+  // on the holding doc; only present on cardhedge-last-sale holdings
+  // whose engine signal helper succeeded.
+  modelExpectation?: {
+    value: number;
+    range: [number, number];
+    multiplier: number;
+    multiplierRange: [number, number];
+    basis: string | null;
+    n: number;
+    baseAutoMedian: number;
+    baseAutoCount: number;
+  } | null;
+  modelSignal?: {
+    lean: "buy" | "hold" | "sell";
+    deltaPct: number;
+    expectation: number;
+    effectiveMultiplier: number;
+  } | null;
 }
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
@@ -304,6 +326,18 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     // population — additive invariant locked by the wire-shape test.
     ...(holding.lastSaleSurface
       ? { lastSaleSurface: holding.lastSaleSurface }
+      : {}),
+    // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): same conditional-
+    // spread pattern. Key omitted when absent on the holding doc. Present
+    // only on cardhedge-last-sale holdings whose engine signal succeeded
+    // (curated row + empirical baseRelativePremium + sufficient base
+    // autos). Non-signal holdings (the overwhelming majority) emit a wire
+    // BYTE-IDENTICAL to pre-CF behavior.
+    ...(holding.modelExpectation
+      ? { modelExpectation: holding.modelExpectation }
+      : {}),
+    ...(holding.modelSignal
+      ? { modelSignal: holding.modelSignal }
       : {}),
   };
 }

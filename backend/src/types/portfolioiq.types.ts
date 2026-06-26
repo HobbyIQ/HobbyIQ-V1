@@ -196,4 +196,44 @@ export interface PortfolioHolding {
     date: string | null;
     compCount: number;
   } | null;
+
+  // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): multiplier-model
+  // expectation for the cardhedge-last-sale path. Populated only when
+  // the engine's signal helper successfully computed (subset resolved,
+  // curated row with empirical baseRelativePremium found, base-auto
+  // pool sufficient). When the engine couldn't compute (no curated row,
+  // subset unresolvable, base pool too thin, etc.), this stays absent
+  // / null and iOS shows no buy/sell signal — no fake numbers.
+  //
+  // `value` is the price-space centroid (baseAutoMedian × multiplier);
+  // `range` is the price-space [low, high] from baseAutoMedian ×
+  // baseRelativePremium.range. Surfacing both lets iOS render the
+  // signal with explicit numbers ("model expects $266 (range $254–$278)")
+  // rather than just a verdict badge.
+  modelExpectation?: {
+    value: number;
+    range: [number, number];
+    multiplier: number;
+    multiplierRange: [number, number];
+    basis: string | null;
+    n: number;
+    baseAutoMedian: number;
+    baseAutoCount: number;
+  } | null;
+
+  // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): buy/sell signal
+  // derived from the single trusted CH sale's position vs the model
+  // expectation's range.
+  //   lean === "sell"  → sale is ABOVE the parallel's empirical band
+  //                       (e.g. Hartman BXF /150 at $450, band [$254, $278])
+  //   lean === "buy"   → sale is BELOW the band
+  //   lean === "hold"  → sale is within the band
+  // deltaPct is the % difference from the centroid: positive = above,
+  // negative = below.
+  modelSignal?: {
+    lean: "buy" | "hold" | "sell";
+    deltaPct: number;
+    expectation: number;
+    effectiveMultiplier: number;
+  } | null;
 }

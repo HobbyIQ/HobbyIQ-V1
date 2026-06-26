@@ -179,9 +179,13 @@ describe("buildChLastSalePatch — GARBAGE-OUT: returns {} on degenerate CH-last
 
 describe("buildChLastSalePatch — populated patch on canonical CH-last-sale shape", () => {
   // CF-CH-THIN-COMP-FMV-CLEAR (2026-06-26): the canonical CH-last-sale
-  // patch shape. lastSaleSurface PLUS the FMV-class clear fields. All
-  // six tests below assert the full shape with toEqual — if any future
-  // change drops a clear field, these tests fail loudly.
+  // patch shape. lastSaleSurface PLUS the FMV-class clear fields PLUS
+  // the model-signal clears (CF-CH-LAST-SALE-MODEL-EXPECTATION
+  // 2026-06-26 — modelExpectation/modelSignal always set in the patch
+  // so the writeback CLEARS any stale value from a prior reprice;
+  // populated with validated values when the engine emitted them, null
+  // when not). All positive-path tests assert the full shape with
+  // toEqual — if any future change drops a clear field, these fail.
   const CANONICAL_CLEAR_FIELDS = {
     fairMarketValue: null,
     estimatedValue: null,
@@ -189,6 +193,8 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     estimateHigh: null,
     estimateBasis: null,
     isEstimate: false,
+    modelExpectation: null,
+    modelSignal: null,
   };
 
   it("Hartman Blue X-Fractor /150 shape: returns lastSaleSurface with price/date/compCount + FMV-class clears", () => {
@@ -371,5 +377,131 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
     expect(patch).toEqual({});
     const merged = { ...chN2Holding, ...patch };
     expect(merged.fairMarketValue).toBe(450);  // ← legacy CH FMV intact
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26) — modelExpectation + modelSignal
+// persistence + stale-clear semantics
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("buildChLastSalePatch — modelExpectation + modelSignal persistence", () => {
+  const validExpectation = {
+    value: 266,
+    range: [254, 278] as [number, number],
+    multiplier: 2.974,
+    multiplierRange: [2.214, 3.795] as [number, number],
+    basis: "base_anchored_off_sample_paired_premium",
+    n: 9,
+    baseAutoMedian: 85.5,
+    baseAutoCount: 20,
+  };
+  const validSignal = {
+    lean: "sell" as const,
+    deltaPct: 69.2,
+    expectation: 266,
+    effectiveMultiplier: 5.263,
+  };
+
+  it("engine response with valid modelExpectation + modelSignal → patch carries both verbatim", () => {
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      modelExpectation: validExpectation,
+      modelSignal: validSignal,
+    });
+    expect(patch.modelExpectation).toEqual(validExpectation);
+    expect(patch.modelSignal).toEqual(validSignal);
+    // Sanity: lastSaleSurface + clears still present.
+    expect(patch.lastSaleSurface).toEqual({ price: 450, date: "2026-06-19", compCount: 1 });
+    expect(patch.fairMarketValue).toBeNull();
+  });
+
+  it("STALE CLEAR — holding has prior modelExpectation/Signal; new patch with engine emitting nothing → patch SETS both to null (writeback clears)", () => {
+    // Prior reprice landed modelSignal.lean="sell" on the holding. A
+    // subsequent reprice (e.g. CH data updated, signal no longer computes)
+    // emits estimateSource="cardhedge-last-sale" but WITHOUT model fields.
+    // The patch must SET both to null so the spread CLEARS the stale
+    // values — same pattern as the FMV-clear from CF-CH-THIN-COMP-FMV-CLEAR.
+    const staleHolding = {
+      id: "test-stale-model",
+      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      lastSaleSurface: { price: 380, date: "2026-06-10", compCount: 1 },
+      modelExpectation: validExpectation,  // ← stale
+      modelSignal: validSignal,            // ← stale
+    };
+
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      // modelExpectation + modelSignal NOT present
+    });
+
+    // Patch explicitly sets BOTH to null.
+    expect(patch.modelExpectation).toBeNull();
+    expect(patch.modelSignal).toBeNull();
+
+    // After the spread: stale values cleared.
+    const merged = { ...staleHolding, ...patch };
+    expect(merged.modelExpectation).toBeNull();
+    expect(merged.modelSignal).toBeNull();
+  });
+
+  it("MALFORMED modelExpectation (missing required field) → null in patch (garbage rejected, stale cleared)", () => {
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      modelExpectation: {
+        value: 266,
+        // range missing
+        multiplier: 2.974,
+      },
+      modelSignal: validSignal,
+    });
+    expect(patch.modelExpectation).toBeNull();
+    // Sibling field validated independently — signal still flows through.
+    expect(patch.modelSignal).toEqual(validSignal);
+  });
+
+  it("MALFORMED modelSignal (invalid lean enum) → null in patch", () => {
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      modelExpectation: validExpectation,
+      modelSignal: { ...validSignal, lean: "moon" },  // ← invalid
+    });
+    expect(patch.modelExpectation).toEqual(validExpectation);
+    expect(patch.modelSignal).toBeNull();
+  });
+
+  it("MALFORMED — NaN values rejected → null", () => {
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      modelExpectation: { ...validExpectation, value: NaN },
+      modelSignal: { ...validSignal, deltaPct: NaN },
+    });
+    expect(patch.modelExpectation).toBeNull();
+    expect(patch.modelSignal).toBeNull();
+  });
+
+  it("ADDITIVE INVARIANT REASSERT — non-CH-last-sale source with model fields in estimate → patch is {} (model fields IGNORED for non-CH-last-sale)", () => {
+    // CRITICAL SCOPE GUARD: the early-return at estimateSource gate still
+    // returns {} for every other source even if the engine response
+    // somehow carried model fields. The model persistence is SCOPED to
+    // cardhedge-last-sale only.
+    const patch = buildChLastSalePatch({
+      estimateSource: "observed",  // ← NOT cardhedge-last-sale
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+      modelExpectation: validExpectation,
+      modelSignal: validSignal,
+    });
+    expect(patch).toEqual({});
   });
 });

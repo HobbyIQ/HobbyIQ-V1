@@ -229,3 +229,111 @@ describe("ADDITIVE INVARIANT — wire key-set byte-identical for a normal holdin
     expect(removed).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): modelExpectation + modelSignal
+// wire-shape additive invariant
+// ─────────────────────────────────────────────────────────────────────────────
+
+const validExpectation = {
+  value: 266,
+  range: [254, 278] as [number, number],
+  multiplier: 2.974,
+  multiplierRange: [2.214, 3.795] as [number, number],
+  basis: "base_anchored_off_sample_paired_premium",
+  n: 9,
+  baseAutoMedian: 85.5,
+  baseAutoCount: 20,
+};
+const validSignal = {
+  lean: "sell" as const,
+  deltaPct: 69.2,
+  expectation: 266,
+  effectiveMultiplier: 5.263,
+};
+
+describe("ADDITIVE INVARIANT — composeHoldingWireShape: modelExpectation / modelSignal", () => {
+  it("a normal holding's wire does NOT contain modelExpectation or modelSignal keys", () => {
+    const wire = composeHoldingWireShape(baseHolding());
+    expect("modelExpectation" in wire).toBe(false);
+    expect("modelSignal" in wire).toBe(false);
+  });
+
+  it("JSON-serialized wire has NO 'modelExpectation' or 'modelSignal' substring on normal holding", () => {
+    const json = JSON.stringify(composeHoldingWireShape(baseHolding()));
+    expect(json).not.toContain("modelExpectation");
+    expect(json).not.toContain("modelSignal");
+  });
+
+  it("a holding with modelExpectation null → key OMITTED (not surfaced as null)", () => {
+    const withNull: PortfolioHolding = {
+      ...baseHolding(),
+      modelExpectation: null,
+      modelSignal: null,
+    };
+    const wire = composeHoldingWireShape(withNull);
+    expect("modelExpectation" in wire).toBe(false);
+    expect("modelSignal" in wire).toBe(false);
+  });
+
+  it("a CH-last-sale + signal holding emits modelExpectation + modelSignal verbatim on the wire", () => {
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: validExpectation,
+      modelSignal: validSignal,
+    };
+    const wire = composeHoldingWireShape(chLs);
+    expect(wire.modelExpectation).toEqual(validExpectation);
+    expect(wire.modelSignal).toEqual(validSignal);
+  });
+
+  it("JSON-serialized wire of CH-last-sale + signal holding contains 'modelSignal' + lean value", () => {
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: validExpectation,
+      modelSignal: validSignal,
+    };
+    const json = JSON.stringify(composeHoldingWireShape(chLs));
+    expect(json).toContain("modelExpectation");
+    expect(json).toContain("modelSignal");
+    expect(json).toContain('"lean":"sell"');
+  });
+
+  it("FULL CH-last-sale + signal wire keys are the pre-CF list PLUS exactly 3 added keys (lastSaleSurface, modelExpectation, modelSignal); no other drift", () => {
+    const normalKeys = Object.keys(composeHoldingWireShape(baseHolding())).sort();
+    const chLs: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      modelExpectation: validExpectation,
+      modelSignal: validSignal,
+    };
+    const chLsKeys = Object.keys(composeHoldingWireShape(chLs)).sort();
+    const added = chLsKeys.filter((k) => !normalKeys.includes(k)).sort();
+    const removed = normalKeys.filter((k) => !chLsKeys.includes(k));
+    expect(added).toEqual(["lastSaleSurface", "modelExpectation", "modelSignal"]);
+    expect(removed).toEqual([]);
+  });
+
+  it("CH-last-sale holding WITHOUT signal (helper returned null) → only lastSaleSurface added; no modelExpectation/Signal keys", () => {
+    // The "signal failed to compute" case — engine emitted
+    // cardhedge-last-sale + lastSale but modelExpectation/Signal are
+    // absent on the holding. iOS sees no signal badge. Wire stays clean.
+    const normalKeys = Object.keys(composeHoldingWireShape(baseHolding())).sort();
+    const chLsNoSignal: PortfolioHolding = {
+      ...baseHolding(),
+      fairMarketValue: undefined,
+      lastSaleSurface: { price: 450, date: "2026-06-19", compCount: 1 },
+      // no modelExpectation, no modelSignal
+    };
+    const wireKeys = Object.keys(composeHoldingWireShape(chLsNoSignal)).sort();
+    const added = wireKeys.filter((k) => !normalKeys.includes(k)).sort();
+    expect(added).toEqual(["lastSaleSurface"]);
+    expect("modelExpectation" in composeHoldingWireShape(chLsNoSignal)).toBe(false);
+    expect("modelSignal" in composeHoldingWireShape(chLsNoSignal)).toBe(false);
+  });
+});
