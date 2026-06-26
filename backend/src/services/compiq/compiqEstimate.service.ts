@@ -3951,7 +3951,22 @@ export async function computeEstimate(
         );
       }
 
-      if (siblingPool.sales.length > 0) {
+      // CF-CH-THIN-COMP-RESCUE-BYPASS (2026-06-26): when trusted CH n=1
+      // routed into the insufficient branch (CF-CH-THIN-COMP-FRESH-SALE),
+      // the single CH sale on the parallel-specific chCardId IS the
+      // authoritative price for THIS card. Combining it with the sibling
+      // pool (sales from OTHER parallels of the same player+product+year)
+      // would override the honest "Last sold $X via 1 comp" headline with
+      // a cross-card weighted median — the 2026-06-26 18:38Z prod trace
+      // surfaced this as $8.50 on the Hartman BXF /150 holding. Skip the
+      // rescue so the cardhedge-last-sale ladder arm at ~L4250 fires.
+      //
+      // Trust gate is the same `isChTrustedSingleSaleForce` used by the
+      // variant-mismatch bypass and the insufficient-predicate force —
+      // one consistent trust-guarded CH n=1 detection across all sites.
+      // Non-CH cases (CS-served, CH untrusted) keep the existing sibling-
+      // pool rescue verbatim.
+      if (siblingPool.sales.length > 0 && !isChTrustedSingleSaleForce) {
         const directSales: Array<{ price: number; ts: number }> = fetched.comps
           .map((c) => ({ price: c.price, ts: Date.parse(c.soldDate || "") }))
           .filter((s) => Number.isFinite(s.ts) && s.price > 0);
