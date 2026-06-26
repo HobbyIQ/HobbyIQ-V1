@@ -140,6 +140,11 @@ export type QueryContext = {
   cardYear?: string | number;
   product?: string;
   parallel?: string;
+  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): the Cardsight parallel UUID.
+  // Threaded through alongside parallel-name so the engine's divergence
+  // helper can filter CS sales by parallel_id and suppress wrong-card
+  // comparisons when CS has only parent/base records.
+  parallelId?: string | null;
   // Phase 2 v2 -- defect #11: cardNumber threaded through so resolveCardId can
   // disambiguate via detail-probe AND so the LRU cache key includes it for
   // proper per-cardNumber cache entries.

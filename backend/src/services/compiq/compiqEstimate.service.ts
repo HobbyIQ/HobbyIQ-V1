@@ -442,11 +442,27 @@ async function maybeLogChCsDivergence(
   csCardId: string,
   chMedian: number,
   grade: string,
+  parallelId?: string | null,
 ): Promise<void> {
   if (!chMedian || chMedian <= 0) return;
   try {
     const pricing = await getPricing(csCardId);
-    const csSales = selectSalesByGrade(pricing, grade);
+    let csSales = selectSalesByGrade(pricing, grade);
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): when the CH side is parallel-
+    // specific (parallelId supplied), only fire divergence against CS
+    // records tagged with the SAME parallel_id. If CS has no parallel-
+    // specific records, the CS pool is the PARENT/BASE for a different
+    // variant and the comparison is wrong-card noise — skip. Divergence
+    // still fires when CS has parallel-specific comps for this same card
+    // (per CF test 4).
+    if (typeof parallelId === "string" && parallelId.length > 0) {
+      const filtered = csSales.filter((s) => {
+        const pid = (s as { parallel_id?: string | null }).parallel_id;
+        return typeof pid === "string" && pid === parallelId;
+      });
+      if (filtered.length === 0) return;
+      csSales = filtered;
+    }
     if (csSales.length < CH_CS_DIVERGENCE_MIN_CS_COMPS) return;
     const csPrices = csSales
       .map((s) => Number((s as { price?: unknown }).price))
@@ -1518,7 +1534,11 @@ async function fetchComps(
           const chMedian = chComputeMedian(mapped.map((c) => c.price));
           if (chMedian) {
             // Fire-and-forget divergence telemetry against Cardsight.
-            maybeLogChCsDivergence(pinnedCardId, chMedian, grade).catch(() => {});
+            // CF-CH-THIN-COMP-PRIMARY (2026-06-26): pass parallelId so the
+            // helper can detect CS-parent-only and suppress wrong-card
+            // comparisons. iOS sends parallelId on /price-by-id; the
+            // refresh path threads it through buildIdentityHintFromContext.
+            maybeLogChCsDivergence(pinnedCardId, chMedian, grade, parallelId).catch(() => {});
           }
           console.log(JSON.stringify({
             event: "compiq.fetchComps.ch_served",
@@ -1893,7 +1913,12 @@ async function fetchComps(
       sales.map((s) => s.price).filter((p) => Number.isFinite(p) && p > 0),
     );
     if (chMedian) {
-      maybeLogChCsDivergence(card.card_id, chMedian, grade).catch(() => {});
+      // CF-CH-THIN-COMP-PRIMARY (2026-06-26): see helper for parallelId
+      // semantics. Routed/free-text path reads parallelId off queryContext
+      // when the caller supplied it (price-by-id callers do; pure /search
+      // text callers don't, in which case helper falls back to unfiltered
+      // CS pool comparison).
+      maybeLogChCsDivergence(card.card_id, chMedian, grade, queryContext?.parallelId ?? null).catch(() => {});
     }
     console.log(JSON.stringify({
       event: "compiq.fetchComps.ch_served",
@@ -2421,7 +2446,13 @@ export function emitPredictionToCorpus(params: {
   // flag. Required field on every emit so analysts can assert the
   // invariant: no row with estimateSource="trend-extrapolated" has a
   // non-null fairMarketValue.
-  estimateSource?: "observed" | "cardhedge" | "trend-extrapolated" | "last-sale" | null;
+  estimateSource?:
+    | "observed"
+    | "cardhedge"
+    | "cardhedge-last-sale"
+    | "trend-extrapolated"
+    | "last-sale"
+    | null;
   estimatedValue?: number | null;
 }): void {
   try {
@@ -2822,6 +2853,10 @@ export async function computeEstimate(
     cardYear: body.cardYear ?? parsed?.year ?? undefined,
     product: body.product ?? parsed?.set ?? undefined,
     parallel: body.parallel ?? parsed?.parallel ?? undefined,
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): thread parallelId so the
+    // CH/CS divergence helper can filter CS sales by parallel_id and
+    // suppress wrong-card comparisons.
+    parallelId: body.parallelId ?? null,
     // Phase 2 v2 defect #11 — thread cardNumber so resolveCardId disambiguates
     // via detail-probe + LRU cache key includes it. Body's cardNumber comes
     // from /price route's requestFromParsed (set in this PR); parsed.cardNumber
@@ -3300,6 +3335,45 @@ export async function computeEstimate(
     // titles itself.
     console.log(
       `[compiq.computeEstimate] recovery-isolated pool (${fetched.priceSourceInternal}); bypassing tier ladder count-floor — pool size=${recencyFilteredComps.length}`,
+    );
+    tierResult = {
+      chosenTier: "T0" as VariantStrictness,
+      variantFiltered: recencyFilteredComps,
+      variantExclusionReasons: {},
+      variantExcludedCount: 0,
+      tierLadderTrace: {
+        T0: recencyFilteredComps.length,
+        T1: 0,
+        T2: 0,
+        T3: 0,
+      } as Record<VariantStrictness, number>,
+      everythingFilteredOut: false,
+    };
+  } else if (
+    fetched.vendor === "cardhedge" &&
+    fetched.chTrustReason !== undefined &&
+    recencyFilteredComps.length > 0
+  ) {
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): CardHedge resolved a parallel-
+    // specific chCardId via the canonicalized bridge (CF-ENGINE-PARALLEL-
+    // CANONICALIZE). Every comp in fetched.comps is for THIS parallel by
+    // construction — the bridge's card-match already did the variant-
+    // correctness check the tier ladder duplicates. Running both layers
+    // collapses 1-2 comp trusted-CH pools to 0 even when they're cleanly
+    // parallel-isolated.
+    //
+    // Mirrors the CF-PINNED-PARALLEL-RECOVERY pattern above for title-
+    // match recovery pools: synthesize a passing T0 tierResult; downstream
+    // confidence calibration (calibrateConfidence's n<3 → 45% cap)
+    // carries the thin-pool disclosure. The n==1 case is rendered as
+    // "Last sold $X via 1 comp" via the cardhedge-last-sale estimateSource
+    // emitted in the insufficient branch below.
+    //
+    // chTrustReason !== undefined gates this to the trust-guard-passed
+    // path (prices_by_card_honest | title_cohesion_strong). If a future
+    // value is added to the union, this branch picks it up automatically.
+    console.log(
+      `[compiq.computeEstimate] CH-trusted pool (chTrustReason=${fetched.chTrustReason}); bypassing tier ladder count-floor — pool size=${recencyFilteredComps.length}`,
     );
     tierResult = {
       chosenTier: "T0" as VariantStrictness,
@@ -4132,17 +4206,52 @@ export async function computeEstimate(
     // ground a confident FMV (n=1 thin-parallel case), still attribute the
     // path to CH so iOS / corpus know the data came from CardHedger. CH-thin
     // takes precedence over trend-extrapolated and last-sale.
-    const resolvedEstimateSource: "cardhedge" | "trend-extrapolated" | "last-sale" | null =
-      fetched.vendor === "cardhedge" && lastSale !== null
+    //
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): split the CH-served thin-comp
+    // path into two surfaces by count:
+    //   n==1 → "cardhedge-last-sale" (NEW). iOS renders "Last sold $X via
+    //          1 comp" off lastSale; trendEstimate is SUPPRESSED so no
+    //          competing estimatedValue prose appears.
+    //   n>=2 → "cardhedge" (legacy CH-thin label). Trend-extrapolated
+    //          remains an honest enrichment.
+    // Detection uses fetched.chTrustReason as the trust gate (matches the
+    // variant-mismatch bypass above) — anonymous-vendor CS comps don't
+    // qualify.
+    const isChTrustedThin =
+      fetched.vendor === "cardhedge" &&
+      fetched.chTrustReason !== undefined &&
+      lastSale !== null;
+    const isChTrustedSingleSale =
+      isChTrustedThin && fetched.comps.length === 1;
+    const resolvedEstimateSource:
+      | "cardhedge"
+      | "cardhedge-last-sale"
+      | "trend-extrapolated"
+      | "last-sale"
+      | null =
+      isChTrustedSingleSale
+        ? "cardhedge-last-sale"
+        : isChTrustedThin
         ? "cardhedge"
         : trendEstimate !== null
         ? "trend-extrapolated"
         : lastSale !== null
         ? "last-sale"
         : null;
-    const resolvedEstimatedValue = trendEstimate?.estimatedValue ?? null;
-    const resolvedEstimateRange = trendEstimate?.estimateRange ?? null;
-    const resolvedEstimateBasis = trendEstimate?.basis ?? null;
+    // CF-CH-THIN-COMP-PRIMARY: trendEstimate suppressed on the n==1 CH path
+    // so iOS sees a clean "Last sold $X via 1 comp" without a competing
+    // forward-looking estimatedValue. n>=2 CH path and all CS paths
+    // unchanged.
+    const suppressTrendForChLastSale = isChTrustedSingleSale;
+    const resolvedEstimatedValue = suppressTrendForChLastSale
+      ? null
+      : trendEstimate?.estimatedValue ?? null;
+    const resolvedEstimateRange = suppressTrendForChLastSale
+      ? null
+      : trendEstimate?.estimateRange ?? null;
+    const resolvedEstimateBasis = suppressTrendForChLastSale
+      ? null
+      : trendEstimate?.basis ?? null;
 
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
@@ -4252,6 +4361,11 @@ export async function computeEstimate(
       // CS-sourced trend-extrap rows stay byte-identical pre/post P8.
       chCardId: fetched.vendor === "cardhedge" ? fetched.chCardId : undefined,
       chTrustReason: fetched.vendor === "cardhedge" ? fetched.chTrustReason : undefined,
+      // CF-CH-THIN-COMP-PRIMARY (2026-06-26): comp count on the CH-served
+      // branch so iOS can render "via N comp(s)" generally (N comes from
+      // the trusted-CH getCardSales response). corpusMapping reads this
+      // into chProvenance.compCount.
+      chCompCount: fetched.vendor === "cardhedge" ? fetched.comps.length : undefined,
       // CF-THIN-CARD-FULL-DETAIL-PARITY (2026-06-12): shape parity with
       // the live branch — surface trendIQ + broaderTrend (and the trendIQ
       // lastUpdated as signalsLastUpdated, mirroring the live path at
@@ -5227,6 +5341,11 @@ export async function computeEstimate(
     // chProvenance block on the corpus row. Omitted when vendor !== cardhedge.
     chCardId: fetched.vendor === "cardhedge" ? fetched.chCardId : undefined,
     chTrustReason: fetched.vendor === "cardhedge" ? fetched.chTrustReason : undefined,
+    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): same compCount surfaced on the
+    // success path (n>=2 CH-served — "cardhedge" estimateSource). iOS uses
+    // it for "via N comp(s)" rendering even when FMV lands; corpus row's
+    // chProvenance.compCount tracks the source's depth for analytics.
+    chCompCount: fetched.vendor === "cardhedge" ? fetched.comps.length : undefined,
     estimateSource:
       typeof fairMarketValue === "number"
         ? (fetched.vendor === "cardhedge" ? ("cardhedge" as const) : ("observed" as const))
