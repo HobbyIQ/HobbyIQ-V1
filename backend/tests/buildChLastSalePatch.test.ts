@@ -178,7 +178,20 @@ describe("buildChLastSalePatch — GARBAGE-OUT: returns {} on degenerate CH-last
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("buildChLastSalePatch — populated patch on canonical CH-last-sale shape", () => {
-  it("Hartman Blue X-Fractor /150 shape: returns lastSaleSurface with price/date/compCount", () => {
+  // CF-CH-THIN-COMP-FMV-CLEAR (2026-06-26): the canonical CH-last-sale
+  // patch shape. lastSaleSurface PLUS the FMV-class clear fields. All
+  // six tests below assert the full shape with toEqual — if any future
+  // change drops a clear field, these tests fail loudly.
+  const CANONICAL_CLEAR_FIELDS = {
+    fairMarketValue: null,
+    estimatedValue: null,
+    estimateLow: null,
+    estimateHigh: null,
+    estimateBasis: null,
+    isEstimate: false,
+  };
+
+  it("Hartman Blue X-Fractor /150 shape: returns lastSaleSurface with price/date/compCount + FMV-class clears", () => {
     const patch = buildChLastSalePatch({
       estimateSource: "cardhedge-last-sale",
       lastSale: { price: 450, soldDate: "2026-06-01" },
@@ -186,6 +199,7 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: "2026-06-01", compCount: 1 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
   });
 
@@ -196,6 +210,7 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: "2026-06-01", compCount: 1 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
   });
 
@@ -207,6 +222,7 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: null, compCount: 1 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
   });
 
@@ -218,6 +234,7 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: null, compCount: 1 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
   });
 
@@ -229,6 +246,7 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: null, compCount: 1 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
   });
 
@@ -240,6 +258,118 @@ describe("buildChLastSalePatch — populated patch on canonical CH-last-sale sha
     });
     expect(patch).toEqual({
       lastSaleSurface: { price: 450, date: "2026-06-01", compCount: 2 },
+      ...CANONICAL_CLEAR_FIELDS,
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-THIN-COMP-FMV-CLEAR — writeback semantics: the spread MUST clear
+// a stale FMV that's already on the holding
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEAR)", () => {
+  it("THE PROD RESIDUE CASE: holding has fairMarketValue=8.5 from a prior sibling-rescue write; cardhedge-last-sale patch SPREAD clears it to null", () => {
+    // This is the EXACT shape from 2026-06-26 19:03:34Z Cosmos: the
+    // cardhedge-last-sale write surfaced lastSaleSurface correctly but
+    // left fairMarketValue=8.5 residue from the 18:38Z sibling-pool
+    // rescue write. iOS LIST view kept showing $8.50.
+    const staleHolding = {
+      id: "f6dccf27-8b17-4b73-8df4-bec96d90e2c6",
+      playerName: "Eric Hartman",
+      cardYear: 2026,
+      product: "Bowman",
+      parallel: "Blue X-Fractor /150",
+      parallelId: "b83de312-609d-4d58-af41-c8766a81835f",
+      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      isAuto: true,
+      fairMarketValue: 8.5,            // ← the residue
+      estimatedValue: null,
+      estimateLow: null,
+      estimateHigh: null,
+      lastUpdated: "2026-06-26T18:38:55.000Z",
+    };
+
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge-last-sale",
+      lastSale: { price: 450, soldDate: "2026-06-19" },
+      chCompCount: 1,
+    });
+
+    // The spread is what BOTH writeback sites do (autoPriceHolding's
+    // fairValue<=0 abort + repriceHoldingsForUser's CH-last-sale branch):
+    //   { ...holding, ...identityPatch, ...chLastSalePatch, lastUpdated }
+    const merged = { ...staleHolding, ...patch };
+
+    // POST-FIX: fairMarketValue is null (cleared). PRE-FIX: would still be 8.5.
+    expect(merged.fairMarketValue).toBeNull();
+    expect(merged.lastSaleSurface).toEqual({
+      price: 450,
+      date: "2026-06-19",
+      compCount: 1,
+    });
+    // All FMV-class fields cleared:
+    expect(merged.estimatedValue).toBeNull();
+    expect(merged.estimateLow).toBeNull();
+    expect(merged.estimateHigh).toBeNull();
+    expect(merged.estimateBasis).toBeNull();
+    expect(merged.isEstimate).toBe(false);
+    // Identity fields preserved (the patch only touches FMV-class):
+    expect(merged.cardsightCardId).toBe("befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
+    expect(merged.parallelId).toBe("b83de312-609d-4d58-af41-c8766a81835f");
+    expect(merged.playerName).toBe("Eric Hartman");
+  });
+
+  it("ADDITIVE INVARIANT REASSERT: non-CH-last-sale holding with a real observed FMV → patch is {}, FMV untouched after spread", () => {
+    // The load-bearing scope invariant: every other source returns {}
+    // from buildChLastSalePatch. The spread is a no-op; the holding's
+    // existing fairMarketValue stays intact. If the FMV-clear ever
+    // bled to non-CH-last-sale sources, this test would fail.
+    const observedHolding = {
+      id: "test-observed-holding",
+      playerName: "Mike Trout",
+      cardYear: 2011,
+      product: "Topps Update",
+      cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+      fairMarketValue: 1250.5,
+      valuationStatus: "observed" as const,
+    };
+
+    // Estimate has the OBSERVED FMV source, not cardhedge-last-sale.
+    const patch = buildChLastSalePatch({
+      estimateSource: "observed",
+      lastSale: { price: 1240, soldDate: "2026-06-20" },
+      chCompCount: null,
+    });
+
+    expect(patch).toEqual({});
+    const merged = { ...observedHolding, ...patch };
+    // FMV intact — the additive invariant holds. Spread of {} is no-op.
+    expect(merged.fairMarketValue).toBe(1250.5);
+    expect(merged.valuationStatus).toBe("observed");
+    expect("lastSaleSurface" in merged).toBe(false);
+  });
+
+  it("ADDITIVE INVARIANT REASSERT: 'cardhedge' n>=2 (the legacy CH-thin source) → patch is {}, FMV untouched", () => {
+    // CRITICAL SCOPE: the prior n>=2 CH source MUST NOT trigger the clear.
+    // It takes the FMV success path (median of CH sales) — clearing FMV
+    // here would null out the legitimate CH-served FMV.
+    const chN2Holding = {
+      id: "test-ch-n2-holding",
+      playerName: "Eric Hartman",
+      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      fairMarketValue: 450,
+      valuationStatus: "observed" as const,
+    };
+
+    const patch = buildChLastSalePatch({
+      estimateSource: "cardhedge",  // ← legacy n>=2 path, NOT cardhedge-last-sale
+      lastSale: { price: 450, soldDate: "2026-06-20" },
+      chCompCount: 3,
+    });
+
+    expect(patch).toEqual({});
+    const merged = { ...chN2Holding, ...patch };
+    expect(merged.fairMarketValue).toBe(450);  // ← legacy CH FMV intact
   });
 });
