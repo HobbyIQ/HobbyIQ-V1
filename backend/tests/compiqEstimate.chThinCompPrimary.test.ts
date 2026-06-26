@@ -182,6 +182,120 @@ describe("CF-CH-THIN-COMP-PRIMARY — Blue X-Fractor /150 (CH n=1, CS base-only 
 });
 
 // ============================================================================
+// AGE-AXIS BOUNDARY — CF-CH-THIN-COMP-FRESH-SALE (2026-06-26)
+//
+// The prior CF's split lived INSIDE `if (insufficient)`. The existing
+// predicate routes "1 comp, <=14 days → allow" to the main pipeline,
+// which can't FMV n=1 and emits null. Production data on 2026-06-26
+// surfaced this: the live CH sale was 7 days old (≤14), so the engine
+// took the main pipeline, FMV came back null, and the holding was marked
+// "Low confidence." The follow-up CF (CF-CH-THIN-COMP-FRESH-SALE) routes
+// trusted CH n=1 into the insufficient branch unconditionally so the
+// cardhedge-last-sale ladder arm fires regardless of sale age.
+//
+// These tests lock the age-axis: 1 day (fresh boundary), 7 days (the
+// prod case that exposed the gap), 14 days (pre-existing boundary —
+// still works post-fix). The 25-day case is the original test above,
+// retained as the "stale" sample.
+// ============================================================================
+
+describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-sale at all sale ages", () => {
+  const sharedCsPool = buildCsPricingResponse(
+    Array.from({ length: 30 }, (_, i) => ({
+      price: 80 + (i % 10),
+      daysOld: 5 + (i % 30),
+      parallelId: null,
+    })),
+  );
+
+  it("FRESH (1 day old): trusted CH n=1 still reaches cardhedge-last-sale (fresh-boundary lock)", async () => {
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: [buildChSale(450, 1)],
+      chCardId: BXF_150_CH_ID,
+      chTrustReason: "prices_by_card_honest",
+    });
+    mockGetPricing.mockResolvedValue(sharedCsPool);
+
+    const result = await computeEstimate({
+      cardsightCardId: HARTMAN_CS_ID,
+      playerName: "Eric Hartman",
+      cardYear: 2026,
+      product: "Bowman Chrome",
+      parallel: "Blue X-Fractor /150",
+      parallelId: BXF_150_PARALLEL_ID,
+      cardNumber: "CPA-EHA",
+      isAuto: true,
+      pinnedAuthoritative: true,
+    });
+
+    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.fairMarketValue).toBeNull();
+    expect((result as any).lastSale?.price).toBe(450);
+    expect((result as any).chCompCount).toBe(1);
+  });
+
+  it("PROD CASE (7 days old): the live failure — fresh single sale that skipped cardhedge-last-sale pre-fix", async () => {
+    // This is the exact prod shape from 2026-06-26 18:12:11Z: 1 trusted CH
+    // sale, 7 days old. Pre-CF-CH-THIN-COMP-FRESH-SALE: engine took the
+    // main pipeline (insufficient=false), FMV came back null, the
+    // cardhedge-last-sale split never ran, holding marked "Low confidence."
+    // Post-fix: engine routes to insufficient branch via the trusted-CH
+    // force, cardhedge-last-sale fires, lastSale persisted.
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: [buildChSale(450, 7)],
+      chCardId: BXF_150_CH_ID,
+      chTrustReason: "prices_by_card_honest",
+    });
+    mockGetPricing.mockResolvedValue(sharedCsPool);
+
+    const result = await computeEstimate({
+      cardsightCardId: HARTMAN_CS_ID,
+      playerName: "Eric Hartman",
+      cardYear: 2026,
+      product: "Bowman Chrome",
+      parallel: "Blue X-Fractor /150",
+      parallelId: BXF_150_PARALLEL_ID,
+      cardNumber: "CPA-EHA",
+      isAuto: true,
+      pinnedAuthoritative: true,
+    });
+
+    // The prod-case assertion: source IS "cardhedge-last-sale" on the
+    // fresh path now, not null / "no-recent-comps" / "live".
+    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.fairMarketValue).toBeNull();
+    expect((result as any).lastSale?.price).toBe(450);
+    expect((result as any).chCompCount).toBe(1);
+    expect((result as any).chCardId).toBe(BXF_150_CH_ID);
+    expect((result as any).chTrustReason).toBe("prices_by_card_honest");
+  });
+
+  it("PRE-EXISTING BOUNDARY (14 days old): trusted CH n=1 reaches cardhedge-last-sale (at the existing >14 cutoff)", async () => {
+    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
+      sales: [buildChSale(450, 14)],
+      chCardId: BXF_150_CH_ID,
+      chTrustReason: "prices_by_card_honest",
+    });
+    mockGetPricing.mockResolvedValue(sharedCsPool);
+
+    const result = await computeEstimate({
+      cardsightCardId: HARTMAN_CS_ID,
+      playerName: "Eric Hartman",
+      cardYear: 2026,
+      product: "Bowman Chrome",
+      parallel: "Blue X-Fractor /150",
+      parallelId: BXF_150_PARALLEL_ID,
+      cardNumber: "CPA-EHA",
+      isAuto: true,
+      pinnedAuthoritative: true,
+    });
+
+    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect((result as any).lastSale?.price).toBe(450);
+  });
+});
+
+// ============================================================================
 // TEST 2 — CH n>=2 trusted → estimateSource="cardhedge", FMV=median (unchanged)
 // ============================================================================
 
