@@ -3801,8 +3801,25 @@ export async function computeEstimate(
   // emit.
   const isRecoveryIsolatedPoolForCount =
     fetched.priceSourceInternal === "title-matched-parallel";
+  // CF-CH-THIN-COMP-FRESH-SALE (2026-06-26): force trusted CH n=1 into the
+  // insufficient branch REGARDLESS of sale age. The prior CF
+  // (CF-CH-THIN-COMP-PRIMARY) added the "cardhedge-last-sale" split INSIDE
+  // the insufficient branch, but the existing age rule "1 comp, <=14 days
+  // → allow" routes fresh single CH sales (the prod case at 7 days old)
+  // straight to the main pipeline — which can't FMV from n=1 and emits
+  // null, leaving estimateSource=null and the holding marked "Low
+  // confidence." Routing trusted CH n=1 to the insufficient branch lets
+  // the cardhedge-last-sale ladder arm pick it up and render "Last sold
+  // $X via 1 comp." Mirrors the trust-guard gate (chTrustReason !==
+  // undefined) used by the variant-mismatch bypass + the estimateSource
+  // split above; same trusted-CH detection across the three sites.
+  const isChTrustedSingleSaleForce =
+    fetched.vendor === "cardhedge" &&
+    fetched.chTrustReason !== undefined &&
+    compCount === 1;
   const insufficient =
     compCount === 0
+    || isChTrustedSingleSaleForce
     || (!isRecoveryIsolatedPoolForCount && (
       (compCount === 1 && (daysSinceNewest == null || daysSinceNewest > 14)) ||
       (compCount === 2 && (daysSinceNewest == null || daysSinceNewest > 180)) ||
