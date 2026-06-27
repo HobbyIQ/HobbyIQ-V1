@@ -830,6 +830,11 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           estimatedValue: null,
           estimateRange: null,
           estimateBasis: null,
+          // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): always
+          // emit the gradedEstimates rail so the iOS decoder has a stable
+          // contract. Thin-null branches emit empty array; full-priced
+          // branches below emit the compileGradedEstimatesForCard result.
+          gradedEstimates: [],
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -906,6 +911,41 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         : 0;
       const syntheticQuick = syntheticFmv * 0.88;
       const syntheticPremium = syntheticFmv * 1.15;
+
+      // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
+      // gradedEstimates assembly already shipping on /price-by-id so
+      // /search responses carry the same rail data. Uses the same helpers
+      // (getPricingForMarketRead → buildGradeBreakdown →
+      // compileGradedEstimatesForCard). Failure is non-fatal: assembly
+      // throws → caught + logged → empty array. Response shape stays
+      // stable regardless. parallelId=null because /search resolves card
+      // identity from the parsed query, not a UUID — base-scope rail.
+      let gradedEstimates: GradedProjectionResult[] = [];
+      const cardIdForGraded = (est as any).cardIdentity?.cardId;
+      if (typeof cardIdForGraded === "string" && cardIdForGraded.length > 0) {
+        try {
+          const pricingForMR = await getPricingForMarketRead(cardIdForGraded);
+          if (pricingForMR && !pricingForMR.notFound) {
+            const gradeBreakdown = buildGradeBreakdown(pricingForMR, null);
+            const compiled = await compileGradedEstimatesForCard({
+              pricing: pricingForMR,
+              estimate: est as any,
+              parallelId: null,
+              parallelName: parsed.parallel ?? null,
+              isRawScope: false,
+              isThinMarket: isThin,
+              gradeBreakdown,
+              source: "compiq.search",
+              cardId: cardIdForGraded,
+            });
+            gradedEstimates = compiled.estimates;
+          }
+        } catch (err) {
+          console.warn(
+            `[compiq.search] gradedEstimates assembly failed (non-fatal): ${(err as Error)?.message ?? err}`,
+          );
+        }
+      }
 
       return {
         ...buildEngineMeta(),
@@ -1005,6 +1045,11 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           confidence: parsed.confidence,
         },
         searchQuery,
+        // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): emit the
+        // gradedEstimates rail symmetric with /price-by-id. Empty array
+        // when the assembly produced none; always present so iOS decoder
+        // contract is stable.
+        gradedEstimates,
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
@@ -1115,6 +1160,11 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           estimatedValue: null,
           estimateRange: null,
           estimateBasis: null,
+          // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): always
+          // emit the gradedEstimates rail so the iOS decoder has a stable
+          // contract. Thin-null branches emit empty array; full-priced
+          // branches below emit the compileGradedEstimatesForCard result.
+          gradedEstimates: [],
           variantWarning: [],
           neighborSynthesis: null,
           crossParallelAnchor: null,
@@ -1163,6 +1213,39 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         ? `No exact match for requested variant (missing: ${variantWarning.join(", ")}). Showing closest available comp. ${baseSummary}`
         : baseSummary;
       const finalConfidence = hasWarn ? Math.min(confidence, 0.45) : confidence;
+
+      // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): mirror the
+      // gradedEstimates assembly already shipping on /price-by-id so /price
+      // responses carry the same rail data. parallelId=null because /price
+      // (like /search) resolves card identity from the parsed query, not a
+      // UUID — base-scope rail. Failure is non-fatal.
+      let gradedEstimates: GradedProjectionResult[] = [];
+      const cardIdForGraded = (est as any).cardIdentity?.cardId;
+      if (typeof cardIdForGraded === "string" && cardIdForGraded.length > 0) {
+        try {
+          const pricingForMR = await getPricingForMarketRead(cardIdForGraded);
+          if (pricingForMR && !pricingForMR.notFound) {
+            const gradeBreakdown = buildGradeBreakdown(pricingForMR, null);
+            const compiled = await compileGradedEstimatesForCard({
+              pricing: pricingForMR,
+              estimate: est as any,
+              parallelId: null,
+              parallelName: parsed.parallel ?? null,
+              isRawScope: false,
+              isThinMarket: isThin,
+              gradeBreakdown,
+              source: "compiq.price",
+              cardId: cardIdForGraded,
+            });
+            gradedEstimates = compiled.estimates;
+          }
+        } catch (err) {
+          console.warn(
+            `[compiq.price] gradedEstimates assembly failed (non-fatal): ${(err as Error)?.message ?? err}`,
+          );
+        }
+      }
+
       return {
         ...buildEngineMeta(),
         success: true,
@@ -1251,6 +1334,11 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           confidence: parsed.confidence,
         },
         searchQuery,
+        // CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES (2026-06-27): emit the
+        // gradedEstimates rail symmetric with /price-by-id. Empty array
+        // when the assembly produced none; always present so iOS decoder
+        // contract is stable.
+        gradedEstimates,
       };
     }, CACHE_TTL_SECONDS);
     res.json(result);
