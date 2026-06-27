@@ -25,7 +25,7 @@
 // approximate / broad) per design doc §3g.
 
 import type { CardsightPricingResponse } from "./cardsight.client.js";
-import { tokenizeParallel, PARALLEL_SINGULAR_TOKENS } from "./cardsight.mapper.js";
+import { tokenizeParallel, PARALLEL_SINGULAR_TOKENS } from "./parallelTokenizer.js";
 import {
   CHROME_DRAFT_MULTIPLIERS,
   BOWMAN_2022_FAMILY_ENTRIES,

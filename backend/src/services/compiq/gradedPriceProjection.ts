@@ -33,7 +33,7 @@ import {
 } from "./compiqEstimate.service.js";
 import { lookupMultiplier } from "./chromeDraftMultipliers.js";
 import { isBaseTitle } from "./parallelTitleMatch.js";
-import { tokenizeParallel } from "./cardsight.mapper.js";
+import { tokenizeParallel } from "./parallelTokenizer.js";
 import { buildParallelTitleMatcher } from "./parallelTitleMatch.js";
 import {
   computeFittedComposedMultiplier,

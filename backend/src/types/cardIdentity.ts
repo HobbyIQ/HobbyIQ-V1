@@ -12,9 +12,19 @@
  * but stale; this is the source of truth.
  */
 
-import type { CardsightParallel } from "../services/compiq/cardsight.client.js";
+/**
+ * Catalog parallel descriptor. Relocated inline (Phase 3 Wave 3) out of the
+ * now-deleted cardsight.client.ts. The legacy `CardsightParallel` name is kept
+ * as a deprecated alias so existing consumers keep compiling.
+ */
+export interface CardParallel {
+  id: string;
+  name: string;
+  numberedTo?: number;
+}
 
-export type { CardsightParallel };
+/** @deprecated use CardParallel — alias retained for back-compat. */
+export type CardsightParallel = CardParallel;
 
 export type CardIdentitySource =
   | "psa-cert"

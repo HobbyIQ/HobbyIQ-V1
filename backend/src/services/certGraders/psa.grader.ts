@@ -17,7 +17,7 @@ import {
   lookupPsaCertByNumber,
   PsaApiError,
 } from "../psa/psaCert.service.js";
-import { tokenizeParallel } from "../compiq/cardsight.mapper.js";
+import { tokenizeParallel } from "../compiq/parallelTokenizer.js";
 import { parseGradeLabel } from "../portfolioiq/gradeParser.js";
 import {
   CertGraderError,
