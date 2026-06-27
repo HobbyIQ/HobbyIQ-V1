@@ -6,7 +6,7 @@ import { normalizePlayerName } from "./parallelTokenizer.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
 import {
   type CardsightSaleRecord,
-} from "./cardsight.client.js";
+} from "./catalogSource.js";
 // PHASE-4A-2.2 (2026-06-02): per-prediction cache-stats scope. The
 // `cacheStatsContext.run` wrap around the body lets every cacheWrap call
 // underneath tally hits/misses into a per-prediction bucket, which the

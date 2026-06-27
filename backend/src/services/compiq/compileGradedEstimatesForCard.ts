@@ -27,8 +27,8 @@
 // mutationDetected: false } so the caller doesn't need its own
 // try/catch (route's outer try/catch is now redundant but harmless).
 
-import type { CardsightPricingResponse } from "./cardsight.client.js";
-import { getCardDetail } from "./cardsight.client.js";
+import type { CardsightPricingResponse } from "./catalogSource.js";
+import { getCardDetail } from "./catalogSource.js";
 import {
   buildGradedEstimates,
   computeReleaseGradeCurve,

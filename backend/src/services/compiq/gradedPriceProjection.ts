@@ -21,11 +21,11 @@
 import type {
   CardsightPricingResponse,
   CardsightSaleRecord,
-} from "./cardsight.client.js";
+} from "./catalogSource.js";
 import {
   searchCatalog,
   getPricing as fetchPricing,
-} from "./cardsight.client.js";
+} from "./catalogSource.js";
 import {
   selectSalesByGrade,
   getGraderPremium,

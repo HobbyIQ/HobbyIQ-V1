@@ -56,7 +56,7 @@ import { cacheWrap } from "../shared/cache.service.js";
 import type {
   CardsightPricingResponse,
   CardsightSaleRecord,
-} from "./cardsight.client.js";
+} from "./catalogSource.js";
 
 /** Window the fact pack and trajectory operate on (matches Layer 2
  *  computeCardTrajectory's RECENT window). */

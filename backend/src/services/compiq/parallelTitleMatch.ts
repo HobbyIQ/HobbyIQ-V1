@@ -24,7 +24,7 @@
 // shaping layer collapses to 3 user-facing categories (exact /
 // approximate / broad) per design doc §3g.
 
-import type { CardsightPricingResponse } from "./cardsight.client.js";
+import type { CardsightPricingResponse } from "./catalogSource.js";
 import { tokenizeParallel, PARALLEL_SINGULAR_TOKENS } from "./parallelTokenizer.js";
 import {
   CHROME_DRAFT_MULTIPLIERS,

@@ -20,7 +20,7 @@ import {
   getPricing as getPricingForMarketRead,
   getCardImage,
   autocompleteCards,
-} from "../services/compiq/cardsight.client.js";
+} from "../services/compiq/catalogSource.js";
 // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): wire graded estimator
 // into /price-by-id. Grounded-only (estimate + rough); ballpark + insufficient
 // dropped. Display-not-train: every entry has fairMarketValue=null.

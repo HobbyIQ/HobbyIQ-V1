@@ -8,7 +8,7 @@ import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 // array /price-by-id surfaces, so a graded holding's stored valuation
 // can mirror the rail's grounded/insufficient verdict at write time.
 import { compileGradedEstimatesForCard } from "../compiq/compileGradedEstimatesForCard.js";
-import { getPricing as getPricingForMarketRead } from "../compiq/cardsight.client.js";
+import { getPricing as getPricingForMarketRead } from "../compiq/catalogSource.js";
 import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";

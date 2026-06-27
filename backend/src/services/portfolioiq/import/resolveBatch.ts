@@ -6,8 +6,8 @@
 // resolveCardId (which already carries the 429/5xx exponential backoff
 // per fetchWithRetry).
 
-import { resolveCardId } from "../../compiq/cardsight.mapper.js";
-import type { CompIQQueryInput } from "../../compiq/cardsight.mapper.js";
+import { resolveCardId } from "../../compiq/catalogSource.js";
+import type { CompIQQueryInput } from "../../compiq/catalogSource.js";
 import type { ParsedRow } from "./fileParser.js";
 import { detectCollision, type CollisionDetection } from "./collisionDetector.js";
 import type { PortfolioHolding } from "../../../types/portfolioiq.types.js";
