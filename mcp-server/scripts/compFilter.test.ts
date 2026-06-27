@@ -102,6 +102,25 @@ describe("CF-MCP-CARDNUMBER-ISOLATION — filterCompsForCard", () => {
     assert.ok(!out.some((c) => /custom|reprint|aceo/i.test(c.title)));
   });
 
+  it("CF-MCP-CONDITION-EXCLUSION — drops damaged/altered/read-description comps", () => {
+    // 4 clean autos + 5 flawed copies of the same card. The flawed ones must
+    // be excluded so they can't drag the anchor median down.
+    const comps: Comp[] = [
+      { price: 120, date: "2026-06-26T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA Braves" },
+      { price: 125, date: "2026-06-26T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA Braves" },
+      { price: 118, date: "2026-06-26T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA Braves" },
+      { price: 122, date: "2026-06-26T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA Braves" },
+      { price: 30, date: "2026-06-25T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA CREASED damaged" },
+      { price: 25, date: "2026-06-25T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA - read description" },
+      { price: 20, date: "2026-06-25T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA AS-IS poor condition" },
+      { price: 28, date: "2026-06-25T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA water damage" },
+      { price: 35, date: "2026-06-25T00:00:00.000Z", title: "2026 Bowman Chrome Eric Hartman Auto #CPA-EHA trimmed altered" },
+    ];
+    const out = filterCompsForCard(comps as any, "Eric Hartman", 2026, "Bowman Chrome", "CPA-EHA");
+    assert.equal(out.length, 4, "only the 4 clean autos should survive");
+    assert.ok(out.every((c) => c.price >= 100), "no flawed (low-price) comps should remain");
+  });
+
   it("empty pool returns empty", () => {
     assert.deepEqual(filterCompsForCard([], "Eric Hartman", 2026, "Bowman Chrome", "CPA-EHA"), []);
   });

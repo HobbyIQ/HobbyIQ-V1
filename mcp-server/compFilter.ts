@@ -21,6 +21,13 @@ import type { CardComp } from "./pricing.js";
 // 30% of the original, fall back to the unfiltered set so a sparse market
 // doesn't get zeroed out.
 //
+// CF-MCP-CONDITION-EXCLUSION (2026-06-27): also drop condition-flawed comps
+// (damaged, creased, altered, trimmed, water damage, "as-is", "read
+// description", poor condition). A flawed copy sells far below a clean one,
+// so leaving these in the pool drags the anchor median down and mis-low-
+// prices the user's presumed-clean card. Graded condition is handled by the
+// grade tier upstream.
+//
 // CF-MCP-CARDNUMBER-ISOLATION (2026-06-27): when a cardNumber is supplied,
 // apply an AUTHORITATIVE second stage that keeps only titles containing the
 // normalized card number (e.g. "CPA-EHA"). A single player+set+year can span
@@ -64,6 +71,22 @@ export function filterCompsForCard(
     }
     // Drop obvious reprint/non-original-card noise.
     if (/(reprint|custom|shoebox|aceo|art card|fan made|fan-made)/i.test(title)) {
+      return false;
+    }
+    // CF-MCP-CONDITION-EXCLUSION (2026-06-27): drop damaged / altered /
+    // "read description" comps. A creased, trimmed, water-damaged, or
+    // "as-is" card sells for a fraction of a clean copy, so leaving these in
+    // the pool drags the anchor median DOWN and mis-low-prices the user's
+    // (presumed-clean) card. Conservative term list — only unambiguous flaw
+    // indicators, and "read"/"please read" only as multi-word phrases so a
+    // stray "read" in a player/set name can't false-match. Graded condition
+    // is handled by the grade tier upstream, so these raw-flaw words rarely
+    // appear in legit graded titles.
+    if (
+      /(damaged|crease[ds]?|\baltered\b|trimmed|miscut|mis-cut|water[\s-]?damage|ripped|\btorn\b|stain(?:ed|s)?|writing on|marker|\bdmg\b|\bas[\s-]?is\b|read desc|please read|read before|read the desc|poor condition)/i.test(
+        title,
+      )
+    ) {
       return false;
     }
     return true;
