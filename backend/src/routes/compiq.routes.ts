@@ -819,6 +819,14 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           // either. All three null.
           lastSale: null,
           estimateSource: null,
+          // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+          // trend-aware sub-blocks + CH comp count on every response
+          // shape. Always emit the keys (null when helper didn't fire)
+          // so the iOS decoder has a stable contract — same writeback-
+          // clear pattern as the persistence layer.
+          modelExpectation: (est as any).modelExpectation ?? null,
+          modelSignal: (est as any).modelSignal ?? null,
+          chCompCount: (est as any).chCompCount ?? null,
           estimatedValue: null,
           estimateRange: null,
           estimateBasis: null,
@@ -967,6 +975,13 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+        // trend-aware sub-blocks + CH comp count. Always emit the keys
+        // (null when helper didn't fire) so the iOS decoder has a stable
+        // contract — same writeback-clear pattern as the persistence layer.
+        modelExpectation: (est as any).modelExpectation ?? null,
+        modelSignal: (est as any).modelSignal ?? null,
+        chCompCount: (est as any).chCompCount ?? null,
         estimatedValue: (est as any).estimatedValue ?? null,
         estimateRange: (est as any).estimateRange ?? null,
         estimateBasis: (est as any).estimateBasis ?? null,
@@ -1089,6 +1104,14 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           // either. All three null.
           lastSale: null,
           estimateSource: null,
+          // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+          // trend-aware sub-blocks + CH comp count on every response
+          // shape. Always emit the keys (null when helper didn't fire)
+          // so the iOS decoder has a stable contract — same writeback-
+          // clear pattern as the persistence layer.
+          modelExpectation: (est as any).modelExpectation ?? null,
+          modelSignal: (est as any).modelSignal ?? null,
+          chCompCount: (est as any).chCompCount ?? null,
           estimatedValue: null,
           estimateRange: null,
           estimateBasis: null,
@@ -1198,6 +1221,13 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+        // trend-aware sub-blocks + CH comp count. Always emit the keys
+        // (null when helper didn't fire) so the iOS decoder has a stable
+        // contract — same writeback-clear pattern as the persistence layer.
+        modelExpectation: (est as any).modelExpectation ?? null,
+        modelSignal: (est as any).modelSignal ?? null,
+        chCompCount: (est as any).chCompCount ?? null,
         estimatedValue: (est as any).estimatedValue ?? null,
         estimateRange: (est as any).estimateRange ?? null,
         estimateBasis: (est as any).estimateBasis ?? null,
@@ -1401,6 +1431,14 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           // either. All three null.
           lastSale: null,
           estimateSource: null,
+          // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+          // trend-aware sub-blocks + CH comp count on every response
+          // shape. Always emit the keys (null when helper didn't fire)
+          // so the iOS decoder has a stable contract — same writeback-
+          // clear pattern as the persistence layer.
+          modelExpectation: (est as any).modelExpectation ?? null,
+          modelSignal: (est as any).modelSignal ?? null,
+          chCompCount: (est as any).chCompCount ?? null,
           estimatedValue: null,
           estimateRange: null,
           estimateBasis: null,
@@ -1662,6 +1700,13 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         // "observed" / "trend-extrapolated" / "last-sale" / null.
         lastSale: (est as any).lastSale ?? null,
         estimateSource: (est as any).estimateSource ?? null,
+        // CF-CH-RESPONSE-SURFACE-SUBBLOCKS (2026-06-27): surface the
+        // trend-aware sub-blocks + CH comp count. Always emit the keys
+        // (null when helper didn't fire) so the iOS decoder has a stable
+        // contract — same writeback-clear pattern as the persistence layer.
+        modelExpectation: (est as any).modelExpectation ?? null,
+        modelSignal: (est as any).modelSignal ?? null,
+        chCompCount: (est as any).chCompCount ?? null,
         estimatedValue: (est as any).estimatedValue ?? null,
         estimateRange: (est as any).estimateRange ?? null,
         estimateBasis: (est as any).estimateBasis ?? null,
