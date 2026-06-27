@@ -22,11 +22,24 @@ import {
   type CardHedgeIdentity,
 } from "./cardhedge.client.js";
 import type { ParallelPriceSource, UserFacingPriceSource } from "./parallelTitleMatch.js";
-import { cacheWrap } from "../shared/cache.service.js";
+import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
 
 // ── Bridge constants ────────────────────────────────────────────────────────
 const BRIDGE_TTL_SEC = 24 * 3600;
 const MIN_BRIDGE_CONFIDENCE = 0.80;
+
+// ── Card-metadata side cache ──────────────────────────────────────────────────
+// CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27): every RoutedCard surfaced via a
+// search is stashed by card_id so the pinned /price-by-id path (which iOS
+// deliberately calls with query=nil — see APIService.priceByCardId) can
+// recover the real player/set/year/number/variant. Without this the pinned
+// path only has the numeric card_id to work with, so cardIdentity.player
+// degrades to the raw id AND the CardHedge comp bridge (which needs a
+// playerName) can't resolve — yielding the "Can't estimate yet" empty state.
+const CARD_META_TTL_SEC = 7 * 24 * 3600; // 7 days — outlives the 6h search cache.
+function cardMetaKey(cardId: string): string {
+  return `card-meta:${cardId}`;
+}
 
 export interface CardIdentityHint {
   playerName: string;
@@ -335,7 +348,45 @@ export async function searchCardsRouted(
   limit: number = 20,
 ): Promise<RoutedCard[]> {
   const hits = await chSearchCards(query, limit);
-  return hits.map(chCardToRoutedCard);
+  const routed = hits.map(chCardToRoutedCard);
+  // CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27): stash each card's metadata by
+  // card_id so the pinned /price-by-id path can later recover player/set/etc.
+  // Fire-and-forget — a cache write failure must never break search.
+  void cacheCardMeta(routed);
+  return routed;
+}
+
+/**
+ * Persist RoutedCard metadata under `card-meta:{card_id}` so the pinned
+ * /price-by-id path can recover identity from a bare card_id. Best-effort:
+ * only cards carrying a real player are stored (a numeric-only or empty
+ * player is not worth caching), and any write error is swallowed.
+ */
+async function cacheCardMeta(cards: RoutedCard[]): Promise<void> {
+  await Promise.all(
+    cards
+      .filter((c) => typeof c.card_id === "string" && c.card_id.length > 0 && !!c.player)
+      .map((c) =>
+        cacheSet(cardMetaKey(c.card_id), JSON.stringify(c), CARD_META_TTL_SEC).catch(() => {}),
+      ),
+  );
+}
+
+/**
+ * Recover a previously-searched card's metadata by its card_id. Returns null
+ * on cache miss or parse failure. Used by the pinned /price-by-id path to
+ * surface the real player when iOS sends query=nil.
+ */
+export async function getCardMetaById(cardId: string): Promise<RoutedCard | null> {
+  if (!cardId) return null;
+  try {
+    const raw = await cacheGet(cardMetaKey(cardId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RoutedCard;
+    return parsed && typeof parsed.card_id === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── getCardSalesRouted ──────────────────────────────────────────────────────

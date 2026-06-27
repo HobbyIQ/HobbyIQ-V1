@@ -3,7 +3,7 @@ import { CompIQEstimateRequest, type PredictionCallContext } from "../../types/c
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./parallelTokenizer.js";
-import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
+import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, getCardMetaById, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
 import {
   type CardsightSaleRecord,
 } from "./catalogSource.js";
@@ -1432,6 +1432,40 @@ async function fetchComps(
   // it server-side). Cardsight returns raw + graded as separate
   // structures; we select records based on the requested grade string.
   if (pinnedCardId && (!hasMeaningfulQuery || pinnedAuthoritative)) {
+    // ── CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27) ───────────────────────
+    // iOS pins the cardsightCardId and deliberately sends query=nil (see
+    // APIService.priceByCardId / CF-PRICE-BY-ID-ROUTE). The route layer
+    // then falls back to body.playerName = resolvedCardId, so by the time
+    // we reach here queryContext.playerName is the raw numeric card_id (or
+    // absent). That breaks two things: (1) the CardHedge comp bridge needs
+    // a real playerName to resolve, and (2) cardIdentity.player echoes the
+    // numeric id, so the iOS headline renders the raw id instead of the
+    // player. Recover the real identity from the card-meta side cache
+    // (written by searchCardsRouted at picker time) and fill the missing /
+    // numeric-only fields. Falls through cleanly on a cache miss.
+    const playerLooksMissing =
+      !queryContext?.playerName ||
+      queryContext.playerName.trim().length === 0 ||
+      queryContext.playerName.trim() === pinnedCardId.trim();
+    if (playerLooksMissing) {
+      const meta = await getCardMetaById(pinnedCardId);
+      if (meta?.player) {
+        queryContext = {
+          ...(queryContext ?? {}),
+          playerName: meta.player,
+          cardYear: queryContext?.cardYear ?? meta.year,
+          product: queryContext?.product ?? meta.set,
+          parallel: queryContext?.parallel ?? meta.variant,
+          cardNumber: queryContext?.cardNumber ?? meta.number,
+        };
+        console.log(JSON.stringify({
+          event: "compiq.fetchComps.pinned_player_recovered",
+          source: "compiqEstimate.fetchComps",
+          csCardId: pinnedCardId,
+          recoveredPlayer: meta.player,
+        }));
+      }
+    }
     // ── CF-CH-P5-PRIMARY: try CardHedge first via the router seam ─────────
     // When the request carries enough identity to bridge over to
     // CardHedge, attempt CH first. If trusted, return CH-sourced comps
