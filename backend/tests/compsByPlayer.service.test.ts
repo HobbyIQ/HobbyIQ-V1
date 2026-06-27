@@ -1,14 +1,19 @@
 /**
- * Phase 1 MCP rewire — unit tests for compsByPlayer.service.fetchCompsByPlayer.
- * Mocks cardsight.client (searchCatalog, getPricing) + cache.service so tests
+ * Unit tests for compsByPlayer.service.fetchCompsByPlayer (CardHedge-only edition).
+ *
+ * Mocks cardhedge.client (searchCards, getTrustedComps) + cache.service so tests
  * are deterministic and never touch the network.
+ *
+ * Phase 2 of the Cardsight removal arc replaced the Cardsight-direct flow
+ * (searchCatalog + getPricing + translateResponse) with CH searchCards +
+ * trust-guarded getTrustedComps. The aggregate contract (CompsByPlayerResponse)
+ * is byte-compatible apart from `source: "cardsight"` -> `source: "cardhedge"`.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("../src/services/compiq/cardsight.client.js", () => ({
-  searchCatalog: vi.fn(),
-  getPricing: vi.fn(),
-  getCardDetail: vi.fn(),
+vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
+  searchCards: vi.fn(),
+  getTrustedComps: vi.fn(),
 }));
 
 // In-memory cache mock so each test starts clean and we can observe cache
@@ -31,37 +36,63 @@ vi.mock("../src/services/shared/cache.service.js", () => ({
   isRedisReady: vi.fn(async () => false),
 }));
 
-import * as cs from "../src/services/compiq/cardsight.client.js";
+import * as ch from "../src/services/compiq/cardhedge.client.js";
 import {
   fetchCompsByPlayer,
   warmCompsByPlayerCache,
   __compsByPlayerInternals,
 } from "../src/services/compiq/compsByPlayer.service";
 
-type Catalog = Awaited<ReturnType<typeof cs.searchCatalog>>[number];
-type Pricing = Awaited<ReturnType<typeof cs.getPricing>>;
+type CHCard = Awaited<ReturnType<typeof ch.searchCards>>[number];
+type CHTrusted = Awaited<ReturnType<typeof ch.getTrustedComps>>;
+type CHSale = CHTrusted["comps"][number];
 
-function catalog(id: string, releaseName: string, setName = "Base Set", year = 2017): Catalog {
-  return { id, name: `card-${id}`, number: "", releaseName, setName, year };
+function chCard(
+  cardId: string,
+  opts: Partial<Omit<CHCard, "card_id">> = {},
+): CHCard {
+  return {
+    card_id: cardId,
+    player: opts.player ?? "Test Player",
+    set: opts.set ?? "Topps Update",
+    year: opts.year ?? 2017,
+    number: opts.number ?? "US1",
+    variant: opts.variant ?? "Base",
+    title: opts.title ?? `${opts.year ?? 2017} ${opts.set ?? "Topps Update"} ${cardId}`,
+    ...opts,
+  };
 }
 
-function pricingWithRecords(
-  totalRecords: number,
-  records: Array<{ title: string; price: number; date: string }> = [],
-): Pricing {
+function chSale(
+  title: string,
+  price: number,
+  date: string,
+  grade = "Raw",
+): CHSale {
+  return { title, price, date, grade, source: "ebay", sale_type: null, url: null };
+}
+
+function trustedComps(sales: CHSale[]): CHTrusted {
   return {
-    raw: {
-      count: totalRecords,
-      records: records.map((r) => ({
-        title: r.title,
-        price: r.price,
-        date: r.date,
-        source: "ebay",
-        url: null,
-      })),
-    },
-    graded: [],
-    meta: { total_records: totalRecords, last_sale_date: null },
+    trusted: true,
+    reason: "prices_by_card_honest",
+    comps: sales,
+    median: sales.length ? sales[Math.floor(sales.length / 2)].price : null,
+    count: sales.length,
+    newestDate: sales.length ? sales[0].date : null,
+    pricesByCardLength: Math.max(1, sales.length),
+  };
+}
+
+function rejectedTrust(reason: CHTrusted["reason"] = "no_real_data"): CHTrusted {
+  return {
+    trusted: false,
+    reason,
+    comps: [],
+    median: null,
+    count: 0,
+    newestDate: null,
+    pricesByCardLength: 0,
   };
 }
 
@@ -71,14 +102,14 @@ beforeEach(() => {
 });
 
 describe("fetchCompsByPlayer — happy path aggregation", () => {
-  it("Mike Trout + Topps Update + year=2011 → aggregated comps with cardId attached", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([
-      catalog("trout-tu-base", "Topps Update", "Base Set", 2011),
+  it("Mike Trout + Topps Update + year=2011 → aggregated comps with cardId attached and source=cardhedge", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("trout-tu-base", { year: 2011, set: "Topps Update" }),
     ]);
-    (cs.getPricing as any).mockResolvedValue(
-      pricingWithRecords(2, [
-        { title: "2011 Topps Update Trout RC #US175", price: 310, date: "2026-05-20T12:00:00Z" },
-        { title: "2011 Topps Update Trout RC #US175 PSA", price: 295, date: "2026-05-15T08:00:00Z" },
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([
+        chSale("2011 Topps Update Trout RC #US175", 310, "2026-05-20T12:00:00Z"),
+        chSale("2011 Topps Update Trout RC #US175", 295, "2026-05-15T08:00:00Z"),
       ]),
     );
 
@@ -94,28 +125,21 @@ describe("fetchCompsByPlayer — happy path aggregation", () => {
     expect(r.cardIds).toEqual(["trout-tu-base"]);
     expect(r.comps).toHaveLength(2);
     expect(r.comps[0].cardId).toBe("trout-tu-base");
-    expect(r.comps[0].source).toBe("cardsight");
+    expect(r.comps[0].source).toBe("cardhedge");
     expect(r.cached).toBe(false);
     expect(r.cacheAge).toBeUndefined();
     // Sorted desc by date
     expect(r.comps[0].date.localeCompare(r.comps[1].date)).toBeGreaterThan(0);
   });
 
-  it("Aaron Judge + Topps Update + year=2017 → product narrowing recovers buried RC (Q1 case)", async () => {
-    // Q1 finding: searchCatalog("Aaron Judge", year=2017) returns 50 candidates
-    // with no Topps Update Base in top 50. With product narrowing, the query
-    // becomes "Aaron Judge Topps Update" and the RC surfaces at position 4.
-    (cs.searchCatalog as any).mockResolvedValue([
-      catalog("bowman-chrome-1", "Bowman Chrome", "Base", 2017),
-      catalog("bowman-1", "Bowman", "Base", 2017),
-      catalog("finest-1", "Finest", "Base", 2017),
-      catalog("judge-tu-base", "Topps Update", "Base Set", 2017),
-      catalog("donruss-1", "Donruss", "Base", 2017),
+  it("year filter discards candidates from other years", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("judge-tu-2017", { year: 2017, set: "Topps Update" }),
+      chCard("judge-tu-2019", { year: 2019, set: "Topps Update" }),
+      chCard("judge-tu-2020", { year: 2020, set: "Topps Update" }),
     ]);
-    (cs.getPricing as any).mockResolvedValue(
-      pricingWithRecords(1, [
-        { title: "2017 Topps Update Judge RC #US87", price: 75, date: "2026-05-19T00:00:00Z" },
-      ]),
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("2017 Topps Update Judge RC #US87", 75, "2026-05-19T00:00:00Z")]),
     );
 
     const r = await fetchCompsByPlayer({
@@ -124,118 +148,22 @@ describe("fetchCompsByPlayer — happy path aggregation", () => {
       cardYear: 2017,
     });
 
-    // Release filter narrows from 5 candidates to 1 (only judge-tu-base has releaseName=Topps Update)
-    expect(r.cardIds).toEqual(["judge-tu-base"]);
+    expect(r.cardIds).toEqual(["judge-tu-2017"]);
     expect(r.comps).toHaveLength(1);
-    expect(r.comps[0].cardId).toBe("judge-tu-base");
+    // Only the year=2017 candidate should have been probed for trust.
+    expect((ch.getTrustedComps as any).mock.calls).toHaveLength(1);
+    expect((ch.getTrustedComps as any).mock.calls[0][0]).toBe("judge-tu-2017");
   });
 
-  it("multi-candidate aggregation: dedupes same sale appearing under multiple cardIds", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([
-      catalog("dup-a", "Topps Update"),
-      catalog("dup-b", "Topps Update"),
+  it("product filter discards candidates whose set/title don't contain the product", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("trout-tu", { year: 2011, set: "Topps Update" }),
+      chCard("trout-bowman", { year: 2011, set: "Bowman Chrome" }),
+      chCard("trout-finest", { year: 2011, set: "Finest" }),
     ]);
-    // dup-a and dup-b both report the same sale + one unique each
-    (cs.getPricing as any).mockImplementation((id: string) => {
-      const shared = { title: "shared sale", price: 100, date: "2026-05-20T00:00:00Z" };
-      if (id === "dup-a") {
-        return Promise.resolve(pricingWithRecords(2, [
-          shared,
-          { title: "dup-a-unique", price: 50, date: "2026-05-19T00:00:00Z" },
-        ]));
-      }
-      return Promise.resolve(pricingWithRecords(2, [
-        shared,
-        { title: "dup-b-unique", price: 60, date: "2026-05-18T00:00:00Z" },
-      ]));
-    });
-
-    const r = await fetchCompsByPlayer({ playerName: "Player X", product: "Topps Update" });
-
-    expect(r.cardIds).toHaveLength(2);
-    expect(r.comps).toHaveLength(3); // 1 shared + 2 unique (dedup removed the second occurrence of shared)
-    const titles = r.comps.map((c) => c.title).sort();
-    expect(titles).toEqual(["dup-a-unique", "dup-b-unique", "shared sale"]);
-  });
-
-  it("partial pricing failure: tolerates getPricing rejection, returns the successful card's comps", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([
-      catalog("ok-1", "Topps Update"),
-      catalog("err-1", "Topps Update"),
-    ]);
-    (cs.getPricing as any).mockImplementation((id: string) => {
-      if (id === "ok-1") {
-        return Promise.resolve(pricingWithRecords(1, [
-          { title: "ok sale", price: 200, date: "2026-05-20T00:00:00Z" },
-        ]));
-      }
-      return Promise.reject(new Error("upstream 503"));
-    });
-
-    const r = await fetchCompsByPlayer({ playerName: "Player Y", product: "Topps Update" });
-
-    expect(r.cardIds).toEqual(["ok-1"]); // err-1 omitted
-    expect(r.comps).toHaveLength(1);
-    expect(r.comps[0].cardId).toBe("ok-1");
-  });
-});
-
-describe("fetchCompsByPlayer — setName Chrome fallback (Bonemer pre-merge finding)", () => {
-  it("Bonemer 2024 Bowman Draft Chrome: narrows to setName containing 'Chrome' when releaseName exact-match misses", async () => {
-    // Cardsight encodes Bonemer's chrome variant as releaseName="Bowman Draft"
-    // + setName="Chrome Prospect Autographs". Exact-match on
-    // releaseName="Bowman Draft Chrome" yields zero, so the fallback narrows
-    // by setName containing "Chrome" — picks the CPA-CBO card, NOT the
-    // BD-31 Base Set card.
-    (cs.searchCatalog as any).mockResolvedValue([
-      {
-        id: "bonemer-base",
-        name: "Caleb Bonemer",
-        number: "BD-31",
-        releaseName: "Bowman Draft",
-        setName: "Base Set",
-        year: 2024,
-      },
-      {
-        id: "bonemer-chrome-auto",
-        name: "Caleb Bonemer",
-        number: "CPA-CBO",
-        releaseName: "Bowman Draft",
-        setName: "Chrome Prospect Autographs",
-        year: 2024,
-      },
-    ]);
-    (cs.getPricing as any).mockImplementation((id: string) =>
-      Promise.resolve(
-        pricingWithRecords(1, [
-          { title: `sale-${id}`, price: 100, date: "2026-05-20T00:00:00Z" },
-        ]),
-      ),
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("sale", 100, "2026-05-20T00:00:00Z")]),
     );
-
-    const r = await fetchCompsByPlayer({
-      playerName: "Caleb Bonemer",
-      product: "Bowman Draft Chrome",
-      cardYear: 2024,
-    });
-
-    expect(r.cardIds).toEqual(["bonemer-chrome-auto"]);
-    expect(r.comps).toHaveLength(1);
-    expect(r.comps[0].cardId).toBe("bonemer-chrome-auto");
-    expect(
-      r.warnings.some((w) => w.includes('setName containing "Chrome"')),
-    ).toBe(true);
-  });
-
-  it("setName Chrome fallback does NOT fire for non-Chrome products", async () => {
-    // Mike Trout 2011 Topps Update — product doesn't contain "Chrome", so
-    // even if releaseName exact-match misses (e.g., catalog returns a
-    // different releaseName variant), the fallback is skipped and the code
-    // falls through to top-K aggregation.
-    (cs.searchCatalog as any).mockResolvedValue([
-      { id: "weird-id", name: "?", number: "?", releaseName: "Topps Series 2", setName: "Base Set", year: 2011 },
-    ]);
-    (cs.getPricing as any).mockResolvedValue(pricingWithRecords(0));
 
     const r = await fetchCompsByPlayer({
       playerName: "Mike Trout",
@@ -243,55 +171,145 @@ describe("fetchCompsByPlayer — setName Chrome fallback (Bonemer pre-merge find
       cardYear: 2011,
     });
 
-    // Falls through to top-K (the single weird candidate)
-    expect(r.cardIds).toEqual(["weird-id"]);
-    expect(r.warnings.some((w) => w.includes("aggregating top-ranked"))).toBe(true);
-    expect(r.warnings.some((w) => w.includes("Chrome"))).toBe(false);
+    expect(r.cardIds).toEqual(["trout-tu"]);
+  });
+
+  it("multi-candidate aggregation: dedupes same sale appearing under multiple cardIds", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("dup-a"),
+      chCard("dup-b"),
+    ]);
+    (ch.getTrustedComps as any).mockImplementation((id: string) => {
+      const shared = chSale("shared sale", 100, "2026-05-20T00:00:00Z");
+      if (id === "dup-a") {
+        return Promise.resolve(
+          trustedComps([shared, chSale("dup-a-unique", 50, "2026-05-19T00:00:00Z")]),
+        );
+      }
+      return Promise.resolve(
+        trustedComps([shared, chSale("dup-b-unique", 60, "2026-05-18T00:00:00Z")]),
+      );
+    });
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Player X",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+
+    expect(r.cardIds).toHaveLength(2);
+    // 1 shared (deduped) + 2 unique
+    expect(r.comps).toHaveLength(3);
+    const titles = r.comps.map((c) => c.title).sort();
+    expect(titles).toEqual(["dup-a-unique", "dup-b-unique", "shared sale"]);
+  });
+
+  it("partial trust failure: tolerates getTrustedComps rejection, returns the successful card's comps", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("ok-1"),
+      chCard("err-1"),
+    ]);
+    (ch.getTrustedComps as any).mockImplementation((id: string) => {
+      if (id === "ok-1") {
+        return Promise.resolve(
+          trustedComps([chSale("ok sale", 200, "2026-05-20T00:00:00Z")]),
+        );
+      }
+      return Promise.reject(new Error("upstream 503"));
+    });
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Player Y",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+
+    expect(r.cardIds).toEqual(["ok-1"]);
+    expect(r.comps).toHaveLength(1);
+    expect(r.comps[0].cardId).toBe("ok-1");
+  });
+});
+
+describe("fetchCompsByPlayer — trust-guard behavior", () => {
+  it("trust-rejected candidates are silently dropped from cardIds + comps", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("trusted-1"),
+      chCard("blob-1"),
+      chCard("no-data-1"),
+    ]);
+    (ch.getTrustedComps as any).mockImplementation((id: string) => {
+      if (id === "trusted-1") {
+        return Promise.resolve(
+          trustedComps([chSale("real sale", 99, "2026-05-20T00:00:00Z")]),
+        );
+      }
+      if (id === "blob-1") return Promise.resolve(rejectedTrust("blob_signature"));
+      return Promise.resolve(rejectedTrust("no_real_data"));
+    });
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Player Z",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+
+    expect(r.cardIds).toEqual(["trusted-1"]);
+    expect(r.comps).toHaveLength(1);
+    expect(r.comps[0].source).toBe("cardhedge");
+  });
+
+  it("all candidates trust-rejected → empty cardIds + comps (NOT cached)", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("blob-1"),
+      chCard("blob-2"),
+    ]);
+    (ch.getTrustedComps as any).mockResolvedValue(rejectedTrust("blob_signature"));
+
+    const r = await fetchCompsByPlayer({
+      playerName: "Made Up Player",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+
+    expect(r.cardIds).toEqual([]);
+    expect(r.comps).toEqual([]);
+
+    // Verify NOT cached — second call should re-hit upstream.
+    await fetchCompsByPlayer({
+      playerName: "Made Up Player",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+    expect((ch.searchCards as any).mock.calls.length).toBe(2);
   });
 });
 
 describe("fetchCompsByPlayer — filtering + warnings", () => {
-  it("releases match filter fall-through: warns when product not in dictionary", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([
-      catalog("legacy-1", "Some Obscure Release"),
+  it("year+product filter empties pool → falls through to top-K with warning", async () => {
+    (ch.searchCards as any).mockResolvedValue([
+      chCard("c-wrong-year", { year: 2019, set: "Topps Update" }),
+      chCard("c-wrong-set", { year: 2017, set: "Bowman Chrome" }),
     ]);
-    (cs.getPricing as any).mockResolvedValue(pricingWithRecords(0));
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("fallback sale", 1, "2026-05-20T00:00:00Z")]),
+    );
 
     const r = await fetchCompsByPlayer({
-      playerName: "Player Z",
-      product: "Made Up Brand",
+      playerName: "Player W",
+      product: "Topps Update",
+      cardYear: 2017,
     });
 
-    expect(r.warnings.some((w) => w.includes("not in Cardsight release dictionary"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("aggregating top-ranked"))).toBe(true);
+    // Both candidates probed because the filter empties + falls through.
+    expect((ch.getTrustedComps as any).mock.calls.length).toBe(2);
   });
 
-  it("grade filter applies: gradeCompany + gradeValue routes through translateResponse graded path", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([catalog("graded-1", "Topps Update")]);
-    (cs.getPricing as any).mockResolvedValue({
-      raw: { count: 0, records: [] },
-      graded: [
-        {
-          company_name: "PSA",
-          grades: [
-            {
-              grade_value: "10",
-              count: 1,
-              records: [
-                { title: "PSA 10 Trout", price: 1500, date: "2026-05-15T00:00:00Z", source: "ebay", url: null },
-              ],
-            },
-            {
-              grade_value: "9",
-              count: 1,
-              records: [
-                { title: "PSA 9 Trout", price: 800, date: "2026-05-10T00:00:00Z", source: "ebay", url: null },
-              ],
-            },
-          ],
-        },
-      ],
-      meta: { total_records: 2, last_sale_date: null },
-    });
+  it("grade query is forwarded to getTrustedComps", async () => {
+    (ch.searchCards as any).mockResolvedValue([chCard("graded-1")]);
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("PSA 10 Trout", 1500, "2026-05-15T00:00:00Z", "PSA 10")]),
+    );
 
     const r = await fetchCompsByPlayer({
       playerName: "Mike Trout",
@@ -302,16 +320,16 @@ describe("fetchCompsByPlayer — filtering + warnings", () => {
     });
 
     expect(r.comps).toHaveLength(1);
-    expect(r.comps[0].price).toBe(1500);
-    expect(r.comps[0].title).toBe("PSA 10 Trout");
+    expect((ch.getTrustedComps as any).mock.calls[0][2]).toBe("PSA 10");
   });
 
-  it("empty catalog: returns empty comps + warning, NOT cached", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([]);
+  it("empty search: returns empty comps + warning, NOT cached", async () => {
+    (ch.searchCards as any).mockResolvedValue([]);
 
     const r = await fetchCompsByPlayer({
       playerName: "Made Up Player",
       product: "Topps Update",
+      cardYear: 2017,
     });
 
     expect(r.cardIds).toEqual([]);
@@ -319,19 +337,21 @@ describe("fetchCompsByPlayer — filtering + warnings", () => {
     expect(r.cached).toBe(false);
     expect(r.warnings.length).toBeGreaterThan(0);
 
-    // Verify NOT cached — second call should re-hit catalog (mock counter increments)
-    await fetchCompsByPlayer({ playerName: "Made Up Player", product: "Topps Update" });
-    expect((cs.searchCatalog as any).mock.calls.length).toBe(2);
+    // Verify NOT cached — second call should re-hit upstream.
+    await fetchCompsByPlayer({
+      playerName: "Made Up Player",
+      product: "Topps Update",
+      cardYear: 2017,
+    });
+    expect((ch.searchCards as any).mock.calls.length).toBe(2);
   });
 });
 
 describe("fetchCompsByPlayer — cache behavior", () => {
   it("cache hit: second call returns cached=true with cacheAge populated; no upstream calls", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([catalog("c-1", "Topps Update")]);
-    (cs.getPricing as any).mockResolvedValue(
-      pricingWithRecords(1, [
-        { title: "sale", price: 50, date: "2026-05-20T00:00:00Z" },
-      ]),
+    (ch.searchCards as any).mockResolvedValue([chCard("c-1", { year: 2011 })]);
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("sale", 50, "2026-05-20T00:00:00Z")]),
     );
 
     const first = await fetchCompsByPlayer({
@@ -341,7 +361,7 @@ describe("fetchCompsByPlayer — cache behavior", () => {
     });
     expect(first.cached).toBe(false);
 
-    const callsAfterFirst = (cs.searchCatalog as any).mock.calls.length;
+    const callsAfterFirst = (ch.searchCards as any).mock.calls.length;
 
     const second = await fetchCompsByPlayer({
       playerName: "Mike Trout",
@@ -351,14 +371,10 @@ describe("fetchCompsByPlayer — cache behavior", () => {
     expect(second.cached).toBe(true);
     expect(second.cacheAge).toBeGreaterThanOrEqual(0);
     expect(second.comps).toEqual(first.comps);
-    // No new upstream calls
-    expect((cs.searchCatalog as any).mock.calls.length).toBe(callsAfterFirst);
+    expect((ch.searchCards as any).mock.calls.length).toBe(callsAfterFirst);
   });
 
   it("cache key sensitivity: different query params produce different keys", async () => {
-    (cs.searchCatalog as any).mockResolvedValue([catalog("c-1", "Topps Update")]);
-    (cs.getPricing as any).mockResolvedValue(pricingWithRecords(0));
-
     const baseInput = {
       playerName: "Mike Trout",
       product: "Topps Update",
@@ -384,31 +400,36 @@ describe("fetchCompsByPlayer — cache behavior", () => {
     });
     expect(k1).toBe(k2);
   });
+
+  it("cache key version is v2 (vendor changed from Cardsight to CardHedge)", async () => {
+    const k = __compsByPlayerInternals.buildCacheKey({
+      playerName: "Mike Trout",
+      product: "Topps Update",
+      cardYear: 2011,
+    });
+    expect(k.startsWith("compsByPlayer:v2|")).toBe(true);
+  });
 });
 
 describe("warmCompsByPlayerCache", () => {
-  it("warms all CACHE_WARM_TARGETS sequentially (not parallel) and reports results", async () => {
-    // Per defect #13 v2: warming must be serialized, NOT Promise.all'd.
-    // Verify by tracking the order of searchCatalog calls — they must complete
-    // before the next starts. Each call resolves on a short delay; if running
-    // in parallel, the call count would jump ahead of the resolved count.
+  it("warms all CACHE_WARM_TARGETS sequentially (not parallel)", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
-    (cs.searchCatalog as any).mockImplementation(async () => {
+    (ch.searchCards as any).mockImplementation(async () => {
       inFlight++;
       maxInFlight = Math.max(maxInFlight, inFlight);
       await new Promise((r) => setTimeout(r, 5));
       inFlight--;
-      return [catalog("warmed-1", "Topps Update")];
+      return [chCard("warmed-1", { year: 2011 })];
     });
-    (cs.getPricing as any).mockResolvedValue(
-      pricingWithRecords(1, [{ title: "x", price: 1, date: "2026-05-20T00:00:00Z" }]),
+    (ch.getTrustedComps as any).mockResolvedValue(
+      trustedComps([chSale("x", 1, "2026-05-20T00:00:00Z")]),
     );
 
     await warmCompsByPlayerCache();
 
-    expect(maxInFlight).toBe(1); // serialized — never more than one concurrent
-    expect((cs.searchCatalog as any).mock.calls.length).toBe(
+    expect(maxInFlight).toBe(1);
+    expect((ch.searchCards as any).mock.calls.length).toBe(
       __compsByPlayerInternals.CACHE_WARM_TARGETS.length,
     );
   });

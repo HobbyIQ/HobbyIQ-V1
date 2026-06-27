@@ -1,36 +1,32 @@
 /**
- * Phase 1 of MCP /predict rewire (Option B): backend grows a player+product
- * comp aggregation endpoint that MCP's compsLoader can call instead of
- * reading the fn-cardhedge-comps blob.
- *
- * Design: docs/phase0/mcp_rewire_design.md (61e2d5c) — specifically the
- * 2026-05-27 pre-implementation addendum which supersedes §5 + §10 for this
- * implementation. Key revisions from the original spec:
- *   - product is REQUIRED (Q1 finding: Cardsight catalog text-relevance buries
- *     Topps Update Base Sets when only player+year is given)
- *   - Search query reuses Phase 2 v2 pattern: `${playerName} ${releaseName}`
- *   - Two-layer cache (this layer = aggregate, 6h TTL; lower layer = Cardsight
- *     client's existing cacheWrap on getPricing/searchCatalog)
+ * Player+product comp aggregation, CH-only.
  *
  * Endpoint contract (see route in compiq.routes.ts):
  *   GET /api/compiq/comps-by-player?playerName=...&product=...&cardYear=...
  *     &parallel=...&gradeCompany=...&gradeValue=...
  *   →  CompsByPlayerResponse
  *
- * Reuses:
- *   - lookupReleaseName + applyCardNumberDisambiguation (cardsight.mapper)
- *   - searchCatalog + getPricing (cardsight.client, both already cacheWrap'd)
- *   - translateResponse (cardsight.translator, handles raw + graded paths)
- *   - cacheWrap pattern via cacheGet/cacheSet (cache.service, Redis-or-memory)
+ * Flow (CF-CARDSIGHT-REMOVAL-PHASE-2):
+ *   1. searchCards(player + product + year) on CardHedge — top-25 candidates.
+ *   2. Filter to candidates whose year matches input.cardYear and whose set/title
+ *      contains the product token. On empty, fall through to all candidates with a warning.
+ *   3. For up to MAX_TRUSTED_PROBES candidates, call getTrustedComps(card_id, identity, grade).
+ *      Trust-rejected results (blob_signature, no_real_data) are dropped silently — the
+ *      gap propagates upward as fewer comps rather than as untrusted noise.
+ *   4. Aggregate + dedupe on (title, date, price), sort by date desc.
+ *
+ * Cache: 6h aggregate TTL via cacheGet/cacheSet. Cache key v2 (vendor changed).
+ * Lower layer: CH client's own cacheWrap on searchCards (4h) + getCardSales (12h)
+ *              + getPricesByCard (4h).
  */
 
 import { cacheGet, cacheSet } from "../shared/cache.service.js";
-import { searchCatalog, getPricing } from "./cardsight.client.js";
-import { translateResponse } from "./cardsight.translator.js";
 import {
-  lookupReleaseName,
-  applyCardNumberDisambiguation,
-} from "./cardsight.mapper.js";
+  searchCards,
+  getTrustedComps,
+  type CardHedgeCard,
+  type CardHedgeIdentity,
+} from "./cardhedge.client.js";
 
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
@@ -39,15 +35,13 @@ const log = {
     console.warn(JSON.stringify({ event, source: "compsByPlayer.service", ...fields })),
 };
 
-// 6h matches Cardsight cacheWrap PRICING_TTL_SEC so the aggregate doesn't
-// outlive its underlying pricing data.
+// 6h matches CH cache TTLs so the aggregate doesn't outlive its underlying pricing data.
 const AGGREGATE_TTL_SECONDS = 6 * 3600;
 
-// Matches cardsight.mapper.MAX_PRICING_PROBES for symmetry. Worst-case
-// Cardsight call fan-out per request: 1 searchCatalog + ≤8 getPricing.
-const MAX_PRICING_PROBES = 8;
+// Worst-case CH call fan-out per request: 1 searchCards + ≤8 × (1 getPricesByCard + 1 getCardSales).
+const MAX_TRUSTED_PROBES = 8;
 
-const SEARCH_TAKE = 25;
+const SEARCH_LIMIT = 25;
 
 export interface CompsByPlayerInput {
   playerName: string;
@@ -63,7 +57,7 @@ export interface CompByPlayer {
   price: number;
   date: string;
   title: string;
-  source: "cardsight";
+  source: "cardhedge";
 }
 
 export interface CompsByPlayerResponse {
@@ -89,8 +83,9 @@ interface CachedEntry {
 }
 
 function buildCacheKey(input: CompsByPlayerInput): string {
+  // v2: vendor switched from Cardsight to CardHedge — bump to invalidate stale entries.
   return [
-    "compsByPlayer:v1",
+    "compsByPlayer:v2",
     input.playerName.toLowerCase().trim().replace(/\s+/g, " "),
     input.product.toLowerCase().trim().replace(/\s+/g, " "),
     String(input.cardYear ?? ""),
@@ -100,14 +95,37 @@ function buildCacheKey(input: CompsByPlayerInput): string {
   ].join("|");
 }
 
+function deriveGradeQuery(input: CompsByPlayerInput): string {
+  // CH getTrustedComps takes a grade string ("Raw", "PSA 10", etc.).
+  if (!input.gradeCompany || input.gradeValue === undefined) return "Raw";
+  return `${String(input.gradeCompany).toUpperCase()} ${input.gradeValue}`.trim();
+}
+
+function extractSurname(playerName: string): string {
+  const parts = playerName.trim().split(/\s+/);
+  return parts[parts.length - 1] ?? playerName;
+}
+
+function candidateMatches(c: CardHedgeCard, input: CompsByPlayerInput): boolean {
+  if (input.cardYear !== undefined) {
+    const cYearNum = c.year !== undefined && c.year !== null ? Number(String(c.year)) : NaN;
+    if (!Number.isFinite(cYearNum) || cYearNum !== input.cardYear) return false;
+  }
+  const productLc = input.product.toLowerCase().trim();
+  if (!productLc) return true;
+  const setLc = (c.set ?? "").toLowerCase();
+  const titleLc = (c.title ?? "").toLowerCase();
+  return setLc.includes(productLc) || titleLc.includes(productLc);
+}
+
 /**
- * Aggregate player+product comps from Cardsight. Returns a flat, deduped,
- * date-sorted CardComp array spanning the top-K data-bearing candidates that
+ * Aggregate player+product comps from CardHedge. Returns a flat, deduped,
+ * date-sorted CompByPlayer array spanning the top-K trusted candidates that
  * match the player+product+year combination.
  *
- * Failure handling: catalog miss returns empty comps + warnings (NOT cached);
- * per-candidate getPricing errors are tolerated (skipped, logged as warnings).
- * Aggregate-level errors propagate.
+ * Failure handling: search miss returns empty comps + warnings (NOT cached);
+ * per-candidate getTrustedComps errors are tolerated (skipped, logged as
+ * warnings); trust-rejected results are dropped silently.
  */
 export async function fetchCompsByPlayer(
   input: CompsByPlayerInput,
@@ -145,37 +163,22 @@ export async function fetchCompsByPlayer(
   const start = Date.now();
   const warnings: string[] = [];
 
-  // Player-level aggregation doesn't have cardNumber context, but call the
-  // disambiguator anyway to preserve dispatch behavior if a future caller
-  // passes a cardNumber.
-  const effectiveProduct =
-    applyCardNumberDisambiguation(input.product, undefined) ?? input.product;
-  const releaseName = lookupReleaseName(effectiveProduct);
-  if (!releaseName) {
-    warnings.push(
-      `Product "${input.product}" not in Cardsight release dictionary — searching by literal product string.`,
-    );
-  }
-
-  const query = [input.playerName.trim(), releaseName ?? effectiveProduct]
+  const yearToken = input.cardYear !== undefined ? String(input.cardYear) : "";
+  const query = [yearToken, input.playerName.trim(), input.product.trim()]
     .filter(Boolean)
     .join(" ");
 
-  const catalogResults = await searchCatalog(query, {
-    year: input.cardYear,
-    take: SEARCH_TAKE,
-  });
+  const searchResults = await searchCards(query, SEARCH_LIMIT);
 
-  if (catalogResults.length === 0) {
-    warnings.push(`No Cardsight catalog results for query "${query}".`);
-    log.warn("aggregate_catalog_empty", {
+  if (searchResults.length === 0) {
+    warnings.push(`No CardHedge candidates for query "${query}".`);
+    log.warn("aggregate_search_empty", {
       playerName: input.playerName,
       product: input.product,
       cardYear: input.cardYear ?? null,
       query,
     });
-    // Don't cache empty catalog results — transient Cardsight issues should not
-    // pin a 6h null entry.
+    // Don't cache empty results — transient upstream issues should not pin a 6h null entry.
     return {
       player: input.playerName,
       product: input.product,
@@ -187,61 +190,39 @@ export async function fetchCompsByPlayer(
     };
   }
 
-  // Release-name filter (case-insensitive exact match), with same fall-through
-  // semantics as resolveCardId.
-  const expectedRelease = (releaseName ?? effectiveProduct).toLowerCase().trim();
-  let candidates = catalogResults.filter(
-    (r) => (r.releaseName ?? "").toLowerCase().trim() === expectedRelease,
-  );
+  // Filter to candidates whose year + product match. Fall through to all
+  // search results with a warning when the strict filter empties the pool —
+  // mirrors prior compsByPlayer behavior for resilience against catalog drift.
+  let candidates = searchResults.filter((c) => candidateMatches(c, input));
   if (candidates.length === 0) {
-    // setName "Chrome" fallback (pre-merge confirmation finding, 2026-05-27).
-    // Cardsight encodes some chrome variants in setName rather than
-    // releaseName — Caleb Bonemer 2024 "Bowman Draft Chrome" returns 2 cards
-    // both with releaseName="Bowman Draft": one Base Set (BD-31, not chrome)
-    // and one Chrome Prospect Autograph (CPA-CBO, the chrome variant). Naive
-    // top-K fall-through mixes them. When the user's product implies "chrome"
-    // but releaseName exact-match returns nothing, narrow to candidates whose
-    // setName contains "chrome" (case-insensitive). If that also yields
-    // nothing, fall through to the all-top-K aggregator with a warning.
-    if (/chrome/i.test(input.product)) {
-      const chromeFiltered = catalogResults.filter((r) =>
-        /chrome/i.test(r.setName ?? ""),
-      );
-      if (chromeFiltered.length > 0) {
-        candidates = chromeFiltered;
-        warnings.push(
-          `No catalog candidates matched release "${expectedRelease}" exactly — narrowed by setName containing "Chrome" (${chromeFiltered.length} candidates).`,
-        );
-        log.info("aggregate_setname_chrome_fallback", {
-          query,
-          expectedRelease,
-          chromeFilteredCount: chromeFiltered.length,
-        });
-      }
-    }
-    if (candidates.length === 0) {
-      warnings.push(
-        `No catalog candidates matched release "${expectedRelease}" — aggregating top-ranked results instead.`,
-      );
-      log.warn("aggregate_release_filter_no_match", {
-        query,
-        expectedRelease,
-        topCandidates: catalogResults
-          .slice(0, 3)
-          .map((r) => r.releaseName ?? "")
-          .join(" | "),
-      });
-      candidates = catalogResults;
-    }
+    warnings.push(
+      `No CardHedge candidates matched ${input.playerName} ${input.product} ${yearToken} exactly — aggregating top-ranked results.`,
+    );
+    log.warn("aggregate_filter_no_match", {
+      query,
+      topCandidates: searchResults
+        .slice(0, 3)
+        .map((c) => `${c.year ?? "?"} ${c.set ?? ""} ${c.number ?? ""}`.trim())
+        .join(" | "),
+    });
+    candidates = searchResults;
   }
 
-  // Top-K parallel pricing probe. Failures per-candidate are tolerated.
-  const probeSet = candidates.slice(0, MAX_PRICING_PROBES);
-  const pricings = await Promise.all(
+  // Build identity for trust-guard. Surname + year scoping prevents the CH
+  // "recent sales blob" fallback bucket from polluting our comp pool.
+  const identity: CardHedgeIdentity = {
+    playerSurname: extractSurname(input.playerName).toLowerCase(),
+    expectedYear: yearToken,
+  };
+  const gradeQuery = deriveGradeQuery(input);
+
+  // Top-K trusted-comp probe. Per-candidate failures + trust-rejections are tolerated.
+  const probeSet = candidates.slice(0, MAX_TRUSTED_PROBES);
+  const trustedResults = await Promise.all(
     probeSet.map((c) =>
-      getPricing(c.id).catch((err: any) => {
-        log.warn("aggregate_pricing_probe_failed", {
-          cardId: c.id,
+      getTrustedComps(c.card_id, identity, gradeQuery).catch((err: any) => {
+        log.warn("aggregate_trusted_probe_failed", {
+          cardId: c.card_id,
           query,
           error: err?.message ?? String(err),
         });
@@ -250,34 +231,38 @@ export async function fetchCompsByPlayer(
     ),
   );
 
-  // Aggregate + dedupe. Same sale can appear under multiple cardIds (e.g.,
-  // duplicate catalog entries per logical card per defect #5 family); dedupe
-  // on title+date+price to avoid double-counting.
+  // Aggregate + dedupe. Same sale can appear under multiple cardIds; dedupe
+  // on (title, date, price) to avoid double-counting.
   const cardIds: string[] = [];
   const comps: CompByPlayer[] = [];
   const seenSales = new Set<string>();
+  let rejectedTrust = 0;
   for (let i = 0; i < probeSet.length; i++) {
     const candidate = probeSet[i];
-    const pricing = pricings[i];
-    if (!pricing) continue;
-    cardIds.push(candidate.id);
+    const trusted = trustedResults[i];
+    if (!trusted) continue;
+    if (!trusted.trusted) {
+      rejectedTrust++;
+      log.info("aggregate_trust_rejected", {
+        cardId: candidate.card_id,
+        reason: trusted.reason,
+      });
+      continue;
+    }
+    cardIds.push(candidate.card_id);
 
-    const translated = translateResponse(pricing, {
-      gradeCompany: input.gradeCompany,
-      gradeValue:
-        input.gradeValue !== undefined ? String(input.gradeValue) : undefined,
-    });
-
-    for (const t of translated) {
-      const dedupKey = `${t.title}|${t.soldDate}|${t.price}`;
+    for (const sale of trusted.comps) {
+      const date = sale.date ?? "";
+      const title = sale.title ?? "";
+      const dedupKey = `${title}|${date}|${sale.price}`;
       if (seenSales.has(dedupKey)) continue;
       seenSales.add(dedupKey);
       comps.push({
-        cardId: candidate.id,
-        price: t.price,
-        date: t.soldDate,
-        title: t.title,
-        source: "cardsight",
+        cardId: candidate.card_id,
+        price: sale.price,
+        date,
+        title,
+        source: "cardhedge",
       });
     }
   }
@@ -309,6 +294,7 @@ export async function fetchCompsByPlayer(
     cacheKey,
     cardCount: cardIds.length,
     compsCount: comps.length,
+    rejectedTrust,
     elapsedMs: Date.now() - start,
   });
 
@@ -325,10 +311,8 @@ export async function fetchCompsByPlayer(
 
 // ───── Cache warming at startup ──────────────────────────────────────────────
 //
-// 10 demo-relevant player+product+year targets, matching the
-// CACHE_WARM_TARGETS list in cardsight.mapper.ts but now keyed at the
-// aggregate granularity. Serialized warming per defect #13 v2 — avoids the
-// Cardsight rate-limit cascade that previously poisoned warm caches.
+// 10 demo-relevant player+product+year targets. Serialized warming avoids
+// the upstream rate-limit cascade that previously poisoned warm caches.
 //
 // Startup cost estimate: ~10 targets × ~5s cold-call each ≈ ~50s sequential.
 // Warming is fire-and-forget (see server.ts startup chain); /api/health stays
@@ -381,6 +365,6 @@ export async function warmCompsByPlayerCache(): Promise<void> {
 export const __compsByPlayerInternals = {
   buildCacheKey,
   AGGREGATE_TTL_SECONDS,
-  MAX_PRICING_PROBES,
+  MAX_TRUSTED_PROBES,
   CACHE_WARM_TARGETS,
 };

@@ -60,7 +60,7 @@ describe("GET /api/compiq/comps-by-player — happy path", () => {
       cardYear: 2011,
       cardIds: ["card-1"],
       comps: [
-        { cardId: "card-1", price: 310, date: "2026-05-20T00:00:00Z", title: "2011 Topps Update Trout", source: "cardsight" as const },
+        { cardId: "card-1", price: 310, date: "2026-05-20T00:00:00Z", title: "2011 Topps Update Trout", source: "cardhedge" as const },
       ],
       cached: false,
       warnings: [],
