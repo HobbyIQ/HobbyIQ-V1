@@ -17,6 +17,7 @@
     "fn-player-score-refresh",
     "fn-search-intent",
     "fn-serve-signals",
-    "fn-backtest-runner"
+    "fn-backtest-runner",
+    "fn-nightly-comp-prefetch"
   ]
 }
