@@ -16,6 +16,7 @@ struct DashboardView: View {
     @State private var navigateToCertResolve = false
     @State private var certResolveInput = ""
     @State private var showCardScanner = false
+    @State private var showGradedScanner = false
     @FocusState private var isAskFocused: Bool
 
     var body: some View {
@@ -45,6 +46,8 @@ struct DashboardView: View {
                     searchBar
 
                     scanAffordance
+
+                    gradedScanAffordance
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
@@ -92,6 +95,7 @@ struct DashboardView: View {
             AccountView(sessionViewModel: sessionViewModel)
         }
         .scanFlow(isPresented: $showCardScanner, sessionViewModel: sessionViewModel)
+        .gradedSlabScanFlow(isPresented: $showGradedScanner, sessionViewModel: sessionViewModel)
     }
 
     // MARK: - Scan affordance
@@ -120,6 +124,34 @@ struct DashboardView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Scan a card to price it")
+    }
+
+    // MARK: - Graded slab scan affordance
+
+    private var gradedScanAffordance: some View {
+        Button {
+            showGradedScanner = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.badge.checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("Scan a graded slab to find it")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.7))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
+            )
+            .clipShape(Capsule(style: .continuous))
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Scan a graded slab to find the card")
     }
 
     // MARK: - Search Bar
