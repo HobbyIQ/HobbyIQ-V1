@@ -3,7 +3,14 @@ import { compiqEstimate, computeEstimate, simulateWhatIf } from "../services/com
 import { cacheWrap } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
-import { searchCards } from "../services/compiq/cardhedge.client.js";
+import {
+  searchCards,
+  getCardDetail,
+  searchSets,
+  imageMatch,
+  imageSearch,
+  detailsByCertOcr,
+} from "../services/compiq/cardhedge.client.js";
 import {
   parseCardQuery,
   buildCompSearchQuery,
@@ -1253,7 +1260,116 @@ router.post("/sell-window", async (req, res, next) => {
   }
 });
 
-// Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
+// ---------------------------------------------------------------------------
+// Card Hedge data-surface endpoints (card data only; pricing stays in MCP)
+//
+// These power the iOS detail view, set-picker, scanner, and graded-slab OCR
+// flows. They return CH-native card data — we do NOT compute predicted
+// pricing here. Predicted pricing remains the MCP /predict pipeline's job.
+// ---------------------------------------------------------------------------
+
+router.post("/card-details", async (req, res, next) => {
+  try {
+    const { cardId, rawImagesOnly } = req.body ?? {};
+    if (!cardId || typeof cardId !== "string") {
+      return res.status(400).json({ success: false, error: 'Missing "cardId" field' });
+    }
+    const detail = await getCardDetail(cardId.trim(), {
+      rawImagesOnly: Boolean(rawImagesOnly),
+    });
+    if (!detail) {
+      return res.status(404).json({ success: false, error: "card_not_found", cardId });
+    }
+    return res.json({ success: true, card: detail });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/set-search", async (req, res, next) => {
+  try {
+    const { search, category, count } = req.body ?? {};
+    const opts: { search?: string; category?: string; count?: number } = {};
+    if (typeof search === "string" && search.trim()) opts.search = search.trim();
+    if (typeof category === "string" && category.trim()) opts.category = category.trim();
+    if (typeof count === "number" && count > 0) opts.count = count;
+    const sets = await searchSets(opts);
+    return res.json({ success: true, count: sets.length, sets });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/image-match", async (req, res, next) => {
+  try {
+    const { imageUrl, imageBase64, k } = req.body ?? {};
+    if (!imageUrl && !imageBase64) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Provide "imageUrl" or "imageBase64"' });
+    }
+    const out = await imageMatch(
+      {
+        ...(typeof imageUrl === "string" ? { image_url: imageUrl } : {}),
+        ...(typeof imageBase64 === "string" ? { image_base64: imageBase64 } : {}),
+      },
+      { k: typeof k === "number" ? k : undefined },
+    );
+    if (!out) {
+      return res.status(502).json({ success: false, error: "image_match_failed" });
+    }
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/image-search", async (req, res, next) => {
+  try {
+    const { imageUrl, imageBase64, k } = req.body ?? {};
+    if (!imageUrl && !imageBase64) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Provide "imageUrl" or "imageBase64"' });
+    }
+    const out = await imageSearch(
+      {
+        ...(typeof imageUrl === "string" ? { image_url: imageUrl } : {}),
+        ...(typeof imageBase64 === "string" ? { image_base64: imageBase64 } : {}),
+      },
+      { k: typeof k === "number" ? k : undefined },
+    );
+    if (!out) {
+      return res.status(502).json({ success: false, error: "image_search_failed" });
+    }
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/details-by-cert-ocr", async (req, res, next) => {
+  try {
+    const { imageUrl, imageBase64 } = req.body ?? {};
+    if (!imageUrl && !imageBase64) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Provide "imageUrl" or "imageBase64"' });
+    }
+    const out = await detailsByCertOcr({
+      ...(typeof imageUrl === "string" ? { image_url: imageUrl } : {}),
+      ...(typeof imageBase64 === "string" ? { image_base64: imageBase64 } : {}),
+    });
+    if (!out) {
+      return res.status(502).json({ success: false, error: "cert_ocr_failed" });
+    }
+    return res.json({ success: true, ...out });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Test-only export — keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
 export const __testing__ = { regimeFieldsFromEstimate, predictedRangeFieldsFromEstimate };
 

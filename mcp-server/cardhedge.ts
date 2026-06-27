@@ -501,3 +501,112 @@ function pickBestHit(
   // Require last-name + year (>=0.65) OR explicit card-number hit (>=0.55).
   return best.score >= 0.55 ? best.hit : undefined;
 }
+
+// ---------------------------------------------------------------------------
+// CH image-match — true visual identity from an uploaded image URL/base64.
+// Used by the iOS scanner via POST /api/compiq/image. Returns the top
+// candidate plus the full candidate list so the route can apply its own
+// confidence gating.
+// ---------------------------------------------------------------------------
+
+export interface CHImageCandidate {
+  card_id: string;
+  confidence: number;
+  title?: string;
+  player?: string;
+  set?: string;
+  year?: string | number;
+  number?: string;
+  variant?: string;
+  image_urls: string[];
+}
+
+export interface CHImageMatchResult {
+  ok: boolean;
+  best?: CHImageCandidate;
+  candidates: CHImageCandidate[];
+  reason?: string;
+}
+
+interface CHImageMatchResponse {
+  best_match?: any;
+  match?: any;
+  card?: any;
+  candidates?: any[];
+  results?: any[];
+}
+
+function normalizeImageCandidate(raw: any): CHImageCandidate | null {
+  if (!raw || typeof raw !== "object") return null;
+  const cardId = raw.card_id ?? raw.id ?? raw.card?.card_id;
+  if (!cardId) return null;
+  const conf =
+    typeof raw.confidence === "number"
+      ? raw.confidence
+      : typeof raw.score === "number"
+      ? raw.score
+      : 0;
+  return {
+    card_id: String(cardId),
+    confidence: Number.isFinite(conf) ? conf : 0,
+    title: raw.title ?? raw.description ?? raw.name ?? raw.card?.title,
+    player: raw.player ?? raw.card?.player,
+    set: raw.set ?? raw.card?.set,
+    year: raw.year ?? raw.card?.year,
+    number: raw.number ?? raw.card?.number,
+    variant: raw.variant ?? raw.card?.variant,
+    image_urls: extractImagesFromHit(raw as any),
+  };
+}
+
+/**
+ * Call CH /cards/image-match. Provide image_url (preferred — CH fetches it
+ * server-side) or image_base64. Returns a normalized candidate list sorted
+ * by confidence desc.
+ */
+export async function imageMatchByUrl(opts: {
+  imageUrl?: string;
+  imageBase64?: string;
+  k?: number;
+}): Promise<CHImageMatchResult> {
+  if (!opts.imageUrl && !opts.imageBase64) {
+    return { ok: false, candidates: [], reason: "no_image_provided" };
+  }
+  const body: Record<string, unknown> = {};
+  if (opts.imageUrl) body.image_url = opts.imageUrl;
+  if (opts.imageBase64) body.image_base64 = opts.imageBase64;
+  if (typeof opts.k === "number" && opts.k > 0) body.k = opts.k;
+
+  try {
+    const r = await postJson<CHImageMatchResponse>("/cards/image-match", body);
+    const raws: any[] = [];
+    if (Array.isArray(r.candidates)) raws.push(...r.candidates);
+    if (Array.isArray(r.results)) raws.push(...r.results);
+    if (r.best_match) raws.unshift(r.best_match);
+    if (r.match) raws.unshift(r.match);
+    if (r.card) raws.unshift(r.card);
+
+    const seen = new Set<string>();
+    const candidates: CHImageCandidate[] = [];
+    for (const raw of raws) {
+      const cand = normalizeImageCandidate(raw);
+      if (!cand) continue;
+      if (seen.has(cand.card_id)) continue;
+      seen.add(cand.card_id);
+      candidates.push(cand);
+    }
+    candidates.sort((a, b) => b.confidence - a.confidence);
+
+    if (candidates.length === 0) {
+      return { ok: false, candidates: [], reason: "no_candidates" };
+    }
+    return { ok: true, best: candidates[0], candidates };
+  } catch (err) {
+    console.warn("[cardhedge] image-match failed:", (err as Error).message);
+    return {
+      ok: false,
+      candidates: [],
+      reason: (err as Error).message ?? "image_match_failed",
+    };
+  }
+}

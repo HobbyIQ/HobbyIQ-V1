@@ -43,7 +43,7 @@ import {
   type PriceResult,
 } from "./pricing.js";
 import { fetchPlayerComps } from "./compsLoader.js";
-import { primePlayerComps, lookupCardImage } from "./cardhedge.js";
+import { primePlayerComps, lookupCardImage, imageMatchByUrl } from "./cardhedge.js";
 import { logPrediction } from "./predictionLog.js";
 import { runBacktest, backtestSummary } from "./backtest.js";
 import { checkUrlReachable, isUrlHealthy } from "./healthChecks.js";
@@ -91,6 +91,33 @@ app.post("/api/compiq/image", async (req: Request, res: Response) => {
     });
     const blobUrl = blob.url;
 
+    // 1) Preferred path: CH /cards/image-match — true visual identity from
+    //    the uploaded blob URL. Returns confidence-ranked candidates.
+    try {
+      const ihit = await imageMatchByUrl({ imageUrl: blobUrl, k: 5 });
+      if (ihit.ok && ihit.best && ihit.best.confidence >= 0.8) {
+        const best = ihit.best;
+        return res.status(200).json({
+          ok: true,
+          cached: false,
+          query: typeof query === "string" ? query : best.title ?? best.player ?? "",
+          player: best.player,
+          card_id: best.card_id,
+          confidence: best.confidence,
+          image_urls: best.image_urls,
+          title: best.title,
+          candidates: ihit.candidates,
+          blobUrl,
+          source: "ch_image_match",
+        });
+      }
+    } catch (err) {
+      console.warn("[image-scan] image-match path failed, falling back to text search:", (err as Error).message);
+    }
+
+    // 2) Fallback: text-search by player name / freeform query. Lower-fidelity
+    //    but keeps the endpoint useful when image-match returns low confidence
+    //    (e.g., damaged scan, unusual angle).
     const lookupQuery =
       typeof query === "string" && query.trim()
         ? query.trim()
@@ -102,7 +129,7 @@ app.post("/api/compiq/image", async (req: Request, res: Response) => {
       playerName: typeof playerName === "string" ? playerName : undefined,
     });
     if (out && out.confidence >= 0.8) {
-      return res.status(200).json({ ...out, blobUrl });
+      return res.status(200).json({ ...out, blobUrl, source: "ch_text_search" });
     }
     return res.status(404).json({
       error: "Card not recognized",

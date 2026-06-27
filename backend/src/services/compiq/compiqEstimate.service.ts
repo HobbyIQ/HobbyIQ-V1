@@ -2,8 +2,27 @@ import { Request, Response } from "express";
 import { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
-import { type CardHedgeCard, type TrendAdjustment } from "./cardhedge.client.js";
-import { findCompsRouted, searchCardsRouted, getCardSalesRouted, type QueryContext } from "./cardsight.router.js";
+import {
+  findCompsByQuery,
+  searchCards,
+  getCardSales,
+  type CardHedgeCard,
+  type TrendAdjustment,
+} from "./cardhedge.client.js";
+
+// Structured fields the iOS client / parser threads through to fetchComps.
+// Used today for logging + future query refinement; CH's findCompsByQuery
+// builds its own query string from the free-text `query` param so these
+// fields are passed in but not yet consumed by the comp fetcher.
+export type QueryContext = {
+  playerName?: string;
+  cardYear?: string | number;
+  product?: string;
+  parallel?: string;
+  cardNumber?: string;
+  gradeCompany?: string;
+  gradeValue?: string;
+};
 import { parseCardQuery } from "./cardQueryParser.js";
 import { writeTrendSnapshot } from "../playerScore/trendHistory.service.js";
 import { updatePlayerScoreFromEstimate } from "../playerScore/playerScore.service.js";
@@ -614,7 +633,7 @@ async function fetchBroaderTrend(
   // Find sibling cards: same player + year + set, any variant.
   let siblings: CardHedgeCard[] = [];
   try {
-    siblings = await searchCardsRouted(`${year} ${set} ${player}`.trim(), 20);
+    siblings = await searchCards(`${year} ${set} ${player}`.trim(), 20);
   } catch {
     siblings = [];
   }
@@ -636,7 +655,7 @@ async function fetchBroaderTrend(
   const siblingSales = await Promise.all(
     siblingIds.map(async (id) => {
       try {
-        return await getCardSalesRouted(id, grade, SAMPLES_PER_SIBLING, { cardIdSource: "cardhedge" });
+        return await getCardSales(id, grade, SAMPLES_PER_SIBLING);
       } catch {
         return [];
       }
@@ -743,11 +762,11 @@ async function fetchComps(
   // [] (router's cardIdSource=cardhedge guard fires) — the correct
   // fallback when there's no text to drive a Cardsight catalog lookup.
   if (pinnedCardId && !hasMeaningfulQuery) {
-    const sales = await getCardSalesRouted(pinnedCardId, grade, 25, { cardIdSource: "cardhedge" });
+    const sales = await getCardSales(pinnedCardId, grade, 25);
     // Pull set/player/variant for display by looking up via search (best effort).
     let identityCard: any = null;
     try {
-      const hits = await searchCardsRouted(query || pinnedCardId, 20);
+      const hits = await searchCards(query || pinnedCardId, 20);
       identityCard = hits.find((h) => h.card_id === pinnedCardId) ?? null;
     } catch {
       identityCard = null;
@@ -789,7 +808,11 @@ async function fetchComps(
     return { comps: mapped, card: identity, variantWarning: [], aiCategory: null, trendAdjustment: null };
   }
 
-  const { card, sales, variantWarning, aiCategory, trendAdjustment } = await findCompsRouted(query, { grade, limit: 25, queryContext });
+  // queryContext is intentionally unused here today — findCompsByQuery
+  // builds its own query from the free-text `query` param. We accept the
+  // structured context for forward-compat / logging only.
+  void queryContext;
+  const { card, sales, variantWarning, aiCategory, trendAdjustment } = await findCompsByQuery(query, { grade, limit: 25 });
 
   if (!card) {
     console.warn(`[compiq.fetchComps] Card Hedge found no matching card for "${query}"`);

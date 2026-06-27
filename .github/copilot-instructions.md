@@ -99,86 +99,99 @@ Cardsight integration lives under `backend/src/services/compiq/cardsight.*`.
 
 ---
 
-## CURRENT STATE (as of 2026-05-27 — MCP rewire Phase 2 shipped)
+## CURRENT STATE (as of 2026-06-26 — CH restored as sole data source)
 
 Honest snapshot of what's true today. Sections above this one carry historical
 context; when they conflict with this section, **this section wins.**
 
-### Comp data flow (post Phase 1 + Phase 2)
+### Comp + card data flow (post CH-restoration)
 
-- **Primary comp source:** Cardsight API (catalog + pricing), accessed via
-  `backend/src/services/compiq/cardsight.router.ts` under
-  `CARDSIGHT_MODE=exclusive` (production setting on hobbyiq3).
+- **Sole data source:** Card Hedge API (`https://api.cardhedger.com/v1`,
+  `X-API-Key: ${CARD_HEDGE_API_KEY}`, prices as DOLLAR strings — coerce to
+  float, never `/100`). Used for catalog, comps, set search, image identity,
+  and graded-slab cert OCR. Cardsight is gone.
 - **MCP comp fetching:** `mcp-server/compsLoader.ts` calls hobbyiq3's
-  `/api/compiq/comps-by-player` endpoint via HTTP (Phase 2, PR #121, shipped
-  2026-05-27). MCP NO LONGER reads `compiq-signals/{slug}/cardhedge.json`
-  blob writes.
-- **Backend caching:** `compsByPlayer.service.ts` aggregate cache (6h TTL,
-  Redis-backed) + per-cardId Cardsight pricing cache (6h TTL via
-  `cardhedge.client`'s wrapper, which was kept for cache machinery despite
-  the name). Per-cardId resolution LRU at 7-day TTL.
-- **iOS-facing endpoints unchanged:** `/api/compiq/price`,
-  `/api/compiq/price-by-id`, `/api/compiq/estimate` work the same shape;
-  internals now route through Cardsight.
+  `/api/compiq/comps-by-player` endpoint via HTTP. That endpoint
+  (`backend/src/services/compiq/compsByPlayer.service.ts`) now hits CH
+  directly: `searchCards` → top-K filter → `getCardSales` per candidate →
+  dedupe + sort.
+- **MCP image identity (NEW):** `POST /api/compiq/image` first calls CH
+  `/cards/image-match` against the uploaded blob URL (true visual identity),
+  then falls back to the legacy `lookupCardImage` text-search if confidence
+  is below 0.80.
+- **Backend caching:** `compsByPlayer.service.ts` aggregate cache 6h TTL
+  (key prefix `compsByPlayer:v2:ch` — bumped to invalidate stale Cardsight
+  entries); per-cardId CH comps cache 12h TTL inside `cardhedge.client.ts`;
+  card-details 6h; set search 24h; image lookups 24h. All Redis-backed.
+- **iOS-facing endpoints unchanged in shape:** `/api/compiq/price`,
+  `/api/compiq/price-by-id`, `/api/compiq/estimate`, `/api/compiq/predict`,
+  `/api/compiq/comps-by-player`, `/api/compiq/search-list` — same request +
+  response contracts, no iOS changes required.
+- **iOS-facing endpoints added:** `POST /api/compiq/card-details`,
+  `POST /api/compiq/set-search`, `POST /api/compiq/image-match`,
+  `POST /api/compiq/image-search`, `POST /api/compiq/details-by-cert-ocr`
+  on the hobbyiq3 backend. These return CH data only — predicted pricing
+  remains MCP `/predict`'s job.
 
-### CH (Card Hedge) residual state — partial cleanup
+### Pricing engine (unchanged)
 
-- `fn-cardhedge-comps` (the nightly blob writer) **still fires at 02:00 UTC**
-  writing valid blobs that zero production consumers read. Tracked as
-  CF-FN-CARDHEDGE-DISABLE; durable disable requires `fn-compiq` redeploy
-  (Linux Function App read-only constraint prevents `az`-side disable).
-- `cardhedge.client.ts` **still in the repo with 4 production imports**:
-  `cardsight.router.ts:28`, `compiqEstimate.service.ts:5` (type-only),
-  `compiq.routes.ts:6` + `:735` (search-list dead path). Production paths
-  reach `cardhedge.client.ts` even under `CARDSIGHT_MODE=exclusive` — the
-  precise consumer that requires `CARD_HEDGE_API_KEY` at runtime is **not
-  yet identified** (2026-05-27 WS4.3 finding: removing the env var on
-  hobbyiq3 caused `/price` and `/estimate` to return empty comps; env var
-  restored). Tracked as CF-CARDHEDGE-CLIENT-DELETE; investigation pending.
-- `CARD_HEDGE_API_KEY` env var: **removed from compiq-mcp** (Phase 2 has
-  no CH dependency), **kept on hobbyiq3** (runtime consumer not yet
-  identified per above), **kept on fn-compiq** (zombie preservation;
-  removes once CF-FN-CARDHEDGE-DISABLE lands).
-- `ch-monitor.yml` Phase 3a GitHub Action: **disabled 2026-05-27** — the
-  blobs it monitors are still being written but no production consumer
-  reads them, so monitoring is no-op.
+- The MCP `/predict` pipeline still owns ALL predicted pricing: signals
+  aggregation, 90-day price floor, anchor + trend model, catalyst detection,
+  and the GPT-4o MEDIUM-block prompt with H6/H10 enforcement.
+- This service emits only RAW sale records and identity metadata. No
+  pricing prediction ever comes from Card Hedge — its FMV/price-estimate
+  endpoints are intentionally NOT wired.
+- `pricing.ts`, `compsAnalytics.ts`, `catalystCalendar.ts`,
+  `cardModifiers.ts`, `signal-aggregator`, and the price-floor function
+  were NOT touched.
 
-### Deploy infrastructure (post 2026-05-24 incident hardening)
+### Cardsight removal — COMPLETE
+
+- Deleted files: `cardsight.client.ts`, `cardsight.translator.ts`,
+  `cardsight.mapper.ts`, `cardsight.router.ts` (backend);
+  `cardsight.router.test.ts`, `cardsight.mapper.test.ts`,
+  `compiqEstimateQueryContext.test.ts`, `compsByPlayer.service.test.ts`
+  (tests — superseded by CH-direct equivalents or rendered obsolete by
+  the rewire).
+- `CARDSIGHT_MODE` and `CARDSIGHT_API_KEY` env vars no longer read by any
+  code. Safe to remove from hobbyiq3 + compiq-mcp App Settings.
+- `warmResolveCardIdCache` startup warming removed; `warmCompsByPlayerCache`
+  remains.
+- `QueryContext` type now lives in `compiqEstimate.service.ts` (local
+  definition) since the router that exported it is gone. Structured fields
+  still flow through `fetchComps` for future use / logging.
+
+### CH residual cleanup
+
+- `fn-cardhedge-comps` (nightly 02:00 UTC blob writer) is now **useful
+  again** — it writes the per-player comps cache that backs the warm-start
+  path on cold containers. Previously a zombie under Cardsight; no longer.
+- `cardhedge.client.ts` is the canonical CH HTTP client (backend). It
+  exports: `searchCards`, `identifyCard`, `getCardSales`, `getPricesByCard`,
+  `findCompsByQuery`, `computeTrendAdjustment`, `fetchSiblingParallelComps`,
+  `getCardDetail`, `searchSets`, `imageMatch`, `imageSearch`,
+  `detailsByCertOcr` plus token-matching helpers.
+- `mcp-server/cardhedge.ts` is the MCP-side CH client (admin prime +
+  image scan). It exports: `identifyCard`, `getCardSales`,
+  `writePlayerComps`, `primePlayerComps`, `lookupCardImage`,
+  `imageMatchByUrl`.
+
+### Deploy infrastructure (unchanged from 2026-05-24 hardening)
 
 - **hobbyiq3:** built-artifact deploy mode (zip with pre-baked `dist/` +
   `node_modules/`), `SCM_DO_BUILD_DURING_DEPLOYMENT=false`,
-  `ENABLE_ORYX_BUILD=false`. Use `scripts/deploy-with-build-info.ps1`
-  (hardened script with `[0/5]` invariant check, `[4/5]` Kudu poll bug
-  fix, `[5/5]` feature-probe SHA verification). See
-  `docs/deployment/README.md`.
+  `ENABLE_ORYX_BUILD=false`. Use `scripts/deploy-with-build-info.ps1`.
+  See `docs/deployment/README.md`.
 - **compiq-mcp:** source-deploy mode (zip with source-only, Oryx builds
-  server-side), `SCM_DO_BUILD_DURING_DEPLOYMENT=true`. Manual procedure
-  documented in `docs/deployment/README.md` (no script in repo yet).
-- **Daily-refresh GitHub Action:** `.github/workflows/daily-refresh.yml`
-  fires daily at 9 UTC AND 10 UTC (both EDT-gated). Each fire deploys
-  current `main` HEAD to hobbyiq3 via `azure/webapps-deploy@v3`. This is
-  KNOWN AND EXPECTED — surfaced 2026-05-27 mid-session investigation.
-  Workflow only updates `GIT_SHA` + `DEPLOYED_AT` env vars (not
-  `GIT_SHA_SHORT` + `GIT_BRANCH`); tracked as CF-DAILY-REFRESH-CONSISTENCY.
+  server-side), `SCM_DO_BUILD_DURING_DEPLOYMENT=true`.
+- **Daily-refresh GitHub Action:** unchanged (still 9 UTC + 10 UTC
+  EDT-gated).
 
-### Cosmos auth (post 2026-05-23 key-rotation incident)
+### Cosmos auth (unchanged from 2026-05-23 key-rotation incident)
 
 - compiq-mcp `COSMOS_CONNECTION_STRING` = SECONDARY key
 - fn-compiq `COSMOS_KEY` = SECONDARY key
-- HobbyIQ3 `COSMOS_CONNECTION_STRING` = PRIMARY key (unchanged)
-- Blast radius distributed: future PRIMARY rotation hits HobbyIQ3 only;
-  future SECONDARY rotation hits compiq-mcp + fn-compiq.
-
-### MCP rewire arc: COMPLETE
-
-- Phase 1 (backend `/api/compiq/comps-by-player`): shipped PR #119 +
-  re-deployed via CF-PHASE1-RETRY at SHA `ddf9209` on 2026-05-27.
-- Phase 2 (compsLoader HTTP rewire): shipped PR #121 at SHA `eb87559`,
-  deployed to compiq-mcp via Kudu `098460e6`, verified 5/5 demo /predict
-  smoke matches local exactly.
-- Phase 3 (decommission): partial. fn-cardhedge-comps still fires
-  (CF-FN-CARDHEDGE-DISABLE). cardhedge.client.ts still in repo
-  (CF-CARDHEDGE-CLIENT-DELETE).
+- HobbyIQ3 `COSMOS_CONNECTION_STRING` = PRIMARY key
 
 ---
 

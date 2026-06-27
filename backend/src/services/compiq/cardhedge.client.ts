@@ -970,3 +970,383 @@ export async function fetchSiblingParallelComps(opts: {
   );
   return merged;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Additional Card Hedge endpoints (CH-only restoration, 2026-06-26)
+//
+// These power iOS picker, scanner, and detail views. All return CH-native
+// shapes — we do NOT layer pricing logic on top here. Our pricing engine
+// (MCP /predict + signals + floor + anchor) continues to consume comps from
+// findCompsByQuery / getCardSales above and is untouched by this surface.
+// ───────────────────────────────────────────────────────────────────────────
+
+const CARD_DETAILS_TTL_SEC = 6 * 3600;
+const SET_SEARCH_TTL_SEC = 24 * 3600;
+const IMAGE_LOOKUP_TTL_SEC = 24 * 3600;
+
+export interface CardHedgePriceEntry {
+  grade: string;
+  price: number;
+}
+
+export interface CardHedgeCardDetail {
+  card_id: string;
+  description?: string | null;
+  player?: string | null;
+  set?: string | null;
+  number?: string | null;
+  variant?: string | null;
+  image?: string | null;
+  images?: string[];
+  category?: string | null;
+  category_group?: string | null;
+  set_type?: string | null;
+  rookie?: boolean;
+  prices: CardHedgePriceEntry[];
+  /** Raw CH payload for unknown fields (forward-compat). */
+  raw?: Record<string, unknown>;
+}
+
+export interface CardHedgeSetInfo {
+  name: string;
+  year?: number | string | null;
+  category?: string | null;
+  image?: string | null;
+  thirty_day_sales?: number | null;
+  raw?: Record<string, unknown>;
+}
+
+export interface CardHedgeImageInput {
+  image_url?: string;
+  image_base64?: string;
+}
+
+export interface CardHedgeImageCandidate {
+  card_id: string;
+  description?: string | null;
+  player?: string | null;
+  set?: string | null;
+  number?: string | null;
+  variant?: string | null;
+  image?: string | null;
+  category?: string | null;
+  similarity?: string | number | null;
+  confidence?: number | null;
+  reasoning?: string | null;
+}
+
+export interface CardHedgeImageMatchResult {
+  best_match: CardHedgeImageCandidate | null;
+  candidates: CardHedgeImageCandidate[];
+  query_id?: string | null;
+  message?: string | null;
+}
+
+export interface CardHedgeImageSearchResult {
+  results: Array<{
+    similarity?: string | number | null;
+    distance?: number | null;
+    ximilar_id?: string | null;
+    product_id?: string | null;
+    card_data?: CardHedgeImageCandidate | null;
+  }>;
+  total_results: number;
+  query_id?: string | null;
+  has_cardhedge_matches?: boolean;
+}
+
+export interface CardHedgeCertResult {
+  cert_info: {
+    grader?: string | null;
+    cert?: string | null;
+    grade?: string | null;
+    gemrate_id?: string | null;
+    universal_gemrate_id?: string | null;
+    description?: string | null;
+  } | null;
+  card: CardHedgeCardDetail | null;
+  card_source?: "gemrate_id" | "card_match" | null;
+  match_confidence?: number | null;
+}
+
+function normalizePriceEntries(raw: unknown): CardHedgePriceEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p: any) => ({
+      grade: String(p?.grade ?? "").trim(),
+      price: toFloat(p?.price),
+    }))
+    .filter((p) => p.grade && p.price > 0);
+}
+
+function cardFromAny(c: any): CardHedgeCardDetail | null {
+  if (!c || !c.card_id) return null;
+  return {
+    card_id: String(c.card_id),
+    description: c.description ?? c.title ?? null,
+    player: c.player ?? null,
+    set: c.set ?? null,
+    number: c.number ?? null,
+    variant: c.variant ?? null,
+    image: c.image ?? null,
+    images: Array.isArray(c.images) ? c.images.filter((x: unknown) => typeof x === "string") : undefined,
+    category: c.category ?? null,
+    category_group: c.category_group ?? null,
+    set_type: c.set_type ?? null,
+    rookie: typeof c.rookie === "boolean" ? c.rookie : undefined,
+    prices: normalizePriceEntries(c.prices),
+    raw: c,
+  };
+}
+
+/** POST /cards/card-details — detailed card metadata by card_id. */
+export async function getCardDetail(
+  cardId: string,
+  opts: { rawImagesOnly?: boolean } = {},
+): Promise<CardHedgeCardDetail | null> {
+  if (!cardId) return null;
+  const h = headers();
+  if (!h) return null;
+  return cacheWrap(
+    cacheKey("ch:card-details", cardId, opts.rawImagesOnly ? "raw" : "all"),
+    async () => _getCardDetail(cardId, opts, h),
+    CARD_DETAILS_TTL_SEC,
+  );
+}
+
+async function _getCardDetail(
+  cardId: string,
+  opts: { rawImagesOnly?: boolean },
+  h: Record<string, string>,
+): Promise<CardHedgeCardDetail | null> {
+  try {
+    const body: Record<string, unknown> = { card_id: cardId };
+    if (opts.rawImagesOnly) body.raw_images_only = true;
+    const res = await fetch(`${BASE_URL}/cards/card-details`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] card-details HTTP ${res.status} for card_id=${cardId}`);
+      return null;
+    }
+    const json: any = await res.json();
+    const cards: any[] = Array.isArray(json?.cards) ? json.cards : [];
+    if (cards.length === 0) return null;
+    return cardFromAny(cards[0]);
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] card-details threw for card_id=${cardId}:`, err?.message ?? err);
+    return null;
+  }
+}
+
+/** POST /cards/set-search — set browsing with name + category filters. */
+export async function searchSets(
+  opts: { search?: string; category?: string; count?: number } = {},
+): Promise<CardHedgeSetInfo[]> {
+  const h = headers();
+  if (!h) return [];
+  const count = Math.max(1, Math.min(opts.count ?? 25, 100));
+  const search = (opts.search ?? "").trim();
+  const category = (opts.category ?? "").trim();
+  return cacheWrap(
+    cacheKey("ch:set-search", search, category, String(count)),
+    async () => _searchSets({ search, category, count }, h),
+    SET_SEARCH_TTL_SEC,
+  );
+}
+
+async function _searchSets(
+  opts: { search: string; category: string; count: number },
+  h: Record<string, string>,
+): Promise<CardHedgeSetInfo[]> {
+  try {
+    const body: Record<string, unknown> = { count: opts.count };
+    if (opts.search) body.search = opts.search;
+    if (opts.category) body.category = opts.category;
+    const res = await fetch(`${BASE_URL}/cards/set-search`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] set-search HTTP ${res.status}`);
+      return [];
+    }
+    const json: any = await res.json();
+    const sets: any[] = Array.isArray(json?.sets) ? json.sets : [];
+    return sets
+      .filter((s) => s?.name)
+      .map((s) => ({
+        name: String(s.name),
+        year: s.year ?? null,
+        category: s.category ?? null,
+        image: s.image ?? null,
+        thirty_day_sales:
+          typeof s["30 Day Sales"] === "number"
+            ? s["30 Day Sales"]
+            : typeof s.thirty_day_sales === "number"
+              ? s.thirty_day_sales
+              : null,
+        raw: s,
+      }));
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] set-search threw:`, err?.message ?? err);
+    return [];
+  }
+}
+
+function buildImageBody(input: CardHedgeImageInput, k?: number): Record<string, unknown> | null {
+  const body: Record<string, unknown> = {};
+  if (input.image_url && typeof input.image_url === "string") body.image_url = input.image_url;
+  else if (input.image_base64 && typeof input.image_base64 === "string") body.image_base64 = input.image_base64;
+  else return null;
+  if (typeof k === "number" && k > 0) body.k = Math.min(k, 50);
+  return body;
+}
+
+function imageCacheKeyPart(input: CardHedgeImageInput): string {
+  if (input.image_url) return `url:${input.image_url}`;
+  if (input.image_base64) {
+    // base64 can be huge — hash by length + head/tail to avoid blowing the
+    // Redis key. Distinct images collide rarely; cache miss is acceptable.
+    const b = input.image_base64;
+    return `b64:${b.length}:${b.slice(0, 16)}:${b.slice(-16)}`;
+  }
+  return "none";
+}
+
+/** POST /cards/image-match — AI picks single best card + variant from photo. */
+export async function imageMatch(
+  input: CardHedgeImageInput,
+  opts: { k?: number } = {},
+): Promise<CardHedgeImageMatchResult | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input, opts.k);
+  if (!body) return null;
+  return cacheWrap(
+    cacheKey("ch:image-match", imageCacheKeyPart(input), String(opts.k ?? 10)),
+    async () => _imageMatch(body, h),
+    IMAGE_LOOKUP_TTL_SEC,
+  );
+}
+
+async function _imageMatch(
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<CardHedgeImageMatchResult | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/image-match`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] image-match HTTP ${res.status}`);
+      return null;
+    }
+    const json: any = await res.json();
+    return {
+      best_match: json?.best_match ?? null,
+      candidates: Array.isArray(json?.candidates) ? json.candidates : [],
+      query_id: json?.query_id ?? null,
+      message: json?.message ?? null,
+    };
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] image-match threw:`, err?.message ?? err);
+    return null;
+  }
+}
+
+/** POST /cards/image-search — ranked list of visually similar cards. */
+export async function imageSearch(
+  input: CardHedgeImageInput,
+  opts: { k?: number } = {},
+): Promise<CardHedgeImageSearchResult | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input, opts.k);
+  if (!body) return null;
+  return cacheWrap(
+    cacheKey("ch:image-search", imageCacheKeyPart(input), String(opts.k ?? 10)),
+    async () => _imageSearch(body, h),
+    IMAGE_LOOKUP_TTL_SEC,
+  );
+}
+
+async function _imageSearch(
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<CardHedgeImageSearchResult | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/image-search`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] image-search HTTP ${res.status}`);
+      return null;
+    }
+    const json: any = await res.json();
+    return {
+      results: Array.isArray(json?.results) ? json.results : [],
+      total_results: typeof json?.total_results === "number" ? json.total_results : 0,
+      query_id: json?.query_id ?? null,
+      has_cardhedge_matches: Boolean(json?.has_cardhedge_matches),
+    };
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] image-search threw:`, err?.message ?? err);
+    return null;
+  }
+}
+
+/** POST /cards/details-by-cert-ocr — graded slab photo → cert + card details. */
+export async function detailsByCertOcr(
+  input: CardHedgeImageInput,
+): Promise<CardHedgeCertResult | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input);
+  if (!body) return null;
+  return cacheWrap(
+    cacheKey("ch:cert-ocr", imageCacheKeyPart(input)),
+    async () => _detailsByCertOcr(body, h),
+    IMAGE_LOOKUP_TTL_SEC,
+  );
+}
+
+async function _detailsByCertOcr(
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<CardHedgeCertResult | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/details-by-cert-ocr`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] details-by-cert-ocr HTTP ${res.status}`);
+      return null;
+    }
+    const json: any = await res.json();
+    return {
+      cert_info: json?.cert_info ?? null,
+      card: cardFromAny(json?.card),
+      card_source: json?.card_source ?? null,
+      match_confidence:
+        typeof json?.match_confidence === "number" ? json.match_confidence : null,
+    };
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] details-by-cert-ocr threw:`, err?.message ?? err);
+    return null;
+  }
+}
