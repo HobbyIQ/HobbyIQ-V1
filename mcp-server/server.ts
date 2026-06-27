@@ -43,6 +43,7 @@ import {
   type PriceResult,
 } from "./pricing.js";
 import { fetchPlayerComps } from "./compsLoader.js";
+import { filterCompsForCard } from "./compFilter.js";
 import { primePlayerComps, lookupCardImage } from "./cardhedge.js";
 import { logPrediction } from "./predictionLog.js";
 import { runBacktest, backtestSummary } from "./backtest.js";
@@ -190,57 +191,6 @@ function mapBestTimeToRecommendation(t: PriceResult["best_time_to_sell"]): strin
   return t === "now" || t === "3 days" ? "move" : "hold";
 }
 
-// Player-level blob cache returns every sale that mentions the player,
-// including reprints ("SHOEBOX TREASURES"), wrong-year listings, and
-// off-set noise. Hard-filter on title tokens before pricing so we never
-// anchor on something like a $5 reprint of a $300 rookie.
-//
-// Rule: title must contain (a) the year, AND (b) at least one player
-// surname token (≥3 chars). If a setName is provided, also require at
-// least one set token. If the filtered set drops below 5 comps OR below
-// 30% of the original, fall back to the unfiltered set so a sparse market
-// doesn't get zeroed out.
-function filterCompsForCard(
-  comps: CardComp[],
-  playerName: string,
-  year: number,
-  setName: string,
-): CardComp[] {
-  if (!comps.length) return comps;
-
-  const yearStr = String(year);
-  const playerTokens = playerName
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length >= 3);
-  const setTokens = setName
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length >= 3 && t !== "the");
-
-  const filtered = comps.filter((c) => {
-    const title = (c.title ?? "").toLowerCase();
-    if (!title) return false;
-    if (!title.includes(yearStr)) return false;
-    const hasPlayer = playerTokens.some((t) => title.includes(t));
-    if (!hasPlayer) return false;
-    if (setTokens.length) {
-      const hasSet = setTokens.some((t) => title.includes(t));
-      if (!hasSet) return false;
-    }
-    // Drop obvious reprint/non-original-card noise.
-    if (/(reprint|custom|shoebox|aceo|art card|fan made|fan-made)/i.test(title)) {
-      return false;
-    }
-    return true;
-  });
-
-  if (filtered.length >= 5 && filtered.length >= comps.length * 0.3) {
-    return filtered;
-  }
-  return comps;
-}
-
 app.post("/api/compiq/predict", async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as PredictRequestBody;
 
@@ -272,7 +222,9 @@ app.post("/api/compiq/predict", async (req: Request, res: Response) => {
 
   // Hard-filter on title tokens (year + player surname + set) to drop
   // reprints and wrong-year listings before anchor + analytics math runs.
-  comps = filterCompsForCard(comps, playerName, year, setName);
+  // cardNumber (when present) further isolates the exact card so a $125 auto
+  // isn't blended with $10 base-prospect comps under the same player+set.
+  comps = filterCompsForCard(comps, playerName, year, setName, cardNumber);
 
   // Determine anchor price: caller > median of comps.
   let anchorPrice = Number(body.anchorPrice);
