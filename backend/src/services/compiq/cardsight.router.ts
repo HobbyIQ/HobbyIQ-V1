@@ -1,78 +1,39 @@
 /**
- * Cardsight routing layer.
+ * Comp routing layer (CardHedge-only).
  *
- * Post-CF-CARDHEDGE-HARD-CUTOVER (2026-05-30) the file was collapsed to
- * Cardsight-only. Re-introduced in CF-CH-P3-SEAM (2026-06-25) as a true
- * vendor seam: CardHedge is tried first via the trust-guard
- * (cardhedge.client.ts:getTrustedComps), Cardsight is the floor. Callers
- * still see vendor-neutral RoutedCard / RoutedSale / RoutedResult and do
- * not branch on vendor.
+ * Post-CF-CARDSIGHT-REMOVAL (2026-06-28): Cardsight wholly decommissioned.
+ * All comp fetching now goes through CardHedge via the trust-guard. The
+ * file retains its historical name and exports vendor-neutral surfaces
+ * (RoutedCard, RoutedSale, RoutedResult, findCompsRouted,
+ * searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance)
+ * so the pricing engine (compiqEstimate.service.ts) sees no signature
+ * change.
  *
- * Bridge:
- *   CS-cardId + identity hint  -> CH-cardId via /v1/cards/card-match.
- *   Confidence < 0.80           -> CH miss, fall to Cardsight.
- *   Confidence >= 0.80          -> trust-guard against the CH cardId.
- *     - prices_by_card_honest / title_cohesion_strong -> use CH
- *     - blob_signature / no_real_data                  -> fall to Cardsight
- *   Bridge result cached 24h on (csCardId, identity-query).
- *
- * Log event vocabulary:
- *   - "cardsight.findComps.start" / "cardsight.findComps.end"
- *   - "identity_source"
- *   - "getCardDetail_failed" (warn)
- *   - "cardsight_error" (warn)
- *   - "router.bridge_no_match" / "router.bridge_low_confidence"
- *   - "router.ch_served" (CH path won)
- *   - "router.ch_not_trusted" (CH bridged but trust-guard rejected)
+ * When CardHedge cannot bridge (no playerName, low confidence) or the
+ * trust-guard rejects (blob signature, no real data), callers get an
+ * empty RoutedResult. There is no Cardsight floor anymore.
  */
 
-import { searchCatalog, getCardDetail, getPricing, CardsightTimeoutError } from "./cardsight.client.js";
-import { resolveCardId } from "./cardsight.mapper.js";
-import { translateResponse } from "./cardsight.translator.js";
-import {
-  applyParallelTitleMatch,
-  collapsePriceSource,
-  type ParallelPriceSource,
-  type UserFacingPriceSource,
-} from "./parallelTitleMatch.js";
 import {
   identifyCard as chIdentifyCard,
+  searchCards as chSearchCards,
   getTrustedComps,
+  type CardHedgeCard,
   type CardHedgeIdentity,
 } from "./cardhedge.client.js";
+import type { ParallelPriceSource, UserFacingPriceSource } from "./parallelTitleMatch.js";
 import { cacheWrap } from "../shared/cache.service.js";
 
-// ── CardHedge bridge constants ──────────────────────────────────────────────
-const BRIDGE_TTL_SEC = 24 * 3600;          // 24h — CS-id -> CH-id mapping is stable
-const MIN_BRIDGE_CONFIDENCE = 0.80;        // CH card-match confidence floor
+// ── Bridge constants ────────────────────────────────────────────────────────
+const BRIDGE_TTL_SEC = 24 * 3600;
+const MIN_BRIDGE_CONFIDENCE = 0.80;
 
-/**
- * Identity hint required to bridge a Cardsight card_id over to CardHedge
- * via /v1/cards/card-match. Optional fields tighten the match but are not
- * required; `playerName` is the only hard-required field (CH match is
- * fuzzy-text-driven and an empty playerName cannot resolve usefully).
- */
 export interface CardIdentityHint {
   playerName: string;
   cardYear?: string | number;
   product?: string;
-  /**
-   * Parallel/variant string as supplied by the caller (typically an iOS
-   * holding's stored string). Used as the bridge query's parallel token
-   * UNLESS {@link parallelId} resolves to an authoritative Cardsight
-   * catalog name (see CF-ENGINE-PARALLEL-CANONICALIZE), in which case the
-   * canonical name + numberedTo overrides this loose string.
-   */
   parallel?: string;
-  /**
-   * CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): when present alongside
-   * the parent cardsightCardId, the router resolves this Cardsight UUID
-   * to the catalog's authoritative parallel name + numberedTo (via
-   * getCardDetail's parallels[]) and uses THAT in the CH card-match
-   * query — eliminating loose iOS parallel-string variability as a CH
-   * bridge failure mode. Falls back to {@link parallel} if the id can't
-   * be resolved.
-   */
+  /** Vestigial — was a Cardsight parallel UUID. CH bridge uses the parallel string only. */
   parallelId?: string;
   number?: string;
   isAuto?: boolean;
@@ -80,16 +41,10 @@ export interface CardIdentityHint {
 
 const log = {
   info: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", ...fields })),
+    console.log(JSON.stringify({ event, source: "comp.router", ...fields })),
   warn: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", level: "warn", ...fields })),
-  debug: (event: string, fields: Record<string, unknown> = {}) =>
-    console.log(JSON.stringify({ event, source: "cardsight.router", level: "debug", ...fields })),
+    console.log(JSON.stringify({ event, source: "comp.router", level: "warn", ...fields })),
 };
-
-// Routed-result types. Relocated here from cardhedge.client.ts (deleted
-// per CF-CARDHEDGE-HARD-CUTOVER) and renamed to vendor-neutral
-// RoutedCard / RoutedSale per CF-CARDHEDGE-NAMING-CLEANUP.
 
 export interface RoutedCard {
   card_id: string;
@@ -112,25 +67,19 @@ export interface RoutedSale {
   url: string | null;
 }
 
-type RoutedResult = {
+export type RoutedResult = {
   card: RoutedCard | null;
   sales: RoutedSale[];
   variantWarning: string[];
   aiCategory: string | null;
-  // CF-CARDSIGHT-RESOLVER-REDESIGN: parallel-match attribution. Internal
-  // fine-grained source for telemetry; user-facing 3-category collapse
-  // for response shape. Both surfaced -- response-shaping layer in
-  // compiqEstimate.service.ts decides which (typically just user-facing).
+  /**
+   * Vestigial parallel-match attribution. Always undefined in the
+   * CH-only world (these fields were Cardsight pricing-shape signals).
+   */
   priceSourceInternal?: ParallelPriceSource;
   priceSource?: UserFacingPriceSource;
-  /** Number of sale records after title-match filter (when applied). */
   parallelMatchFilteredCount?: number;
-  /** Total records in unified bucket before filter (for "N of M" disclosure). */
   parallelMatchUnifiedCount?: number;
-  // CF-CH-P8-TESTS (2026-06-25): CardHedge vendor provenance. Populated
-  // only on the CH-served branch; absent (undefined) on Cardsight rows.
-  // The engine reads these to surface chCardId / chTrustReason onto the
-  // corpus row's chProvenance block.
   chCardId?: string;
   chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong";
 };
@@ -140,31 +89,11 @@ export type QueryContext = {
   cardYear?: string | number;
   product?: string;
   parallel?: string;
-  // CF-CH-THIN-COMP-PRIMARY (2026-06-26): the Cardsight parallel UUID.
-  // Threaded through alongside parallel-name so the engine's divergence
-  // helper can filter CS sales by parallel_id and suppress wrong-card
-  // comparisons when CS has only parent/base records.
   parallelId?: string | null;
-  // Phase 2 v2 -- defect #11: cardNumber threaded through so resolveCardId can
-  // disambiguate via detail-probe AND so the LRU cache key includes it for
-  // proper per-cardNumber cache entries.
   cardNumber?: string;
   gradeCompany?: string;
   gradeValue?: string;
-  // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01):
-  // effectiveIsAuto from compiqEstimate, threaded so resolveCardId can
-  // re-select candidates whose card-number auto-prefix matches user intent.
   isAuto?: boolean;
-  // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when set true alongside
-  // a pinned cardsightCardId, fetchComps forces the pinned-id branch
-  // regardless of whether the composed cardTitle differs from the pinned
-  // id. Default-off; only set by autoPriceHolding (portfolio reprice path)
-  // where the stored cardsightCardId is authoritative and the composed
-  // cardTitle is a derived display label, not a free-text override.
-  // queryContext is the existing plumbing channel from computeEstimate
-  // down to fetchComps — adding here keeps the surface additive (other
-  // callers ignore the flag) and avoids a 6th positional param on the
-  // already-five-parameter fetchComps signature.
   pinnedAuthoritative?: boolean;
 };
 
@@ -176,22 +105,7 @@ export type FindCompsRoutedOptions = {
   queryContext?: QueryContext;
 };
 
-function toCardsightQuery(query: string, opts: FindCompsRoutedOptions) {
-  const ctx = opts.queryContext ?? {};
-  return {
-    playerName: ctx.playerName ?? query,
-    cardYear: ctx.cardYear,
-    product: ctx.product,
-    parallel: ctx.parallel,
-    cardNumber: ctx.cardNumber,
-    gradeCompany: opts.gradeCompany ?? ctx.gradeCompany,
-    gradeValue: opts.gradeValue ?? ctx.gradeValue,
-    // CF-CARDSIGHT-AUTO-COLOR-RESOLVE-+-PARALLEL-NORMALIZE (2026-06-01)
-    isAuto: ctx.isAuto,
-  };
-}
-
-function emptyCardsightResult(warnings: string[] = []): RoutedResult {
+function emptyResult(warnings: string[] = []): RoutedResult {
   return {
     card: null,
     sales: [],
@@ -200,19 +114,18 @@ function emptyCardsightResult(warnings: string[] = []): RoutedResult {
   };
 }
 
-function csToRoutedCard(cs: any): RoutedCard {
+function chCardToRoutedCard(c: CardHedgeCard): RoutedCard {
   return {
-    card_id: cs.id,
-    player: cs.player ?? undefined,
-    set: cs.setName ?? undefined,
-    year: cs.year ?? undefined,
-    number: cs.number ?? undefined,
-    title: cs.name ?? undefined,
-    name: cs.name ?? undefined,
+    card_id: c.card_id,
+    player: c.player ?? undefined,
+    set: c.set ?? undefined,
+    year: c.year ?? undefined,
+    number: c.number ?? undefined,
+    variant: c.variant ?? undefined,
+    title: c.title ?? c.name ?? undefined,
+    name: c.name ?? undefined,
   };
 }
-
-// ── CardHedge bridge ────────────────────────────────────────────────────────
 
 /**
  * Build a CardHedge /v1/cards/card-match query from identity hint.
@@ -232,63 +145,8 @@ function buildCardHedgeQuery(identity: CardIdentityHint): string {
   return parts.join(" ").trim();
 }
 
-/**
- * CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): resolve a Cardsight
- * parallel UUID to the catalog's authoritative parallel name +
- * numberedTo suffix (e.g. `"Green Shimmer Refractor /99"`).
- *
- * The CH card-match bridge ranks dramatically better on the catalog's
- * canonical phrasing than on iOS-stored parallel strings (which vary
- * — `"Green Shimmer Refractor /99"` resolves at conf 0.97 while
- * `"/99"` alone or empty resolves to the BASE card_id). Using the
- * Cardsight catalog as the source of truth makes the bridge
- * deterministic.
- *
- * Returns null when:
- *   - parentCardId or parallelId is empty
- *   - getCardDetail throws or returns notFound
- *   - the parallels[] array doesn't contain the requested id
- *   - the matched parallel has no usable name
- *
- * Caller falls back to the iOS-sent parallel string on null. getCardDetail
- * is itself cached at the cardsight.client.ts layer, so steady-state
- * cost is essentially zero per resolve.
- */
-async function resolveCanonicalParallel(
-  parentCardId: string,
-  parallelId: string,
-): Promise<string | null> {
-  if (!parentCardId || !parallelId) return null;
-  try {
-    const detail = await getCardDetail(parentCardId);
-    if (!detail || detail.notFound) return null;
-    const parallels = detail.parallels ?? [];
-    const match = parallels.find((p) => p.id === parallelId);
-    if (!match || !match.name) return null;
-    const name = match.name.trim();
-    if (!name) return null;
-    const numberedTo = match.numberedTo;
-    if (typeof numberedTo === "number" && numberedTo > 0) {
-      return `${name} /${numberedTo}`;
-    }
-    return name;
-  } catch (err: any) {
-    log.warn("canonicalize_parallel_failed", {
-      parentCardId,
-      parallelId,
-      error: err?.message ?? String(err),
-    });
-    return null;
-  }
-}
-
 const GENERATIONAL_SUFFIX_RE = /^(jr|sr|ii|iii|iv)\.?$/i;
 
-/**
- * Extract surname for the trust-guard's title-cohesion check. Strips trailing
- * generational suffixes (Jr, Sr, II/III/IV with optional period) so the
- * surname is "Acuna" for "Ronald Acuna Jr", not "Jr".
- */
 function extractSurname(playerName: string): string {
   if (!playerName) return "";
   const tokens = playerName.toLowerCase().trim().split(/\s+/).filter((t) => t.length > 0);
@@ -298,55 +156,31 @@ function extractSurname(playerName: string): string {
   return tokens[idx];
 }
 
-function bridgeCacheKey(csCardId: string, query: string): string {
-  return ["router:cs-to-ch", csCardId, query.toLowerCase().replace(/\s+/g, " ").trim()].join(":");
+function identityCacheKey(query: string): string {
+  return ["router:ch-identify", query.toLowerCase().replace(/\s+/g, " ").trim()].join(":");
 }
 
 /**
- * Bridge a Cardsight card_id over to CardHedge via /v1/cards/card-match.
- * Cached 24h on (csCardId, identity query) — card_id mappings are stable.
- *
- * Returns:
- *   { chCardId, confidence }   — match resolved at >= MIN_BRIDGE_CONFIDENCE
- *   null                        — no match, low confidence, or empty query
+ * Resolve an identity hint to a CardHedge card_id via /v1/cards/card-match.
+ * Cached 24h on the natural-language query. Returns null on no match or
+ * confidence below MIN_BRIDGE_CONFIDENCE.
  */
-async function bridgeCsToCh(
-  csCardId: string,
+async function resolveChCardId(
   identity: CardIdentityHint,
 ): Promise<{ chCardId: string; confidence: number } | null> {
-  // CF-ENGINE-PARALLEL-CANONICALIZE (2026-06-26): when the caller carries
-  // a Cardsight parallel UUID, replace the loose iOS parallel string
-  // with the catalog's authoritative `{name} /{numberedTo}` before
-  // building the CH bridge query. Falls back to the iOS-sent string when
-  // the id doesn't resolve. Additive: when no parallelId is present,
-  // behavior is byte-identical to the pre-CF path.
-  let effectiveIdentity: CardIdentityHint = identity;
-  if (identity.parallelId) {
-    const canonical = await resolveCanonicalParallel(csCardId, identity.parallelId);
-    if (canonical) {
-      effectiveIdentity = { ...identity, parallel: canonical };
-      log.info("router.parallel_canonicalized", {
-        csCardId,
-        parallelId: identity.parallelId,
-        iosSent: identity.parallel ?? null,
-        canonical,
-      });
-    }
-  }
-
-  const query = buildCardHedgeQuery(effectiveIdentity);
+  const query = buildCardHedgeQuery(identity);
   if (!query) return null;
 
   const raw = await cacheWrap(
-    bridgeCacheKey(csCardId, query),
+    identityCacheKey(query),
     async () => {
       const match = await chIdentifyCard(query);
       if (!match || !match.card_id) {
-        log.info("router.bridge_no_match", { csCardId, query });
+        log.info("router.bridge_no_match", { query });
         return "";
       }
       if (match.confidence < MIN_BRIDGE_CONFIDENCE) {
-        log.info("router.bridge_low_confidence", { csCardId, query, confidence: match.confidence });
+        log.info("router.bridge_low_confidence", { query, confidence: match.confidence });
         return "";
       }
       return JSON.stringify({ chCardId: match.card_id, confidence: match.confidence });
@@ -363,29 +197,27 @@ async function bridgeCsToCh(
 }
 
 /**
- * Internal: try CardHedge for a Cardsight card_id + identity. Returns the
- * trust-guarded comps when CH wins; null when CH should be skipped (no
- * bridge, blob, or no real data). Caller falls through to Cardsight on null.
+ * Fetch trust-guarded CardHedge comps for an identity hint.
+ * Returns null when bridge or trust-guard rejects.
  */
-async function tryCardHedgeForCs(
-  csCardId: string,
+async function tryCardHedge(
   identity: CardIdentityHint,
   grade: string,
 ): Promise<{ sales: RoutedSale[]; trustReason: string; chCardId: string } | null> {
-  const bridge = await bridgeCsToCh(csCardId, identity);
+  const bridge = await resolveChCardId(identity);
   if (!bridge) return null;
 
-  const surname = extractSurname(identity.playerName);
-  const expectedYear = identity.cardYear !== undefined && identity.cardYear !== null
-    ? String(identity.cardYear)
-    : "";
-
-  const chIdentity: CardHedgeIdentity = { playerSurname: surname, expectedYear };
+  const chIdentity: CardHedgeIdentity = {
+    playerSurname: extractSurname(identity.playerName),
+    expectedYear:
+      identity.cardYear !== undefined && identity.cardYear !== null
+        ? String(identity.cardYear)
+        : "",
+  };
   const trusted = await getTrustedComps(bridge.chCardId, chIdentity, grade);
 
   if (!trusted.trusted) {
     log.info("router.ch_not_trusted", {
-      csCardId,
       chCardId: bridge.chCardId,
       reason: trusted.reason,
       pricesByCardLength: trusted.pricesByCardLength,
@@ -408,204 +240,91 @@ async function tryCardHedgeForCs(
   };
 }
 
-// ── findCompsRouted ─────────────────────────────────────────────────────────
-
-async function findCompsViaCardsight(
-  query: string,
-  opts: FindCompsRoutedOptions,
-): Promise<RoutedResult> {
-  const start = Date.now();
-  log.info("cardsight.findComps.start", {
-    query,
-    playerName: opts.queryContext?.playerName ?? null,
-    cardYear: opts.queryContext?.cardYear ?? null,
-    parallel: opts.queryContext?.parallel ?? null,
-    gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany ?? null,
-    gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue ?? null,
-    ts: start,
-  });
-  let outcome: "ok" | "empty" | "no_match" | "no_pricing" | "error" | "timeout" = "ok";
-  let cardId: string | null = null;
-  let result_count = 0;
-  try {
-    const mapped = await resolveCardId(toCardsightQuery(query, opts));
-    if (!mapped.cardId) {
-      outcome = "no_match";
-      return emptyCardsightResult(["cardsight_no_catalog_match", ...mapped.warnings]);
-    }
-    cardId = mapped.cardId;
-
-    // CF-CARDSIGHT-CARDIDENTITY-COMPLETENESS (investigation a6c6dd9):
-    // /pricing/{id}'s embedded `card` object is SPARSE -- setName/year
-    // come back undefined for Cardsight-exclusive resolved cards.
-    // /catalog/cards/{id} (getCardDetail) returns RICH metadata
-    // (releaseName, setName, releaseYear, parallels[]). Fetch both in
-    // parallel; build cardIdentity preferring detail's fields with
-    // graceful degradation to pricing.card if detail fails.
-    const [pricing, detail] = await Promise.all([
-      getPricing(mapped.cardId, { parallelId: mapped.parallelId ?? undefined }),
-      getCardDetail(mapped.cardId).catch((err) => {
-        log.warn("getCardDetail_failed", {
-          cardId: mapped.cardId,
-          error: (err as Error)?.message ?? String(err),
-        });
-        return null;
-      }),
-    ]);
-
-    const detailOk = detail !== null && !detail.notFound;
-
-    // CF-CARDSIGHT-RESOLVER-REDESIGN: title-match-with-specificity-guard.
-    const siblingParallels = detailOk && detail!.parallels ? detail!.parallels : [];
-    const titleMatchOutcome = applyParallelTitleMatch({
-      pricingResponse: pricing,
-      pricingCameFromUnifiedFallback: pricing.__parallelIdFilterFellBack === true,
-      userParallelInput: opts.queryContext?.parallel,
-      matchedParallelId: mapped.parallelId,
-      siblingParallels,
-    });
-    const filteredPricing = titleMatchOutcome.response;
-
-    // CF-CARDSIGHT-TRANSLATER-GRADE-WIRING: bridge queryContext grade
-    // fields into the translator.
-    const translated = translateResponse(filteredPricing, {
-      gradeCompany: opts.gradeCompany ?? opts.queryContext?.gradeCompany,
-      gradeValue: opts.gradeValue ?? opts.queryContext?.gradeValue,
-    });
-
-    log.info("identity_source", {
-      cardId: mapped.cardId,
-      source: detailOk ? "getCardDetail" : (detail === null ? "degraded" : "not_found"),
-      // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): pricing fallback now
-      // reads from the actual wire shape — set.release is the product line
-      // (matches CardsightCardDetail.releaseName semantically). The legacy
-      // `pricing.card?.setName` read returned undefined on every call.
-      set: detailOk
-        ? detail!.releaseName
-        : (pricing.card?.set?.release ?? null),
-      year: detailOk ? detail!.year : (pricing.card?.set?.year ?? null),
-    });
-
-    const baseCard: RoutedCard = {
-      card_id: mapped.cardId,
-      title: pricing.card?.name ?? undefined,
-      // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): pricing.card has no
-      // `player` field — the player name lives in `.name`. The legacy
-      // `?? pricing.card?.player` read was always undefined. Map directly
-      // from `.name` now.
-      player: pricing.card?.name ?? undefined,
-      // cardIdentity.set carries the PRODUCT LINE. detail.releaseName is
-      // the product line; pricing.card.set.release is its pricing-wire
-      // analog. (set.name is the SUBSET — "Base Set" — which is NOT what
-      // this field carries.)
-      set: detailOk
-        ? detail!.releaseName
-        : (pricing.card?.set?.release ?? undefined),
-      year: detailOk
-        ? detail!.year
-        : (pricing.card?.set?.year ?? undefined),
-      number: pricing.card?.number ?? undefined,
-      variant: mapped.parallelId ?? undefined,
-    };
-
-    if (translated.length === 0) {
-      outcome = "no_pricing";
-      return {
-        card: baseCard,
-        sales: [],
-        variantWarning: ["cardsight_no_pricing_data", ...mapped.warnings],
-        aiCategory: null,
-        priceSourceInternal: titleMatchOutcome.priceSource,
-        priceSource: collapsePriceSource(titleMatchOutcome.priceSource),
-        parallelMatchFilteredCount: titleMatchOutcome.filteredCount,
-        parallelMatchUnifiedCount: titleMatchOutcome.totalUnifiedCount,
-      };
-    }
-
-    result_count = translated.length;
-    if (result_count === 0) outcome = "empty";
-
-    return {
-      card: baseCard,
-      sales: translated.map((s) => ({
-        title: s.title,
-        price: s.price,
-        date: s.soldDate,
-        grade: opts.grade ?? "Raw",
-        source: "cardsight",
-        sale_type: null,
-        url: null,
-      })),
-      variantWarning: mapped.warnings,
-      aiCategory: null,
-      priceSourceInternal: titleMatchOutcome.priceSource,
-      priceSource: collapsePriceSource(titleMatchOutcome.priceSource),
-      parallelMatchFilteredCount: titleMatchOutcome.filteredCount,
-      parallelMatchUnifiedCount: titleMatchOutcome.totalUnifiedCount,
-    };
-  } catch (err) {
-    outcome = err instanceof CardsightTimeoutError ? "timeout" : "error";
-    throw err;
-  } finally {
-    log.info("cardsight.findComps.end", {
-      query,
-      cardId,
-      result_count,
-      latency_ms: Date.now() - start,
-      outcome,
-    });
-  }
+function identityHintFromContext(opts: FindCompsRoutedOptions): CardIdentityHint | null {
+  const ctx = opts.queryContext;
+  if (!ctx?.playerName) return null;
+  return {
+    playerName: ctx.playerName,
+    cardYear: ctx.cardYear,
+    product: ctx.product,
+    parallel: ctx.parallel,
+    number: ctx.cardNumber,
+    isAuto: ctx.isAuto,
+  };
 }
+
+function narrowTrustReason(
+  reason: string,
+): "prices_by_card_honest" | "title_cohesion_strong" | undefined {
+  return reason === "prices_by_card_honest" || reason === "title_cohesion_strong"
+    ? reason
+    : undefined;
+}
+
+// ── findCompsRouted ─────────────────────────────────────────────────────────
 
 export async function findCompsRouted(
   query: string,
   opts: FindCompsRoutedOptions = {},
 ): Promise<RoutedResult> {
-  // P3 seam: Cardsight resolves identity + serves as the floor. If
-  // queryContext carries enough identity to bridge over to CardHedge,
-  // and CH passes the trust-guard, swap the sales[] array for CH-sourced
-  // comps. Card identity + warnings stay on the CS-resolved metadata.
-  try {
-    const csResult = await findCompsViaCardsight(query, opts);
+  const start = Date.now();
+  log.info("comp.findComps.start", {
+    query,
+    playerName: opts.queryContext?.playerName ?? null,
+    cardYear: opts.queryContext?.cardYear ?? null,
+    parallel: opts.queryContext?.parallel ?? null,
+    grade: opts.grade ?? null,
+  });
 
-    const identity = identityHintFromContext(opts);
-    if (identity && csResult.card?.card_id) {
-      const ch = await tryCardHedgeForCs(
-        csResult.card.card_id,
-        identity,
-        opts.grade ?? "Raw",
-      );
-      if (ch) {
-        log.info("router.ch_served", {
-          query,
-          csCardId: csResult.card.card_id,
-          chCardId: ch.chCardId,
-          count: ch.sales.length,
-          trustReason: ch.trustReason,
-          via: "findCompsRouted",
-        });
-        // CF-CH-P8-TESTS: surface CH provenance for the engine to read.
-        // Only one of "prices_by_card_honest" | "title_cohesion_strong" is
-        // possible at this point (the only trusted reasons getTrustedComps
-        // returns); narrow defensively.
-        const chTrustReason: RoutedResult["chTrustReason"] =
-          ch.trustReason === "prices_by_card_honest" ||
-          ch.trustReason === "title_cohesion_strong"
-            ? ch.trustReason
-            : undefined;
-        return {
-          ...csResult,
-          sales: ch.sales,
-          chCardId: ch.chCardId,
-          chTrustReason,
-        };
-      }
+  const identity = identityHintFromContext(opts);
+  if (!identity) {
+    log.info("comp.findComps.end", { query, outcome: "no_identity", latency_ms: Date.now() - start });
+    return emptyResult(["no_identity_for_bridge"]);
+  }
+
+  try {
+    const ch = await tryCardHedge(identity, opts.grade ?? "Raw");
+    if (!ch) {
+      log.info("comp.findComps.end", { query, outcome: "ch_unavailable", latency_ms: Date.now() - start });
+      return emptyResult(["ch_no_match_or_untrusted"]);
     }
-    return csResult;
-  } catch (err: any) {
-    if (err instanceof CardsightTimeoutError) throw err;
-    log.warn("cardsight_error", { query, error: err?.message ?? String(err) });
-    return emptyCardsightResult(["cardsight_error"]);
+
+    log.info("router.ch_served", {
+      query,
+      chCardId: ch.chCardId,
+      count: ch.sales.length,
+      trustReason: ch.trustReason,
+      via: "findCompsRouted",
+    });
+    log.info("comp.findComps.end", {
+      query,
+      cardId: ch.chCardId,
+      result_count: ch.sales.length,
+      latency_ms: Date.now() - start,
+      outcome: "ok",
+    });
+
+    const card: RoutedCard = {
+      card_id: ch.chCardId,
+      player: identity.playerName,
+      set: identity.product,
+      year: identity.cardYear,
+      number: identity.number,
+      variant: identity.parallel,
+    };
+    return {
+      card,
+      sales: ch.sales,
+      variantWarning: [],
+      aiCategory: null,
+      chCardId: ch.chCardId,
+      chTrustReason: narrowTrustReason(ch.trustReason),
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn("ch_error", { query, error: msg });
+    log.info("comp.findComps.end", { query, outcome: "error", latency_ms: Date.now() - start });
+    return emptyResult(["ch_error"]);
   }
 }
 
@@ -615,27 +334,18 @@ export async function searchCardsRouted(
   query: string,
   limit: number = 20,
 ): Promise<RoutedCard[]> {
-  // Post-CF-CARDHEDGE-HARD-CUTOVER: Cardsight-only.
-  const cs = await searchCatalog(query, { take: limit });
-  return cs.map(csToRoutedCard);
+  const hits = await chSearchCards(query, limit);
+  return hits.map(chCardToRoutedCard);
 }
 
 // ── getCardSalesRouted ──────────────────────────────────────────────────────
 
 /**
- * Fetch comps for a Cardsight card_id. When `identity` is provided, attempts
- * CardHedge via the bridge first; on any non-trusted result, falls through to
- * Cardsight (existing behavior). Without `identity`, behavior is identical to
- * pre-P3 — pure Cardsight, no CH call. This keeps existing callers' behavior
- * byte-for-byte unchanged until P5 threads identity through.
+ * Fetch CardHedge comps for an identity. The legacy `cardId` parameter
+ * (formerly a Cardsight card_id) is now used only as a telemetry tag —
+ * the actual CH card_id is resolved from `identity` via the bridge.
  *
- * Each returned RoutedSale carries `source` ("cardhedge" | "cardsight").
- *
- * For callers that ALSO need vendor provenance metadata (chCardId,
- * chTrustReason) — typically the engine's corpus emit path — use
- * {@link getCardSalesRoutedWithProvenance} instead. This function preserves
- * the bare-array signature for backward-compat callers that only consume
- * sales[].
+ * Callers without an identity get an empty array.
  */
 export async function getCardSalesRouted(
   cardId: string,
@@ -647,15 +357,6 @@ export async function getCardSalesRouted(
   return result.sales;
 }
 
-/**
- * CF-CH-P8-TESTS: provenance-aware sibling of {@link getCardSalesRouted}.
- * Returns the same sales[] plus the CardHedge attribution metadata when CH
- * served (chCardId from the bridge, chTrustReason from getTrustedComps).
- * On Cardsight floor or no-identity calls, those fields are undefined.
- *
- * The engine's pinned-id path uses this to thread provenance through to the
- * corpus row's chProvenance block (CF-CH-P6-CORPUS field).
- */
 export async function getCardSalesRoutedWithProvenance(
   cardId: string,
   grade: string,
@@ -666,57 +367,26 @@ export async function getCardSalesRoutedWithProvenance(
   chCardId?: string;
   chTrustReason?: "prices_by_card_honest" | "title_cohesion_strong";
 }> {
-  void limit; // Cardsight returns the full record set; caller slices.
+  void limit;
+  void cardId;
 
-  // P3: try CardHedge first when identity is provided.
-  if (identity && identity.playerName) {
-    const ch = await tryCardHedgeForCs(cardId, identity, grade);
-    if (ch) {
-      log.info("router.ch_served", {
-        csCardId: cardId,
-        chCardId: ch.chCardId,
-        count: ch.sales.length,
-        trustReason: ch.trustReason,
-      });
-      const chTrustReason: "prices_by_card_honest" | "title_cohesion_strong" | undefined =
-        ch.trustReason === "prices_by_card_honest" ||
-        ch.trustReason === "title_cohesion_strong"
-          ? ch.trustReason
-          : undefined;
-      return {
-        sales: ch.sales,
-        chCardId: ch.chCardId,
-        chTrustReason,
-      };
-    }
+  if (!identity || !identity.playerName) {
+    return { sales: [] };
   }
 
-  // Cardsight floor (unchanged behavior).
-  const pricing = await getPricing(cardId);
-  const translated = translateResponse(pricing, {});
-  return {
-    sales: translated.map((t) => ({
-      price: t.price,
-      date: t.soldDate ?? null,
-      grade,
-      source: "cardsight",
-      sale_type: null,
-      title: t.title ?? null,
-      url: null,
-    })),
-  };
-}
+  const ch = await tryCardHedge(identity, grade);
+  if (!ch) {
+    return { sales: [] };
+  }
 
-/** Build a CardIdentityHint from the FindCompsRouted queryContext. */
-function identityHintFromContext(opts: FindCompsRoutedOptions): CardIdentityHint | null {
-  const ctx = opts.queryContext;
-  if (!ctx?.playerName) return null;
+  log.info("router.ch_served", {
+    chCardId: ch.chCardId,
+    count: ch.sales.length,
+    trustReason: ch.trustReason,
+  });
   return {
-    playerName: ctx.playerName,
-    cardYear: ctx.cardYear,
-    product: ctx.product,
-    parallel: ctx.parallel,
-    number: ctx.cardNumber,
-    isAuto: ctx.isAuto,
+    sales: ch.sales,
+    chCardId: ch.chCardId,
+    chTrustReason: narrowTrustReason(ch.trustReason),
   };
 }

@@ -7,13 +7,9 @@ import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
-import { startInventoryRefreshJob } from "./jobs/cardsightInventoryRefresh.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
-import { startPredictionOutcomesCaptureJob } from "./jobs/predictionOutcomesCapture.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
-import { startGetPricingBudgetEmit } from "./services/compiq/cardsight.client.js";
 import { startEbayFinancesEnrichmentJob } from "./jobs/ebayFinancesEnrichment.job.js";
-import { warmResolveCardIdCache } from "./services/compiq/cardsight.mapper.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
 
 // Initialize App Insights — must be called before the server handles requests.
@@ -83,13 +79,6 @@ app.listen(port, "0.0.0.0", () => {
   } catch (err: any) {
     console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
   }
-  // CF-SCANNING-B5b (2026-06-03): daily Cardsight identifiable-set snapshot
-  // refresh. Defaults to 04:30 PT — fires before any user traffic spikes.
-  try {
-    startInventoryRefreshJob();
-  } catch (err: any) {
-    console.error("[server] startInventoryRefreshJob failed:", err?.message ?? err);
-  }
   // CF-PAYMENTS-APPLE-2 (2026-06-03): nightly subscription safety-net.
   // Catches App Store Server Notifications V2 events Apple failed to
   // deliver. Defaults to 05:15 PT — after the inventory refresh, before
@@ -99,27 +88,10 @@ app.listen(port, "0.0.0.0", () => {
   } catch (err: any) {
     console.error("[server] startSubscriptionsSafetyNetJob failed:", err?.message ?? err);
   }
-  // CF-ML-MOAT-OUTCOMES (2026-06-03): daily prediction-outcome capture.
-  // Re-queries Cardsight for post-prediction sales, producing
-  // (features, predicted, actual) training tuples. Defaults to 05:45 PT —
-  // after safety-net (05:15), before DailyIQ (06:00).
-  try {
-    startPredictionOutcomesCaptureJob();
-  } catch (err: any) {
-    console.error("[server] startPredictionOutcomesCaptureJob failed:", err?.message ?? err);
-  }
   try {
     startCacheHitRateEmit();
   } catch (err: any) {
     console.error("[server] startCacheHitRateEmit failed:", err?.message ?? err);
-  }
-  // CF-OPS-HARDENING-1a (2026-06-04): hourly Cardsight getPricing budget
-  // delta emit. Feeds Azure Monitor log-search alerts at 75/90/100% of
-  // the 100k/mo soft quota.
-  try {
-    startGetPricingBudgetEmit();
-  } catch (err: any) {
-    console.error("[server] startGetPricingBudgetEmit failed:", err?.message ?? err);
   }
   // CF-EBAY-FINANCES-ENRICHMENT (Group D, 2026-06-04): 6h cadence; shadow
   // mode default ON. Switches to active when EBAY_FINANCES_ENRICHMENT_SHADOW=
@@ -130,22 +102,9 @@ app.listen(port, "0.0.0.0", () => {
   } catch (err: any) {
     console.error("[server] startEbayFinancesEnrichmentJob failed:", err?.message ?? err);
   }
-  // Phase 1 CH-removal-v2 fix (commit 8d6d769): prime the resolveCardId LRU
-  // cache for popular cards so the first iOS request after a container
-  // restart doesn't pay the multi-candidate disambiguation cold-path.
-  // Fire-and-forget — failure is non-fatal (queries still resolve, just slow
-  // on first hit per card).
-  //
-  // MCP rewire Phase 1: warm the aggregate-cache after resolveCardId warming
-  // completes (NOT in parallel — both share Cardsight rate-limit headroom).
-  // ~50s additional cold-path on top of resolveCardId's ~3-4 min.
-  warmResolveCardIdCache()
-    .catch((err) => {
-      console.warn("[server] warmResolveCardIdCache failed:", err?.message ?? err);
-    })
-    .finally(() => {
-      warmCompsByPlayerCache().catch((err) => {
-        console.warn("[server] warmCompsByPlayerCache failed:", err?.message ?? err);
-      });
-    });
+  // Warm CompsByPlayer aggregate cache for popular cards so the first iOS
+  // request after a container restart doesn't pay the cold-path lookup.
+  warmCompsByPlayerCache().catch((err) => {
+    console.warn("[server] warmCompsByPlayerCache failed:", err?.message ?? err);
+  });
 });
