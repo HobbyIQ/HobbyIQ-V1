@@ -262,18 +262,20 @@ describe("dispatchSearch — cert mode", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Freetext mode — catalog search removed with the Cardsight decommission.
-// dispatchFreetextMode now returns zero candidates plus a
-// "freetext_catalog_unavailable" warning (dispatcher.ts). Cert-mode lookups
-// (PSA, etc.) remain the only candidate-producing path.
-// ─────────────────────────────────────────────────────────────────────────
+// Freetext mode — now backed by CardHedge via searchCardsRouted (the
+// Cardsight catalog seam is gone). With no CARD_HEDGE_API_KEY in the test
+// environment the CH client returns zero hits, so dispatchFreetextMode
+// yields zero candidates plus a "no_freetext_matches" warning
+// (dispatcher.ts:163). Cert-mode lookups (PSA, etc.) remain the only
+// candidate-producing path under test.
+// ──────────────────────────────────────────────────────────────────
 
 describe("dispatchSearch — freetext mode", () => {
-  it("returns zero candidates and the catalog-unavailable warning", async () => {
+  it("returns zero candidates and the no-matches warning when CH yields nothing", async () => {
     const r = await dispatchSearch("Bobby Witt Jr");
     expect(r.input.detectedMode).toBe("freetext");
     expect(r.candidates).toEqual([]);
-    expect(r.warnings).toEqual(["freetext_catalog_unavailable"]);
+    expect(r.warnings).toEqual(["no_freetext_matches"]);
   });
 
   it("never queries searchCatalog in freetext mode", async () => {

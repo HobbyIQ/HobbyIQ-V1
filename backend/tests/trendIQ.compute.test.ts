@@ -253,28 +253,39 @@ describe("computeCardTrajectory — Layer 2 card-level comp trajectory", () => {
   const NOW = Date.parse("2026-05-25T12:00:00Z");
   const dayAgo = (n: number) => new Date(NOW - n * 24 * 3600 * 1000).toISOString();
 
-  it("returns null when recent window has <2 comps", () => {
+  it("returns a directional read with 1 comp in each window (thin-comp support)", () => {
     const r = computeCardTrajectory(
       [
-        { price: 100, soldDate: dayAgo(5) },  // recent (only 1)
-        { price: 110, soldDate: dayAgo(20) },
+        { price: 100, soldDate: dayAgo(5) },  // recent (1)
+        { price: 105, soldDate: dayAgo(30) }, // older (1)
+      ],
+      NOW,
+    );
+    expect(r).not.toBeNull();
+    expect(r!.recentCount).toBe(1);
+    expect(r!.olderCount).toBe(1);
+  });
+
+  it("returns null when a window is empty (no before/after)", () => {
+    // All comps in the recent window — older window empty.
+    const rNoOlder = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(2) },
+        { price: 110, soldDate: dayAgo(5) },
+      ],
+      NOW,
+    );
+    expect(rNoOlder).toBeNull();
+
+    // All comps in the older window — recent window empty.
+    const rNoRecent = computeCardTrajectory(
+      [
+        { price: 100, soldDate: dayAgo(20) },
         { price: 105, soldDate: dayAgo(30) },
       ],
       NOW,
     );
-    expect(r).toBeNull();
-  });
-
-  it("returns null when older window has <2 comps", () => {
-    const r = computeCardTrajectory(
-      [
-        { price: 100, soldDate: dayAgo(2) },
-        { price: 110, soldDate: dayAgo(5) },
-        { price: 105, soldDate: dayAgo(30) }, // older (only 1)
-      ],
-      NOW,
-    );
-    expect(r).toBeNull();
+    expect(rNoRecent).toBeNull();
   });
 
   it("returns null when both windows empty", () => {
@@ -513,7 +524,7 @@ describe("computeSegmentTrajectory — Layer 3 segment trajectory", () => {
     expect(r).toBeNull();
   });
 
-  it("returns null with < 2 pre-anchor comps", () => {
+  it("returns a trajectory with 1 pre-anchor comp (thin-comp support)", () => {
     const r = computeSegmentTrajectory(
       pool([
         // anchor at 30d. pre-window: [60d, 30d]. only 1 in pre window.
@@ -528,20 +539,17 @@ describe("computeSegmentTrajectory — Layer 3 segment trajectory", () => {
       daysAgo(30),
       NOW,
     );
-    expect(r).toBeNull();
+    expect(r).not.toBeNull();
+    expect(r!.preAnchorCount).toBe(1);
   });
 
-  it("returns null with < 2 post-anchor comps", () => {
+  it("returns null when a segment window is empty (no before/after)", () => {
+    // All sales in the pre window — post window empty.
     const r = computeSegmentTrajectory(
       pool([
-        // 5 in pre window
         { price: 100, daysAgo: 35 },
         { price: 102, daysAgo: 40 },
         { price: 104, daysAgo: 45 },
-        { price: 106, daysAgo: 50 },
-        { price: 108, daysAgo: 55 },
-        // only 1 in post (anchor, now)
-        { price: 120, daysAgo: 10 },
       ]),
       daysAgo(30),
       NOW,

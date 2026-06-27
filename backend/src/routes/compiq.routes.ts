@@ -21,6 +21,10 @@ import {
   getCardImage,
   autocompleteCards,
 } from "../services/compiq/catalogSource.js";
+// CF-CARDHEDGE-CARD-IMAGE (2026-06-30): recover the CardHedge CDN image for
+// the pinned /price-by-id hero from the RoutedCard meta cache (populated by
+// the search that preceded the tap).
+import { getCardMetaById } from "../services/compiq/cardsight.router.js";
 // CF-GRADED-PRICE-PROJECTION Phase 2 (2026-06-13): wire graded estimator
 // into /price-by-id. Grounded-only (estimate + rough); ballpark + insufficient
 // dropped. Display-not-train: every entry has fairMarketValue=null.
@@ -584,6 +588,13 @@ router.post("/cardsearch", async (req, res, next) => {
       ? (response as any).candidates
       : [];
     for (const c of candidates) {
+      // CF-CARDHEDGE-CARD-IMAGE (2026-06-30): a candidate that already
+      // carries a real http(s) image (CardHedge CDN URL set by the
+      // dispatcher) is authoritative — never overwrite it with the
+      // dead Cardsight proxy URL.
+      if (typeof c?.imageUrl === "string" && /^https?:\/\//i.test(c.imageUrl)) {
+        continue;
+      }
       const cid: string | undefined =
         typeof c?.candidateId === "string" ? c.candidateId : undefined;
       const m = cid?.match(/^cardsight:([0-9a-f-]+)$/i);
@@ -1461,21 +1472,16 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // with unchanged comp sets reuse the prose without burning LLM
       // tokens (once wired up).
       let marketReadResult: MarketReadResult | null = null;
-      // CF-CARD-HERO-IMAGE (2026-06-08): top-level representative
-      // thumbnail. Two URLs surfaced:
-      //   cardImageUrl       → STABLE Cardsight catalog asset via our
-      //                        proxy route (CF-CARD-IMAGE-PROXY). Same
-      //                        URL across sales / time / grade. iOS
-      //                        renders this as the primary hero.
-      //   cardImageThumbUrl  → EPHEMERAL eBay thumb of the most-recent
-      //                        clean comp (existing pickCardImageUrl
-      //                        logic). Useful as a fallback when the
-      //                        catalog asset 404s, or as a "what the
-      //                        most recent sale looked like" secondary.
-      let cardImageUrl: string | undefined = absoluteApiUrl(
-        req,
-        `/api/compiq/card-image/${resolvedCardId}`,
-      );
+      // CF-CARDHEDGE-CARD-IMAGE (2026-06-30): Cardsight is decommissioned and
+      // the `/api/compiq/card-image/:id` proxy it backed always 404s. CardHedge
+      // surfaces a public bubble.io CDN image per card, stashed on the
+      // RoutedCard meta by the preceding search (cardsight.router.cacheCardMeta).
+      // Pull it directly — iOS loads the CDN URL with no proxy needed. Falls
+      // back to undefined on a cold-cache miss (iOS then renders the neutral
+      // placeholder), and `cardImageThumbUrl` below still provides the eBay
+      // most-recent-comp secondary.
+      const cardMetaForImage = await getCardMetaById(resolvedCardId);
+      let cardImageUrl: string | undefined = cardMetaForImage?.imageUrl ?? undefined;
       let cardImageThumbUrl: string | undefined;
       // CF-GRADE-BREAKDOWN (2026-06-09): per-graded-bucket menu off the
       // same cached cs:pricing payload — zero new Cardsight ops.

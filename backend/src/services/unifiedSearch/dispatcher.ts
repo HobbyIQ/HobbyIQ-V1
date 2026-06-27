@@ -217,7 +217,11 @@ function routedCardToIdentity(
     totalPopulation: null,
     populationHigher: null,
     title: composedTitle,
-    imageUrl: null,
+    // CF-CARDHEDGE-CARD-IMAGE (2026-06-30): surface the CardHedge CDN image
+    // on each candidate so the iOS search picker (CardSearchView) renders a
+    // thumbnail. The compiq.routes /cardsearch proxy-patch only fires for
+    // UUID-shape ids, so CardHedge candidates rely on this value directly.
+    imageUrl: card.imageUrl ?? null,
     raw: card,
   };
 }

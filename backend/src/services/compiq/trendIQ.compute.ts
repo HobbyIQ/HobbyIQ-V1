@@ -120,7 +120,13 @@ export function computeCardTrajectory(
     }
   }
 
-  if (recent.length < 2 || older.length < 2) return null;
+  // CF-THIN-COMP-TREND (2026-06-30): require only ≥1 comp in EACH window
+  // (was ≥2) so weak-comp cards still surface a directional read. Thinness
+  // remains visible to consumers via recentCount/olderCount, and the ±50%
+  // clamp below bounds the swing a single-comp median can produce. A card
+  // with <2 total comps still can't fill both windows, so this is the
+  // truthful floor — you cannot infer before/after motion from one sale.
+  if (recent.length < 1 || older.length < 1) return null;
 
   const recentMedian = simpleMedian(recent);
   const olderMedian = simpleMedian(older);
@@ -296,7 +302,11 @@ export function computeSegmentTrajectoryAndFull(
     }
   }
 
-  if (preAnchor.length < 2 || postAnchor.length < 2) {
+  // CF-THIN-COMP-TREND (2026-06-30): relaxed from ≥2 to ≥1 in EACH segment
+  // so thin sibling pools still yield a Layer 3 trajectory. preAnchorCount/
+  // postAnchorCount keep the thinness visible; the ±50% clamp bounds the
+  // single-comp swing.
+  if (preAnchor.length < 1 || postAnchor.length < 1) {
     nullDiag("sparse_pool", {
       anchorAgeDays: anchorAgeDays.toFixed(1),
       pre: preAnchor.length,

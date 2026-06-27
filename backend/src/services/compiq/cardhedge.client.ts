@@ -52,6 +52,36 @@ export interface CardHedgeCard {
   variant?: string;
   title?: string;
   name?: string;
+  /** Front-facing card image (CardHedge bubble.io CDN URL), normalized from
+   *  the several image fields CH may return. Undefined when none present. */
+  image?: string;
+}
+
+/**
+ * CardHedge card-search hits carry the front image under one of several
+ * keys (`image`, `image_url`, `front_image`, `front_image_url`) or an
+ * `images[]` array of strings / `{ url }`. Return the first http(s) URL.
+ */
+function pickCardImage(raw: any): string | undefined {
+  const isUrl = (u: unknown): u is string =>
+    typeof u === "string" && /^https?:\/\//i.test(u);
+  const candidates: unknown[] = [
+    raw?.front_image_url,
+    raw?.image_url,
+    raw?.front_image,
+    raw?.image,
+  ];
+  if (Array.isArray(raw?.images)) {
+    for (const it of raw.images) {
+      if (typeof it === "string") candidates.push(it);
+      else if (it && typeof it === "object") candidates.push((it as any).url);
+    }
+  }
+  candidates.push(raw?.back_image_url);
+  for (const c of candidates) {
+    if (isUrl(c)) return c;
+  }
+  return undefined;
 }
 
 export interface CardHedgeSale {
@@ -92,7 +122,14 @@ async function _searchCards(query: string, limit: number, h: Record<string, stri
       return [];
     }
     const body: any = await res.json();
-    const cards: CardHedgeCard[] = Array.isArray(body?.cards) ? body.cards : [];
+    const rawCards: any[] = Array.isArray(body?.cards) ? body.cards : [];
+    // Normalize the image field onto each card so downstream consumers
+    // (RoutedCard → search candidates → priced-card hero) get a stable
+    // `image` regardless of which image key CardHedge populated.
+    const cards: CardHedgeCard[] = rawCards.map((c) => ({
+      ...c,
+      image: pickCardImage(c),
+    }));
     return cards.slice(0, limit);
   } catch (err: any) {
     console.warn(`[cardhedge.client] search threw for "${query}":`, err?.message ?? err);

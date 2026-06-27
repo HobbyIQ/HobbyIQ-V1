@@ -68,6 +68,9 @@ export interface RoutedCard {
   variant?: string;
   title?: string;
   name?: string;
+  /** Front-facing card image (CardHedge CDN URL). Cached with the rest of
+   *  the RoutedCard meta so the pinned /price-by-id hero can recover it. */
+  imageUrl?: string;
 }
 
 export interface RoutedSale {
@@ -137,6 +140,7 @@ function chCardToRoutedCard(c: CardHedgeCard): RoutedCard {
     variant: c.variant ?? undefined,
     title: c.title ?? c.name ?? undefined,
     name: c.name ?? undefined,
+    imageUrl: c.image ?? undefined,
   };
 }
 
