@@ -72,6 +72,55 @@ def read_floor(card_id: str) -> dict[str, Any] | None:
         return None
 
 
+def upsert_floor(
+    card_id: str,
+    floor: float,
+    comp_count_90d: int,
+    player_name: str,
+    grade: str,
+    variant: str,
+    source: str = "comps-by-player",
+) -> dict[str, Any]:
+    """Persist a computed 90-day floor to Cosmos.
+
+    `card_id` is the composite key the MCP layer builds at H6 check time
+    ({player}|{year}|{set}|{cardNumber}|{grade}|{variant}). Partition key
+    is `/id` so item id == partition value.
+
+    Returns the upserted doc shape so callers can log/return it. On
+    Cosmos failure logs + returns the input shape with `persisted: False`.
+    """
+    import datetime as _dt
+
+    doc = {
+        "id": card_id,
+        "floor": float(floor),
+        "comp_count_90d": int(comp_count_90d),
+        "player_name": player_name,
+        "grade": grade,
+        "variant": variant,
+        "source": source,
+        "updated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+    }
+    container = _container()
+    if not container:
+        logging.warning(
+            "cosmos_floor.upsert_floor: cosmos not configured; skipping card_id=%s",
+            card_id,
+        )
+        return {**doc, "persisted": False}
+    try:
+        container.upsert_item(doc)
+        return {**doc, "persisted": True}
+    except Exception as exc:  # noqa: BLE001
+        logging.warning(
+            "cosmos_floor.upsert_floor: upsert failed card_id=%s err=%s",
+            card_id,
+            exc,
+        )
+        return {**doc, "persisted": False}
+
+
 def update_floor_from_ebay(
     card_id: str,
     player_name: str,
@@ -79,28 +128,16 @@ def update_floor_from_ebay(
     variant: str,
     ebay_token: str,
 ) -> dict[str, Any]:
-    """STUBBED per CF-CARDHEDGE-HARD-CUTOVER.
+    """STUBBED per CF-CARDHEDGE-HARD-CUTOVER (now superseded by CH path).
 
-    Original implementation:
-      Primary: Card Hedge (search_cards + get_card_sales, 90-day window,
-        trim bottom 5%, min as floor).
-      Fallback: eBay sold listings (Buy/Browse API with soldDateRange).
-      Persist: upsert to Cosmos `price_floors` container.
-
-    Stubbed because CardHedge is dead. eBay fallback path is also retired
-    here to avoid partial-functionality confusion (the fallback was
-    eBay-only when CH returned empty; now CH is always empty, so
-    "fallback" would effectively become "primary" -- a substantive code
-    change that belongs in the greenfield Cardsight Function rather than
-    a hard-cutover stub).
-
-    Returns the same shape the prior implementation returned so the
-    Functions that call this (fn-price-floor HTTP route, future Cardsight
-    nightly prefetch) can rely on the contract without crashing.
+    Kept as a non-raising stub so any latent caller (fn-price-floor POST)
+    doesn't crash. The real H6-refresh path is now the CH-driven nightly
+    prefetch in fn-nightly-comp-prefetch which calls upsert_floor()
+    directly.
     """
     logging.info(
-        "cosmos_floor.update_floor_from_ebay: stubbed (CF-CARDHEDGE-HARD-CUTOVER) "
-        "card_id=%s",
+        "cosmos_floor.update_floor_from_ebay: deprecated stub; use the "
+        "fn-nightly-comp-prefetch CH path instead. card_id=%s",
         card_id,
     )
     return {"floor": None, "source": "stubbed", "comp_count": 0}
