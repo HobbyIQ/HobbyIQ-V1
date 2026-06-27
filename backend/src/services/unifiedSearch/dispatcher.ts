@@ -23,13 +23,13 @@
 // user explicitly toggled "this is a cert" on ambiguous text), the
 // dispatcher tries ALL registered graders rather than returning empty.
 //
-// Freetext mode: searchCatalog → rankCatalogHits → adapter.
+// Freetext mode: searchCardsRouted (CardHedge card-search) → adapter.
 // Cap at 30 candidates by default (matches design §4 `take: 30`).
 //
 // The dispatcher itself is pure orchestration — no caching, no
-// retry, no rate-limiting. Each adapter brings its own (searchCatalog
-// inherits cacheWrap + retry from cardsight.client.ts; PSA grader is
-// uncached per the W3 deferred-decision lock — see
+// retry, no rate-limiting. Each adapter brings its own (searchCardsRouted
+// inherits CardHedge's cacheWrap + retry from cardhedge.client.ts; PSA
+// grader is uncached per the W3 deferred-decision lock — see
 // CF-CERT-LOOKUP-CACHE in SESSION_HANDOFF.md).
 
 import {
@@ -47,6 +47,10 @@ import type {
   UnifiedSearchMode,
   UnifiedSearchResponse,
 } from "../../types/unifiedSearch.js";
+import {
+  searchCardsRouted,
+  type RoutedCard,
+} from "../compiq/cardsight.router.js";
 
 const FREETEXT_TAKE_DEFAULT = 30;
 
@@ -126,17 +130,95 @@ async function dispatchCertMode(
 
 async function dispatchFreetextMode(
   input: string,
-  _trimmed: string,
+  trimmed: string,
 ): Promise<UnifiedSearchResponse> {
-  void _trimmed;
-  void FREETEXT_TAKE_DEFAULT;
-  // Freetext catalog search was removed with the Cardsight decommission.
-  // CardHedge has no equivalent catalog index; freetext callers now
-  // receive zero candidates. Cert-mode lookup (PSA, etc.) still works.
+  // Freetext catalog search is served by CardHedge's card-search
+  // (POST /cards/card-search via cardhedge.client → searchCardsRouted).
+  // The prior implementation returned zero candidates because the
+  // Cardsight catalog was decommissioned; CardHedge exposes the same
+  // free-text card lookup, so we route through it here. Each hit is
+  // adapted to the canonical CardIdentity shape the iOS picker decodes.
+  let hits: RoutedCard[];
+  try {
+    hits = await searchCardsRouted(trimmed, FREETEXT_TAKE_DEFAULT);
+  } catch {
+    // Surface a non-fatal warning rather than throwing — the route
+    // layer maps thrown upstream timeouts to a 200 graceful shell, but
+    // any other failure here should still yield an empty-but-valid
+    // response so the picker degrades cleanly instead of erroring.
+    return {
+      input: { raw: input, detectedMode: "freetext" },
+      candidates: [],
+      warnings: ["freetext_search_failed"],
+    };
+  }
+
+  const candidates = hits
+    .filter((c) => typeof c.card_id === "string" && c.card_id.length > 0)
+    .map((card, index) => routedCardToIdentity(card, index, hits.length));
+
   return {
     input: { raw: input, detectedMode: "freetext" },
-    candidates: [],
-    warnings: ["freetext_catalog_unavailable"],
+    candidates,
+    warnings: candidates.length === 0 ? ["no_freetext_matches"] : [],
+  };
+}
+
+/**
+ * Adapt a CardHedge RoutedCard to the canonical CardIdentity shape.
+ *
+ * Freetext hits are relevance-ranked, not authoritative — confidence
+ * decays by CardHedge's returned order so the iOS picker (which sorts
+ * by confidence descending) preserves CardHedge's ranking. The
+ * `cardsight:` candidateId prefix is retained as the stable wire
+ * contract the iOS decoder strips before calling /price-by-id.
+ */
+function routedCardToIdentity(
+  card: RoutedCard,
+  index: number,
+  total: number,
+): CardIdentity {
+  const yearNum =
+    card.year != null && Number.isFinite(Number(card.year))
+      ? Number(card.year)
+      : null;
+
+  const composedTitle =
+    card.title?.trim() ||
+    card.name?.trim() ||
+    [card.year, card.set, card.player, card.number, card.variant]
+      .map((p) => (p == null ? "" : String(p).trim()))
+      .filter((p) => p.length > 0)
+      .join(" ");
+
+  // Linear decay across the result set, floored at 0.3 so even the last
+  // hit reads as a plausible (low) relevance match rather than zero.
+  const span = Math.max(total, 1);
+  const confidence = Math.max(0.3, 1 - (index / span) * 0.6);
+
+  return {
+    candidateId: `cardsight:${card.card_id}`,
+    source: "cardsight-catalog",
+    attribution: "ranked",
+    confidence: Math.round(confidence * 100) / 100,
+    player: card.player ?? null,
+    year: yearNum,
+    brand: null,
+    setName: card.set ?? null,
+    cardNumber: card.number != null ? String(card.number) : null,
+    parallel: card.variant ?? null,
+    variation: null,
+    isAuto: false,
+    serialNumber: null,
+    grade: null,
+    gradeCompany: null,
+    gradeValue: null,
+    certNumber: null,
+    totalPopulation: null,
+    populationHigher: null,
+    title: composedTitle,
+    imageUrl: null,
+    raw: card,
   };
 }
 
