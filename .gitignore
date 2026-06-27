@@ -40,3 +40,24 @@ compiq-functions/**/__pycache__/
 
 # Xcode user-specific state (window layout, breakpoints, scheme selection)
 **/xcuserdata/
+
+# Local scratch / command-output dumps (deploy logs, smoke probes, harness output)
+.deploy-output.txt
+.zip-output.txt
+scripts/*-out.txt
+scripts/smoke-*.json
+mcp-server/deploy-log.txt
+backend/harness-output.txt
+backend/unit-suite-output.txt
+harness-output*.txt
+unit-suite-output.txt
+tier1-local-output.txt
+ops-tail.txt
+ops-report.json
+_full.txt
+_full2.txt
+_pe*.txt
+
+# Local secret scratch — connection strings / triage secret hits; never commit
+.blobconn.txt
+filtered-triage-secret-hits.txt
