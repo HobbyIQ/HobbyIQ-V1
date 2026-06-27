@@ -24,6 +24,17 @@ import {
   afterEach,
 } from "vitest";
 
+// CF-CARDSIGHT-REMOVAL (Wave 3): every test in this file does
+// vi.resetModules() + a cold dynamic import() of fetchSignals.js, and the SUT
+// arms AbortSignal.timeout(3000). Under heavy parallel CPU contention the cold
+// ESM import/transform alone can exceed the default 5000ms test timeout,
+// producing a non-deterministic timeout failure unrelated to the assertions.
+// Raise the per-test timeout for this whole file so it stays green regardless
+// of worker load / file-distribution reshuffles. MUST be called at module
+// (collection) scope — vi.setConfig inside a hook applies too late to override
+// the already-captured per-test timeout.
+vi.setConfig({ testTimeout: 20000 });
+
 // Track all stdout lines for log-shape assertions.
 let logs: string[] = [];
 const origLog = console.log;
