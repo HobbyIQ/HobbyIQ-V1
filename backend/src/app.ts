@@ -29,7 +29,6 @@ import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
 import subscriptionsRoutes from "./routes/subscriptions.routes.js";
-import internalCardsightInventoryRoutes from "./routes/internalCardsightInventory.routes.js";
 import rateLimit from "express-rate-limit";
 
 const config = getConfig();
@@ -90,7 +89,6 @@ app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
-app.use("/api/internal/cardsight-inventory", internalCardsightInventoryRoutes);
 // CF-ACCOUNT-DELETION (2026-06-04): Apple Guideline 5.1.1(v) compliance.
 app.use("/api/account", accountRoutes);
 

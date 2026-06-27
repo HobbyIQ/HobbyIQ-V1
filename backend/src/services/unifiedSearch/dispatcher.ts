@@ -42,12 +42,6 @@ import {
   type CertGraderErrorCode,
   type CertLookupResult,
 } from "../certGraders/certGrader.js";
-import { searchCatalog } from "../compiq/cardsight.client.js";
-import {
-  cardsightCatalogToCardIdentity,
-  enrichWithDetails,
-} from "./cardsightCatalogAdapter.js";
-import { rankCatalogHits } from "./rankCatalogHits.js";
 import type { CardIdentity } from "../../types/cardIdentity.js";
 import type {
   UnifiedSearchMode,
@@ -132,31 +126,17 @@ async function dispatchCertMode(
 
 async function dispatchFreetextMode(
   input: string,
-  trimmed: string,
+  _trimmed: string,
 ): Promise<UnifiedSearchResponse> {
-  const catalogHits = await searchCatalog(trimmed, { take: FREETEXT_TAKE_DEFAULT });
-  const ranked = rankCatalogHits(catalogHits, trimmed);
-
-  // Per CF-UNIFIED-SEARCH-AND-CERT W5-Windows D1: enrich ranked
-  // catalog hits with detail-endpoint data (parallels[] + attributes[])
-  // before mapping to CardIdentity. The enrichment is concurrency-
-  // limited and cacheWrap-protected at the client layer; failed
-  // per-hit fetches surface as an aggregated warn event and leave
-  // the candidate without parallels/attributes rather than dropping
-  // the hit.
-  const rankedHits = ranked.map(({ hit }) => hit);
-  const enriched = await enrichWithDetails(rankedHits);
-
-  // Stitch detail back onto each (hit, score) pair, preserving rank order.
-  const candidates = ranked.map(({ hit, score }, idx) => {
-    const detail = enriched[idx]?.detail;
-    return cardsightCatalogToCardIdentity(hit, score, detail);
-  });
-
+  void _trimmed;
+  void FREETEXT_TAKE_DEFAULT;
+  // Freetext catalog search was removed with the Cardsight decommission.
+  // CardHedge has no equivalent catalog index; freetext callers now
+  // receive zero candidates. Cert-mode lookup (PSA, etc.) still works.
   return {
     input: { raw: input, detectedMode: "freetext" },
-    candidates,
-    warnings: [],
+    candidates: [],
+    warnings: ["freetext_catalog_unavailable"],
   };
 }
 

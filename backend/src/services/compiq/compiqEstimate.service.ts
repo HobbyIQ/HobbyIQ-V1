@@ -56,16 +56,11 @@ import {
   computeBaseAnchoredParallelFMV,
   type BaseAnchoredFmvResult,
 } from "../../agents/baseAnchoredParallelFMV.js";
-// CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): multiplier-model
-// expectation + buy/sell signal for the cardhedge-last-sale path.
-// Closes Gap A (subset via getCardDetail.setName) + Gap B (Build B
-// wired into the last-sale arm). See the helper's module doc for the
-// full design and scope guarantee.
-import {
-  computeCardhedgeLastSaleSignal,
-  type ModelExpectation,
-  type ModelSignal,
-} from "./cardhedgeLastSaleSignal.service.js";
+// CF-CH-LAST-SALE-MODEL-EXPECTATION removed with Cardsight decommission.
+// modelExpectation + modelSignal are permanently null on every response;
+// the cardhedge-last-sale path no longer emits a Build-B-derived signal.
+type ModelExpectation = null;
+type ModelSignal = null;
 // TrendIQ Phase 1 (docs/phase0/trendiq_design.md) — forward-looking
 // composite score. B.4.a wires Layer 1 only (player momentum from the
 // signal aggregator); Layers 2 and 3 follow in B.4.b/c. The composite
@@ -4295,65 +4290,11 @@ export async function computeEstimate(
       ? null
       : trendEstimate?.basis ?? null;
 
-    // CF-CH-LAST-SALE-MODEL-EXPECTATION (2026-06-26): when the response is
-    // cardhedge-last-sale, run Build B against the parent card's base-auto
-    // pool with the SUBSET resolved via Cardsight catalog detail (the
-    // CH-served pinned path's identity carries `set = product`, not the
-    // real subset — Gap A). Build B's empirical baseRelativePremium gives
-    // a model-expectation price-range; comparing the single CH sale
-    // against that range yields a Lean Buy / Hold / Lean Sell signal.
-    //
-    // SCOPE: ONLY runs when isChTrustedSingleSale (the same gate as the
-    // cardhedge-last-sale estimateSource split above). Every other path
-    // skips this; modelExpectation + modelSignal stay undefined.
-    //
-    // NULL-SAFE: the helper returns null when subset can't resolve, the
-    // curated row lacks empirical baseRelativePremium, the base-auto pool
-    // is too thin, or any fetch throws. iOS sees no modelExpectation /
-    // modelSignal in those cases — the cardhedge-last-sale shape is
-    // emitted as-is, no fake signal.
-    //
-    // FMV STAYS NULL — this is a SIGNAL, not a FMV.
-    let modelExpectation: ModelExpectation | null = null;
-    let modelSignal: ModelSignal | null = null;
-    if (isChTrustedSingleSale && body.cardsightCardId && subjectProduct !== null && lastSale !== null) {
-      // CF-CH-MODEL-SIGNAL-PARALLEL-INPUT-FIX (2026-06-26): pass the RAW
-      // user-facing parallel string to the helper. The helper's print-run
-      // strip (\s*\/\s*\d+\s*$) requires the SLASH; normalizeParallel
-      // upstream strips non-alphanum, so normalizedParallel is "blue x
-      // fractor 150" (no slash) which the strip can't handle.
-      // The live 2026-06-26 20:23Z reprice on the Hartman BXF /150
-      // holding surfaced this: previous call site preferred normalized
-      // → helper's strip didn't fire → lookup missed → modelExpectation
-      // and modelSignal both persisted as null in Cosmos. Fix: body.parallel
-      // first, normalizedParallel only as a fallback for callers that
-      // didn't populate body.parallel.
-      const sig = await computeCardhedgeLastSaleSignal({
-        cardsightCardId: body.cardsightCardId,
-        lastSalePrice: lastSale.price,
-        product: subjectProduct,
-        parallelName: body.parallel ?? normalizedParallel ?? "",
-        year: Number(body.cardYear ?? fetched.card?.year ?? 0),
-        // CF-CH-MODEL-EXPECTATION-TREND-ANCHOR (2026-06-26): thread the
-        // sale date (the trend regression's projection target) and the
-        // holding's purchasePrice (for positionSignal). Helper handles
-        // null gracefully — trendAnchor / positionSignal absent from
-        // the response shape when their inputs aren't present.
-        lastSaleDate: lastSale.soldDate ?? null,
-        purchasePrice: body.purchasePrice ?? null,
-      });
-      if (sig) {
-        modelExpectation = sig.modelExpectation;
-        modelSignal = sig.modelSignal;
-        console.log(
-          `[compiq.computeEstimate] cardhedge-last-sale signal: lastSale=${lastSale.price} ` +
-            `modelExpectation=${sig.modelExpectation.value} ` +
-            `range=[${sig.modelExpectation.range[0]},${sig.modelExpectation.range[1]}] ` +
-            `effectiveMultiplier=${sig.modelSignal.effectiveMultiplier}× ` +
-            `lean=${sig.modelSignal.lean} deltaPct=${sig.modelSignal.deltaPct}`,
-        );
-      }
-    }
+    // CF-CH-LAST-SALE-MODEL-EXPECTATION was removed with the Cardsight
+    // decommission. modelExpectation + modelSignal are always null now;
+    // iOS sees no Build-B-derived signal on the cardhedge-last-sale path.
+    const modelExpectation: ModelExpectation = null;
+    const modelSignal: ModelSignal = null;
 
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,

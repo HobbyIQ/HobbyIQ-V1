@@ -18,12 +18,6 @@
 import "../certGraders/index.js";
 
 export { dispatchSearch } from "./dispatcher.js";
-export {
-  buildCatalogTitle,
-  cardsightCatalogToCardIdentity,
-  detectAutoFromBlob,
-} from "./cardsightCatalogAdapter.js";
-export { rankCatalogHits } from "./rankCatalogHits.js";
 export type {
   UnifiedSearchMode,
   UnifiedSearchResponse,
