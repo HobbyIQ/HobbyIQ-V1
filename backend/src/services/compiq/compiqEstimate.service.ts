@@ -2,18 +2,11 @@ import { Request, Response } from "express";
 import { CompIQEstimateRequest, type PredictionCallContext } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
 import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
-import { normalizePlayerName } from "./cardsight.mapper.js";
+import { normalizePlayerName } from "./parallelTokenizer.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
 import {
-  getPricing,
-  getCardDetail,
   type CardsightSaleRecord,
 } from "./cardsight.client.js";
-import {
-  applyParallelTitleMatch,
-  collapsePriceSource,
-  type ParallelPriceSource,
-} from "./parallelTitleMatch.js";
 // PHASE-4A-2.2 (2026-06-02): per-prediction cache-stats scope. The
 // `cacheStatsContext.run` wrap around the body lets every cacheWrap call
 // underneath tally hits/misses into a per-prediction bucket, which the
@@ -430,66 +423,6 @@ function chSalesToRawComps(
       imageUrl: null,
     }))
     .filter((c) => c.price > 0);
-}
-
-const CH_CS_DIVERGENCE_THRESHOLD = 0.40;  // >40% delta logs ch_cs_divergence
-const CH_CS_DIVERGENCE_MIN_CS_COMPS = 5;  // need CS dense enough to be a real signal
-
-/**
- * Fire-and-forget Cardsight divergence telemetry. Called when CardHedge wins
- * a comp request — pulls Cardsight pricing in parallel + compares medians.
- * Logs "ch_cs_divergence" only when:
- *   - CS has >= CH_CS_DIVERGENCE_MIN_CS_COMPS comps (otherwise too noisy)
- *   - |delta| / max(chMedian, csMedian) > CH_CS_DIVERGENCE_THRESHOLD
- * Never throws; never blocks the response.
- */
-async function maybeLogChCsDivergence(
-  csCardId: string,
-  chMedian: number,
-  grade: string,
-  parallelId?: string | null,
-): Promise<void> {
-  if (!chMedian || chMedian <= 0) return;
-  try {
-    const pricing = await getPricing(csCardId);
-    let csSales = selectSalesByGrade(pricing, grade);
-    // CF-CH-THIN-COMP-PRIMARY (2026-06-26): when the CH side is parallel-
-    // specific (parallelId supplied), only fire divergence against CS
-    // records tagged with the SAME parallel_id. If CS has no parallel-
-    // specific records, the CS pool is the PARENT/BASE for a different
-    // variant and the comparison is wrong-card noise — skip. Divergence
-    // still fires when CS has parallel-specific comps for this same card
-    // (per CF test 4).
-    if (typeof parallelId === "string" && parallelId.length > 0) {
-      const filtered = csSales.filter((s) => {
-        const pid = (s as { parallel_id?: string | null }).parallel_id;
-        return typeof pid === "string" && pid === parallelId;
-      });
-      if (filtered.length === 0) return;
-      csSales = filtered;
-    }
-    if (csSales.length < CH_CS_DIVERGENCE_MIN_CS_COMPS) return;
-    const csPrices = csSales
-      .map((s) => Number((s as { price?: unknown }).price))
-      .filter((p): p is number => Number.isFinite(p) && p > 0);
-    if (csPrices.length < CH_CS_DIVERGENCE_MIN_CS_COMPS) return;
-    const csMedian = chComputeMedian(csPrices);
-    if (!csMedian || csMedian <= 0) return;
-    const delta = Math.abs(chMedian - csMedian) / Math.max(chMedian, csMedian);
-    if (delta > CH_CS_DIVERGENCE_THRESHOLD) {
-      console.log(JSON.stringify({
-        event: "ch_cs_divergence",
-        source: "compiqEstimate.fetchComps",
-        csCardId,
-        chMedian,
-        csMedian,
-        delta: Number(delta.toFixed(3)),
-        csCompCount: csPrices.length,
-      }));
-    }
-  } catch {
-    // Non-blocking telemetry — swallow.
-  }
 }
 
 /**
@@ -1537,14 +1470,6 @@ async function fetchComps(
           });
           const identity = buildIdentityFromContext(queryContext, pinnedCardId);
           const chMedian = chComputeMedian(mapped.map((c) => c.price));
-          if (chMedian) {
-            // Fire-and-forget divergence telemetry against Cardsight.
-            // CF-CH-THIN-COMP-PRIMARY (2026-06-26): pass parallelId so the
-            // helper can detect CS-parent-only and suppress wrong-card
-            // comparisons. iOS sends parallelId on /price-by-id; the
-            // refresh path threads it through buildIdentityHintFromContext.
-            maybeLogChCsDivergence(pinnedCardId, chMedian, grade, parallelId).catch(() => {});
-          }
           console.log(JSON.stringify({
             event: "compiq.fetchComps.ch_served",
             source: "compiqEstimate.fetchComps",
@@ -1576,318 +1501,24 @@ async function fetchComps(
       }
     }
 
-    const pricing = await getPricing(pinnedCardId);
-
-    // CF-CARDSIGHT-PRICING-CARD-SCHEMA (2026-06-07): map identity from the
-    // pricing-card wire shape (card_id snake-case; name=player; nested
-    // `set.{name,year,release}`). The catalog/detail shape and the pricing
-    // shape are DIFFERENT — conflating them was the long-standing bug that
-    // produced null identity on every pinned-id price call.
-    //
-    // Legacy `.id` fallback retained for defense-in-depth in case Cardsight
-    // ever rolls a response shape variant or rolls back; the consistency
-    // guard below catches actual mismatches regardless.
-    const catalogCard = pricing.card;
-    const setYearAsNumber = (raw: string | undefined): number | null => {
-      if (raw === undefined || raw === null || raw === "") return null;
-      const n = Number(raw);
-      return Number.isFinite(n) ? n : null;
-    };
-    const buildIdentityFromPricingCard = (
-      c: NonNullable<typeof catalogCard>,
-    ) => ({
-      // Fall back to pinnedCardId when both wire id fields are absent.
-      // The consistency guard below catches the mismatch case explicitly;
-      // here we only need a non-null string for the downstream contract.
-      card_id: c.card_id ?? (c as { id?: string }).id ?? pinnedCardId,
-      title: c.name ?? null,
-      player: c.name ?? null,
-      set: c.set?.name ?? null,
-      // CF-PLAYER-IN-SET-RELEASE-KEY (2026-06-09): c.set.name is the literal
-      // subset name ("Base Set") and is NOT unique per release. The
-      // release/product line lives on c.set.release. Surface it so the
-      // pinned-id path's identity matches the routed path (which already
-      // carries release name via cardsight.router → CardsightCardDetail
-      // .releaseName), and so the player-in-set scoping / nightly history
-      // key can use release+year as a non-colliding identity.
-      release: c.set?.release ?? null,
-      year: setYearAsNumber(c.set?.year),
-      number: c.number ?? null,
-      variant: null,
-    });
-    const buildStubIdentity = (id: string) => ({
-      card_id: id,
-      title: null,
-      player: null,
-      set: null,
-      release: null,
-      year: null,
-      number: null,
-      variant: null,
-    });
-    const identity = catalogCard
-      ? buildIdentityFromPricingCard(catalogCard)
-      : buildStubIdentity(pinnedCardId);
-
-    if (pricing.notFound) {
-      console.warn(`[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not found in catalog`);
-      return { comps: [], card: identity, variantWarning: [], aiCategory: null, vendor: "cardsight" };
-    }
-
-    // CF-CARDSIGHT-PRICING-CONSISTENCY-GUARD (2026-06-07): if Cardsight ever
-    // returns a `pricing.card.card_id` that doesn't match the id we
-    // requested (transient vendor flap, stale cache row, mapped-alias
-    // surprise), treat the response as UNRESOLVED. Wrong-card comps + a
-    // wrong-card identity must NOT leak into the comp page. Returns the
-    // same no-comps + stub-identity shape as `pricing.notFound`, so the
-    // downstream "couldn't price reliably" UI path renders honestly.
-    //
-    // The guard does NOT fall back to free-text — surfacing a different
-    // wrong card would compound the problem.
-    if (catalogCard?.card_id && catalogCard.card_id !== pinnedCardId) {
-      console.error(JSON.stringify({
-        event: "pricing_card_id_mismatch",
-        source: "compiq.fetchComps",
-        subsystem: "cardsight",
-        requestedId: pinnedCardId,
-        returnedCardId: catalogCard.card_id,
-        returnedPlayer: catalogCard.name ?? null,
-        returnedNumber: catalogCard.number ?? null,
-      }));
-      return {
-        comps: [],
-        card: buildStubIdentity(pinnedCardId),
-        variantWarning: [],
-        aiCategory: null,
-        vendor: "cardsight",
-      };
-    }
-
-    // Client-side grade filter. Grade string is "Raw" or "<COMPANY> <VALUE>"
-    // (e.g. "PSA 10", "BGS 9.5"). For Raw, use the ungraded raw.records.
-    // For a graded request, find the matching company + grade value in
-    // pricing.graded[]; return that grade's records or [] if no match.
-    const salesByGrade = selectSalesByGrade(pricing, grade);
-    // CF-PARALLEL-AWARE-VALUE (2026-06-09): apply the parallel filter
-    // right after the grade pick. Authoritative; affects every
-    // downstream pool. See filterRecordsByParallel header for the
-    // base-vs-parallel semantics.
-    const filteredByParallel = filterRecordsByParallel(salesByGrade, parallelId ?? null);
-
-    // CF-PINNED-PARALLEL-RECOVERY (2026-06-10): mirror the routed-search
-    // path's applyParallelTitleMatch recovery in the pinned-id branch.
-    //
-    // Cause: Cardsight's per-sale `parallel_id` tagging is unreliable for
-    // most cards (documented at cardsight.client.ts:513-522 from the
-    // 2026-05-27 Maddux Tiffany incident — verified again for 2024 Bowman
-    // Chrome Blue Refractor /150 on 2026-06-10). When the user picks a
-    // parallel and Cardsight didn't tag the sales, `filterRecordsByParallel`
-    // collapses to 0 even though the unified pool contains real Blue-
-    // Refractor-titled sales. The routed-search path recovers via
-    // title-token matching with a sibling-parallels specificity guard
-    // (applyParallelTitleMatch); the pinned branch never inherited that
-    // recovery — this CF fixes the asymmetry.
-    //
-    // We do NOT pass parallelId to getPricing above: the inner
-    // _getPricing parallel-id fallback at cardsight.client.ts:506-549
-    // already retries unified when the parallel_id call returns 0, but
-    // that costs an extra HTTP per request and the unified pool we'd get
-    // back is identical to what the no-parallelId call above already
-    // returned (verified architecturally — Cardsight pricing for a base
-    // cardId returns the same sales regardless of parallel_id query).
-    // The title-match recovery here covers both "Cardsight tagged some"
-    // and "Cardsight tagged nothing" classes uniformly.
-    //
-    // getCardDetail fires ONLY when (parallelId is provided) AND (the
-    // filter collapsed below RECOVERY_THRESHOLD) — never on base requests,
-    // never on a healthy filtered pool. Cached via cs:detail wrap.
-    const RECOVERY_THRESHOLD = 3;
-    let sales: typeof filteredByParallel = filteredByParallel;
-    let pinnedPriceSource: ParallelPriceSource | null = null;
-    let pinnedFilteredCount: number | null = null;
-    let pinnedUnifiedCount: number | null = null;
-
-    if (
-      parallelId
-      && filteredByParallel.length < RECOVERY_THRESHOLD
-      && salesByGrade.length >= RECOVERY_THRESHOLD
-    ) {
-      const detailStartMs = Date.now();
-      const detail = await getCardDetail(pinnedCardId).catch((err) => {
-        console.warn(
-          `[compiq.fetchComps] pinned-parallel getCardDetail failed: ${
-            (err as Error)?.message ?? err
-          }`,
-        );
-        return null;
-      });
-      const detailLatencyMs = Date.now() - detailStartMs;
-      const detailOk = detail !== null && !detail.notFound;
-      const siblingParallels =
-        detailOk && detail!.parallels ? detail!.parallels : [];
-
-      // Build a synthetic pricing response with the grade-selected
-      // records under raw.records. applyParallelTitleMatch walks raw +
-      // graded; collapsing graded to [] here keeps the title-match
-      // working on the SAME records the value path consumes (no
-      // accidental other-grade leakage).
-      const syntheticPricing = {
-        ...pricing,
-        raw: {
-          count: salesByGrade.length,
-          records: salesByGrade as unknown as NonNullable<
-            typeof pricing.raw
-          >["records"],
-        },
-        graded: [],
-      };
-
-      const matchStartMs = Date.now();
-      const outcome = applyParallelTitleMatch({
-        pricingResponse: syntheticPricing,
-        // We KNOW Cardsight's parallel_id tagging didn't deliver here
-        // (filteredByParallel collapsed). Set the flag explicitly so the
-        // helper engages title-match rather than short-circuiting to
-        // "cardsight-parallel-id".
-        pricingCameFromUnifiedFallback: true,
-        userParallelInput: queryContext?.parallel,
-        matchedParallelId: parallelId,
-        siblingParallels,
-      });
-      const matchLatencyMs = Date.now() - matchStartMs;
-
-      pinnedPriceSource = outcome.priceSource;
-      pinnedFilteredCount = outcome.filteredCount;
-      pinnedUnifiedCount = outcome.totalUnifiedCount;
-
-      console.log(
-        `[compiq.fetchComps] pinned-parallel recovery: parallelId=${parallelId} ` +
-          `parallel="${queryContext?.parallel ?? ""}" ` +
-          `priceSource=${outcome.priceSource} filtered=${outcome.filteredCount} ` +
-          `unified=${outcome.totalUnifiedCount} ` +
-          `detailMs=${detailLatencyMs} matchMs=${matchLatencyMs}`,
-      );
-
-      // CF-PARALLEL-COMP-VETO-FIX (2026-06-12): vendor tags authoritative,
-      // title-match adds backfill. The pre-CF logic discarded
-      // filteredByParallel records whenever title-match returned a
-      // non-positive outcome ("unified-fallback-no-match"), which threw
-      // away Cardsight's correctly tagged parallel_id records every time
-      // the title spelling didn't match the catalog parallel name (e.g.
-      // Blue RayWave Refractor: catalog name "Blue RayWave Refractor",
-      // seller title "Blue Wave Refractor" — 2 vendor-tagged records
-      // discarded). Vendor tags are the strict ground truth; recovery is
-      // BACKFILL for untagged sales, never a VETO of tagged ones.
-      //
-      // GUARDRAIL on corpus pollution: title-match's "unified-fallback-
-      // no-match" outcome is still treated as "no backfill records to
-      // add" — we only pull recovery records into the union when title-
-      // match positively isolated them ("title-matched-parallel" or
-      // "title-match-low-sample"). filteredByParallel itself is
-      // structurally parallel-pure (records carrying the right
-      // parallel_id from Cardsight), so including it in the sales pool
-      // does NOT introduce base-mixed records to corpus emit.
-      const recoveryRecords: typeof sales =
-        outcome.priceSource === "title-matched-parallel"
-        || outcome.priceSource === "title-match-low-sample"
-          ? ((outcome.response.raw?.records ?? []) as typeof sales)
-          : ([] as typeof sales);
-      const recordKey = (
-        r: { url?: string | null; title?: string | null; price?: number | null; date?: string | null; source?: string | null },
-      ): string =>
-        typeof r.url === "string" && r.url.length > 0
-          ? `u:${r.url}`
-          : `f:${r.title ?? ""}|${r.price ?? ""}|${r.date ?? ""}|${r.source ?? ""}`;
-      const seen = new Set<string>();
-      const merged: typeof sales = [];
-      for (const r of filteredByParallel) {
-        const k = recordKey(r as Parameters<typeof recordKey>[0]);
-        if (seen.has(k)) continue;
-        seen.add(k);
-        merged.push(r);
-      }
-      for (const r of recoveryRecords) {
-        const k = recordKey(r as Parameters<typeof recordKey>[0]);
-        if (seen.has(k)) continue;
-        seen.add(k);
-        merged.push(r);
-      }
-      sales = merged;
-
-      // priceSource: when title-match contributed, keep its outcome name
-      // (the recovery's classification of how it isolated records).
-      // When title-match returned "unified-fallback-no-match" BUT
-      // filteredByParallel had vendor-tagged records that survive into
-      // the union, switch the source to "cardsight-parallel-id" — those
-      // are exact vendor tags, even if thin (below the recovery
-      // threshold). Mirrors the ≥-threshold branch below.
-      if (
-        outcome.priceSource === "unified-fallback-no-match"
-        && filteredByParallel.length > 0
-      ) {
-        pinnedPriceSource = "cardsight-parallel-id";
-      }
-      pinnedFilteredCount = sales.length;
-    } else if (parallelId && filteredByParallel.length >= RECOVERY_THRESHOLD) {
-      // Cardsight DID tag enough records — no recovery needed.
-      // Surface the source so iOS sees "exact" for these wins.
-      pinnedPriceSource = "cardsight-parallel-id";
-      pinnedFilteredCount = filteredByParallel.length;
-      pinnedUnifiedCount = salesByGrade.length;
-    }
-
-    // priceSource fields surfaced only when parallelId was provided
-    // (they describe the parallel-match outcome; meaningless on base).
-    const priceSourceFields = pinnedPriceSource
-      ? {
-          priceSource: collapsePriceSource(pinnedPriceSource),
-          priceSourceInternal: pinnedPriceSource,
-          parallelMatchFilteredCount: pinnedFilteredCount ?? undefined,
-          parallelMatchUnifiedCount: pinnedUnifiedCount ?? undefined,
-        }
-      : {};
-
-    if (sales.length === 0) {
-      console.warn(
-        `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} returned 0 comps`,
-      );
-      return {
-        comps: [],
-        card: identity,
-        variantWarning: [],
-        aiCategory: null,
-        vendor: "cardsight",
-        ...priceSourceFields,
-      };
-    }
-
-    const mapped: RawComp[] = sales
-      .map((s) => ({
-        price: s.price,
-        title:
-          s.title ||
-          [identity.year, identity.set, identity.player, identity.number, identity.variant]
-            .filter(Boolean)
-            .join(" "),
-        soldDate: s.date ?? "",
-        // CF-RECENTCOMPS-SALETYPE: preserve Cardsight's per-comp
-        // listing_type so the route can derive saleType for iOS chips.
-        listingType: (s as { listing_type?: string | null }).listing_type ?? null,
-        // CF-RECENTCOMPS-IMAGEURL: preserve image_url for the thumbnail.
-        imageUrl: (s as { image_url?: string | null }).image_url ?? null,
-      }))
-      .filter((c) => c.price > 0);
-
-    console.log(
-      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} grade=${grade} parallelId=${parallelId ?? "(base)"} comps=${mapped.length} priceSource=${pinnedPriceSource ?? "(n/a)"}`,
+    // CF-CARDSIGHT-REMOVAL (Phase 3 Wave 3): the Cardsight pinned-id pricing
+    // fallback has been removed. CardHedge is the sole comp source. When the
+    // CardHedge-first attempt above does not serve (no identity bridge, no
+    // match, or untrusted), return empty comps for the pinned card — we no
+    // longer call Cardsight getPricing / getCardDetail. Identity is built
+    // from the request context so the downstream "couldn't price reliably"
+    // UI still renders the card honestly.
+    const identity = buildIdentityFromContext(queryContext, pinnedCardId);
+    console.warn(
+      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not served by CardHedge; ` +
+        `Cardsight fallback removed — returning 0 comps`,
     );
     return {
-      comps: mapped,
+      comps: [],
       card: identity,
       variantWarning: [],
       aiCategory: null,
-      vendor: "cardsight",
-      ...priceSourceFields,
+      vendor: "cardhedge",
     };
   }
 
@@ -1917,14 +1548,6 @@ async function fetchComps(
     const chMedian = chComputeMedian(
       sales.map((s) => s.price).filter((p) => Number.isFinite(p) && p > 0),
     );
-    if (chMedian) {
-      // CF-CH-THIN-COMP-PRIMARY (2026-06-26): see helper for parallelId
-      // semantics. Routed/free-text path reads parallelId off queryContext
-      // when the caller supplied it (price-by-id callers do; pure /search
-      // text callers don't, in which case helper falls back to unfiltered
-      // CS pool comparison).
-      maybeLogChCsDivergence(card.card_id, chMedian, grade, queryContext?.parallelId ?? null).catch(() => {});
-    }
     console.log(JSON.stringify({
       event: "compiq.fetchComps.ch_served",
       source: "compiqEstimate.fetchComps",

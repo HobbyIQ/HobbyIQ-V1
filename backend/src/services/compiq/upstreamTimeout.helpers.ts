@@ -34,8 +34,21 @@
 //   spreads it before the helper return so engine metadata stays close
 //   to the route concern; the helper covers ONLY the pricing payload.
 
-import { CardsightTimeoutError } from "./cardsight.client.js";
 import type { UnifiedSearchResponse } from "../../types/unifiedSearch.js";
+
+/**
+ * Upstream catalog/pricing timeout error. Relocated here (inline) during the
+ * Cardsight removal arc (Phase 3 Wave 3) — was previously exported from the
+ * now-deleted cardsight.client.ts. Kept under the legacy name so the route
+ * call sites that use `isCardsightTimeoutError` continue to compile and any
+ * upstream layer that throws it is still classified as a graceful timeout.
+ */
+export class CardsightTimeoutError extends Error {
+  constructor(message = "Upstream catalog request timed out") {
+    super(message);
+    this.name = "CardsightTimeoutError";
+  }
+}
 
 /** Type guard — usable anywhere we have `catch (err)`. */
 export function isCardsightTimeoutError(err: unknown): err is CardsightTimeoutError {
