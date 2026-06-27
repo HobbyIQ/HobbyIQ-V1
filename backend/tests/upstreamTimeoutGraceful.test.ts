@@ -11,7 +11,7 @@
 
 import request from "supertest";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { CardsightTimeoutError } from "../src/services/compiq/cardsight.client.js";
+import { CardsightTimeoutError } from "../src/services/compiq/upstreamTimeout.helpers.js";
 
 process.env.COMPIQ_CORPUS_DISABLED = "1";
 

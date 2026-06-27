@@ -7,7 +7,7 @@ import app from "../src/app";
 
 // Mock the Cardsight resolver — import routes go through it for arbitrary
 // rows; we don't want live HTTP in tests.
-vi.mock("../src/services/compiq/cardsight.mapper.js", async (importActual) => {
+vi.mock("../src/services/compiq/catalogSource.js", async (importActual) => {
   const actual = await importActual() as Record<string, unknown>;
   return {
     ...actual,

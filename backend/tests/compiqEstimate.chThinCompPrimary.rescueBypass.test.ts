@@ -42,8 +42,8 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importOriginal) => 
   };
 });
 
-vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/services/compiq/cardsight.client.js")>();
+vi.mock("../src/services/compiq/catalogSource.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/services/compiq/catalogSource.js")>();
   return {
     ...actual,
     getPricing: vi.fn(),
@@ -70,7 +70,7 @@ vi.mock("../src/services/compiq/compsByPlayer.service.js", async (importOriginal
 // This is the belt-and-suspenders posture Drew called out.
 
 import { getCardSalesRoutedWithProvenance } from "../src/services/compiq/cardsight.router.js";
-import { getPricing, getCardDetail } from "../src/services/compiq/cardsight.client.js";
+import { getPricing, getCardDetail } from "../src/services/compiq/catalogSource.js";
 import { fetchCompsByPlayer } from "../src/services/compiq/compsByPlayer.service.js";
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service.js";
 

@@ -18,7 +18,7 @@ import { isBaseTitle } from "../src/services/compiq/parallelTitleMatch.js";
 import type {
   CardsightPricingResponse,
   CardsightSaleRecord,
-} from "../src/services/compiq/cardsight.client.js";
+} from "../src/services/compiq/catalogSource.js";
 
 // ─── Fixture helpers ───────────────────────────────────────────────────────
 

@@ -29,8 +29,8 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importOriginal) => 
   };
 });
 
-vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/services/compiq/cardsight.client.js")>();
+vi.mock("../src/services/compiq/catalogSource.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/services/compiq/catalogSource.js")>();
   return {
     ...actual,
     getPricing: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => 
 });
 
 import { getCardSalesRouted, getCardSalesRoutedWithProvenance, findCompsRouted } from "../src/services/compiq/cardsight.router.js";
-import { getPricing, getCardDetail } from "../src/services/compiq/cardsight.client.js";
+import { getPricing, getCardDetail } from "../src/services/compiq/catalogSource.js";
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service.js";
 
 const mockGetCardSalesRouted = vi.mocked(getCardSalesRouted);
@@ -211,88 +211,6 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
     // The provenance-aware router fn should NOT be called when there's no
     // identity hint.
     expect(mockGetCardSalesRoutedWithProvenance).not.toHaveBeenCalled();
-  });
-});
-
-// ============================================================================
-// DIVERGENCE TELEMETRY — both vendors have data + >40% delta
-// ============================================================================
-
-describe("CF-CH-P5-PRIMARY — divergence telemetry (non-blocking)", () => {
-  it("logs 'ch_cs_divergence' when CH wins with $250 median and CS has dense comps at $100 median (>40% delta)", async () => {
-    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
-      sales: buildSales(11, "cardhedge", 250),
-      chCardId: "1778542093014x623522278065749040",
-      chTrustReason: "prices_by_card_honest",
-    });
-    // CS dense pool with median $100 — 60% below CH's $250 = clear divergence.
-    mockGetPricing.mockResolvedValue(buildPricingResponse(
-      Array.from({ length: 10 }, (_, i) => ({ price: 95 + i, date: `2026-06-${10 + i}` })),
-    ));
-
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
-      playerName: "Eric Hartman",
-      cardYear: 2026,
-      product: "Bowman Chrome",
-      pinnedAuthoritative: true,
-    });
-    // Wait a microtask for the fire-and-forget divergence promise.
-    await new Promise((r) => setImmediate(r));
-
-    const calls = logSpy.mock.calls.map((c) => String(c[0]));
-    const divergenceLog = calls.find((c) => c.includes("ch_cs_divergence"));
-    expect(divergenceLog).toBeDefined();
-  });
-
-  it("does NOT log divergence when CS has fewer than 5 comps (too thin to compare)", async () => {
-    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
-      sales: buildSales(11, "cardhedge", 250),
-      chCardId: "1778542093014x623522278065749040",
-      chTrustReason: "prices_by_card_honest",
-    });
-    mockGetPricing.mockResolvedValue(buildPricingResponse(
-      Array.from({ length: 3 }, (_, i) => ({ price: 100, date: `2026-06-${10 + i}` })),
-    ));
-
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
-      playerName: "Eric Hartman",
-      cardYear: 2026,
-      product: "Bowman Chrome",
-      pinnedAuthoritative: true,
-    });
-    await new Promise((r) => setImmediate(r));
-
-    const calls = logSpy.mock.calls.map((c) => String(c[0]));
-    expect(calls.find((c) => c.includes("ch_cs_divergence"))).toBeUndefined();
-  });
-
-  it("does NOT log divergence when delta is below 40% threshold", async () => {
-    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
-      sales: buildSales(11, "cardhedge", 250),
-      chCardId: "1778542093014x623522278065749040",
-      chTrustReason: "prices_by_card_honest",
-    });
-    // CS at $230 → ~8% delta, below threshold.
-    mockGetPricing.mockResolvedValue(buildPricingResponse(
-      Array.from({ length: 10 }, (_, i) => ({ price: 225 + i, date: `2026-06-${10 + i}` })),
-    ));
-
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
-      playerName: "Eric Hartman",
-      cardYear: 2026,
-      product: "Bowman Chrome",
-      pinnedAuthoritative: true,
-    });
-    await new Promise((r) => setImmediate(r));
-
-    const calls = logSpy.mock.calls.map((c) => String(c[0]));
-    expect(calls.find((c) => c.includes("ch_cs_divergence"))).toBeUndefined();
   });
 });
 

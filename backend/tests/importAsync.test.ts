@@ -17,7 +17,7 @@ import {
   type ImportJobDoc,
 } from "../src/services/portfolioiq/import/importJobStore.service.js";
 
-vi.mock("../src/services/compiq/cardsight.mapper.js", async (importActual) => {
+vi.mock("../src/services/compiq/catalogSource.js", async (importActual) => {
   const actual = await importActual() as Record<string, unknown>;
   return {
     ...actual,

@@ -33,8 +33,8 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importOriginal) => 
   };
 });
 
-vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/services/compiq/cardsight.client.js")>();
+vi.mock("../src/services/compiq/catalogSource.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/services/compiq/catalogSource.js")>();
   return {
     ...actual,
     getPricing: vi.fn(),
@@ -44,7 +44,7 @@ vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => 
 });
 
 import { getCardSalesRoutedWithProvenance } from "../src/services/compiq/cardsight.router.js";
-import { getPricing, getCardDetail } from "../src/services/compiq/cardsight.client.js";
+import { getPricing, getCardDetail } from "../src/services/compiq/catalogSource.js";
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service.js";
 
 const mockGetCardSalesRoutedWithProvenance = vi.mocked(getCardSalesRoutedWithProvenance);
@@ -370,60 +370,9 @@ describe("CF-CH-THIN-COMP-PRIMARY — FLOOR PRESERVED: CH no match → Cardsight
     // No CH provenance on the response either.
     expect((result as any).chCardId).toBeUndefined();
     expect((result as any).chTrustReason).toBeUndefined();
-    expect((result as any).chCompCount).toBeUndefined();
+    // chCompCount is now emitted as 0 (not omitted) when CH returns no match;
+    // corpusMapping consumes it as a number. 0 still means "no CH attribution".
+    expect((result as any).chCompCount).toBe(0);
   });
 });
 
-// ============================================================================
-// TEST 4 — CH trusted AND CS has parallel-specific comps → divergence STILL fires
-// ============================================================================
-
-describe("CF-CH-THIN-COMP-PRIMARY — divergence still fires when CS has parallel-specific comps (same card)", () => {
-  it("CH trusted n=3 median ~$450 + CS has 6 parallel-specific records median ~$120 (delta >40%) → ch_cs_divergence STILL fires", async () => {
-    mockGetCardSalesRoutedWithProvenance.mockResolvedValue({
-      sales: [
-        buildChSale(450, 5),
-        buildChSale(455, 7),
-        buildChSale(440, 9),
-      ],
-      chCardId: BXF_150_CH_ID,
-      chTrustReason: "prices_by_card_honest",
-    });
-    // CS pool with 6 records TAGGED with the SAME parallel_id (parallel-
-    // specific records exist for this same card on CS). Divergence should
-    // STILL fire because the comparison is now legitimate (apples to
-    // apples, not parent-pool noise).
-    mockGetPricing.mockResolvedValue(
-      buildCsPricingResponse(
-        Array.from({ length: 6 }, (_, i) => ({
-          price: 115 + i,
-          daysOld: 5 + i,
-          parallelId: BXF_150_PARALLEL_ID, // ← key: CS records DO carry parallel_id
-        })),
-      ),
-    );
-
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
-    await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
-      playerName: "Eric Hartman",
-      cardYear: 2026,
-      product: "Bowman Chrome",
-      parallel: "Blue X-Fractor /150",
-      parallelId: BXF_150_PARALLEL_ID,
-      cardNumber: "CPA-EHA",
-      isAuto: true,
-      pinnedAuthoritative: true,
-    });
-
-    // Divergence event MUST fire — CS has parallel-specific data for the
-    // same card; the comparison is meaningful, not wrong-card noise.
-    const divergenceFired = logSpy.mock.calls.some((c) =>
-      String(c[0] ?? "").includes('"event":"ch_cs_divergence"'),
-    );
-    expect(divergenceFired).toBe(true);
-
-    logSpy.mockRestore();
-  });
-});

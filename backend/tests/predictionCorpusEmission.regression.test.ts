@@ -31,6 +31,28 @@ vi.mock("../src/services/compiq/predictionCorpus.service.js", async () => {
 // Mock cardsight.router so computeEstimate runs end-to-end without network.
 // Minimal happy-path mocks; payload values chosen so the prediction path
 // reaches the emission site at compiqEstimate.service.ts:~2715.
+// CF-CARDSIGHT-REMOVAL (Wave 3): stub the trendIQ L3 forward-projection seam so
+// computeEstimate doesn't make an un-mocked ~5s live fetchCompsByPlayer HTTP call
+// and exceed the 5000ms vitest timeout. Empty comps keeps trendIQ "insufficient"
+// (identical to the live fallback), leaving all assertions unaffected.
+vi.mock("../src/services/compiq/compsByPlayer.service.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    fetchCompsByPlayer: vi.fn(
+      async (input: { playerName: string; product: string; cardYear?: number }) => ({
+        player: input.playerName,
+        product: input.product,
+        ...(input.cardYear !== undefined ? { cardYear: input.cardYear } : {}),
+        cardIds: [],
+        comps: [],
+        cached: false,
+        warnings: [],
+      }),
+    ),
+  };
+});
+
 vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
   const actual = (await importActual()) as Record<string, unknown>;
   const now = Date.now();

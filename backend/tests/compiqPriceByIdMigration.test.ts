@@ -37,7 +37,7 @@ import {
   selectSalesByGrade,
   filterRecordsByParallel,
 } from "../src/services/compiq/compiqEstimate.service";
-import type { CardsightSaleRecord } from "../src/services/compiq/cardsight.client";
+import type { CardsightSaleRecord } from "../src/services/compiq/catalogSource";
 
 function makeRecord(price: number, title = "fixture"): CardsightSaleRecord {
   return {

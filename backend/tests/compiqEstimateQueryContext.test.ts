@@ -15,6 +15,28 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 // mocks one layer deeper (cardhedge.client) and exercises the legacy path
 // under CARDSIGHT_MODE=off; this test mocks the router itself to capture
 // opts.queryContext regardless of mode.
+// CF-CARDSIGHT-REMOVAL (Wave 3): stub the trendIQ L3 forward-projection seam so
+// computeEstimate doesn't make an un-mocked ~5s live fetchCompsByPlayer HTTP call
+// and exceed the 5000ms vitest timeout. Empty comps keeps trendIQ "insufficient"
+// (identical to the live fallback), leaving all assertions unaffected.
+vi.mock("../src/services/compiq/compsByPlayer.service.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    fetchCompsByPlayer: vi.fn(
+      async (input: { playerName: string; product: string; cardYear?: number }) => ({
+        player: input.playerName,
+        product: input.product,
+        ...(input.cardYear !== undefined ? { cardYear: input.cardYear } : {}),
+        cardIds: [],
+        comps: [],
+        cached: false,
+        warnings: [],
+      }),
+    ),
+  };
+});
+
 vi.mock("../src/services/compiq/cardsight.router.js", () => ({
   findCompsRouted: vi.fn(),
   searchCardsRouted: vi.fn().mockResolvedValue([]),

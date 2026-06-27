@@ -11,8 +11,8 @@ import {
   collapsePriceSource,
   type ParallelTitleMatchInput,
 } from "../src/services/compiq/parallelTitleMatch.js";
-import type { CardsightPricingResponse } from "../src/services/compiq/cardsight.client.js";
-import { tokenizeParallel } from "../src/services/compiq/cardsight.mapper.js";
+import type { CardsightPricingResponse } from "../src/services/compiq/catalogSource.js";
+import { tokenizeParallel } from "../src/services/compiq/parallelTokenizer.js";
 
 // ─── Fixtures ──────────────────────────────────────────────────────────────
 

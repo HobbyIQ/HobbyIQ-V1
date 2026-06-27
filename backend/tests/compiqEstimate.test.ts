@@ -90,6 +90,30 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
   };
 });
 
+// CF-CARDSIGHT-REMOVAL (Wave 3): the trendIQ L3 forward-projection path now
+// calls fetchCompsByPlayer (live HTTP to the comps-by-player seam). Stub it to
+// resolve instantly-empty so the route tests don't incur ~5s of un-mocked
+// network latency and exceed the 5000ms vitest test timeout. Empty comps keeps
+// trendIQ "insufficient" — identical to the live fallback shape, just without
+// the network round-trip — so all route-shape assertions are unaffected.
+vi.mock("../src/services/compiq/compsByPlayer.service.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
+    fetchCompsByPlayer: vi.fn(
+      async (input: { playerName: string; product: string; cardYear?: number }) => ({
+        player: input.playerName,
+        product: input.product,
+        ...(input.cardYear !== undefined ? { cardYear: input.cardYear } : {}),
+        cardIds: [],
+        comps: [],
+        cached: false,
+        warnings: [],
+      }),
+    ),
+  };
+});
+
 // CF-PAYMENTS-B1: /api/compiq/estimate now requires a session. Mock
 // getUserBySession so the existing route-shape assertions still run; use
 // pro_seller plan so requireRateLimited short-circuits (unlimited cap).

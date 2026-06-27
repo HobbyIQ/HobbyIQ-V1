@@ -29,6 +29,16 @@ let logs: string[] = [];
 const origLog = console.log;
 
 beforeEach(() => {
+  // CF-CARDSIGHT-REMOVAL (Wave 3): cross-file isolation guard. Other suites
+  // (cacheStaleServe / mlbStatsResolverGap / playerScoreLeagueLevel) enable
+  // vi.useFakeTimers(); if any leaves the fake clock active in this worker,
+  // both vi.resetModules()+dynamic import() below AND the SUT's
+  // AbortSignal.timeout(3000) stall on the frozen clock, so the
+  // not_configured short-circuit test never resolves and hits the 5000ms
+  // vitest timeout. Force real timers FIRST so this file is hermetic
+  // regardless of worker file ordering (exposed when sibling files were
+  // deleted and the worker file distribution reshuffled).
+  vi.useRealTimers();
   logs = [];
   console.log = (...args: unknown[]) => {
     logs.push(args.map((a) => String(a)).join(" "));

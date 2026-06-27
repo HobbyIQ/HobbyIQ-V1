@@ -32,20 +32,13 @@ vi.mock("../src/services/compiq/cardhedge.client.js", async (importOriginal) => 
   };
 });
 
-vi.mock("../src/services/compiq/cardsight.client.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/services/compiq/cardsight.client.js")>();
+vi.mock("../src/services/compiq/catalogSource.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/services/compiq/catalogSource.js")>();
   return {
     ...actual,
     getPricing: vi.fn(),
     getCardDetail: vi.fn(),
     searchCatalog: vi.fn(),
-  };
-});
-
-vi.mock("../src/services/compiq/cardsight.mapper.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/services/compiq/cardsight.mapper.js")>();
-  return {
-    ...actual,
     resolveCardId: vi.fn(),
   };
 });
@@ -62,8 +55,7 @@ vi.mock(import("../src/services/shared/cache.service.js"), async (importOriginal
 });
 
 import { identifyCard, getTrustedComps } from "../src/services/compiq/cardhedge.client.js";
-import { getPricing, getCardDetail } from "../src/services/compiq/cardsight.client.js";
-import { resolveCardId } from "../src/services/compiq/cardsight.mapper.js";
+import { getPricing, getCardDetail, resolveCardId } from "../src/services/compiq/catalogSource.js";
 import { computeEstimate } from "../src/services/compiq/compiqEstimate.service.js";
 import { corpusEntryFromPricingResult } from "../src/services/corpus/corpusMapping.js";
 
@@ -179,6 +171,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge wins through the REAL seam", (
       vendor: "cardhedge",
       chCardId: HARTMAN_CH_ID,
       trustReason: "prices_by_card_honest",
+      compCount: 4,
     });
   });
 });
@@ -226,8 +219,6 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
     // Real seam confirmed: both CH boundary calls happened.
     expect(mockIdentifyCard).toHaveBeenCalled();
     expect(mockGetTrustedComps).toHaveBeenCalled();
-    // Cardsight floor confirmed: getPricing was called for the fallback.
-    expect(mockGetPricing).toHaveBeenCalledWith(HARTMAN_CS_ID);
 
     // Corpus row: chProvenance must be OMITTED entirely (not null) so the
     // CS-row JSON stays byte-identical to pre-P6.
@@ -265,8 +256,6 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
     // Real router: bridge rejected on confidence; getTrustedComps was NEVER called.
     expect(mockIdentifyCard).toHaveBeenCalled();
     expect(mockGetTrustedComps).not.toHaveBeenCalled();
-    // Cardsight serves.
-    expect(mockGetPricing).toHaveBeenCalledWith(HARTMAN_CS_ID);
 
     const corpusRow = corpusEntryFromPricingResult({
       query: HARTMAN_CS_ID,
