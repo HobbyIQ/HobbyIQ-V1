@@ -197,7 +197,7 @@ struct SellWindowView: View {
             }
 
             if let verdict = r.verdict {
-                Text(verdict)
+                Text(verdict.repairingMojibake())
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
             }
@@ -230,7 +230,7 @@ struct SellWindowView: View {
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .tracking(0.8)
                     ForEach(all) { window in
-                        windowCard(window, title: window.label ?? window.monthRange)
+                        windowCard(window, title: window.displayLabel ?? window.monthRange)
                     }
                 }
             }
@@ -252,7 +252,7 @@ struct SellWindowView: View {
             Text(window.monthRange)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            if let reason = window.reason {
+            if let reason = window.displayReason {
                 Text(reason)
                     .font(.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)

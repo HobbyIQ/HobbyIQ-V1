@@ -20,6 +20,12 @@ struct PortfolioDetailPhotosCard: View {
     @State private var frontPhotoRequest: CardPhotoPickerRequest?
     @State private var backPhotoRequest: CardPhotoPickerRequest?
     @State private var localError: String?
+    /// CF-IOS-PHOTO-DELETE-CONFIRM (2026-06-27): the destructive
+    /// "Remove Photo" action inside the source-selection alert used to
+    /// fire the network delete immediately. The intermediate side state
+    /// here triggers a second `.confirmationDialog` so a mis-tap can be
+    /// cancelled before the photo is actually removed.
+    @State private var pendingRemovalSide: CardPhotoSide?
 
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onUpdated: @escaping () -> Void) {
         self.viewModel = viewModel
@@ -103,6 +109,27 @@ struct PortfolioDetailPhotosCard: View {
             CardPhotoPicker(sourceType: request.sourceType) { image in
                 Task { await uploadPhoto(image, side: request.side) }
             }
+        }
+        .confirmationDialog(
+            "Remove this photo?",
+            isPresented: Binding(
+                get: { pendingRemovalSide != nil },
+                set: { isPresented in if isPresented == false { pendingRemovalSide = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingRemovalSide
+        ) { side in
+            Button("Remove Photo", role: .destructive) {
+                pendingRemovalSide = nil
+                Task { await removePhoto(side: side) }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRemovalSide = nil
+            }
+        } message: { side in
+            Text(side == .front
+                 ? "The front photo will be removed from this card and the eBay draft."
+                 : "The back photo will be removed from this card and the eBay draft.")
         }
     }
 
@@ -210,7 +237,7 @@ struct PortfolioDetailPhotosCard: View {
         }()
         if hasExistingPhoto {
             Button("Remove Photo", role: .destructive) {
-                Task { await removePhoto(side: side) }
+                pendingRemovalSide = side
             }
         }
     }

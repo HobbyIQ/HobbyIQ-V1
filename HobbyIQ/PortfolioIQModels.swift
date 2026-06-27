@@ -1425,6 +1425,14 @@ struct PortfolioCardRow: View {
                             .truncationMode(.tail)
                     }
 
+                    if let secondary = inventoryCardSecondaryDetailLine(for: card) {
+                        Text(secondary)
+                            .font(.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
                     inventoryGradePill(text: card.gradeChipText)
                 }
 
@@ -1466,6 +1474,13 @@ struct PortfolioCardGridCard: View {
                     Text(details)
                         .font(.caption2)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
+                }
+
+                if let secondary = inventoryCardSecondaryDetailLine(for: card) {
+                    Text(secondary)
+                        .font(.caption2)
+                        .foregroundStyle(AppColors.textSecondary)
                         .lineLimit(1)
                 }
 
@@ -1548,6 +1563,21 @@ private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
         return fallback.isEmpty ? nil : fallback
     }
     return parts.joined(separator: " · ")
+}
+
+/// CF-IOS-INVENTORY-ROW-SECONDARY (2026-06-27): compact secondary detail
+/// line under the year/set subtitle — grade label first, then parallel /
+/// variant. Each segment trimmed and dropped when empty so a legacy row
+/// missing one or both never renders a dangling " · ". InventoryCard
+/// has no structured serial-number field — the serial is typically baked
+/// into the `parallel` text (e.g. "Refractor /99"), so it surfaces
+/// automatically through the parallel segment.
+private func inventoryCardSecondaryDetailLine(for card: InventoryCard) -> String? {
+    let segments = [card.grade, card.parallel]
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    guard segments.isEmpty == false else { return nil }
+    return segments.joined(separator: " · ")
 }
 
 /// Single grade pill — sentence-case label, soft surface, neutral by default.

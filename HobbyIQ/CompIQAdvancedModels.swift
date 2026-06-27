@@ -171,6 +171,15 @@ struct SellWindowPeriod: Codable, Identifiable {
     let reason: String?
     var id: String { "\(startMonth ?? 0)-\(endMonth ?? 0)-\(label ?? "")" }
 
+    /// Display-side label with backend mojibake repaired. Backend sometimes
+    /// ships "(Sepâ€"Oct)" — UTF-8 en-dash misdecoded as Latin-1 then
+    /// re-encoded. Surfacing the raw label is what the user sees; this
+    /// computed property repairs the common sequences before display.
+    var displayLabel: String? { label?.repairingMojibake() }
+
+    /// Display-side reason with the same mojibake repair pass.
+    var displayReason: String? { reason?.repairingMojibake() }
+
     var monthRange: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM"
@@ -272,4 +281,38 @@ struct PlayerComp: Codable, Identifiable {
     let title: String?
     let source: String?
     var id: String { "\(cardId ?? "")-\(price ?? 0)-\(date ?? "")" }
+}
+
+// MARK: - Mojibake Repair
+
+extension String {
+    /// Backend strings occasionally arrive UTF-8-encoded once, misdecoded as
+    /// Latin-1 / Windows-1252, then re-encoded as UTF-8 — classic mojibake.
+    /// The most-visible artifact is en-dash printed as `â€”`
+    /// or `â€`. Repair common sequences on display so the
+    /// user never sees broken bytes. Order matters: longer sequences are
+    /// listed first so a partial match doesn't strip a valid suffix.
+    func repairingMojibake() -> String {
+        guard contains("â€") || contains("Ã") else { return self }
+        var s = self
+        let pairs: [(String, String)] = [
+            ("\u{00E2}\u{0080}\u{0093}", "\u{2013}"),
+            ("\u{00E2}\u{0080}\u{0094}", "\u{2014}"),
+            ("\u{00E2}\u{0080}\u{0098}", "\u{2018}"),
+            ("\u{00E2}\u{0080}\u{0099}", "\u{2019}"),
+            ("\u{00E2}\u{0080}\u{009C}", "\u{201C}"),
+            ("\u{00E2}\u{0080}\u{009D}", "\u{201D}"),
+            ("\u{00E2}\u{0080}\u{00A6}", "\u{2026}"),
+            ("\u{00C3}\u{00A9}", "\u{00E9}"),
+            ("\u{00C3}\u{00A8}", "\u{00E8}"),
+            ("\u{00C3}\u{00B1}", "\u{00F1}"),
+            ("\u{00C3}\u{00A1}", "\u{00E1}"),
+            ("\u{00C3}\u{00B3}", "\u{00F3}"),
+            ("\u{00C3}\u{00BA}", "\u{00FA}")
+        ]
+        for (broken, fixed) in pairs {
+            s = s.replacingOccurrences(of: broken, with: fixed)
+        }
+        return s
+    }
 }

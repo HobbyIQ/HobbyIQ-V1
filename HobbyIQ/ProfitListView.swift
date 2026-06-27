@@ -53,32 +53,38 @@ struct ProfitListView: View {
                                 NavigationLink {
                                     ProfitIQCardDetailView(viewModel: viewModel, card: card)
                                 } label: {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(card.playerName)
-                                                .font(.subheadline.weight(.semibold))
-                                                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                            Text(card.cardName)
-                                                .font(.caption)
-                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                            HStack(spacing: 6) {
-                                                signalBadge(title: card.signal.displayTitle, color: signalColor(for: card.signal))
-                                                Text(card.roi.portfolioPercentString)
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack(alignment: .top, spacing: 12) {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(card.playerName)
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                                Text(card.cardName)
+                                                    .font(.caption)
+                                                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                                HStack(spacing: 6) {
+                                                    signalBadge(title: card.signal.displayTitle, color: signalColor(for: card.signal))
+                                                    Text(card.roi.portfolioPercentString)
+                                                        .font(.caption.weight(.semibold))
+                                                        .foregroundStyle(roiColor(for: card.roi))
+                                                }
+                                            }
+
+                                            Spacer()
+
+                                            VStack(alignment: .trailing, spacing: 4) {
+                                                Text(card.profitLoss.portfolioSignedCurrencyString)
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(profitColor(for: card.profitLoss))
+                                                Text(card.listPrice.portfolioCurrencyString)
                                                     .font(.caption.weight(.semibold))
                                                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                                             }
                                         }
 
-                                        Spacer()
-
-                                        VStack(alignment: .trailing, spacing: 4) {
-                                            Text(card.profitLoss.portfolioSignedCurrencyString)
-                                                .font(.subheadline.weight(.semibold))
-                                                .foregroundStyle(profitColor(for: card.profitLoss))
-                                            Text(card.listPrice.portfolioCurrencyString)
-                                                .font(.caption.weight(.semibold))
-                                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                                        }
+                                        Text("P/L: \(card.profitLoss.portfolioSignedCurrencyString)")
+                                            .font(.caption)
+                                            .foregroundStyle(AppColors.textSecondary)
                                     }
                                 }
                                 .buttonStyle(.plain)
@@ -133,6 +139,16 @@ struct ProfitListView: View {
     private func profitColor(for value: Double) -> Color {
         if value > 0 { return HobbyIQTheme.Colors.electricBlue }
         if value < 0 { return .red }
+        return HobbyIQTheme.Colors.mutedText
+    }
+
+    /// CF-IOS-PORTFOLIO-ROW-SIGNAL (2026-06-27): ROI gets a sign-driven
+    /// color so the chip row's percentage carries the same green/red read
+    /// as the profitLoss column. Zero stays neutral so flat positions
+    /// don't read as either win or loss.
+    private func roiColor(for value: Double) -> Color {
+        if value > 0 { return HobbyIQTheme.Colors.successGreen }
+        if value < 0 { return AppColors.danger }
         return HobbyIQTheme.Colors.mutedText
     }
 }

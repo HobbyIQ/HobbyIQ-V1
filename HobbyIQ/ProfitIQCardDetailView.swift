@@ -67,6 +67,9 @@ struct ProfitIQCardDetailView: View {
                         .clipShape(Capsule())
                 }
 
+                valuationBreakdownSection
+                whyThisSignalSection
+
                 priceHistorySection
             }
             .padding(.horizontal, 16)
@@ -99,6 +102,93 @@ struct ProfitIQCardDetailView: View {
             }
         }
         .task { await loadHistory() }
+    }
+
+    // MARK: - Valuation Breakdown
+
+    @ViewBuilder
+    private var valuationBreakdownSection: some View {
+        let plColor: Color = card.profitLoss > 0
+            ? HobbyIQTheme.Colors.successGreen
+            : (card.profitLoss < 0 ? AppColors.danger : AppColors.textPrimary)
+        let roiColor: Color = card.roi > 0
+            ? HobbyIQTheme.Colors.successGreen
+            : (card.roi < 0 ? AppColors.danger : AppColors.textPrimary)
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "dollarsign.circle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("Valuation Breakdown")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+            }
+
+            MetricRow(title: "Current Value", value: card.currentValue.portfolioCurrencyString)
+            MetricRow(title: "Cost", value: card.cost.portfolioCurrencyString)
+            MetricRow(title: "Profit / Loss", value: card.profitLoss.portfolioCurrencyString, valueColor: plColor)
+            MetricRow(title: "ROI", value: card.roi.portfolioPercentString, valueColor: roiColor)
+            MetricRow(title: "List Price", value: card.listPrice.portfolioCurrencyString)
+            MetricRow(title: "Min Acceptable Offer", value: card.minAcceptableOffer.portfolioCurrencyString)
+            MetricRow(title: "Quick Sale", value: card.quickSalePrice.portfolioCurrencyString)
+        }
+        .padding(14)
+        .background(AppColors.surfaceElevated)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: - Why This Signal
+
+    @ViewBuilder
+    private var whyThisSignalSection: some View {
+        if !card.reasoning.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Why This Signal")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Spacer()
+                }
+
+                Text(card.signal.displayTitle)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(signalColor(for: card.signal))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(signalColor(for: card.signal).opacity(0.15))
+                    .clipShape(Capsule(style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(card.reasoning, id: \.self) { item in
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                            Text(item)
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(14)
+            .background(AppColors.surfaceElevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
     }
 
     // MARK: - Price History
@@ -259,6 +349,9 @@ struct ProfitIQCardDetailView: View {
                 MetricRow(title: "Quick Sale Price", value: card.quickSalePrice.portfolioCurrencyString)
                 MetricRow(title: "Format", value: card.format)
                 MetricRow(title: "Date Sold", value: formattedLastSellIQAt)
+                if card.confidence > 0 {
+                    MetricRow(title: "Model Confidence", value: "\(Int(card.confidence * 100))%")
+                }
             }
             .padding(14)
             .background(AppColors.surfaceElevated)
@@ -295,9 +388,14 @@ struct ProfitIQCardDetailView: View {
     }
 }
 
-private struct MetricRow: View {
+struct MetricRow: View {
     let title: String
     let value: String
+    /// Optional override for the value-side foreground. Defaults to
+    /// `AppColors.textPrimary` so existing call sites keep their look.
+    /// New rows (e.g. Profit/Loss, ROI) pass green/red here to signal
+    /// the sign without changing the row template.
+    var valueColor: Color = AppColors.textPrimary
 
     var body: some View {
         HStack(spacing: 12) {
@@ -307,7 +405,7 @@ private struct MetricRow: View {
             Spacer(minLength: 8)
             Text(value)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(AppColors.textPrimary)
+                .foregroundStyle(valueColor)
         }
     }
 }

@@ -88,14 +88,33 @@ struct ActionIQView: View {
     @ViewBuilder
     private var stateBanner: some View {
         if let errorMessage {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Could not load your action plan.")
                     .font(.headline)
                     .foregroundStyle(AppColors.textPrimary)
                 Text(errorMessage)
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
+
+                Button {
+                    Task { await loadPlan() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption.weight(.bold))
+                        Text("Try Again")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(AppColors.danger)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppColors.danger.opacity(0.18))
+                    .clipShape(Capsule(style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(isLoading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(HobbyIQTheme.Spacing.medium)
             .background(AppColors.danger.opacity(0.14))
             .overlay(

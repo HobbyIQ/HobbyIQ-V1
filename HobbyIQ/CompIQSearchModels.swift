@@ -934,6 +934,15 @@ struct CompIQPriceByIdResponse: Codable {
     /// Softer than a proxy scan but reliably available on cards with a
     /// recent comp, including parallels the proxy doesn't cover.
     let cardImageThumbUrl: String?
+    /// Backend e8743a6 (2026-06-27): back-of-card scan when CardHedge has
+    /// one. Nil/absent on most cards. View renders side-by-side with the
+    /// front when present and falls back to the same neutral-card
+    /// placeholder the front uses on AsyncImage failure.
+    let cardBackImageUrl: String?
+    /// Backend e8743a6 (2026-06-27): engine-owned 90-day price floor in
+    /// whole dollars. Nil when the daily series is too thin to compute
+    /// one. Surfaces as a small caption beneath the hero.
+    let priceFloor90d: Double?
     let cardIdentity: CompIQPriceCardIdentity?
     let gradeUsed: String?
     let compsUsed: Int?
@@ -1099,6 +1108,8 @@ struct CompIQPriceByIdResponse: Codable {
         priceHistory = try? container.decodeIfPresent([PriceHistoryPoint].self, forKey: .priceHistory)
         cardImageUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageUrl)
         cardImageThumbUrl = try? container.decodeIfPresent(String.self, forKey: .cardImageThumbUrl)
+        cardBackImageUrl = try? container.decodeIfPresent(String.self, forKey: .cardBackImageUrl)
+        priceFloor90d = try? container.decodeIfPresent(Double.self, forKey: .priceFloor90d)
         cardIdentity = try? container.decodeIfPresent(CompIQPriceCardIdentity.self, forKey: .cardIdentity)
         gradeUsed = try? container.decodeIfPresent(String.self, forKey: .gradeUsed)
         compsUsed = try? container.decodeIfPresent(Int.self, forKey: .compsUsed)
@@ -1152,7 +1163,7 @@ struct CompIQPriceByIdResponse: Codable {
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
         case confidence, source, trendAnalysis, recentComps, excludedComps, priceHistory
-        case cardImageUrl, cardImageThumbUrl
+        case cardImageUrl, cardImageThumbUrl, cardBackImageUrl, priceFloor90d
         case cardIdentity, gradeUsed, compsUsed, compsAvailable, daysSinceNewestComp
         case verdict, action, quickSaleValue, premiumValue, explanation
         case graderPremium, buyWindow, freshness, broaderTrend

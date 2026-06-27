@@ -729,6 +729,7 @@ struct CompIQPricedCardView: View {
 
             // Hero image — visual anchor for the card identity.
             cardHeroImageCard(response)
+            cardFloorCaption(response)
 
             // Hero price slot (FMV $ or "No current estimate").
             fmvCard(response)
@@ -822,7 +823,216 @@ struct CompIQPricedCardView: View {
                     regimeContent(response)
                 }
             }
+
+            marketTrendSection(response)
+            dataQualitySection(response)
+            priceZonesSection(response)
         }
+    }
+
+    // MARK: - Themed Summary Sections (CF-IOS-COMP-SUMMARY-SECTIONS, 2026-06-21)
+
+    @ViewBuilder
+    private func marketTrendSection(_ response: CompIQPriceByIdResponse) -> some View {
+        let trend = response.trendAnalysis
+        let direction = trend?.marketDirection?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let change = trend?.changeFromOlderToRecent?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let liquidity = trend?.liquidity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasContent = (direction?.isEmpty == false) || (change?.isEmpty == false) || (liquidity?.isEmpty == false)
+
+        if hasContent {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Market Trend")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Spacer()
+                }
+
+                if let direction, direction.isEmpty == false {
+                    MetricRow(
+                        title: "Direction",
+                        value: direction,
+                        valueColor: marketDirectionColor(direction)
+                    )
+                }
+                if let change, change.isEmpty == false {
+                    MetricRow(
+                        title: "Change",
+                        value: change,
+                        valueColor: marketChangeColor(change)
+                    )
+                }
+                if let liquidity, liquidity.isEmpty == false {
+                    MetricRow(title: "Liquidity", value: liquidity)
+                }
+            }
+            .padding(14)
+            .background(AppColors.surfaceElevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func dataQualitySection(_ response: CompIQPriceByIdResponse) -> some View {
+        let quality = response.compQuality?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sufficiency = response.dataSufficiency?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let compsUsed = response.compsUsed
+        let freshness = response.freshness?.status?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let daysSince = response.freshness?.daysSinceNewestComp ?? response.daysSinceNewestComp
+        let warning = response.variantWarning?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let hasContent = (quality?.isEmpty == false)
+            || (sufficiency?.isEmpty == false)
+            || (compsUsed != nil)
+            || (freshness?.isEmpty == false)
+            || (daysSince != nil)
+            || (warning?.isEmpty == false)
+
+        if hasContent {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Data Quality")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Spacer()
+                }
+
+                if let quality, quality.isEmpty == false {
+                    MetricRow(title: "Comp Quality", value: quality)
+                }
+                if let sufficiency, sufficiency.isEmpty == false {
+                    MetricRow(title: "Data Sufficiency", value: sufficiency)
+                }
+                if let compsUsed {
+                    MetricRow(title: "Comps Used", value: "\(compsUsed)")
+                }
+                if let freshness, freshness.isEmpty == false {
+                    MetricRow(title: "Freshness", value: freshness.capitalized)
+                }
+                if let daysSince {
+                    MetricRow(title: "Newest Comp", value: daysSince == 0 ? "Today" : "\(daysSince)d ago")
+                }
+                if let warning, warning.isEmpty == false {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppColors.danger)
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(AppColors.danger)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(14)
+            .background(AppColors.surfaceElevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private func priceZonesSection(_ response: CompIQPriceByIdResponse) -> some View {
+        let buy = response.buyZone
+        let hold = response.holdZone
+        let sell = response.sellZone
+        let hasContent = (buy?.low != nil || buy?.high != nil)
+            || (hold?.low != nil || hold?.high != nil)
+            || (sell?.low != nil || sell?.high != nil)
+
+        if hasContent {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "target")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text("Price Zones")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(AppColors.textPrimary)
+                    Spacer()
+                }
+
+                if buy?.low != nil || buy?.high != nil {
+                    MetricRow(
+                        title: "Buy Zone",
+                        value: zoneRangeString(buy),
+                        valueColor: HobbyIQTheme.Colors.successGreen
+                    )
+                }
+                if hold?.low != nil || hold?.high != nil {
+                    MetricRow(
+                        title: "Hold Zone",
+                        value: zoneRangeString(hold)
+                    )
+                }
+                if sell?.low != nil || sell?.high != nil {
+                    MetricRow(
+                        title: "Sell Zone",
+                        value: zoneRangeString(sell),
+                        valueColor: AppColors.danger
+                    )
+                }
+            }
+            .padding(14)
+            .background(AppColors.surfaceElevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    private func zoneRangeString(_ zone: PriceZone?) -> String {
+        let low = zone?.low
+        let high = zone?.high
+        if let low, let high {
+            return "\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))"
+        }
+        if let low {
+            return low.formatted(.currency(code: "USD"))
+        }
+        if let high {
+            return high.formatted(.currency(code: "USD"))
+        }
+        return "—"
+    }
+
+    private func marketDirectionColor(_ raw: String) -> Color {
+        let v = raw.lowercased()
+        if v.contains("up") || v.contains("rising") || v.contains("bull") {
+            return HobbyIQTheme.Colors.successGreen
+        }
+        if v.contains("down") || v.contains("falling") || v.contains("bear") {
+            return AppColors.danger
+        }
+        return AppColors.textPrimary
+    }
+
+    private func marketChangeColor(_ raw: String) -> Color {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("-") { return AppColors.danger }
+        if trimmed.hasPrefix("+") { return HobbyIQTheme.Colors.successGreen }
+        let stripped = trimmed.replacingOccurrences(of: "%", with: "")
+        if let num = Double(stripped) {
+            if num > 0 { return HobbyIQTheme.Colors.successGreen }
+            if num < 0 { return AppColors.danger }
+        }
+        return AppColors.textPrimary
     }
 
     // MARK: - FMV Hero Card
@@ -1137,32 +1347,93 @@ struct CompIQPricedCardView: View {
         }
     }
 
-    /// CF-THIN-CARD-FULL-DETAIL-PARITY Phase 2 (2026-06-11): hoisted out
-    /// of `observedPriceSlot` so EVERY price slot (observed / trend-
-    /// extrapolated / last-sale / no-sales) gets the same follower row.
-    /// Directional (abs(impliedPct) >= 0.5 with trendIQ or broaderTrend
-    /// pct present): "<arrow> Next sale ~$Y · ±X%" + range. Flat (no
-    /// pct, near-zero pct, or no projection target): "<right-arrow>
-    /// Holding steady" — text only, never an invented number. The 0.5%
-    /// floor kills "Next sale ~$430 · 0.0%" tautologies; the text-only
-    /// flat copy keeps the shell intact instead of stripping the row.
-    /// CF-IOS-DIRECTION-SWEEP (2026-06-18): the prior implementation had
-    /// a `predictedPrice + trendIQ.direction + broaderTrend.direction`
-    /// branch that rendered "Next sale ~$Y · ±X%" + range. The direction
-    /// branch is gone; the function collapses to the flat-state line so
-    /// the value-block shell still renders consistently across all
-    /// observed / trend-extrapolated / last-sale / no-sales price slots.
+    /// CF-IOS-REGIME-DRIVEN-FOLLOWER (2026-06-27): the follower row now
+    /// reads off the regime classifier instead of hardcoding "Holding
+    /// steady". The label is the SAME plain-English string the Regime
+    /// section's headline uses, so the two surfaces can never disagree.
+    /// Insufficient data / nil regime → row hides entirely (EmptyView)
+    /// rather than render an incorrect calm-state.
     @ViewBuilder
     private func valueBlockFollower(_ response: CompIQPriceByIdResponse) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "arrow.right")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text("Holding steady")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        if let model = valueBlockFollowerModel(response) {
+            HStack(spacing: 6) {
+                Image(systemName: model.icon)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(model.color)
+                Text(model.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(model.color)
+            }
+            .padding(.top, 4)
+        } else {
+            EmptyView()
         }
-        .padding(.top, 4)
+    }
+
+    /// Drives both the icon glyph and the label for `valueBlockFollower`.
+    /// Regime keys map 1:1 to icon + label + color. Returns nil for any
+    /// regime the slot shouldn't speak to (insufficient_data, unknown,
+    /// nil), which collapses the row.
+    private func valueBlockFollowerModel(
+        _ response: CompIQPriceByIdResponse
+    ) -> (icon: String, label: String, color: Color)? {
+        guard let raw = response.regime?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+              raw.isEmpty == false else {
+            return nil
+        }
+
+        let slope = response.regimeDiagnostics?.slopePctPerMonth
+        let slopeSuffix: String = {
+            guard let slope, slope.isFinite else { return "" }
+            return " · " + String(format: "%+.0f%%/mo", slope)
+        }()
+
+        switch raw {
+        case "sharply_breaking_out", "gradually_rising":
+            return ("arrow.up.right",
+                    "Trending up" + slopeSuffix,
+                    HobbyIQTheme.Colors.successGreen)
+        case "sharply_crashing", "declining":
+            return ("arrow.down.right",
+                    "Trending down" + slopeSuffix,
+                    HobbyIQTheme.Colors.danger)
+        case "volatile":
+            return ("arrow.left.arrow.right",
+                    "Volatile",
+                    HobbyIQTheme.Colors.warning)
+        case "stable":
+            return ("arrow.right",
+                    "Holding steady",
+                    HobbyIQTheme.Colors.mutedText)
+        case "insufficient_data", "unknown":
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    /// Plain-English label shared by `valueBlockFollower` and the
+    /// Regime section's headline. Single source of truth so the two
+    /// surfaces can't drift apart on a new regime code — the default
+    /// branch de-underscores + capitalizes the raw value as a safe
+    /// fallback for forward-compatibility.
+    private func regimeFriendlyLabel(_ regime: String) -> String {
+        switch regime.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "sharply_breaking_out", "gradually_rising":
+            return "Trending up"
+        case "sharply_crashing", "declining":
+            return "Trending down"
+        case "volatile":
+            return "Volatile"
+        case "stable":
+            return "Holding steady"
+        case "insufficient_data":
+            return "Not enough sales"
+        default:
+            return regime.replacingOccurrences(of: "_", with: " ").capitalized
+        }
     }
 
     // CF-IOS-DIRECTION-SWEEP (2026-06-18): overallTrendContent removed
@@ -1871,6 +2142,7 @@ struct CompIQPricedCardView: View {
         VStack(alignment: .leading, spacing: 8) {
             compsHeader(response)
             if let comps = response.recentComps, comps.isEmpty == false {
+                lastSoldBanner(comps: comps)
                 VStack(spacing: 0) {
                     ForEach(Array(comps.enumerated()), id: \.element.id) { index, comp in
                         recentCompRow(comp, showsTopDivider: index > 0)
@@ -1880,6 +2152,74 @@ struct CompIQPricedCardView: View {
                 noRecentCompsLine(response)
             }
         }
+    }
+
+    /// CF-IOS-COMPS-LAST-SOLD-BANNER (2026-06-27): surfaceElevated banner
+    /// above the comps list. Headlines the most recent sale's price + a
+    /// relative sold-date subtitle. Self-suppresses when neither the
+    /// price nor a parseable date is available.
+    @ViewBuilder
+    private func lastSoldBanner(comps: [CompIQPriceRecentComp]) -> some View {
+        let mostRecent = comps
+            .filter { $0.parsedDate != nil }
+            .max(by: { ($0.parsedDate ?? .distantPast) < ($1.parsedDate ?? .distantPast) })
+            ?? comps.first
+        let price = mostRecent?.price
+        let relative = mostRecent?.relativeDate.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasContent = price != nil || (relative?.isEmpty == false)
+
+        if hasContent {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Last Sold")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .tracking(0.6)
+                    HStack(spacing: 6) {
+                        if let price {
+                            Text(price.formatted(.currency(code: "USD")))
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(AppColors.textPrimary)
+                        }
+                        if let relative, relative.isEmpty == false {
+                            if price != nil {
+                                Text("·")
+                                    .font(.caption)
+                                    .foregroundStyle(AppColors.textSecondary)
+                            }
+                            Text(relative)
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                        }
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(AppColors.surfaceElevated)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+    }
+
+    /// CF-IOS-COMPS-LAST-SOLD-BANNER (2026-06-27): builds an eBay sold-
+    /// listings search URL for the given comp title so a tap on a comp
+    /// row lands on the same query the engine sourced the comp from.
+    /// Returns nil for empty / whitespace-only titles so the row gates
+    /// off the tap affordance instead of opening a junk search.
+    private func ebaySoldSearchURL(for title: String?) -> URL? {
+        guard let title = title?.trimmingCharacters(in: .whitespacesAndNewlines),
+              title.isEmpty == false,
+              let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            return nil
+        }
+        return URL(string: "https://www.ebay.com/sch/i.html?_nkw=\(encoded)&_sacat=0&LH_Sold=1&LH_Complete=1")
     }
 
     /// Calm comps-empty line for thin-pool responses. Replaces the prior
@@ -2183,7 +2523,8 @@ struct CompIQPricedCardView: View {
 
     private func recentCompRow(_ comp: CompIQPriceRecentComp, showsTopDivider: Bool) -> some View {
         let isBelowMarket = comp.belowMarket == true
-        return HStack(alignment: .center, spacing: 11) {
+        let tapURL = ebaySoldSearchURL(for: comp.title)
+        let row = HStack(alignment: .center, spacing: 11) {
             compThumbnail(urlString: comp.imageUrl)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -2209,9 +2550,17 @@ struct CompIQPricedCardView: View {
                     .truncationMode(.tail)
             }
             .opacity(isBelowMarket ? 0.78 : 1)
+
+            if tapURL != nil {
+                Spacer(minLength: 6)
+                Image(systemName: "arrow.up.right.square")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 9)
+        .contentShape(Rectangle())
         .overlay(alignment: .top) {
             if showsTopDivider {
                 Rectangle()
@@ -2219,6 +2568,16 @@ struct CompIQPricedCardView: View {
                     .frame(height: 0.5)
             }
         }
+
+        return Button {
+            guard let tapURL else { return }
+            UIApplication.shared.open(tapURL)
+        } label: {
+            row
+        }
+        .buttonStyle(.plain)
+        .disabled(tapURL == nil)
+        .accessibilityHint(tapURL == nil ? "" : "Opens eBay sold listings for this title")
     }
 
     /// CF-B (2026-06-08): "Excluded from value" — comps the engine dropped
@@ -2277,18 +2636,58 @@ struct CompIQPricedCardView: View {
     /// card aspect (2.5:3.5) and centered. Reuses the same graceful
     /// neutral-card placeholder used for the comp rows so a missing or
     /// 404'd photo never surfaces a broken-image glyph.
+    ///
+    /// Backend e8743a6 (2026-06-27): when `cardBackImageUrl` is present,
+    /// the hero shrinks to a side-by-side front + back pair (150x210
+    /// each, 12pt gap). With no back URL, the layout collapses to the
+    /// original single 180x252 centered front — byte-identical to the
+    /// pre-CardHedge state so the common (back-less) card never shifts.
     @ViewBuilder
     private func cardHeroImageCard(_ response: CompIQPriceByIdResponse) -> some View {
-        HStack {
+        let backRaw = response.cardBackImageUrl?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasBack = backRaw?.isEmpty == false
+
+        HStack(spacing: hasBack ? 12 : 0) {
             Spacer(minLength: 0)
             cardHeroImage(
                 primary: response.cardImageUrl,
                 fallback: response.cardImageThumbUrl
             )
-            .frame(width: 180, height: 252) // 2.5:3.5 → 180:252
+            .frame(
+                width: hasBack ? 150 : 180,
+                height: hasBack ? 210 : 252
+            )
+            if hasBack {
+                cardHeroImage(
+                    primary: backRaw,
+                    fallback: nil
+                )
+                .frame(width: 150, height: 210)
+            }
             Spacer(minLength: 0)
         }
         .padding(.top, 4)
+    }
+
+    /// Backend e8743a6 (2026-06-27): compact "90-day floor $X" caption
+    /// under the hero. Self-suppresses when `priceFloor90d` is nil or
+    /// non-positive. Uses `arrow.down.to.line.compact` to read as "this
+    /// is the floor"; mutedText/steelGray keeps it subordinate to the
+    /// hero price slot below.
+    @ViewBuilder
+    private func cardFloorCaption(_ response: CompIQPriceByIdResponse) -> some View {
+        if let floor = response.priceFloor90d, floor > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.down.to.line.compact")
+                    .font(.caption2.weight(.semibold))
+                Text("90-day floor \(floor.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.steelGray)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 2)
+        }
     }
 
     /// CF-CARD-IMAGE-FALLBACK (2026-06-11): nested-AsyncImage fallback —
@@ -2479,7 +2878,7 @@ struct CompIQPricedCardView: View {
             // Headline: regime + confidence chips.
             HStack(spacing: 10) {
                 if let regime = response.regime {
-                    Text(regime.replacingOccurrences(of: "_", with: " ").capitalized)
+                    Text(regimeFriendlyLabel(regime))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                 }
@@ -2497,35 +2896,41 @@ struct CompIQPricedCardView: View {
             }
 
             if let diag = response.regimeDiagnostics {
-                Divider().background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
-
-                VStack(alignment: .leading, spacing: 6) {
-                    if let slope = diag.slopePctPerMonth {
-                        regimeRow(label: "Slope", value: String(format: "%+.2f%%/mo", slope))
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let slope = diag.slopePctPerMonth {
+                            regimeRow(label: "Slope", value: String(format: "%+.2f%%/mo", slope))
+                        }
+                        if let cov = diag.coefficientOfVariation {
+                            regimeRow(label: "Coefficient of Variation", value: String(format: "%.3f", cov))
+                        }
+                        if let r2 = diag.r2 {
+                            regimeRow(label: "R²", value: String(format: "%.3f", r2))
+                        }
+                        if let recent = diag.recentMeanLast14d {
+                            regimeRow(label: "Recent mean (14d)", value: recent.formatted(.currency(code: "USD")))
+                        }
+                        if let older = diag.olderMean14to90d {
+                            regimeRow(label: "Older mean (14–90d)", value: older.formatted(.currency(code: "USD")))
+                        }
+                        if let pct = diag.pctChangeRecentVsOlder {
+                            regimeRow(label: "Δ recent vs older", value: String(format: "%+.2f%%", pct))
+                        }
+                        if let reason = diag.classificationReason {
+                            Text(reason)
+                                .font(.caption2)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 4)
+                        }
                     }
-                    if let cov = diag.coefficientOfVariation {
-                        regimeRow(label: "Coefficient of Variation", value: String(format: "%.3f", cov))
-                    }
-                    if let r2 = diag.r2 {
-                        regimeRow(label: "R²", value: String(format: "%.3f", r2))
-                    }
-                    if let recent = diag.recentMeanLast14d {
-                        regimeRow(label: "Recent mean (14d)", value: recent.formatted(.currency(code: "USD")))
-                    }
-                    if let older = diag.olderMean14to90d {
-                        regimeRow(label: "Older mean (14–90d)", value: older.formatted(.currency(code: "USD")))
-                    }
-                    if let pct = diag.pctChangeRecentVsOlder {
-                        regimeRow(label: "Δ recent vs older", value: String(format: "%+.2f%%", pct))
-                    }
-                    if let reason = diag.classificationReason {
-                        Text(reason)
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 4)
-                    }
+                    .padding(.top, 6)
+                } label: {
+                    Text("Why this trend?")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                 }
+                .tint(HobbyIQTheme.Colors.electricBlue)
             }
         }
     }

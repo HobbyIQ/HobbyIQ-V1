@@ -632,30 +632,71 @@ struct PortfolioIQView: View {
         let valueColor: Color = isUp ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
         let arrowIcon = isUp ? "arrow.up.right" : "arrow.down.right"
 
-        return HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(mover.playerName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                Text(mover.cardName)
-                    .font(.caption)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    .lineLimit(1)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(mover.playerName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text(mover.cardName)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 6) {
+                    Image(systemName: arrowIcon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(valueColor)
+                    Text(mover.profitLoss.portfolioSignedCurrencyText)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(valueColor)
+                }
             }
 
-            Spacer(minLength: 12)
-
-            HStack(spacing: 6) {
-                Image(systemName: arrowIcon)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(valueColor)
-                Text(mover.profitLoss.portfolioSignedCurrencyText)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(valueColor)
-            }
+            moverRowSecondaryLine(mover: mover)
         }
         .padding(.horizontal, 12)
         .frame(minHeight: 44)
+    }
+
+    /// CF-IOS-PORTFOLIO-ROW-SECONDARY (2026-06-27): compact ROI% +
+    /// current-value line under the mover row's primary content. ROI is
+    /// derived from the row's profitLoss / cost basis (cost = currentValue
+    /// - profitLoss), so the line uses only fields already on
+    /// `PortfolioMover`. Segments self-suppress: ROI hides when cost
+    /// rounds to zero; current value hides when the row carries no value.
+    @ViewBuilder
+    private func moverRowSecondaryLine(mover: PortfolioMover) -> some View {
+        let cost = mover.currentValue - mover.profitLoss
+        let roiPct: Double? = cost > 0 ? (mover.profitLoss / cost) * 100 : nil
+        let roiColor: Color = {
+            guard let roiPct else { return HobbyIQTheme.Colors.mutedText }
+            if roiPct > 0 { return HobbyIQTheme.Colors.successGreen }
+            if roiPct < 0 { return AppColors.danger }
+            return HobbyIQTheme.Colors.mutedText
+        }()
+
+        HStack(spacing: 6) {
+            if let roiPct {
+                Text(roiPct.portfolioPercentString)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(roiColor)
+            }
+            if mover.currentValue > 0 {
+                if roiPct != nil {
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Text(mover.currentValue.portfolioCurrencyString)
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
     }
 
     // MARK: - Helpers
