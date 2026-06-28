@@ -225,6 +225,12 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     "upper", "deck", "fleer", "score", "prospect", "prospects",
     "border", "raw", "signed", "signature", "wave", "shimmer",
     "baseball", "football", "basketball", "hockey", "soccer",
+    // CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): "image" pair to the
+    // existing "variation" so the "Image Variation" parallel name doesn't
+    // leak its first half into playerName (observed on
+    // "Drake Baldwin 2025 Bowman Chrome Image Variation" → playerName
+    // "Drake Baldwin Image" pre-fix → CardHedge player filter mismatched).
+    "image",
   ];
   for (const noise of NOISE) {
     remaining = remaining.replace(new RegExp(`\\b${noise}\\b`, "gi"), " ");

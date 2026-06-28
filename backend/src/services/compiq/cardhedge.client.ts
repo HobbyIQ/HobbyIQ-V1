@@ -94,35 +94,83 @@ export interface CardHedgeSale {
   url: string | null;
 }
 
+/**
+ * CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): optional structured filter
+ * fields the CardHedge `/cards/card-search` endpoint supports natively.
+ * Sending these alongside the free-text `search` lets CH's tokenizer narrow
+ * by player / set / rookie status instead of chewing through everything as
+ * one free-text blob. Before this CF, queries like "drake baldwin 2025
+ * bowman chrome image variation" returned 0 candidates because CH couldn't
+ * confidently match the variant within a too-noisy search string.
+ *
+ * All fields are optional. When omitted, behavior is byte-identical to the
+ * pre-CF call shape — the existing callers (pricing path, sibling fetch,
+ * image lookup) keep their semantics.
+ */
+export interface CardSearchFilters {
+  /** Filter by player name (e.g. "Drake Baldwin"). */
+  player?: string | null;
+  /** Filter by set name (e.g. "2025 Bowman Chrome Baseball"). */
+  set?: string | null;
+  /** Filter by rookie status (e.g. "Rookie" — CH's enum value). */
+  rookie?: string | null;
+}
+
 /** POST /cards/card-search — free-text card lookup (Baseball). */
-export async function searchCards(query: string, limit = 10): Promise<CardHedgeCard[]> {
+export async function searchCards(
+  query: string,
+  limit = 10,
+  filters?: CardSearchFilters,
+): Promise<CardHedgeCard[]> {
   const h = headers();
   if (!h) {
     console.warn("[cardhedge.client] CARD_HEDGE_API_KEY missing");
     return [];
   }
-  return cacheWrap(cacheKey("ch:search", query, String(limit)), async () => _searchCards(query, limit, h), SEARCH_TTL_SEC);
+  // Filter values folded into the cache key so the same `query` with
+  // different structured filters doesn't collide on a stale cached payload.
+  const filterKey = filters
+    ? [filters.player ?? "", filters.set ?? "", filters.rookie ?? ""].join("|")
+    : "";
+  return cacheWrap(
+    cacheKey("ch:search", query, String(limit), filterKey),
+    async () => _searchCards(query, limit, h, filters),
+    SEARCH_TTL_SEC,
+  );
 }
 
-async function _searchCards(query: string, limit: number, h: Record<string, string>): Promise<CardHedgeCard[]> {
+async function _searchCards(
+  query: string,
+  limit: number,
+  h: Record<string, string>,
+  filters?: CardSearchFilters,
+): Promise<CardHedgeCard[]> {
   try {
+    const body: Record<string, unknown> = {
+      search: query,
+      category: "Baseball",
+      page: 1,
+      page_size: Math.max(1, Math.min(limit, 50)),
+    };
+    // CF-CH-STRUCTURED-SEARCH-FILTERS: only emit each filter key when the
+    // value is non-empty. CH treats omitted fields as "no filter" — sending
+    // an empty string would (per the docs) be a "match empty string" filter.
+    if (filters?.player && filters.player.length > 0) body.player = filters.player;
+    if (filters?.set && filters.set.length > 0) body.set = filters.set;
+    if (filters?.rookie && filters.rookie.length > 0) body.rookie = filters.rookie;
+
     const res = await fetch(`${BASE_URL}/cards/card-search`, {
       method: "POST",
       headers: h,
-      body: JSON.stringify({
-        search: query,
-        category: "Baseball",
-        page: 1,
-        page_size: Math.max(1, Math.min(limit, 50)),
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
     if (!res.ok) {
       console.warn(`[cardhedge.client] search HTTP ${res.status} for "${query}"`);
       return [];
     }
-    const body: any = await res.json();
-    const rawCards: any[] = Array.isArray(body?.cards) ? body.cards : [];
+    const respBody: any = await res.json();
+    const rawCards: any[] = Array.isArray(respBody?.cards) ? respBody.cards : [];
     // Normalize the image field onto each card so downstream consumers
     // (RoutedCard → search candidates → priced-card hero) get a stable
     // `image` regardless of which image key CardHedge populated.
