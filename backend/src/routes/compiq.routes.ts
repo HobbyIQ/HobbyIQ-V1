@@ -1050,21 +1050,6 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         }
       }
 
-      // CF-CH-TELEMETRY-FANOUT (2026-06-28): same two-event telemetry as
-      // /price-by-id. /search is the high-volume freetext path so this
-      // is where most of the drift evidence will accumulate. Grade keys
-      // come back as Raw (no per-request grade input on this route);
-      // graded-tier drift can still be evaluated downstream by joining
-      // with the gradedEstimates rail.
-      recordCHReferenceTelemetry({
-        source: "compiq.search",
-        cardId: typeof cardIdForGraded === "string" ? cardIdForGraded : null,
-        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
-        gradingCompany: null,
-        gradeValue: null,
-        engineFmv: noUsableLiveFmv ? null : fmv,
-      });
-
       return {
         ...buildEngineMeta(),
         success: true,
@@ -1170,6 +1155,26 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         gradedEstimates,
       };
     }, CACHE_TTL_SECONDS);
+    // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): fire on EVERY response
+    // (cache hit + miss) by reading from `result` instead of nesting
+    // inside the producer. The route is cacheWrapped at 6h TTL — a hit
+    // bypasses the producer entirely, so the in-producer call we shipped
+    // in #161 only fired on cache misses (~1 in N). Cache itself caches
+    // CH calls inside recordCHReferenceTelemetry (12h getCardFmv +
+    // getPriceEstimate + getSalesStatsByPlayer), so emitting on every
+    // cache hit doesn't multiply CH traffic — it just lets the App
+    // Insights event flow through on every priced response.
+    recordCHReferenceTelemetry({
+      source: "compiq.search",
+      cardId: ((result as any).cardIdentity?.cardId as string | undefined) ?? null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      gradingCompany: null,
+      gradeValue: null,
+      engineFmv:
+        typeof (result as any).fairMarketValueLive === "number"
+          ? ((result as any).fairMarketValueLive as number)
+          : null,
+    });
     res.json(result);
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
@@ -1364,18 +1369,6 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         }
       }
 
-      // CF-CH-TELEMETRY-FANOUT (2026-06-28): same two-event telemetry as
-      // /search and /price-by-id. Drift evidence accumulates per-route so
-      // KQL can compare base rates.
-      recordCHReferenceTelemetry({
-        source: "compiq.price",
-        cardId: typeof cardIdForGraded === "string" ? cardIdForGraded : null,
-        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
-        gradingCompany: null,
-        gradeValue: null,
-        engineFmv: isThin ? null : fmv,
-      });
-
       return {
         ...buildEngineMeta(),
         success: true,
@@ -1471,6 +1464,18 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         gradedEstimates,
       };
     }, CACHE_TTL_SECONDS);
+    // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
+    recordCHReferenceTelemetry({
+      source: "compiq.price",
+      cardId: ((result as any).cardIdentity?.cardId as string | undefined) ?? null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      gradingCompany: null,
+      gradeValue: null,
+      engineFmv:
+        typeof (result as any).fairMarketValueLive === "number"
+          ? ((result as any).fairMarketValueLive as number)
+          : null,
+    });
     res.json(result);
     // Telemetry â€” see /search for rationale.
     writeTelemetryEntries({
@@ -1854,20 +1859,6 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         gradedEstimates = compiled.estimates;
       }
 
-      // CF-CH-TELEMETRY-FANOUT (2026-06-28): two-event telemetry helper —
-      // see top of file. Folds the inline blocks the original
-      // CF-CH-FMV-CROSS-VALIDATE + CF-CH-TREND-INGEST emitted into one
-      // call so the same evidence shape ships from /search, /price, and
-      // /price-by-id uniformly.
-      recordCHReferenceTelemetry({
-        source: "compiq.price-by-id",
-        cardId: resolvedCardId,
-        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
-        gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
-        gradeValue: typeof gradeValue === "number" ? gradeValue : null,
-        engineFmv: isThin ? null : fmv,
-      });
-
       return {
         ...buildEngineMeta(),
         success: true,
@@ -2127,6 +2118,18 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         );
       }
     }
+    // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
+    recordCHReferenceTelemetry({
+      source: "compiq.price-by-id",
+      cardId: resolvedCardId,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+      gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+      engineFmv:
+        typeof (result as any).fairMarketValueLive === "number"
+          ? ((result as any).fairMarketValueLive as number)
+          : null,
+    });
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
