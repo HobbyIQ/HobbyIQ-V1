@@ -192,6 +192,45 @@ const PLAYER_FILTER_NOISE_PATTERNS: readonly RegExp[] = [
   /\bPattern\b/gi,
 ];
 
+/**
+ * CF-CH-RERANK-BY-INTENT (2026-06-28): score a CardHedge candidate by how
+ * well it matches the user's parsed intent. Higher score = better match.
+ * Returns 0 when nothing matches (CH's original order remains the
+ * tiebreaker via stable sort).
+ *
+ * Scoring components:
+ *   +3 if `intentWantsAuto` AND candidate is auto (matches user intent)
+ *   -1 if `intentWantsAuto` AND candidate is NOT auto (penalty — user
+ *      asked for auto; non-auto rows shouldn't bubble up)
+ *   +2 per parallel-token match between intentTokens and candidate.variant
+ *      (case-insensitive whole-token match)
+ *
+ * Exported for direct testing.
+ */
+export function scoreCandidateForIntent(opts: {
+  isAuto: boolean | undefined;
+  parallel: string | null | undefined;
+  intentTokens: ReadonlyArray<string>;
+  intentWantsAuto: boolean;
+}): number {
+  let score = 0;
+  if (opts.intentWantsAuto) {
+    score += opts.isAuto === true ? 3 : -1;
+  }
+  if (opts.parallel && opts.intentTokens.length > 0) {
+    const parallelTokens = String(opts.parallel)
+      .toLowerCase()
+      .replace(/-/g, " ")
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3);
+    const parallelTokenSet = new Set(parallelTokens);
+    for (const t of opts.intentTokens) {
+      if (parallelTokenSet.has(t)) score += 2;
+    }
+  }
+  return score;
+}
+
 export function sanitizePlayerForCH(playerName: string): string {
   let cleaned = playerName;
   for (const re of PLAYER_FILTER_NOISE_PATTERNS) {
@@ -346,6 +385,24 @@ async function dispatchFreetextMode(
   // Drake Baldwin 2025 Bowman Chrome Image Variation, which returned 0
   // candidates pre-CF because the parallel-name noise dominated the
   // free-text match.
+  /**
+   * CF-CH-RERANK-BY-INTENT (2026-06-28): tokens extracted from the raw user
+   * query that we'll use to re-rank CardHedge's returned candidates. CH's
+   * relevance ranker often buries the user's actually-intended variant
+   * (e.g. CPA-NK Green Lava at position 35 for "nick kurtz green lava auto")
+   * because its tokenizer doesn't bridge parallel + player + auto signals
+   * the way we need it to.
+   *
+   * Tokens are length>=3, lowercase, alphanumeric. The auto flag is
+   * extracted separately because it has its own scoring branch.
+   */
+  const intentTokens = trimmed
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3 && t !== "the" && t !== "and");
+  const intentWantsAuto = /\bauto(graph(ed)?)?\b/i.test(trimmed);
+
   const parsed = parseCardQuery(trimmed);
   const filters = buildFiltersFromParsedQuery(parsed);
   // CF-CH-QUERY-HYPHEN-NORMALIZE (2026-06-28): collapse hyphens to spaces
@@ -393,9 +450,35 @@ async function dispatchFreetextMode(
     };
   }
 
-  const candidates = hits
-    .filter((c) => typeof c.card_id === "string" && c.card_id.length > 0)
-    .map((card, index) => routedCardToIdentity(card, index, hits.length));
+  // CF-CH-RERANK-BY-INTENT (2026-06-28): re-rank CH's results by parsed
+  // intent (isAuto match + parallel-token match). CH's relevance ranking
+  // sometimes buries the user's actually-intended variant deep in the
+  // list — Kurtz CPA-NK Green Lava sat at position 35 for "green lava
+  // auto" pre-rerank. Stable sort preserves CH's original order as the
+  // tiebreaker for equal-scored candidates.
+  const filteredHits = hits.filter(
+    (c) => typeof c.card_id === "string" && c.card_id.length > 0,
+  );
+  // Detect if every candidate is auto from card-number prefix; we use the
+  // same prefix detector the adapter uses so the rerank score's
+  // `isAuto` matches what we'll surface to iOS.
+  const scoredHits = filteredHits
+    .map((card, originalIndex) => {
+      const isAuto = detectIsAutoFromCardNumber(card.number);
+      const score = scoreCandidateForIntent({
+        isAuto,
+        parallel: card.variant,
+        intentTokens,
+        intentWantsAuto,
+      });
+      return { card, originalIndex, score };
+    })
+    // Stable sort: higher score first; ties → preserve CH's original order.
+    .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+
+  const candidates = scoredHits.map((entry, newIndex) =>
+    routedCardToIdentity(entry.card, newIndex, scoredHits.length),
+  );
 
   return {
     input: { raw: input, detectedMode: "freetext" },
