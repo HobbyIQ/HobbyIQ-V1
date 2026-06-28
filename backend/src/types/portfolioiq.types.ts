@@ -30,6 +30,19 @@ export interface PortfolioHolding {
   purchasePrice?: number;
   totalCostBasis?: number;
   /**
+   * CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): persist the grade-
+   * ladder anchor snapshot when autoPriceHolding fell back to it (engine
+   * couldn't anchor a real FMV). Surfaces on read-back so iOS can render
+   * "Last sold: PSA 9 $1325 · 236 days ago" alongside the estimated value.
+   */
+  nearestGradedAnchor?: {
+    grade: string;
+    price: number;
+    daysOld: number;
+    sampleSize: number;
+    confidence: number;
+  };
+  /**
    * CF-GRADER-STATUS-FIELD (2026-06-28): first-class state for cards that
    * are physically out of the user's hands but still owned. Distinct from
    * the existing `status` field (which iOS uses for inventory bucketing).

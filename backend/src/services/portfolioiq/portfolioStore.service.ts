@@ -1880,6 +1880,96 @@ async function autoPriceHolding(
         }
   );
 
+  // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): when the engine
+  // produced null/zero FMV AND we have a cardsightCardId, fall through
+  // to the grade-ladder anchor mechanism we own end-to-end (same one
+  // surfaced at /price-by-id in CF-CH-NEAREST-GRADED-ANCHOR PR #164).
+  // This rescues the "CH has prices, engine couldn't anchor" class
+  // identified by the 2026-06-28 inventory audit (12 holdings where
+  // CH had grade data but engine FMV was null because the user's grade
+  // wasn't in CH's pool — e.g. Roman Anthony BGS 8.5 when CH has Raw/
+  // PSA 10/PSA 9, or Gage Wood PSA 9 when CH has only Raw).
+  //
+  // Branches:
+  //   - rail "observed" path with fairValue > 0: no change (engine produced
+  //     a real FMV, ladder not needed)
+  //   - rail "estimated" path: no change (T3 base-auto floor already set
+  //     estimatedValue; ladder would compete needlessly)
+  //   - everything else with fairValue <= 0 AND cardsightCardId: try ladder
+  //
+  // Synthesizes the same shape as the T3 estimated path so the wire-
+  // shape / iOS rendering treats both identically.
+  let resolvedAfterLadder = resolved;
+  let nearestGradedAnchorSnapshot: {
+    grade: string;
+    price: number;
+    daysOld: number;
+    sampleSize: number;
+    confidence: number;
+  } | null = null;
+  const railIsObservedZero =
+    resolved.valuationStatus === "observed" && (resolved.fairMarketValueOverride ?? 0) <= 0;
+  if (
+    cardsightCardId &&
+    (resolved.valuationStatus !== "estimated") &&
+    (resolvedAfterLadder.fairMarketValueOverride === null || railIsObservedZero)
+  ) {
+    try {
+      const { deriveGradeLadderAnchor } = await import(
+        "../compiq/compiqEstimate.service.js"
+      );
+      const ladder = await deriveGradeLadderAnchor({
+        cardId: cardsightCardId,
+        // Always request "Raw" so the ladder picks the freshest anchor
+        // regardless of the user's requested grade; the auto-aware
+        // multiplier table converts it to the user's grade when applicable.
+        requestedGrade: "Raw",
+        cardClass: holding.isAuto === true ? "autograph" : "base",
+      });
+      if (ladder && ladder.derivedFmv > 0) {
+        nearestGradedAnchorSnapshot = {
+          grade: ladder.anchorGrade,
+          price: ladder.anchorPrice,
+          daysOld: ladder.anchorDaysOld,
+          sampleSize: ladder.anchorSampleSize,
+          confidence: ladder.confidence,
+        };
+        // Promote to "estimated" so iOS shows the ladder-derived value
+        // with low-confidence styling instead of the null FMV.
+        resolvedAfterLadder = {
+          fairMarketValueOverride: null,
+          valuationStatus: "estimated" as const,
+          estimatedValue: ladder.derivedFmv,
+          estimateLow: ladder.anchorPrice * 0.7,  // wide band on derived-anchor estimates
+          estimateHigh: ladder.anchorPrice * 1.3,
+          estimateConfidence: ladder.confidence,
+          estimateBasis: ladder.explanation,
+          isEstimate: true,
+        };
+        try {
+          console.log(JSON.stringify({
+            event: "autoprice_grade_ladder_fallback_applied",
+            source: "portfolio.autoPriceHolding",
+            holdingId: holding.id,
+            cardId: cardsightCardId,
+            anchorGrade: ladder.anchorGrade,
+            anchorPrice: ladder.anchorPrice,
+            anchorDaysOld: ladder.anchorDaysOld,
+            derivedFmv: ladder.derivedFmv,
+            confidence: ladder.confidence,
+            timestamp: new Date().toISOString(),
+          }));
+        } catch {
+          // Telemetry must never propagate.
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[portfolio.autoPriceHolding] grade-ladder fallback failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  }
+
   // CF-IDENTITY-HYDRATION (2026-06-18) / -COMPLETION (2026-06-18): identity
   // patch already computed above (hoisted to fire on both the success path
   // here AND the no-FMV early return). Spread is a no-op when the patch
@@ -1887,16 +1977,21 @@ async function autoPriceHolding(
   const updated: PortfolioHolding = {
     ...holding,
     ...identityPatch,
-    fairMarketValue: resolved.fairMarketValueOverride === null
+    fairMarketValue: resolvedAfterLadder.fairMarketValueOverride === null
       ? null as any  // null erases the field on display; ERP read coerces null→null
-      : resolved.fairMarketValueOverride,
-    estimatedValue: resolved.estimatedValue,
-    estimateLow: resolved.estimateLow,
-    estimateHigh: resolved.estimateHigh,
-    estimateConfidence: resolved.estimateConfidence,
-    estimateBasis: resolved.estimateBasis,
-    isEstimate: resolved.isEstimate,
-    valuationStatus: resolved.valuationStatus,
+      : resolvedAfterLadder.fairMarketValueOverride,
+    estimatedValue: resolvedAfterLadder.estimatedValue,
+    estimateLow: resolvedAfterLadder.estimateLow,
+    estimateHigh: resolvedAfterLadder.estimateHigh,
+    estimateConfidence: resolvedAfterLadder.estimateConfidence,
+    estimateBasis: resolvedAfterLadder.estimateBasis,
+    isEstimate: resolvedAfterLadder.isEstimate,
+    valuationStatus: resolvedAfterLadder.valuationStatus,
+    // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): persist the
+    // anchor snapshot so the iOS detail surface can render
+    // "Last sold: PSA 9 $1325 · 236 days ago" alongside the estimated
+    // value. null when the ladder didn't fire (typical case).
+    nearestGradedAnchor: nearestGradedAnchorSnapshot ?? undefined,
     predictedPrice,
     predictedPriceLow,
     predictedPriceHigh,
