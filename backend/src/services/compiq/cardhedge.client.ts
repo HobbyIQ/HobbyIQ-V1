@@ -231,6 +231,96 @@ async function _getCardDetailsById(cardId: string, h: Record<string, string>): P
   }
 }
 
+/**
+ * CF-CH-FMV-CROSS-VALIDATE (2026-06-28): CardHedge's two reference-FMV
+ * shapes. `card-fmv` returns the rich index-adjusted FMV (with
+ * confidence_grade A/B/C/D, freshness_days, English explanation);
+ * `price-estimate` returns the lean direct estimate (price + range +
+ * confidence + method only).
+ *
+ * Both endpoints require `card_id` + `grade` ("Raw", "PSA 10", etc.).
+ * Returns null on any HTTP/network/shape failure — caller must treat
+ * a null response as "no reference signal" and degrade silently.
+ */
+export interface CardHedgeFmv {
+  price: number;
+  price_low: number | null;
+  price_high: number | null;
+  confidence: number | null;
+  method: string | null;
+  freshness_days: number | null;
+  support_grades: number | null;
+  grade_label: string | null;
+  provider: string | null;
+  grade_value: number | null;
+  as_of_date?: string | null;
+  confidence_grade?: string | null;
+  raw_price?: number | null;
+  price_explanation?: string | null;
+  index_pct_change?: number | null;
+  [k: string]: unknown;
+}
+
+export interface CardHedgePriceEstimate {
+  price: number;
+  price_low: number | null;
+  price_high: number | null;
+  confidence: number | null;
+  method: string | null;
+  freshness_days: number | null;
+  support_grades: number | null;
+  grade_label: string | null;
+  provider: string | null;
+  grade_value: number | null;
+}
+
+const FMV_TTL_SEC = 12 * 3600;  // 12h — matches CH's comps cadence; FMV is daily.
+
+export async function getCardFmv(cardId: string, grade: string): Promise<CardHedgeFmv | null> {
+  const h = headers();
+  if (!h || !cardId || !grade) return null;
+  return cacheWrap(
+    cacheKey("ch:card-fmv", cardId, grade),
+    async () => _postFmvShape<CardHedgeFmv>("/cards/card-fmv", { card_id: cardId, grade }, h),
+    FMV_TTL_SEC,
+  );
+}
+
+export async function getPriceEstimate(cardId: string, grade: string): Promise<CardHedgePriceEstimate | null> {
+  const h = headers();
+  if (!h || !cardId || !grade) return null;
+  return cacheWrap(
+    cacheKey("ch:price-estimate", cardId, grade),
+    async () => _postFmvShape<CardHedgePriceEstimate>("/cards/price-estimate", { card_id: cardId, grade }, h),
+    FMV_TTL_SEC,
+  );
+}
+
+async function _postFmvShape<T extends { price: number }>(
+  path: string,
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] ${path} HTTP ${res.status} for card_id=${body.card_id}`);
+      return null;
+    }
+    const respBody: any = await res.json();
+    if (!respBody || typeof respBody.price !== "number" || !Number.isFinite(respBody.price)) return null;
+    return respBody as T;
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] ${path} threw for card_id=${body.card_id}:`, err?.message ?? err);
+    return null;
+  }
+}
+
 /** POST /cards/card-match — AI text match. Returns null when confidence < 0.80. */
 export async function identifyCard(query: string): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   const h = headers();

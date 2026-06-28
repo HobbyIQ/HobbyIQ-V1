@@ -1,5 +1,14 @@
 import { Router } from "express";
-import { compiqEstimate, computeEstimate, simulateWhatIf } from "../services/compiq/compiqEstimate.service.js";
+import {
+  compiqEstimate,
+  computeEstimate,
+  simulateWhatIf,
+  logFmvDriftObserved,
+} from "../services/compiq/compiqEstimate.service.js";
+import {
+  getCardFmv,
+  getPriceEstimate,
+} from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
@@ -1723,6 +1732,55 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         });
         gradedEstimates = compiled.estimates;
       }
+
+      // CF-CH-FMV-CROSS-VALIDATE (2026-06-28): fire-and-forget telemetry
+      // comparing our engine FMV against CardHedge's two reference shapes
+      // (card-fmv = index-adjusted, price-estimate = direct). Read-only,
+      // zero pricing impact — builds the calibration evidence base for
+      // future engine tuning. Both CH calls are cached 12h via cacheWrap
+      // so repeated /price-by-id hits on the same card don't multiply CH
+      // traffic. The void/.catch keeps the route's response path off the
+      // critical path: telemetry latency never blocks the user.
+      void (async () => {
+        try {
+          const grade =
+            typeof gradeCompany === "string" && typeof gradeValue === "number"
+              ? `${gradeCompany} ${gradeValue}`
+              : "Raw";
+          const [chFmv, chEst] = await Promise.all([
+            getCardFmv(resolvedCardId, grade),
+            getPriceEstimate(resolvedCardId, grade),
+          ]);
+          logFmvDriftObserved({
+            source: "compiq.price-by-id",
+            player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
+            cardId: resolvedCardId,
+            gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+            grade,
+            engineFmv: isThin ? null : fmv,
+            chCardFmv: chFmv
+              ? {
+                  price: chFmv.price,
+                  confidence: chFmv.confidence,
+                  confidenceGrade: chFmv.confidence_grade ?? null,
+                  freshnessDays: chFmv.freshness_days,
+                  method: chFmv.method,
+                }
+              : null,
+            chPriceEstimate: chEst
+              ? {
+                  price: chEst.price,
+                  confidence: chEst.confidence,
+                  method: chEst.method,
+                }
+              : null,
+          });
+        } catch (err) {
+          console.warn(
+            `[compiq.price-by-id] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+          );
+        }
+      })();
 
       return {
         ...buildEngineMeta(),
