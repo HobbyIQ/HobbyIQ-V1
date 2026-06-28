@@ -694,48 +694,154 @@ export function applyCompQualityFilter(sales: RawComp[], card: CardIdentityLite)
 // ---------------------------------------------------------------------------
 // Grader premium coefficients (Pricing Accuracy — Improvement 3)
 // ---------------------------------------------------------------------------
-// Approximate market premiums vs a raw/ungraded baseline (=1.0). These are
-// starting values; tune over time with backtest data.
-const GRADER_PREMIUMS: Record<string, Record<string, number>> = {
+// CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28): replaced the prior flat-per-grade
+// table with a PRICE-TIERED structure sourced from Prospects Live's "Pitchers,
+// Hitters, and PSA Grades: The PSA Grading Multiplier for MiLB Prospect Cards"
+// (https://www.prospectslive.com/...). The prior flat 4.0× for PSA 10 was
+// roughly correct at <$25 raw but systematically OVERSTATED graded value at
+// the $50+ tier (real PSA 10 multiplier at $100+ raw is ~2.2×, not 4.0×) and
+// UNDERSTATED PSA 9 at <$25 (real 2.56× vs old 1.7×). The article's data also
+// confirms PSA 9 LOSES value above $50 raw — the prior 1.7× was a guaranteed
+// over-claim there.
+//
+// SCOPE: pitching prospects baseline. Hitter data was promised by the article
+// but not included in the published excerpt; we'll fold it in once we have
+// either the article's update or our own observed data via the telemetry the
+// CF adds below (logGraderRatioObserved). Veteran/established player
+// multipliers may differ — the per-player overlay arrives in a follow-up CF
+// after the data accumulates.
+//
+// BGS/SGC/CGC tiers derive multiplicatively from PSA per existing hobby
+// convention (no independent dataset for them yet).
+//
+// HOW THE LOOKUP WORKS: when callers pass `rawPrice`, the function picks the
+// matching tier. When they don't (legacy callers), the function returns the
+// `fallback` tier value which equals the article's overall pitcher average.
+// That fallback is intentionally a slight regression from the prior flat
+// constants (PSA 10 3.43× vs 4.0×) — the prior constants were too high on
+// average. The change in tier coverage is the entire point of this CF.
+
+export type GradePriceTier = "<25" | "25-50" | "50-100" | "100+" | "fallback";
+
+interface GradeTierTable {
+  "<25": number;
+  "25-50": number;
+  "50-100": number;
+  "100+": number;
+  fallback: number;
+}
+
+const GRADER_PREMIUMS: Record<string, Record<string, GradeTierTable>> = {
   PSA: {
-    "10": 4.0,
-    "9":  1.7,
-    "8":  1.15,
-    "7":  0.95,
-    "6":  0.85,
-    "5":  0.75,
+    // PSA 10 — article: 4.9 (<$25), ~3.6 ($25-50), ~2.8 ($50-100), ~2.2 ($100+),
+    // overall avg 3.43 (pitching prospects, n≈60).
+    "10": { "<25": 4.9, "25-50": 3.6, "50-100": 2.8, "100+": 2.2, fallback: 3.43 },
+    // PSA 9 — article: 2.56 (<$25), ~1.5 ($25-50), <1.0 at $50+ (real value loss).
+    // We clamp to 0.85 minimum to avoid extreme-loss baseline noise.
+    "9":  { "<25": 2.56, "25-50": 1.5, "50-100": 0.95, "100+": 0.85, fallback: 1.70 },
+    // PSA 8 — article: "consistently loses value" → all tiers below 1.0.
+    "8":  { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
+    "7":  { "<25": 0.85, "25-50": 0.80, "50-100": 0.75, "100+": 0.70, fallback: 0.78 },
+    "6":  { "<25": 0.75, "25-50": 0.70, "50-100": 0.65, "100+": 0.60, fallback: 0.68 },
+    "5":  { "<25": 0.65, "25-50": 0.60, "50-100": 0.55, "100+": 0.50, fallback: 0.58 },
   },
   BGS: {
-    "10":  6.0,
-    "9.5": 3.5,
-    "9":   1.6,
-    "8.5": 1.2,
-    "8":   1.05,
+    // BGS 10 ("Black Label") — typically 1.5× PSA 10.
+    "10":  { "<25": 7.35, "25-50": 5.40, "50-100": 4.20, "100+": 3.30, fallback: 5.15 },
+    // BGS 9.5 ≈ PSA 10 × 0.89 (from external-source ratio: PSA 10 = BGS 9.5 × 1.12).
+    "9.5": { "<25": 4.36, "25-50": 3.20, "50-100": 2.49, "100+": 1.96, fallback: 3.05 },
+    // BGS 9 ≈ PSA 9 × 0.94.
+    "9":   { "<25": 2.41, "25-50": 1.41, "50-100": 0.89, "100+": 0.80, fallback: 1.60 },
+    "8.5": { "<25": 1.10, "25-50": 1.00, "50-100": 0.95, "100+": 0.90, fallback: 1.00 },
+    "8":   { "<25": 1.00, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
   },
   SGC: {
-    "10":  3.4,
-    "9.5": 2.6,
-    "9":   1.5,
-    "8.5": 1.15,
-    "8":   1.0,
+    // SGC 10 ≈ PSA 10 × 0.85.
+    "10":  { "<25": 4.17, "25-50": 3.06, "50-100": 2.38, "100+": 1.87, fallback: 2.92 },
+    "9.5": { "<25": 3.72, "25-50": 2.74, "50-100": 2.13, "100+": 1.67, fallback: 2.61 },
+    "9":   { "<25": 2.30, "25-50": 1.35, "50-100": 0.86, "100+": 0.77, fallback: 1.53 },
+    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.90, "100+": 0.85, fallback: 0.95 },
+    "8":   { "<25": 0.95, "25-50": 0.90, "50-100": 0.85, "100+": 0.80, fallback: 0.90 },
   },
   CGC: {
-    "10":  3.2,
-    "9.5": 2.4,
-    "9":   1.45,
-    "8.5": 1.12,
-    "8":   0.98,
+    // CGC 10 ≈ PSA 10 × 0.80.
+    "10":  { "<25": 3.92, "25-50": 2.88, "50-100": 2.24, "100+": 1.76, fallback: 2.74 },
+    "9.5": { "<25": 3.49, "25-50": 2.56, "50-100": 1.99, "100+": 1.57, fallback: 2.44 },
+    "9":   { "<25": 2.18, "25-50": 1.28, "50-100": 0.81, "100+": 0.73, fallback: 1.45 },
+    "8.5": { "<25": 1.05, "25-50": 0.95, "50-100": 0.88, "100+": 0.83, fallback: 0.93 },
+    "8":   { "<25": 0.93, "25-50": 0.88, "50-100": 0.83, "100+": 0.78, fallback: 0.88 },
   },
 };
 
+/**
+ * CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28): map a raw anchor price to its
+ * tier bucket. Boundaries chosen to match the Prospects Live article's
+ * reported tier structure ($25, $50, $100 break points).
+ */
+export function rawPriceToGradeTier(rawPrice: number | null | undefined): GradePriceTier {
+  if (rawPrice == null || !Number.isFinite(rawPrice) || rawPrice <= 0) {
+    return "fallback";
+  }
+  if (rawPrice < 25) return "<25";
+  if (rawPrice < 50) return "25-50";
+  if (rawPrice < 100) return "50-100";
+  return "100+";
+}
+
 export function getGraderPremium(
   gradingCompany: string | null | undefined,
-  grade: string | null | undefined
+  grade: string | null | undefined,
+  rawPrice?: number | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
-  return GRADER_PREMIUMS[company]?.[gradeKey] ?? 1.0;
+  const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
+  if (!tierTable) return 1.0;
+  const tier = rawPriceToGradeTier(rawPrice);
+  return tierTable[tier];
+}
+
+/**
+ * CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28): telemetry side-channel for the
+ * per-player calibration follow-up. Logs an observed graded-to-raw ratio
+ * whenever the engine has paired sales data (graded comp + raw median) for
+ * the same card. Aggregating across many (player, grade) observations lets
+ * us derive per-player multipliers later via App Insights KQL queries on
+ * the `graded_ratio_observed` event.
+ *
+ * Fire-and-forget — never throws, never affects the priced response.
+ * Telemetry payload kept minimal so storage cost stays bounded.
+ */
+export function logGraderRatioObserved(opts: {
+  source: string;
+  player: string | null;
+  cardId: string | null;
+  gradingCompany: string;
+  grade: string;
+  rawAnchor: number;
+  gradedValue: number;
+}): void {
+  if (!opts.rawAnchor || opts.rawAnchor <= 0 || !opts.gradedValue || opts.gradedValue <= 0) return;
+  const ratio = opts.gradedValue / opts.rawAnchor;
+  const tier = rawPriceToGradeTier(opts.rawAnchor);
+  try {
+    console.log(JSON.stringify({
+      event: "graded_ratio_observed",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      rawAnchor: Math.round(opts.rawAnchor * 100) / 100,
+      gradedValue: Math.round(opts.gradedValue * 100) / 100,
+      ratio: Math.round(ratio * 1000) / 1000,
+      tier,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
 }
 
 /** Extracts a (company, grade) tuple from a free-text comp title, or null. */

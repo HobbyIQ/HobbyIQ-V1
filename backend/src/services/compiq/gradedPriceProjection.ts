@@ -2104,7 +2104,12 @@ export function computeGradedProjection(
         gradeStr: string,
         reason: string,
       ) => {
-        const generic = getGraderPremium(company, gradeStr);
+        // CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28): pass anchorPrice so the
+        // multiplier comes from the matching price tier instead of the
+        // fallback overall-average. <$25 raws now get the higher PSA 10
+        // premium (4.9×) they actually trade at; $100+ raws get the lower
+        // 2.2× that matches the market instead of the old 4.0× over-claim.
+        const generic = getGraderPremium(company, gradeStr, anchorPrice);
         if (!Number.isFinite(generic) || generic < 1.0) {
           demoteToNoData(r, reason);
           return;
