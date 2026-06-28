@@ -53,6 +53,18 @@ export interface CompileGradedEstimatesInput {
      * Null/undefined or "insufficient" coverage = no forward shift.
      */
     trendIQ?: TrendIQResult | null;
+    /**
+     * CF-CH-GRADED-FROM-COMPOSED-ANCHOR (2026-06-28): Build B's
+     * composed raw FMV (base_auto_median × curated baseRelativePremium)
+     * for parallel cards without observed comps. When fmv (observed)
+     * and lastSale.price are both absent, the parallel-scope anchor
+     * resolution falls through to this composed value with source
+     * "fmv" so the projection has SOMETHING to project from. Without
+     * this, thin parallels (Hartman Blue X-Fractor /150 auto, etc.)
+     * yielded empty gradedEstimates because every anchor branch null'd
+     * out — even though Build B had produced a real composed estimate.
+     */
+    estimatedValue?: number | null;
   };
   /** Cardsight parallelId of the request (null/undefined for base scope). */
   parallelId: string | null;
@@ -160,6 +172,20 @@ export async function compileGradedEstimatesForCard(
       }
     }
 
+    // CF-CH-GRADED-FROM-COMPOSED-ANCHOR (2026-06-28): Build B's composed
+    // raw FMV for parallel cards without observed comps. Used as the last-
+    // resort anchor when fmv (observed) and lastSale.price are both null,
+    // so thin parallels yield projected graded estimates instead of an
+    // empty array. Extracted once here so both the raw-scope branch (below)
+    // and the graded-scope branch can fall through to it.
+    const estimatedValueRaw = input.estimate.estimatedValue;
+    const composedRawFmv =
+      typeof estimatedValueRaw === "number"
+      && Number.isFinite(estimatedValueRaw)
+      && estimatedValueRaw > 0
+        ? estimatedValueRaw
+        : null;
+
     let parallelRawFmv: number | null = null;
     let parallelRawFmvSource: "fmv" | "last-sale" | undefined;
     let parallelRawFmvAgeDays: number | null = null;
@@ -173,6 +199,17 @@ export async function compileGradedEstimatesForCard(
           parallelRawFmv = lastSalePrice;
           parallelRawFmvSource = "last-sale";
           parallelRawFmvAgeDays = daysSinceNewestComp;
+        } else if (composedRawFmv != null) {
+          // CF-CH-GRADED-FROM-COMPOSED-ANCHOR — Build B fallback for
+          // thin parallels (no observed fmv, no last-sale). Source
+          // tag stays "fmv" because downstream consumers treat it as
+          // the synthetic raw anchor; the engine's projection math is
+          // anchor-source-agnostic. Age stays null — composed values
+          // are point-in-time outputs of the curated multiplier, not
+          // a dated sale record.
+          parallelRawFmv = composedRawFmv;
+          parallelRawFmvSource = "fmv";
+          parallelRawFmvAgeDays = null;
         }
       } else {
         // CF-GRADED-PRECEDENCE-OBSERVED (2026-06-15): graded-scope used
@@ -194,6 +231,15 @@ export async function compileGradedEstimatesForCard(
         );
         if (observedMedian != null && observedMedian > 0) {
           parallelRawFmv = observedMedian;
+          parallelRawFmvSource = "fmv";
+          parallelRawFmvAgeDays = null;
+        } else if (composedRawFmv != null) {
+          // CF-CH-GRADED-FROM-COMPOSED-ANCHOR (2026-06-28): same Build B
+          // fallback as the raw-scope branch above — graded-scope thin
+          // parallels also yielded empty gradedEstimates pre-fix because
+          // no same-parallel observed median existed. Now the composed
+          // value anchors the projection on graded scope too.
+          parallelRawFmv = composedRawFmv;
           parallelRawFmvSource = "fmv";
           parallelRawFmvAgeDays = null;
         }

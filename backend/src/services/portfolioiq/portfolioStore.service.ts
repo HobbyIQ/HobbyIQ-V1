@@ -1656,6 +1656,10 @@ async function autoPriceHolding(
             daysSinceNewestComp?: number | null;
             recentComps?: ReadonlyArray<unknown>;
             trendIQ?: import("../compiq/trendIQ.types.js").TrendIQResult | null;
+            // CF-CH-GRADED-FROM-COMPOSED-ANCHOR (2026-06-28): Build B
+            // composed fallback so thin-parallel holdings get graded
+            // estimates persisted on autoPrice.
+            estimatedValue?: number | null;
           },
           parallelId,
           parallelName,

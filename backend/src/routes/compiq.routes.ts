@@ -1706,6 +1706,12 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
             daysSinceNewestComp?: number | null;
             recentComps?: ReadonlyArray<unknown>;
             trendIQ?: import("../services/compiq/trendIQ.types.js").TrendIQResult | null;
+            // CF-CH-GRADED-FROM-COMPOSED-ANCHOR (2026-06-28): Build B's
+            // composed raw FMV. Helper falls back to this anchor when fmv
+            // (observed) and lastSale.price are both null on thin parallels
+            // — without it, gradedEstimates was empty for Hartman Blue
+            // X-Fractor / Speckle Refractor / etc.
+            estimatedValue?: number | null;
           },
           parallelId: resolvedParallelId ?? null,
           parallelName: resolvedParallelName ?? null,
