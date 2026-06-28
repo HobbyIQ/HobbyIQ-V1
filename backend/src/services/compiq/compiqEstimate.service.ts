@@ -788,14 +788,104 @@ export function rawPriceToGradeTier(rawPrice: number | null | undefined): GradeP
   return "100+";
 }
 
+/**
+ * CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): empirical auto-specific
+ * multiplier table calibrated from 848 prospect-autograph cards' CH
+ * 90-day-avg prices. Loaded lazily on first access; refreshed by a
+ * weekly Azure Function (CF-AUTO-MULTIPLIER-REFRESH-JOB follows).
+ * Fall through to the static GRADER_PREMIUMS when (a) the calibration
+ * file is missing or fails to parse OR (b) the requested cardClass
+ * is not "autograph".
+ */
+type AutoMultiplierTable = {
+  calibratedAt?: string;
+  sampleSize?: { total: number };
+  table?: Record<string, Record<string, Record<string, number>>>;
+};
+
+let _autoTableCache: AutoMultiplierTable | null | undefined = undefined;
+function getAutoTable(): AutoMultiplierTable | null {
+  if (_autoTableCache !== undefined) return _autoTableCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("node:path") as typeof import("node:path");
+    const p = path.resolve(process.cwd(), "data/auto-multipliers-latest.json");
+    if (!fs.existsSync(p)) {
+      _autoTableCache = null;
+      return null;
+    }
+    _autoTableCache = JSON.parse(fs.readFileSync(p, "utf-8")) as AutoMultiplierTable;
+    return _autoTableCache;
+  } catch (err) {
+    console.warn(`[compiqEstimate] auto-multipliers load failed: ${(err as Error)?.message ?? err}`);
+    _autoTableCache = null;
+    return null;
+  }
+}
+
+/**
+ * Tier resolver supporting both the static-table tiers (<25, 25-50,
+ * 50-100, 100+) AND the empirical-table tiers (..., 100-250, 250-500,
+ * 500-1000, 1000+). The caller's `rawPrice` lands in whichever tier
+ * exists in the target table — we resolve by walking the table's
+ * declared tier keys for the highest match the price clears.
+ */
+function resolveTierForTable(
+  table: Record<string, number> | undefined,
+  rawPrice: number | null | undefined,
+): number | null {
+  if (!table) return null;
+  if (rawPrice == null || !Number.isFinite(rawPrice) || rawPrice <= 0) {
+    return typeof table.fallback === "number" ? table.fallback : null;
+  }
+  const tierKeys = ["<25", "25-50", "50-100", "100-250", "250-500", "500-1000", "100+", "1000+"];
+  const present = tierKeys.filter((k) => typeof table[k] === "number");
+  if (present.length === 0) {
+    return typeof table.fallback === "number" ? table.fallback : null;
+  }
+  // Pick the tier the price falls into.
+  const price = rawPrice;
+  let pick: string | null = null;
+  for (const k of present) {
+    if (k === "<25" && price < 25) pick = k;
+    else if (k === "25-50" && price >= 25 && price < 50) pick = k;
+    else if (k === "50-100" && price >= 50 && price < 100) pick = k;
+    else if (k === "100-250" && price >= 100 && price < 250) pick = k;
+    else if (k === "250-500" && price >= 250 && price < 500) pick = k;
+    else if (k === "500-1000" && price >= 500 && price < 1000) pick = k;
+    else if (k === "100+" && price >= 100) pick = k;
+    else if (k === "1000+" && price >= 1000) pick = k;
+  }
+  if (pick && typeof table[pick] === "number") return table[pick];
+  return typeof table.fallback === "number" ? table.fallback : null;
+}
+
 export function getGraderPremium(
   gradingCompany: string | null | undefined,
   grade: string | null | undefined,
   rawPrice?: number | null,
+  cardClass?: "autograph" | "base",
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
+
+  // CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): prefer the empirical auto
+  // table when the card is autograph-class. Falls through to the static
+  // base table on any miss (no row for tier, no row for grade, no table
+  // for company).
+  if (cardClass === "autograph") {
+    const auto = getAutoTable();
+    const autoTier = auto?.table?.[company]?.[gradeKey];
+    const autoValue = resolveTierForTable(autoTier, rawPrice);
+    if (autoValue != null && Number.isFinite(autoValue) && autoValue > 0) {
+      return autoValue;
+    }
+    // else fall through to base table (logged in telemetry as a calibration gap)
+  }
+
   const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
   if (!tierTable) return 1.0;
   const tier = rawPriceToGradeTier(rawPrice);
@@ -1106,6 +1196,7 @@ export function gradeLadderConversionRatio(
   anchorGrade: GradeLadderGrade,
   requestedGrade: GradeLadderGrade,
   anchorPrice: number,
+  cardClass?: "autograph" | "base",
 ): { ratio: number; rawTierUsed: number } {
   if (anchorGrade === requestedGrade) return { ratio: 1, rawTierUsed: anchorPrice };
 
@@ -1115,7 +1206,7 @@ export function gradeLadderConversionRatio(
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
     if (!ap) return { ratio: 1, rawTierUsed: anchorPrice };
-    const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice);
+    const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice, cardClass);
     rawFromAnchor = anchorPrice / anchorPremium;
   }
 
@@ -1125,7 +1216,7 @@ export function gradeLadderConversionRatio(
   } else {
     const rp = gradeLadderToCompanyPair(requestedGrade);
     if (!rp) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor);
+    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor, cardClass);
   }
 
   let anchorPremium: number;
@@ -1134,7 +1225,7 @@ export function gradeLadderConversionRatio(
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
     if (!ap) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor);
+    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor, cardClass);
   }
 
   const ratio = requestedPremium / anchorPremium;
@@ -1153,10 +1244,11 @@ export function gradeLadderConversionRatio(
 export async function deriveGradeLadderAnchor(opts: {
   cardId: string;
   requestedGrade: GradeLadderGrade;
+  cardClass?: "autograph" | "base";
   nowMs?: number;
   fetchPrices?: (cardId: string, grade: string, days: number) => Promise<{ closing_date: string; price: number }[]>;
 }): Promise<GradeLadderAnchor | null> {
-  const { cardId, requestedGrade } = opts;
+  const { cardId, requestedGrade, cardClass } = opts;
   const nowMs = opts.nowMs ?? Date.now();
   if (!cardId) return null;
 
@@ -1189,7 +1281,7 @@ export async function deriveGradeLadderAnchor(opts: {
 
   if (!best) return null;
 
-  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price);
+  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass);
   const derivedFmv = Math.round(best.price * ratio * 100) / 100;
   const confidence = gradeLadderConfidence(best.daysOld, best.sampleSize);
 
