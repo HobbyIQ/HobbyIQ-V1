@@ -185,6 +185,52 @@ async function _searchCards(
   }
 }
 
+/**
+ * CF-CH-MATCH-CARD-BOOST (2026-06-28): fetch full card details for a
+ * card_id. Used when `identifyCard` returns a card_id that ISN'T in the
+ * search result set (i.e., AI matched a variant CH's token search buried
+ * beyond our 100-result window). The returned CardHedgeCard has the
+ * same shape as `searchCards` hits, so the dispatcher can adapt it via
+ * the existing `chCardToRoutedCard` → `routedCardToIdentity` path.
+ *
+ * Returns null on any HTTP error, network failure, or shape mismatch —
+ * the dispatcher gracefully degrades to the search-only path.
+ */
+export async function getCardDetailsById(cardId: string): Promise<CardHedgeCard | null> {
+  const h = headers();
+  if (!h || !cardId) return null;
+  return cacheWrap(
+    cacheKey("ch:card-details", cardId),
+    async () => _getCardDetailsById(cardId, h),
+    SEARCH_TTL_SEC,
+  );
+}
+
+async function _getCardDetailsById(cardId: string, h: Record<string, string>): Promise<CardHedgeCard | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/card-details`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify({ card_id: cardId }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] card-details HTTP ${res.status} for "${cardId}"`);
+      return null;
+    }
+    const respBody: any = await res.json();
+    // /v1/cards/card-details may return the card under `card` or directly at
+    // top level — defensive coverage of both shapes (the docs example shows
+    // the top-level shape but the search-cards path nests under `cards`).
+    const raw = respBody?.card ?? respBody;
+    if (!raw || typeof raw.card_id !== "string") return null;
+    return { ...raw, image: pickCardImage(raw) } as CardHedgeCard;
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] card-details threw for "${cardId}":`, err?.message ?? err);
+    return null;
+  }
+}
+
 /** POST /cards/card-match — AI text match. Returns null when confidence < 0.80. */
 export async function identifyCard(query: string): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   const h = headers();
