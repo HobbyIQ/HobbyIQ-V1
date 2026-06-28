@@ -93,6 +93,48 @@ describe("buildFiltersFromParsedQuery — low-confidence parses return undefined
 // 3. SET COMPOSITION — year suffix logic
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-SET-FILTER-ONLY-WHEN-SPECIFIC (2026-06-28) — brand-only queries
+// drop the set filter (CardHedge set names are granular; brand-only doesn't
+// match any real set row)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("buildFiltersFromParsedQuery — brand-only queries skip the set filter", () => {
+  it("'2025 Bowman Josh Hammond' → set filter dropped (brand-only)", () => {
+    const parsed = parseCardQuery("2025 Bowman Josh Hammond");
+    expect(parsed.brand).toBe("Bowman");
+    expect(parsed.set).toBe("Bowman"); // parser sets set=brand when no subset
+    const filters = buildFiltersFromParsedQuery(parsed);
+    expect(filters).toBeDefined();
+    expect(filters!.player).toBe("Josh Hammond");
+    expect(filters!.set).toBeUndefined(); // ← the fix
+  });
+
+  it("'2025 Bowman Chrome Eric Hartman' → set filter SENT (specific subset)", () => {
+    const parsed = parseCardQuery("2025 Bowman Chrome Eric Hartman");
+    expect(parsed.brand).toBe("Bowman");
+    expect(parsed.set).toBe("Bowman Chrome");
+    const filters = buildFiltersFromParsedQuery(parsed);
+    expect(filters!.set).toBe("2025 Bowman Chrome Baseball");
+  });
+
+  it("'2024 Topps Mike Trout' → set filter dropped (brand-only)", () => {
+    const parsed = parseCardQuery("2024 Topps Mike Trout");
+    expect(parsed.brand).toBe("Topps");
+    expect(parsed.set).toBe("Topps");
+    const filters = buildFiltersFromParsedQuery(parsed);
+    expect(filters!.set).toBeUndefined();
+  });
+
+  it("'2024 Topps Chrome Mike Trout' → set filter SENT (specific subset)", () => {
+    const parsed = parseCardQuery("2024 Topps Chrome Mike Trout");
+    expect(parsed.brand).toBe("Topps");
+    expect(parsed.set).toBe("Topps Chrome");
+    const filters = buildFiltersFromParsedQuery(parsed);
+    expect(filters!.set).toBe("2024 Topps Chrome Baseball");
+  });
+});
+
 describe("buildFiltersFromParsedQuery — set field composition", () => {
   it("year + set present → '${year} ${set} Baseball'", () => {
     const parsed = parseCardQuery("Mike Trout 2024 Bowman Chrome");
