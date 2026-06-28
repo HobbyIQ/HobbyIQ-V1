@@ -2153,12 +2153,18 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // unused-by-default for now — same-grade fast path is sound; cross-
     // grade conversion will activate when the calibrated table lands.
     try {
+      // CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): cardClass passes through
+      // to gradeLadderConversionRatio so the autograph-empirical table
+      // is used when the card is autograph-class. cardIdentity.isAuto
+      // is populated by CF-CH-AUTO-FROM-CARDNUMBER.
+      const isAutoForLadder = ((result as any).cardIdentity?.isAuto as boolean | undefined) === true;
       const anchorResult = await deriveGradeLadderAnchor({
         cardId: resolvedCardId,
         // Request "Raw" so we ALWAYS get a graded anchor even when the
         // user is viewing the raw price (PSA 10/9/8 anchors get
         // identified; we surface them without conversion).
         requestedGrade: "Raw",
+        cardClass: isAutoForLadder ? "autograph" : "base",
       });
       if (anchorResult) {
         (result as any).nearestGradedAnchor = {
