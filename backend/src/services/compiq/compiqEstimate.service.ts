@@ -909,6 +909,114 @@ export function logFmvDriftObserved(opts: {
   }
 }
 
+/**
+ * CF-CH-TREND-INGEST (2026-06-28): derive a price-class momentum signal
+ * from CardHedge's per-player weekly sales buckets. Returns a structured
+ * shape with both raw inputs and a derived ratio so downstream KQL can
+ * either consume the ratio directly or re-derive it with custom rules.
+ *
+ * The signal: ratio of the latest COMPLETE week's avg_sale vs the mean
+ * of the prior 4 complete weeks. >1.1 → momentum up; <0.9 → down. The
+ * "complete" gate excludes the always-partial current week to avoid
+ * mid-week noise (CH's partial buckets are pro-rated and unstable).
+ *
+ * Exported for direct testing.
+ */
+export interface SalesBucketLite {
+  start: string;
+  end: string;
+  count: number;
+  average_sale: number;
+  partial: boolean;
+}
+
+export interface SalesMomentumSignal {
+  latestCompleteWeek: { start: string; end: string; avgSale: number; count: number } | null;
+  priorMeanAvgSale: number | null;
+  priorMeanCount: number | null;
+  priorWeeks: number;
+  momentumRatio: number | null;
+  volumeRatio: number | null;
+}
+
+export function deriveSalesMomentum(buckets: ReadonlyArray<SalesBucketLite>): SalesMomentumSignal {
+  const empty: SalesMomentumSignal = {
+    latestCompleteWeek: null,
+    priorMeanAvgSale: null,
+    priorMeanCount: null,
+    priorWeeks: 0,
+    momentumRatio: null,
+    volumeRatio: null,
+  };
+  if (!buckets?.length) return empty;
+  // Walk from the most-recent end backward, finding the first COMPLETE week.
+  const complete = buckets.filter((b) => !b.partial);
+  if (complete.length < 2) return empty;
+  const latest = complete[complete.length - 1];
+  const prior = complete.slice(0, -1).slice(-4); // up to 4 weeks BEFORE latest
+  if (prior.length === 0) return empty;
+  const sumAvg = prior.reduce((s, b) => s + (Number.isFinite(b.average_sale) ? b.average_sale : 0), 0);
+  const sumCount = prior.reduce((s, b) => s + (Number.isFinite(b.count) ? b.count : 0), 0);
+  const priorMeanAvgSale = sumAvg / prior.length;
+  const priorMeanCount = sumCount / prior.length;
+  return {
+    latestCompleteWeek: {
+      start: latest.start,
+      end: latest.end,
+      avgSale: Math.round(latest.average_sale * 100) / 100,
+      count: latest.count,
+    },
+    priorMeanAvgSale: Math.round(priorMeanAvgSale * 100) / 100,
+    priorMeanCount: Math.round(priorMeanCount),
+    priorWeeks: prior.length,
+    momentumRatio: priorMeanAvgSale > 0
+      ? Math.round((latest.average_sale / priorMeanAvgSale) * 1000) / 1000
+      : null,
+    volumeRatio: priorMeanCount > 0
+      ? Math.round((latest.count / priorMeanCount) * 1000) / 1000
+      : null,
+  };
+}
+
+/**
+ * CF-CH-TREND-INGEST (2026-06-28): emit an App Insights event with CH's
+ * per-player trend signals alongside our existing engine output. Fire-
+ * and-forget; pure telemetry — no price math impact this CF. Once we
+ * have N weeks of paired observations we can decide whether to feed
+ * momentumRatio into the trendIQ composite or treat it as a standalone
+ * cascade-tier signal.
+ */
+export function logSalesMomentumObserved(opts: {
+  source: string;
+  player: string;
+  cardId: string | null;
+  signal: SalesMomentumSignal;
+  totalSales30d: number | null;
+}): void {
+  if (!opts.signal || !opts.signal.latestCompleteWeek) return;
+  try {
+    console.log(JSON.stringify({
+      event: "sales_momentum_observed",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      latestCompleteWeekStart: opts.signal.latestCompleteWeek.start,
+      latestCompleteWeekEnd: opts.signal.latestCompleteWeek.end,
+      latestAvgSale: opts.signal.latestCompleteWeek.avgSale,
+      latestWeekCount: opts.signal.latestCompleteWeek.count,
+      priorMeanAvgSale: opts.signal.priorMeanAvgSale,
+      priorMeanCount: opts.signal.priorMeanCount,
+      priorWeeks: opts.signal.priorWeeks,
+      momentumRatio: opts.signal.momentumRatio,
+      volumeRatio: opts.signal.volumeRatio,
+      totalSales30d: opts.totalSales30d,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
 /** Extracts a (company, grade) tuple from a free-text comp title, or null. */
 export function detectGradeFromTitle(title: string): { company: string; grade: string } | null {
   if (!title) return null;

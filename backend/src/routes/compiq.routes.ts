@@ -4,10 +4,14 @@ import {
   computeEstimate,
   simulateWhatIf,
   logFmvDriftObserved,
+  deriveSalesMomentum,
+  logSalesMomentumObserved,
 } from "../services/compiq/compiqEstimate.service.js";
 import {
   getCardFmv,
   getPriceEstimate,
+  getSalesStatsByPlayer,
+  getTotalSalesByPlayer,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -1781,6 +1785,39 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           );
         }
       })();
+
+      // CF-CH-TREND-INGEST (2026-06-28): fire-and-forget per-player trend
+      // telemetry (sales-stats weekly buckets + 30d total-sales count) for
+      // the player on the card we just priced. Pure observation pass —
+      // momentumRatio / volumeRatio surface in App Insights so we can pair
+      // them with predictedPrice outcomes over time and decide whether to
+      // promote them into the trendIQ composite in a follow-up CF.
+      const playerForTrend = ((est as any).cardIdentity?.player as string | undefined) ?? null;
+      if (playerForTrend) {
+        void (async () => {
+          try {
+            const [stats, totals] = await Promise.all([
+              getSalesStatsByPlayer([playerForTrend], "week"),
+              getTotalSalesByPlayer([playerForTrend]),
+            ]);
+            const playerResult = stats?.results?.find((r) => r.player === playerForTrend);
+            if (!playerResult) return;
+            const signal = deriveSalesMomentum(playerResult.buckets);
+            const totals30d = totals?.results?.find((r) => r.player === playerForTrend)?.total_sales ?? null;
+            logSalesMomentumObserved({
+              source: "compiq.price-by-id",
+              player: playerForTrend,
+              cardId: resolvedCardId,
+              signal,
+              totalSales30d: totals30d,
+            });
+          } catch (err) {
+            console.warn(
+              `[compiq.price-by-id] sales-momentum telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+            );
+          }
+        })();
+      }
 
       return {
         ...buildEngineMeta(),

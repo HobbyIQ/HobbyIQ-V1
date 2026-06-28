@@ -321,6 +321,160 @@ async function _postFmvShape<T extends { price: number }>(
   }
 }
 
+/**
+ * CF-CH-TREND-INGEST (2026-06-28): CardHedge's per-player sales
+ * trend signals. Three endpoints, three product surfaces:
+ *
+ *   sales-stats-by-player → weekly buckets (count, avg_sale, total) per
+ *                            player. The week-over-week trajectory is the
+ *                            player-level price-class momentum signal.
+ *   total-sales-by-player → 30d total sale count per player. Volume /
+ *                            attention proxy (engaged-fan-tier of cascade).
+ *   top-movers            → weekly top gainers across the catalog.
+ *
+ * Both player-keyed endpoints require a `players` array (NOT singular
+ * `player` — they're batch shapes). category defaults to "Baseball" to
+ * stay aligned with the rest of the engine.
+ */
+export interface SalesStatsBucket {
+  start: string;
+  end: string;
+  count: number;
+  total_amount: number;
+  average_sale: number;
+  partial: boolean;
+}
+
+export interface SalesStatsByPlayerResult {
+  player: string;
+  buckets: SalesStatsBucket[];
+}
+
+export interface SalesStatsByPlayerResponse {
+  interval: "day" | "week" | "month";
+  periods: number;
+  results: SalesStatsByPlayerResult[];
+}
+
+export interface TotalSalesByPlayerResult {
+  player: string;
+  total_sales: number;
+  search_time_ms?: number;
+}
+
+export interface TotalSalesByPlayerResponse {
+  results: TotalSalesByPlayerResult[];
+  days: number;
+}
+
+export interface TopMoverCard {
+  card_id: string;
+  description: string;
+  player: string;
+  set: string;
+  number: string;
+  variant: string;
+  image?: string;
+  category: string;
+  set_type?: string;
+  rookie: boolean;
+  gain: number;
+  "7 Day Sales"?: number;
+  "30 Day Sales"?: number;
+  prices?: Array<{ grade: string; price: string }>;
+}
+
+const TREND_TTL_SEC = 12 * 3600;        // 12h — CH refreshes once daily.
+const TOP_MOVERS_TTL_SEC = 6 * 3600;    // 6h — surfaces in app, refresh more often.
+
+export async function getSalesStatsByPlayer(
+  players: string[],
+  interval: "day" | "week" | "month" = "week",
+  category: string = "Baseball",
+): Promise<SalesStatsByPlayerResponse | null> {
+  const h = headers();
+  if (!h || !players?.length) return null;
+  return cacheWrap(
+    cacheKey("ch:sales-stats", category, interval, players.slice().sort().join(",")),
+    async () =>
+      _postTyped<SalesStatsByPlayerResponse>(
+        "/cards/sales-stats-by-player",
+        { players, interval, category },
+        h,
+      ),
+    TREND_TTL_SEC,
+  );
+}
+
+export async function getTotalSalesByPlayer(
+  players: string[],
+  category: string = "Baseball",
+): Promise<TotalSalesByPlayerResponse | null> {
+  const h = headers();
+  if (!h || !players?.length) return null;
+  return cacheWrap(
+    cacheKey("ch:total-sales", category, players.slice().sort().join(",")),
+    async () =>
+      _postTyped<TotalSalesByPlayerResponse>(
+        "/cards/total-sales-by-player",
+        { players, category },
+        h,
+      ),
+    TREND_TTL_SEC,
+  );
+}
+
+export async function getTopMovers(): Promise<TopMoverCard[] | null> {
+  const h = headers();
+  if (!h) return null;
+  return cacheWrap(
+    cacheKey("ch:top-movers", "all"),
+    async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/cards/top-movers`, {
+          method: "GET",
+          headers: h,
+          signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+        });
+        if (!res.ok) {
+          console.warn(`[cardhedge.client] top-movers HTTP ${res.status}`);
+          return null;
+        }
+        const respBody: any = await res.json();
+        const cards: any[] = Array.isArray(respBody?.cards) ? respBody.cards : [];
+        return cards as TopMoverCard[];
+      } catch (err: any) {
+        console.warn("[cardhedge.client] top-movers threw:", err?.message ?? err);
+        return null;
+      }
+    },
+    TOP_MOVERS_TTL_SEC,
+  );
+}
+
+async function _postTyped<T>(
+  path: string,
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] ${path} HTTP ${res.status}`);
+      return null;
+    }
+    return (await res.json()) as T;
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] ${path} threw:`, err?.message ?? err);
+    return null;
+  }
+}
+
 /** POST /cards/card-match — AI text match. Returns null when confidence < 0.80. */
 export async function identifyCard(query: string): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   const h = headers();
