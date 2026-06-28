@@ -54,7 +54,16 @@ import {
 import { parseCardQuery } from "../compiq/cardQueryParser.js";
 import type { CardSearchFilters } from "../compiq/cardhedge.client.js";
 
-const FREETEXT_TAKE_DEFAULT = 30;
+// CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
+// CardHedge search window. The 30-result default was missing specific
+// variants (Drake Baldwin 2025 Bowman Chrome Image Variation surfaced 0
+// instances across multiple query angles); CH ranks IV-class parallels
+// below the more popular base/refractor variants, so the IV likely sits
+// beyond position 30 in their relevance ranking. 100 is CH's documented
+// page_size ceiling (per /cards/card-search OpenAPI: max 100). Latency
+// impact is minimal — CH returns the larger page from the same query;
+// dispatch + adapter cost scales linearly with result count.
+const FREETEXT_TAKE_DEFAULT = 100;
 
 /**
  * CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): the confidence floor at
