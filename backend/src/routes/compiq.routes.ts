@@ -242,6 +242,96 @@ const NON_LIVE_SOURCES_FOR_REGIME: ReadonlySet<string> = new Set([
   "upstream-timeout",
 ]);
 
+/**
+ * CF-CH-TELEMETRY-FANOUT (2026-06-28): fire-and-forget helper that posts
+ * the two CardHedge-reference telemetry events (`fmv_drift_observed` +
+ * `sales_momentum_observed`) for a freshly-priced card. Called from
+ * `/search`, `/price`, and `/price-by-id` so the evidence base accumulates
+ * uniformly regardless of which user-facing route fires.
+ *
+ * Pure side-effect: void return, never throws (every CH call and every
+ * log is guarded). Caller MUST invoke as `void recordCHReferenceTelemetry(...)`
+ * — awaiting it would block the response path and defeat the purpose.
+ *
+ * `source` is the App Insights `source` field, used downstream KQL to
+ * separate per-route base rates ("which route gives best drift signal
+ * coverage?"). `engineFmv` should be null when the route surfaced null
+ * (thin/can't-price) — matches what the user actually sees.
+ */
+function recordCHReferenceTelemetry(opts: {
+  source: string;
+  cardId: string | null;
+  player: string | null;
+  gradingCompany: string | null;
+  gradeValue: number | null;
+  engineFmv: number | null;
+}): void {
+  if (!opts.cardId) return;
+  const grade =
+    opts.gradingCompany && typeof opts.gradeValue === "number"
+      ? `${opts.gradingCompany} ${opts.gradeValue}`
+      : "Raw";
+  // FMV drift telemetry
+  void (async () => {
+    try {
+      const [chFmv, chEst] = await Promise.all([
+        getCardFmv(opts.cardId!, grade),
+        getPriceEstimate(opts.cardId!, grade),
+      ]);
+      logFmvDriftObserved({
+        source: opts.source,
+        player: opts.player,
+        cardId: opts.cardId!,
+        gradingCompany: opts.gradingCompany,
+        grade,
+        engineFmv: opts.engineFmv,
+        chCardFmv: chFmv
+          ? {
+              price: chFmv.price,
+              confidence: chFmv.confidence,
+              confidenceGrade: chFmv.confidence_grade ?? null,
+              freshnessDays: chFmv.freshness_days,
+              method: chFmv.method,
+            }
+          : null,
+        chPriceEstimate: chEst
+          ? { price: chEst.price, confidence: chEst.confidence, method: chEst.method }
+          : null,
+      });
+    } catch (err) {
+      console.warn(
+        `[${opts.source}] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  })();
+  // Sales-momentum telemetry — player-keyed, so skip if we don't have one.
+  if (!opts.player) return;
+  void (async () => {
+    try {
+      const [stats, totals] = await Promise.all([
+        getSalesStatsByPlayer([opts.player!], "week"),
+        getTotalSalesByPlayer([opts.player!]),
+      ]);
+      const playerResult = stats?.results?.find((r) => r.player === opts.player);
+      if (!playerResult) return;
+      const signal = deriveSalesMomentum(playerResult.buckets);
+      const totals30d =
+        totals?.results?.find((r) => r.player === opts.player)?.total_sales ?? null;
+      logSalesMomentumObserved({
+        source: opts.source,
+        player: opts.player!,
+        cardId: opts.cardId,
+        signal,
+        totalSales30d: totals30d,
+      });
+    } catch (err) {
+      console.warn(
+        `[${opts.source}] sales-momentum telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  })();
+}
+
 function regimeFieldsFromEstimate(est: Record<string, unknown>): {
   regime: RegimeResult["regime"];
   regimeConfidence: RegimeResult["confidence"];
@@ -960,6 +1050,21 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
         }
       }
 
+      // CF-CH-TELEMETRY-FANOUT (2026-06-28): same two-event telemetry as
+      // /price-by-id. /search is the high-volume freetext path so this
+      // is where most of the drift evidence will accumulate. Grade keys
+      // come back as Raw (no per-request grade input on this route);
+      // graded-tier drift can still be evaluated downstream by joining
+      // with the gradedEstimates rail.
+      recordCHReferenceTelemetry({
+        source: "compiq.search",
+        cardId: typeof cardIdForGraded === "string" ? cardIdForGraded : null,
+        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
+        gradingCompany: null,
+        gradeValue: null,
+        engineFmv: noUsableLiveFmv ? null : fmv,
+      });
+
       return {
         ...buildEngineMeta(),
         success: true,
@@ -1258,6 +1363,18 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           );
         }
       }
+
+      // CF-CH-TELEMETRY-FANOUT (2026-06-28): same two-event telemetry as
+      // /search and /price-by-id. Drift evidence accumulates per-route so
+      // KQL can compare base rates.
+      recordCHReferenceTelemetry({
+        source: "compiq.price",
+        cardId: typeof cardIdForGraded === "string" ? cardIdForGraded : null,
+        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
+        gradingCompany: null,
+        gradeValue: null,
+        engineFmv: isThin ? null : fmv,
+      });
 
       return {
         ...buildEngineMeta(),
@@ -1737,87 +1854,19 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         gradedEstimates = compiled.estimates;
       }
 
-      // CF-CH-FMV-CROSS-VALIDATE (2026-06-28): fire-and-forget telemetry
-      // comparing our engine FMV against CardHedge's two reference shapes
-      // (card-fmv = index-adjusted, price-estimate = direct). Read-only,
-      // zero pricing impact — builds the calibration evidence base for
-      // future engine tuning. Both CH calls are cached 12h via cacheWrap
-      // so repeated /price-by-id hits on the same card don't multiply CH
-      // traffic. The void/.catch keeps the route's response path off the
-      // critical path: telemetry latency never blocks the user.
-      void (async () => {
-        try {
-          const grade =
-            typeof gradeCompany === "string" && typeof gradeValue === "number"
-              ? `${gradeCompany} ${gradeValue}`
-              : "Raw";
-          const [chFmv, chEst] = await Promise.all([
-            getCardFmv(resolvedCardId, grade),
-            getPriceEstimate(resolvedCardId, grade),
-          ]);
-          logFmvDriftObserved({
-            source: "compiq.price-by-id",
-            player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
-            cardId: resolvedCardId,
-            gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
-            grade,
-            engineFmv: isThin ? null : fmv,
-            chCardFmv: chFmv
-              ? {
-                  price: chFmv.price,
-                  confidence: chFmv.confidence,
-                  confidenceGrade: chFmv.confidence_grade ?? null,
-                  freshnessDays: chFmv.freshness_days,
-                  method: chFmv.method,
-                }
-              : null,
-            chPriceEstimate: chEst
-              ? {
-                  price: chEst.price,
-                  confidence: chEst.confidence,
-                  method: chEst.method,
-                }
-              : null,
-          });
-        } catch (err) {
-          console.warn(
-            `[compiq.price-by-id] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
-          );
-        }
-      })();
-
-      // CF-CH-TREND-INGEST (2026-06-28): fire-and-forget per-player trend
-      // telemetry (sales-stats weekly buckets + 30d total-sales count) for
-      // the player on the card we just priced. Pure observation pass —
-      // momentumRatio / volumeRatio surface in App Insights so we can pair
-      // them with predictedPrice outcomes over time and decide whether to
-      // promote them into the trendIQ composite in a follow-up CF.
-      const playerForTrend = ((est as any).cardIdentity?.player as string | undefined) ?? null;
-      if (playerForTrend) {
-        void (async () => {
-          try {
-            const [stats, totals] = await Promise.all([
-              getSalesStatsByPlayer([playerForTrend], "week"),
-              getTotalSalesByPlayer([playerForTrend]),
-            ]);
-            const playerResult = stats?.results?.find((r) => r.player === playerForTrend);
-            if (!playerResult) return;
-            const signal = deriveSalesMomentum(playerResult.buckets);
-            const totals30d = totals?.results?.find((r) => r.player === playerForTrend)?.total_sales ?? null;
-            logSalesMomentumObserved({
-              source: "compiq.price-by-id",
-              player: playerForTrend,
-              cardId: resolvedCardId,
-              signal,
-              totalSales30d: totals30d,
-            });
-          } catch (err) {
-            console.warn(
-              `[compiq.price-by-id] sales-momentum telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
-            );
-          }
-        })();
-      }
+      // CF-CH-TELEMETRY-FANOUT (2026-06-28): two-event telemetry helper —
+      // see top of file. Folds the inline blocks the original
+      // CF-CH-FMV-CROSS-VALIDATE + CF-CH-TREND-INGEST emitted into one
+      // call so the same evidence shape ships from /search, /price, and
+      // /price-by-id uniformly.
+      recordCHReferenceTelemetry({
+        source: "compiq.price-by-id",
+        cardId: resolvedCardId,
+        player: ((est as any).cardIdentity?.player as string | undefined) ?? null,
+        gradingCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+        gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+        engineFmv: isThin ? null : fmv,
+      });
 
       return {
         ...buildEngineMeta(),
