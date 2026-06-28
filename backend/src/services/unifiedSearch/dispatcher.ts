@@ -49,10 +49,15 @@ import type {
 } from "../../types/unifiedSearch.js";
 import {
   searchCardsRouted,
+  chCardToRoutedCard,
   type RoutedCard,
 } from "../compiq/cardsight.router.js";
 import { parseCardQuery } from "../compiq/cardQueryParser.js";
-import type { CardSearchFilters } from "../compiq/cardhedge.client.js";
+import {
+  identifyCard,
+  getCardDetailsById,
+  type CardSearchFilters,
+} from "../compiq/cardhedge.client.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -403,6 +408,26 @@ async function dispatchFreetextMode(
     .filter((t) => t.length >= 3 && t !== "the" && t !== "and");
   const intentWantsAuto = /\bauto(graph(ed)?)?\b/i.test(trimmed);
 
+  /**
+   * CF-CH-MATCH-CARD-BOOST (2026-06-28): in parallel with the existing
+   * token-search, ask CardHedge's AI matcher (/v1/cards/card-match)
+   * to identify the most likely card from the user's raw query.
+   * When it returns a high-confidence (>=0.80) card_id, we boost
+   * that card to position 1 in the candidate list — either by
+   * promoting an existing search hit OR by fetching its details
+   * via /v1/cards/card-details and prepending.
+   *
+   * Solves the "card exists in CH but token-search ranks it
+   * beyond position 50" class of issues (Kurtz CPA-NK Green Lava
+   * sat at position 35+ for "nick kurtz green lava auto"). The AI
+   * matcher understands semantic intent that token-search misses.
+   *
+   * Raw `trimmed` (not the sanitized search query) is passed to the
+   * AI matcher — natural-language nuance is exactly what the AI
+   * needs. Both calls fire concurrently to minimize latency.
+   */
+  const aiMatchPromise = identifyCard(trimmed).catch(() => null);
+
   const parsed = parseCardQuery(trimmed);
   const filters = buildFiltersFromParsedQuery(parsed);
   // CF-CH-QUERY-HYPHEN-NORMALIZE (2026-06-28): collapse hyphens to spaces
@@ -476,8 +501,71 @@ async function dispatchFreetextMode(
     // Stable sort: higher score first; ties → preserve CH's original order.
     .sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
 
-  const candidates = scoredHits.map((entry, newIndex) =>
-    routedCardToIdentity(entry.card, newIndex, scoredHits.length),
+  /**
+   * CF-CH-MATCH-CARD-BOOST (2026-06-28): consume the AI-match result.
+   * `aiMatchPromise` resolves to either a high-confidence match or null.
+   * Three outcomes:
+   *   1. null / no match           → no boost, candidates ranked purely by intent score
+   *   2. match_id IS in scoredHits → promote that card to position 0
+   *   3. match_id NOT in scoredHits → fetch details, prepend as a synthetic position 0
+   *
+   * Outcome (3) is the load-bearing case — it surfaces cards that CH's
+   * token search ranks beyond the 100-result window (Kurtz CPA-NK Green
+   * Lava sat at position 35+ for "nick kurtz green lava auto"; with
+   * other parallel-noisy queries it can sit beyond 100). The AI matcher
+   * uses semantic understanding to find the right card_id even when
+   * tokens don't line up, and we backfill the full card record via
+   * /v1/cards/card-details so the iOS picker has everything it needs.
+   *
+   * Boosted candidates get `attribution: "ai-matched"` and `confidence: 1.0`
+   * so the picker's confidence-descending sort keeps them at position 0
+   * even if a downstream sort runs.
+   */
+  const aiMatch = await aiMatchPromise;
+  let aiMatchedId: string | null = null;
+  let prependedCard: RoutedCard | null = null;
+  if (aiMatch && typeof aiMatch.card_id === "string" && aiMatch.card_id.length > 0) {
+    aiMatchedId = aiMatch.card_id;
+    const existingIdx = scoredHits.findIndex((h) => h.card.card_id === aiMatchedId);
+    if (existingIdx > 0) {
+      // Promote existing hit to the front (rerank didn't already).
+      const [promoted] = scoredHits.splice(existingIdx, 1);
+      scoredHits.unshift(promoted);
+    } else if (existingIdx === -1) {
+      // Not in our search window — fetch the card record directly.
+      try {
+        const fetched = await getCardDetailsById(aiMatchedId);
+        if (fetched && fetched.card_id) {
+          prependedCard = chCardToRoutedCard(fetched);
+        } else {
+          // Couldn't recover — drop the attribution so we don't tag the
+          // (unrelated) search-result that's about to occupy position 0.
+          aiMatchedId = null;
+        }
+      } catch {
+        // Silently degrade — search hits already ranked, just no boost.
+        aiMatchedId = null;
+      }
+    }
+    // existingIdx === 0 → already first, no move needed. attribution stays.
+  }
+
+  const aiAttributedIds = new Set<string>();
+  if (aiMatchedId) {
+    aiAttributedIds.add(aiMatchedId);
+  }
+
+  const orderedCards: RoutedCard[] = prependedCard
+    ? [prependedCard, ...scoredHits.map((s) => s.card)]
+    : scoredHits.map((s) => s.card);
+
+  const candidates = orderedCards.map((card, newIndex) =>
+    routedCardToIdentity(
+      card,
+      newIndex,
+      orderedCards.length,
+      aiAttributedIds.has(card.card_id) ? "ai-matched" : undefined,
+    ),
   );
 
   return {
@@ -500,6 +588,7 @@ function routedCardToIdentity(
   card: RoutedCard,
   index: number,
   total: number,
+  attributionOverride?: "ai-matched",
 ): CardIdentity {
   const yearNum =
     card.year != null && Number.isFinite(Number(card.year))
@@ -514,15 +603,22 @@ function routedCardToIdentity(
       .filter((p) => p.length > 0)
       .join(" ");
 
-  // Linear decay across the result set, floored at 0.3 so even the last
-  // hit reads as a plausible (low) relevance match rather than zero.
+  // CF-CH-MATCH-CARD-BOOST (2026-06-28): AI-matched candidates get
+  // confidence 1.0 + attribution "ai-matched" so the iOS picker's
+  // confidence-descending sort keeps them at position 0. Without the
+  // override, linear decay across the result set kicks in (floor 0.3).
   const span = Math.max(total, 1);
-  const confidence = Math.max(0.3, 1 - (index / span) * 0.6);
+  const confidence =
+    attributionOverride === "ai-matched"
+      ? 1.0
+      : Math.max(0.3, 1 - (index / span) * 0.6);
+  const attribution =
+    attributionOverride === "ai-matched" ? "ai-matched" : "ranked";
 
   return {
     candidateId: `cardsight:${card.card_id}`,
     source: "cardsight-catalog",
-    attribution: "ranked",
+    attribution,
     confidence: Math.round(confidence * 100) / 100,
     player: card.player ?? null,
     year: yearNum,

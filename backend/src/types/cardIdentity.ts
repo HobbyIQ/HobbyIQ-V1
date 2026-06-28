@@ -33,7 +33,15 @@ export type CardIdentitySource =
   | "sgc-cert"
   | "cgc-cert";
 
-export type CardIdentityAttribution = "authoritative" | "ranked";
+/**
+ * CF-CH-MATCH-CARD-BOOST (2026-06-28): "ai-matched" added for candidates
+ * resolved by CardHedge's /v1/cards/card-match semantic matcher (confidence
+ * gate >=0.80). Carries confidence 1.0 like "authoritative" but is
+ * distinct so consumers can attribute the source if needed (telemetry,
+ * future debug overlay). The match is high-confidence but NOT a cert
+ * confirmation — it's a semantic resolution of intent.
+ */
+export type CardIdentityAttribution = "authoritative" | "ranked" | "ai-matched";
 
 export interface CardIdentity {
   /** Stable per-candidate id, e.g. "psa:76556858" or "cardsight:b9d2b2b1..." */

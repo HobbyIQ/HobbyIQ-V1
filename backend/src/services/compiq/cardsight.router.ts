@@ -131,7 +131,7 @@ function emptyResult(warnings: string[] = []): RoutedResult {
   };
 }
 
-function chCardToRoutedCard(c: CardHedgeCard): RoutedCard {
+export function chCardToRoutedCard(c: CardHedgeCard): RoutedCard {
   return {
     card_id: c.card_id,
     player: c.player ?? undefined,
