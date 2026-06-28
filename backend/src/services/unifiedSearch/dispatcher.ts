@@ -147,6 +147,59 @@ export function detectIsAutoFromCardNumber(
   return AUTO_CARDNUMBER_PREFIXES.some((re) => re.test(trimmed));
 }
 
+/**
+ * CF-CH-SANITIZE-PLAYER-FILTER (2026-06-28): the parser's playerName
+ * extraction strips known noise (auto, refractor, base, etc.) but leaves
+ * parallel-specific tokens like "X-Fractor", "Fractor", "Shimmer",
+ * "Speckle", "Geometric" intact when they appear in a query. Those
+ * tokens then leak into playerName ("X-fractor Eric Hartman" from
+ * "blue x-fractor eric hartman"), and CardHedge's `player` filter is
+ * exact-match — a player named "X-fractor Eric Hartman" doesn't exist,
+ * so the filter returns 0 results.
+ *
+ * Fix: strip a curated list of parallel/variant token patterns from
+ * playerName before sending as the CH player filter. The list intentionally
+ * skips solo color words ("Blue", "Red", "Gold", "Black", "White") because
+ * those can legitimately be parts of player surnames (Black, Gold, etc.);
+ * the parallel-vocabulary terms below are not common surnames so stripping
+ * them is safe. Keeps the cleaned name's word ordering intact.
+ *
+ * Exported for direct testing — the regression cases ("X-Fractor Eric
+ * Hartman" → "Eric Hartman", clean "Eric Hartman" untouched) are pinned
+ * in the test file.
+ */
+const PLAYER_FILTER_NOISE_PATTERNS: readonly RegExp[] = [
+  /\bX-?Fractor\b/gi,
+  /\bRefractor\b/gi,
+  /\bSuperfractor\b/gi,
+  /\bFractor\b/gi,
+  /\bShimmer\b/gi,
+  /\bSpeckle\b/gi,
+  /\bGeometric\b/gi,
+  /\bWave\b/gi,
+  /\bRayWave\b/gi,
+  /\bLava\b/gi,
+  /\bGrass\b/gi,
+  /\bReptilian\b/gi,
+  /\bLogoFractor\b/gi,
+  /\bPearl\b/gi,
+  /\bNeon\b/gi,
+  /\bSteel\b/gi,
+  /\bMetal\b/gi,
+  /\bMini-?Diamond\b/gi,
+  /\bDiamond\b/gi,
+  /\bAtomic\b/gi,
+  /\bPattern\b/gi,
+];
+
+export function sanitizePlayerForCH(playerName: string): string {
+  let cleaned = playerName;
+  for (const re of PLAYER_FILTER_NOISE_PATTERNS) {
+    cleaned = cleaned.replace(re, " ");
+  }
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+
 export function buildFiltersFromParsedQuery(
   parsed: ReturnType<typeof parseCardQuery>,
 ): CardSearchFilters | undefined {
@@ -154,7 +207,16 @@ export function buildFiltersFromParsedQuery(
 
   const filters: CardSearchFilters = {};
   if (parsed.playerName && parsed.playerName.length > 0) {
-    filters.player = parsed.playerName;
+    // CF-CH-SANITIZE-PLAYER-FILTER (2026-06-28): strip parallel-vocabulary
+    // tokens that leaked into playerName via the parser. Only set the
+    // filter when at least one non-empty token remains — a fully-stripped
+    // name (e.g. "X-Fractor" alone) yields the empty string, which we'd
+    // be wrong to send as a filter (it would tell CH "match any player
+    // whose name is empty" or worse, treat as no filter).
+    const cleaned = sanitizePlayerForCH(parsed.playerName);
+    if (cleaned.length > 0) {
+      filters.player = cleaned;
+    }
   }
   if (parsed.set && parsed.set.length > 0) {
     filters.set = parsed.year
@@ -288,9 +350,13 @@ async function dispatchFreetextMode(
   // filtered candidate set and can pick the parallel variant they want
   // from the picker UI. Without filters, fall back to the hyphen-stripped
   // full query as the search — the prior behavior.
+  // CF-CH-SANITIZE-PLAYER-FILTER (2026-06-28): use the SAME sanitized
+  // playerName for the search field so a polluted parser result doesn't
+  // get sent twice (once as the filter, once as the search) — both must
+  // be the same clean player name for CH to narrow + rank correctly.
   const chSearchQuery =
     filters && parsed.playerName
-      ? parsed.playerName
+      ? sanitizePlayerForCH(parsed.playerName)
       : hyphenStripped;
   let hits: RoutedCard[];
   try {
