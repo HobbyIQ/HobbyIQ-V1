@@ -218,7 +218,27 @@ export function buildFiltersFromParsedQuery(
       filters.player = cleaned;
     }
   }
-  if (parsed.set && parsed.set.length > 0) {
+  // CF-CH-SET-FILTER-ONLY-WHEN-SPECIFIC (2026-06-28): only send the set
+  // filter when the parser identified a SUBSET more specific than the
+  // brand alone (e.g. "Bowman Chrome", "Bowman Draft Chrome", "Topps
+  // Chrome", "Topps Heritage"). When parsed.set equals parsed.brand
+  // (user only typed "Bowman" / "Topps"), the composed set name
+  // "${year} Bowman Baseball" doesn't match any CardHedge set — CH's
+  // set names are granular and brand-only doesn't correspond to any
+  // real set row. The exact-match filter then narrows to 0 candidates
+  // even though hundreds of cards exist.
+  //
+  // Observable pre-fix: "2025 bowman josh hammond" → 0 candidates
+  // (Hammond CPA-JH Refractor lives in "2025 Bowman Draft Chrome
+  // Baseball" but the filter sent "2025 Bowman Baseball"). Bare
+  // "josh hammond" returned 50 candidates including the Refractor auto.
+  //
+  // When user types a specific subset, the composition may still fail
+  // (CH might use "Bowman Draft Chrome Baseball" vs our "Bowman Chrome
+  // Baseball"), but at least the user expressed intent and a slight
+  // mismatch is recoverable via the free-text search ranking. The
+  // brand-only case has NO recovery — set filter just kills everything.
+  if (parsed.set && parsed.set.length > 0 && parsed.set !== parsed.brand) {
     filters.set = parsed.year
       ? `${parsed.year} ${parsed.set} Baseball`
       : `${parsed.set} Baseball`;
