@@ -20,6 +20,7 @@ import {
   getTrustedComps,
   type CardHedgeCard,
   type CardHedgeIdentity,
+  type CardSearchFilters,
 } from "./cardhedge.client.js";
 import type { ParallelPriceSource, UserFacingPriceSource } from "./parallelTitleMatch.js";
 import { cacheWrap, cacheGet, cacheSet } from "../shared/cache.service.js";
@@ -350,8 +351,13 @@ export async function findCompsRouted(
 export async function searchCardsRouted(
   query: string,
   limit: number = 20,
+  filters?: CardSearchFilters,
 ): Promise<RoutedCard[]> {
-  const hits = await chSearchCards(query, limit);
+  // CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): forward optional player/
+  // set/rookie filters through to CardHedge. Omitting them preserves the
+  // pre-CF call shape exactly — every existing caller without filters is
+  // unaffected.
+  const hits = await chSearchCards(query, limit, filters);
   const routed = hits.map(chCardToRoutedCard);
   // CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27): stash each card's metadata by
   // card_id so the pinned /price-by-id path can later recover player/set/etc.

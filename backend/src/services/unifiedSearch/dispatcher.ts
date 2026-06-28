@@ -51,8 +51,60 @@ import {
   searchCardsRouted,
   type RoutedCard,
 } from "../compiq/cardsight.router.js";
+import { parseCardQuery } from "../compiq/cardQueryParser.js";
+import type { CardSearchFilters } from "../compiq/cardhedge.client.js";
 
 const FREETEXT_TAKE_DEFAULT = 30;
+
+/**
+ * CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): the confidence floor at
+ * which we trust the parser's structured fields enough to forward them
+ * to CardHedge as dedicated filters (vs leaving them as free-text only).
+ * Below this floor we revert to pre-CF behavior — the entire trimmed query
+ * goes into `search` and CH does its own free-text matching.
+ *
+ * 0.5 was picked because `parseCardQuery`'s scoring adds 0.4 for a two-
+ * word playerName, 0.2 each for year and brand, etc. — a hit at >=0.5
+ * means at least player + (year OR brand) parsed cleanly, which is the
+ * minimum CardHedge needs to apply structured filtering meaningfully.
+ */
+const PARSER_CONFIDENCE_FLOOR = 0.5;
+
+/**
+ * Build the structured filter shape for CardHedge from a parsed query.
+ * Only emits fields when the parser extracted them with the corresponding
+ * signal. Sending an undefined/empty field to CH is a no-op, but we keep
+ * the object minimal to make logs + tests easier to read.
+ *
+ * `set` is composed as `${year} ${set} Baseball` to match CardHedge's
+ * canonical set naming (per their /cards/card-search example response —
+ * `"set": "2018 Topps Chrome Baseball"`). When year is missing we fall back
+ * to just `${set} Baseball`. When set is missing entirely the field is
+ * omitted (CH will treat the search as set-unconstrained).
+ */
+export function buildFiltersFromParsedQuery(
+  parsed: ReturnType<typeof parseCardQuery>,
+): CardSearchFilters | undefined {
+  if (parsed.confidence < PARSER_CONFIDENCE_FLOOR) return undefined;
+
+  const filters: CardSearchFilters = {};
+  if (parsed.playerName && parsed.playerName.length > 0) {
+    filters.player = parsed.playerName;
+  }
+  if (parsed.set && parsed.set.length > 0) {
+    filters.set = parsed.year
+      ? `${parsed.year} ${parsed.set} Baseball`
+      : `${parsed.set} Baseball`;
+  }
+  if (parsed.isRookie) {
+    filters.rookie = "Rookie";
+  }
+
+  // Only return a filter object when at least one field was set — keeps the
+  // CH request body identical to pre-CF when no structured signal exists.
+  if (!filters.player && !filters.set && !filters.rookie) return undefined;
+  return filters;
+}
 
 /**
  * Extract a CertGraderErrorCode from an arbitrary rejection reason.
@@ -138,9 +190,20 @@ async function dispatchFreetextMode(
   // Cardsight catalog was decommissioned; CardHedge exposes the same
   // free-text card lookup, so we route through it here. Each hit is
   // adapted to the canonical CardIdentity shape the iOS picker decodes.
+  //
+  // CF-CH-STRUCTURED-SEARCH-FILTERS (2026-06-28): parse the trimmed query
+  // backend-side and forward structured player/set/rookie fields to CH
+  // when the parser's confidence clears PARSER_CONFIDENCE_FLOOR. CH's
+  // tokenizer can then narrow by dedicated filter fields instead of
+  // chewing through everything as one free-text blob. Observable on
+  // Drake Baldwin 2025 Bowman Chrome Image Variation, which returned 0
+  // candidates pre-CF because the parallel-name noise dominated the
+  // free-text match.
+  const parsed = parseCardQuery(trimmed);
+  const filters = buildFiltersFromParsedQuery(parsed);
   let hits: RoutedCard[];
   try {
-    hits = await searchCardsRouted(trimmed, FREETEXT_TAKE_DEFAULT);
+    hits = await searchCardsRouted(trimmed, FREETEXT_TAKE_DEFAULT, filters);
   } catch {
     // Surface a non-fatal warning rather than throwing — the route
     // layer maps thrown upstream timeouts to a 200 graceful shell, but
