@@ -117,6 +117,8 @@ export interface PortfolioHoldingWire {
   // Grade
   gradeCompany?: string;
   gradeValue?: number;
+  /** CF-GRADER-STATUS-FIELD (2026-06-28): see PortfolioHolding for semantics. */
+  graderStatus?: "available" | "at_psa" | "pending_redemption" | "in_route";
   // Acquisition
   quantity?: number;
   purchasePrice?: number;
@@ -283,6 +285,8 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     // Grade
     gradeCompany: holding.gradeCompany,
     gradeValue: holding.gradeValue,
+    // CF-GRADER-STATUS-FIELD (2026-06-28)
+    graderStatus: holding.graderStatus,
     // Acquisition
     quantity: holding.quantity,
     purchasePrice: holding.purchasePrice,
