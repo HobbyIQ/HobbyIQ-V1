@@ -91,6 +91,62 @@ const PARSER_CONFIDENCE_FLOOR = 0.5;
  * to just `${set} Baseball`. When set is missing entirely the field is
  * omitted (CH will treat the search as set-unconstrained).
  */
+/**
+ * CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): CardHedge's /cards/card-search
+ * doesn't expose an `isAuto` field on the response (verified against
+ * CardHedgeCard interface and the public API docs). routedCardToIdentity
+ * therefore hardcoded `isAuto: false` on every candidate, including
+ * obvious autographs (e.g. `CPA-EHA Orange Shimmer Refractor` came back
+ * with `isAuto: false`). When iOS' AddHoldingRequest forwards the field
+ * the backend persists non-auto, and the engine prices the holding as a
+ * cheaper non-auto variant — Drew's $22 Speckle / wrong-Hartman-pricing
+ * symptom.
+ *
+ * Fix: derive isAuto from the card_number prefix. Bowman / Topps
+ * autograph subsets use consistent multi-letter prefixes ending in "A"
+ * for "Autograph(s)" — CPA, CDA, BCPA, BDPA, BCDA, BCRA, TCRA, TRA, etc.
+ * The patterns below are intentionally conservative (no single-letter
+ * "A-" wildcard) to avoid false positives on parallel codes that
+ * coincidentally end in A.
+ *
+ * Each entry MUST be followed by either "-" or end-of-string so a prefix
+ * never matches mid-string (e.g. `CPA` must not match `BCPA-102`).
+ */
+const AUTO_CARDNUMBER_PREFIXES: readonly RegExp[] = [
+  /^CPA(?:-|$)/i,    // Chrome Prospect Autographs (Bowman Chrome — the canonical)
+  /^CDA(?:-|$)/i,    // Chrome Draft Autographs
+  /^BCPA(?:-|$)/i,   // Bowman Chrome Prospect Autographs (variant naming)
+  /^BCDA(?:-|$)/i,   // Bowman Chrome Draft Autographs
+  /^BDPA(?:-|$)/i,   // Bowman Draft Prospect Autographs
+  /^BDA(?:-|$)/i,    // Bowman Draft Autographs (paper)
+  /^BPA(?:-|$)/i,    // Bowman Prospect Autographs (paper)
+  /^BCRA(?:-|$)/i,   // Bowman Chrome Rookie Autographs
+  /^TCRA(?:-|$)/i,   // Topps Chrome Rookie Autographs
+  /^TRA(?:-|$)/i,    // Topps Rookie Autographs
+  /^FCA(?:-|$)/i,    // Finest Card Autographs
+  /^USA-/i,          // USA Baseball Autograph subsets
+  /^AU-/i,           // Generic Autograph prefix (multi-product)
+];
+
+/**
+ * CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): detect whether a card is an
+ * autograph from its card-number prefix. Returns true on a confirmed
+ * auto-prefix match, false otherwise. Returns false (not null) for
+ * missing/empty input so the caller can safely OR with other signals.
+ *
+ * Exposed as a named export so the test file can pin the prefix table
+ * exactly and a future addition (new product, new prefix) requires a
+ * matching test row.
+ */
+export function detectIsAutoFromCardNumber(
+  cardNumber: string | null | undefined,
+): boolean {
+  if (!cardNumber || typeof cardNumber !== "string") return false;
+  const trimmed = cardNumber.trim();
+  if (trimmed.length === 0) return false;
+  return AUTO_CARDNUMBER_PREFIXES.some((re) => re.test(trimmed));
+}
+
 export function buildFiltersFromParsedQuery(
   parsed: ReturnType<typeof parseCardQuery>,
 ): CardSearchFilters | undefined {
@@ -280,7 +336,12 @@ function routedCardToIdentity(
     cardNumber: card.number != null ? String(card.number) : null,
     parallel: card.variant ?? null,
     variation: null,
-    isAuto: false,
+    // CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): derive isAuto from the
+    // card_number prefix. CardHedge's API doesn't expose an isAuto field,
+    // so the prior hardcoded `false` was silently downgrading every
+    // autograph card to non-auto in iOS' picker → AddHoldingRequest →
+    // backend persist → engine mispriced as the cheaper non-auto variant.
+    isAuto: detectIsAutoFromCardNumber(card.number),
     serialNumber: null,
     grade: null,
     gradeCompany: null,
