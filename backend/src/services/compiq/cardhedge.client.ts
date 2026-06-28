@@ -219,10 +219,19 @@ async function _getCardDetailsById(cardId: string, h: Record<string, string>): P
       return null;
     }
     const respBody: any = await res.json();
-    // /v1/cards/card-details may return the card under `card` or directly at
-    // top level — defensive coverage of both shapes (the docs example shows
-    // the top-level shape but the search-cards path nests under `cards`).
-    const raw = respBody?.card ?? respBody;
+    // CF-CH-CARD-DETAILS-SHAPE-FIX (2026-06-28): /v1/cards/card-details
+    // returns `{pages, count, cards: [...]}` — the same shape as
+    // /cards/card-search, NOT the top-level card I'd guessed from the docs
+    // example. Pick the first element of `cards` whose card_id matches.
+    // Fallbacks: nested `card`, then top-level (defensive coverage).
+    let raw: any = null;
+    if (Array.isArray(respBody?.cards) && respBody.cards.length > 0) {
+      raw = respBody.cards.find((c: any) => c?.card_id === cardId) ?? respBody.cards[0];
+    } else if (respBody?.card) {
+      raw = respBody.card;
+    } else if (respBody?.card_id) {
+      raw = respBody;
+    }
     if (!raw || typeof raw.card_id !== "string") return null;
     return { ...raw, image: pickCardImage(raw) } as CardHedgeCard;
   } catch (err: any) {
