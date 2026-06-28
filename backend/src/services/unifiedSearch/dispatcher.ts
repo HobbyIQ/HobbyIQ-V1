@@ -266,9 +266,29 @@ async function dispatchFreetextMode(
   // free-text match.
   const parsed = parseCardQuery(trimmed);
   const filters = buildFiltersFromParsedQuery(parsed);
+  // CF-CH-QUERY-HYPHEN-NORMALIZE (2026-06-28): CardHedge's /cards/card-search
+  // tokenizer treats hyphens as hard separators. Queries containing
+  // hyphenated parallel names (e.g. "Blue X-Fractor", "Mini-Diamond Refractor",
+  // "Black & White Shimmer") return 0 candidates because "x-fractor" splits
+  // into "x" + "fractor", neither of which match anything in CH's index.
+  // Observable: "eric hartman blue x-fractor" returns 0; "eric hartman x
+  // fractor" (hyphen stripped) returns 50 with the Blue X-Fractor CPA-EHA
+  // auto in the results.
+  //
+  // The structured filters (player/set/rookie) we send via
+  // buildFiltersFromParsedQuery are UNAFFECTED — those are exact-match
+  // dedicated fields and the parser's playerName/set extraction is already
+  // hyphen-tolerant. Only the free-text `search` field needs sanitizing.
+  //
+  // Replacement keeps the user's original token order intact (so CH's
+  // relevance ranking still sees the variant words in their meaningful
+  // positions); we only collapse the hyphen-as-separator into a regular
+  // space. Multiple consecutive spaces collapse to one to keep the body
+  // tidy in logs.
+  const chSearchQuery = trimmed.replace(/-/g, " ").replace(/\s+/g, " ").trim();
   let hits: RoutedCard[];
   try {
-    hits = await searchCardsRouted(trimmed, FREETEXT_TAKE_DEFAULT, filters);
+    hits = await searchCardsRouted(chSearchQuery, FREETEXT_TAKE_DEFAULT, filters);
   } catch {
     // Surface a non-fatal warning rather than throwing — the route
     // layer maps thrown upstream timeouts to a 200 graceful shell, but
