@@ -34,6 +34,29 @@ export function filterRecordsByParallel<T extends { parallel_id?: string | null 
   parallelId: string | null | undefined,
 ): T[] {
   if (parallelId) {
+    // CF-CH-PARALLEL-FILTER-BYPASS (2026-06-27): Cardsight tagged every
+    // sale with a `parallel_id` UUID and called this filter to subset
+    // base+parallel records to the requested parallel. CardHedge (which
+    // replaced Cardsight in the Wave 3 sweeps) does NOT carry parallel_id
+    // — each parallel has its own card_id, so sales returned by
+    // getCardSales(parallelCardId) are already parallel-scoped upstream.
+    // The strict UUID equality below was dropping every CardHedge record
+    // (`undefined === "uuid"` is false) → 0-comp fall-through → engine
+    // forced into Build B base × multiplier math even when 6+ real direct
+    // comps existed (e.g. Hartman Speckle Refractor /299 returning $22).
+    //
+    // Bypass: when NO record in the input carries parallel_id (the
+    // CardHedge shape), return as-is — the caller fetched a
+    // parallel-scoped card_id, the records are already correct. When ANY
+    // record DOES carry parallel_id (Cardsight legacy / mixed source),
+    // preserve the original strict filter so cross-parallel bleed stays
+    // sealed.
+    const anyHasParallelId = records.some(
+      (r) => r.parallel_id !== undefined && r.parallel_id !== null,
+    );
+    if (!anyHasParallelId) {
+      return [...records];
+    }
     return records.filter((r) => r.parallel_id === parallelId);
   }
   return records.filter(
