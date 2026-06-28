@@ -1,0 +1,155 @@
+name: Weekly Auto-Multiplier Calibration Refresh
+
+# CF-AUTO-MULTIPLIER-REFRESH-JOB (2026-06-28) — step 4 of the ML loop
+# documented in backend/docs/ml-calibration-architecture.md.
+#
+# Weekly cron re-runs backend/scripts/calibrate-auto-multipliers.cjs against
+# CardHedge to refresh the empirical autograph multiplier table.
+#
+# Pipeline:
+#   1. Scan ~1000 prospect-autograph cards' all-prices-by-card from CH
+#   2. Compute per-(company, grade, raw-tier) trimmed-median ratios
+#   3. Write backend/data/auto-multipliers-latest.json
+#   4. Sanity-gate: refuse the commit if any ratio is outside [0.5×, 1.5×]
+#      of the prior week's value AND prior sample size was >=10 (avoids
+#      replacing a high-confidence ratio with a noisy new one).
+#   5. Commit + push if the file changed
+#   6. Trigger the deploy workflow so the engine picks up the new table
+#
+# Per the trustworthiness guardrails in ml-calibration-architecture.md,
+# the sanity gate is "monotonically self-improving" enforcement — a
+# regressing calibration is rejected rather than deployed.
+
+on:
+  schedule:
+    # Sundays 02:00 UTC = ~9pm Saturday America/Los_Angeles. Catches the
+    # weekend-end CH data settlement before Monday user traffic.
+    - cron: "0 2 * * 0"
+  # Manual override for ad-hoc refresh / debugging
+  workflow_dispatch:
+    inputs:
+      force_commit:
+        description: "Skip sanity gate (use for first run or known recovery)"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write  # needed to push the regenerated JSON back to main
+
+jobs:
+  refresh-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARD_HEDGE_API_KEY: ${{ secrets.CARD_HEDGE_API_KEY }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can compare against prior calibration
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install backend deps (for @azure/cosmos + ioredis etc — script needs @azure/cosmos isn't required, but install keeps node-fetch ABI consistent)
+        working-directory: backend
+        run: npm ci
+
+      - name: Snapshot prior calibration for sanity gate
+        id: snapshot
+        run: |
+          if [ -f backend/data/auto-multipliers-latest.json ]; then
+            cp backend/data/auto-multipliers-latest.json /tmp/auto-multipliers-prior.json
+            echo "had_prior=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "had_prior=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run calibration scan
+        working-directory: backend
+        run: node scripts/calibrate-auto-multipliers.cjs
+
+      - name: Promote dated output to latest
+        # The script writes auto-multipliers-YYYY-MM-DD.json; we update
+        # auto-multipliers-latest.json (the engine reads this canonical name).
+        run: |
+          DATED=$(ls backend/auto-multipliers-*.json 2>/dev/null | tail -1)
+          if [ -z "$DATED" ]; then
+            echo "::error::scan produced no output file"
+            exit 1
+          fi
+          mkdir -p backend/data
+          mv "$DATED" backend/data/auto-multipliers-latest.json
+          echo "promoted $DATED → backend/data/auto-multipliers-latest.json"
+
+      - name: Sanity-gate against prior calibration
+        # Refuse the run if any non-trivial ratio (prior n >= 10) moves
+        # outside [0.5×, 1.5×] of last week's value. Forces human review
+        # rather than silent breakage on a noisy refresh.
+        if: steps.snapshot.outputs.had_prior == 'true' && github.event.inputs.force_commit != 'true'
+        run: |
+          node -e '
+            const fs = require("fs");
+            const prior = JSON.parse(fs.readFileSync("/tmp/auto-multipliers-prior.json", "utf-8"));
+            const next = JSON.parse(fs.readFileSync("backend/data/auto-multipliers-latest.json", "utf-8"));
+            const regressions = [];
+            for (const company of Object.keys(prior.table ?? {})) {
+              for (const grade of Object.keys(prior.table[company] ?? {})) {
+                for (const tier of Object.keys(prior.table[company][grade] ?? {})) {
+                  const p = prior.table[company][grade][tier];
+                  const n = next.table?.[company]?.[grade]?.[tier];
+                  const priorN = prior.diagnostics?.[company]?.[grade]?.[tier]?.n ?? 0;
+                  if (typeof p !== "number" || typeof n !== "number" || priorN < 10) continue;
+                  const ratio = n / p;
+                  if (ratio < 0.5 || ratio > 1.5) {
+                    regressions.push(`${company}/${grade}/${tier}: prior=${p} (n=${priorN}) → new=${n} ratio=${ratio.toFixed(3)}`);
+                  }
+                }
+              }
+            }
+            if (regressions.length > 0) {
+              console.error("Sanity-gate FAILED — calibration drift exceeded [0.5×, 1.5×] bounds:");
+              regressions.forEach((r) => console.error("  - " + r));
+              process.exit(1);
+            }
+            console.log("Sanity-gate PASS: " + Object.keys(next.table ?? {}).join(",") + " companies, all ratios within bounds.");
+          '
+
+      - name: Check for content change
+        id: change_check
+        run: |
+          if git diff --quiet backend/data/auto-multipliers-latest.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No calibration changes since last run."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Calibration changed — will commit."
+          fi
+
+      - name: Commit + push refreshed calibration
+        if: steps.change_check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/data/auto-multipliers-latest.json
+          git commit -m "chore(ml): weekly auto-multiplier calibration refresh
+
+          Refreshed by CF-AUTO-MULTIPLIER-REFRESH-JOB cron.
+          See backend/docs/ml-calibration-architecture.md for the loop."
+          git push origin HEAD:main
+
+      - name: Trigger backend deploy
+        if: steps.change_check.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "daily-refresh.yml",
+              ref: "main",
+            });
+            console.log("Triggered daily-refresh.yml to ship the new calibration.");
