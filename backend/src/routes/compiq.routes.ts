@@ -6,6 +6,8 @@ import {
   logFmvDriftObserved,
   deriveSalesMomentum,
   logSalesMomentumObserved,
+  deriveGradeLadderAnchor,
+  type GradeLadderGrade,
 } from "../services/compiq/compiqEstimate.service.js";
 import {
   getCardFmv,
@@ -2130,6 +2132,70 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           ? ((result as any).fairMarketValueLive as number)
           : null,
     });
+
+    // CF-CH-NEAREST-GRADED-ANCHOR (2026-06-28): surface the best graded
+    // anchor we know about on EVERY priced response, regardless of
+    // whether the engine FMV is healthy or degenerate. iOS uses this to
+    // render honest disclosure when the raw FMV is uncertain:
+    //   "Last sold: PSA 9 $1325 · 236 days ago"
+    //
+    // Per Drew's framing — "scalable trustworthy product with the best
+    // approach" — we deliberately do NOT fabricate a derived raw FMV
+    // via inverse-multiplier math today: the existing GRADER_PREMIUMS
+    // table is base-card-calibrated and produces wrong inverses for
+    // autos at high anchor prices (Kurtz Green Lava PSA 9 at $1325 →
+    // inverse implies Raw at $1559, vs CH's $278 truth). Surfacing the
+    // anchor without converting is the honest interim; the auto-aware
+    // multiplier-calibration CF follows once we have telemetry to
+    // justify the conversion math.
+    //
+    // The deriveGradeLadderAnchor function ships in the engine module
+    // unused-by-default for now — same-grade fast path is sound; cross-
+    // grade conversion will activate when the calibrated table lands.
+    try {
+      const anchorResult = await deriveGradeLadderAnchor({
+        cardId: resolvedCardId,
+        // Request "Raw" so we ALWAYS get a graded anchor even when the
+        // user is viewing the raw price (PSA 10/9/8 anchors get
+        // identified; we surface them without conversion).
+        requestedGrade: "Raw",
+      });
+      if (anchorResult) {
+        (result as any).nearestGradedAnchor = {
+          grade: anchorResult.anchorGrade,
+          price: anchorResult.anchorPrice,
+          daysOld: anchorResult.anchorDaysOld,
+          sampleSize: anchorResult.anchorSampleSize,
+          confidence: anchorResult.confidence,
+        };
+        try {
+          console.log(JSON.stringify({
+            event: "nearest_graded_anchor_surfaced",
+            source: "compiq.price-by-id",
+            cardId: resolvedCardId,
+            engineFmv:
+              typeof (result as any).fairMarketValueLive === "number"
+                ? (result as any).fairMarketValueLive
+                : null,
+            engineCompsUsed:
+              typeof (result as any).compsUsed === "number" ? (result as any).compsUsed : null,
+            anchorGrade: anchorResult.anchorGrade,
+            anchorPrice: anchorResult.anchorPrice,
+            anchorDaysOld: anchorResult.anchorDaysOld,
+            anchorSampleSize: anchorResult.anchorSampleSize,
+            confidence: anchorResult.confidence,
+            timestamp: new Date().toISOString(),
+          }));
+        } catch {
+          // Telemetry must never propagate.
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[compiq.price-by-id] nearest-graded-anchor failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
