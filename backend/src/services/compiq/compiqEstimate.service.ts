@@ -1017,6 +1017,199 @@ export function logSalesMomentumObserved(opts: {
   }
 }
 
+/**
+ * CF-CH-GRADE-LADDER-ANCHOR (2026-06-28): when the comp pool for the
+ * requested grade is degenerate (null FMV, single rogue lowball, or
+ * stale-only), climb the grade ladder via CH's prices-by-card endpoint
+ * and back-compute the requested grade using our GRADER_PREMIUMS
+ * tiered table. Mirrors CH's `anchor_multiplier_indexed` method but
+ * uses OUR multiplier table (which the per-player calibration CF will
+ * tune over time once telemetry accumulates).
+ *
+ * Per Drew's framing: "I want to tweak ours to work like theirs but
+ * better". This is the first step — make the engine reach for a graded
+ * anchor when raw is thin, the same way CH does. The "better" part
+ * lives in our richer signal palette (per-card compsMomentum, cascade
+ * model, fitted ladder) which can layer on top in follow-up CFs.
+ *
+ * Walks the grade ladder top-down, prefers the FRESHEST anchor with
+ * data (not necessarily highest grade — staleness damping says a fresh
+ * PSA 8 anchor beats a year-old PSA 10 anchor).
+ */
+export type GradeLadderGrade =
+  | "PSA 10" | "PSA 9" | "PSA 8" | "PSA 7"
+  | "BGS 10" | "BGS 9.5" | "BGS 9"
+  | "SGC 10" | "SGC 9.5" | "SGC 9"
+  | "Raw";
+
+export interface GradeLadderAnchor {
+  /** The grade we anchored on (NOT necessarily the requested grade). */
+  anchorGrade: GradeLadderGrade;
+  /** Latest closing price of the anchor grade. */
+  anchorPrice: number;
+  /** Days since the anchor's most-recent closing date. */
+  anchorDaysOld: number;
+  /** Number of daily-closing points seen for the anchor grade. */
+  anchorSampleSize: number;
+  /** Derived FMV for the REQUESTED grade (anchor × multiplier ratio). */
+  derivedFmv: number;
+  /** Multiplier ratio applied: anchorPrice × ratio = derivedFmv. */
+  multiplierRatio: number;
+  /** 0..1 confidence based on freshness + sample size. */
+  confidence: number;
+  /** User-facing explanation, e.g. "Estimated Raw from PSA 9 anchor..." */
+  explanation: string;
+}
+
+const GRADE_LADDER_ORDER: GradeLadderGrade[] = [
+  "PSA 10", "BGS 10", "SGC 10",
+  "PSA 9", "BGS 9.5", "SGC 9.5",
+  "PSA 8", "BGS 9", "SGC 9",
+  "PSA 7",
+];
+
+function gradeLadderToCompanyPair(g: GradeLadderGrade): { company: string; grade: string } | null {
+  if (g === "Raw") return null;
+  const m = g.match(/^(PSA|BGS|SGC)\s+(.+)$/);
+  if (!m) return null;
+  return { company: m[1], grade: m[2] };
+}
+
+function daysOldFromIsoDate(iso: string, nowMs: number): number {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return Infinity;
+  const ms = nowMs - t;
+  return Math.max(0, Math.floor(ms / 86_400_000));
+}
+
+/**
+ * Confidence model: 0.6 base (we're guessing from one anchor),
+ * -0.1 per 30 days of staleness, +0.03 per sample (~5 samples saturates
+ * at +0.15), clamped [0,1]. Calibrated to mirror CH's pattern (their
+ * D-grade ≈ 0.18 at 236 days; this model gives ~0.21 at 236 days × 5
+ * samples — comparable signal).
+ */
+export function gradeLadderConfidence(daysOld: number, sampleSize: number): number {
+  const base = 0.6;
+  const freshnessPenalty = (daysOld / 30) * 0.1;
+  const sampleBonus = Math.min(0.15, sampleSize * 0.03);
+  return Math.max(0, Math.min(1, base - freshnessPenalty + sampleBonus));
+}
+
+/**
+ * anchorPrice * ratio = requestedGrade FMV.
+ * ratio = premium(requested) / premium(anchor), both keyed off the
+ * raw-price tier estimated from the anchor (two-step: anchor → raw
+ * tier estimate → requested premium).
+ */
+export function gradeLadderConversionRatio(
+  anchorGrade: GradeLadderGrade,
+  requestedGrade: GradeLadderGrade,
+  anchorPrice: number,
+): { ratio: number; rawTierUsed: number } {
+  if (anchorGrade === requestedGrade) return { ratio: 1, rawTierUsed: anchorPrice };
+
+  let rawFromAnchor: number;
+  if (anchorGrade === "Raw") {
+    rawFromAnchor = anchorPrice;
+  } else {
+    const ap = gradeLadderToCompanyPair(anchorGrade);
+    if (!ap) return { ratio: 1, rawTierUsed: anchorPrice };
+    const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice);
+    rawFromAnchor = anchorPrice / anchorPremium;
+  }
+
+  let requestedPremium: number;
+  if (requestedGrade === "Raw") {
+    requestedPremium = 1;
+  } else {
+    const rp = gradeLadderToCompanyPair(requestedGrade);
+    if (!rp) return { ratio: 1, rawTierUsed: rawFromAnchor };
+    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor);
+  }
+
+  let anchorPremium: number;
+  if (anchorGrade === "Raw") {
+    anchorPremium = 1;
+  } else {
+    const ap = gradeLadderToCompanyPair(anchorGrade);
+    if (!ap) return { ratio: 1, rawTierUsed: rawFromAnchor };
+    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor);
+  }
+
+  const ratio = requestedPremium / anchorPremium;
+  return { ratio, rawTierUsed: rawFromAnchor };
+}
+
+/**
+ * Orchestrator. Walks the grade ladder via CH prices-by-card, picks
+ * the freshest anchor with data, computes the requested-grade FMV.
+ * Returns null when NO grade in the ladder had any data (truly
+ * unpriceable card).
+ *
+ * `nowMs` injected for deterministic tests; production passes Date.now().
+ * `fetchPrices` injected for tests; production uses CH client.
+ */
+export async function deriveGradeLadderAnchor(opts: {
+  cardId: string;
+  requestedGrade: GradeLadderGrade;
+  nowMs?: number;
+  fetchPrices?: (cardId: string, grade: string, days: number) => Promise<{ closing_date: string; price: number }[]>;
+}): Promise<GradeLadderAnchor | null> {
+  const { cardId, requestedGrade } = opts;
+  const nowMs = opts.nowMs ?? Date.now();
+  if (!cardId) return null;
+
+  let fetcher = opts.fetchPrices;
+  if (!fetcher) {
+    const mod = await import("./cardhedge.client.js");
+    fetcher = mod.getPricesByCard;
+  }
+
+  // Parallelize the ladder walk — CH's prices-by-card endpoint is
+  // independent per grade, so 10 sequential fetches (~200ms each cold,
+  // ~5ms each cached) becomes one round-trip wall clock. 12h cacheWrap
+  // means second-visit cards are nearly free.
+  const fetches = await Promise.all(
+    GRADE_LADDER_ORDER.map((grade) =>
+      fetcher!(cardId, grade, 365).then((prices) => ({ grade, prices })).catch(() => ({ grade, prices: [] as { closing_date: string; price: number }[] })),
+    ),
+  );
+
+  let best: { grade: GradeLadderGrade; price: number; daysOld: number; sampleSize: number } | null = null;
+  for (const { grade, prices } of fetches) {
+    if (!prices?.length) continue;
+    const latest = prices[prices.length - 1];
+    if (!latest?.closing_date || !(latest.price > 0)) continue;
+    const daysOld = daysOldFromIsoDate(latest.closing_date, nowMs);
+    if (!best || daysOld < best.daysOld) {
+      best = { grade, price: latest.price, daysOld, sampleSize: prices.length };
+    }
+  }
+
+  if (!best) return null;
+
+  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price);
+  const derivedFmv = Math.round(best.price * ratio * 100) / 100;
+  const confidence = gradeLadderConfidence(best.daysOld, best.sampleSize);
+
+  const explanation =
+    best.grade === requestedGrade
+      ? `${best.grade} anchor $${best.price} (${best.daysOld}d old, ${best.sampleSize} samples), used directly.`
+      : `Estimated ${requestedGrade} from the ${best.grade} anchor ($${best.price}, ${best.daysOld}d old), grade-adjusted ${best.grade}→${requestedGrade} via ${ratio.toFixed(3)}× (raw tier $${rawTierUsed.toFixed(2)}, ${best.sampleSize} samples).`;
+
+  return {
+    anchorGrade: best.grade,
+    anchorPrice: best.price,
+    anchorDaysOld: best.daysOld,
+    anchorSampleSize: best.sampleSize,
+    derivedFmv,
+    multiplierRatio: ratio,
+    confidence,
+    explanation,
+  };
+}
+
 /** Extracts a (company, grade) tuple from a free-text comp title, or null. */
 export function detectGradeFromTitle(title: string): { company: string; grade: string } | null {
   if (!title) return null;
