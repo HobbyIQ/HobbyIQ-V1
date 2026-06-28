@@ -844,6 +844,71 @@ export function logGraderRatioObserved(opts: {
   }
 }
 
+/**
+ * CF-CH-FMV-CROSS-VALIDATE (2026-06-28): emit one App Insights event
+ * comparing our engine FMV against CardHedge's two reference shapes
+ * (card-fmv = index-adjusted, price-estimate = direct). Fire-and-forget;
+ * telemetry failures must never propagate.
+ *
+ * Drift signal interpretation (downstream KQL):
+ *   ratio ~ 1.0   → our FMV agrees with CH's reference
+ *   ratio < 0.7   → we're materially under CH (potentially undervaluing)
+ *   ratio > 1.4   → we're materially over CH (potentially overvaluing)
+ *   |ratio| outside [0.5, 2.0] consistently per-card → calibration target
+ *
+ * `engineFmv` is the composed Build B value the route is about to surface.
+ * `chCardFmv` + `chPriceEstimate` are the two CH endpoints — pass null
+ * when either fetch failed (telemetry still records the side that returned).
+ */
+export function logFmvDriftObserved(opts: {
+  source: string;
+  player: string | null;
+  cardId: string;
+  gradingCompany: string | null;
+  grade: string | null;
+  engineFmv: number | null;
+  chCardFmv: {
+    price: number;
+    confidence: number | null;
+    confidenceGrade: string | null;
+    freshnessDays: number | null;
+    method: string | null;
+  } | null;
+  chPriceEstimate: {
+    price: number;
+    confidence: number | null;
+    method: string | null;
+  } | null;
+}): void {
+  // Skip if neither CH signal is present — nothing to compare against.
+  if (!opts.chCardFmv && !opts.chPriceEstimate) return;
+  const engine = Number.isFinite(opts.engineFmv) && (opts.engineFmv ?? 0) > 0 ? opts.engineFmv : null;
+  const cardFmvRatio = engine && opts.chCardFmv && opts.chCardFmv.price > 0
+    ? Math.round((engine / opts.chCardFmv.price) * 1000) / 1000
+    : null;
+  const priceEstRatio = engine && opts.chPriceEstimate && opts.chPriceEstimate.price > 0
+    ? Math.round((engine / opts.chPriceEstimate.price) * 1000) / 1000
+    : null;
+  try {
+    console.log(JSON.stringify({
+      event: "fmv_drift_observed",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      gradingCompany: opts.gradingCompany,
+      grade: opts.grade,
+      engineFmv: engine,
+      chCardFmv: opts.chCardFmv,
+      chPriceEstimate: opts.chPriceEstimate,
+      cardFmvRatio,
+      priceEstRatio,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
 /** Extracts a (company, grade) tuple from a free-text comp title, or null. */
 export function detectGradeFromTitle(title: string): { company: string; grade: string } | null {
   if (!title) return null;
