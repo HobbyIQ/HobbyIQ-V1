@@ -36,6 +36,10 @@ import {
   type GradedProjectionResult,
 } from "./gradedPriceProjection.js";
 import type { TrendIQResult } from "./trendIQ.types.js";
+// CF-CH-WIRE-GRADER-RATIO-TELEMETRY (2026-06-28): observed-pair telemetry
+// for per-player grading multiplier calibration. Fires when we have both
+// observed raw AND observed graded medians on the same card.
+import { logGraderRatioObserved } from "./compiqEstimate.service.js";
 
 export interface CompileGradedEstimatesInput {
   pricing: CardsightPricingResponse;
@@ -279,6 +283,79 @@ export async function compileGradedEstimatesForCard(
     // detail fetch up to feed the strict graded-scope matcher; the
     // existing sibling-observed anchor path consumes the same values
     // here without a re-fetch).
+
+    // CF-CH-WIRE-GRADER-RATIO-TELEMETRY (2026-06-28): emit a
+    // `graded_ratio_observed` event for each (raw, graded) pair we
+    // currently see on this card. The aggregator (KQL query — see
+    // docs/per-player-grader-calibration.md) groups these by
+    // (player, gradingCompany, grade, tier) over a rolling window and
+    // produces the per-player observed median ratio.
+    //
+    // OBSERVED-PAIR ONLY: we need a raw median (from gradeBreakdown's
+    // "Raw" / "Ungraded" entry) AND a graded median (from any non-raw
+    // entry) on the SAME card. Composed/projected anchors are not
+    // logged — they're circular (they ARE our multiplier) and would
+    // pollute the calibration signal.
+    //
+    // Fire-and-forget; failures never propagate (the helper itself
+    // try/catches). Telemetry payload size is bounded — one event per
+    // observed graded tier per priced response.
+    try {
+      const breakdown = input.gradeBreakdown as ReadonlyArray<{
+        grader?: string;
+        grade?: string;
+        compCount?: number;
+        median?: number;
+      }>;
+      const rawEntry = breakdown.find(
+        (e) =>
+          typeof e?.grader === "string" &&
+          /^(raw|ungraded)$/i.test(e.grader.trim()),
+      );
+      const rawAnchor =
+        rawEntry?.median != null && Number.isFinite(rawEntry.median) && rawEntry.median > 0
+          ? rawEntry.median
+          : null;
+      // CardsightPricingCard surfaces the player via `name` on most flows;
+      // the CardHedge-routed path stamps `player` defensively as an
+      // additional field. Read both for max coverage.
+      const cardAny = pricing.card as { player?: unknown; name?: unknown } | null | undefined;
+      const playerName =
+        typeof cardAny?.player === "string" && cardAny.player.length > 0
+          ? cardAny.player
+          : typeof cardAny?.name === "string" && cardAny.name.length > 0
+            ? cardAny.name
+            : null;
+      if (rawAnchor != null) {
+        for (const entry of breakdown) {
+          if (!entry?.grader || !entry?.grade) continue;
+          // Skip the raw row itself; we want raw → graded pairs only.
+          if (/^(raw|ungraded)$/i.test(String(entry.grader).trim())) continue;
+          if (
+            typeof entry.median !== "number" ||
+            !Number.isFinite(entry.median) ||
+            entry.median <= 0
+          ) {
+            continue;
+          }
+          logGraderRatioObserved({
+            source: `${source}.observed-pair`,
+            player: playerName,
+            cardId,
+            gradingCompany: String(entry.grader),
+            grade: String(entry.grade),
+            rawAnchor,
+            gradedValue: entry.median,
+          });
+        }
+      }
+    } catch (err) {
+      // Telemetry must never propagate. Log a warn so we can see the rare
+      // shape-mismatch case in App Insights.
+      console.warn(
+        `[${source}] graded_ratio_observed telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
 
     const built = buildGradedEstimates({
       pricing,
