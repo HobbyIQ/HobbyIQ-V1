@@ -29,6 +29,24 @@ export interface PortfolioHolding {
   quantity?: number;
   purchasePrice?: number;
   totalCostBasis?: number;
+  /**
+   * CF-GRADER-STATUS-FIELD (2026-06-28): first-class state for cards that
+   * are physically out of the user's hands but still owned. Distinct from
+   * the existing `status` field (which iOS uses for inventory bucketing).
+   *
+   *   "available"          — in hand, ready to sell/hold/list
+   *   "at_psa"             — sent for grading, still owned, awaiting return
+   *   "pending_redemption" — Topps/Bowman redemption card pending fulfillment
+   *   "in_route"           — bought online, in transit to user
+   *
+   * iOS renders a badge on the inventory row when graderStatus !== "available".
+   * Filter views (Available / At PSA / Pending Redemption) read this field.
+   * Future autopricing can derate confidence on cards in transit (the user
+   * can't react to market moves on a card they don't physically hold).
+   *
+   * Absent / "available" → behavior unchanged from pre-CF.
+   */
+  graderStatus?: "available" | "at_psa" | "pending_redemption" | "in_route";
   purchaseDate?: string | number;
   purchaseSource?: string;
   listingUrl?: string;
