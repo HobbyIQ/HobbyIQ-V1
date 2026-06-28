@@ -689,6 +689,137 @@ function resolveBowman2022Alias(
   return BOWMAN_2022_ALIASES[normalized] ?? rawInput;
 }
 
+/**
+ * CF-PARALLEL-PREMIUM-CALIBRATION (2026-06-28): empirical-table loader.
+ * Lazy reads backend/data/parallel-premiums-latest.json on first call,
+ * provides O(1) lookup by (year, set, parallel, printRun). Falls
+ * through to null when the file is missing / unparseable / no entry
+ * matches — caller's behavior unchanged in that case (worksheet only).
+ */
+type EmpiricalParallelEntry = {
+  year: number;
+  set: string;
+  parallel: string;
+  printRun: string;
+  baseRelativePremium: number | null;
+  sampleSize: number;
+  ratioRange: [number | null, number | null];
+  p25?: number | null;
+  p75?: number | null;
+  provenance: "empirical" | "thin_provisional";
+  skippedReason?: string | null;
+};
+
+type EmpiricalParallelTable = {
+  calibratedAt?: string;
+  method?: string;
+  entries?: EmpiricalParallelEntry[];
+};
+
+let _empiricalParallelTableCache: EmpiricalParallelTable | null | undefined = undefined;
+let _empiricalParallelIndex: Map<string, EmpiricalParallelEntry> | null = null;
+
+function empiricalParallelKey(year: number, set: string, parallel: string, printRun: string): string {
+  return `${year}|${set.toLowerCase().trim()}|${parallel.toLowerCase().trim()}|${printRun.toLowerCase().trim()}`;
+}
+
+function loadEmpiricalParallelTable(): EmpiricalParallelTable | null {
+  if (_empiricalParallelTableCache !== undefined) return _empiricalParallelTableCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("node:path") as typeof import("node:path");
+    const p = path.resolve(process.cwd(), "data/parallel-premiums-latest.json");
+    if (!fs.existsSync(p)) {
+      _empiricalParallelTableCache = null;
+      return null;
+    }
+    const t = JSON.parse(fs.readFileSync(p, "utf-8")) as EmpiricalParallelTable;
+    _empiricalParallelTableCache = t;
+    _empiricalParallelIndex = new Map();
+    for (const e of t.entries ?? []) {
+      if (e.baseRelativePremium == null || e.baseRelativePremium <= 0) continue;
+      if (e.provenance === "thin_provisional" && e.sampleSize < 5) continue;
+      _empiricalParallelIndex.set(
+        empiricalParallelKey(e.year, e.set, e.parallel, e.printRun),
+        e,
+      );
+    }
+    return t;
+  } catch (err) {
+    console.warn(`[chromeDraftMultipliers] parallel-premiums load failed: ${(err as Error)?.message ?? err}`);
+    _empiricalParallelTableCache = null;
+    return null;
+  }
+}
+
+/**
+ * CF-PARALLEL-PREMIUM-CALIBRATION (2026-06-28): synthesize a minimal
+ * BowmanFamilyEntry from the empirical table when the static worksheet
+ * doesn't carry the requested (year, subset, parallel, printRun) combo.
+ *
+ * Falls through to null (caller's original behavior) when:
+ *   - the empirical file is missing / unparseable
+ *   - no entry matches the (year, set, parallel, printRun) tuple
+ *   - the entry has insufficient sample size
+ *
+ * The synthesized entry carries `provenance: "empirical"` so downstream
+ * Build B math treats it identically to a hand-curated empirical row.
+ */
+function tryEmpiricalParallelLookup(ctx: BowmanFamilyLookupContext): BowmanFamilyEntry | null {
+  if (ctx.year === undefined) return null;
+  loadEmpiricalParallelTable();
+  if (!_empiricalParallelIndex) return null;
+
+  // Map the worksheet subset → likely set string in the empirical file.
+  // For now: 'Chrome Prospect Autographs' subset → 'Bowman Chrome Prospects' set.
+  const setHint = ctx.subset === "Chrome Prospect Autographs"
+    ? "Bowman Chrome Prospects"
+    : String(ctx.subset);
+
+  // The worksheet's parallelName + ctx.tierQualifier together imply the
+  // print run we'd look up. Without printRun in the lookup ctx we can't
+  // pick a specific entry deterministically; walk all empirical entries
+  // for (year, set, parallel) and return the highest-sample one.
+  const parallelLower = ctx.parallelName.toLowerCase().trim();
+  const yearStr = String(ctx.year);
+  let best: EmpiricalParallelEntry | null = null;
+  for (const [key, e] of _empiricalParallelIndex) {
+    if (!key.startsWith(`${yearStr}|`)) continue;
+    if (e.parallel.toLowerCase().trim() !== parallelLower) continue;
+    if (e.set.toLowerCase().trim() !== setHint.toLowerCase()) continue;
+    if (!best || e.sampleSize > best.sampleSize) best = e;
+  }
+  if (!best || best.baseRelativePremium == null) return null;
+
+  // Synthesize an entry compatible with downstream Build B math.
+  return {
+    year: best.year,
+    product: ctx.product,
+    subset: ctx.subset,
+    parallelName: best.parallel,
+    printRun: best.printRun,
+    baselineMultiplier: best.baseRelativePremium,  // placeholder; Build B uses baseRelativePremium directly
+    range: { low: best.ratioRange[0] ?? best.baseRelativePremium, high: best.ratioRange[1] ?? best.baseRelativePremium },
+    directCompOnly: true,
+    tierQualifier: null,
+    isAutograph: ctx.subset === "Chrome Prospect Autographs",
+    provenance: "sibling_provisional",
+    baseRelativePremium: {
+      value: best.baseRelativePremium,
+      range: [best.ratioRange[0] ?? best.baseRelativePremium, best.ratioRange[1] ?? best.baseRelativePremium] as [number, number],
+      n: best.sampleSize,
+      basis: "base_auto_paired",
+      provenance: "empirical",
+      calibratedAt: new Date().toISOString(),
+      sampleBaseRange: [0, 0],
+      topBaseBucketRatio: null,
+    },
+    note: `CF-PARALLEL-PREMIUM-CALIBRATION 2026-06-28 — synthesized from empirical scan (n=${best.sampleSize}, p25=${best.p25 ?? "?"}, p75=${best.p75 ?? "?"}). Worksheet had no static entry for this combo; weekly refresh keeps it current.`,
+  };
+}
+
 export function lookupBowmanFamilyEntry(
   ctx: BowmanFamilyLookupContext,
 ): BowmanFamilyEntry | null {
@@ -721,7 +852,11 @@ export function lookupBowmanFamilyEntry(
     );
     if (candidates.length === 1) return candidates[0]!;
   }
-  return null;
+  // CF-PARALLEL-PREMIUM-CALIBRATION (2026-06-28): fall through to the
+  // empirical table when the static worksheet has no match. Solves the
+  // "Kurtz Green Lava 2025 not in worksheet → no Build B → degenerate
+  // FMV" class indefinitely without manual worksheet additions.
+  return tryEmpiricalParallelLookup(ctx);
 }
 
 export function lookupBowmanFamilyByProduct(
