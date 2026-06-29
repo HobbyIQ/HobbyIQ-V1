@@ -49,6 +49,50 @@ const SEARCHES = [
   "1986 Topps Traded Bonds", "1989 Upper Deck Griffey",
   // 1951 Bowman classics
   "1951 Bowman Baseball Mantle", "1951 Bowman Baseball Mays",
+
+  // CF-VINTAGE-CALIBRATION-PASS-2 (2026-06-29) — additions targeting
+  // weak bins surfaced by scripts/audit-vintage-coverage.cjs:
+  //   1948-1969 PSA 10 missing 500-1000, 1000-5000, 5000+ (n<3 each)
+  //   1970-1989 PSA 8/9/10 missing 500-1000, 1000-5000, 5000+ (n<3 each)
+  //   1948-1969 BGS/SGC at high grades sparse
+  //
+  // The 1948-1969 era is already strong on the low-grade end (PSA 8
+  // <50 has n=2362). Missing tiers up top are intrinsic — there
+  // genuinely aren't many $500+ raw vintage HOFs with Raw-paired
+  // grade observations. These searches surface the cards that DO
+  // pair: deep-HOF prospects and stars whose raw exists.
+  //
+  // 1948-1969 HOF deep-cuts (filling PSA 8/9/10 upper tiers)
+  "1954 Topps Baseball Ernie Banks RC",
+  "1955 Topps Baseball Killebrew RC",
+  "1956 Topps Baseball Ford",
+  "1957 Topps Baseball Drysdale RC",
+  "1958 Topps Baseball Frank Robinson",
+  "1960 Topps Baseball Yastrzemski RC",
+  "1961 Topps Baseball Carew",
+  "1963 Topps Baseball Stargell RC",
+  "1964 Topps Baseball Niekro RC",
+  "1965 Topps Baseball Carlton RC",
+  "1966 Topps Baseball Palmer RC",
+  "1968 Topps Baseball Bench RC",
+  "1969 Topps Baseball Mantle Last Card",
+  // 1970-1989 RCs (filling all three PSA 8/9/10 upper tiers — modern-
+  // vintage HOFs that command higher raw prices than the base set)
+  "1972 Topps Baseball Carlton",
+  "1974 Topps Baseball Schmidt RC",
+  "1976 Topps Baseball Eckersley RC",
+  "1980 Topps Baseball Henderson RC",
+  "1982 Topps Traded Cal Ripken RC",
+  "1983 Topps Tony Gwynn RC",
+  "1984 Donruss Mattingly RC",
+  "1984 Fleer Update Clemens RC",
+  "1985 Topps Mark McGwire RC",
+  "1986 Donruss Canseco RC",
+  "1986 Fleer Update Bonds RC",
+  "1987 Topps Bo Jackson RC",
+  "1988 Score Glavine RC",
+  "1989 Bowman Griffey Jr RC",
+  "1989 Donruss Randy Johnson RC",
 ];
 
 const TIERS = [
