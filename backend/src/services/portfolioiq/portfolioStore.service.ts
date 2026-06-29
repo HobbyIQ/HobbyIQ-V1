@@ -1812,6 +1812,7 @@ async function autoPriceHolding(
         cardId: earlyCardId,
         requestedGrade: "Raw",
         cardClass: holding.isAuto === true ? "autograph" : "base",
+        cardYear: typeof holding.cardYear === "number" ? holding.cardYear : null,
       });
       if (ladder && ladder.derivedFmv > 0) {
         preEarlyLadderResult = {
@@ -2028,6 +2029,7 @@ async function autoPriceHolding(
         // multiplier table converts it to the user's grade when applicable.
         requestedGrade: "Raw",
         cardClass: holding.isAuto === true ? "autograph" : "base",
+        cardYear: typeof holding.cardYear === "number" ? holding.cardYear : null,
       });
       if (ladder && ladder.derivedFmv > 0) {
         nearestGradedAnchorSnapshot = {
@@ -4369,6 +4371,7 @@ export async function repriceHoldingsForUser(
               cardId: lsCsid,
               requestedGrade: "Raw",
               cardClass: (holding as any).isAuto === true ? "autograph" : "base",
+              cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
             });
             if (ladder && ladder.derivedFmv > 0) {
               lsLadderResult = {
@@ -4466,6 +4469,7 @@ export async function repriceHoldingsForUser(
               cardId: reprCsidForLadder,
               requestedGrade: "Raw",
               cardClass: (holding as any).isAuto === true ? "autograph" : "base",
+              cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
             });
             if (ladder && ladder.derivedFmv > 0) {
               const now = new Date().toISOString();
