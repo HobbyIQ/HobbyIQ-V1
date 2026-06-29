@@ -4343,6 +4343,67 @@ export async function repriceHoldingsForUser(
       if (Object.keys(repriceChLastSalePatch).length > 0) {
         const chLsNow = new Date().toISOString();
         const chLsPrevious = doc.holdings[holding.id];
+
+        // CF-REPRICE-LADDER-IN-LASTSALE (2026-06-29): on the single-CH-sale
+        // path (estimateSource="cardhedge-last-sale"), the old chLastSalePatch
+        // bypass returned with lastSale data but NO estimated FMV. For Drew's
+        // 3 Hartman Orange Shimmer/X-Fractor holdings this was the actual
+        // gap — they have 1 CH sale each, hit this bypass, then skipped my
+        // PR #174 ladder fallback below. Run the ladder HERE so both surfaces
+        // populate: lastSale (engine-emitted) + estimatedValue (ladder).
+        let lsLadderResult: {
+          derivedFmv: number; confidence: number; explanation: string;
+          anchorGrade: string; anchorPrice: number; anchorDaysOld: number; anchorSampleSize: number;
+        } | null = null;
+        const lsCsid =
+          typeof (holding as any).cardsightCardId === "string" &&
+          ((holding as any).cardsightCardId as string).trim() !== ""
+            ? ((holding as any).cardsightCardId as string).trim()
+            : null;
+        if (lsCsid) {
+          try {
+            const { deriveGradeLadderAnchor } = await import(
+              "../compiq/compiqEstimate.service.js"
+            );
+            const ladder = await deriveGradeLadderAnchor({
+              cardId: lsCsid,
+              requestedGrade: "Raw",
+              cardClass: (holding as any).isAuto === true ? "autograph" : "base",
+            });
+            if (ladder && ladder.derivedFmv > 0) {
+              lsLadderResult = {
+                derivedFmv: ladder.derivedFmv,
+                confidence: ladder.confidence,
+                explanation: ladder.explanation,
+                anchorGrade: ladder.anchorGrade,
+                anchorPrice: ladder.anchorPrice,
+                anchorDaysOld: ladder.anchorDaysOld,
+                anchorSampleSize: ladder.anchorSampleSize,
+              };
+              try {
+                console.log(JSON.stringify({
+                  event: "autoprice_grade_ladder_fallback_applied",
+                  source: "portfolio.repriceHoldingsForUser.lastSale",
+                  holdingId: holding.id,
+                  cardId: lsCsid,
+                  anchorGrade: ladder.anchorGrade,
+                  anchorPrice: ladder.anchorPrice,
+                  anchorDaysOld: ladder.anchorDaysOld,
+                  derivedFmv: ladder.derivedFmv,
+                  confidence: ladder.confidence,
+                  timestamp: new Date().toISOString(),
+                }));
+              } catch {
+                // Telemetry must never propagate.
+              }
+            }
+          } catch (err) {
+            console.warn(
+              `[portfolio.repriceHoldingsForUser] lastSale-path ladder failed (non-fatal): ${(err as Error)?.message ?? err}`,
+            );
+          }
+        }
+
         const chLsUpdated: PortfolioHolding = {
           ...holding,
           ...repriceIdentityPatch,
@@ -4350,6 +4411,29 @@ export async function repriceHoldingsForUser(
           // fairMarketValue stays whatever it was (typically null for
           // this source). We're not inventing an FMV; we're persisting a
           // single trusted CH last-sale that iOS renders separately.
+          // CF-REPRICE-LADDER-IN-LASTSALE: also persist the ladder-derived
+          // estimatedValue + nearestGradedAnchor so iOS has BOTH surfaces.
+          ...(lsLadderResult
+            ? {
+                estimatedValue: lsLadderResult.derivedFmv,
+                estimateLow: lsLadderResult.anchorPrice * 0.7,
+                estimateHigh: lsLadderResult.anchorPrice * 1.3,
+                estimateConfidence: (
+                  lsLadderResult.confidence >= 0.5 ? "estimate" :
+                  lsLadderResult.confidence >= 0.3 ? "rough" : "ballpark"
+                ) as "estimate" | "rough" | "ballpark",
+                estimateBasis: lsLadderResult.explanation,
+                isEstimate: true,
+                valuationStatus: "estimated" as const,
+                nearestGradedAnchor: {
+                  grade: lsLadderResult.anchorGrade,
+                  price: lsLadderResult.anchorPrice,
+                  daysOld: lsLadderResult.anchorDaysOld,
+                  sampleSize: lsLadderResult.anchorSampleSize,
+                  confidence: lsLadderResult.confidence,
+                },
+              }
+            : {}),
           verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
           recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
           lastUpdated: chLsNow,
