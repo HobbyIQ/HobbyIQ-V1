@@ -150,6 +150,28 @@ async function main() {
   // PHASE 3: bin pairs by raw tier, compute (graded/raw) ratios.
   console.log("[calibrate] phase 3: compute per-tier ratios");
   // ratiosByCompanyGradeTier["PSA"]["10"]["<25"] = [ratio1, ratio2, ...]
+  //
+  // CF-AUTO-MULTIPLIER-HIGH-GRADE-FLOOR (2026-06-29): the prior filter
+  // accepted ANY positive ratio. For PSA 8+ (and BGS/SGC equivalents)
+  // a sub-1.0 ratio is structurally impossible — the slab can't be
+  // cheaper than the raw because the slab includes a guaranteed-clean
+  // raw plus the grading service value. Sub-1 observations are bad
+  // data (single-comp outliers, mis-tagged variants, freshness gaps in
+  // CH's price aggregator) and skew the trimmed median below the true
+  // value when they survive into the median bucket.
+  //
+  // Pre-fix engine impact: PSA 8 autographs at $500-1000 Raw got ratio
+  // 0.234 → engine priced them at $175 instead of $1500+. Class A bug,
+  // opposite-direction of the Mantle $2.28M case.
+  //
+  // Lower grades (≤7.5) keep the prior > 0 floor: a beat-up PSA 5 can
+  // genuinely sell for less than Raw because the slab signals
+  // "professionally certified damage" rather than open-market upside.
+  const HIGH_GRADE_FLOOR_GRADES = new Set([
+    "8", "8.5", "9", "9.5", "10",
+    "AUTH",  // PSA AUTH on an auto = certified autograph, must be ≥ Raw
+  ]);
+  let droppedSubOneFloor = 0;
   const ratios = {};
   for (const obs of observations) {
     const tier = tierFor(obs.raw);
@@ -160,12 +182,18 @@ async function main() {
       const company = m[1], grade = m[2];
       const ratio = price / obs.raw;
       if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 50) continue;  // filter wild outliers
+      if (HIGH_GRADE_FLOOR_GRADES.has(grade) && ratio < 1.0) {
+        // Reject: high-grade slab priced below its own raw is bad data.
+        droppedSubOneFloor++;
+        continue;
+      }
       ratios[company] ??= {};
       ratios[company][grade] ??= {};
       ratios[company][grade][tier] ??= [];
       ratios[company][grade][tier].push(ratio);
     }
   }
+  console.log(`[calibrate] phase 3: dropped ${droppedSubOneFloor} sub-1.0 observations on high-grade slabs (bad data hygiene)`);
 
   // Build the output table
   const output = {
