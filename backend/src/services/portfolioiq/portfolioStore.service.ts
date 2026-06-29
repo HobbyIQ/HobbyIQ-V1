@@ -1542,6 +1542,97 @@ export function buildChLastSalePatch(
   };
 }
 
+/**
+ * CF-LADDER-HELPER-EXTRACT (2026-06-29): single home for the
+ * deriveGradeLadderAnchor call pattern shared by autoPriceHolding +
+ * repriceHoldingsForUser. Both functions had 2 ladder call sites each
+ * (4 total), each constructing the same `{cardId, requestedGrade:
+ * "Raw", cardClass, cardYear}` request and emitting the same telemetry
+ * shape. The 2026-06-29 vintage CF (CF-VINTAGE-GRADER-PREMIUMS) made
+ * the maintenance cost visible — threading `cardYear` through all four
+ * sites by hand. This helper collapses it to one place.
+ *
+ * The helper:
+ *   - Reads `isAuto` + `cardYear` off the holding
+ *   - Calls deriveGradeLadderAnchor
+ *   - Emits structured `autoprice_grade_ladder_fallback_applied`
+ *     telemetry on success (tagged with the caller's `source`)
+ *   - Logs a non-fatal warn on throw
+ *   - Returns the projection shape every caller previously built
+ *     inline; null on failure or no-derived-FMV
+ *
+ * Telemetry source tags (preserved from prior inline calls so App
+ * Insights queries continue to disambiguate):
+ *   "portfolio.autoPriceHolding.pre-early"
+ *   "portfolio.autoPriceHolding"
+ *   "portfolio.repriceHoldingsForUser.lastSale"
+ *   "portfolio.repriceHoldingsForUser"
+ */
+interface LadderFallbackResult {
+  derivedFmv: number;
+  confidence: number;
+  explanation: string;
+  anchorGrade: string;
+  anchorPrice: number;
+  anchorDaysOld: number;
+  anchorSampleSize: number;
+}
+
+async function applyGradeLadderFallback(opts: {
+  holding: PortfolioHolding;
+  cardId: string;
+  source: string;
+}): Promise<LadderFallbackResult | null> {
+  try {
+    const { deriveGradeLadderAnchor } = await import(
+      "../compiq/compiqEstimate.service.js"
+    );
+    const ladder = await deriveGradeLadderAnchor({
+      cardId: opts.cardId,
+      // Always request "Raw" so the ladder picks the freshest anchor
+      // regardless of the user's requested grade; the auto-aware
+      // multiplier table converts it to the user's grade when applicable.
+      requestedGrade: "Raw",
+      cardClass: (opts.holding as { isAuto?: boolean }).isAuto === true ? "autograph" : "base",
+      cardYear:
+        typeof (opts.holding as { cardYear?: number }).cardYear === "number"
+          ? ((opts.holding as { cardYear?: number }).cardYear as number)
+          : null,
+    });
+    if (!ladder || ladder.derivedFmv <= 0) return null;
+    try {
+      console.log(JSON.stringify({
+        event: "autoprice_grade_ladder_fallback_applied",
+        source: opts.source,
+        holdingId: opts.holding.id,
+        cardId: opts.cardId,
+        anchorGrade: ladder.anchorGrade,
+        anchorPrice: ladder.anchorPrice,
+        anchorDaysOld: ladder.anchorDaysOld,
+        derivedFmv: ladder.derivedFmv,
+        confidence: ladder.confidence,
+        timestamp: new Date().toISOString(),
+      }));
+    } catch {
+      // Telemetry must never propagate.
+    }
+    return {
+      derivedFmv: ladder.derivedFmv,
+      confidence: ladder.confidence,
+      explanation: ladder.explanation,
+      anchorGrade: ladder.anchorGrade,
+      anchorPrice: ladder.anchorPrice,
+      anchorDaysOld: ladder.anchorDaysOld,
+      anchorSampleSize: ladder.anchorSampleSize,
+    };
+  } catch (err) {
+    console.warn(
+      `[portfolio.applyGradeLadderFallback] ${opts.source} failed (non-fatal): ${(err as Error)?.message ?? err}`,
+    );
+    return null;
+  }
+}
+
 async function autoPriceHolding(
   doc: UserDoc,
   holding: PortfolioHolding,
@@ -1804,48 +1895,11 @@ async function autoPriceHolding(
     !railResolution &&
     fairValue <= 0
   ) {
-    try {
-      const { deriveGradeLadderAnchor } = await import(
-        "../compiq/compiqEstimate.service.js"
-      );
-      const ladder = await deriveGradeLadderAnchor({
-        cardId: earlyCardId,
-        requestedGrade: "Raw",
-        cardClass: holding.isAuto === true ? "autograph" : "base",
-        cardYear: typeof holding.cardYear === "number" ? holding.cardYear : null,
-      });
-      if (ladder && ladder.derivedFmv > 0) {
-        preEarlyLadderResult = {
-          derivedFmv: ladder.derivedFmv,
-          confidence: ladder.confidence,
-          explanation: ladder.explanation,
-          anchorGrade: ladder.anchorGrade,
-          anchorPrice: ladder.anchorPrice,
-          anchorDaysOld: ladder.anchorDaysOld,
-          anchorSampleSize: ladder.anchorSampleSize,
-        };
-        try {
-          console.log(JSON.stringify({
-            event: "autoprice_grade_ladder_fallback_applied",
-            source: "portfolio.autoPriceHolding.pre-early",
-            holdingId: holding.id,
-            cardId: earlyCardId,
-            anchorGrade: ladder.anchorGrade,
-            anchorPrice: ladder.anchorPrice,
-            anchorDaysOld: ladder.anchorDaysOld,
-            derivedFmv: ladder.derivedFmv,
-            confidence: ladder.confidence,
-            timestamp: new Date().toISOString(),
-          }));
-        } catch {
-          // Telemetry must never propagate.
-        }
-      }
-    } catch (err) {
-      console.warn(
-        `[portfolio.autoPriceHolding] pre-early ladder failed (non-fatal): ${(err as Error)?.message ?? err}`,
-      );
-    }
+    preEarlyLadderResult = await applyGradeLadderFallback({
+      holding,
+      cardId: earlyCardId,
+      source: "portfolio.autoPriceHolding.pre-early",
+    });
   }
 
   if (preEarlyLadderResult) {
@@ -2018,60 +2072,31 @@ async function autoPriceHolding(
     railNoUsableFmv &&
     railNoUsableEstimate
   ) {
-    try {
-      const { deriveGradeLadderAnchor } = await import(
-        "../compiq/compiqEstimate.service.js"
-      );
-      const ladder = await deriveGradeLadderAnchor({
-        cardId: cardsightCardId,
-        // Always request "Raw" so the ladder picks the freshest anchor
-        // regardless of the user's requested grade; the auto-aware
-        // multiplier table converts it to the user's grade when applicable.
-        requestedGrade: "Raw",
-        cardClass: holding.isAuto === true ? "autograph" : "base",
-        cardYear: typeof holding.cardYear === "number" ? holding.cardYear : null,
-      });
-      if (ladder && ladder.derivedFmv > 0) {
-        nearestGradedAnchorSnapshot = {
-          grade: ladder.anchorGrade,
-          price: ladder.anchorPrice,
-          daysOld: ladder.anchorDaysOld,
-          sampleSize: ladder.anchorSampleSize,
-          confidence: ladder.confidence,
-        };
-        // Promote to "estimated" so iOS shows the ladder-derived value
-        // with low-confidence styling instead of the null FMV.
-        resolvedAfterLadder = {
-          fairMarketValueOverride: null,
-          valuationStatus: "estimated" as const,
-          estimatedValue: ladder.derivedFmv,
-          estimateLow: ladder.anchorPrice * 0.7,  // wide band on derived-anchor estimates
-          estimateHigh: ladder.anchorPrice * 1.3,
-          estimateConfidence: ladder.confidence,
-          estimateBasis: ladder.explanation,
-          isEstimate: true,
-        };
-        try {
-          console.log(JSON.stringify({
-            event: "autoprice_grade_ladder_fallback_applied",
-            source: "portfolio.autoPriceHolding",
-            holdingId: holding.id,
-            cardId: cardsightCardId,
-            anchorGrade: ladder.anchorGrade,
-            anchorPrice: ladder.anchorPrice,
-            anchorDaysOld: ladder.anchorDaysOld,
-            derivedFmv: ladder.derivedFmv,
-            confidence: ladder.confidence,
-            timestamp: new Date().toISOString(),
-          }));
-        } catch {
-          // Telemetry must never propagate.
-        }
-      }
-    } catch (err) {
-      console.warn(
-        `[portfolio.autoPriceHolding] grade-ladder fallback failed (non-fatal): ${(err as Error)?.message ?? err}`,
-      );
+    const ladder = await applyGradeLadderFallback({
+      holding,
+      cardId: cardsightCardId,
+      source: "portfolio.autoPriceHolding",
+    });
+    if (ladder) {
+      nearestGradedAnchorSnapshot = {
+        grade: ladder.anchorGrade,
+        price: ladder.anchorPrice,
+        daysOld: ladder.anchorDaysOld,
+        sampleSize: ladder.anchorSampleSize,
+        confidence: ladder.confidence,
+      };
+      // Promote to "estimated" so iOS shows the ladder-derived value
+      // with low-confidence styling instead of the null FMV.
+      resolvedAfterLadder = {
+        fairMarketValueOverride: null,
+        valuationStatus: "estimated" as const,
+        estimatedValue: ladder.derivedFmv,
+        estimateLow: ladder.anchorPrice * 0.7,  // wide band on derived-anchor estimates
+        estimateHigh: ladder.anchorPrice * 1.3,
+        estimateConfidence: ladder.confidence,
+        estimateBasis: ladder.explanation,
+        isEstimate: true,
+      };
     }
   }
 
@@ -4353,58 +4378,18 @@ export async function repriceHoldingsForUser(
         // gap — they have 1 CH sale each, hit this bypass, then skipped my
         // PR #174 ladder fallback below. Run the ladder HERE so both surfaces
         // populate: lastSale (engine-emitted) + estimatedValue (ladder).
-        let lsLadderResult: {
-          derivedFmv: number; confidence: number; explanation: string;
-          anchorGrade: string; anchorPrice: number; anchorDaysOld: number; anchorSampleSize: number;
-        } | null = null;
+        let lsLadderResult: LadderFallbackResult | null = null;
         const lsCsid =
-          typeof (holding as any).cardsightCardId === "string" &&
-          ((holding as any).cardsightCardId as string).trim() !== ""
-            ? ((holding as any).cardsightCardId as string).trim()
+          typeof (holding as { cardsightCardId?: string }).cardsightCardId === "string" &&
+          ((holding as { cardsightCardId?: string }).cardsightCardId as string).trim() !== ""
+            ? ((holding as { cardsightCardId?: string }).cardsightCardId as string).trim()
             : null;
         if (lsCsid) {
-          try {
-            const { deriveGradeLadderAnchor } = await import(
-              "../compiq/compiqEstimate.service.js"
-            );
-            const ladder = await deriveGradeLadderAnchor({
-              cardId: lsCsid,
-              requestedGrade: "Raw",
-              cardClass: (holding as any).isAuto === true ? "autograph" : "base",
-              cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
-            });
-            if (ladder && ladder.derivedFmv > 0) {
-              lsLadderResult = {
-                derivedFmv: ladder.derivedFmv,
-                confidence: ladder.confidence,
-                explanation: ladder.explanation,
-                anchorGrade: ladder.anchorGrade,
-                anchorPrice: ladder.anchorPrice,
-                anchorDaysOld: ladder.anchorDaysOld,
-                anchorSampleSize: ladder.anchorSampleSize,
-              };
-              try {
-                console.log(JSON.stringify({
-                  event: "autoprice_grade_ladder_fallback_applied",
-                  source: "portfolio.repriceHoldingsForUser.lastSale",
-                  holdingId: holding.id,
-                  cardId: lsCsid,
-                  anchorGrade: ladder.anchorGrade,
-                  anchorPrice: ladder.anchorPrice,
-                  anchorDaysOld: ladder.anchorDaysOld,
-                  derivedFmv: ladder.derivedFmv,
-                  confidence: ladder.confidence,
-                  timestamp: new Date().toISOString(),
-                }));
-              } catch {
-                // Telemetry must never propagate.
-              }
-            }
-          } catch (err) {
-            console.warn(
-              `[portfolio.repriceHoldingsForUser] lastSale-path ladder failed (non-fatal): ${(err as Error)?.message ?? err}`,
-            );
-          }
+          lsLadderResult = await applyGradeLadderFallback({
+            holding,
+            cardId: lsCsid,
+            source: "portfolio.repriceHoldingsForUser.lastSale",
+          });
         }
 
         const chLsUpdated: PortfolioHolding = {
@@ -4461,66 +4446,40 @@ export async function repriceHoldingsForUser(
             ? ((holding as any).cardsightCardId as string).trim()
             : null;
         if (reprCsidForLadder) {
-          try {
-            const { deriveGradeLadderAnchor } = await import(
-              "../compiq/compiqEstimate.service.js"
-            );
-            const ladder = await deriveGradeLadderAnchor({
-              cardId: reprCsidForLadder,
-              requestedGrade: "Raw",
-              cardClass: (holding as any).isAuto === true ? "autograph" : "base",
-              cardYear: typeof (holding as any).cardYear === "number" ? (holding as any).cardYear : null,
-            });
-            if (ladder && ladder.derivedFmv > 0) {
-              const now = new Date().toISOString();
-              doc.holdings[holding.id] = {
-                ...holding,
-                ...repriceIdentityPatch,
-                fairMarketValue: null as any,
-                estimatedValue: ladder.derivedFmv,
-                estimateLow: ladder.anchorPrice * 0.7,
-                estimateHigh: ladder.anchorPrice * 1.3,
-                estimateConfidence:
-                  ladder.confidence >= 0.5 ? "estimate" :
-                  ladder.confidence >= 0.3 ? "rough" : "ballpark",
-                estimateBasis: ladder.explanation,
-                isEstimate: true,
-                valuationStatus: "estimated",
-                nearestGradedAnchor: {
-                  grade: ladder.anchorGrade,
-                  price: ladder.anchorPrice,
-                  daysOld: ladder.anchorDaysOld,
-                  sampleSize: ladder.anchorSampleSize,
-                  confidence: ladder.confidence,
-                },
-                verdict: "Estimated",
-                recommendation: "Hold",
-                lastUpdated: now,
-              };
-              try {
-                console.log(JSON.stringify({
-                  event: "autoprice_grade_ladder_fallback_applied",
-                  source: "portfolio.repriceHoldingsForUser",
-                  holdingId: holding.id,
-                  cardId: reprCsidForLadder,
-                  anchorGrade: ladder.anchorGrade,
-                  anchorPrice: ladder.anchorPrice,
-                  anchorDaysOld: ladder.anchorDaysOld,
-                  derivedFmv: ladder.derivedFmv,
-                  confidence: ladder.confidence,
-                  timestamp: new Date().toISOString(),
-                }));
-              } catch {
-                // Telemetry must never propagate.
-              }
-              repriced += 1;
-              updates.push({ id: holding.id, status: "repriced", reason: "grade-ladder-fallback" });
-              continue;
-            }
-          } catch (err) {
-            console.warn(
-              `[portfolio.repriceHoldingsForUser] grade-ladder fallback failed (non-fatal): ${(err as Error)?.message ?? err}`,
-            );
+          const ladder = await applyGradeLadderFallback({
+            holding,
+            cardId: reprCsidForLadder,
+            source: "portfolio.repriceHoldingsForUser",
+          });
+          if (ladder) {
+            const now = new Date().toISOString();
+            doc.holdings[holding.id] = {
+              ...holding,
+              ...repriceIdentityPatch,
+              fairMarketValue: null as any,
+              estimatedValue: ladder.derivedFmv,
+              estimateLow: ladder.anchorPrice * 0.7,
+              estimateHigh: ladder.anchorPrice * 1.3,
+              estimateConfidence:
+                ladder.confidence >= 0.5 ? "estimate" :
+                ladder.confidence >= 0.3 ? "rough" : "ballpark",
+              estimateBasis: ladder.explanation,
+              isEstimate: true,
+              valuationStatus: "estimated",
+              nearestGradedAnchor: {
+                grade: ladder.anchorGrade,
+                price: ladder.anchorPrice,
+                daysOld: ladder.anchorDaysOld,
+                sampleSize: ladder.anchorSampleSize,
+                confidence: ladder.confidence,
+              },
+              verdict: "Estimated",
+              recommendation: "Hold",
+              lastUpdated: now,
+            };
+            repriced += 1;
+            updates.push({ id: holding.id, status: "repriced", reason: "grade-ladder-fallback" });
+            continue;
           }
         }
         skipped += 1;
