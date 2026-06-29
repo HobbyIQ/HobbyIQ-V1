@@ -20,17 +20,30 @@ const path = require("path");
 
 const API_BASE = "https://api.cardhedger.com/v1";
 
-// Target combos — start with the highest-leverage gaps (user-visible $4.99
-// class cards). Expand the list in follow-up CFs / scheduled refresh.
+// Target combos — full prospect-auto rainbow for the active years. Expand
+// over time. Untraded parallels (Devin Taylor Green Auto class) get
+// priced via Build B's base-auto × empirical parallel-premium derivation.
 const TARGETS = [
+  // 2025 Bowman Chrome Prospects — Lava series
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Lava Refractor", printRun: "/150", searchToken: "Green Lava" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Yellow Lava Refractor", printRun: "/75", searchToken: "Yellow Lava" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Lava Refractor", printRun: "/25", searchToken: "Orange Lava" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Lava Refractor",  printRun: "/5",   searchToken: "Red Lava" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Speckle Refractor",   printRun: "/299", searchToken: "Speckle Refractor" },
+  // 2025 Bowman Chrome Prospects — regular rainbow refractors
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Refractor",     printRun: "/99",  searchToken: "Green Refractor" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Blue Refractor",      printRun: "/150", searchToken: "Blue Refractor" },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Aqua Refractor",      printRun: "/125", searchToken: "Aqua Refractor" },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Purple Refractor",    printRun: "/250", searchToken: "Purple Refractor" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Gold Refractor",      printRun: "/50",  searchToken: "Gold Refractor" },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Refractor",    printRun: "/25",  searchToken: "Orange Refractor" },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Refractor",       printRun: "/5",   searchToken: "Red Refractor" },
   { year: 2025, set: "Bowman Chrome Prospects", parallel: "Black Refractor",     printRun: "/1",   searchToken: "Black Refractor" },
+  // 2025 Bowman Draft Chrome — same rainbow
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Green Refractor",         printRun: "/99",  searchToken: "Green Refractor" },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Blue Refractor",          printRun: "/150", searchToken: "Blue Refractor" },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Gold Refractor",          printRun: "/50",  searchToken: "Gold Refractor" },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Orange Refractor",        printRun: "/25",  searchToken: "Orange Refractor" },
 ];
 
 async function postJson(p, body, apiKey) {
