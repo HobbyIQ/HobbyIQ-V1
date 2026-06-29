@@ -1,9 +1,9 @@
 {
-  "calibratedAt": "2026-06-29T18:31:58.163Z",
+  "calibratedAt": "2026-06-29T20:15:55.906Z",
   "method": "parallel_over_base_auto_empirical",
   "sampleSize": {
     "totalCombos": 17,
-    "totalPairs": 220
+    "totalPairs": 370
   },
   "entries": [
     {
@@ -69,13 +69,16 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Speckle Refractor",
       "printRun": "/299",
-      "sampleSize": 0,
+      "baseRelativePremium": 2.837,
+      "sampleSize": 30,
       "ratioRange": [
-        null,
-        null
+        0.696,
+        14.837
       ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
+      "p25": 2.837,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
     },
     {
       "year": 2025,
@@ -191,13 +194,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Black Refractor",
       "printRun": "/1",
-      "baseRelativePremium": 8.699,
+      "baseRelativePremium": 8.251,
       "sampleSize": 11,
       "ratioRange": [
         0.6,
         29.505
       ],
-      "p25": 8.699,
+      "p25": 8.251,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -207,52 +210,64 @@
       "set": "Bowman Draft Chrome",
       "parallel": "Green Refractor",
       "printRun": "/99",
-      "sampleSize": 0,
+      "baseRelativePremium": 6.111,
+      "sampleSize": 30,
       "ratioRange": [
-        null,
-        null
+        0.358,
+        26.116
       ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
+      "p25": 6.111,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
     },
     {
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Blue Refractor",
       "printRun": "/150",
-      "sampleSize": 0,
+      "baseRelativePremium": 2.535,
+      "sampleSize": 30,
       "ratioRange": [
-        null,
-        null
+        0.11,
+        13.782
       ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
+      "p25": 2.535,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
     },
     {
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Gold Refractor",
       "printRun": "/50",
-      "sampleSize": 0,
+      "baseRelativePremium": 14.472,
+      "sampleSize": 30,
       "ratioRange": [
-        null,
-        null
+        2.647,
+        57.941
       ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
+      "p25": 14.472,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
     },
     {
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Orange Refractor",
       "printRun": "/25",
-      "sampleSize": 0,
+      "baseRelativePremium": 27.242,
+      "sampleSize": 30,
       "ratioRange": [
-        null,
-        null
+        0.761,
+        85.841
       ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
+      "p25": 27.242,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
     }
   ]
 }
