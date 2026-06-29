@@ -23,27 +23,40 @@ const API_BASE = "https://api.cardhedger.com/v1";
 // Target combos — full prospect-auto rainbow for the active years. Expand
 // over time. Untraded parallels (Devin Taylor Green Auto class) get
 // priced via Build B's base-auto × empirical parallel-premium derivation.
+//
+// `isAuto` (CF-PARALLEL-FILTER-FIX 2026-06-29): when true, search/filter
+// for autograph cards (CPA-XX) and ratio against the base auto. When
+// false, search/filter for non-auto base parallels and ratio against
+// the vanilla base SKU. Bowman Chrome Prospects' rainbow parallels are
+// dominantly autograph (CPA-XX), so isAuto=true. Bowman Draft Chrome's
+// standard refractors (Green/Blue/Gold/Orange /99/150/50/25) exist as
+// BOTH base and autograph variants — these combos calibrate the base
+// variant. Pre-fix the script silently dropped these (looksAuto filter
+// hardcoded to require autograph signal) → all 4 BDC combos returned
+// "no_parallel_cards_found" despite the catalog having plenty of data.
 const TARGETS = [
-  // 2025 Bowman Chrome Prospects — Lava series
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Lava Refractor", printRun: "/150", searchToken: "Green Lava" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Yellow Lava Refractor", printRun: "/75", searchToken: "Yellow Lava" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Lava Refractor", printRun: "/25", searchToken: "Orange Lava" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Lava Refractor",  printRun: "/5",   searchToken: "Red Lava" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Speckle Refractor",   printRun: "/299", searchToken: "Speckle Refractor" },
-  // 2025 Bowman Chrome Prospects — regular rainbow refractors
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Refractor",     printRun: "/99",  searchToken: "Green Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Blue Refractor",      printRun: "/150", searchToken: "Blue Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Aqua Refractor",      printRun: "/125", searchToken: "Aqua Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Purple Refractor",    printRun: "/250", searchToken: "Purple Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Gold Refractor",      printRun: "/50",  searchToken: "Gold Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Refractor",    printRun: "/25",  searchToken: "Orange Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Refractor",       printRun: "/5",   searchToken: "Red Refractor" },
-  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Black Refractor",     printRun: "/1",   searchToken: "Black Refractor" },
-  // 2025 Bowman Draft Chrome — same rainbow
-  { year: 2025, set: "Bowman Draft Chrome", parallel: "Green Refractor",         printRun: "/99",  searchToken: "Green Refractor" },
-  { year: 2025, set: "Bowman Draft Chrome", parallel: "Blue Refractor",          printRun: "/150", searchToken: "Blue Refractor" },
-  { year: 2025, set: "Bowman Draft Chrome", parallel: "Gold Refractor",          printRun: "/50",  searchToken: "Gold Refractor" },
-  { year: 2025, set: "Bowman Draft Chrome", parallel: "Orange Refractor",        printRun: "/25",  searchToken: "Orange Refractor" },
+  // 2025 Bowman Chrome Prospects — Lava series (autograph-dominant)
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Lava Refractor", printRun: "/150", searchToken: "Green Lava", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Yellow Lava Refractor", printRun: "/75", searchToken: "Yellow Lava", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Lava Refractor", printRun: "/25", searchToken: "Orange Lava", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Lava Refractor",  printRun: "/5",   searchToken: "Red Lava", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Speckle Refractor",   printRun: "/299", searchToken: "Speckle Refractor", isAuto: false },
+  // 2025 Bowman Chrome Prospects — regular rainbow refractors (autograph-dominant in this set)
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Green Refractor",     printRun: "/99",  searchToken: "Green Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Blue Refractor",      printRun: "/150", searchToken: "Blue Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Aqua Refractor",      printRun: "/125", searchToken: "Aqua Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Purple Refractor",    printRun: "/250", searchToken: "Purple Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Gold Refractor",      printRun: "/50",  searchToken: "Gold Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Orange Refractor",    printRun: "/25",  searchToken: "Orange Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Red Refractor",       printRun: "/5",   searchToken: "Red Refractor", isAuto: true },
+  { year: 2025, set: "Bowman Chrome Prospects", parallel: "Black Refractor",     printRun: "/1",   searchToken: "Black Refractor", isAuto: true },
+  // 2025 Bowman Draft Chrome — base variants (NOT autograph). 4 BDC
+  // combos pre-CF returned "no_parallel_cards_found" despite catalog
+  // returning 25 cards each on the probe; isAuto:false lets them pair.
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Green Refractor",         printRun: "/99",  searchToken: "Green Refractor", isAuto: false },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Blue Refractor",          printRun: "/150", searchToken: "Blue Refractor", isAuto: false },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Gold Refractor",          printRun: "/50",  searchToken: "Gold Refractor", isAuto: false },
+  { year: 2025, set: "Bowman Draft Chrome", parallel: "Orange Refractor",        printRun: "/25",  searchToken: "Orange Refractor", isAuto: false },
 ];
 
 async function postJson(p, body, apiKey) {
@@ -85,13 +98,20 @@ async function findCardsForCombo(combo, apiKey) {
       if (!cards.length) break;
       // Keep cards whose description/variant contains the parallel token
       // AND have non-zero 90d sales.
+      //
+      // CF-PARALLEL-FILTER-FIX (2026-06-29): per-combo isAuto. When the
+      // combo is autograph-class (Bowman Chrome Prospects rainbow),
+      // require an auto signal in the card. When non-auto (Bowman Draft
+      // Chrome base parallels, Speckle /299), require ABSENCE of auto
+      // so we calibrate the base parallel ratio, not the auto. Pre-fix,
+      // the looksAuto check was hardcoded as a required gate — silently
+      // dropped non-auto base parallels and produced 0-sample combos.
+      const wantsAuto = combo.isAuto !== false;
       for (const c of cards) {
         const blob = `${c.description ?? ""} ${c.variant ?? ""} ${c.search_text ?? ""}`.toLowerCase();
-        const wantsAuto = combo.parallel.toLowerCase().includes("autograph") || combo.parallel.toLowerCase().includes("auto");
         const looksAuto = blob.includes(" auto") || blob.includes("autograph");
-        // Most prospect parallels we care about are AUTO subtypes (CPA-...).
-        // Filter to auto cards since the base-auto comparison only makes sense card-to-card.
-        if (!looksAuto) continue;
+        if (wantsAuto && !looksAuto) continue;
+        if (!wantsAuto && looksAuto) continue;
         if (!blob.includes(combo.searchToken.toLowerCase())) continue;
         const price = parseFloat(c.price);
         const sales = Number(c["90_day_sales"] ?? 0);
@@ -143,6 +163,39 @@ async function findBaseAutoForPlayer(player, year, setHint, apiKey) {
   }
 }
 
+/**
+ * CF-PARALLEL-FILTER-FIX (2026-06-29): non-auto base lookup. For combos
+ * where isAuto=false (Bowman Draft Chrome base refractors, Speckle /299),
+ * the parallel-over-base ratio is computed against the vanilla BASE
+ * insert SKU (BCP-XX with variant="Base"), NOT the base auto. Mirror of
+ * findBaseAutoForPlayer with auto-rejection instead of auto-requirement.
+ */
+async function findBaseForPlayer(player, year, setHint, apiKey) {
+  const search = `${year} ${setHint} ${player}`;
+  try {
+    const r = await postJson(
+      "/cards/90day-prices-by-grade-search",
+      { search, category: "Baseball", grade: "Raw", page: 1, page_size: 20 },
+      apiKey,
+    );
+    const cards = Array.isArray(r?.cards) ? r.cards : [];
+    const bases = cards.filter((c) => {
+      const variantBase = (c.variant ?? "").toLowerCase() === "base";
+      const blob = `${c.description ?? ""} ${c.search_text ?? ""}`.toLowerCase();
+      const isAuto = blob.includes(" auto") || blob.includes("autograph");
+      const playerMatch = (c.player ?? "").toLowerCase() === player.toLowerCase();
+      return variantBase && !isAuto && playerMatch;
+    });
+    if (bases.length === 0) return null;
+    const bc = bases[0];
+    const price = parseFloat(bc.price);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return { card_id: bc.card_id, price, sales: Number(bc["90_day_sales"] ?? 0) };
+  } catch {
+    return null;
+  }
+}
+
 async function calibrateCombo(combo, apiKey) {
   console.log(`\n[combo] ${combo.year} ${combo.set} ${combo.parallel} ${combo.printRun}`);
   const parallelCards = await findCardsForCombo(combo, apiKey);
@@ -151,17 +204,22 @@ async function calibrateCombo(combo, apiKey) {
     return { combo, ratios: [], skipped: "no_parallel_cards_found" };
   }
 
-  // For each parallel card, find the base auto for the same player.
+  // For each parallel card, find the base reference for the same player.
+  // CF-PARALLEL-FILTER-FIX (2026-06-29): branch on combo.isAuto so non-
+  // auto combos compare against the vanilla base insert, not the base auto.
+  const wantsAuto = combo.isAuto !== false;
   const ratios = [];
   for (const pc of parallelCards.slice(0, 30)) {  // cap at 30 per combo to bound API calls
-    const baseAuto = await findBaseAutoForPlayer(pc.player, combo.year, combo.set, apiKey);
-    if (!baseAuto || baseAuto.price <= 0) continue;
-    const ratio = pc.parallelPrice / baseAuto.price;
+    const baseRef = wantsAuto
+      ? await findBaseAutoForPlayer(pc.player, combo.year, combo.set, apiKey)
+      : await findBaseForPlayer(pc.player, combo.year, combo.set, apiKey);
+    if (!baseRef || baseRef.price <= 0) continue;
+    const ratio = pc.parallelPrice / baseRef.price;
     if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 100) continue;
     ratios.push({
       player: pc.player,
       parallelPrice: pc.parallelPrice,
-      basePrice: baseAuto.price,
+      basePrice: baseRef.price,
       ratio,
     });
   }

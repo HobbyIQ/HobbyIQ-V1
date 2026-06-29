@@ -248,6 +248,26 @@ export interface PortfolioHoldingWire {
     expectation: number;
     effectiveMultiplier: number;
   } | null;
+
+  // CF-NEAREST-ANCHOR-WIRE (2026-06-29): surface the grade-ladder
+  // fallback's anchor snapshot on the wire. PR #180 + earlier CFs
+  // already persist `nearestGradedAnchor` on the holding when the
+  // ladder rescued an estimate (engine couldn't anchor a real FMV
+  // for the requested grade). The wire shape was the missing link —
+  // without this field, iOS reading from the inventory endpoint
+  // can't render "Last sold: PSA 9 $1325 · 236 days ago" alongside
+  // the estimated value, even though the data is in Cosmos.
+  //
+  // Conditional-spread emit (matches lastSaleSurface pattern): when
+  // the holding has no anchor (the universal case for healthy-priced
+  // holdings), the wire key is OMITTED — byte-identical to pre-CF.
+  nearestGradedAnchor?: {
+    grade: string;
+    price: number;
+    daysOld: number;
+    sampleSize: number;
+    confidence: number;
+  };
 }
 
 export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
@@ -369,6 +389,12 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
       : {}),
     ...(holding.modelSignal
       ? { modelSignal: holding.modelSignal }
+      : {}),
+    // CF-NEAREST-ANCHOR-WIRE (2026-06-29): conditional-spread emit. Key
+    // omitted on the universal case (no anchor stored). Present only on
+    // holdings the ladder fallback rescued.
+    ...(holding.nearestGradedAnchor
+      ? { nearestGradedAnchor: holding.nearestGradedAnchor }
       : {}),
   };
 }
