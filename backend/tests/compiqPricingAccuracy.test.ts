@@ -306,10 +306,15 @@ describe("Improvement 3 — grader premiums (round-trip)", () => {
     expect(getGraderPremium("PSA", "11")).toBe(1.0);
   });
 
-  it("PSA 10 premium is 4.0x, BGS 9.5 is 3.5x", () => {
-    expect(getGraderPremium("PSA", "10")).toBe(4.0);
-    expect(getGraderPremium("psa", "10")).toBe(4.0);
-    expect(getGraderPremium("BGS", "9.5")).toBe(3.5);
+  it("PSA 10 fallback is 3.43x, BGS 9.5 fallback is 3.05x (per CF-CH-TIERED-GRADER-PREMIUMS calibration)", () => {
+    // CF-CH-TIERED-GRADER-PREMIUMS (2026-06-28) updated the static
+    // GRADER_PREMIUMS to match the Prospects Live article's empirical
+    // values: PSA 10 fallback 4.0 → 3.43, BGS 9.5 fallback 3.5 → 3.05.
+    // See compiqEstimate.service.ts line 738/752 for the source-of-truth
+    // table. This test pins the no-rawPrice fallback path.
+    expect(getGraderPremium("PSA", "10")).toBe(3.43);
+    expect(getGraderPremium("psa", "10")).toBe(3.43);
+    expect(getGraderPremium("BGS", "9.5")).toBe(3.05);
   });
 
   it("detects graded comps from free-text titles", () => {
@@ -325,9 +330,11 @@ describe("Improvement 3 — grader premiums (round-trip)", () => {
   });
 
   it("normalizeCompToRaw inverts applyGraderPremium", () => {
+    // Post-CF-CH-TIERED-GRADER-PREMIUMS: PSA 10 multiplier is 3.43
+    // (no rawPrice → fallback path). 200 * 3.43 = 686.
     const raw = 200;
-    const psa10Price = applyGraderPremium(raw, "PSA", "10"); // 200 * 4 = 800
-    expect(psa10Price).toBe(800);
+    const psa10Price = applyGraderPremium(raw, "PSA", "10");
+    expect(psa10Price).toBe(686);
     const back = normalizeCompToRaw({
       price: psa10Price,
       title: "Card PSA 10",

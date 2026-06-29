@@ -304,9 +304,33 @@ describe("filterRecordsByParallel (CF-PARALLEL-AWARE-VALUE)", () => {
     expect(filterRecordsByParallel([], "GOLD-UUID")).toEqual([]);
   });
 
-  it("treats parallel_id=null AS base (matches Cardsight's optional-field semantics)", () => {
-    const withNullPid: any = { ...makeRecord(150, "null-pid"), parallel_id: null };
+  it("treats parallel_id=null AS base when querying base (no parallelId)", () => {
+    // When the caller asks for base (parallelId=null), records with
+    // parallel_id=null OR undefined are returned. Unchanged from
+    // pre-CF-CH-PARALLEL-FILTER-BYPASS.
+    const withNullPid: { parallel_id: null; title: string; price: number; soldDate: string; grade: string; source: string } =
+      { ...makeRecord(150, "null-pid"), parallel_id: null };
     expect(filterRecordsByParallel([withNullPid], null)).toEqual([withNullPid]);
-    expect(filterRecordsByParallel([withNullPid], "GOLD-UUID")).toEqual([]);
+  });
+
+  it("CF-CH-PARALLEL-FILTER-BYPASS: when NO record carries parallel_id, returns input as-is regardless of parallelId arg", () => {
+    // CardHedge replaced Cardsight (Wave 3); CH does NOT carry
+    // parallel_id (each parallel has its own card_id, so sales returned
+    // by getCardSales(parallelCardId) are already parallel-scoped
+    // upstream). Pre-CF, the strict UUID equality below dropped every
+    // CH record → 0-comp fall-through → engine forced into Build B
+    // math (e.g., Hartman Speckle /299 returned $22). The CF makes the
+    // strict filter bypass when no record has parallel_id.
+    //
+    // Test mirrors the deployed CH shape: records with `parallel_id`
+    // absent entirely (undefined). Both null-parallelId and
+    // "GOLD-UUID"-parallelId paths return the input as-is — the caller
+    // already filtered upstream via the parallel-specific card_id.
+    const chShape = [
+      { title: "ch-1", price: 100, soldDate: "2026-05-01", grade: "Raw", source: "cardhedge" },
+      { title: "ch-2", price: 110, soldDate: "2026-05-02", grade: "Raw", source: "cardhedge" },
+    ];
+    expect(filterRecordsByParallel(chShape, null)).toEqual(chShape);
+    expect(filterRecordsByParallel(chShape, "GOLD-UUID")).toEqual(chShape);
   });
 });
