@@ -82,6 +82,7 @@ describe("deriveGradeLadderAnchor — Kurtz Green Lava (the canonical case)", ()
     const result = await deriveGradeLadderAnchor({
       cardId: "kurtz-green-lava",
       requestedGrade: "Raw",
+      cardClass: "autograph",  // Kurtz Green Lava IS an autograph
       nowMs: NOW_MS,
       fetchPrices: mockFetcher({
         "PSA 9": [
@@ -117,6 +118,7 @@ describe("deriveGradeLadderAnchor — anchor selection", () => {
     const result = await deriveGradeLadderAnchor({
       cardId: "test",
       requestedGrade: "Raw",
+      cardClass: "autograph",  // CF-LADDER-INVERSE-SANITY-GATE: gate is strict for non-auto
       nowMs: NOW_MS,
       fetchPrices: mockFetcher({
         "PSA 10": [{ date: daysAgoIso(300), price: 2000 }],
@@ -131,6 +133,7 @@ describe("deriveGradeLadderAnchor — anchor selection", () => {
     const result = await deriveGradeLadderAnchor({
       cardId: "test",
       requestedGrade: "Raw",
+      cardClass: "autograph",  // CF-LADDER-INVERSE-SANITY-GATE: gate is strict for non-auto
       nowMs: NOW_MS,
       fetchPrices: mockFetcher({
         "PSA 10": [{ date: daysAgoIso(15), price: 2000 }],
@@ -219,6 +222,58 @@ describe("gradeLadderConfidence", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. ANCHOR-AT-REQUESTED-GRADE FAST PATH
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-LADDER-INVERSE-SANITY-GATE (2026-06-29) — Mantle $2.28M regression
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("deriveGradeLadderAnchor — inverse sanity gate", () => {
+  it("Mantle-class regression: PSA 8 vintage anchor → Raw derived > anchor → REJECTS", async () => {
+    // 1952 Topps Mantle: real CH data was PSA 8 $1,830,000. The static
+    // GRADER_PREMIUMS at "100+" tier has PSA 8 = 0.80, so the inverse
+    // 1/0.80 = 1.25× produces a Raw "estimate" of $2,287,500. Higher than
+    // the PSA 8 anchor — impossible by definition. Gate rejects it.
+    const result = await deriveGradeLadderAnchor({
+      cardId: "vintage-mantle-test",
+      requestedGrade: "Raw",
+      nowMs: NOW_MS,
+      fetchPrices: mockFetcher({
+        "PSA 8": [{ date: daysAgoIso(9), price: 1_830_000 }],
+      }),
+    });
+    expect(result).toBeNull();
+  });
+
+  it("clean downgrade: PSA 9 $30 → Raw via low-tier multiplier → not rejected (Raw < anchor)", async () => {
+    // PSA 9 at "<25" tier in static GRADER_PREMIUMS = 2.56x. Inverse for
+    // a low-priced anchor gives Raw well below anchor → gate doesn't fire.
+    const result = await deriveGradeLadderAnchor({
+      cardId: "low-tier-test",
+      requestedGrade: "Raw",
+      nowMs: NOW_MS,
+      fetchPrices: mockFetcher({
+        "PSA 9": [{ date: daysAgoIso(5), price: 30 }],
+      }),
+    });
+    expect(result).not.toBeNull();
+    expect(result!.derivedFmv).toBeLessThan(30);  // Raw < PSA 9
+  });
+
+  it("upgrading: Raw $50 anchor → PSA 10 requested → uncapped (PSA 10 > Raw is expected)", async () => {
+    // The opposite direction: requesting a higher grade should produce a
+    // value > anchor. Sanity gate must NOT fire here.
+    const result = await deriveGradeLadderAnchor({
+      cardId: "upgrade-test",
+      requestedGrade: "PSA 10",
+      nowMs: NOW_MS,
+      fetchPrices: mockFetcher({
+        "Raw": [{ date: daysAgoIso(2), price: 50 }],
+      }),
+    });
+    expect(result).not.toBeNull();
+    expect(result!.derivedFmv).toBeGreaterThan(50);  // PSA 10 > Raw
+  });
+});
 
 describe("deriveGradeLadderAnchor — fast path when anchor IS the requested grade", () => {
   it("returns the anchor price directly with ratio 1.0", async () => {

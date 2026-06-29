@@ -1290,8 +1290,72 @@ export async function deriveGradeLadderAnchor(opts: {
   if (!best) return null;
 
   const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass);
-  const derivedFmv = Math.round(best.price * ratio * 100) / 100;
+  let derivedFmv = Math.round(best.price * ratio * 100) / 100;
   const confidence = gradeLadderConfidence(best.daysOld, best.sampleSize);
+
+  // CF-LADDER-INVERSE-SANITY-GATE (2026-06-29): Raw can NEVER exceed any
+  // graded version of the same card — same card, different condition.
+  // The volume test on 2026-06-29 surfaced 1952 Mantle deriving Raw at
+  // $2.28M from a PSA 8 anchor at $1.83M (auto-multiplier table inversed
+  // to 1.25×). For vintage HOF + high-grade-anchor cases the static
+  // GRADER_PREMIUMS table doesn't apply — its calibration is for modern
+  // prospect-tier cards and the inverse breaks down.
+  //
+  // Gate: when the anchor is graded AND we're deriving Raw, the result
+  // MUST be ≤ anchor price. If the multiplier produced something higher,
+  // the table is wrong for this card class; return null rather than ship
+  // a fabricated number. Caller falls through to whatever else it has
+  // (lastSale, null FMV, etc.) — better than emitting $2M on a card
+  // worth $66.
+  //
+  // Cross-grade sanity: anchor PSA 8 → request PSA 10 SHOULD produce a
+  // value > anchor (PSA 10 commands a premium). That's the OPPOSITE
+  // direction and remains uncapped.
+  const rankFor = (g: GradeLadderGrade): number => {
+    if (g === "Raw") return 0;
+    if (g.includes("10")) return 10;
+    if (g.includes("9.5")) return 9.5;
+    if (g.includes("9")) return 9;
+    if (g.includes("8.5")) return 8.5;
+    if (g.includes("8")) return 8;
+    if (g.includes("7.5")) return 7.5;
+    if (g.includes("7")) return 7;
+    return 0;
+  };
+  const anchorRank = rankFor(best.grade);
+  const requestedRank = rankFor(requestedGrade);
+  const downgrading = anchorRank > requestedRank;
+  // Threshold by card class. Autographs (empirical-calibrated): allow
+  // 1.10× (covers the Kurtz/Hartman edge cases where the auto table
+  // shows Raw ≈ PSA 9 at high tiers). Everything else: strict 1.0×
+  // (Raw must be ≤ graded — physics-of-condition rule). The strict
+  // path catches the volume-test Mantle 1.25× and the 34000× scale
+  // breakdowns where the static base table is wrong for vintage HOF.
+  const maxRatio = cardClass === "autograph" ? 1.10 : 1.00;
+  if (downgrading && derivedFmv > best.price * maxRatio) {
+    try {
+      console.log(JSON.stringify({
+        event: "ladder_inverse_sanity_gate_triggered",
+        source: "compiqEstimate.deriveGradeLadderAnchor",
+        cardId,
+        anchorGrade: best.grade,
+        anchorPrice: best.price,
+        requestedGrade,
+        rejectedDerivedFmv: derivedFmv,
+        ratio,
+        cardClass: cardClass ?? null,
+        reason: "downgrading multiplier produced higher value than anchor — table miscalibrated for this card class",
+        timestamp: new Date().toISOString(),
+      }));
+    } catch {
+      // Telemetry must never propagate.
+    }
+    // Refuse to ship an absurd value. Caller picks up null and falls
+    // through to its own no-FMV path. (Future: surface the GRADED
+    // anchor value separately so iOS can render "Last graded sold:
+    // PSA 8 $1.83M" without claiming a Raw price.)
+    return null;
+  }
 
   const explanation =
     best.grade === requestedGrade
