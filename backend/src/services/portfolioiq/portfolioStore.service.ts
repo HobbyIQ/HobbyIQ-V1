@@ -4362,6 +4362,79 @@ export async function repriceHoldingsForUser(
       }
 
       if (confidence < minPricingConfidence || compsUsed < minCompsUsed || fairValue <= 0) {
+        // CF-REPRICE-GRADE-LADDER-FALLBACK (2026-06-29): the autoPriceHolding
+        // path got a grade-ladder fallback in #170+, but repriceHoldingsForUser
+        // has its OWN inline pricing loop that didn't. For graded/Raw cards
+        // with no FMV from the engine, fall through to the same ladder so
+        // we surface estimatedValue + nearestGradedAnchor instead of leaving
+        // the holding stamped "Low confidence" with no number at all.
+        const reprCsidForLadder =
+          typeof (holding as any).cardsightCardId === "string" &&
+          ((holding as any).cardsightCardId as string).trim() !== ""
+            ? ((holding as any).cardsightCardId as string).trim()
+            : null;
+        if (reprCsidForLadder) {
+          try {
+            const { deriveGradeLadderAnchor } = await import(
+              "../compiq/compiqEstimate.service.js"
+            );
+            const ladder = await deriveGradeLadderAnchor({
+              cardId: reprCsidForLadder,
+              requestedGrade: "Raw",
+              cardClass: (holding as any).isAuto === true ? "autograph" : "base",
+            });
+            if (ladder && ladder.derivedFmv > 0) {
+              const now = new Date().toISOString();
+              doc.holdings[holding.id] = {
+                ...holding,
+                ...repriceIdentityPatch,
+                fairMarketValue: null as any,
+                estimatedValue: ladder.derivedFmv,
+                estimateLow: ladder.anchorPrice * 0.7,
+                estimateHigh: ladder.anchorPrice * 1.3,
+                estimateConfidence:
+                  ladder.confidence >= 0.5 ? "estimate" :
+                  ladder.confidence >= 0.3 ? "rough" : "ballpark",
+                estimateBasis: ladder.explanation,
+                isEstimate: true,
+                valuationStatus: "estimated",
+                nearestGradedAnchor: {
+                  grade: ladder.anchorGrade,
+                  price: ladder.anchorPrice,
+                  daysOld: ladder.anchorDaysOld,
+                  sampleSize: ladder.anchorSampleSize,
+                  confidence: ladder.confidence,
+                },
+                verdict: "Estimated",
+                recommendation: "Hold",
+                lastUpdated: now,
+              };
+              try {
+                console.log(JSON.stringify({
+                  event: "autoprice_grade_ladder_fallback_applied",
+                  source: "portfolio.repriceHoldingsForUser",
+                  holdingId: holding.id,
+                  cardId: reprCsidForLadder,
+                  anchorGrade: ladder.anchorGrade,
+                  anchorPrice: ladder.anchorPrice,
+                  anchorDaysOld: ladder.anchorDaysOld,
+                  derivedFmv: ladder.derivedFmv,
+                  confidence: ladder.confidence,
+                  timestamp: new Date().toISOString(),
+                }));
+              } catch {
+                // Telemetry must never propagate.
+              }
+              repriced += 1;
+              updates.push({ id: holding.id, status: "repriced", reason: "grade-ladder-fallback" });
+              continue;
+            }
+          } catch (err) {
+            console.warn(
+              `[portfolio.repriceHoldingsForUser] grade-ladder fallback failed (non-fatal): ${(err as Error)?.message ?? err}`,
+            );
+          }
+        }
         skipped += 1;
         const failed: string[] = [];
         if (confidence < minPricingConfidence) failed.push(`confidence=${Math.round(confidence)}<${minPricingConfidence}`);
