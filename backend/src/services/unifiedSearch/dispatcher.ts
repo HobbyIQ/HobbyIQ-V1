@@ -607,6 +607,49 @@ async function dispatchFreetextMode(
     ? [prependedCard, ...scoredHits.map((s) => s.card)]
     : scoredHits.map((s) => s.card);
 
+  // CF-YEAR-MISMATCH-TELEMETRY (2026-06-29): emit a structured event when
+  // the winning candidate's year diverges from the user-stated year by
+  // more than 1 year. Seeds the future CF-SET-ALIAS-DICTIONARY by
+  // surfacing the actual collector-vocabulary → CH-catalog mismatches
+  // happening in production traffic. Examples from the 2026-06-29
+  // volume test (Class C):
+  //   "2000 Bowman Chrome Miguel Cabrera" → resolved to 2003 set
+  //   "2001 Bowman Chrome Joe Mauer"      → resolved to 2003 set
+  //   "2015 Bowman Chrome Vlad Jr."       → resolved to 2026 set
+  // Aggregating these in App Insights (KQL on `year_mismatch_resolved`)
+  // gives a verified frequency-ranked seed list for the alias map.
+  //
+  // Fire-and-forget; never throws, never affects the response.
+  if (orderedCards.length > 0 && parsed.year != null) {
+    const topCard = orderedCards[0];
+    const topCardYear =
+      topCard.year != null && Number.isFinite(Number(topCard.year))
+        ? Number(topCard.year)
+        : extractYearFromSetText(topCard.set);
+    if (topCardYear != null && Math.abs(topCardYear - parsed.year) > 1) {
+      try {
+        console.log(JSON.stringify({
+          event: "year_mismatch_resolved",
+          source: "unifiedSearch.dispatcher",
+          query: trimmed,
+          userYear: parsed.year,
+          userSet: parsed.set,
+          userPlayer: parsed.playerName,
+          userIsAuto: parsed.isAuto,
+          resolvedYear: topCardYear,
+          resolvedSet: topCard.set ?? null,
+          resolvedPlayer: topCard.player ?? null,
+          resolvedCardId: topCard.card_id,
+          yearDelta: topCardYear - parsed.year,
+          matchSource: prependedCard ? "ai-match-prepended" : aiMatchedId ? "ai-match-promoted" : "rerank-top",
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry never propagates.
+      }
+    }
+  }
+
   const candidates = orderedCards.map((card, newIndex) =>
     routedCardToIdentity(
       card,
@@ -621,6 +664,18 @@ async function dispatchFreetextMode(
     candidates,
     warnings: candidates.length === 0 ? ["no_freetext_matches"] : [],
   };
+}
+
+/**
+ * CF-YEAR-MISMATCH-TELEMETRY (2026-06-29): extract a 4-digit year from a
+ * CH set name when the card object's year field is null/missing. CH
+ * always carries the year in its set string ("2025 Bowman Chrome Baseball"),
+ * so a regex fallback is reliable as a secondary source.
+ */
+function extractYearFromSetText(setStr: string | undefined | null): number | null {
+  if (!setStr) return null;
+  const m = String(setStr).match(/\b(19|20)\d{2}\b/);
+  return m ? Number(m[0]) : null;
 }
 
 /**
