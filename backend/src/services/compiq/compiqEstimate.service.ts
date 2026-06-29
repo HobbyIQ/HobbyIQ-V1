@@ -789,6 +789,50 @@ export function rawPriceToGradeTier(rawPrice: number | null | undefined): GradeP
 }
 
 /**
+ * CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): empirical multiplier table
+ * calibrated from CardHedge data for vintage (pre-1990) cards. Shape:
+ *   table[era][company][grade][tier] = ratio
+ * where era ∈ {"1948-1969", "1970-1989"} and tier covers the wider
+ * vintage price band (50-100, 100-500, ..., 5000+).
+ *
+ * Lazy load + null cache same pattern as auto table. Refresh ships
+ * as CF-VINTAGE-MULTIPLIER-REFRESH-JOB follow-up.
+ */
+type VintageMultiplierTable = {
+  calibratedAt?: string;
+  sampleSize?: { totalObservations: number; uniqueCards: number };
+  table?: Record<string, Record<string, Record<string, Record<string, number>>>>;
+};
+
+let _vintageTableCache: VintageMultiplierTable | null | undefined = undefined;
+function getVintageTable(): VintageMultiplierTable | null {
+  if (_vintageTableCache !== undefined) return _vintageTableCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("node:path") as typeof import("node:path");
+    const p = path.resolve(process.cwd(), "data/vintage-multipliers-latest.json");
+    if (!fs.existsSync(p)) {
+      _vintageTableCache = null;
+      return null;
+    }
+    _vintageTableCache = JSON.parse(fs.readFileSync(p, "utf-8")) as VintageMultiplierTable;
+    return _vintageTableCache;
+  } catch (err) {
+    console.warn(`[compiqEstimate] vintage-multipliers load failed: ${(err as Error)?.message ?? err}`);
+    _vintageTableCache = null;
+    return null;
+  }
+}
+
+function vintageEraFor(year: number): string | null {
+  if (year >= 1948 && year <= 1969) return "1948-1969";
+  if (year >= 1970 && year <= 1989) return "1970-1989";
+  return null;
+}
+
+/**
  * CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): empirical auto-specific
  * multiplier table calibrated from 848 prospect-autograph cards' CH
  * 90-day-avg prices. Loaded lazily on first access; refreshed by a
@@ -840,7 +884,13 @@ function resolveTierForTable(
   if (rawPrice == null || !Number.isFinite(rawPrice) || rawPrice <= 0) {
     return typeof table.fallback === "number" ? table.fallback : null;
   }
-  const tierKeys = ["<25", "25-50", "50-100", "100-250", "250-500", "500-1000", "100+", "1000+"];
+  const tierKeys = [
+    "<25", "25-50", "50-100", "100-250", "250-500", "500-1000", "100+", "1000+",
+    // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29) — vintage scan emits a
+    // higher-headroom tier scheme because vintage HOFs blow past the
+    // modern-prospect ceilings ($66 Raw / $1.83M PSA 8 is in-band).
+    "<50", "100-500", "1000-5000", "5000+",
+  ];
   const present = tierKeys.filter((k) => typeof table[k] === "number");
   if (present.length === 0) {
     return typeof table.fallback === "number" ? table.fallback : null;
@@ -857,6 +907,11 @@ function resolveTierForTable(
     else if (k === "500-1000" && price >= 500 && price < 1000) pick = k;
     else if (k === "100+" && price >= 100) pick = k;
     else if (k === "1000+" && price >= 1000) pick = k;
+    // vintage tiers
+    else if (k === "<50" && price < 50) pick = k;
+    else if (k === "100-500" && price >= 100 && price < 500) pick = k;
+    else if (k === "1000-5000" && price >= 1000 && price < 5000) pick = k;
+    else if (k === "5000+" && price >= 5000) pick = k;
   }
   if (pick && typeof table[pick] === "number") return table[pick];
   return typeof table.fallback === "number" ? table.fallback : null;
@@ -867,10 +922,31 @@ export function getGraderPremium(
   grade: string | null | undefined,
   rawPrice?: number | null,
   cardClass?: "autograph" | "base",
+  cardYear?: number | null,
 ): number {
   if (!gradingCompany || grade == null) return 1.0;
   const company = String(gradingCompany).toUpperCase().trim();
   const gradeKey = String(grade).trim();
+
+  // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29): vintage takes precedence
+  // over autograph + static for any card with year in [1948, 1989].
+  // PSA grade multipliers on vintage cards are 10-100× higher than Raw
+  // — the static table's 0.80 PSA 8 / Raw ratio at "100+" tier produces
+  // the Mantle $2.28M class breakdown when applied to vintage. The
+  // empirical vintage table is calibrated per era + price tier from
+  // actual CH sale pairs.
+  if (cardYear && cardYear >= 1948 && cardYear <= 1989) {
+    const era = vintageEraFor(cardYear);
+    const vintage = getVintageTable();
+    if (era && vintage?.table?.[era]?.[company]?.[gradeKey]) {
+      const tier = vintage.table[era][company][gradeKey];
+      const vintageValue = resolveTierForTable(tier, rawPrice);
+      if (vintageValue != null && Number.isFinite(vintageValue) && vintageValue > 0) {
+        return vintageValue;
+      }
+    }
+    // else fall through (vintage table may not cover every era/grade combo yet)
+  }
 
   // CF-AUTO-AWARE-MULTIPLIERS (2026-06-28): prefer the empirical auto
   // table when the card is autograph-class. Falls through to the static
@@ -1205,6 +1281,7 @@ export function gradeLadderConversionRatio(
   requestedGrade: GradeLadderGrade,
   anchorPrice: number,
   cardClass?: "autograph" | "base",
+  cardYear?: number | null,
 ): { ratio: number; rawTierUsed: number } {
   if (anchorGrade === requestedGrade) return { ratio: 1, rawTierUsed: anchorPrice };
 
@@ -1214,7 +1291,7 @@ export function gradeLadderConversionRatio(
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
     if (!ap) return { ratio: 1, rawTierUsed: anchorPrice };
-    const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice, cardClass);
+    const anchorPremium = getGraderPremium(ap.company, ap.grade, anchorPrice, cardClass, cardYear);
     rawFromAnchor = anchorPrice / anchorPremium;
   }
 
@@ -1224,7 +1301,7 @@ export function gradeLadderConversionRatio(
   } else {
     const rp = gradeLadderToCompanyPair(requestedGrade);
     if (!rp) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor, cardClass);
+    requestedPremium = getGraderPremium(rp.company, rp.grade, rawFromAnchor, cardClass, cardYear);
   }
 
   let anchorPremium: number;
@@ -1233,7 +1310,7 @@ export function gradeLadderConversionRatio(
   } else {
     const ap = gradeLadderToCompanyPair(anchorGrade);
     if (!ap) return { ratio: 1, rawTierUsed: rawFromAnchor };
-    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor, cardClass);
+    anchorPremium = getGraderPremium(ap.company, ap.grade, rawFromAnchor, cardClass, cardYear);
   }
 
   const ratio = requestedPremium / anchorPremium;
@@ -1253,10 +1330,11 @@ export async function deriveGradeLadderAnchor(opts: {
   cardId: string;
   requestedGrade: GradeLadderGrade;
   cardClass?: "autograph" | "base";
+  cardYear?: number | null;  // CF-VINTAGE-GRADER-PREMIUMS (2026-06-29)
   nowMs?: number;
   fetchPrices?: (cardId: string, grade: string, days: number) => Promise<{ closing_date: string; price: number }[]>;
 }): Promise<GradeLadderAnchor | null> {
-  const { cardId, requestedGrade, cardClass } = opts;
+  const { cardId, requestedGrade, cardClass, cardYear } = opts;
   const nowMs = opts.nowMs ?? Date.now();
   if (!cardId) return null;
 
@@ -1289,7 +1367,7 @@ export async function deriveGradeLadderAnchor(opts: {
 
   if (!best) return null;
 
-  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass);
+  const { ratio, rawTierUsed } = gradeLadderConversionRatio(best.grade, requestedGrade, best.price, cardClass, cardYear);
   let derivedFmv = Math.round(best.price * ratio * 100) / 100;
   const confidence = gradeLadderConfidence(best.daysOld, best.sampleSize);
 
