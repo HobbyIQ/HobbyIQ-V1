@@ -1781,6 +1781,100 @@ async function autoPriceHolding(
   // pre/post this CF.
   const chLastSalePatch = buildChLastSalePatch(estimate);
 
+  // CF-AUTOPRICE-GRADE-LADDER-FALLBACK relocation (2026-06-29): the
+  // ungraded-no-FMV early-return at the next branch was bypassing the
+  // ladder fallback for the 12 ENGINE_GAP holdings the audit surfaced.
+  // Try the ladder HERE so a successful anchor pre-empts the early
+  // return; failure falls through to the prior behavior unchanged.
+  let preEarlyLadderResult: {
+    derivedFmv: number;
+    confidence: number;
+    explanation: string;
+    anchorGrade: string;
+    anchorPrice: number;
+    anchorDaysOld: number;
+    anchorSampleSize: number;
+  } | null = null;
+  const earlyCardId =
+    typeof holding.cardsightCardId === "string" && holding.cardsightCardId.length > 0
+      ? holding.cardsightCardId
+      : null;
+  if (
+    earlyCardId &&
+    !railResolution &&
+    fairValue <= 0
+  ) {
+    try {
+      const { deriveGradeLadderAnchor } = await import(
+        "../compiq/compiqEstimate.service.js"
+      );
+      const ladder = await deriveGradeLadderAnchor({
+        cardId: earlyCardId,
+        requestedGrade: "Raw",
+        cardClass: holding.isAuto === true ? "autograph" : "base",
+      });
+      if (ladder && ladder.derivedFmv > 0) {
+        preEarlyLadderResult = {
+          derivedFmv: ladder.derivedFmv,
+          confidence: ladder.confidence,
+          explanation: ladder.explanation,
+          anchorGrade: ladder.anchorGrade,
+          anchorPrice: ladder.anchorPrice,
+          anchorDaysOld: ladder.anchorDaysOld,
+          anchorSampleSize: ladder.anchorSampleSize,
+        };
+        try {
+          console.log(JSON.stringify({
+            event: "autoprice_grade_ladder_fallback_applied",
+            source: "portfolio.autoPriceHolding.pre-early",
+            holdingId: holding.id,
+            cardId: earlyCardId,
+            anchorGrade: ladder.anchorGrade,
+            anchorPrice: ladder.anchorPrice,
+            anchorDaysOld: ladder.anchorDaysOld,
+            derivedFmv: ladder.derivedFmv,
+            confidence: ladder.confidence,
+            timestamp: new Date().toISOString(),
+          }));
+        } catch {
+          // Telemetry must never propagate.
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[portfolio.autoPriceHolding] pre-early ladder failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  }
+
+  if (preEarlyLadderResult) {
+    const hydrated: PortfolioHolding = {
+      ...holding,
+      ...identityPatch,
+      ...chLastSalePatch,
+      fairMarketValue: null as any,  // ladder produces estimate, not observed
+      estimatedValue: preEarlyLadderResult.derivedFmv,
+      estimateLow: preEarlyLadderResult.anchorPrice * 0.7,
+      estimateHigh: preEarlyLadderResult.anchorPrice * 1.3,
+      estimateConfidence:
+        preEarlyLadderResult.confidence >= 0.5 ? "estimate" :
+        preEarlyLadderResult.confidence >= 0.3 ? "rough" : "ballpark",
+      estimateBasis: preEarlyLadderResult.explanation,
+      isEstimate: true,
+      valuationStatus: "estimated",
+      nearestGradedAnchor: {
+        grade: preEarlyLadderResult.anchorGrade,
+        price: preEarlyLadderResult.anchorPrice,
+        daysOld: preEarlyLadderResult.anchorDaysOld,
+        sampleSize: preEarlyLadderResult.anchorSampleSize,
+        confidence: preEarlyLadderResult.confidence,
+      },
+      lastUpdated: new Date().toISOString(),
+    };
+    doc.holdings[holding.id] = hydrated;
+    return hydrated;
+  }
+
   if (!railResolution && fairValue <= 0) {
     // CF-CH-THIN-COMP-PRIMARY (2026-06-26): scoped writeback bypass.
     // When `chLastSalePatch` is non-empty, the engine produced a single
