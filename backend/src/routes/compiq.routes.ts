@@ -1026,7 +1026,15 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       // stable regardless. parallelId=null because /search resolves card
       // identity from the parsed query, not a UUID — base-scope rail.
       let gradedEstimates: GradedProjectionResult[] = [];
-      const cardIdForGraded = (est as any).cardIdentity?.cardId;
+      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): engine emits
+      // `cardIdentity: { card_id: ... }` (snake_case) at
+      // compiqEstimate.service.ts line 3532; prior code read
+      // `cardIdentity?.cardId` (camelCase) which was ALWAYS undefined,
+      // so this block was a no-op for /search since CF-CH-RESPONSE-
+      // SURFACE-GRADED-ESTIMATES shipped on 2026-06-27. Silent for ~2
+      // days — iOS rail rendered empty on /search even when the card
+      // had populated graded estimates. Same fix applied to /price below.
+      const cardIdForGraded = (est as any).cardIdentity?.card_id;
       if (typeof cardIdForGraded === "string" && cardIdForGraded.length > 0) {
         try {
           const pricingForMR = await getPricingForMarketRead(cardIdForGraded);
@@ -1168,7 +1176,9 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
     // Insights event flow through on every priced response.
     recordCHReferenceTelemetry({
       source: "compiq.search",
-      cardId: ((result as any).cardIdentity?.cardId as string | undefined) ?? null,
+      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): cardIdentity emits
+      // `card_id` snake_case; prior `cardId` was always undefined.
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       gradingCompany: null,
       gradeValue: null,
@@ -1345,7 +1355,11 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       // (like /search) resolves card identity from the parsed query, not a
       // UUID — base-scope rail. Failure is non-fatal.
       let gradedEstimates: GradedProjectionResult[] = [];
-      const cardIdForGraded = (est as any).cardIdentity?.cardId;
+      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): same field-case
+      // bug as /search above — engine emits `card_id` (snake_case) but
+      // the prior code read `cardId` (camelCase). Always undefined →
+      // /price never populated gradedEstimates for ~2 days.
+      const cardIdForGraded = (est as any).cardIdentity?.card_id;
       if (typeof cardIdForGraded === "string" && cardIdForGraded.length > 0) {
         try {
           const pricingForMR = await getPricingForMarketRead(cardIdForGraded);
@@ -1469,7 +1483,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
     recordCHReferenceTelemetry({
       source: "compiq.price",
-      cardId: ((result as any).cardIdentity?.cardId as string | undefined) ?? null,
+      // CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): see /search above.
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       gradingCompany: null,
       gradeValue: null,

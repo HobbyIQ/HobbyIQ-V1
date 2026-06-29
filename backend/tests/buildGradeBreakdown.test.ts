@@ -125,8 +125,20 @@ describe("buildGradeBreakdown", () => {
     expect(goldOut[0].median).toBe(949); // median of [899, 899, 999, 1099]
   });
 
-  it("parallel mode drops buckets that have no matching records", () => {
+  it("parallel mode drops buckets that have no matching records (Cardsight-shape: every record carries parallel_id)", () => {
+    // Post-CF-CH-PARALLEL-FILTER-BYPASS (2026-06-27): the strict
+    // parallel filter only applies when records carry parallel_id.
+    // For CH-shape data (no parallel_id field), the upstream caller
+    // has already filtered by parallel-specific card_id, so the
+    // bypass returns records as-is.
+    //
+    // To exercise the strict drop-buckets behavior, this test uses
+    // Cardsight-shape records where EVERY record has parallel_id
+    // (either GOLD or a different parallel marking it as "base" via
+    // the BASE-PID sentinel). PSA 9/8 buckets only have BASE-PID
+    // records → strict filter drops them under GOLD mode.
     const GOLD = "GOLD";
+    const BASE_PID = "BASE-PID";  // any non-GOLD UUID — strict filter rejects vs GOLD
     const pricing: any = {
       raw: { count: 0, records: [] },
       graded: [
@@ -134,8 +146,8 @@ describe("buildGradeBreakdown", () => {
           company_name: "PSA",
           grades: [
             { grade_value: "10", records: [record(1000, 1, GOLD, "Gold")] },
-            { grade_value: "9", records: [record(500, 1)] }, // base only — dropped under Gold mode
-            { grade_value: "8", records: [record(300, 1)] }, // base only — dropped
+            { grade_value: "9", records: [record(500, 1, BASE_PID, "Base")] }, // base-pid only — dropped under Gold mode
+            { grade_value: "8", records: [record(300, 1, BASE_PID, "Base")] }, // base-pid only — dropped
           ],
         },
       ],

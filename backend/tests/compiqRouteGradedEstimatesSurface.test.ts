@@ -98,7 +98,15 @@ vi.mock("../src/services/compiq/compiqEstimate.service.js", async () => {
 // "not notFound" so the assembly block proceeds into
 // compileGradedEstimatesForCard. The mock for compileGradedEstimatesForCard
 // above controls what flows back.
-vi.mock("../src/services/compiq/marketRead.service.js", async (importActual) => {
+//
+// CF-CARDIDENTITY-FIELD-CASE-FIX (2026-06-29): the route imports
+// `getPricing` from catalogSource.js (aliased as getPricingForMarketRead
+// at compiq.routes.ts line 35), NOT from marketRead.service.js. The
+// prior test mocked marketRead.service.js so the mock never applied —
+// real getPricing ran, hit network-disabled fetch, threw, caught → empty
+// gradedEstimates. Mocking catalogSource.js now exercises the real code
+// path properly.
+vi.mock("../src/services/compiq/catalogSource.js", async (importActual) => {
   const actual = (await importActual()) as Record<string, unknown>;
   return {
     ...actual,
@@ -107,6 +115,13 @@ vi.mock("../src/services/compiq/marketRead.service.js", async (importActual) => 
       card: { id: "fixture-card-id-2017-judge" },
       sales: [],
     })),
+  };
+});
+
+vi.mock("../src/services/compiq/marketRead.service.js", async (importActual) => {
+  const actual = (await importActual()) as Record<string, unknown>;
+  return {
+    ...actual,
     buildGradeBreakdown: vi.fn(() => []),
     generateMarketRead: vi.fn(async () => null),
     pickCardImageUrl: vi.fn(() => null),
@@ -174,10 +189,13 @@ describe("CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES — key-present invariant when
   });
 
   it("/api/compiq/search emits gradedEstimates: [] when assembly produces nothing", async () => {
+    // Unique query per test prevents cache-key collision with prior
+    // describe block (route is cacheWrap-ed at 6h TTL; first successful
+    // call would otherwise return cached gradedEstimates).
     const res = await request(app)
       .post("/api/compiq/search")
       .set("x-session-id", "test-sess")
-      .send({ query: "2017 Topps Chrome Aaron Judge" });
+      .send({ query: "EMPTY-CASE-001 Aaron Judge" });
     expect(res.status).toBe(200);
     expectGradedEstimatesKeyPresent(res.body);
     expect(res.body.gradedEstimates).toEqual([]);
@@ -187,7 +205,7 @@ describe("CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES — key-present invariant when
     const res = await request(app)
       .post("/api/compiq/price")
       .set("x-session-id", "test-sess")
-      .send({ query: "2017 Topps Chrome Aaron Judge" });
+      .send({ query: "EMPTY-CASE-002 Aaron Judge" });
     expect(res.status).toBe(200);
     expectGradedEstimatesKeyPresent(res.body);
     expect(res.body.gradedEstimates).toEqual([]);
@@ -206,7 +224,7 @@ describe("CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES — assembly failure is non-fa
     const res = await request(app)
       .post("/api/compiq/search")
       .set("x-session-id", "test-sess")
-      .send({ query: "2017 Topps Chrome Aaron Judge" });
+      .send({ query: "THROW-CASE-001 Aaron Judge" });
     expect(res.status).toBe(200);
     expectGradedEstimatesKeyPresent(res.body);
     expect(res.body.gradedEstimates).toEqual([]);
@@ -216,7 +234,7 @@ describe("CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES — assembly failure is non-fa
     const res = await request(app)
       .post("/api/compiq/price")
       .set("x-session-id", "test-sess")
-      .send({ query: "2017 Topps Chrome Aaron Judge" });
+      .send({ query: "THROW-CASE-002 Aaron Judge" });
     expect(res.status).toBe(200);
     expectGradedEstimatesKeyPresent(res.body);
     expect(res.body.gradedEstimates).toEqual([]);
