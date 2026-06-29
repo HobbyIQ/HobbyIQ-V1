@@ -1,16 +1,1024 @@
 {
-  "calibratedAt": "2026-06-29T20:15:55.906Z",
+  "calibratedAt": "2026-06-29T22:19:35.354Z",
   "method": "parallel_over_base_auto_empirical",
   "sampleSize": {
-    "totalCombos": 17,
-    "totalPairs": 370
+    "totalCombos": 116,
+    "totalPairs": 3370
   },
   "entries": [
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Green Lava Refractor",
-      "printRun": "/150",
+      "parallel": "Reptilian Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.12,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.025,
+        6.459
+      ],
+      "p25": 2.12,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Mini-Diamond Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.332,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.373,
+        4.888
+      ],
+      "p25": 1.332,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.727,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.294,
+        4.819
+      ],
+      "p25": 1.727,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.238,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.607,
+        6.459
+      ],
+      "p25": 2.238,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Mini Diamond",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.839,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.373,
+        10.827
+      ],
+      "p25": 1.839,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.338,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.279,
+        31.984
+      ],
+      "p25": 5.338,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.078,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.696,
+        18.966
+      ],
+      "p25": 3.078,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.287,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.03,
+        37.056
+      ],
+      "p25": 2.287,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.806,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.145,
+        24.627
+      ],
+      "p25": 5.806,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.85,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.973,
+        14.204
+      ],
+      "p25": 5.85,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.937,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.48,
+        3.745
+      ],
+      "p25": 1.937,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.281,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.062,
+        12.896
+      ],
+      "p25": 2.281,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Pulsar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.966,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.944,
+        13.989
+      ],
+      "p25": 1.966,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.337,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.837,
+        13.889
+      ],
+      "p25": 3.337,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.078,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.696,
+        18.966
+      ],
+      "p25": 3.078,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.936,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.58,
+        9.265
+      ],
+      "p25": 2.936,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.059,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.067,
+        46.235
+      ],
+      "p25": 5.059,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.978,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.283,
+        3.877
+      ],
+      "p25": 1.978,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.596,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.525,
+        16.833
+      ],
+      "p25": 2.596,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.85,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.973,
+        14.204
+      ],
+      "p25": 5.85,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.798,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.575,
+        16.822
+      ],
+      "p25": 1.798,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.737,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.435,
+        12.844
+      ],
+      "p25": 2.737,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.365,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.662,
+        18.626
+      ],
+      "p25": 2.365,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.357,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.462,
+        21.101
+      ],
+      "p25": 4.357,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.759,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.118,
+        36.076
+      ],
+      "p25": 5.759,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Pulsar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.597,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.586,
+        56.803
+      ],
+      "p25": 1.597,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.29,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.636,
+        24.627
+      ],
+      "p25": 4.29,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.806,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.145,
+        24.627
+      ],
+      "p25": 5.806,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Geometric",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.337,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.837,
+        13.889
+      ],
+      "p25": 3.337,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.664,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.054,
+        18.75
+      ],
+      "p25": 4.664,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.726,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.525,
+        25.907
+      ],
+      "p25": 2.726,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.163,
+      "sampleSize": 30,
+      "ratioRange": [
+        2.194,
+        57.788
+      ],
+      "p25": 8.163,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.094,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.505,
+        12.255
+      ],
+      "p25": 2.094,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Geometric",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.036,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.814,
+        36.076
+      ],
+      "p25": 4.036,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.675,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.066,
+        37.056
+      ],
+      "p25": 3.675,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.399,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.831,
+        16.968
+      ],
+      "p25": 2.399,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.634,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.118,
+        22.805
+      ],
+      "p25": 5.634,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.772,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.278,
+        3.58
+      ],
+      "p25": 1.772,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.759,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.118,
+        36.076
+      ],
+      "p25": 5.759,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.515,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.264,
+        5
+      ],
+      "p25": 2.515,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.713,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.005,
+        31.984
+      ],
+      "p25": 4.713,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Pearl Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 12.894,
+      "sampleSize": 30,
+      "ratioRange": [
+        4.317,
+        63.445
+      ],
+      "p25": 12.894,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.959,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.638,
+        20.38
+      ],
+      "p25": 2.959,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.937,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.246,
+        19.417
+      ],
+      "p25": 2.937,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.036,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.814,
+        36.076
+      ],
+      "p25": 4.036,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.993,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.657,
+        16.117
+      ],
+      "p25": 1.993,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Grass",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.468,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.119,
+        31.293
+      ],
+      "p25": 6.468,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Geometric",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.959,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.638,
+        20.38
+      ],
+      "p25": 2.959,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Grass",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.89,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.759,
+        5.922
+      ],
+      "p25": 2.89,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.022,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.49,
+        4.699
+      ],
+      "p25": 3.022,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "HTA Choice",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.081,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.773,
+        3.576
+      ],
+      "p25": 2.081,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold Geometric",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.015,
+      "sampleSize": 29,
+      "ratioRange": [
+        2.717,
+        69.686
+      ],
+      "p25": 9.015,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.163,
+      "sampleSize": 30,
+      "ratioRange": [
+        2.194,
+        57.788
+      ],
+      "p25": 8.163,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.713,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.005,
+        31.984
+      ],
+      "p25": 4.713,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua Pulsar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.296,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.344,
+        56.803
+      ],
+      "p25": 2.296,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.64,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.87,
+        53.494
+      ],
+      "p25": 5.64,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Fuchsia",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.464,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.004,
+        24.902
+      ],
+      "p25": 2.464,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.225,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.32,
+        5.405
+      ],
+      "p25": 2.225,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.64,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.87,
+        53.494
+      ],
+      "p25": 5.64,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.664,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.054,
+        18.75
+      ],
+      "p25": 4.664,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.388,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.047,
+        57.788
+      ],
+      "p25": 5.388,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.728,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.75,
+        46.985
+      ],
+      "p25": 9.728,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.015,
+      "sampleSize": 29,
+      "ratioRange": [
+        2.717,
+        69.686
+      ],
+      "p25": 9.015,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Lava",
+      "printRun": "(unspecified)",
       "baseRelativePremium": 2.751,
       "sampleSize": 28,
       "ratioRange": [
@@ -25,57 +1033,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Yellow Lava Refractor",
-      "printRun": "/75",
-      "sampleSize": 0,
-      "ratioRange": [
-        null,
-        null
-      ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
-      "parallel": "Orange Lava Refractor",
-      "printRun": "/25",
-      "sampleSize": 0,
-      "ratioRange": [
-        null,
-        null
-      ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
-      "parallel": "Red Lava Refractor",
-      "printRun": "/5",
-      "baseRelativePremium": 32.57,
-      "sampleSize": 27,
-      "ratioRange": [
-        3.008,
-        92.025
-      ],
-      "p25": 32.57,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
-      "parallel": "Speckle Refractor",
-      "printRun": "/299",
-      "baseRelativePremium": 2.837,
+      "parallel": "Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.589,
       "sampleSize": 30,
       "ratioRange": [
-        0.696,
-        14.837
+        0.741,
+        36.076
       ],
-      "p25": 2.837,
+      "p25": 5.589,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -83,15 +1049,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Green Refractor",
-      "printRun": "/99",
-      "baseRelativePremium": 1.681,
+      "parallel": "Steel Metal",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.743,
       "sampleSize": 30,
       "ratioRange": [
-        0.167,
-        2.842
+        0.698,
+        36.565
       ],
-      "p25": 1.681,
+      "p25": 3.743,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -99,15 +1065,31 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Blue Refractor",
-      "printRun": "/150",
-      "baseRelativePremium": 1.602,
+      "parallel": "Mini Diamond",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.775,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.173,
+        6.605
+      ],
+      "p25": 2.775,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Orange Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 13.188,
       "sampleSize": 30,
       "ratioRange": [
-        0.139,
-        2.586
+        2.285,
+        91.371
       ],
-      "p25": 1.602,
+      "p25": 13.188,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -115,44 +1097,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Aqua Refractor",
-      "printRun": "/125",
-      "sampleSize": 0,
-      "ratioRange": [
-        null,
-        null
-      ],
-      "provenance": "thin_provisional",
-      "skippedReason": "no_parallel_cards_found"
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
-      "parallel": "Purple Refractor",
-      "printRun": "/250",
-      "baseRelativePremium": 2.031,
-      "sampleSize": 30,
-      "ratioRange": [
-        0.283,
-        3.788
-      ],
-      "p25": 2.031,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
-      "parallel": "Gold Refractor",
-      "printRun": "/50",
-      "baseRelativePremium": 3.473,
+      "parallel": "Gold Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.342,
       "sampleSize": 29,
       "ratioRange": [
-        0.23,
-        8.75
+        0.242,
+        18.666
       ],
-      "p25": 3.473,
+      "p25": 3.342,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -160,15 +1113,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Orange Refractor",
-      "printRun": "/25",
-      "baseRelativePremium": 4.493,
-      "sampleSize": 26,
+      "parallel": "Gold Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.31,
+      "sampleSize": 30,
       "ratioRange": [
-        0.671,
-        10.9
+        0.49,
+        16.739
       ],
-      "p25": 4.493,
+      "p25": 6.31,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -176,15 +1129,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Red Refractor",
-      "printRun": "/5",
-      "baseRelativePremium": 8.979,
-      "sampleSize": 9,
+      "parallel": "Reptilian Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.962,
+      "sampleSize": 30,
       "ratioRange": [
-        0.924,
-        15.791
+        0.192,
+        62.305
       ],
-      "p25": 8.979,
+      "p25": 5.962,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -192,15 +1145,15 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Black Refractor",
-      "printRun": "/1",
-      "baseRelativePremium": 8.251,
-      "sampleSize": 11,
+      "parallel": "Gold Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.728,
+      "sampleSize": 30,
       "ratioRange": [
-        0.6,
-        29.505
+        0.75,
+        46.985
       ],
-      "p25": 8.251,
+      "p25": 9.728,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -208,15 +1161,79 @@
     {
       "year": 2025,
       "set": "Bowman Draft Chrome",
-      "parallel": "Green Refractor",
-      "printRun": "/99",
-      "baseRelativePremium": 6.111,
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.492,
       "sampleSize": 30,
       "ratioRange": [
-        0.358,
-        26.116
+        0.035,
+        2.998
       ],
-      "p25": 6.111,
+      "p25": 1.492,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sky Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.32,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.11,
+        8.066
+      ],
+      "p25": 2.32,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.048,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.633,
+        3.148
+      ],
+      "p25": 2.048,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Lazer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.596,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.053,
+        4.127
+      ],
+      "p25": 1.596,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.721,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.405,
+        13.151
+      ],
+      "p25": 3.721,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -225,14 +1242,302 @@
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Blue Refractor",
-      "printRun": "/150",
-      "baseRelativePremium": 2.535,
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.12,
       "sampleSize": 30,
       "ratioRange": [
         0.11,
         13.782
       ],
-      "p25": 2.535,
+      "p25": 3.12,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sparkle Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.268,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.139,
+        8.161
+      ],
+      "p25": 2.268,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Fuchsia Reptilian Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.385,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.241,
+        11.649
+      ],
+      "p25": 4.385,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.185,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.025,
+        16.426
+      ],
+      "p25": 4.185,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Purple Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.475,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.405,
+        13.615
+      ],
+      "p25": 3.475,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.433,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.103,
+        26.116
+      ],
+      "p25": 7.433,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Reptilian Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.263,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.525,
+        18.297
+      ],
+      "p25": 5.263,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Grass Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.359,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.347,
+        21.143
+      ],
+      "p25": 6.359,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.635,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.333,
+        17.558
+      ],
+      "p25": 4.635,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Steel Metal Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.899,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.273,
+        23.873
+      ],
+      "p25": 5.899,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.653,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.756,
+        5.231
+      ],
+      "p25": 2.653,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.9,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.181,
+        16.14
+      ],
+      "p25": 5.9,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.847,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.386,
+        47.413
+      ],
+      "p25": 7.847,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.475,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.103,
+        13.065
+      ],
+      "p25": 4.475,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.531,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.824,
+        3.646
+      ],
+      "p25": 2.531,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Reptilian Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.5,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.316,
+        24.107
+      ],
+      "p25": 5.5,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.167,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.309,
+        6.657
+      ],
+      "p25": 4.167,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.768,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.486,
+        6.085
+      ],
+      "p25": 3.768,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 15.127,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.295,
+        81.627
+      ],
+      "p25": 15.127,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -241,14 +1546,78 @@
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Gold Refractor",
-      "printRun": "/50",
-      "baseRelativePremium": 14.472,
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 15.127,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.295,
+        81.627
+      ],
+      "p25": 15.127,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Reptilian Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.769,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.726,
+        28.947
+      ],
+      "p25": 6.769,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.433,
       "sampleSize": 30,
       "ratioRange": [
-        2.647,
-        57.941
+        0.103,
+        26.116
       ],
-      "p25": 14.472,
+      "p25": 7.433,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.018,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.348,
+        47.413
+      ],
+      "p25": 8.018,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Mini-Diamond",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.572,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.044,
+        14.881
+      ],
+      "p25": 2.572,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -257,14 +1626,235 @@
       "year": 2025,
       "set": "Bowman Draft Chrome",
       "parallel": "Orange Refractor",
-      "printRun": "/25",
-      "baseRelativePremium": 27.242,
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 23.124,
+      "sampleSize": 26,
+      "ratioRange": [
+        2.816,
+        89.474
+      ],
+      "p25": 23.124,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 12.736,
       "sampleSize": 30,
       "ratioRange": [
-        0.761,
-        85.841
+        0.763,
+        53.111
       ],
-      "p25": 27.242,
+      "p25": 12.736,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Black Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 27.206,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.603,
+        95.541
+      ],
+      "p25": 27.206,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 23.124,
+      "sampleSize": 26,
+      "ratioRange": [
+        2.816,
+        89.474
+      ],
+      "p25": 23.124,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Orange Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 20.276,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.498,
+        62.222
+      ],
+      "p25": 20.276,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.269,
+      "sampleSize": 27,
+      "ratioRange": [
+        1.966,
+        18.39
+      ],
+      "p25": 8.269,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.12,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.11,
+        13.782
+      ],
+      "p25": 3.12,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Bowman Logofractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 11.111,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.683,
+        38.674
+      ],
+      "p25": 11.111,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Ink",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 39.706,
+      "sampleSize": 26,
+      "ratioRange": [
+        16.373,
+        95.4
+      ],
+      "p25": 39.706,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Mini-Diamond",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sparkle",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.174,
+      "sampleSize": 27,
+      "ratioRange": [
+        1.87,
+        54.821
+      ],
+      "p25": 6.174,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 52.196,
+      "sampleSize": 18,
+      "ratioRange": [
+        1.115,
+        88.05
+      ],
+      "p25": 52.196,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.932,
+      "sampleSize": 27,
+      "ratioRange": [
+        2.645,
+        23.892
+      ],
+      "p25": 5.932,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Peanuts Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 28.571,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.78,
+        73.006
+      ],
+      "p25": 28.571,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sunflower Seeds Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 23.425,
+      "sampleSize": 30,
+      "ratioRange": [
+        2.049,
+        67.797
+      ],
+      "p25": 23.425,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
