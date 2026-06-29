@@ -1909,10 +1909,19 @@ async function autoPriceHolding(
   } | null = null;
   const railIsObservedZero =
     resolved.valuationStatus === "observed" && (resolved.fairMarketValueOverride ?? 0) <= 0;
+  // CF-AUTOPRICE-GRADE-LADDER-FALLBACK fix (2026-06-29): the rail's
+  // "match insufficient" branch sets valuationStatus="estimated" with
+  // estimatedValue=null. The prior gate skipped this case incorrectly.
+  // New gate: fire the ladder when the rail produced NO usable estimate,
+  // regardless of whether valuationStatus was "estimated" or "observed".
+  const railNoUsableEstimate =
+    !(typeof resolved.estimatedValue === "number" && resolved.estimatedValue > 0);
+  const railNoUsableFmv =
+    !(typeof resolved.fairMarketValueOverride === "number" && resolved.fairMarketValueOverride > 0);
   if (
     cardsightCardId &&
-    (resolved.valuationStatus !== "estimated") &&
-    (resolvedAfterLadder.fairMarketValueOverride === null || railIsObservedZero)
+    railNoUsableFmv &&
+    railNoUsableEstimate
   ) {
     try {
       const { deriveGradeLadderAnchor } = await import(
