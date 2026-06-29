@@ -524,7 +524,35 @@ async function dispatchFreetextMode(
   const aiMatch = await aiMatchPromise;
   let aiMatchedId: string | null = null;
   let prependedCard: RoutedCard | null = null;
-  if (aiMatch && typeof aiMatch.card_id === "string" && aiMatch.card_id.length > 0) {
+  // CF-AI-MATCH-INTENT-VALIDATION (2026-06-29): when user typed "auto"
+  // but match_card returned a non-auto card, skip the boost. 2026-06-29
+  // volume test surfaced Bryce Harper 2011 Bowman Chrome "Prospect Auto"
+  // resolving to the BCP111 base insert (non-auto, isAuto=false) instead
+  // of the CPA-BH autograph. Same pattern on Tatis Jr, Acuña, Mayer —
+  // CH's matcher picks the highest-volume traded card matching the
+  // player+set, which is the insert variant, not the autograph.
+  //
+  // Detection: aiMatch.card_id resolved to an isAuto=false card AND the
+  // user query has an auto intent token. Reject and let the rerank
+  // handle it (scoreCandidateForIntent already weights isAuto matches).
+  const matchIsAuto = aiMatch ? detectIsAutoFromCardNumber(String(aiMatch.number ?? "")) : false;
+  const intentRejectsMatch = intentWantsAuto && aiMatch && !matchIsAuto;
+  if (intentRejectsMatch) {
+    try {
+      console.log(JSON.stringify({
+        event: "ai_match_intent_rejected",
+        source: "unifiedSearch.dispatcher",
+        query: trimmed,
+        rejectedCardId: aiMatch.card_id,
+        rejectedNumber: aiMatch.number,
+        reason: "user wants auto, match resolved to non-auto card",
+        timestamp: new Date().toISOString(),
+      }));
+    } catch {
+      // Telemetry never propagates.
+    }
+  }
+  if (!intentRejectsMatch && aiMatch && typeof aiMatch.card_id === "string" && aiMatch.card_id.length > 0) {
     aiMatchedId = aiMatch.card_id;
     const existingIdx = scoredHits.findIndex((h) => h.card.card_id === aiMatchedId);
     if (existingIdx > 0) {

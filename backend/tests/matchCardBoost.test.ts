@@ -107,6 +107,7 @@ describe("CF-CH-MATCH-CARD-BOOST — promotion of an existing hit", () => {
     mockedIdentify.mockResolvedValue({
       card_id: "card-target",
       confidence: 0.95,
+      number: "CPA-NK",  // CF-AI-MATCH-INTENT-VALIDATION: detected as auto
     });
     mockedSearch.mockResolvedValue([
       { card_id: "card-decoy-1", player: "Nick Kurtz", variant: "Base" },
@@ -144,6 +145,7 @@ describe("CF-CH-MATCH-CARD-BOOST — prepend a card outside the search window", 
     mockedIdentify.mockResolvedValue({
       card_id: "card-buried",
       confidence: 0.88,
+      number: "CPA-NK",  // CF-AI-MATCH-INTENT-VALIDATION: detected as auto
     });
     mockedSearch.mockResolvedValue([
       { card_id: "card-decoy-1", player: "Nick Kurtz", variant: "Base" },
@@ -208,6 +210,69 @@ describe("CF-CH-MATCH-CARD-BOOST — prepend a card outside the search window", 
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. EDGE — empty search results + AI match still produces a candidate
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-AI-MATCH-INTENT-VALIDATION (2026-06-29) — auto-intent rejection
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("CF-AI-MATCH-INTENT-VALIDATION — reject match_card when isAuto disagrees with intent", () => {
+  it("user typed 'auto' AND match returned non-auto card → boost SKIPPED, rerank takes over", async () => {
+    // Reproduces the 2011 Harper Bowman Chrome Prospect Auto case:
+    // CH's matcher resolved to BCP111 (base insert, isAuto=false) but
+    // user clearly wanted the autograph. The boost must NOT prepend the
+    // non-auto card; the dispatcher's rerank ranks scored hits instead.
+    mockedIdentify.mockResolvedValue({
+      card_id: "wrong-base-insert",
+      confidence: 0.92,
+      number: "BCP111",  // base prospect insert prefix → not auto
+    });
+    mockedSearch.mockResolvedValue([
+      { card_id: "actual-cpa-auto", player: "Bryce Harper", number: "CPA-BH", variant: "Base" },
+      { card_id: "decoy", player: "Bryce Harper", number: "BCP111", variant: "Base" },
+    ]);
+
+    const result = await dispatchSearch("bryce harper 2011 bowman chrome prospect auto");
+
+    // The CPA-BH (auto, scored higher by rerank) wins position 0,
+    // NOT the BCP111 the AI matcher picked.
+    expect(result.candidates).toHaveLength(2);
+    // No candidate should be tagged ai-matched (boost was skipped).
+    expect(result.candidates.every((c) => c.attribution !== "ai-matched")).toBe(true);
+  });
+
+  it("user typed 'auto' AND match returned auto card → boost still fires normally", async () => {
+    // Control: when the matcher IS aligned with intent, the boost works.
+    mockedIdentify.mockResolvedValue({
+      card_id: "correct-auto",
+      confidence: 0.92,
+      number: "CPA-NK",  // chrome prospect auto prefix → IS auto
+    });
+    mockedSearch.mockResolvedValue([
+      { card_id: "correct-auto", player: "Nick Kurtz", number: "CPA-NK", variant: "Green Lava" },
+    ]);
+
+    const result = await dispatchSearch("nick kurtz green lava auto");
+
+    expect(result.candidates[0].attribution).toBe("ai-matched");
+  });
+
+  it("user did NOT type 'auto' → intent gate not engaged, normal boost", async () => {
+    // Control: when user query has no auto intent, the gate doesn't fire
+    // — the boost is the natural CF-CH-MATCH-CARD-BOOST behavior.
+    mockedIdentify.mockResolvedValue({
+      card_id: "any-card",
+      confidence: 0.9,
+      number: "BCP111",  // would have triggered gate IF auto were in query
+    });
+    mockedSearch.mockResolvedValue([
+      { card_id: "any-card", player: "Bryce Harper", number: "BCP111", variant: "Base" },
+    ]);
+
+    const result = await dispatchSearch("bryce harper 2011 bowman chrome prospect");  // no "auto"
+
+    expect(result.candidates[0].attribution).toBe("ai-matched");
+  });
+});
 
 describe("CF-CH-MATCH-CARD-BOOST — surfaces a candidate even when search returns zero", () => {
   it("AI match alone yields a single-candidate response when search is empty", async () => {
