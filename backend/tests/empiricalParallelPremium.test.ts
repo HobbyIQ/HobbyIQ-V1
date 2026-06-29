@@ -13,15 +13,17 @@ import { describe, expect, it } from "vitest";
 import { lookupBowmanFamilyEntry } from "../src/services/compiq/chromeDraftMultipliers.js";
 
 describe("lookupBowmanFamilyEntry — empirical-table fallthrough", () => {
-  it("Kurtz-class 2025 Green Lava Refractor: synthesized entry from empirical scan", () => {
+  it("Kurtz-class 2025 Green Lava: synthesized entry from empirical scan", () => {
+    // Post-CF-CH-PARALLEL-DISCOVERY (PR #192): the empirical table now
+    // uses CH's canonical variant names without manual suffix-stripping.
+    // CH catalogs the variant as "Green Lava" (no "Refractor" suffix),
+    // so iOS sends "Green Lava" too. Test reflects the canonical name.
     const entry = lookupBowmanFamilyEntry({
       year: 2025,
       product: "Bowman",
       subset: "Chrome Prospect Autographs",
-      parallelName: "Green Lava Refractor",
+      parallelName: "Green Lava",
     });
-    // The worksheet has 2026 entries but no 2025 ones — the empirical
-    // table (n=28, 2.704×) should now produce a synthesized entry.
     expect(entry).not.toBeNull();
     expect(entry!.year).toBe(2025);
     expect(entry!.baseRelativePremium?.value).toBeGreaterThan(2);
