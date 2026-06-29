@@ -870,6 +870,54 @@ function getAutoTable(): AutoMultiplierTable | null {
 }
 
 /**
+ * CF-BASE-MULTIPLIER-ENGINE-WIRING (2026-06-29): empirical base-graded
+ * multiplier table calibrated from 4,421 modern (1990+) base graded
+ * observations across 6,880 unique cards. Replaces the static
+ * GRADER_PREMIUMS table (hand-curated from a 2018 article) for modern
+ * base graded cards.
+ *
+ * GATED by env var MULTIPLIER_BASE_TABLE_ENABLED — default OFF so the
+ * deployed engine continues using static GRADER_PREMIUMS. Flip to
+ * "true" in App Service application settings when ready to roll out.
+ *
+ * Expected impact on flip: modern PSA 10 base graded holdings see
+ * 10-127% price increases (biggest delta in the <$25 raw tier where
+ * static was 4.9× and empirical is 11.1×).
+ */
+type BaseMultiplierTable = {
+  calibratedAt?: string;
+  sampleSize?: { totalObservations: number; uniqueCards: number };
+  table?: Record<string, Record<string, Record<string, number>>>;
+};
+
+let _baseTableCache: BaseMultiplierTable | null | undefined = undefined;
+function getBaseTable(): BaseMultiplierTable | null {
+  if (_baseTableCache !== undefined) return _baseTableCache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("node:fs") as typeof import("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("node:path") as typeof import("node:path");
+    const p = path.resolve(process.cwd(), "data/base-multipliers-latest.json");
+    if (!fs.existsSync(p)) {
+      _baseTableCache = null;
+      return null;
+    }
+    _baseTableCache = JSON.parse(fs.readFileSync(p, "utf-8")) as BaseMultiplierTable;
+    return _baseTableCache;
+  } catch (err) {
+    console.warn(`[compiqEstimate] base-multipliers load failed: ${(err as Error)?.message ?? err}`);
+    _baseTableCache = null;
+    return null;
+  }
+}
+
+function isBaseTableEnabled(): boolean {
+  // Read each time so test-time env stub flips take effect immediately.
+  return String(process.env.MULTIPLIER_BASE_TABLE_ENABLED ?? "").toLowerCase() === "true";
+}
+
+/**
  * Tier resolver supporting both the static-table tiers (<25, 25-50,
  * 50-100, 100+) AND the empirical-table tiers (..., 100-250, 250-500,
  * 500-1000, 1000+). The caller's `rawPrice` lands in whichever tier
@@ -960,6 +1008,21 @@ export function getGraderPremium(
       return autoValue;
     }
     // else fall through to base table (logged in telemetry as a calibration gap)
+  }
+
+  // CF-BASE-MULTIPLIER-ENGINE-WIRING (2026-06-29): when the env flag
+  // MULTIPLIER_BASE_TABLE_ENABLED is "true", prefer the empirical base
+  // table for modern (1990+) base graded cards. Default OFF preserves
+  // the legacy static-table behavior — flip the flag in App Service
+  // application settings when ready to roll out the new pricing.
+  if (isBaseTableEnabled()) {
+    const base = getBaseTable();
+    const baseTier = base?.table?.[company]?.[gradeKey];
+    const baseValue = resolveTierForTable(baseTier, rawPrice);
+    if (baseValue != null && Number.isFinite(baseValue) && baseValue > 0) {
+      return baseValue;
+    }
+    // else fall through to static
   }
 
   const tierTable = GRADER_PREMIUMS[company]?.[gradeKey];
