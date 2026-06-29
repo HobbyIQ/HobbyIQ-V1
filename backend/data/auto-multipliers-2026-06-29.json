@@ -18,14 +18,12 @@
       "6": {
         "<25": 1.629,
         "25-50": 0.413,
-        "50-100": 0.632,
         "100-250": 0.612,
         "fallback": 0.741
       },
       "7": {
         "<25": 1.463,
         "25-50": 0.811,
-        "50-100": 0.41,
         "100-250": 0.871,
         "250-500": 0.711,
         "fallback": 1
@@ -43,7 +41,6 @@
         "25-50": 1.572,
         "50-100": 1.495,
         "100-250": 1.313,
-        "250-500": 1.316,
         "500-1000": 1.305,
         "fallback": 2.394
       },
@@ -102,7 +99,6 @@
         "fallback": 2.594
       },
       "8.5": {
-        "<25": 1.4,
         "100-250": 1.575,
         "fallback": 1.505
       },
@@ -266,7 +262,8 @@
           "trimmedMedian": 0.632,
           "fullMedian": 0.632,
           "min": 0.086,
-          "max": 1.308
+          "max": 1.308,
+          "monotonicityAction": "dropped (n=7 < 10, was 0.632, violated 5=0.853)"
         },
         "100-250": {
           "n": 4,
@@ -308,7 +305,8 @@
           "trimmedMedian": 0.41,
           "fullMedian": 0.41,
           "min": 0.152,
-          "max": 1.352
+          "max": 1.352,
+          "monotonicityAction": "dropped (n=3 < 10, was 0.41, violated 5=0.853)"
         },
         "100-250": {
           "n": 9,
@@ -412,7 +410,8 @@
           "trimmedMedian": 1.316,
           "fullMedian": 1.316,
           "min": 1.001,
-          "max": 2.963
+          "max": 2.963,
+          "monotonicityAction": "dropped (n=9 < 10, was 1.316, violated 8=1.388)"
         },
         "500-1000": {
           "n": 4,
@@ -806,7 +805,8 @@
           "trimmedMedian": 1.4,
           "fullMedian": 1.4,
           "min": 1.126,
-          "max": 7.689
+          "max": 7.689,
+          "monotonicityAction": "dropped (n=9 < 10, was 1.4, violated 8=4.271)"
         },
         "25-50": {
           "n": 0,
@@ -1187,5 +1187,164 @@
         }
       }
     }
+  },
+  "monotonicityPostprocess": {
+    "appliedAt": "2026-06-29T20:30:58.943Z",
+    "retroApplied": true,
+    "adjustmentCount": 15,
+    "drops": 4,
+    "promotes": 0,
+    "adjustments": [
+      {
+        "action": "keep-despite-violation",
+        "context": "PSA",
+        "tier": "<25",
+        "grade": "6",
+        "sampleSize": 21,
+        "originalRatio": 1.629,
+        "violatedGrade": "5",
+        "violatedRatio": 5.354
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "PSA",
+        "tier": "<25",
+        "grade": "7",
+        "sampleSize": 31,
+        "originalRatio": 1.463,
+        "violatedGrade": "6",
+        "violatedRatio": 1.629
+      },
+      {
+        "action": "drop",
+        "context": "PSA",
+        "tier": "50-100",
+        "grade": "6",
+        "sampleSize": 7,
+        "originalRatio": 0.632,
+        "violatedGrade": "5",
+        "violatedRatio": 0.853
+      },
+      {
+        "action": "drop",
+        "context": "PSA",
+        "tier": "50-100",
+        "grade": "7",
+        "sampleSize": 3,
+        "originalRatio": 0.41,
+        "violatedGrade": "5",
+        "violatedRatio": 0.853
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "PSA",
+        "tier": "50-100",
+        "grade": "9",
+        "sampleSize": 36,
+        "originalRatio": 1.495,
+        "violatedGrade": "8",
+        "violatedRatio": 1.674
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "PSA",
+        "tier": "100-250",
+        "grade": "9",
+        "sampleSize": 24,
+        "originalRatio": 1.313,
+        "violatedGrade": "8",
+        "violatedRatio": 1.497
+      },
+      {
+        "action": "drop",
+        "context": "PSA",
+        "tier": "250-500",
+        "grade": "9",
+        "sampleSize": 9,
+        "originalRatio": 1.316,
+        "violatedGrade": "8",
+        "violatedRatio": 1.388
+      },
+      {
+        "action": "drop",
+        "context": "SGC",
+        "tier": "<25",
+        "grade": "8.5",
+        "sampleSize": 9,
+        "originalRatio": 1.4,
+        "violatedGrade": "8",
+        "violatedRatio": 4.271
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "SGC",
+        "tier": "<25",
+        "grade": "9",
+        "sampleSize": 58,
+        "originalRatio": 3.51,
+        "violatedGrade": "8",
+        "violatedRatio": 4.271
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "SGC",
+        "tier": "<25",
+        "grade": "9.5",
+        "sampleSize": 169,
+        "originalRatio": 3.335,
+        "violatedGrade": "9",
+        "violatedRatio": 3.51
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "SGC",
+        "tier": "25-50",
+        "grade": "9.5",
+        "sampleSize": 23,
+        "originalRatio": 1.64,
+        "violatedGrade": "9",
+        "violatedRatio": 1.667
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "SGC",
+        "tier": "50-100",
+        "grade": "9.5",
+        "sampleSize": 11,
+        "originalRatio": 1.4,
+        "violatedGrade": "9",
+        "violatedRatio": 1.579
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "BGS",
+        "tier": "<25",
+        "grade": "8.5",
+        "sampleSize": 11,
+        "originalRatio": 4.308,
+        "violatedGrade": "8",
+        "violatedRatio": 5.634
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "BGS",
+        "tier": "<25",
+        "grade": "9",
+        "sampleSize": 48,
+        "originalRatio": 3.054,
+        "violatedGrade": "8.5",
+        "violatedRatio": 4.308
+      },
+      {
+        "action": "keep-despite-violation",
+        "context": "BGS",
+        "tier": "100-250",
+        "grade": "9.5",
+        "sampleSize": 15,
+        "originalRatio": 1.649,
+        "violatedGrade": "9",
+        "violatedRatio": 1.796
+      }
+    ]
   }
 }

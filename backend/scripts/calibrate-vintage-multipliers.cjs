@@ -18,6 +18,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { applyMonotonicityPostprocess } = require("./lib/monotonicity-postprocess.cjs");
 
 const API_BASE = "https://api.cardhedger.com/v1";
 
@@ -284,6 +285,23 @@ async function main() {
       }
     }
   }
+
+  // CF-MULTIPLIER-MONOTONICITY-ENFORCEMENT (2026-06-29): enforce
+  // grade-monotonicity within each (era, company, tier). Low-sample
+  // noise (n<5) is dropped → engine falls back to per-grade fallback;
+  // sufficient samples with anomalous values are floored to prior-
+  // grade. AUTH skipped (in vintage context = damaged-card class,
+  // legitimately can be sub-Raw).
+  const monoTiers = TIERS.map(t => t.label);
+  const monoReport = applyMonotonicityPostprocess(output, monoTiers, true);
+  output.monotonicityPostprocess = {
+    adjustmentCount: monoReport.adjustments.length,
+    drops: monoReport.adjustments.filter(a => a.action === "drop").length,
+    promotes: monoReport.adjustments.filter(a => a.action === "promote").length,
+    adjustments: monoReport.adjustments,
+  };
+  console.log(`[vintage-calibrate] monotonicity post-process: ${monoReport.adjustments.length} adjustments ` +
+    `(${output.monotonicityPostprocess.drops} drops, ${output.monotonicityPostprocess.promotes} promotes)`);
 
   const outPath = path.join(__dirname, `vintage-multipliers-${new Date().toISOString().slice(0, 10)}.json`);
   fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
