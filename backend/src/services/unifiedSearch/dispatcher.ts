@@ -456,10 +456,30 @@ async function dispatchFreetextMode(
   // playerName for the search field so a polluted parser result doesn't
   // get sent twice (once as the filter, once as the search) — both must
   // be the same clean player name for CH to narrow + rank correctly.
-  const chSearchQuery =
+  //
+  // CF-AUTO-INTENT-SEARCH-FILTER (2026-06-29): when the user query has
+  // auto intent AND structured filters are present, keep "autograph" in
+  // the search string so CH's relevance ranker biases the candidate
+  // pool toward autograph SKUs. Without this, "Bryce Harper 2011 Bowman
+  // Chrome Prospect Auto" with filters reduced the search to just
+  // "Bryce Harper" — CH ranked by trade volume and the CPA-BH autograph
+  // sat below 50 base inserts, never entering the rerank-able pool. The
+  // PR #178 matcher-rejection + rerank only works if CPA-BH is actually
+  // in the search results.
+  //
+  // Single token ("autograph") rather than appending the raw "auto" so
+  // CH's tokenizer matches the canonical product name CPA-XX cards
+  // carry in their title. The downstream rerank is the authoritative
+  // auto check (AUTO_NUMBER_PREFIXES on card number) so any false
+  // positives in this widened pool are filtered by rerank score.
+  const baseSearchQuery =
     filters && parsed.playerName
       ? sanitizePlayerForCH(parsed.playerName)
       : hyphenStripped;
+  const chSearchQuery =
+    intentWantsAuto && filters && parsed.playerName
+      ? `${baseSearchQuery} autograph`
+      : baseSearchQuery;
   let hits: RoutedCard[];
   try {
     hits = await searchCardsRouted(chSearchQuery, FREETEXT_TAKE_DEFAULT, filters);
