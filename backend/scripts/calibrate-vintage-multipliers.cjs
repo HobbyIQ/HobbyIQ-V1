@@ -225,6 +225,17 @@ async function main() {
       const company = m[1], grade = m[2];
       const ratio = price / obs.raw;
       if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1000) continue;  // hard outlier cap
+      // CF-VINTAGE-HIGH-GRADE-FLOOR (2026-06-29): for non-AUTH high
+      // grades (PSA/BGS/SGC 8+), the slab is structurally ≥ Raw. Sub-1.0
+      // observations are bad data and skew the median down. AUTH on
+      // vintage = "authenticated but ungradable" (trimmed/altered) which
+      // LEGITIMATELY sells below Raw — so AUTH is EXCLUDED from the floor.
+      //
+      // Pre-fix anomalies caught: 1948-1969 SGC 10 / 5000+ = 0.23 (n=4);
+      // 1948-1969 BGS 10 / 100-500 = 0.42 (n=3); etc. These would have
+      // routed the engine to UNDERPRICE PSA 10 vintage HOFs by 60-80%.
+      const isHighNumericGrade = /^(8|8\.5|9|9\.5|10)$/.test(grade);
+      if (isHighNumericGrade && ratio < 1.0) continue;
       ratios[obs.era] ??= {};
       ratios[obs.era][company] ??= {};
       ratios[obs.era][company][grade] ??= {};
