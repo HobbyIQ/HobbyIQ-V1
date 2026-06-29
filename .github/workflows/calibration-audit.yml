@@ -1,0 +1,68 @@
+# CF-CALIBRATION-AUDIT-CI (2026-06-29) — gate PRs that touch multiplier
+# tables on the audit script. Catches structurally-impossible ratios,
+# monotonicity violations, outliers, and empty rows before they reach
+# main. Fast and self-contained — no npm install needed (audit script
+# has zero deps), so this workflow stays green even when the npm
+# ERESOLVE in backend-tests is blocking install elsewhere.
+
+name: calibration-audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/data/auto-multipliers-*.json"
+      - "backend/data/vintage-multipliers-*.json"
+      - "backend/data/parallel-premiums-*.json"
+      - "backend/scripts/calibrate-*.cjs"
+      - "backend/scripts/audit-multiplier-tables.cjs"
+      - "backend/scripts/lib/monotonicity-postprocess.cjs"
+      - ".github/workflows/calibration-audit.yml"
+
+concurrency:
+  group: calibration-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Multiplier Table Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run audit-multiplier-tables.cjs
+        # Exit 0: clean
+        # Exit 1: warnings only (informational; non-blocking)
+        # Exit 2: errors (new structurally-impossible ratios, outliers,
+        #        or monotonicity violations NOT pre-accepted by the
+        #        post-process). Blocks the PR.
+        #
+        # Accept exit 1 as success (warnings are informational only).
+        # Any non-1/non-0 exit (including 2) propagates as failure and
+        # blocks the PR.
+        run: |
+          set +e
+          node scripts/audit-multiplier-tables.cjs
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "::notice::Multiplier audit clean (0 warnings)"
+            exit 0
+          elif [ "$rc" -eq 1 ]; then
+            echo "::notice::Multiplier audit passed with warnings (informational, non-blocking)"
+            exit 0
+          else
+            echo "::error::Multiplier audit failed with errors (exit $rc) — see logs above for the new anomalies"
+            exit "$rc"
+          fi

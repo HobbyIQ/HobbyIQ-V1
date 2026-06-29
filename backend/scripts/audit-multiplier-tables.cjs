@@ -90,6 +90,22 @@ function auditMultiplierTable(file, kind, data) {
   }
   const tiers = kind === "vintage" ? VINTAGE_TIERS : AUTO_TIERS;
 
+  // CF-MULTIPLIER-MONOTONICITY-ENFORCEMENT (2026-06-29): when the data
+  // file carries monotonicityPostprocess metadata, the "kept-despite-
+  // violation" entries are pre-reviewed (both grades have n≥10; the
+  // variance is real, not noise). Mark them as warnings instead of
+  // errors so the audit's exit code only blocks PRs on NEW anomalies.
+  const knownAcceptedViolations = new Set();
+  const mono = data.monotonicityPostprocess;
+  if (mono?.adjustments) {
+    for (const a of mono.adjustments) {
+      if (a.action === "keep-despite-violation") {
+        // Key: context|tier|grade
+        knownAcceptedViolations.add(`${a.context}|${a.tier}|${a.grade}`);
+      }
+    }
+  }
+
   // For vintage, walk per-era. For auto, top-level is company.
   const eras = kind === "vintage" ? Object.keys(table) : [null];
   for (const era of eras) {
@@ -125,7 +141,14 @@ function auditMultiplierTable(file, kind, data) {
             const drop = (prevRatio - v) / prevRatio;
             if (v < prevRatio && drop > 0.20) {
               // PSA(n+1) drops > 20% below PSA(n) in same tier — bad
-              err(file, "monotonicity", `${eraLabel} ${tier}: ${prevGrade}=${prevRatio} → ${grade}=${v} (${grade} should be ≥ ${prevGrade}, dropped ${Math.round(drop*100)}%)`);
+              const key = `${eraLabel}|${tier}|${grade}`;
+              if (knownAcceptedViolations.has(key)) {
+                // Already reviewed by monotonicity post-process (both
+                // grades have n≥10, variance acknowledged as real).
+                warn(file, "monotonicity-known", `${eraLabel} ${tier}: ${prevGrade}=${prevRatio} → ${grade}=${v} (dropped ${Math.round(drop*100)}%; pre-accepted, n≥10 both sides)`);
+              } else {
+                err(file, "monotonicity", `${eraLabel} ${tier}: ${prevGrade}=${prevRatio} → ${grade}=${v} (${grade} should be ≥ ${prevGrade}, dropped ${Math.round(drop*100)}%)`);
+              }
             } else if (v < prevRatio) {
               warn(file, "monotonicity", `${eraLabel} ${tier}: ${prevGrade}=${prevRatio} → ${grade}=${v} (mild dip, ${Math.round(drop*100)}%)`);
             }
