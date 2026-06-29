@@ -1151,11 +1151,19 @@ export interface GradeLadderAnchor {
   explanation: string;
 }
 
+// CF-LADDER-INCLUDE-RAW (2026-06-29): "Raw" is part of the ladder.
+// Pre-fix: walker enumerated graded tiers only, so cards with only raw
+// data in CH (most prospect autos pre-grading) had no anchor returned —
+// the audit-surfaced 12 ENGINE_GAP holdings on Drew's portfolio. By
+// inserting Raw at the END (low confidence vs a fresh graded anchor),
+// the freshness selector still prefers a recent graded sale when one
+// exists, but falls through to raw when nothing else has data.
 const GRADE_LADDER_ORDER: GradeLadderGrade[] = [
   "PSA 10", "BGS 10", "SGC 10",
   "PSA 9", "BGS 9.5", "SGC 9.5",
   "PSA 8", "BGS 9", "SGC 9",
   "PSA 7",
+  "Raw",
 ];
 
 function gradeLadderToCompanyPair(g: GradeLadderGrade): { company: string; grade: string } | null {
