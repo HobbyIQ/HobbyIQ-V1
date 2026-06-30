@@ -73,7 +73,7 @@ describe("CF-EXPORT-BE — canonical schema (column order = import contract)", (
     expect(EXPORT_COLUMNS.length).toBeGreaterThan(20);
     const headers = exportColumnHeaders();
     // First three are the round-trip anchor identity columns
-    expect(headers.slice(0, 3)).toEqual(["holdingId", "cardId", "cardsightGradeId"]);
+    expect(headers.slice(0, 3)).toEqual(["holdingId", "cardId", "gradeId"]);
     // Last seven are computed (read-only on import)
     expect(headers.slice(-7)).toEqual([
       "fairMarketValue", "estimatedValue", "valuationStatus",
@@ -126,8 +126,8 @@ describe("CF-EXPORT-BE — buildExportRows", () => {
   });
 
   it("renders null/undefined as empty string", () => {
-    const rows = buildExportRows([makeHolding({ cardsightGradeId: null, notes: undefined })]);
-    expect(rows[0]!["cardsightGradeId"]).toBe("");
+    const rows = buildExportRows([makeHolding({ gradeId: null, notes: undefined })]);
+    expect(rows[0]!["gradeId"]).toBe("");
     expect(rows[0]!["notes"]).toBe("");
   });
 
