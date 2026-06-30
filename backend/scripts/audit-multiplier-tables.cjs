@@ -221,9 +221,22 @@ function auditParallel(file, data) {
     const ratio = e.baseRelativePremium;
     if (typeof ratio !== "number") continue;
     const label = `${e.year} ${e.set} ${e.parallel} ${e.printRun}`;
-    // (1) Parallels should always cost MORE than base (ratio >= 1.0)
+    // (1) Parallels priced BELOW base.
+    // CF-AUDIT-SUB-1-WARNING (2026-06-30): demoted from error → warning.
+    // Verified empirically for 2023 Bowman Chrome Prospects Refractor
+    // (n=30, ratio=0.869): 4 of 5 sampled prospects had Refractor priced
+    // below their Base counterpart (e.g., Lazaro Montes Base=$13.14 vs
+    // Refractor=$4.06). Modern Bowman Chrome Prospects has flipped the
+    // legacy rainbow logic — BCP Base is the canonical "first card" and
+    // gets all the speculative attention; Refractor is print-run-padded
+    // (often unnumbered) so the premium has eroded below base. Same
+    // dynamic likely for Topps Chrome Update (X-Fractor/Sepia/Prism) +
+    // Topps Heritage Purple. Worth surfacing for human review but NOT
+    // a structural error — these are real market data, engine consumes
+    // them correctly (chromeDraftMultipliers.ts:755 filter is ratio<=0,
+    // sub-1.0 multipliers load and apply as parallelPrice=basePrice*x).
     if (ratio < 1.0) {
-      err(file, "parallel-sub-1", `${label}: ratio=${ratio} (parallel < base is impossible)`);
+      warn(file, "parallel-sub-1", `${label}: ratio=${ratio} (parallel < base — modern market inversion, see audit-multiplier-tables.cjs comment for context)`);
     }
     // (2) Outliers — flag very-high ratios for sanity check
     if (ratio > 30) {
