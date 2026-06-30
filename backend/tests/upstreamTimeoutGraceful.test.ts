@@ -160,7 +160,7 @@ describe("upstream-timeout graceful handling", () => {
   });
 
   describe("/api/compiq/price-by-id", () => {
-    it("returns 200 + upstream-timeout shape with the pinned cardsightCardId exposed", async () => {
+    it("returns 200 + upstream-timeout shape with the pinned cardId exposed", async () => {
       (compiqEstimateMod.computeEstimate as any).mockImplementationOnce(
         async () => {
           throw new CardsightTimeoutError();
@@ -169,10 +169,10 @@ describe("upstream-timeout graceful handling", () => {
       const r = await request(app)
         .post("/api/compiq/price-by-id")
         .set("x-session-id", "test-sess")
-        .send({ cardsightCardId: "test-card-uuid-abc", query: "Test card" });
+        .send({ cardId: "test-card-uuid-abc", query: "Test card" });
       expect(r.status).toBe(200);
       expect(r.body.source).toBe("upstream-timeout");
-      expect(r.body.cardsightCardId).toBe("test-card-uuid-abc");
+      expect(r.body.cardId).toBe("test-card-uuid-abc");
       expect(r.body.predictedPrice).toBeNull();
     });
   });
@@ -317,7 +317,7 @@ describe("upstreamTimeout.helpers — pure-shape locks", () => {
       "../src/services/compiq/upstreamTimeout.helpers.js"
     );
     const out = buildUpstreamTimeoutPriceByIdResponse("uuid-xyz");
-    expect(out.cardsightCardId).toBe("uuid-xyz");
+    expect(out.cardId).toBe("uuid-xyz");
     expect(out.source).toBe("upstream-timeout");
     expect(out.predictedPrice).toBeNull();
   });

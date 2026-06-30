@@ -3,7 +3,7 @@
 //
 // THIS FILE PINS:
 //   1. gradeStringFromHolding mapping (PSA 10, BGS 9.5, Raw fallback)
-//   2. subscriptionItemFromHolding requires cardsightCardId + buildable grade
+//   2. subscriptionItemFromHolding requires cardId + buildable grade
 //   3. external_id format: userId:holdingId
 //   4. holdingSubscriptionChanged only fires on (cardId, grade) deltas
 //   5. batchSubscribeHoldings filters invalid + returns counts
@@ -34,7 +34,7 @@ afterEach(() => {
 function h(overrides: Partial<PortfolioHolding> = {}): PortfolioHolding {
   return {
     id: "h-1",
-    cardsightCardId: "card-1",
+    cardId: "card-1",
     gradingCompany: "PSA",
     gradeValue: 10,
     ...overrides,
@@ -72,14 +72,14 @@ describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — gradeStringFromHolding", () =>
 describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — subscriptionItemFromHolding", () => {
   it("returns {cardId, grade, externalId} with userId:holdingId format", async () => {
     const { subscriptionItemFromHolding } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
-    const item = subscriptionItemFromHolding("user-42", h({ id: "hold-7", cardsightCardId: "abc" }));
+    const item = subscriptionItemFromHolding("user-42", h({ id: "hold-7", cardId: "abc" }));
     expect(item).toEqual({ cardId: "abc", grade: "PSA 10", externalId: "user-42:hold-7" });
   });
 
-  it("missing cardsightCardId → null", async () => {
+  it("missing cardId → null", async () => {
     const { subscriptionItemFromHolding } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
-    expect(subscriptionItemFromHolding("u1", h({ cardsightCardId: null }))).toBeNull();
-    expect(subscriptionItemFromHolding("u1", h({ cardsightCardId: "" }))).toBeNull();
+    expect(subscriptionItemFromHolding("u1", h({ cardId: null }))).toBeNull();
+    expect(subscriptionItemFromHolding("u1", h({ cardId: "" }))).toBeNull();
   });
 
   it("invalid grade → null", async () => {
@@ -94,10 +94,10 @@ describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — holdingSubscriptionChanged", (
     expect(holdingSubscriptionChanged(undefined, h())).toBe(true);
   });
 
-  it("cardsightCardId changed → true", async () => {
+  it("cardId changed → true", async () => {
     const { holdingSubscriptionChanged } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
-    const a = h({ cardsightCardId: "card-1" });
-    const b = h({ cardsightCardId: "card-2" });
+    const a = h({ cardId: "card-1" });
+    const b = h({ cardId: "card-2" });
     expect(holdingSubscriptionChanged(a, b)).toBe(true);
   });
 
@@ -130,7 +130,7 @@ describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — subscribeHoldingToDeltaPoll", 
       json: async () => ({ results: [{ card_id: "card-1", grade: "PSA 10", status: "success" }], total_requested: 1, total_successful: 1 }),
     });
     const { subscribeHoldingToDeltaPoll } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
-    await subscribeHoldingToDeltaPoll("user-1", h({ id: "h-99", cardsightCardId: "card-1" }));
+    await subscribeHoldingToDeltaPoll("user-1", h({ id: "h-99", cardId: "card-1" }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
     expect(body.client_id).toBe("client-x");
@@ -140,7 +140,7 @@ describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — subscribeHoldingToDeltaPoll", 
   it("missing identity → silent skip (no HTTP call, no throw)", async () => {
     process.env.CARD_HEDGE_CLIENT_ID = "client-x";
     const { subscribeHoldingToDeltaPoll } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
-    await subscribeHoldingToDeltaPoll("user-1", h({ cardsightCardId: null }));
+    await subscribeHoldingToDeltaPoll("user-1", h({ cardId: null }));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -161,9 +161,9 @@ describe("CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE — batchSubscribeHoldings", () =>
     });
     const { batchSubscribeHoldings } = await import("../src/services/portfolioiq/deltaPollSubscriptions.service.js");
     const items = [
-      { userId: "u1", holding: h({ id: "h1", cardsightCardId: "c1" }) },
-      { userId: "u1", holding: h({ id: "h2", cardsightCardId: null }) },  // invalid
-      { userId: "u2", holding: h({ id: "h3", cardsightCardId: "c3" }) },
+      { userId: "u1", holding: h({ id: "h1", cardId: "c1" }) },
+      { userId: "u1", holding: h({ id: "h2", cardId: null }) },  // invalid
+      { userId: "u2", holding: h({ id: "h3", cardId: "c3" }) },
     ];
     const r = await batchSubscribeHoldings(items);
     expect(r.submitted).toBe(2);

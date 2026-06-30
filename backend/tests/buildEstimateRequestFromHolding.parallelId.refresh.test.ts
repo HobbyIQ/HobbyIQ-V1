@@ -115,7 +115,7 @@ describe("repriceHoldingsForUser — parallelId threaded into computeEstimate (C
       product: "Bowman Chrome",
       parallel: "Green Shimmer Refractor /99",
       isAuto: true,
-      cardsightCardId: HARTMAN_PARENT,
+      cardId: HARTMAN_PARENT,
       parallelId: GREEN_SHIMMER_PARALLEL_ID,
       lastUpdated: "2026-06-17T00:00:00.000Z",
     });
@@ -142,7 +142,7 @@ describe("repriceHoldingsForUser — parallelId threaded into computeEstimate (C
 
     const [body] = calls[0];
     expect(body.parallelId).toBe(GREEN_SHIMMER_PARALLEL_ID);
-    expect(body.cardsightCardId).toBe(HARTMAN_PARENT);
+    expect(body.cardId).toBe(HARTMAN_PARENT);
     expect(body.parallel).toBe("Green Shimmer Refractor /99");
     expect(body.pinnedAuthoritative).toBe(true);
   });
@@ -155,7 +155,7 @@ describe("repriceHoldingsForUser — parallelId threaded into computeEstimate (C
       playerName: "Mike Trout",
       cardYear: 2011,
       product: "Topps Update",
-      cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+      cardId: "fda530ab-e925-460e-ab88-63199ef975e9",
       lastUpdated: "2026-06-17T00:00:00.000Z",
     });
 

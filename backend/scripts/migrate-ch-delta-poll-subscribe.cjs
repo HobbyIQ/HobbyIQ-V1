@@ -84,7 +84,7 @@ async function main() {
             sampleIdentities.push({
               userId,
               holdingId: h.id,
-              cardsightCardId: h.cardsightCardId ?? null,
+              cardId: h.cardId ?? null,
               gradingCompany: h.gradingCompany ?? null,
               gradeValue: h.gradeValue ?? null,
             });

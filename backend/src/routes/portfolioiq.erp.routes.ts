@@ -752,7 +752,7 @@ router.post("/trades", async (req: Request, res: Response) => {
         throw new Error('incoming.fmvSource must be "compiq" or "manual"');
       }
       return {
-        cardsightCardId: typeof i.cardsightCardId === "string" ? i.cardsightCardId : undefined,
+        cardId: typeof i.cardId === "string" ? i.cardId : undefined,
         cardTitle: String(i.cardTitle ?? "").trim(),
         grade: typeof i.grade === "string" ? i.grade : undefined,
         fmvAtTrade: Number(i.fmvAtTrade),

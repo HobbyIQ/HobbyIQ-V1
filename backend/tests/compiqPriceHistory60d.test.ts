@@ -3,7 +3,7 @@
 // The original file also locked the value path and exercised the 60-day
 // priceHistory[] series end-to-end through computeEstimate via a mocked
 // Cardsight getPricing() response. That data path was removed in
-// CF-CARDSIGHT-REMOVAL (Phase 3 Wave 3): the pinned cardsightCardId branch
+// CF-CARDSIGHT-REMOVAL (Phase 3 Wave 3): the pinned cardId branch
 // no longer calls Cardsight getPricing/getCardDetail — comps are sourced
 // solely from CardHedge via the router, and on a CardHedge miss the branch
 // returns 0 comps. With no getPricing-fed pool reaching the engine, the

@@ -3,7 +3,7 @@
  *
  * Backfill coverage replacing the retired Cardsight-coupled pinned-id tests
  * (compiqEstimatePinnedCard, compiqEstimate.pinnedAuthoritative). Those
- * asserted the now-deleted `cardsight.client.getPricing(cardsightCardId)`
+ * asserted the now-deleted `cardsight.client.getPricing(cardId)`
  * branch. That branch is GONE: CardHedge (via the router seam) is the sole
  * comp source, and on a CardHedge miss the engine returns ZERO comps for the
  * pinned card rather than falling back to a Cardsight pricing call.
@@ -115,7 +115,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
     });
 
     const result = await computeEstimate({
-      cardsightCardId: PINNED_CS_ID,
+      cardId: PINNED_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -148,7 +148,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
     mockProvenance.mockResolvedValue({ sales: [] });
 
     const result = await computeEstimate({
-      cardsightCardId: PINNED_CS_ID,
+      cardId: PINNED_CS_ID,
       playerName: "Shohei Ohtani",
       cardYear: 2018,
       product: "Topps Chrome",
@@ -172,7 +172,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
 
   it("pinned-id with no identity hint (no playerName) → router provenance fn never called, no Cardsight call", async () => {
     const result = await computeEstimate({
-      cardsightCardId: PINNED_CS_ID,
+      cardId: PINNED_CS_ID,
       // No playerName / cardYear / product — nothing to bridge to CardHedge.
     });
 
@@ -192,7 +192,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
     });
 
     const result = await computeEstimate({
-      cardsightCardId: PINNED_CS_ID,
+      cardId: PINNED_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",

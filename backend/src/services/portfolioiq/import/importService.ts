@@ -528,10 +528,10 @@ export async function commitImport(
   for (const env of request.envelopes) {
     let action = actions[env.rowNumber] ?? defaultActionFor(env);
 
-    if (env.lane === "new" && env.cardsightCardId && (action === "commit" || action === "add-as-copy")) {
+    if (env.lane === "new" && env.cardId && (action === "commit" || action === "add-as-copy")) {
       const freshCollision = detectCollision(
         {
-          cardsightCardId: env.cardsightCardId,
+          cardId: env.cardId,
           holdingId: env.payload.id ?? null,
           parallel: env.payload.parallel ?? null,
           gradeCompany: env.payload.gradeCompany ?? null,
@@ -637,7 +637,7 @@ async function applyAction(
     const newId = env.payload.id ? normalizeId(env.payload.id) : normalizeId(generateId());
     const newHolding = mergePayload({ id: newId } as PortfolioHolding, env.payload);
     newHolding.id = newId;
-    newHolding.cardsightCardId = env.cardsightCardId ?? null;
+    newHolding.cardId = env.cardId ?? null;
     doc.holdings[newId] = newHolding;
     return { rowNumber: env.rowNumber, action, outcome: "added", holdingId: newId };
   } catch (err: unknown) {

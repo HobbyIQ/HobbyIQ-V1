@@ -333,7 +333,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
   describe("main-path emit content unchanged (helper migration preserves payload shape)", () => {
     it("main-path payload retains the same canonical field set as the pre-helper inline emit", () => {
       // Pin the field set on the main-path emit — the pre-CF inline payload
-      // emitted: eventType, timestamp, cardsightCardId, playerName, cardYear,
+      // emitted: eventType, timestamp, cardId, playerName, cardYear,
       // product, parallel, gradeCompany, gradeValue, fairMarketValue,
       // predictedPrice, predictedPriceRange, predictedPriceMechanism,
       // forwardProjectionFactor, trendIQ, compsUsed.
@@ -368,7 +368,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       // Pre-CF fields (preserved).
       expect(payload.eventType).toBe("prediction_emitted");
       expect(payload.timestamp).toBeDefined();
-      expect(payload.cardsightCardId).toBe("card-main-pin");
+      expect(payload.cardId).toBe("card-main-pin");
       expect(payload.playerName).toBe("Paul Skenes");
       expect(payload.cardYear).toBe(2024);
       expect(payload.product).toBe("Bowman Chrome");

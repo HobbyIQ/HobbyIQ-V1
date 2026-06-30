@@ -135,7 +135,7 @@ export interface PortfolioHolding {
   // additive and backward-compatible — existing holdings parse and
   // serialize unchanged, same posture as W4's certNumber / certGrader
   // (683b26f).
-  cardsightCardId?: string | null;
+  cardId?: string | null;
   // CF-CARDSIGHT-GRADE-ID-PATTERN — Cardsight leaf grade UUID
   // persisted onto the holding at write time when the resolver
   // matches (gradeCompany, gradeValue, isAuto) to Cardsight's grades
@@ -157,7 +157,7 @@ export interface PortfolioHolding {
   // backend/src/services/cardsight/cardsightGradesTaxonomy.ts.
   // Per InventoryIQ design Section 2.3 R2; per CF-CARDSIGHT-GRADES-
   // ENDPOINT-EVAL (006176d) Finding 2 GREEN. Same posture as R1
-  // (cardsightCardId) -- additive, backward-compatible, no migration.
+  // (cardId) -- additive, backward-compatible, no migration.
   cardsightGradeId?: string | null;
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): pinned-parallel Cardsight UUID

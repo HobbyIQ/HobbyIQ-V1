@@ -173,7 +173,7 @@ describe("CF-CH-RESPONSE-SURFACE-GRADED-ESTIMATES — gradedEstimates rail propa
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
-      .send({ cardsightCardId: "fixture-card-id-2017-judge" });
+      .send({ cardId: "fixture-card-id-2017-judge" });
     expect(res.status).toBe(200);
     expectGradedEstimatesKeyPresent(res.body);
   });

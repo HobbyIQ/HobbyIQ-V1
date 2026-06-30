@@ -1,7 +1,7 @@
 // CF-IMPORT-BE (2026-06-21) — per-row resolver orchestration with bounded
 // concurrency (4-way, per the step-0 rate-limit probe ceiling).
 //
-// Round-trip rows (cardsightCardId present + matches existing) skip
+// Round-trip rows (cardId present + matches existing) skip
 // resolution entirely. Arbitrary rows go through cardsight.mapper's
 // resolveCardId (which already carries the 429/5xx exponential backoff
 // per fetchWithRetry).
@@ -28,8 +28,8 @@ export interface ImportRowEnvelope {
   lane: ImportLane;
   /** Resolution + collision verdict bucket. */
   bucket: ImportBucket;
-  /** Resolved cardsightCardId (from sheet anchor OR resolver call). null when unresolved. */
-  cardsightCardId: string | null;
+  /** Resolved cardId (from sheet anchor OR resolver call). null when unresolved. */
+  cardId: string | null;
   /** Existing holdingId targeted by an UPDATE-lane row. */
   existingHoldingId?: string;
   /** Collision detection result when applicable. */
@@ -44,7 +44,7 @@ export interface ImportRowEnvelope {
 
 export interface NormalizedHoldingPayload {
   id?: string;
-  cardsightCardId?: string | null;
+  cardId?: string | null;
   playerName?: string;
   cardYear?: number;
   product?: string;
@@ -145,7 +145,7 @@ async function processRow(
         rowNumber: row.rowNumber,
         lane: "update",
         bucket: "identity-edited",
-        cardsightCardId: existing.cardsightCardId ?? null,
+        cardId: existing.cardId ?? null,
         existingHoldingId: payload.id,
         payload,
         parseFlags: row.flags,
@@ -156,7 +156,7 @@ async function processRow(
       rowNumber: row.rowNumber,
       lane: "update",
       bucket: "resolved-clean",
-      cardsightCardId: existing.cardsightCardId ?? null,
+      cardId: existing.cardId ?? null,
       existingHoldingId: payload.id,
       payload,
       parseFlags: row.flags,
@@ -165,8 +165,8 @@ async function processRow(
   }
 
   // ─── NEW lane ───────────────────────────────────────────────────────
-  // If cardsightCardId already on the sheet (round-trip), skip resolver.
-  let resolvedCardId: string | null = payload.cardsightCardId ?? null;
+  // If cardId already on the sheet (round-trip), skip resolver.
+  let resolvedCardId: string | null = payload.cardId ?? null;
 
   if (!resolvedCardId) {
     // Arbitrary path: call resolver.
@@ -186,7 +186,7 @@ async function processRow(
       rowNumber: row.rowNumber,
       lane: "new",
       bucket: "unresolved",
-      cardsightCardId: null,
+      cardId: null,
       payload,
       parseFlags: row.flags,
       message: "Resolver could not match this row to a Cardsight catalog entry.",
@@ -196,7 +196,7 @@ async function processRow(
   // Collision check
   const collision = detectCollision(
     {
-      cardsightCardId: resolvedCardId,
+      cardId: resolvedCardId,
       holdingId: payload.id ?? null,
       parallel: payload.parallel ?? null,
       gradeCompany: payload.gradeCompany ?? null,
@@ -206,14 +206,14 @@ async function processRow(
     opts.existingHoldings,
   );
 
-  payload.cardsightCardId = resolvedCardId;
+  payload.cardId = resolvedCardId;
 
   if (collision.collides) {
     return {
       rowNumber: row.rowNumber,
       lane: "new",
       bucket: "resolved-collision",
-      cardsightCardId: resolvedCardId,
+      cardId: resolvedCardId,
       collision,
       payload,
       parseFlags: row.flags,
@@ -225,7 +225,7 @@ async function processRow(
     rowNumber: row.rowNumber,
     lane: "new",
     bucket: "resolved-clean",
-    cardsightCardId: resolvedCardId,
+    cardId: resolvedCardId,
     payload,
     parseFlags: row.flags,
     message: "Resolved to Cardsight catalog; no collision.",
@@ -238,7 +238,7 @@ function extractPayload(row: ParsedRow): NormalizedHoldingPayload {
   const get = (k: string) => row.cells[k]?.value ?? undefined;
 
   out.id = get("holdingId") as string | undefined;
-  out.cardsightCardId = (get("cardsightCardId") as string | undefined) ?? null;
+  out.cardId = (get("cardId") as string | undefined) ?? null;
   out.playerName = get("playerName") as string | undefined;
   out.cardYear = get("cardYear") as number | undefined;
   out.product = get("product") as string | undefined;

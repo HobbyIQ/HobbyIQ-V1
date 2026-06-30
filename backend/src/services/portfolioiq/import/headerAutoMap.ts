@@ -123,14 +123,17 @@ const SYNONYMS: Record<string, string> = {
 };
 
 /**
- * Round-trip detection: a sheet that has `holdingId` OR `cardsightCardId`
+ * Round-trip detection: a sheet that has `holdingId` OR `cardId`
  * in its headers (any case) is treated as a round-trip-schema file —
  * import uses strict parsing + skips auto-map.
  */
-const ROUND_TRIP_ANCHOR_HEADERS = new Set(["holdingid", "cardsightcardid"]);
+// CF-CARDID-RENAME (2026-06-30): accept both the new `cardid` header
+// (post-rename exports) and the legacy `cardsightcardid` (older exports
+// users may still re-import). normalize() lowercases first.
+const ROUND_TRIP_ANCHOR_HEADERS = new Set(["holdingid", "cardid", "cardsightcardid"]);
 
 export interface AutoMapResult {
-  /** True when the file looks like CF-EXPORT-BE's own output (carries holdingId or cardsightCardId). */
+  /** True when the file looks like CF-EXPORT-BE's own output (carries holdingId or cardId). */
   isRoundTrip: boolean;
   /** Mapping from raw sheet header → canonical column header (or null when no map proposed). */
   mapping: Record<string, string | null>;

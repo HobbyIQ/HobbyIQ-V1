@@ -183,7 +183,7 @@ export async function sendAdvancedAlertNotification(
     title: string;
     body: string;
     ruleId: string;
-    cardsightCardId?: string | null;
+    cardId?: string | null;
     scopeType: "card" | "player" | "watchlist" | "holdings";
   },
 ): Promise<SendResult> {
@@ -195,7 +195,7 @@ export async function sendAdvancedAlertNotification(
     data: {
       type: "advanced_alert",
       ruleId: payload.ruleId,
-      cardsightCardId: payload.cardsightCardId ?? null,
+      cardId: payload.cardId ?? null,
       scopeType: payload.scopeType,
     },
   });

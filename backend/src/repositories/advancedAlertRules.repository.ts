@@ -16,7 +16,7 @@ import type { TrendIQCoverage } from "../services/compiq/trendIQ.types.js";
 export type AdvancedAlertScope =
   | {
       type: "card";
-      cardsightCardId: string;
+      cardId: string;
       gradeCompany?: string;
       gradeValue?: number;
     }

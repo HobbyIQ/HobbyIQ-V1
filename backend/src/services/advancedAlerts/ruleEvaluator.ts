@@ -70,15 +70,15 @@ function gradeSuffix(
 }
 
 function targetFromCard(
-  cardsightCardId: string,
+  cardId: string,
   gradeCompany?: string,
   gradeValue?: number,
 ): EvaluationTarget {
   return {
-    key: `card:${cardsightCardId}:${gradeSuffix(gradeCompany, gradeValue)}`,
+    key: `card:${cardId}:${gradeSuffix(gradeCompany, gradeValue)}`,
     request: {
-      playerName: cardsightCardId,
-      cardsightCardId,
+      playerName: cardId,
+      cardId,
       gradeCompany,
       gradeValue,
     },
@@ -117,7 +117,7 @@ function targetFromHolding(holding: PortfolioHolding): EvaluationTarget | null {
   // single helper in portfolioStore.service.ts. Brings this site up to the
   // canonical shape sites 1 and 2 already use — see the helper's doc comment
   // for the seven drift corrections this site adopts (primarily: pinned
-  // cardsightCardId + pinnedAuthoritative flag for stored-cardId holdings,
+  // cardId + pinnedAuthoritative flag for stored-cardId holdings,
   // and `isAuto` declaration so auto holdings stop mixing with non-auto
   // comps in alert pricing). Key/holdingId semantics preserved — the
   // dedup key still includes the per-target grade suffix derived from the
@@ -146,7 +146,7 @@ export async function resolveTargets(
   switch (scope.type) {
     case "card":
       resolved = [
-        targetFromCard(scope.cardsightCardId, scope.gradeCompany, scope.gradeValue),
+        targetFromCard(scope.cardId, scope.gradeCompany, scope.gradeValue),
       ];
       break;
     case "player":
@@ -360,7 +360,7 @@ export async function runAdvancedAlertsEvaluator(): Promise<AdvancedAlertEvaluat
             title: payload.title,
             body: payload.body,
             ruleId: rule.ruleId,
-            cardsightCardId: target.request.cardsightCardId ?? null,
+            cardId: target.request.cardId ?? null,
             scopeType: rule.scope.type,
           });
           summary.pushSent += res.sent;

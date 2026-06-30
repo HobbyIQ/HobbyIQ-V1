@@ -10,7 +10,7 @@
  *
  * The new gate at portfolioStore.service.ts:validateHoldingIdentity
  * requires non-empty `playerName` AND one of:
- *   - non-empty `cardsightCardId` alone (identify-then-save flow), OR
+ *   - non-empty `cardId` alone (identify-then-save flow), OR
  *   - both non-null `cardYear` AND non-empty `product` (free-text flow).
  *
  * Plus a defense-in-depth safety net at repriceHoldingsForUser that
@@ -59,7 +59,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
       .send({
         id: "identity-test-skenes-only",
         playerName: "Paul Skenes",
-        // No cardYear, product, or cardsightCardId — the production
+        // No cardYear, product, or cardId — the production
         // failure shape that landed 201 OK pre-CF.
       });
 
@@ -68,8 +68,8 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
     expect(res.body?.error?.missing).toEqual(["cardYear", "product"]);
     expect(typeof res.body?.error?.message).toBe("string");
     expect(typeof res.body?.error?.hint).toBe("string");
-    // Hint surfaces both satisfying-shape options (cardYear+product OR cardsightCardId).
-    expect(res.body.error.hint).toMatch(/cardsightCardId/);
+    // Hint surfaces both satisfying-shape options (cardYear+product OR cardId).
+    expect(res.body.error.hint).toMatch(/cardId/);
   });
 
   it("missing playerName too: missing[] surfaces playerName first (stable spec order)", async () => {
@@ -89,7 +89,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
     expect(res.body.error.missing).toEqual(["playerName"]);
   });
 
-  it("accepts cardsightCardId-only as a valid identity-bearing shape (identify-then-save flow)", async () => {
+  it("accepts cardId-only as a valid identity-bearing shape (identify-then-save flow)", async () => {
     const session = await signIn();
     const res = await request(app)
       .post("/api/portfolio/holdings")
@@ -100,7 +100,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
         // No cardYear or product, but Cardsight UUID is present.
         // This is the identify-then-save flow: iOS got a UUID back
         // from POST /identify and saves without filling in text fields.
-        cardsightCardId: "b676dee0-3ec0-4a15-af9f-8dfd3e73b039",
+        cardId: "b676dee0-3ec0-4a15-af9f-8dfd3e73b039",
       });
 
     expect([200, 201]).toContain(res.status);
@@ -130,7 +130,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
         id: "identity-test-year-only",
         playerName: "Mike Trout",
         cardYear: 2011,
-        // No product, no cardsightCardId.
+        // No product, no cardId.
       });
 
     expect(res.status).toBe(400);
@@ -154,7 +154,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
     expect(res.body.error.missing).toEqual(["cardYear"]);
   });
 
-  it("rejects empty-string cardsightCardId (treated as absent)", async () => {
+  it("rejects empty-string cardId (treated as absent)", async () => {
     const session = await signIn();
     const res = await request(app)
       .post("/api/portfolio/holdings")
@@ -162,7 +162,7 @@ describe("addHolding identity validation (POST /api/portfolio/holdings)", () => 
       .send({
         id: "identity-test-csid-empty",
         playerName: "Paul Skenes",
-        cardsightCardId: "",
+        cardId: "",
       });
 
     expect(res.status).toBe(400);
@@ -256,7 +256,7 @@ const userId = "test-reprice-cardless-user";
       // Intentionally null/missing identity — the legacy shape.
       cardYear: null,
       product: null,
-      cardsightCardId: null,
+      cardId: null,
       quantity: 1,
       purchasePrice: 100,
       totalCostBasis: 100,
@@ -296,7 +296,7 @@ const userId = "test-reprice-cardless-user";
     warnSpy.mockRestore();
   });
 
-  it("cardsightCardId-only legacy row: NOT skipped by the safety net (csid provides identity)", async () => {
+  it("cardId-only legacy row: NOT skipped by the safety net (csid provides identity)", async () => {
 const userId = "test-reprice-csid-only-user";
     const doc = await readUserDoc(userId);
     const holdingId = "legacy-csid-only-row";
@@ -305,7 +305,7 @@ const userId = "test-reprice-csid-only-user";
       playerName: "Paul Skenes",
       cardYear: null,
       product: null,
-      cardsightCardId: "b676dee0-3ec0-4a15-af9f-8dfd3e73b039",
+      cardId: "b676dee0-3ec0-4a15-af9f-8dfd3e73b039",
       quantity: 1,
       purchasePrice: 100,
       totalCostBasis: 100,
@@ -317,7 +317,7 @@ const userId = "test-reprice-csid-only-user";
     const result = await repriceHoldingsForUser(userId, "test-csid-survives");
 
     // The safety net only skips when BOTH cardYear is null AND
-    // cardsightCardId is null. Csid-only legacy rows fall through
+    // cardId is null. Csid-only legacy rows fall through
     // to the normal repricing path (where computeEstimate decides
     // its own pass/skip based on comp data — out of scope for this test).
     const update = result.updates.find((u) => u.id === holdingId);

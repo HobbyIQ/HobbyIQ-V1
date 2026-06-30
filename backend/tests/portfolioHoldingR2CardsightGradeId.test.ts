@@ -1,7 +1,7 @@
 // CF-CARDSIGHT-GRADE-ID-PATTERN -- PortfolioHolding cardsightGradeId
 // round-trip integration tests.
 //
-// Mirrors the W4 cert-fields + R1 cardsightCardId test patterns at
+// Mirrors the W4 cert-fields + R1 cardId test patterns at
 // portfolioHoldingCertFields.test.ts (683b26f) +
 // portfolioHoldingR1CardsightCardId.test.ts (bf836c0). Verifies the
 // additive R2 field shipped by this CF:

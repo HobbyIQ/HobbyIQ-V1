@@ -10,7 +10,7 @@
  *   1. INCLUDES parallelId on the request when the holding stores one.
  *   2. OMITS parallelId (undefined, not null) when the holding lacks it.
  *   3. OMITS when stored as explicit `null` (legacy holdings shape).
- *   4. Back-compat: an unpinned holding (no cardsightCardId) still omits
+ *   4. Back-compat: an unpinned holding (no cardId) still omits
  *      parallelId cleanly without crashing the builder.
  *
  * Why it matters — the engine wire trace:
@@ -50,7 +50,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
       product: "Bowman Chrome",
       parallel: "Green Shimmer Refractor /99",
       isAuto: true,
-      cardsightCardId: HARTMAN_PARENT,
+      cardId: HARTMAN_PARENT,
       parallelId: GREEN_SHIMMER_PARALLEL_ID,
     });
 
@@ -59,7 +59,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
     expect(req.parallelId).toBe(GREEN_SHIMMER_PARALLEL_ID);
     // Sanity: the rest of the shape is unchanged.
     expect(req.playerName).toBe("Eric Hartman");
-    expect(req.cardsightCardId).toBe(HARTMAN_PARENT);
+    expect(req.cardId).toBe(HARTMAN_PARENT);
     expect(req.parallel).toBe("Green Shimmer Refractor /99");
     expect(req.pinnedAuthoritative).toBe(true);
   });
@@ -67,7 +67,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
   it("OMITS parallelId (undefined, not null) when the holding lacks one", () => {
     const holding = holdingWith({
       playerName: "Mike Trout",
-      cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+      cardId: "fda530ab-e925-460e-ab88-63199ef975e9",
     });
 
     const req = buildEstimateRequestFromHolding(holding);
@@ -81,7 +81,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
   it("OMITS parallelId when stored as explicit null (legacy holding write)", () => {
     const holding = holdingWith({
       playerName: "Mike Trout",
-      cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+      cardId: "fda530ab-e925-460e-ab88-63199ef975e9",
       parallelId: null,
     } as Partial<PortfolioHolding>);
 
@@ -90,7 +90,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
     expect(req.parallelId).toBeUndefined();
   });
 
-  it("back-compat: unpinned holding (no cardsightCardId) still omits parallelId cleanly", () => {
+  it("back-compat: unpinned holding (no cardId) still omits parallelId cleanly", () => {
     const holding = holdingWith({
       playerName: "Paul Skenes",
       cardYear: 2024,
@@ -100,7 +100,7 @@ describe("buildEstimateRequestFromHolding — parallelId threading (CF-HOLDING-R
     const req = buildEstimateRequestFromHolding(holding);
 
     expect(req.parallelId).toBeUndefined();
-    expect(req.cardsightCardId).toBeUndefined();
+    expect(req.cardId).toBeUndefined();
     expect(req.pinnedAuthoritative).toBe(false);
   });
 });

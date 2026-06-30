@@ -2,11 +2,11 @@
 //
 // Ships the canonical 28-column schema CF-IMPORT-BE will consume as its
 // round-trip contract. Column order is deliberate:
-//   1. Stable identity (cardsightCardId, holdingId) — the import's
+//   1. Stable identity (cardId, holdingId) — the import's
 //      resolution-free anchor. Re-import without editing these = zero
 //      resolver calls.
 //   2. Card identity (user-editable; drives resolver fallback when
-//      cardsightCardId absent).
+//      cardId absent).
 //   3. Grade.
 //   4. Acquisition (full user-editable surface).
 //   5. Listing intent.
@@ -52,7 +52,7 @@ export interface ExportColumn {
 export const EXPORT_COLUMNS: ReadonlyArray<ExportColumn> = [
   // ─── Stable identity (round-trip anchor) ───────────────────────────────
   { header: "holdingId",            key: "id",                  group: "identity" },
-  { header: "cardsightCardId",      key: "cardsightCardId",     group: "identity" },
+  { header: "cardId",      key: "cardId",     group: "identity" },
   { header: "cardsightGradeId",     key: "cardsightGradeId",    group: "identity" },
   // ─── Card identity (user-editable; resolver fallback) ──────────────────
   { header: "playerName",           key: "playerName",          group: "identity-edit" },

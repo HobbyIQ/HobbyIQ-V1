@@ -1,16 +1,16 @@
 // CF-PRICE-BY-ID-MIGRATION — coverage retained post-CF-CARDHEDGE-
 // NAMING-CLEANUP. Dual-accept transition for the legacy cardHedgeCardId
-// wire key has been removed; cardsightCardId is the sole accepted form.
+// wire key has been removed; cardId is the sole accepted form.
 //
 // Covers:
 //   1. selectSalesByGrade helper (Raw, PSA 10, BGS 9.5, malformed grade,
 //      missing company, missing grade value) — direct unit tests of the
 //      client-side grade filter.
-//   2. /api/compiq/price-by-id cardsightCardId wire-key handling.
+//   2. /api/compiq/price-by-id cardId wire-key handling.
 //   3. /api/compiq/price-by-id missing-field rejection: 400 when the
-//      cardsightCardId field is missing or empty.
+//      cardId field is missing or empty.
 //   4. Legacy cardHedgeCardId in request body is silently ignored (no
-//      destructure, no dual-accept) — request lacking cardsightCardId
+//      destructure, no dual-accept) — request lacking cardId
 //      returns 400 regardless of whether legacy field is present.
 
 import { describe, expect, it, vi } from "vitest";
@@ -203,20 +203,20 @@ describe("selectSalesByGrade (CF-PRICE-BY-ID-MIGRATION grade filter)", () => {
 });
 
 describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CLEANUP)", () => {
-  it("accepts the cardsightCardId wire key", async () => {
+  it("accepts the cardId wire key", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
-      .send({ cardsightCardId: "fixture-card-id" });
+      .send({ cardId: "fixture-card-id" });
     expect(res.status).toBe(200);
   });
 
-  it("400 when cardsightCardId is missing, error names the field", async () => {
+  it("400 when cardId is missing, error names the field", async () => {
     const res = await request(app).post("/api/compiq/price-by-id").set("x-session-id", "test-sess").send({});
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       success: false,
-      error: 'Missing "cardsightCardId" field',
+      error: 'Missing "cardId" field',
     });
   });
 
@@ -228,20 +228,20 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
     expect(res.status).toBe(400);
     expect(res.body).toEqual({
       success: false,
-      error: 'Missing "cardsightCardId" field',
+      error: 'Missing "cardId" field',
     });
   });
 
-  it("cardsightCardId is used when both keys are sent (legacy silently ignored)", async () => {
+  it("cardId is used when both keys are sent (legacy silently ignored)", async () => {
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
       .send({
-        cardsightCardId: "fixture-card-id",
+        cardId: "fixture-card-id",
         cardHedgeCardId: "legacy-card-id",
       });
     expect(res.status).toBe(200);
-    expect(res.body.cardsightCardId).toBe("fixture-card-id");
+    expect(res.body.cardId).toBe("fixture-card-id");
   });
 
   // CF-PARALLEL-AWARE-VALUE (2026-06-09): parallelId UUID validation.
@@ -250,7 +250,7 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
       .send({
-        cardsightCardId: "00000000-0000-0000-0000-000000000000",
+        cardId: "00000000-0000-0000-0000-000000000000",
         parallelId: "not-a-uuid",
       });
     expect(res.status).toBe(400);
@@ -262,7 +262,7 @@ describe("/api/compiq/price-by-id wire-key handling (post-CF-CARDHEDGE-NAMING-CL
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
       .send({
-        cardsightCardId: "00000000-0000-0000-0000-000000000000",
+        cardId: "00000000-0000-0000-0000-000000000000",
         parallelId: "b44f73a5-3100-41d5-8235-047636739e6e",
         parallelName: "Gold",
       });

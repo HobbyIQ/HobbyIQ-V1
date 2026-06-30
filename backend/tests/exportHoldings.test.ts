@@ -31,7 +31,7 @@ function makeHolding(overrides: Partial<PortfolioHoldingWire> = {}): PortfolioHo
     cardNumber: "CPA-EHA",
     parallel: "Blue X-Fractor /150",
     isAuto: true,
-    cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+    cardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
     quantity: 1,
     purchasePrice: 100,
     totalCostBasis: 100,
@@ -73,7 +73,7 @@ describe("CF-EXPORT-BE — canonical schema (column order = import contract)", (
     expect(EXPORT_COLUMNS.length).toBeGreaterThan(20);
     const headers = exportColumnHeaders();
     // First three are the round-trip anchor identity columns
-    expect(headers.slice(0, 3)).toEqual(["holdingId", "cardsightCardId", "cardsightGradeId"]);
+    expect(headers.slice(0, 3)).toEqual(["holdingId", "cardId", "cardsightGradeId"]);
     // Last seven are computed (read-only on import)
     expect(headers.slice(-7)).toEqual([
       "fairMarketValue", "estimatedValue", "valuationStatus",
@@ -119,7 +119,7 @@ describe("CF-EXPORT-BE — buildExportRows", () => {
     expect(rows).toHaveLength(1);
     const r = rows[0]!;
     expect(r["holdingId"]).toBe("holding-test-1");
-    expect(r["cardsightCardId"]).toBe("befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
+    expect(r["cardId"]).toBe("befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
     expect(r["playerName"]).toBe("Eric Hartman");
     expect(r["isAuto"]).toBe("TRUE");
     expect(r["parallel"]).toBe("Blue X-Fractor /150");
@@ -149,7 +149,7 @@ describe("CF-EXPORT-BE — buildHoldingsExport csv", () => {
     const csv = out.buffer as string;
     const lines = csv.split("\r\n");
     expect(lines.length).toBe(2);
-    expect(lines[0]).toContain("holdingId,cardsightCardId");
+    expect(lines[0]).toContain("holdingId,cardId");
     expect(lines[1]).toContain("holding-test-1");
   });
 
@@ -233,7 +233,7 @@ async function addTestHolding(sessionId: string, id: string, overrides: Partial<
       cardYear: 2024,
       product: "Bowman Chrome",
       cardTitle: "2024 Bowman Chrome Auto",
-      cardsightCardId: "test-cardsight-id-" + id,
+      cardId: "test-cardsight-id-" + id,
       quantity: 1,
       purchasePrice: 100,
       totalCostBasis: 100,
@@ -269,7 +269,7 @@ describe("CF-EXPORT-BE — GET /api/portfolio/export route", () => {
     expect(res.headers["content-type"]).toContain("text/csv");
     expect(res.headers["content-disposition"]).toMatch(/\.csv"/);
     // Body should be a CSV string with the canonical header row
-    expect(res.text).toContain("holdingId,cardsightCardId");
+    expect(res.text).toContain("holdingId,cardId");
   });
 
   it("round-trips through xlsx parser: every column header lands in the sheet header row", async () => {

@@ -90,7 +90,7 @@ function makeRule(overrides: Partial<AdvancedAlertRule> = {}): AdvancedAlertRule
     ruleId: "r-1",
     userId: "u-1",
     name: "Test rule",
-    scope: { type: "card", cardsightCardId: "c-1" },
+    scope: { type: "card", cardId: "c-1" },
     combinator: "AND",
     conditions: [{ kind: "predicted_direction", equals: "up" }],
     cooldownMin: 360,
@@ -178,14 +178,14 @@ describe("cooldownActive", () => {
 // ─── resolveTargets ─────────────────────────────────────────────────────────
 
 describe("resolveTargets — fan-out per scope", () => {
-  it("scope=card resolves to one target with cardsightCardId pinned", async () => {
+  it("scope=card resolves to one target with cardId pinned", async () => {
     const r = await resolveTargets(
       makeRule({
-        scope: { type: "card", cardsightCardId: "c-abc", gradeCompany: "PSA", gradeValue: 10 },
+        scope: { type: "card", cardId: "c-abc", gradeCompany: "PSA", gradeValue: 10 },
       }),
     );
     expect(r.targets.length).toBe(1);
-    expect(r.targets[0].request.cardsightCardId).toBe("c-abc");
+    expect(r.targets[0].request.cardId).toBe("c-abc");
     expect(r.targets[0].request.gradeCompany).toBe("PSA");
     expect(r.targets[0].holdingId).toBeNull();
     expect(r.overflow).toBe(false);
@@ -197,7 +197,7 @@ describe("resolveTargets — fan-out per scope", () => {
     );
     expect(r.targets.length).toBe(1);
     expect(r.targets[0].request.playerName).toBe("Paul Skenes");
-    expect(r.targets[0].request.cardsightCardId).toBeUndefined();
+    expect(r.targets[0].request.cardId).toBeUndefined();
   });
 
   it("scope=watchlist fans out to one target per watchlist entry", async () => {
@@ -258,15 +258,15 @@ describe("resolveTargets — fan-out per scope", () => {
   // See the helper's doc comment in portfolioStore.service.ts for the full
   // drift inventory.
 
-  it("CF-CONSOLIDATION: pinned holding with sparse identity carries cardsightCardId + pinnedAuthoritative=true (drift correction #7 — the explicit CF goal)", async () => {
-    // The Drew-Trout shape: cardsightCardId stored, identity fields sparse.
+  it("CF-CONSOLIDATION: pinned holding with sparse identity carries cardId + pinnedAuthoritative=true (drift correction #7 — the explicit CF goal)", async () => {
+    // The Drew-Trout shape: cardId stored, identity fields sparse.
     portfolioMock.mockResolvedValueOnce({
       id: "u-1", userId: "u-1",
       holdings: {
         h1: {
           id: "h1",
           playerName: "Mike Trout",
-          cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+          cardId: "fda530ab-e925-460e-ab88-63199ef975e9",
           // intentionally NO cardYear/product/parallel/grade — sparse identity
         },
       } as any,
@@ -275,13 +275,13 @@ describe("resolveTargets — fan-out per scope", () => {
     const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
     expect(r.targets.length).toBe(1);
     const req = r.targets[0].request;
-    expect(req.cardsightCardId).toBe("fda530ab-e925-460e-ab88-63199ef975e9");
+    expect(req.cardId).toBe("fda530ab-e925-460e-ab88-63199ef975e9");
     expect(req.pinnedAuthoritative).toBe(true);
     // playerName preserved REAL — no UUID overload, corpus-clean rule.
     expect(req.playerName).toBe("Mike Trout");
   });
 
-  it("CF-CONSOLIDATION: unpinned holding (no cardsightCardId) → cardsightCardId undefined + pinnedAuthoritative=false (default-off invariant)", async () => {
+  it("CF-CONSOLIDATION: unpinned holding (no cardId) → cardId undefined + pinnedAuthoritative=false (default-off invariant)", async () => {
     portfolioMock.mockResolvedValueOnce({
       id: "u-1", userId: "u-1",
       holdings: {
@@ -290,7 +290,7 @@ describe("resolveTargets — fan-out per scope", () => {
           playerName: "Paul Skenes",
           cardYear: 2024,
           product: "Topps Chrome",
-          // no cardsightCardId
+          // no cardId
         },
       } as any,
       ledger: [], priceHistoryByHolding: {}, alerts: [], recommendationFeedback: [],
@@ -298,7 +298,7 @@ describe("resolveTargets — fan-out per scope", () => {
     const r = await resolveTargets(makeRule({ scope: { type: "holdings" } }));
     expect(r.targets.length).toBe(1);
     const req = r.targets[0].request;
-    expect(req.cardsightCardId).toBeUndefined();
+    expect(req.cardId).toBeUndefined();
     expect(req.pinnedAuthoritative).toBe(false);
     expect(req.playerName).toBe("Paul Skenes");
     expect(req.cardYear).toBe(2024);
@@ -363,7 +363,7 @@ describe("runAdvancedAlertsEvaluator — pass-level orchestration", () => {
   it("fires APNs with data.type=advanced_alert on rule match", async () => {
     listActiveRulesMock.mockResolvedValueOnce([
       makeRule({
-        scope: { type: "card", cardsightCardId: "c-1" },
+        scope: { type: "card", cardId: "c-1" },
         combinator: "AND",
         conditions: [{ kind: "predicted_direction", equals: "up" }],
       }),
@@ -383,7 +383,7 @@ describe("runAdvancedAlertsEvaluator — pass-level orchestration", () => {
     const pushArg = sendAdvancedAlertMock.mock.calls[0][1] as any;
     expect(pushArg.ruleId).toBe("r-1");
     expect(pushArg.scopeType).toBe("card");
-    expect(pushArg.cardsightCardId).toBe("c-1");
+    expect(pushArg.cardId).toBe("c-1");
   });
 
   it("skips fire when cooldown is active", async () => {
@@ -421,8 +421,8 @@ describe("runAdvancedAlertsEvaluator — pass-level orchestration", () => {
 
   it("dedups identical targets across rules within one pass", async () => {
     listActiveRulesMock.mockResolvedValueOnce([
-      makeRule({ ruleId: "r-A", scope: { type: "card", cardsightCardId: "shared" } }),
-      makeRule({ ruleId: "r-B", scope: { type: "card", cardsightCardId: "shared" } }),
+      makeRule({ ruleId: "r-A", scope: { type: "card", cardId: "shared" } }),
+      makeRule({ ruleId: "r-B", scope: { type: "card", cardId: "shared" } }),
     ]);
     computeEstimateMock.mockResolvedValue({
       fairMarketValue: 100,

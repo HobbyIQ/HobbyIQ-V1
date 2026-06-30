@@ -120,7 +120,7 @@ function makeUser(plan: string) {
 }
 
 const CARD_ID = "00000000-1111-2222-3333-444455556666";
-const VALID_BODY = { cardsightCardId: CARD_ID };
+const VALID_BODY = { cardId: CARD_ID };
 
 let app: any;
 
@@ -193,7 +193,7 @@ describe("POST /api/compiq/trendiq (trendIQComposite, investor+)", () => {
       .send(VALID_BODY);
     expect(r.status).toBe(200);
     expect(r.body.success).toBe(true);
-    expect(r.body.cardsightCardId).toBe(CARD_ID);
+    expect(r.body.cardId).toBe(CARD_ID);
     expect(r.body.trendIQ.composite).toBe(1.18);
     expect(r.body.trendIQ.coverage).toBe("full");
     expect(r.body.signalsLastUpdated).toBe(FIXTURE_TRENDIQ.lastUpdated);
@@ -217,14 +217,14 @@ describe("POST /api/compiq/trendiq (trendIQComposite, investor+)", () => {
     expect(r.body.trendIQ.composite).toBe(1.18);
   });
 
-  it("400 when cardsightCardId missing", async () => {
+  it("400 when cardId missing", async () => {
     setUser(makeUser("investor"));
     const r = await request(app)
       .post("/api/compiq/trendiq")
       .set("x-session-id", "s")
       .send({});
     expect(r.status).toBe(400);
-    expect(r.body.error).toMatch(/cardsightCardId/);
+    expect(r.body.error).toMatch(/cardId/);
   });
 
   it("cacheWrap dedups: two back-to-back calls invoke computeEstimate once", async () => {
@@ -319,14 +319,14 @@ describe("POST /api/compiq/trendiq/full (trendIQLayer3Full, pro_seller)", () => 
     expect(r.body.segmentTrajectoryFull.perWindow.post.mean).toBe(120.5);
   });
 
-  it("400 when cardsightCardId missing", async () => {
+  it("400 when cardId missing", async () => {
     setUser(makeUser("pro_seller"));
     const r = await request(app)
       .post("/api/compiq/trendiq/full")
       .set("x-session-id", "s")
       .send({});
     expect(r.status).toBe(400);
-    expect(r.body.error).toMatch(/cardsightCardId/);
+    expect(r.body.error).toMatch(/cardId/);
   });
 
   it("segmentTrajectoryFull = null when capture hook never fires (sparse pool path)", async () => {

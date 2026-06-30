@@ -30,7 +30,7 @@
  *
  *   - compiq:price-by-id:v4:<cardId>|<gradeCo><gradeVal>
  *       Route-level /api/compiq/price-by-id response cache. Payload:
- *       { _v: { cardsightCardId, cardIdentity:{card_id,...}, marketTier,
+ *       { _v: { cardId, cardIdentity:{card_id,...}, marketTier,
  *               recentComps, ... }, _ts: epoch_ms }
  *
  * Mismatch rule (BOTH namespaces): the key's <cardId> portion must equal

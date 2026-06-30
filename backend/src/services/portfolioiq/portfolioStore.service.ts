@@ -193,7 +193,7 @@ export interface TradeOutgoingRecord {
 
 export interface TradeIncomingRecord {
   holdingId: string;          // new holding id
-  cardsightCardId?: string;
+  cardId?: string;
   cardTitle: string;
   grade?: string;
   fmvAtTrade: number;
@@ -227,6 +227,32 @@ interface RecommendationFeedback {
   createdAt: string;
 }
 
+// CF-CARDID-RENAME (2026-06-30): existing Cosmos docs store the holding
+// catalog id under the legacy field name `cardsightCardId`. Internal code
+// reads it via the new `cardId`. Normalize at the data boundary so the
+// rest of the codebase never sees the legacy name.
+//
+// This is a one-way migration helper — written data only emits `cardId`
+// (see writeUserDoc); the legacy field is silently dropped at next save.
+// Read both, write new: safe rollback if a regression turns up because
+// the data path still serves correctly during the transition.
+function normalizeHoldingCatalogId(holding: Record<string, unknown> | undefined): void {
+  if (!holding) return;
+  if (holding.cardId == null && typeof holding.cardsightCardId === "string") {
+    holding.cardId = holding.cardsightCardId;
+  }
+  // Don't delete legacy field here — preserve it through the read so a
+  // single deploy can be rolled back without losing data; the field is
+  // dropped at write time by writeUserDoc-side normalization.
+}
+
+function normalizeUserDocHoldings(doc: UserDoc | null | undefined): void {
+  if (!doc?.holdings) return;
+  for (const h of Object.values(doc.holdings)) {
+    normalizeHoldingCatalogId(h as unknown as Record<string, unknown> | undefined);
+  }
+}
+
 export async function readUserDoc(userId: string): Promise<UserDoc> {
   const cached = getCached(userId);
   if (cached) return cached;
@@ -247,14 +273,15 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
       });
     }
     const doc = testMemStore.get(userId)!;
+    normalizeUserDocHoldings(doc);
     setCache(userId, doc);
     return doc;
   }
-  
+
   if (!container) {
     throw new Error("[portfolio] Cosmos container is not available and test mode is not enabled");
   }
-  
+
   try {
     const { resource } = await container.item(userId, userId).read<UserDoc>();
     const doc = resource
@@ -273,6 +300,9 @@ export async function readUserDoc(userId: string): Promise<UserDoc> {
           alerts: [],
           recommendationFeedback: [],
         };
+    // CF-CARDID-RENAME (2026-06-30): hoist legacy cardsightCardId → cardId
+    // on any holding still carrying the old field name.
+    normalizeUserDocHoldings(doc);
     setCache(userId, doc);
     return doc;
   } catch (err: any) {
@@ -935,7 +965,7 @@ export function shimmedCardTitle(holding: PortfolioHolding): string {
 //      grades (legacy data) to numbers. Site 3's type-narrow
 //      (`typeof === "number" ? ... : undefined`) dropped string grades
 //      silently.
-//   7. cardsightCardId + pinnedAuthoritative: the explicit CF goal. Site 3
+//   7. cardId + pinnedAuthoritative: the explicit CF goal. Site 3
 //      previously did not pin, so sparse-identity holdings re-resolved by
 //      name search in the engine — same mis-resolution shape that hit
 //      persistence sites (Trout $331 → $2) until 3e7cf30 + f6fda5d.
@@ -947,7 +977,7 @@ export function buildEstimateRequestFromHolding(
   holding: PortfolioHolding,
 ): CompIQEstimateRequest {
   const pinnedCardId =
-    String(holding.cardsightCardId ?? "").trim() || undefined;
+    String(holding.cardId ?? "").trim() || undefined;
   return {
     playerName: String(holding.playerName ?? "").trim(),
     cardYear: shimmedCardYear(holding),
@@ -958,7 +988,7 @@ export function buildEstimateRequestFromHolding(
       String(holding.gradingCompany ?? holding.gradeCompany ?? "").trim() ||
       undefined,
     gradeValue: toNumber((holding as any).gradeValue, 0) || undefined,
-    cardsightCardId: pinnedCardId,
+    cardId: pinnedCardId,
     // CF-HOLDING-REFRESH-PARALLELID-THREAD (2026-06-26): thread the
     // holding's stored parallelId into the engine input so the CH
     // bridge canonicalize step fires on every refresh path (autoPrice
@@ -987,7 +1017,7 @@ export function buildEstimateRequestFromHolding(
 // CF-IDENTITY-HYDRATION (2026-06-18): backfill identity fields on a holding
 // from the engine's resolved Cardsight catalog identity.
 //
-// Why: a holding can carry a correct cardsightCardId but empty identity
+// Why: a holding can carry a correct cardId but empty identity
 // fields (year/set/product/parallel/cardNumber/isAuto). The pinned-id fix
 // (3e7cf30 + f6fda5d + bda96e4) makes PRICING correct on those holdings.
 // This helper makes IDENTITY correct too — titles auto-compose, holding
@@ -1014,7 +1044,7 @@ export function buildEstimateRequestFromHolding(
 //
 // Safety rules:
 //   1. PIN-AUTHORITATIVE GUARD. Hydrate ONLY when the engine's resolved
-//      card_id matches the holding's stored cardsightCardId. This
+//      card_id matches the holding's stored cardId. This
 //      rejects:
 //        - unpinned holdings (engine resolves by name; resolution may
 //          land on a different card than the user intends, see the
@@ -1079,7 +1109,7 @@ export function hydrateHoldingIdentityFromEstimate(
   // Gate 2 — pin-authoritative match. Only hydrate when the engine's
   // resolved card_id matches what's stored on the holding. Rejects
   // unpinned holdings (engine resolved by name) AND vendor-flap cases.
-  const storedCardId = String(holding.cardsightCardId ?? "").trim();
+  const storedCardId = String(holding.cardId ?? "").trim();
   if (storedCardId.length === 0) return {};
   const resolvedCardId = String(cardIdentity.card_id ?? "").trim();
   if (resolvedCardId.length === 0 || resolvedCardId !== storedCardId) return {};
@@ -1218,7 +1248,7 @@ function stripDeprecatedHoldingKeys(
   return clean;
 }
 
-// CF-INVENTORYIQ-R1 — write-side normalizer for `cardsightCardId`.
+// CF-INVENTORYIQ-R1 — write-side normalizer for `cardId`.
 // Applied by addHolding + updateHolding so the stored form is always
 // the bare Cardsight UUID regardless of which shape the client sends.
 //   - non-string input (undefined / null): pass through unchanged
@@ -1230,16 +1260,16 @@ function stripDeprecatedHoldingKeys(
 //     or the prefixed form (event count > 0 -> iOS contract drift
 //     worth fixing in W5-iOS)
 //   - bare UUID (or any other string shape): pass through unchanged
-function normalizeR1CardsightCardId<T extends { cardsightCardId?: string | null }>(
+function normalizeR1CardsightCardId<T extends { cardId?: string | null }>(
   holding: T,
   holdingId: string,
   source: string,
 ): T {
-  const raw = holding.cardsightCardId;
+  const raw = holding.cardId;
   if (typeof raw !== "string") return holding;
 
   if (raw === "") {
-    return { ...holding, cardsightCardId: null };
+    return { ...holding, cardId: null };
   }
 
   if (raw.startsWith("cardsight:")) {
@@ -1249,7 +1279,7 @@ function normalizeR1CardsightCardId<T extends { cardsightCardId?: string | null 
       holdingId,
       prefixedForm: raw.slice(0, 30) + (raw.length > 30 ? "..." : ""),
     }));
-    return { ...holding, cardsightCardId: raw.slice("cardsight:".length) };
+    return { ...holding, cardId: raw.slice("cardsight:".length) };
   }
 
   return holding;
@@ -1683,7 +1713,7 @@ async function autoPriceHolding(
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): graded-rail resolution.
   // Run when the holding is graded (gradeCompany + gradeValue present
-  // and well-formed) AND we have a cardsightCardId to fetch pricing
+  // and well-formed) AND we have a cardId to fetch pricing
   // for. The rail produces 4 entries per pricing payload; match the
   // holding's grade against them and branch per the resolution tree:
   //   • no match (engine GUARD-skipped the grade because there's ≥1
@@ -1696,7 +1726,7 @@ async function autoPriceHolding(
   //   • match insufficient → fairMarketValue + estimatedValue both null;
   //     estimateBasis = entry.basis (the scope-labeled "why" prose for
   //     iOS tap-state); valuationStatus = "pending".
-  // Ungraded holdings or holdings without cardsightCardId skip the rail
+  // Ungraded holdings or holdings without cardId skip the rail
   // entirely; their valuation is the existing fairValue path, stamped
   // valuationStatus = "observed" to populate the new field.
   //
@@ -1714,9 +1744,9 @@ async function autoPriceHolding(
   })();
   const isGraded =
     normalizedGradeCompany.length > 0 && normalizedGradeValue !== null;
-  const cardsightCardId =
-    typeof holding.cardsightCardId === "string" && holding.cardsightCardId.length > 0
-      ? holding.cardsightCardId
+  const cardId =
+    typeof holding.cardId === "string" && holding.cardId.length > 0
+      ? holding.cardId
       : null;
 
   let railResolution: {
@@ -1736,9 +1766,9 @@ async function autoPriceHolding(
     isEstimate: boolean;
   } | null = null;
 
-  if (isGraded && cardsightCardId) {
+  if (isGraded && cardId) {
     try {
-      const pricing = await getPricingForMarketRead(cardsightCardId);
+      const pricing = await getPricingForMarketRead(cardId);
       if (pricing && !pricing.notFound) {
         const parallelId =
           typeof (holding as { parallelId?: string | null }).parallelId === "string"
@@ -1769,7 +1799,7 @@ async function autoPriceHolding(
           isThinMarket: !(fairValue > 0),
           gradeBreakdown,
           source: "portfolio.autoPriceHolding",
-          cardId: cardsightCardId,
+          cardId: cardId,
         });
         const targetLabel = `${normalizedGradeCompany} ${normalizedGradeValue}`;
         const match = compiled.estimates.find((e) => {
@@ -1895,8 +1925,8 @@ async function autoPriceHolding(
     anchorSampleSize: number;
   } | null = null;
   const earlyCardId =
-    typeof holding.cardsightCardId === "string" && holding.cardsightCardId.length > 0
-      ? holding.cardsightCardId
+    typeof holding.cardId === "string" && holding.cardId.length > 0
+      ? holding.cardId
       : null;
   if (
     earlyCardId &&
@@ -2003,7 +2033,7 @@ async function autoPriceHolding(
     : null;
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): merge railResolution into the
-  // stamped holding. Ungraded / no-cardsightCardId path: railResolution
+  // stamped holding. Ungraded / no-cardId path: railResolution
   // is null → fall back to engine-classification reading below.
   //
   // CF-A(a) — T3 BASE-AUTO FLOOR RE-BUCKET: when railResolution is null
@@ -2038,7 +2068,7 @@ async function autoPriceHolding(
   );
 
   // CF-AUTOPRICE-GRADE-LADDER-FALLBACK (2026-06-28): when the engine
-  // produced null/zero FMV AND we have a cardsightCardId, fall through
+  // produced null/zero FMV AND we have a cardId, fall through
   // to the grade-ladder anchor mechanism we own end-to-end (same one
   // surfaced at /price-by-id in CF-CH-NEAREST-GRADED-ANCHOR PR #164).
   // This rescues the "CH has prices, engine couldn't anchor" class
@@ -2052,7 +2082,7 @@ async function autoPriceHolding(
   //     a real FMV, ladder not needed)
   //   - rail "estimated" path: no change (T3 base-auto floor already set
   //     estimatedValue; ladder would compete needlessly)
-  //   - everything else with fairValue <= 0 AND cardsightCardId: try ladder
+  //   - everything else with fairValue <= 0 AND cardId: try ladder
   //
   // Synthesizes the same shape as the T3 estimated path so the wire-
   // shape / iOS rendering treats both identically.
@@ -2076,13 +2106,13 @@ async function autoPriceHolding(
   const railNoUsableFmv =
     !(typeof resolved.fairMarketValueOverride === "number" && resolved.fairMarketValueOverride > 0);
   if (
-    cardsightCardId &&
+    cardId &&
     railNoUsableFmv &&
     railNoUsableEstimate
   ) {
     const ladder = await applyGradeLadderFallback({
       holding,
-      cardId: cardsightCardId,
+      cardId: cardId,
       source: "portfolio.autoPriceHolding",
     });
     if (ladder) {
@@ -3032,7 +3062,7 @@ export async function updateLedgerEntry(req: Request, res: Response) {
  * Witt class is worse because it looks correct.
  *
  * The gate requires non-empty `playerName` AND at least one of:
- *   - `cardsightCardId` alone (covers identify-then-save flows where
+ *   - `cardId` alone (covers identify-then-save flows where
  *     iOS holds a Cardsight UUID without text fields), OR
  *   - both `cardYear` AND `product` (free-text identity, no Cardsight UUID).
  *
@@ -3055,8 +3085,8 @@ function validateHoldingIdentity(
     typeof holding.product === "string" ? holding.product.trim() : "";
   const hasProduct = productRaw !== "";
   const csidRaw =
-    typeof holding.cardsightCardId === "string"
-      ? holding.cardsightCardId.trim()
+    typeof holding.cardId === "string"
+      ? holding.cardId.trim()
       : "";
   const hasCardsightCardId = csidRaw !== "";
 
@@ -3084,7 +3114,7 @@ function respondMissingIdentity(res: Response, missing: string[]): void {
       message: "Holding requires card identity",
       missing: ordered,
       hint:
-        "Provide non-empty playerName plus (cardYear AND product), or alternatively a non-empty cardsightCardId.",
+        "Provide non-empty playerName plus (cardYear AND product), or alternatively a non-empty cardId.",
     },
   });
 }
@@ -3110,9 +3140,9 @@ export async function addHolding(req: Request, res: Response) {
   holding = await populateCardsightGradeId(holding);
 
   // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION: gate must run AFTER
-  // normalizeR1CardsightCardId (which can hoist cardsightCardId from
+  // normalizeR1CardsightCardId (which can hoist cardId from
   // legacy field shapes) AND AFTER populateCardsightGradeId, so the
-  // identity check sees the final resolved cardsightCardId. Reject
+  // identity check sees the final resolved cardId. Reject
   // null-identity payloads BEFORE any persistence side-effects.
   const identityCheck = validateHoldingIdentity(holding);
   if (!identityCheck.ok) {
@@ -3216,7 +3246,7 @@ export async function updateHolding(req: Request, res: Response) {
   // Validates the merged AFTER-state — an update of an existing legacy
   // null-identity row to {quantity: 5} still blocks (the merged state
   // is still null-identity); an update that ADDS cardYear+product OR
-  // cardsightCardId passes (the merged state has identity). Forces
+  // cardId passes (the merged state has identity). Forces
   // legacy null-identity rows to be fixed-by-update or recreated,
   // never silently persisted in another permissive write.
   const identityCheck = validateHoldingIdentity(next);
@@ -3913,7 +3943,7 @@ export interface RecordTradeInput {
     fmvSource: "compiq" | "manual";
   }>;
   incoming: Array<{
-    cardsightCardId?: string;
+    cardId?: string;
     cardTitle: string;
     grade?: string;
     fmvAtTrade: number;
@@ -4067,14 +4097,14 @@ export async function recordTradeTransaction(
       purchaseSource: "trade",
       lastUpdated: now,
     } as PortfolioHolding;
-    if (inc.cardsightCardId) {
-      (newH as any).cardsightCardId = inc.cardsightCardId;
+    if (inc.cardId) {
+      (newH as any).cardId = inc.cardId;
     }
     (newH as any).tradeId = tradeId;
     newHoldings.push(newH);
     incomingRecords.push({
       holdingId,
-      cardsightCardId: inc.cardsightCardId,
+      cardId: inc.cardId,
       cardTitle: inc.cardTitle,
       grade: inc.grade,
       fmvAtTrade: inc.fmvAtTrade,
@@ -4168,7 +4198,7 @@ export interface BatchRepriceResult {
      * re-read of the user's doc. Optional — repriced/fresh entries
      * leave it undefined; cardless entries are known-null.
      */
-    cardsightCardId?: string | null;
+    cardId?: string | null;
   }>;
   /** Set when the entire request was throttled (no work performed). */
   throttled?: boolean;
@@ -4266,7 +4296,7 @@ export async function repriceHoldingsForUser(
     // structured warn so legacy null-identity holdings stop generating
     // wrong-card prices even before the user fixes them via update.
     const reprCardYear = shimmedCardYear(holding);
-    const reprCsid = String((holding as any).cardsightCardId ?? "").trim();
+    const reprCsid = String((holding as any).cardId ?? "").trim();
     if ((reprCardYear == null || !(toNumber(reprCardYear, 0) > 0)) && reprCsid === "") {
       console.warn(JSON.stringify({
         event: "repriceHoldingsForUser_skipped_cardless",
@@ -4280,8 +4310,8 @@ export async function repriceHoldingsForUser(
       updates.push({
         id: holding.id,
         status: "skipped",
-        reason: "missing_card_identity (cardYear=null AND cardsightCardId=null)",
-        cardsightCardId: null,
+        reason: "missing_card_identity (cardYear=null AND cardId=null)",
+        cardId: null,
       });
       continue;
     }
@@ -4406,9 +4436,9 @@ export async function repriceHoldingsForUser(
         // populate: lastSale (engine-emitted) + estimatedValue (ladder).
         let lsLadderResult: LadderFallbackResult | null = null;
         const lsCsid =
-          typeof (holding as { cardsightCardId?: string }).cardsightCardId === "string" &&
-          ((holding as { cardsightCardId?: string }).cardsightCardId as string).trim() !== ""
-            ? ((holding as { cardsightCardId?: string }).cardsightCardId as string).trim()
+          typeof (holding as { cardId?: string }).cardId === "string" &&
+          ((holding as { cardId?: string }).cardId as string).trim() !== ""
+            ? ((holding as { cardId?: string }).cardId as string).trim()
             : null;
         if (lsCsid) {
           lsLadderResult = await applyGradeLadderFallback({
@@ -4467,9 +4497,9 @@ export async function repriceHoldingsForUser(
         // we surface estimatedValue + nearestGradedAnchor instead of leaving
         // the holding stamped "Low confidence" with no number at all.
         const reprCsidForLadder =
-          typeof (holding as any).cardsightCardId === "string" &&
-          ((holding as any).cardsightCardId as string).trim() !== ""
-            ? ((holding as any).cardsightCardId as string).trim()
+          typeof (holding as any).cardId === "string" &&
+          ((holding as any).cardId as string).trim() !== ""
+            ? ((holding as any).cardId as string).trim()
             : null;
         if (reprCsidForLadder) {
           const ladder = await applyGradeLadderFallback({
@@ -4546,9 +4576,9 @@ export async function repriceHoldingsForUser(
           lastUpdated: now,
         };
         const reprCsid =
-          typeof (holding as any).cardsightCardId === "string" &&
-          ((holding as any).cardsightCardId as string).trim() !== ""
-            ? ((holding as any).cardsightCardId as string).trim()
+          typeof (holding as any).cardId === "string" &&
+          ((holding as any).cardId as string).trim() !== ""
+            ? ((holding as any).cardId as string).trim()
             : null;
         updates.push({
           id: holding.id,
@@ -4556,7 +4586,7 @@ export async function repriceHoldingsForUser(
           reason: `confidence-gate: ${failed.join(", ")} (source=${estSource || "ok"}${
             daysSinceNewestComp !== null ? `, daysSinceNewestComp=${daysSinceNewestComp}` : ""
           })`,
-          cardsightCardId: reprCsid,
+          cardId: reprCsid,
         });
         continue;
       }
@@ -4639,15 +4669,15 @@ export async function repriceHoldingsForUser(
     } catch (error: any) {
       skipped += 1;
       const errCsid =
-        typeof (holding as any).cardsightCardId === "string" &&
-        ((holding as any).cardsightCardId as string).trim() !== ""
-          ? ((holding as any).cardsightCardId as string).trim()
+        typeof (holding as any).cardId === "string" &&
+        ((holding as any).cardId as string).trim() !== ""
+          ? ((holding as any).cardId as string).trim()
           : null;
       updates.push({
         id: holding.id,
         status: "error",
         reason: error?.message ?? "estimate-failed",
-        cardsightCardId: errCsid,
+        cardId: errCsid,
       });
     }
   }
@@ -4688,7 +4718,7 @@ export async function listAllPortfolioUserIds(): Promise<string[]> {
 }
 
 // CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): scan all user docs for
-// holdings matching a (cardsightCardId, grade) pair. The delta-poll
+// holdings matching a (cardId, grade) pair. The delta-poll
 // worker calls this with each unique (card_id, grade) from a price-
 // updates batch and triggers a targeted reprice on each match.
 //
@@ -4700,10 +4730,10 @@ export async function listAllPortfolioUserIds(): Promise<string[]> {
 // (cosmos unavailable, scan error) — the delta worker treats empty as
 // "no holdings affected, no reprice needed".
 export async function findHoldingsByCardAndGrade(
-  cardsightCardId: string,
+  cardId: string,
   grade: string,
 ): Promise<Array<{ userId: string; holdingId: string }>> {
-  if (!cardsightCardId || !grade) return [];
+  if (!cardId || !grade) return [];
   const matches: Array<{ userId: string; holdingId: string }> = [];
   try {
     const userIds = await listAllPortfolioUserIds();
@@ -4712,7 +4742,7 @@ export async function findHoldingsByCardAndGrade(
         const doc = await readUserDoc(userId);
         for (const [holdingId, h] of Object.entries(doc.holdings ?? {})) {
           if (!h) continue;
-          if (String(h.cardsightCardId ?? "").trim() !== cardsightCardId) continue;
+          if (String(h.cardId ?? "").trim() !== cardId) continue;
           const company = String(h.gradingCompany ?? "").trim().toUpperCase();
           const value = h.gradeValue;
           const holdingGrade =
