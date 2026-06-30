@@ -106,4 +106,11 @@ jobs:
       - name: Run Tier 1 production harness
         env:
           NODE_ENV: "test"
+          # CF-TIER1-HARNESS-SESSION (2026-06-30): the harness hits prod
+          # /api/compiq/* routes which require x-session-id (CF-PAYMENTS-A).
+          # The secret holds a long-lived test session-id Drew provisions
+          # against a dedicated harness user. When unset, the harness fails
+          # with a clear "secret missing" error instead of the opaque 401.
+          # See backend/docs/runbooks/tier1-harness-session.md.
+          TIER1_HARNESS_SESSION_ID: ${{ secrets.TIER1_HARNESS_SESSION_ID }}
         run: npm run test:harness:tier1

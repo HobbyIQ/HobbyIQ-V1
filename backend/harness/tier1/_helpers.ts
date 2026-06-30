@@ -370,6 +370,19 @@ export function loadBaseline(c: TestCase): Baseline {
 // HTTP helpers
 // ---------------------------------------------------------------------------
 
+// CF-TIER1-HARNESS-SESSION (2026-06-30): the harness hits production
+// `/api/compiq/*` routes, all of which are gated by requireSession (CF-
+// PAYMENTS-A). Without an x-session-id header, every call returns 401
+// and the harness has been chronically red on every PR for ~3 days.
+//
+// Fix: read TIER1_HARNESS_SESSION_ID from the env. The CI workflow
+// exposes it from a GitHub Secret. Drew provisions the secret with a
+// long-lived test session-id (one-time, then rotate as needed).
+//
+// Local dev: export TIER1_HARNESS_SESSION_ID=<your-own-session-id>
+// to run the harness against prod from your machine.
+const HARNESS_SESSION_ID = process.env.TIER1_HARNESS_SESSION_ID?.trim() ?? "";
+
 async function postJson(
   pathName: string,
   body: Record<string, unknown>
@@ -377,14 +390,26 @@ async function postJson(
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), CASE_BUDGET_MS - 1_000);
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (HARNESS_SESSION_ID) {
+      headers["x-session-id"] = HARNESS_SESSION_ID;
+    }
     const res = await fetch(`${API_BASE}${pathName}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(body),
       signal: ctl.signal,
     });
     const json = (await res.json()) as Record<string, unknown>;
     if (!res.ok) {
+      // CF-TIER1-HARNESS-SESSION: 401 most often means the secret isn't
+      // set in the CI environment. Make the failure actionable.
+      if (res.status === 401 && !HARNESS_SESSION_ID) {
+        throw new Error(
+          `${pathName} returned HTTP 401 because TIER1_HARNESS_SESSION_ID is not set ` +
+            `(GitHub Secret in CI, env var locally). See backend/docs/runbooks/tier1-harness-session.md.`
+        );
+      }
       throw new Error(
         `${pathName} returned HTTP ${res.status}: ${JSON.stringify(json).slice(0, 200)}`
       );
