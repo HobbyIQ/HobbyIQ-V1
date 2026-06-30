@@ -14,6 +14,13 @@ import {
   getPriceEstimate,
   getSalesStatsByPlayer,
   getTotalSalesByPlayer,
+  // CF-COMPIQ-SCAN-ROUTE (2026-06-30): iOS slab scanning entry point.
+  // Uses CH's image-match + cert-OCR endpoints to identify a card
+  // from a photo and return a structured response iOS can hand to
+  // /price-by-id for pricing.
+  identifyCardByImage,
+  getCardDetailsByCertImage,
+  type ImageInput,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -3029,6 +3036,119 @@ router.get(
     }
   },
 );
+
+// CF-COMPIQ-SCAN-ROUTE (2026-06-30) — iOS slab scanning entry point.
+// Takes a photo (URL or base64) and identifies the card, returning a
+// structured shape iOS can hand to /price-by-id for pricing.
+//
+// HEURISTIC (when `hint` is "auto" or omitted):
+//   1. Try cert-OCR first — if the photo shows a graded slab, this
+//      identifies the cert number, grader, and card in one call
+//   2. If cert-OCR yields no card_id (raw card OR slab too blurry to
+//      OCR), fall back to image-match for AI-driven identification
+//
+// REQUEST  POST /api/compiq/scan
+//   { imageUrl?: string,
+//     imageBase64?: string,    // at least one required
+//     hint?: "raw" | "graded" | "auto" }   // default "auto"
+//
+// RESPONSE
+//   { success: boolean,
+//     cardsightCardId: string | null,    // pass to /price-by-id
+//     player, set, number, variant,
+//     matchPath: "cert-ocr" | "image-match" | null,
+//     matchConfidence: number | null,
+//     // When matchPath = cert-ocr:
+//     certInfo: { certNumber, grader, grade } | null }
+//
+// AUTH: requireSession + requireRateLimited("priceChecksPerDay").
+// Same rate budget as text-based scans — one image scan = one priceCheck.
+router.post("/scan", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { imageUrl, imageBase64, hint } = (req.body ?? {}) as {
+      imageUrl?: unknown;
+      imageBase64?: unknown;
+      hint?: unknown;
+    };
+    const input: ImageInput = {
+      imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
+      imageBase64: typeof imageBase64 === "string" ? imageBase64 : undefined,
+    };
+    if (!input.imageUrl && !input.imageBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing image — provide "imageUrl" or "imageBase64"',
+      });
+    }
+    const resolvedHint: "raw" | "graded" | "auto" =
+      hint === "raw" || hint === "graded" ? hint : "auto";
+
+    // ── Step 1: cert-OCR (slab path) ──────────────────────────────
+    // Tried first when hint is "graded" or "auto". Cert-OCR is fast and
+    // resolves cert_number + grader + card identity in one call when the
+    // photo shows a slab label clearly.
+    let certResult: Awaited<ReturnType<typeof getCardDetailsByCertImage>> = null;
+    if (resolvedHint !== "raw") {
+      certResult = await getCardDetailsByCertImage(input);
+    }
+    if (certResult && certResult.card?.card_id) {
+      const ci = certResult.cert_info ?? {};
+      return res.json({
+        success: true,
+        cardsightCardId: String(certResult.card.card_id),
+        player: typeof certResult.card.player === "string" ? certResult.card.player : null,
+        set: typeof certResult.card.set === "string" ? certResult.card.set : null,
+        number: typeof certResult.card.number === "string" ? certResult.card.number : null,
+        variant: typeof certResult.card.variant === "string" ? certResult.card.variant : null,
+        matchPath: "cert-ocr" as const,
+        matchConfidence:
+          typeof certResult.match_confidence === "number" ? certResult.match_confidence : null,
+        certInfo: {
+          certNumber: typeof ci.cert_number === "string" ? ci.cert_number : null,
+          grader: typeof ci.grader === "string" ? ci.grader : null,
+          grade: typeof ci.grade === "string" ? ci.grade : null,
+        },
+      });
+    }
+
+    // ── Step 2: image-match (raw or cert-OCR-miss path) ─────────────
+    // When hint is "raw" OR the slab OCR didn't yield a card_id, run the
+    // image-match AI to pick a best card.
+    if (resolvedHint !== "graded") {
+      const matchResult = await identifyCardByImage(input);
+      const best = matchResult?.best_match;
+      if (best && typeof best.card_id === "string" && best.card_id.length > 0) {
+        return res.json({
+          success: true,
+          cardsightCardId: best.card_id,
+          player: typeof best.player === "string" ? best.player : null,
+          set: typeof best.set === "string" ? best.set : null,
+          number: typeof best.number === "string" ? best.number : null,
+          variant: typeof best.variant === "string" ? best.variant : null,
+          matchPath: "image-match" as const,
+          matchConfidence: typeof best.confidence === "number" ? best.confidence : null,
+          certInfo: null,
+        });
+      }
+    }
+
+    // No path resolved a card_id. Return a structured "couldn't match"
+    // response so iOS can show a helpful UI (e.g., "try a clearer photo").
+    return res.json({
+      success: true,
+      cardsightCardId: null,
+      player: null,
+      set: null,
+      number: null,
+      variant: null,
+      matchPath: null,
+      matchConfidence: null,
+      certInfo: null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Test-only export â€” keeps `regimeFieldsFromEstimate` reachable from unit
 // tests without exposing it on the public router surface.
