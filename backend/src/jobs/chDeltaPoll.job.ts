@@ -32,6 +32,14 @@
 import fs from "fs";
 import path from "path";
 import { getPriceUpdates, type CardHedgePriceUpdate } from "../services/compiq/cardhedge.client.js";
+// CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): consume updates by mapping
+// (card_id, grade) → holdings → targeted reprice. Lazy-imported via
+// dynamic import inside the cycle to avoid bloating the job's startup
+// cost and to keep test mocks tractable.
+import {
+  findHoldingsByCardAndGrade,
+  repriceHoldingByDelta,
+} from "../services/portfolioiq/portfolioStore.service.js";
 
 const DEFAULT_INTERVAL_MIN = 15;
 const DEFAULT_FIRST_DELAY_MS = 60 * 1000;
@@ -130,13 +138,49 @@ export async function runDeltaPollCycle(now: Date = new Date()): Promise<DeltaPo
         summary.newCheckpoint = latest;
         writeCheckpoint(latest);
       }
+
+      // CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): for each unique
+      // (card_id, grade) in the update batch, find matching holdings
+      // and trigger a targeted reprice. Dedupe first — the same
+      // (card_id, grade) often appears multiple times in one batch
+      // (consecutive sales of the same card), but we only need ONE
+      // reprice per card per cycle.
+      let holdingsAffected = 0;
+      let holdingsRepriced = 0;
+      try {
+        const uniquePairs = new Map<string, { cardId: string; grade: string }>();
+        for (const u of result.updates) {
+          const key = `${u.card_id}|${u.grade}`;
+          if (!uniquePairs.has(key)) uniquePairs.set(key, { cardId: u.card_id, grade: u.grade });
+        }
+        for (const { cardId, grade } of uniquePairs.values()) {
+          const matches = await findHoldingsByCardAndGrade(cardId, grade);
+          holdingsAffected += matches.length;
+          for (const m of matches) {
+            const r = await repriceHoldingByDelta(m.userId, m.holdingId);
+            if (r.repriced) holdingsRepriced++;
+          }
+        }
+      } catch (err) {
+        // Reverse-map failure must not poison the poll cycle. We've
+        // already advanced the checkpoint above; the missed reprices
+        // will surface on the next periodic full refresh (6h).
+        console.warn(
+          `[ch-delta-poll] reverse-map / reprice failed (non-fatal): ${(err as Error)?.message ?? err}`,
+        );
+      }
+
       // CF-CH-DELTA-POLL-TELEMETRY: structured event so KQL can chart
-      // poll frequency, update counts, and detect stalls. Emit even on
-      // zero-update cycles (those are the healthy baseline).
+      // poll frequency, update counts, holdings affected, and detect
+      // stalls. Emit even on zero-update cycles (those are the
+      // healthy baseline).
       console.log(JSON.stringify({
         event: "ch_delta_poll_cycle",
         since,
         updatesReceived: result.updates.length,
+        uniquePairs: new Set(result.updates.map((u) => `${u.card_id}|${u.grade}`)).size,
+        holdingsAffected,
+        holdingsRepriced,
         newCheckpoint: summary.newCheckpoint,
         checkpointAdvanced: summary.newCheckpoint !== since,
         timestamp: startedAt,
