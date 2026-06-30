@@ -1118,6 +1118,39 @@ export interface CrossObservedInversionEvent {
   passNumber: number;
 }
 
+/** CF-INVERSION-GUARD-SKIPPED-TELEMETRY (2026-06-30) — telemetry payload
+ *  for inversions that were DETECTED (higher < lower) but where a safety
+ *  rail blocked reconstruction. Lets the KQL aggregator measure how
+ *  selective the rails are: too aggressive (missing real fixes) vs too
+ *  permissive (reconstructing in noise). skipReason values match the
+ *  named guards in applyCrossGradedInversionGuard. */
+export interface CrossObservedInversionSkippedEvent {
+  grader: string;
+  higherGrade: string;
+  lowerGrade: string;
+  higherMedian: number;
+  higherCount: number;
+  lowerMedian: number;
+  lowerCount: number;
+  marginPct: number;  // (lower - higher) / lower * 100 — always > 0 (real inversion)
+  marginUSD: number;  // lower - higher
+  skipReason:
+    | "margin_below_5_pct"
+    | "margin_below_5_usd"
+    | "lower_compcount_below_higher"
+    | "lower_compcount_below_3"
+    | "premium_unavailable"
+    | "premium_below_one";
+  passNumber: number;
+}
+
+/** Combined return shape: reconstructions that fired + reconstructions
+ *  that were blocked by a safety rail. */
+export interface CrossGradedInversionGuardResult {
+  fired: CrossObservedInversionEvent[];
+  skipped: CrossObservedInversionSkippedEvent[];
+}
+
 // CF-CROSS-OBSERVED-INVERSION-GUARD (2026-06-29) — reconstruct inverted
 // higher-grade observed medians. When the SAME grader's PSA 10 prices
 // below its PSA 9 (structurally impossible — better grade always >=
@@ -1155,13 +1188,41 @@ export interface CrossObservedInversionEvent {
 export function applyCrossGradedInversionGuard(
   entries: GradeBreakdownEntry[],
   rawAnchor: number | null,
-): CrossObservedInversionEvent[] {
+): CrossGradedInversionGuardResult {
   const MIN_INVERSION_RATIO = 0.95;
   const MIN_INVERSION_ABS_USD = 5;
   const MIN_LOWER_COMPS = 3;
   const MAX_PASSES = 4;
 
-  const events: CrossObservedInversionEvent[] = [];
+  const fired: CrossObservedInversionEvent[] = [];
+  const skipped: CrossObservedInversionSkippedEvent[] = [];
+
+  // CF-INVERSION-GUARD-SKIPPED-TELEMETRY (2026-06-30): helper to record
+  // a skip with full pair context. Computed margins are always positive
+  // here (only called when higher.median < lower.median).
+  function recordSkip(
+    grader: string,
+    higher: GradeBreakdownEntry,
+    lower: GradeBreakdownEntry,
+    reason: CrossObservedInversionSkippedEvent["skipReason"],
+    pass: number,
+  ): void {
+    const marginUSD = lower.median - higher.median;
+    const marginPct = (marginUSD / lower.median) * 100;
+    skipped.push({
+      grader,
+      higherGrade: higher.grade,
+      lowerGrade: lower.grade,
+      higherMedian: higher.median,
+      higherCount: higher.compCount,
+      lowerMedian: lower.median,
+      lowerCount: lower.compCount,
+      marginPct: Math.round(marginPct * 10) / 10,
+      marginUSD,
+      skipReason: reason,
+      passNumber: pass,
+    });
+  }
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
     let firedThisPass = false;
@@ -1185,11 +1246,26 @@ export function applyCrossGradedInversionGuard(
       for (let i = 0; i < numericList.length - 1; i++) {
         const higher = numericList[i]!;
         const lower = numericList[i + 1]!;
+        // No inversion at all → not interesting, skip silently
         if (higher.entry.median >= lower.entry.median) continue;
-        if (higher.entry.median >= lower.entry.median * MIN_INVERSION_RATIO) continue;
-        if (lower.entry.median - higher.entry.median < MIN_INVERSION_ABS_USD) continue;
-        if (lower.entry.compCount < higher.entry.compCount) continue;
-        if (lower.entry.compCount < MIN_LOWER_COMPS) continue;
+        // From here on, real inversion exists. Any further skip is
+        // safety-rail-blocked and worth recording for telemetry.
+        if (higher.entry.median >= lower.entry.median * MIN_INVERSION_RATIO) {
+          recordSkip(grader, higher.entry, lower.entry, "margin_below_5_pct", pass);
+          continue;
+        }
+        if (lower.entry.median - higher.entry.median < MIN_INVERSION_ABS_USD) {
+          recordSkip(grader, higher.entry, lower.entry, "margin_below_5_usd", pass);
+          continue;
+        }
+        if (lower.entry.compCount < higher.entry.compCount) {
+          recordSkip(grader, higher.entry, lower.entry, "lower_compcount_below_higher", pass);
+          continue;
+        }
+        if (lower.entry.compCount < MIN_LOWER_COMPS) {
+          recordSkip(grader, higher.entry, lower.entry, "lower_compcount_below_3", pass);
+          continue;
+        }
 
         const higherPremium = getGraderPremium(
           grader,
@@ -1201,10 +1277,15 @@ export function applyCrossGradedInversionGuard(
           lower.entry.grade,
           rawAnchor ?? undefined,
         );
-        if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium)) continue;
-        if (lowerPremium <= 0) continue;
+        if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium) || lowerPremium <= 0) {
+          recordSkip(grader, higher.entry, lower.entry, "premium_unavailable", pass);
+          continue;
+        }
         const ratio = higherPremium / lowerPremium;
-        if (!Number.isFinite(ratio) || ratio < 1.0) continue;
+        if (!Number.isFinite(ratio) || ratio < 1.0) {
+          recordSkip(grader, higher.entry, lower.entry, "premium_below_one", pass);
+          continue;
+        }
 
         const reconstructed = Math.round(lower.entry.median * ratio);
         const originalMedian = higher.entry.median;
@@ -1215,7 +1296,7 @@ export function applyCrossGradedInversionGuard(
           `Reconstructed: observed median $${originalMedian} (from ${originalCount} sales) inverted with ` +
           `${lower.entry.grader} ${lower.entry.grade} $${lower.entry.median} (${lower.entry.compCount} sales). ` +
           `Likely outlier sale or misgrade. Reconstructed via empirical premium ratio (${ratio.toFixed(2)}×).`;
-        events.push({
+        fired.push({
           grader,
           higherGrade: higher.entry.grade,
           lowerGrade: lower.entry.grade,
@@ -1234,7 +1315,7 @@ export function applyCrossGradedInversionGuard(
     if (!firedThisPass) break;
   }
 
-  return events;
+  return { fired, skipped };
 }
 
 // CF-SUB-RAW-INVERSION-TELEMETRY (2026-06-30) — structured event for the
@@ -1282,6 +1363,42 @@ export function logSubRawInversionObserved(opts: {
       rawMedian: opts.event.rawMedian,
       marginPct: opts.event.marginPct,
       marginUSD: opts.event.marginUSD,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
+/** CF-INVERSION-GUARD-SKIPPED-TELEMETRY (2026-06-30): fire-and-forget
+ *  telemetry for inversions that were detected but blocked by a safety
+ *  rail. Helps tune the rail thresholds: clusters of "margin_below_5_pct"
+ *  with consistent grader-pairs would suggest tightening the threshold;
+ *  clusters of "lower_compcount_below_higher" reveal real cross-grader
+ *  inversions worth investigating separately. */
+export function logCrossObservedInversionSkipped(opts: {
+  source: string;
+  player: string | null;
+  cardId: string | null;
+  event: CrossObservedInversionSkippedEvent;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "cross_observed_inversion_skipped",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      grader: opts.event.grader,
+      higherGrade: opts.event.higherGrade,
+      lowerGrade: opts.event.lowerGrade,
+      higherMedian: opts.event.higherMedian,
+      higherCount: opts.event.higherCount,
+      lowerMedian: opts.event.lowerMedian,
+      lowerCount: opts.event.lowerCount,
+      marginPct: opts.event.marginPct,
+      marginUSD: opts.event.marginUSD,
+      skipReason: opts.event.skipReason,
+      passNumber: opts.event.passNumber,
       timestamp: new Date().toISOString(),
     }));
   } catch {
@@ -1545,18 +1662,26 @@ export function buildGradeBreakdown(
   // signal feeds the calibration loop — clusters by (year, grader,
   // grade-pair) indicate CH FMV interpolation quirks at specific
   // vintages worth investigating.
-  const inversionEvents = applyCrossGradedInversionGuard(out, observedRawMedian);
-  if (inversionEvents.length > 0) {
-    const cardId = pricing.card?.card_id ?? null;
-    const player = pricing.card?.name ?? null;
-    for (const ev of inversionEvents) {
-      logCrossObservedInversionFired({
-        source: "buildGradeBreakdown",
-        player,
-        cardId,
-        event: ev,
-      });
-    }
+  const inversionResult = applyCrossGradedInversionGuard(out, observedRawMedian);
+  const cardId = pricing.card?.card_id ?? null;
+  const player = pricing.card?.name ?? null;
+  for (const ev of inversionResult.fired) {
+    logCrossObservedInversionFired({
+      source: "buildGradeBreakdown",
+      player,
+      cardId,
+      event: ev,
+    });
+  }
+  // CF-INVERSION-GUARD-SKIPPED-TELEMETRY (2026-06-30): emit one event per
+  // detected-but-blocked inversion. Lets KQL measure rail selectivity.
+  for (const ev of inversionResult.skipped) {
+    logCrossObservedInversionSkipped({
+      source: "buildGradeBreakdown",
+      player,
+      cardId,
+      event: ev,
+    });
   }
 
   // CF-CROSS-GRADER-INVERSION-TELEMETRY (2026-06-30): observation-only.

@@ -24,8 +24,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   applyCrossGradedInversionGuard,
   logCrossObservedInversionFired,
+  logCrossObservedInversionSkipped,
   type GradeBreakdownEntry,
   type CrossObservedInversionEvent,
+  type CrossObservedInversionSkippedEvent,
 } from "../src/services/compiq/marketRead.service.js";
 
 function e(
@@ -178,7 +180,7 @@ describe("CF-CROSS-OBSERVED-INVERSION-GUARD — applyCrossGradedInversionGuard",
 describe("CF-INVERSION-GUARD-MULTIPASS — convergence + event reporting", () => {
   it("returns event list — Mantle scenario emits one event", () => {
     const entries = [e("PSA", "10", 2639, 3), e("PSA", "9", 3249, 8)];
-    const events = applyCrossGradedInversionGuard(entries, 305);
+    const { fired: events, skipped: _skipped } = applyCrossGradedInversionGuard(entries, 305);
     expect(events).toHaveLength(1);
     expect(events[0]!.grader).toBe("PSA");
     expect(events[0]!.higherGrade).toBe("10");
@@ -194,7 +196,7 @@ describe("CF-INVERSION-GUARD-MULTIPASS — convergence + event reporting", () =>
 
   it("returns empty event list when no firings", () => {
     const entries = [e("PSA", "10", 5000, 5), e("PSA", "9", 1500, 8)];
-    const events = applyCrossGradedInversionGuard(entries, 100);
+    const { fired: events, skipped: _skipped } = applyCrossGradedInversionGuard(entries, 100);
     expect(events).toEqual([]);
   });
 
@@ -209,7 +211,7 @@ describe("CF-INVERSION-GUARD-MULTIPASS — convergence + event reporting", () =>
       e("PSA", "8.5", 300, 6),
       e("PSA", "8", 400, 8),
     ];
-    const events = applyCrossGradedInversionGuard(entries, 50);
+    const { fired: events, skipped: _skipped } = applyCrossGradedInversionGuard(entries, 50);
     // No throw, no infinite loop — events emitted and the function returned.
     expect(Array.isArray(events)).toBe(true);
     // All event passNumbers must be within bounds.
@@ -229,7 +231,7 @@ describe("CF-INVERSION-GUARD-MULTIPASS — convergence + event reporting", () =>
       e("PSA", "9.5", 80, 5),    // vs PSA 9 (200): inverted
       e("PSA", "9", 200, 10),
     ];
-    const events = applyCrossGradedInversionGuard(entries, 50);
+    const { fired: events, skipped: _skipped } = applyCrossGradedInversionGuard(entries, 50);
     if (events.length > 0) {
       expect(events[0]!.passNumber).toBe(1);
     }
@@ -303,6 +305,143 @@ describe("CF-INVERSION-GUARD-TELEMETRY — logCrossObservedInversionFired", () =
           lowerCount: 5,
           reconstructedMedian: 300,
           ratio: 1.5,
+          passNumber: 1,
+        },
+      });
+    }).not.toThrow();
+    stringifySpy.mockRestore();
+  });
+});
+
+describe("CF-INVERSION-GUARD-SKIPPED-TELEMETRY — skipped events from safety rails", () => {
+  it("inversion within 5% margin → skipped with reason margin_below_5_pct", () => {
+    // PSA 9 = $100, PSA 10 = $97 → 3% margin → safety rail blocks.
+    const entries = [e("PSA", "10", 97, 5), e("PSA", "9", 100, 10)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 25);
+    expect(fired).toHaveLength(0);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]!.skipReason).toBe("margin_below_5_pct");
+    expect(skipped[0]!.grader).toBe("PSA");
+    expect(skipped[0]!.higherGrade).toBe("10");
+    expect(skipped[0]!.lowerGrade).toBe("9");
+    expect(skipped[0]!.marginUSD).toBe(3);
+    expect(skipped[0]!.marginPct).toBe(3);
+  });
+
+  it("absolute diff < $5 → skipped with reason margin_below_5_usd", () => {
+    // PSA 9 = $10, PSA 10 = $8 → 20% but only $2 absolute → 5% margin
+    // passes BUT $5 USD floor blocks.
+    const entries = [e("PSA", "10", 8, 5), e("PSA", "9", 10, 10)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 5);
+    expect(fired).toHaveLength(0);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]!.skipReason).toBe("margin_below_5_usd");
+    expect(skipped[0]!.marginUSD).toBe(2);
+  });
+
+  it("lower compCount < higher compCount → skipped (real inversion signal)", () => {
+    const entries = [e("PSA", "10", 2000, 20), e("PSA", "9", 3000, 1)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 100);
+    expect(fired).toHaveLength(0);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]!.skipReason).toBe("lower_compcount_below_higher");
+    expect(skipped[0]!.higherCount).toBe(20);
+    expect(skipped[0]!.lowerCount).toBe(1);
+  });
+
+  it("lower compCount < 3 → skipped (shaky reconstruction base)", () => {
+    const entries = [e("PSA", "10", 2000, 2), e("PSA", "9", 3000, 2)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 100);
+    expect(fired).toHaveLength(0);
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]!.skipReason).toBe("lower_compcount_below_3");
+  });
+
+  it("no inversion at all → no skip event (uninteresting)", () => {
+    const entries = [e("PSA", "10", 5000, 3), e("PSA", "9", 1500, 8)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 100);
+    expect(fired).toEqual([]);
+    expect(skipped).toEqual([]);
+  });
+
+  it("inversion AND reconstruction fires → no skip (skip is for blocked-only)", () => {
+    // Mantle scenario — passes all rails → fires reconstruction, no skip.
+    const entries = [e("PSA", "10", 2639, 3), e("PSA", "9", 3249, 8)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 305);
+    expect(fired).toHaveLength(1);
+    expect(skipped).toEqual([]);
+  });
+
+  it("cross-grader inversion → no skip event (different graders never compared)", () => {
+    const entries = [e("PSA", "10", 2000, 5), e("BGS", "10", 5000, 10)];
+    const { fired, skipped } = applyCrossGradedInversionGuard(entries, 100);
+    expect(fired).toEqual([]);
+    expect(skipped).toEqual([]);
+  });
+});
+
+describe("CF-INVERSION-GUARD-SKIPPED-TELEMETRY — logCrossObservedInversionSkipped JSON shape", () => {
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    logSpy.mockRestore();
+  });
+
+  it("emits a JSON event with all fields populated", () => {
+    const event: CrossObservedInversionSkippedEvent = {
+      grader: "PSA",
+      higherGrade: "10",
+      lowerGrade: "9",
+      higherMedian: 95,
+      higherCount: 3,
+      lowerMedian: 100,
+      lowerCount: 10,
+      marginPct: 5,
+      marginUSD: 5,
+      skipReason: "margin_below_5_pct",
+      passNumber: 1,
+    };
+    logCrossObservedInversionSkipped({
+      source: "buildGradeBreakdown",
+      player: "Test Player",
+      cardId: "test-card",
+      event,
+    });
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(logSpy.mock.calls[0]![0] as string);
+    expect(payload.event).toBe("cross_observed_inversion_skipped");
+    expect(payload.source).toBe("buildGradeBreakdown");
+    expect(payload.skipReason).toBe("margin_below_5_pct");
+    expect(payload.higherMedian).toBe(95);
+    expect(payload.lowerMedian).toBe(100);
+    expect(payload.marginPct).toBe(5);
+    expect(payload.marginUSD).toBe(5);
+    expect(payload.passNumber).toBe(1);
+    expect(typeof payload.timestamp).toBe("string");
+  });
+
+  it("never throws on serialization failure (defensive)", () => {
+    const stringifySpy = vi.spyOn(JSON, "stringify").mockImplementation(() => {
+      throw new Error("boom");
+    });
+    expect(() => {
+      logCrossObservedInversionSkipped({
+        source: "test",
+        player: null,
+        cardId: null,
+        event: {
+          grader: "PSA",
+          higherGrade: "10",
+          lowerGrade: "9",
+          higherMedian: 95,
+          higherCount: 1,
+          lowerMedian: 100,
+          lowerCount: 5,
+          marginPct: 5,
+          marginUSD: 5,
+          skipReason: "margin_below_5_pct",
           passNumber: 1,
         },
       });
