@@ -20,8 +20,8 @@ describe("chromeDraftMultipliers — spot-check baseline values", () => {
     expect(CHROME_DRAFT_MULTIPLIERS["Refractor"].refractorMultiplier).toBe(1.0);
   });
 
-  it("Blue /150 = 5.700 baseMultiplier", () => {
-    expect(CHROME_DRAFT_MULTIPLIERS["Blue"].baseMultiplier).toBe(5.7);
+  it("Blue /150 = 3.120 baseMultiplier (CF-WORKSHEET-CALIBRATION 2026-06-29)", () => {
+    expect(CHROME_DRAFT_MULTIPLIERS["Blue"].baseMultiplier).toBe(3.12);  // CF-WORKSHEET-CALIBRATION 2026-06-29: was 5.7
     expect(CHROME_DRAFT_MULTIPLIERS["Blue"].printRun).toBe("/150");
   });
 
@@ -29,12 +29,12 @@ describe("chromeDraftMultipliers — spot-check baseline values", () => {
     expect(CHROME_DRAFT_MULTIPLIERS["Gold"].baseMultiplier).toBe(14.5);
   });
 
-  it("Orange /25 = 21.900 baseMultiplier", () => {
-    expect(CHROME_DRAFT_MULTIPLIERS["Orange"].baseMultiplier).toBe(21.9);
+  it("Orange /25 = 9.596 baseMultiplier (CF-WORKSHEET-CALIBRATION 2026-06-29)", () => {
+    expect(CHROME_DRAFT_MULTIPLIERS["Orange"].baseMultiplier).toBe(9.596);  // CF-WORKSHEET-CALIBRATION 2026-06-29: was 21.9
   });
 
-  it("Red /5 = 55.000 baseMultiplier", () => {
-    expect(CHROME_DRAFT_MULTIPLIERS["Red"].baseMultiplier).toBe(55.0);
+  it("Red /5 = 22.790 baseMultiplier (CF-WORKSHEET-CALIBRATION 2026-06-29)", () => {
+    expect(CHROME_DRAFT_MULTIPLIERS["Red"].baseMultiplier).toBe(22.79);  // CF-WORKSHEET-CALIBRATION 2026-06-29: was 55.0
   });
 
   it("Superfractor 1/1 = 125.000 baseMultiplier", () => {
@@ -70,14 +70,14 @@ describe("chromeDraftMultipliers — lookupMultiplier edge cases", () => {
   });
 
   it("is case-insensitive", () => {
-    expect(lookupMultiplier("blue")?.baseMultiplier).toBe(5.7);
-    expect(lookupMultiplier("BLUE")?.baseMultiplier).toBe(5.7);
+    expect(lookupMultiplier("blue")?.baseMultiplier).toBe(3.12);
+    expect(lookupMultiplier("BLUE")?.baseMultiplier).toBe(3.12);
     expect(lookupMultiplier("Gold")?.baseMultiplier).toBe(14.5);
     expect(lookupMultiplier("gold sapphire")?.baseMultiplier).toBe(10.9);
   });
 
   it("tolerates extra whitespace and mixed casing", () => {
-    expect(lookupMultiplier("  Blue  ")?.baseMultiplier).toBe(5.7);
+    expect(lookupMultiplier("  Blue  ")?.baseMultiplier).toBe(3.12);
     expect(lookupMultiplier("blue   sapphire")?.baseMultiplier).toBe(5.2);
   });
 
