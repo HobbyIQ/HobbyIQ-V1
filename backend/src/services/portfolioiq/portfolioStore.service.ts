@@ -14,6 +14,14 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+// CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): subscribe holdings
+// to CH's price-tracking feed on add/update. Fire-and-forget — failure
+// must NEVER block the holding save. Dormant unless CARD_HEDGE_CLIENT_ID
+// is set on the server.
+import {
+  subscribeHoldingToDeltaPoll,
+  holdingSubscriptionChanged,
+} from "./deltaPollSubscriptions.service.js";
 import {
   tryFinalizeReconciliation,
   type LedgerEntryForErp,
@@ -3153,6 +3161,15 @@ export async function addHolding(req: Request, res: Response) {
   }
 
   await writeUserDoc(auth.userId, doc);
+
+  // CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): enroll the new
+  // holding in CH's price-tracking feed so the delta-poll worker (PR
+  // #211) sees future sales for this card. Fire-and-forget: a failure
+  // here MUST NOT block the iOS success response. The wrapper itself
+  // short-circuits when CARD_HEDGE_CLIENT_ID is unset, so this is
+  // dormant in any environment without the client_id env var.
+  void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[holding.id]!);
+
   res.status(201).json({ message: "Holding saved", id: holding.id });
 }
 
@@ -3230,6 +3247,15 @@ export async function updateHolding(req: Request, res: Response) {
   }
 
   await writeUserDoc(auth.userId, doc);
+
+  // CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): re-subscribe only
+  // when the update changed the (cardId, grade) identity. Edits that
+  // only touch quantity / notes / photos don't change what CH should
+  // track. Saves a CH call on every quantity bump.
+  if (holdingSubscriptionChanged(previous, doc.holdings[id]!)) {
+    void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
+  }
+
   res.json({ message: "Holding updated", id });
 }
 
