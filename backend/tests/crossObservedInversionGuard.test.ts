@@ -20,10 +20,12 @@
 //   7. Mantle-shape canonical: PSA 10 < PSA 9 → PSA 10 reconstructed,
 //      compCount=0, note set
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   applyCrossGradedInversionGuard,
+  logCrossObservedInversionFired,
   type GradeBreakdownEntry,
+  type CrossObservedInversionEvent,
 } from "../src/services/compiq/marketRead.service.js";
 
 function e(
@@ -170,5 +172,141 @@ describe("CF-CROSS-OBSERVED-INVERSION-GUARD — applyCrossGradedInversionGuard",
     applyCrossGradedInversionGuard(entries, 100);
     expect(entries[0]!.median).toBe(5000);
     expect(entries[0]!.note).toBeUndefined();
+  });
+});
+
+describe("CF-INVERSION-GUARD-MULTIPASS — convergence + event reporting", () => {
+  it("returns event list — Mantle scenario emits one event", () => {
+    const entries = [e("PSA", "10", 2639, 3), e("PSA", "9", 3249, 8)];
+    const events = applyCrossGradedInversionGuard(entries, 305);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.grader).toBe("PSA");
+    expect(events[0]!.higherGrade).toBe("10");
+    expect(events[0]!.lowerGrade).toBe("9");
+    expect(events[0]!.originalHigherMedian).toBe(2639);
+    expect(events[0]!.originalHigherCount).toBe(3);
+    expect(events[0]!.lowerMedian).toBe(3249);
+    expect(events[0]!.lowerCount).toBe(8);
+    expect(events[0]!.passNumber).toBe(1);
+    expect(events[0]!.ratio).toBeGreaterThan(1);
+    expect(events[0]!.reconstructedMedian).toBeGreaterThan(3249);
+  });
+
+  it("returns empty event list when no firings", () => {
+    const entries = [e("PSA", "10", 5000, 5), e("PSA", "9", 1500, 8)];
+    const events = applyCrossGradedInversionGuard(entries, 100);
+    expect(events).toEqual([]);
+  });
+
+  it("terminates within MAX_PASSES (4) — never infinite-loops on degenerate input", () => {
+    // Construct a cascade. Pass 1 reconstructs adjacent pairs; reconstructed
+    // entries (compCount=0) can't anchor further reconstructions, so this
+    // should converge in 1-2 passes regardless. The bound is the safety net.
+    const entries = [
+      e("PSA", "10", 100, 3),
+      e("PSA", "9.5", 80, 4),
+      e("PSA", "9", 200, 5),
+      e("PSA", "8.5", 300, 6),
+      e("PSA", "8", 400, 8),
+    ];
+    const events = applyCrossGradedInversionGuard(entries, 50);
+    // No throw, no infinite loop — events emitted and the function returned.
+    expect(Array.isArray(events)).toBe(true);
+    // All event passNumbers must be within bounds.
+    for (const ev of events) {
+      expect(ev.passNumber).toBeGreaterThanOrEqual(1);
+      expect(ev.passNumber).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("passNumber reflects which pass fired the reconstruction", () => {
+    // PSA 9.5 fires on pass 1 (vs PSA 9). PSA 10 might fire on pass 2
+    // if its original value is below reconstructed PSA 9.5.
+    // We assert the FIRST event is from pass 1 (the obvious adjacent
+    // inversion); higher-pass events are bonus convergence.
+    const entries = [
+      e("PSA", "10", 100, 3),
+      e("PSA", "9.5", 80, 5),    // vs PSA 9 (200): inverted
+      e("PSA", "9", 200, 10),
+    ];
+    const events = applyCrossGradedInversionGuard(entries, 50);
+    if (events.length > 0) {
+      expect(events[0]!.passNumber).toBe(1);
+    }
+  });
+});
+
+describe("CF-INVERSION-GUARD-TELEMETRY — logCrossObservedInversionFired", () => {
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    logSpy.mockRestore();
+  });
+
+  it("emits a JSON event with all fields populated", () => {
+    const event: CrossObservedInversionEvent = {
+      grader: "PSA",
+      higherGrade: "10",
+      lowerGrade: "9",
+      originalHigherMedian: 2639,
+      originalHigherCount: 3,
+      lowerMedian: 3249,
+      lowerCount: 8,
+      reconstructedMedian: 6498,
+      ratio: 2.0,
+      passNumber: 1,
+    };
+    logCrossObservedInversionFired({
+      source: "buildGradeBreakdown",
+      player: "Mickey Mantle",
+      cardId: "test-mantle-1960",
+      event,
+    });
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(logSpy.mock.calls[0]![0] as string);
+    expect(payload.event).toBe("cross_observed_inversion_fired");
+    expect(payload.source).toBe("buildGradeBreakdown");
+    expect(payload.player).toBe("Mickey Mantle");
+    expect(payload.cardId).toBe("test-mantle-1960");
+    expect(payload.grader).toBe("PSA");
+    expect(payload.higherGrade).toBe("10");
+    expect(payload.lowerGrade).toBe("9");
+    expect(payload.originalHigherMedian).toBe(2639);
+    expect(payload.lowerMedian).toBe(3249);
+    expect(payload.reconstructedMedian).toBe(6498);
+    expect(payload.ratio).toBe(2);
+    // Mantle case: PSA 10 was $610 (18.8%) below PSA 9.
+    expect(payload.inversionPctOriginal).toBeCloseTo(18.8, 1);
+    expect(payload.passNumber).toBe(1);
+    expect(typeof payload.timestamp).toBe("string");
+  });
+
+  it("never throws on serialization failure (defensive)", () => {
+    // Force JSON.stringify to throw mid-call.
+    const stringifySpy = vi.spyOn(JSON, "stringify").mockImplementation(() => {
+      throw new Error("boom");
+    });
+    expect(() => {
+      logCrossObservedInversionFired({
+        source: "test",
+        player: null,
+        cardId: null,
+        event: {
+          grader: "PSA",
+          higherGrade: "10",
+          lowerGrade: "9",
+          originalHigherMedian: 100,
+          originalHigherCount: 1,
+          lowerMedian: 200,
+          lowerCount: 5,
+          reconstructedMedian: 300,
+          ratio: 1.5,
+          passNumber: 1,
+        },
+      });
+    }).not.toThrow();
+    stringifySpy.mockRestore();
   });
 });

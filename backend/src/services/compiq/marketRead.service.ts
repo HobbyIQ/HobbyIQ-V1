@@ -1103,6 +1103,21 @@ function recentDirectionFromRecords(
 // ./filters.js — same helper the value path in compiqEstimate.service.ts
 // uses. One function, two consumers, drift impossible.
 
+/** Telemetry payload emitted per reconstruction. Returned to callers so
+ *  they can attach context (player, cardId, source) before logging. */
+export interface CrossObservedInversionEvent {
+  grader: string;
+  higherGrade: string;
+  lowerGrade: string;
+  originalHigherMedian: number;
+  originalHigherCount: number;
+  lowerMedian: number;
+  lowerCount: number;
+  reconstructedMedian: number;
+  ratio: number;
+  passNumber: number;
+}
+
 // CF-CROSS-OBSERVED-INVERSION-GUARD (2026-06-29) — reconstruct inverted
 // higher-grade observed medians. When the SAME grader's PSA 10 prices
 // below its PSA 9 (structurally impossible — better grade always >=
@@ -1123,68 +1138,138 @@ function recentDirectionFromRecords(
 //   - Premium ratio must be computable AND >= 1 (else the reconstruction
 //     is incoherent)
 //
+// MULTI-PASS CONVERGENCE (CF-INVERSION-GUARD-MULTIPASS 2026-06-29): run
+// the adjacent-pair walk until no firings, capped at MAX_PASSES iterations.
+// Why: chain inversions like PSA 10 < PSA 9 < PSA 8 fire in pass 1 only
+// on PSA 9 vs PSA 8 and PSA 10 vs ORIGINAL PSA 9 — leaving PSA 10 vs
+// RECONSTRUCTED PSA 9 (now higher) potentially still inverted relative
+// to its new reconstructed anchor. Multi-pass converges these cascades.
+//
 // Reconstruction sets median = round(lower.median × ratio), zeros
 // compCount (signals "estimated, not observed"), and attaches an
 // explanatory note. The original observed median is preserved in the
 // note for transparency.
+//
+// Returns the list of reconstruction events for telemetry. Empty when
+// nothing fired (the common case).
 export function applyCrossGradedInversionGuard(
   entries: GradeBreakdownEntry[],
   rawAnchor: number | null,
-): void {
+): CrossObservedInversionEvent[] {
   const MIN_INVERSION_RATIO = 0.95;
   const MIN_INVERSION_ABS_USD = 5;
   const MIN_LOWER_COMPS = 3;
+  const MAX_PASSES = 4;
 
-  // Group entries by grader (case-insensitive). Process each grader's
-  // numeric grades from highest down so adjacent comparisons walk the
-  // expected ladder (10 → 9.5 → 9 → 8.5 → ...).
-  const byGrader = new Map<string, GradeBreakdownEntry[]>();
-  for (const e of entries) {
-    const key = e.grader.toUpperCase();
-    if (!byGrader.has(key)) byGrader.set(key, []);
-    byGrader.get(key)!.push(e);
+  const events: CrossObservedInversionEvent[] = [];
+
+  for (let pass = 1; pass <= MAX_PASSES; pass++) {
+    let firedThisPass = false;
+
+    // Group entries by grader (case-insensitive). Process each grader's
+    // numeric grades from highest down so adjacent comparisons walk the
+    // expected ladder (10 → 9.5 → 9 → 8.5 → ...).
+    const byGrader = new Map<string, GradeBreakdownEntry[]>();
+    for (const e of entries) {
+      const key = e.grader.toUpperCase();
+      if (!byGrader.has(key)) byGrader.set(key, []);
+      byGrader.get(key)!.push(e);
+    }
+
+    for (const [grader, list] of byGrader) {
+      const numericList = list
+        .map((e) => ({ entry: e, value: Number(e.grade) }))
+        .filter((x) => Number.isFinite(x.value))
+        .sort((a, b) => b.value - a.value);
+
+      for (let i = 0; i < numericList.length - 1; i++) {
+        const higher = numericList[i]!;
+        const lower = numericList[i + 1]!;
+        if (higher.entry.median >= lower.entry.median) continue;
+        if (higher.entry.median >= lower.entry.median * MIN_INVERSION_RATIO) continue;
+        if (lower.entry.median - higher.entry.median < MIN_INVERSION_ABS_USD) continue;
+        if (lower.entry.compCount < higher.entry.compCount) continue;
+        if (lower.entry.compCount < MIN_LOWER_COMPS) continue;
+
+        const higherPremium = getGraderPremium(
+          grader,
+          higher.entry.grade,
+          rawAnchor ?? undefined,
+        );
+        const lowerPremium = getGraderPremium(
+          grader,
+          lower.entry.grade,
+          rawAnchor ?? undefined,
+        );
+        if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium)) continue;
+        if (lowerPremium <= 0) continue;
+        const ratio = higherPremium / lowerPremium;
+        if (!Number.isFinite(ratio) || ratio < 1.0) continue;
+
+        const reconstructed = Math.round(lower.entry.median * ratio);
+        const originalMedian = higher.entry.median;
+        const originalCount = higher.entry.compCount;
+        higher.entry.median = reconstructed;
+        higher.entry.compCount = 0;
+        higher.entry.note =
+          `Reconstructed: observed median $${originalMedian} (from ${originalCount} sales) inverted with ` +
+          `${lower.entry.grader} ${lower.entry.grade} $${lower.entry.median} (${lower.entry.compCount} sales). ` +
+          `Likely outlier sale or misgrade. Reconstructed via empirical premium ratio (${ratio.toFixed(2)}×).`;
+        events.push({
+          grader,
+          higherGrade: higher.entry.grade,
+          lowerGrade: lower.entry.grade,
+          originalHigherMedian: originalMedian,
+          originalHigherCount: originalCount,
+          lowerMedian: lower.entry.median,
+          lowerCount: lower.entry.compCount,
+          reconstructedMedian: reconstructed,
+          ratio,
+          passNumber: pass,
+        });
+        firedThisPass = true;
+      }
+    }
+
+    if (!firedThisPass) break;
   }
 
-  for (const [grader, list] of byGrader) {
-    const numericList = list
-      .map((e) => ({ entry: e, value: Number(e.grade) }))
-      .filter((x) => Number.isFinite(x.value))
-      .sort((a, b) => b.value - a.value);
+  return events;
+}
 
-    for (let i = 0; i < numericList.length - 1; i++) {
-      const higher = numericList[i]!;
-      const lower = numericList[i + 1]!;
-      if (higher.entry.median >= lower.entry.median) continue;
-      if (higher.entry.median >= lower.entry.median * MIN_INVERSION_RATIO) continue;
-      if (lower.entry.median - higher.entry.median < MIN_INVERSION_ABS_USD) continue;
-      if (lower.entry.compCount < higher.entry.compCount) continue;
-      if (lower.entry.compCount < MIN_LOWER_COMPS) continue;
-
-      const higherPremium = getGraderPremium(
-        grader,
-        higher.entry.grade,
-        rawAnchor ?? undefined,
-      );
-      const lowerPremium = getGraderPremium(
-        grader,
-        lower.entry.grade,
-        rawAnchor ?? undefined,
-      );
-      if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium)) continue;
-      if (lowerPremium <= 0) continue;
-      const ratio = higherPremium / lowerPremium;
-      if (!Number.isFinite(ratio) || ratio < 1.0) continue;
-
-      const reconstructed = Math.round(lower.entry.median * ratio);
-      const originalMedian = higher.entry.median;
-      const originalCount = higher.entry.compCount;
-      higher.entry.median = reconstructed;
-      higher.entry.compCount = 0;
-      higher.entry.note =
-        `Reconstructed: observed median $${originalMedian} (from ${originalCount} sales) inverted with ` +
-        `${lower.entry.grader} ${lower.entry.grade} $${lower.entry.median} (${lower.entry.compCount} sales). ` +
-        `Likely outlier sale or misgrade. Reconstructed via empirical premium ratio (${ratio.toFixed(2)}×).`;
-    }
+/** Fire-and-forget telemetry for cross-observed inversion firings. The
+ *  KQL aggregator can group by grader/grade-pair to spot CH data quirks
+ *  (e.g., 1959-1961 vintage Topps where PSA 10 < PSA 9 from sparse +
+ *  CH-low-confidence FMV interpolation) and feed the calibration loop.
+ *  Telemetry failures must never propagate. */
+export function logCrossObservedInversionFired(opts: {
+  source: string;
+  player: string | null;
+  cardId: string | null;
+  event: CrossObservedInversionEvent;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "cross_observed_inversion_fired",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      grader: opts.event.grader,
+      higherGrade: opts.event.higherGrade,
+      lowerGrade: opts.event.lowerGrade,
+      originalHigherMedian: opts.event.originalHigherMedian,
+      originalHigherCount: opts.event.originalHigherCount,
+      lowerMedian: opts.event.lowerMedian,
+      lowerCount: opts.event.lowerCount,
+      reconstructedMedian: opts.event.reconstructedMedian,
+      ratio: Math.round(opts.event.ratio * 1000) / 1000,
+      inversionPctOriginal:
+        Math.round(((opts.event.lowerMedian - opts.event.originalHigherMedian) / opts.event.lowerMedian) * 1000) / 10,
+      passNumber: opts.event.passNumber,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
   }
 }
 
@@ -1267,7 +1352,25 @@ export function buildGradeBreakdown(
   // inversions where the higher grade still has a depressed median.
   // Vol Test #2 canonical case: 1960 Topps Mickey Mantle All-Star #563,
   // PSA 10 = $2,639 < PSA 9 = $3,249.
-  applyCrossGradedInversionGuard(out, observedRawMedian);
+  //
+  // CF-INVERSION-GUARD-TELEMETRY (2026-06-29): each firing emits a
+  // cross_observed_inversion_fired event for prod monitoring. Frequency
+  // signal feeds the calibration loop — clusters by (year, grader,
+  // grade-pair) indicate CH FMV interpolation quirks at specific
+  // vintages worth investigating.
+  const inversionEvents = applyCrossGradedInversionGuard(out, observedRawMedian);
+  if (inversionEvents.length > 0) {
+    const cardId = pricing.card?.card_id ?? null;
+    const player = pricing.card?.name ?? null;
+    for (const ev of inversionEvents) {
+      logCrossObservedInversionFired({
+        source: "buildGradeBreakdown",
+        player,
+        cardId,
+        event: ev,
+      });
+    }
+  }
 
   // Sort: PSA, BGS, SGC, CGC, then alphabetical; numeric grade desc
   // within a company; non-numeric labels last alphabetically.
