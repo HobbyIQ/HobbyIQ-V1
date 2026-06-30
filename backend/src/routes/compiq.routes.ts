@@ -3063,7 +3063,7 @@ router.get(
 //
 // RESPONSE
 //   { success: boolean,
-//     cardsightCardId: string | null,    // pass to /price-by-id
+//     cardId: string | null,    // pass to /price-by-id
 //     player, set, number, variant,
 //     matchPath: "cert-ocr" | "image-match" | null,
 //     matchConfidence: number | null,
@@ -3072,7 +3072,45 @@ router.get(
 //
 // AUTH: requireSession + requireRateLimited("priceChecksPerDay").
 // Same rate budget as text-based scans — one image scan = one priceCheck.
+
+// CF-COMPIQ-SCAN-TELEMETRY (2026-06-30): emit one structured event per
+// scan attempt so Drew can monitor matchPath success rates and tune the
+// cert-OCR-vs-image-match heuristic threshold. Privacy-safe: NEVER logs
+// imageUrl (may contain SAS sig) or imageBase64 content.
+export function logCompiqScanAttempt(opts: {
+  hint: "raw" | "graded" | "auto";
+  matchPath: "cert-ocr" | "image-match" | null;
+  matchConfidence: number | null;
+  hadCertInfo: boolean;
+  certGrader: string | null;
+  imageInputKind: "url" | "base64";
+  durationMs: number;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "compiq_scan_attempt",
+      hint: opts.hint,
+      matchPath: opts.matchPath,
+      matchConfidence: opts.matchConfidence,
+      matchConfidenceBucket:
+        opts.matchConfidence == null ? "none"
+        : opts.matchConfidence >= 0.9 ? "high"
+        : opts.matchConfidence >= 0.7 ? "medium"
+        : opts.matchConfidence >= 0.5 ? "low"
+        : "very_low",
+      hadCertInfo: opts.hadCertInfo,
+      certGrader: opts.certGrader,
+      imageInputKind: opts.imageInputKind,
+      durationMs: opts.durationMs,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
 router.post("/scan", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  const startMs = Date.now();
   try {
     const { imageUrl, imageBase64, hint } = (req.body ?? {}) as {
       imageUrl?: unknown;
@@ -3091,61 +3129,86 @@ router.post("/scan", requireSession, requireRateLimited("priceChecksPerDay"), as
     }
     const resolvedHint: "raw" | "graded" | "auto" =
       hint === "raw" || hint === "graded" ? hint : "auto";
+    const imageInputKind: "url" | "base64" = input.imageUrl ? "url" : "base64";
 
     // ── Step 1: cert-OCR (slab path) ──────────────────────────────
-    // Tried first when hint is "graded" or "auto". Cert-OCR is fast and
-    // resolves cert_number + grader + card identity in one call when the
-    // photo shows a slab label clearly.
     let certResult: Awaited<ReturnType<typeof getCardDetailsByCertImage>> = null;
     if (resolvedHint !== "raw") {
       certResult = await getCardDetailsByCertImage(input);
     }
     if (certResult && certResult.card?.card_id) {
       const ci = certResult.cert_info ?? {};
+      const certGrader = typeof ci.grader === "string" ? ci.grader : null;
+      const matchConfidence =
+        typeof certResult.match_confidence === "number" ? certResult.match_confidence : null;
+      logCompiqScanAttempt({
+        hint: resolvedHint,
+        matchPath: "cert-ocr",
+        matchConfidence,
+        hadCertInfo: Boolean(ci.cert_number),
+        certGrader,
+        imageInputKind,
+        durationMs: Date.now() - startMs,
+      });
       return res.json({
         success: true,
-        cardsightCardId: String(certResult.card.card_id),
+        cardId: String(certResult.card.card_id),
         player: typeof certResult.card.player === "string" ? certResult.card.player : null,
         set: typeof certResult.card.set === "string" ? certResult.card.set : null,
         number: typeof certResult.card.number === "string" ? certResult.card.number : null,
         variant: typeof certResult.card.variant === "string" ? certResult.card.variant : null,
         matchPath: "cert-ocr" as const,
-        matchConfidence:
-          typeof certResult.match_confidence === "number" ? certResult.match_confidence : null,
+        matchConfidence,
         certInfo: {
           certNumber: typeof ci.cert_number === "string" ? ci.cert_number : null,
-          grader: typeof ci.grader === "string" ? ci.grader : null,
+          grader: certGrader,
           grade: typeof ci.grade === "string" ? ci.grade : null,
         },
       });
     }
 
     // ── Step 2: image-match (raw or cert-OCR-miss path) ─────────────
-    // When hint is "raw" OR the slab OCR didn't yield a card_id, run the
-    // image-match AI to pick a best card.
     if (resolvedHint !== "graded") {
       const matchResult = await identifyCardByImage(input);
       const best = matchResult?.best_match;
       if (best && typeof best.card_id === "string" && best.card_id.length > 0) {
+        const matchConfidence = typeof best.confidence === "number" ? best.confidence : null;
+        logCompiqScanAttempt({
+          hint: resolvedHint,
+          matchPath: "image-match",
+          matchConfidence,
+          hadCertInfo: false,
+          certGrader: null,
+          imageInputKind,
+          durationMs: Date.now() - startMs,
+        });
         return res.json({
           success: true,
-          cardsightCardId: best.card_id,
+          cardId: best.card_id,
           player: typeof best.player === "string" ? best.player : null,
           set: typeof best.set === "string" ? best.set : null,
           number: typeof best.number === "string" ? best.number : null,
           variant: typeof best.variant === "string" ? best.variant : null,
           matchPath: "image-match" as const,
-          matchConfidence: typeof best.confidence === "number" ? best.confidence : null,
+          matchConfidence,
           certInfo: null,
         });
       }
     }
 
-    // No path resolved a card_id. Return a structured "couldn't match"
-    // response so iOS can show a helpful UI (e.g., "try a clearer photo").
+    // No path resolved a card_id.
+    logCompiqScanAttempt({
+      hint: resolvedHint,
+      matchPath: null,
+      matchConfidence: null,
+      hadCertInfo: false,
+      certGrader: null,
+      imageInputKind,
+      durationMs: Date.now() - startMs,
+    });
     return res.json({
       success: true,
-      cardsightCardId: null,
+      cardId: null,
       player: null,
       set: null,
       number: null,
