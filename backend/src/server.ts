@@ -7,6 +7,7 @@ import { startPortfolioRepriceJob } from "./jobs/portfolioReprice.job.js";
 import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
+import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { startEbayFinancesEnrichmentJob } from "./jobs/ebayFinancesEnrichment.job.js";
@@ -78,6 +79,16 @@ app.listen(port, "0.0.0.0", () => {
     startEbayOrderPollJob();
   } catch (err: any) {
     console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
+  }
+  // CF-CH-DELTA-POLL-FOUNDATION (2026-06-30): observation-only CardHedge
+  // price-updates delta poll. Dormant unless both CARD_HEDGE_CLIENT_ID
+  // (Drew registers with CH) AND CH_DELTA_POLL_ENABLED=true. Logs poll
+  // cycles + update counts; downstream wiring (subscribe holdings,
+  // trigger reprice) is a follow-up CF.
+  try {
+    startChDeltaPollJob();
+  } catch (err: any) {
+    console.error("[server] startChDeltaPollJob failed:", err?.message ?? err);
   }
   // CF-PAYMENTS-APPLE-2 (2026-06-03): nightly subscription safety-net.
   // Catches App Store Server Notifications V2 events Apple failed to
