@@ -42,6 +42,7 @@ import crypto from "crypto";
 import {
   selectSalesByGrade,
   applyCompQualityFilterDetailed,
+  getGraderPremium,
 } from "./compiqEstimate.service.js";
 // CF-FILTER-CONSOLIDATION (2026-06-10): single source of pool truth.
 // Was duplicated locally as `filterByParallelHere` to avoid a
@@ -1102,6 +1103,91 @@ function recentDirectionFromRecords(
 // ./filters.js — same helper the value path in compiqEstimate.service.ts
 // uses. One function, two consumers, drift impossible.
 
+// CF-CROSS-OBSERVED-INVERSION-GUARD (2026-06-29) — reconstruct inverted
+// higher-grade observed medians. When the SAME grader's PSA 10 prices
+// below its PSA 9 (structurally impossible — better grade always >=
+// worse grade for the same card), the higher grade's median is likely
+// a fluke sale. We reconstruct via the empirical premium ratio from
+// getGraderPremium, anchored on the (more trusted) lower grade.
+//
+// Safety rails:
+//   - Only same-grader (cross-grader prestige is fuzzy; PSA 10 < BGS 10
+//     is sometimes real)
+//   - Only NUMERIC grades (skip Authentic/Altered/etc.)
+//   - Inversion must be SIGNIFICANT (>5% margin AND >$5 absolute) to
+//     avoid noise on low-value cards
+//   - Lower must have >= higher's comp count (else the "inversion" is
+//     real data: many PSA 10s actually sold below 1 lucky PSA 9 sale)
+//   - Lower must have >= 3 comps (reconstructing off a 1-2 sample base
+//     is rebuilding on shaky ground)
+//   - Premium ratio must be computable AND >= 1 (else the reconstruction
+//     is incoherent)
+//
+// Reconstruction sets median = round(lower.median × ratio), zeros
+// compCount (signals "estimated, not observed"), and attaches an
+// explanatory note. The original observed median is preserved in the
+// note for transparency.
+export function applyCrossGradedInversionGuard(
+  entries: GradeBreakdownEntry[],
+  rawAnchor: number | null,
+): void {
+  const MIN_INVERSION_RATIO = 0.95;
+  const MIN_INVERSION_ABS_USD = 5;
+  const MIN_LOWER_COMPS = 3;
+
+  // Group entries by grader (case-insensitive). Process each grader's
+  // numeric grades from highest down so adjacent comparisons walk the
+  // expected ladder (10 → 9.5 → 9 → 8.5 → ...).
+  const byGrader = new Map<string, GradeBreakdownEntry[]>();
+  for (const e of entries) {
+    const key = e.grader.toUpperCase();
+    if (!byGrader.has(key)) byGrader.set(key, []);
+    byGrader.get(key)!.push(e);
+  }
+
+  for (const [grader, list] of byGrader) {
+    const numericList = list
+      .map((e) => ({ entry: e, value: Number(e.grade) }))
+      .filter((x) => Number.isFinite(x.value))
+      .sort((a, b) => b.value - a.value);
+
+    for (let i = 0; i < numericList.length - 1; i++) {
+      const higher = numericList[i]!;
+      const lower = numericList[i + 1]!;
+      if (higher.entry.median >= lower.entry.median) continue;
+      if (higher.entry.median >= lower.entry.median * MIN_INVERSION_RATIO) continue;
+      if (lower.entry.median - higher.entry.median < MIN_INVERSION_ABS_USD) continue;
+      if (lower.entry.compCount < higher.entry.compCount) continue;
+      if (lower.entry.compCount < MIN_LOWER_COMPS) continue;
+
+      const higherPremium = getGraderPremium(
+        grader,
+        higher.entry.grade,
+        rawAnchor ?? undefined,
+      );
+      const lowerPremium = getGraderPremium(
+        grader,
+        lower.entry.grade,
+        rawAnchor ?? undefined,
+      );
+      if (!Number.isFinite(higherPremium) || !Number.isFinite(lowerPremium)) continue;
+      if (lowerPremium <= 0) continue;
+      const ratio = higherPremium / lowerPremium;
+      if (!Number.isFinite(ratio) || ratio < 1.0) continue;
+
+      const reconstructed = Math.round(lower.entry.median * ratio);
+      const originalMedian = higher.entry.median;
+      const originalCount = higher.entry.compCount;
+      higher.entry.median = reconstructed;
+      higher.entry.compCount = 0;
+      higher.entry.note =
+        `Reconstructed: observed median $${originalMedian} (from ${originalCount} sales) inverted with ` +
+        `${lower.entry.grader} ${lower.entry.grade} $${lower.entry.median} (${lower.entry.compCount} sales). ` +
+        `Likely outlier sale or misgrade. Reconstructed via empirical premium ratio (${ratio.toFixed(2)}×).`;
+    }
+  }
+}
+
 export function buildGradeBreakdown(
   pricing: CardsightPricingResponse,
   parallelId: string | null | undefined,
@@ -1170,6 +1256,18 @@ export function buildGradeBreakdown(
       out.push(entry);
     }
   }
+
+  // CF-CROSS-OBSERVED-INVERSION-GUARD (2026-06-29): same-grader inversion
+  // pass. When a higher numeric grade has a lower median than a lower grade
+  // (PSA 10 < PSA 9), the higher grade's observed comp is a likely outlier
+  // (single fluke sale, misgrade, mislabel). Reconstruct via empirical
+  // ratio from getGraderPremium. Companion to the comp-pool sparsity
+  // filter shipped in CF-COMP-SPARSITY-STALENESS-FILTER (PR #198) —
+  // that one caught n=1 stale singletons; this one catches n>=2
+  // inversions where the higher grade still has a depressed median.
+  // Vol Test #2 canonical case: 1960 Topps Mickey Mantle All-Star #563,
+  // PSA 10 = $2,639 < PSA 9 = $3,249.
+  applyCrossGradedInversionGuard(out, observedRawMedian);
 
   // Sort: PSA, BGS, SGC, CGC, then alphabetical; numeric grade desc
   // within a company; non-numeric labels last alphabetically.
