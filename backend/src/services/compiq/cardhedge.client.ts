@@ -433,14 +433,40 @@ export async function getTotalSalesByPlayer(
   );
 }
 
-export async function getTopMovers(): Promise<TopMoverCard[] | null> {
+export interface GetTopMoversOptions {
+  /** Number of cards to return. CH default = 20, max ≈ 100. */
+  count?: number;
+  /** Optional category filter — e.g. "Baseball", "Basketball", "Pokemon".
+   *  Omit for all categories combined. */
+  category?: string;
+}
+
+/**
+ * CF-CH-TOP-MOVERS-PARAMS (2026-06-30): enhanced to accept count + category
+ * query params. CH's /v1/cards/top-movers supports both; we previously
+ * passed neither, locking to defaults (count=20, all categories). Now
+ * callers can request "20 baseball cards" cleanly. CH caches the
+ * response server-side for 1 hour, and our own cacheWrap layers another
+ * 6h on top (TTL keyed by params).
+ */
+export async function getTopMovers(
+  opts: GetTopMoversOptions = {},
+): Promise<TopMoverCard[] | null> {
   const h = headers();
   if (!h) return null;
+  const count = Number.isFinite(opts.count) && opts.count! > 0 ? Math.floor(opts.count!) : 20;
+  const category = typeof opts.category === "string" && opts.category.trim().length > 0
+    ? opts.category.trim()
+    : null;
+  const cacheKeySuffix = `${count}|${category ?? "all"}`;
   return cacheWrap(
-    cacheKey("ch:top-movers", "all"),
+    cacheKey("ch:top-movers", cacheKeySuffix),
     async () => {
       try {
-        const res = await fetch(`${BASE_URL}/cards/top-movers`, {
+        const params = new URLSearchParams();
+        params.set("count", String(count));
+        if (category) params.set("category", category);
+        const res = await fetch(`${BASE_URL}/cards/top-movers?${params.toString()}`, {
           method: "GET",
           headers: h,
           signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
