@@ -1237,6 +1237,58 @@ export function applyCrossGradedInversionGuard(
   return events;
 }
 
+// CF-SUB-RAW-INVERSION-TELEMETRY (2026-06-30) — structured event for the
+// existing sub-raw note (CF-CROSS-GRADE-COHERENCE additive 2026-06-12).
+// When a graded observed median sits BELOW the raw observed median,
+// buildGradeBreakdown already attaches a display note ("Raw trades above
+// X here — common for hot prospects"). This telemetry adds a queryable
+// event so KQL can aggregate frequency by (player, grader, grade,
+// margin) — useful inputs:
+//   - "which prospects most often trade graded-below-raw?" → seller
+//     intelligence (hot rookie speculation signal)
+//   - "which graders' low grades trade below raw most?" → grader
+//     prestige drift signal
+//   - "year-over-year margin trend" → market regime indicator
+//
+// Pure observation — no behavior change. The existing note stays as the
+// display surface; the event is the data layer.
+export interface SubRawInversionEvent {
+  grader: string;
+  grade: string;
+  gradeMedian: number;
+  gradeCount: number;
+  rawMedian: number;
+  marginPct: number;  // (rawMedian - gradeMedian) / rawMedian * 100
+  marginUSD: number;  // rawMedian - gradeMedian
+}
+
+/** Fire-and-forget telemetry for sub-raw observations. */
+export function logSubRawInversionObserved(opts: {
+  source: string;
+  player: string | null;
+  cardId: string | null;
+  event: SubRawInversionEvent;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "sub_raw_inversion_observed",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      grader: opts.event.grader,
+      grade: opts.event.grade,
+      gradeMedian: opts.event.gradeMedian,
+      gradeCount: opts.event.gradeCount,
+      rawMedian: opts.event.rawMedian,
+      marginPct: opts.event.marginPct,
+      marginUSD: opts.event.marginUSD,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
 /** Fire-and-forget telemetry for cross-observed inversion firings. The
  *  KQL aggregator can group by grader/grade-pair to spot CH data quirks
  *  (e.g., 1959-1961 vintage Topps where PSA 10 < PSA 9 from sparse +
@@ -1337,6 +1389,25 @@ export function buildGradeBreakdown(
         && entry.median < observedRawMedian
       ) {
         entry.note = `Raw trades above ${entry.grader} ${entry.grade} here — common for hot prospects.`;
+        // CF-SUB-RAW-INVERSION-TELEMETRY (2026-06-30): also emit a
+        // structured event so KQL can query the frequency. Fire-and-
+        // forget — telemetry failure must not break grade breakdown.
+        const marginUSD = observedRawMedian - entry.median;
+        const marginPct = Math.round((marginUSD / observedRawMedian) * 1000) / 10;
+        logSubRawInversionObserved({
+          source: "buildGradeBreakdown",
+          player: pricing.card?.name ?? null,
+          cardId: pricing.card?.card_id ?? null,
+          event: {
+            grader: entry.grader,
+            grade: entry.grade,
+            gradeMedian: entry.median,
+            gradeCount: entry.compCount,
+            rawMedian: observedRawMedian,
+            marginPct,
+            marginUSD,
+          },
+        });
       }
       out.push(entry);
     }
