@@ -217,6 +217,15 @@ export function scoreCandidateForIntent(opts: {
   parallel: string | null | undefined;
   intentTokens: ReadonlyArray<string>;
   intentWantsAuto: boolean;
+  /** CF-CH-RERANK-YEAR-MATCH (2026-06-29): user-stated year from parser.
+   *  When present AND candidate's year matches, big boost. When present
+   *  AND candidate's year differs by > 1, penalty. Vol Test #2 surfaced
+   *  the canonical case: query "1953 Topps Duke Snider #210" → CH search
+   *  ranked the 1991 Topps Archives reissue at position 1 (high volume)
+   *  even though the actual 1953 Snider exists at position 2. */
+  intentYear?: number | null;
+  /** Candidate's year (may be number, string, or null). Normalized inside. */
+  candidateYear?: number | string | null | undefined;
 }): number {
   let score = 0;
   if (opts.intentWantsAuto) {
@@ -231,6 +240,22 @@ export function scoreCandidateForIntent(opts: {
     const parallelTokenSet = new Set(parallelTokens);
     for (const t of opts.intentTokens) {
       if (parallelTokenSet.has(t)) score += 2;
+    }
+  }
+  // CF-CH-RERANK-YEAR-MATCH (2026-06-29)
+  if (opts.intentYear != null && opts.intentYear >= 1900) {
+    const candY =
+      typeof opts.candidateYear === "number" && Number.isFinite(opts.candidateYear)
+        ? opts.candidateYear
+        : typeof opts.candidateYear === "string"
+        ? Number(opts.candidateYear)
+        : NaN;
+    if (Number.isFinite(candY)) {
+      const delta = Math.abs(candY - opts.intentYear);
+      if (delta === 0) score += 4;       // exact year match — strongest rerank signal
+      else if (delta === 1) score += 0;  // off-by-1 neutral (year boundary cases like Jan releases)
+      else if (delta <= 3) score -= 2;   // small drift penalty
+      else score -= 5;                   // big drift (Archives reissues, wrong-decade misroutes)
     }
   }
   return score;
@@ -515,6 +540,13 @@ async function dispatchFreetextMode(
         parallel: card.variant,
         intentTokens,
         intentWantsAuto,
+        // CF-CH-RERANK-YEAR-MATCH (2026-06-29): vol-test #2 surfaced
+        // "1953 Topps Snider #210" misrouting to 1991 Topps Archives
+        // 1953 reissue (CH ranked the higher-volume Archives at #1).
+        // Pass user-stated year into rerank so cards matching the year
+        // beat the reissues.
+        intentYear: parsed.year,
+        candidateYear: card.year,
       });
       return { card, originalIndex, score };
     })
