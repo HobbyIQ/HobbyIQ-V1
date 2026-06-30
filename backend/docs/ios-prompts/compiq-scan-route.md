@@ -44,7 +44,7 @@ x-session-id: <session>
 ```json
 {
   "success": true,
-  "cardsightCardId": "1605711600415x817320852227883000",
+  "cardId": "1605711600415x817320852227883000",
   "player": "Mike Trout",
   "set": "2011 Topps Update Baseball",
   "number": "US175",
@@ -61,7 +61,7 @@ x-session-id: <session>
 
 **Field semantics:**
 
-- **`cardsightCardId`** — pass this to `/api/compiq/price-by-id` for pricing. **Null when neither path resolved a card.**
+- **`cardId`** — pass this to `/api/compiq/price-by-id` for pricing. **Null when neither path resolved a card.**
 - **`matchPath`** — `"cert-ocr"` (slab label OCR) or `"image-match"` (visual AI). Null when nothing matched.
 - **`matchConfidence`** — 0.0-1.0. iOS may want to warn the user when below 0.7.
 - **`certInfo`** — present only when `matchPath = "cert-ocr"`. Contains the OCR'd cert number + grader + grade. iOS can pre-fill the user's holding form.
@@ -73,8 +73,8 @@ x-session-id: <session>
 1. User taps "Scan card" → camera opens → captures photo
 2. iOS optionally uploads to photoStorage, gets back a URL (or keeps as base64)
 3. `POST /api/compiq/scan` with `{ imageUrl, hint: "raw" }`
-4. On `cardsightCardId !== null`: navigate to result screen, immediately call `POST /api/compiq/price-by-id { cardsightCardId }`
-5. On `cardsightCardId === null`: show "couldn't match — try a clearer photo / fall back to text search" UI
+4. On `cardId !== null`: navigate to result screen, immediately call `POST /api/compiq/price-by-id { cardId }`
+5. On `cardId === null`: show "couldn't match — try a clearer photo / fall back to text search" UI
 
 ### Flow 2 — Graded slab scan
 
@@ -92,7 +92,7 @@ Use this when iOS doesn't know if the photo is a slab. Backend tries cert-OCR fi
 | Backend response | iOS handles |
 |---|---|
 | `400 Missing image` | Validation bug — log + show generic "scan failed" |
-| `200 success=true, cardsightCardId=null` | "Couldn't match — try a clearer photo" UI |
+| `200 success=true, cardId=null` | "Couldn't match — try a clearer photo" UI |
 | `200 success=true, matchConfidence < 0.7` | "Low confidence — is this right?" disambiguation UI |
 | `200 success=true, matchConfidence < 0.5` (consider) | Same as null match — likely wrong card |
 | `429 Rate limited` | Standard rate-limit handling |
