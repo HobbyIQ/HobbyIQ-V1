@@ -851,6 +851,266 @@ async function _postTyped<T>(
 }
 
 /** POST /cards/card-match — AI text match. Returns null when confidence < 0.80. */
+// ── IMAGE + CERT-OCR ENDPOINTS (CF-CH-IMAGE-CERT-OCR 2026-06-30) ───────────
+//
+// Foundation for iOS slab scanning. CH exposes 4 image-based identification
+// endpoints; we wrap them so the future /api/compiq/scan route (and any
+// other photo-driven flow) can call uniformly.
+//
+// All 4 take EITHER imageUrl (public URL, faster — CH downloads once) OR
+// imageBase64 (data the iOS app already has in-memory, no upload round-
+// trip). At least one is required; the wrapper rejects with null if both
+// missing. base64 payloads bypass our cache layer (each photo is unique);
+// imageUrl is cached by URL hash for a short window (URLs CAN repeat
+// in iOS — the photo storage layer issues persistent SAS URLs).
+//
+// LATENCY: AI vision + match is slower than text — bump the per-call
+// timeout to 30s. NO retries internally; the caller decides whether a
+// timeout warrants a retry (often it doesn't — the user can re-tap).
+//
+// PRIVACY: never log image_url with query strings (they often carry SAS
+// signatures) and never log image_base64 content. Errors log only the
+// endpoint path + HTTP status.
+const IMAGE_OP_TIMEOUT_MS = 30_000;
+const IMAGE_MATCH_TTL_SEC = 10 * 60;  // 10 min — same image_url likely tapped multiple times by an active user
+
+export interface ImageInput {
+  /** Public URL of the card image. Preferred when iOS has already
+   *  uploaded the photo via the existing photo-storage pipeline. */
+  imageUrl?: string;
+  /** Base64-encoded image bytes (data-URI prefix optional). Use when
+   *  the iOS app wants to skip the upload round-trip. */
+  imageBase64?: string;
+}
+
+/** Per the AI's choice — best card it could resolve from the image. */
+export interface CardHedgeImageBestMatch {
+  card_id?: string;
+  description?: string;
+  player?: string;
+  set?: string;
+  number?: string;
+  variant?: string;
+  confidence?: number;
+  [k: string]: unknown;
+}
+
+export interface CardHedgeImageMatchResponse {
+  success: boolean;
+  best_match: CardHedgeImageBestMatch | null;
+  candidates: CardHedgeImageBestMatch[];
+  query_id?: string;
+  message?: string;
+}
+
+export interface CardHedgeImageSearchResult {
+  card_id?: string;
+  description?: string;
+  player?: string;
+  set?: string;
+  number?: string;
+  variant?: string;
+  similarity?: number;
+  [k: string]: unknown;
+}
+
+export interface CardHedgeImageSearchResponse {
+  success: boolean;
+  results: CardHedgeImageSearchResult[];
+  total_results: number;
+  query_id?: string;
+  has_cardhedge_matches?: boolean;
+  message?: string;
+}
+
+export interface CardHedgeCertOcrCertInfo {
+  cert_number?: string;
+  grader?: string;
+  grade?: string | null;
+  [k: string]: unknown;
+}
+
+export interface CardHedgeCertOcrDetailsResponse {
+  cert_info: CardHedgeCertOcrCertInfo;
+  card: { card_id?: string; description?: string; [k: string]: unknown } | null;
+  card_source?: "gemrate_id" | "card_match" | string | null;
+  match_confidence?: number | null;
+}
+
+export interface CardHedgeCertOcrPriceResponse extends CardHedgeCertOcrDetailsResponse {
+  prices: Array<{
+    grade?: string;
+    sale_date?: string;
+    price?: string | number;
+    [k: string]: unknown;
+  }>;
+}
+
+/** Internal: build the request body from an ImageInput, returning null
+ *  if neither field is populated. Trims whitespace. */
+function buildImageBody(input: ImageInput, extras?: Record<string, unknown>): Record<string, unknown> | null {
+  const url = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  const b64 = typeof input.imageBase64 === "string" ? input.imageBase64.trim() : "";
+  if (!url && !b64) return null;
+  const body: Record<string, unknown> = { ...(extras ?? {}) };
+  if (url) body.image_url = url;
+  if (b64) body.image_base64 = b64;
+  return body;
+}
+
+/** Cheap stable hash of imageUrl for cache key segmentation. We avoid
+ *  embedding the full URL because some contain long SAS signatures. */
+function imageCacheKeyPart(input: ImageInput): string {
+  const url = typeof input.imageUrl === "string" ? input.imageUrl.trim() : "";
+  if (!url) return "b64";  // base64 requests bypass cache (see callers)
+  // Strip query string before hashing — SAS signatures rotate; we want
+  // the same underlying blob URL to cache-hit across signature refreshes.
+  const base = url.split("?")[0] || url;
+  let h = 0;
+  for (let i = 0; i < base.length; i++) h = ((h << 5) - h + base.charCodeAt(i)) | 0;
+  return `url:${(h >>> 0).toString(16)}`;
+}
+
+/** Shared POST → JSON for image endpoints. Returns null on error.
+ *  Never logs URL query string or base64 content. */
+async function _postImageEndpoint<T>(
+  path: string,
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(IMAGE_OP_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] ${path} HTTP ${res.status}`);
+      return null;
+    }
+    return (await res.json()) as T;
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] ${path} threw: ${err?.message ?? err}`);
+    return null;
+  }
+}
+
+/**
+ * AI-pick the single best card match for an image. Use this for the iOS
+ * raw-card scan flow ("take a photo of the card you want priced").
+ *
+ * `k` controls AI breadth (default 10 — wider = slower, more accurate).
+ * Returns null on transport failure; the success path's `best_match`
+ * can still be null when the AI isn't confident enough.
+ */
+export async function identifyCardByImage(
+  input: ImageInput,
+  opts: { k?: number } = {},
+): Promise<CardHedgeImageMatchResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input, opts.k != null ? { k: opts.k } : undefined);
+  if (!body) {
+    console.warn("[cardhedge.client] identifyCardByImage: imageUrl OR imageBase64 required");
+    return null;
+  }
+  // base64 inputs bypass cache (per-call unique); imageUrl inputs cache
+  // by hashed URL stem to dedupe a user tapping the same blob twice.
+  if (body.image_base64) {
+    return _postImageEndpoint<CardHedgeImageMatchResponse>("/cards/image-match", body, h);
+  }
+  return cacheWrap(
+    cacheKey("ch:image-match", imageCacheKeyPart(input), String(opts.k ?? 10)),
+    () => _postImageEndpoint<CardHedgeImageMatchResponse>("/cards/image-match", body, h),
+    IMAGE_MATCH_TTL_SEC,
+  );
+}
+
+/**
+ * Ranked list of visually similar cards. Use when the iOS user wants to
+ * BROWSE candidates rather than commit to one — e.g., disambiguating
+ * variants of the same card.
+ */
+export async function searchCardsByImage(
+  input: ImageInput,
+  opts: { k?: number } = {},
+): Promise<CardHedgeImageSearchResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input, opts.k != null ? { k: opts.k } : undefined);
+  if (!body) {
+    console.warn("[cardhedge.client] searchCardsByImage: imageUrl OR imageBase64 required");
+    return null;
+  }
+  if (body.image_base64) {
+    return _postImageEndpoint<CardHedgeImageSearchResponse>("/cards/image-search", body, h);
+  }
+  return cacheWrap(
+    cacheKey("ch:image-search", imageCacheKeyPart(input), String(opts.k ?? 10)),
+    () => _postImageEndpoint<CardHedgeImageSearchResponse>("/cards/image-search", body, h),
+    IMAGE_MATCH_TTL_SEC,
+  );
+}
+
+/**
+ * Extract grader + cert number from a SLABBED card image via AI OCR,
+ * then resolve card details (no price history — see
+ * getPricesByCertImage for that). Use this for the iOS graded-card
+ * scan flow.
+ */
+export async function getCardDetailsByCertImage(
+  input: ImageInput,
+): Promise<CardHedgeCertOcrDetailsResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(input);
+  if (!body) {
+    console.warn("[cardhedge.client] getCardDetailsByCertImage: imageUrl OR imageBase64 required");
+    return null;
+  }
+  if (body.image_base64) {
+    return _postImageEndpoint<CardHedgeCertOcrDetailsResponse>("/cards/details-by-cert-ocr", body, h);
+  }
+  return cacheWrap(
+    cacheKey("ch:cert-ocr-details", imageCacheKeyPart(input)),
+    () => _postImageEndpoint<CardHedgeCertOcrDetailsResponse>("/cards/details-by-cert-ocr", body, h),
+    IMAGE_MATCH_TTL_SEC,
+  );
+}
+
+/**
+ * Same OCR pipeline as getCardDetailsByCertImage but also returns
+ * recent prices for the resolved cert. Use this for the iOS scan-to-
+ * value flow on graded slabs.
+ *
+ * `days` controls the price-history window (1-365, default 90 on CH's
+ * side — we don't override unless caller asks).
+ */
+export async function getPricesByCertImage(
+  input: ImageInput,
+  opts: { days?: number } = {},
+): Promise<CardHedgeCertOcrPriceResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const body = buildImageBody(
+    input,
+    opts.days != null && Number.isFinite(opts.days) ? { days: Math.max(1, Math.min(365, Math.floor(opts.days))) } : undefined,
+  );
+  if (!body) {
+    console.warn("[cardhedge.client] getPricesByCertImage: imageUrl OR imageBase64 required");
+    return null;
+  }
+  if (body.image_base64) {
+    return _postImageEndpoint<CardHedgeCertOcrPriceResponse>("/cards/prices-by-cert-ocr", body, h);
+  }
+  return cacheWrap(
+    cacheKey("ch:cert-ocr-prices", imageCacheKeyPart(input), String(opts.days ?? 90)),
+    () => _postImageEndpoint<CardHedgeCertOcrPriceResponse>("/cards/prices-by-cert-ocr", body, h),
+    IMAGE_MATCH_TTL_SEC,
+  );
+}
+
 export async function identifyCard(query: string): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   const h = headers();
   if (!h || !query.trim()) return null;
