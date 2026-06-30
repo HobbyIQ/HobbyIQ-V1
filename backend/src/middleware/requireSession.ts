@@ -55,7 +55,11 @@ export async function requireSession(
   // requires the env var to be set AND non-empty. The == is exact-string;
   // there's no prefix or HMAC scheme — the token is a CI-only shared
   // secret, not a user-facing credential.
-  const harnessToken = process.env.TIER1_HARNESS_TOKEN ?? "";
+  // .trim() defends against Azure App Service injecting trailing CR/LF/
+  // whitespace into the env var value. The inbound header is already
+  // trimmed above; without trimming the env side, an invisible \n on
+  // the env value silently breaks the bypass even with matching content.
+  const harnessToken = (process.env.TIER1_HARNESS_TOKEN ?? "").trim();
   if (harnessToken.length > 0 && sessionId === harnessToken) {
     req.user = HARNESS_USER;
     next();

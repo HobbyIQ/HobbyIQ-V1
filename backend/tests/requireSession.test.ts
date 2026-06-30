@@ -157,4 +157,24 @@ describe("requireSession — Tier 1 harness token bypass", () => {
     // Synthetic .internal TLD ensures any downstream code that key off
     // domain (e.g., email filters, notifications) trivially excludes it.
   });
+
+  it("env value with trailing whitespace still matches clean inbound (Azure App Service injection defense)", async () => {
+    // Real-world incident 2026-06-30: deploy + env-var set were both
+    // complete + verified, but Tier 1 still 401'd because the App Service
+    // env-var carried trailing whitespace. Header trims, env didn't —
+    // exact-string compare missed. Pin the .trim() symmetry both sides.
+    process.env.TIER1_HARNESS_TOKEN = "Carolina23!\n";
+    const { req, res, next } = makeReqRes({ "x-session-id": "Carolina23!" });
+    await requireSession(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user.userId).toBe("tier1-harness");
+  });
+
+  it("clean env value matches inbound with trailing whitespace (header-trim symmetry)", async () => {
+    process.env.TIER1_HARNESS_TOKEN = "Carolina23!";
+    const { req, res, next } = makeReqRes({ "x-session-id": "Carolina23!  " });
+    await requireSession(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user.userId).toBe("tier1-harness");
+  });
 });
