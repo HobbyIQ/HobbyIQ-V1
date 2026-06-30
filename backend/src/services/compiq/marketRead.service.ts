@@ -1273,6 +1273,122 @@ export function logCrossObservedInversionFired(opts: {
   }
 }
 
+// CF-CROSS-GRADER-INVERSION-TELEMETRY (2026-06-30) — observation-only
+// detection of CROSS-grader inversions. Unlike same-grader (where
+// PSA 10 < PSA 9 is structurally impossible), cross-grader inversions
+// can be REAL: BGS 10 Black Label sometimes trades above PSA 10, BGS 9.5
+// can be ≈ PSA 10 for some cards, and CGC prestige varies by year/set.
+//
+// This pass does NOT reconstruct — just emits a telemetry event for
+// each cross-grader inversion observed. Once we see the patterns in
+// KQL, a follow-up CF can add reconstruction for the cases that prove
+// to be data quirks (large inversion margin + low compcount) vs the
+// cases that are real market signals (small margin + high compcount on
+// both sides).
+//
+// Heuristics for "suspicious enough to log":
+//   - Numeric grades only (skip Authentic/Altered)
+//   - Same numeric grade tier (e.g., PSA 10 vs BGS 10, NOT PSA 10 vs BGS 9)
+//   - At least 5% inversion margin AND >$5 absolute (mirrors same-grader thresholds)
+//   - Both entries have >= 2 comps (single-sale singletons aren't credible)
+export interface CrossGraderInversionEvent {
+  higherGrader: string;     // the grader whose median is HIGHER
+  lowerGrader: string;      // the grader whose median is LOWER
+  numericGrade: string;     // shared numeric grade (e.g., "10")
+  higherMedian: number;
+  higherCount: number;
+  lowerMedian: number;
+  lowerCount: number;
+  marginPct: number;        // (higher - lower) / lower * 100
+}
+
+function detectCrossGraderInversions(
+  entries: GradeBreakdownEntry[],
+): CrossGraderInversionEvent[] {
+  const MIN_MARGIN_PCT = 5;
+  const MIN_MARGIN_USD = 5;
+  const MIN_COMPS = 2;
+
+  // Group entries by numeric grade (same tier comparison only — PSA 10 vs
+  // BGS 10 vs SGC 10 vs CGC 10, NOT PSA 10 vs BGS 9).
+  const byGrade = new Map<string, GradeBreakdownEntry[]>();
+  for (const e of entries) {
+    const g = Number(e.grade);
+    if (!Number.isFinite(g)) continue;  // skip Authentic/Altered/etc.
+    if ((e.compCount ?? 0) < MIN_COMPS) continue;  // skip thin entries
+    const key = String(g);
+    if (!byGrade.has(key)) byGrade.set(key, []);
+    byGrade.get(key)!.push(e);
+  }
+
+  const events: CrossGraderInversionEvent[] = [];
+  for (const [numericGrade, list] of byGrade) {
+    if (list.length < 2) continue;
+    // Compare every pair within this grade tier.
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i]!;
+        const b = list[j]!;
+        if (a.grader.toUpperCase() === b.grader.toUpperCase()) continue;
+        const higher = a.median > b.median ? a : b;
+        const lower = a.median > b.median ? b : a;
+        // Inversion check: this is a "cross-grader inversion" if the
+        // PRESTIGE ordering disagrees with the price ordering. We don't
+        // hard-code a prestige ranking (PSA > BGS > SGC > CGC is
+        // generally accepted but not universal); instead we log ALL
+        // significant cross-grader differences and let downstream KQL
+        // aggregation surface the patterns.
+        const marginUsd = higher.median - lower.median;
+        const marginPct = (marginUsd / lower.median) * 100;
+        if (marginUsd < MIN_MARGIN_USD) continue;
+        if (marginPct < MIN_MARGIN_PCT) continue;
+        events.push({
+          higherGrader: higher.grader,
+          lowerGrader: lower.grader,
+          numericGrade,
+          higherMedian: higher.median,
+          higherCount: higher.compCount,
+          lowerMedian: lower.median,
+          lowerCount: lower.compCount,
+          marginPct: Math.round(marginPct * 10) / 10,
+        });
+      }
+    }
+  }
+  return events;
+}
+
+/** Fire-and-forget telemetry for cross-grader inversion observations.
+ *  Pure data event — no engine behavior change. Feeds the KQL
+ *  aggregator to surface (year, set, grader-pair, grade-tier) patterns
+ *  worth investigating for a future reconstruction CF. */
+export function logCrossGraderInversionObserved(opts: {
+  source: string;
+  player: string | null;
+  cardId: string | null;
+  event: CrossGraderInversionEvent;
+}): void {
+  try {
+    console.log(JSON.stringify({
+      event: "cross_grader_inversion_observed",
+      source: opts.source,
+      player: opts.player,
+      cardId: opts.cardId,
+      higherGrader: opts.event.higherGrader,
+      lowerGrader: opts.event.lowerGrader,
+      numericGrade: opts.event.numericGrade,
+      higherMedian: opts.event.higherMedian,
+      higherCount: opts.event.higherCount,
+      lowerMedian: opts.event.lowerMedian,
+      lowerCount: opts.event.lowerCount,
+      marginPct: opts.event.marginPct,
+      timestamp: new Date().toISOString(),
+    }));
+  } catch {
+    // Telemetry failures must never propagate.
+  }
+}
+
 export function buildGradeBreakdown(
   pricing: CardsightPricingResponse,
   parallelId: string | null | undefined,
@@ -1364,6 +1480,28 @@ export function buildGradeBreakdown(
     const player = pricing.card?.name ?? null;
     for (const ev of inversionEvents) {
       logCrossObservedInversionFired({
+        source: "buildGradeBreakdown",
+        player,
+        cardId,
+        event: ev,
+      });
+    }
+  }
+
+  // CF-CROSS-GRADER-INVERSION-TELEMETRY (2026-06-30): observation-only.
+  // Detects cases like BGS 10 < PSA 10 or SGC 10 < BGS 10 within the same
+  // numeric grade tier. NO behavior change — just emits a telemetry
+  // event per observation. A later CF can add reconstruction once we
+  // see which patterns are real market signals vs CH data quirks.
+  // Detection happens AFTER same-grader reconstruction so its events
+  // reflect the post-reconstruction medians (consistent with what
+  // iOS surfaces).
+  const crossGraderEvents = detectCrossGraderInversions(out);
+  if (crossGraderEvents.length > 0) {
+    const cardId = pricing.card?.card_id ?? null;
+    const player = pricing.card?.name ?? null;
+    for (const ev of crossGraderEvents) {
+      logCrossGraderInversionObserved({
         source: "buildGradeBreakdown",
         player,
         cardId,
