@@ -920,6 +920,41 @@ function findSiblingParallelObservedAnchor(
   };
 }
 
+// CF-COMP-SPARSITY-STALENESS-FILTER (2026-06-29): a singleton observation
+// older than this threshold is NOT credibly observed. Mirrors CH's own
+// confidence_grade=C signaling (Mays 1959 PSA 10 was 224d stale at
+// support=1 when CH itself flagged it C-grade). The threshold lives here
+// so countObservedInScope and extractObservedGradeValues share one
+// definition of "credibly observed" — both must agree, else a grade
+// could be rail-skipped (treated observed) but absent from R-selection
+// (treated unobserved) or vice versa.
+const STALE_SINGLETON_CUTOFF_DAYS = 180;
+const DAY_MS = 86_400_000;
+
+/**
+ * Apply the n=1 staleness filter. A grade with multiple sales is always
+ * credible (corroboration). A grade with a single sale is credible only
+ * if that sale is recent. n=1 with no parsable date is NOT credible —
+ * defensive default; an undated outlier is the case we most want to
+ * exclude.
+ *
+ * Returns the filtered record array (the empty array means "not
+ * credibly observed").
+ */
+export function filterCredibleObserved(
+  records: ReadonlyArray<CardsightSaleRecord>,
+  nowMs: number = Date.now(),
+): CardsightSaleRecord[] {
+  if (records.length === 0) return [];
+  if (records.length >= 2) return [...records];
+  const r = records[0]!;
+  if (!r.date) return [];
+  const t = Date.parse(r.date);
+  if (!Number.isFinite(t)) return [];
+  if (nowMs - t > STALE_SINGLETON_CUTOFF_DAYS * DAY_MS) return [];
+  return [r];
+}
+
 /**
  * CF-GRADED-PRICE-PROJECTION (2026-06-12) — observed-first precedence GUARD.
  *
@@ -938,6 +973,12 @@ function findSiblingParallelObservedAnchor(
  *           unreliable for many cards; see cardsight.client.ts:513-522).
  *     This intentionally over-counts toward "observed" — better to skip
  *     a justified estimate than to overlay one on real data.
+ *
+ * CF-COMP-SPARSITY-STALENESS-FILTER (2026-06-29): post-scope, apply the
+ * singleton-staleness filter. A grade backed by a single sale older than
+ * STALE_SINGLETON_CUTOFF_DAYS counts as UNOBSERVED — the rail then
+ * estimates it via R-scaling, surfacing a credible value instead of
+ * the stale outlier.
  */
 function countObservedInScope(
   pricing: CardsightPricingResponse,
@@ -949,28 +990,31 @@ function countObservedInScope(
   const records = selectSalesByGrade(pricing, `${company} ${grade}`);
   if (records.length === 0) return 0;
 
+  let scope: CardsightSaleRecord[];
   // BASE scope
   if (!targetParallelId) {
-    return records.filter(isBaseRecord).length;
+    scope = records.filter(isBaseRecord);
+  } else {
+    // PARALLEL scope — strict tag first
+    const strict = records.filter((r) => r.parallel_id === targetParallelId);
+    if (strict.length > 0) {
+      scope = strict;
+    } else if (targetParallelName) {
+      // PARALLEL scope — title-token fallback (untagged Cardsight records)
+      const tokens = tokenizeParallel(targetParallelName);
+      if (tokens.length === 0) return 0;
+      const patterns = tokens.map(
+        (t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"),
+      );
+      scope = records.filter((r) => {
+        const title = r.title ?? "";
+        return patterns.every((p) => p.test(title));
+      });
+    } else {
+      return 0;
+    }
   }
-
-  // PARALLEL scope — strict tag first
-  const strict = records.filter((r) => r.parallel_id === targetParallelId);
-  if (strict.length > 0) return strict.length;
-
-  // PARALLEL scope — title-token fallback (untagged Cardsight records)
-  if (targetParallelName) {
-    const tokens = tokenizeParallel(targetParallelName);
-    if (tokens.length === 0) return 0;
-    const patterns = tokens.map(
-      (t) => new RegExp(`\\b${escapeRegex(t)}\\b`, "i"),
-    );
-    return records.filter((r) => {
-      const title = r.title ?? "";
-      return patterns.every((p) => p.test(title));
-    }).length;
-  }
-  return 0;
+  return filterCredibleObserved(scope).length;
 }
 
 // ── Anchor resolution ──────────────────────────────────────────────────────
@@ -2352,11 +2396,17 @@ function extractObservedGradeValues(
       }
     }
     if (scope.length === 0) continue;
-    const med = median(scope.map((r) => r.price));
+    // CF-COMP-SPARSITY-STALENESS-FILTER (2026-06-29): mirror
+    // countObservedInScope. A stale singleton is NOT credibly observed;
+    // excluding it here keeps R-selection + the ordering ceiling
+    // consistent with the rail-skip gate.
+    const credible = filterCredibleObserved(scope);
+    if (credible.length === 0) continue;
+    const med = median(credible.map((r) => r.price));
     if (med === null || med <= 0) continue;
     out.set(`${co} ${gradeStr}`, {
       value: med,
-      n: scope.length,
+      n: credible.length,
       company: co,
       gradeStr,
     });
