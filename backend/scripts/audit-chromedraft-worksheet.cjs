@@ -84,21 +84,35 @@ function main() {
   console.log(`Worksheet entries: ${worksheet.length}`);
   console.log(`Empirical entries (raw): ${empirical.length}`);
 
-  // Index empirical by normalized name. NOTE: prior calibration output
-  // schema doesn't include `isAuto` (fixed in the next refresh — see
-  // CF-PARALLEL-PREMIUMS-OUTPUT-ISAUTO follow-up). So we fall back to
-  // name-only matching here. If both an auto and base variant exist
-  // under the same parallel name, we use the highest-sample entry.
+  // CF-AUDIT-CHROMEDRAFT-PRODUCT-FAMILY-FIX (2026-06-29): scope guard.
+  // Worksheet is owner-authored for "Topps Bowman Chrome / Bowman Draft
+  // Chrome" only (chromeDraftMultipliers.ts:5-8). Empirical data spans
+  // multiple product families (Bowman Chrome Prospects, Bowman Draft
+  // Chrome, Topps Chrome, Topps Chrome Update). The PRIOR audit
+  // normalized by parallel name alone and picked the highest-sample
+  // empirical entry across ALL families — for "Green Wave" that meant
+  // Topps Chrome Update (n=30) winning over Bowman Chrome Prospects
+  // (n=27), producing a phantom -57.8% drift on what's actually a
+  // -29.5% drift (within the 30% tolerance). Filter empirical to the
+  // worksheet's scope BEFORE choosing the best entry.
+  const IN_SCOPE_SET_PATTERN = /(bowman chrome (prospects )?baseball|bowman draft chrome baseball|bowman chrome$|bowman draft chrome$)/i;
+  const inScope = empirical.filter((e) => {
+    if (e.skippedReason || e.baseRelativePremium == null) return false;
+    return IN_SCOPE_SET_PATTERN.test(String(e.set ?? ""));
+  });
+  console.log(`Empirical entries in worksheet scope (Bowman Chrome / Bowman Draft Chrome): ${inScope.length} of ${empirical.length}`);
+
+  // Index by normalized name. If multiple in-scope entries match a name
+  // (e.g., different years), pick the highest-sample entry.
   const empiricalAutoByName = new Map();
-  for (const e of empirical) {
-    if (e.skippedReason || e.baseRelativePremium == null) continue;
+  for (const e of inScope) {
     const key = normalize(e.parallel);
     if (!empiricalAutoByName.has(key)) {
       empiricalAutoByName.set(key, { entries: [] });
     }
     empiricalAutoByName.get(key).entries.push(e);
   }
-  console.log(`Empirical entries (normalized & grouped by name): ${empiricalAutoByName.size}`);
+  console.log(`Empirical entries (in-scope, normalized & grouped by name): ${empiricalAutoByName.size}`);
 
   const findings = { drift: [], match: [], worksheetOnly: [], empiricalOnly: [] };
 
