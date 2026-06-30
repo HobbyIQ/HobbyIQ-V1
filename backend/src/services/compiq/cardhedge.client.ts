@@ -305,6 +305,259 @@ export async function getPriceEstimate(cardId: string, grade: string): Promise<C
   );
 }
 
+// ── BATCH ENDPOINTS (CF-CH-BATCH-PORTFOLIO-REFRESH 2026-06-30) ────────────
+//
+// CH supports up to 100 (card_id, grade) pairs per request for both FMV and
+// price-estimate, and up to 100 certificate numbers per cert-batch call.
+// Using these in the portfolio refresh path is a 10-50× CH call reduction:
+// today the refresh fans out one HTTP call per holding (500-card portfolio
+// = 500 calls); batched, the same portfolio takes 5-10 calls.
+//
+// Cache strategy: batch wrappers do NOT cache the full response (the key
+// would have to be the sorted item set — rarely identical across calls).
+// Callers are expected to manage per-item caching with the existing
+// getCardFmv / getPriceEstimate wrappers when individual cache hits matter
+// (e.g., the hot path serving compiq routes). The batch wrappers are
+// optimized for the BULK refresh case where everything is being re-priced.
+
+/** Per-item input for the batch FMV / price-estimate endpoints. */
+export interface CardHedgeBatchItem {
+  cardId: string;
+  grade: string;
+}
+
+/** Per-item result from /v1/cards/card-fmv-batch. Mirrors CH's
+ *  BatchFMVResultItem: each item carries the input echo + an FMV payload
+ *  (when found) or an error string (when not). The status field is the
+ *  authoritative success/failure flag — `fmv` may be null even on
+ *  status="success" if CH lacks data for that grade. */
+export interface CardHedgeBatchFmvResult {
+  card_id: string;
+  grade: string;
+  status: "success" | "error" | "not_found" | string;
+  fmv: CardHedgeFmv | null;
+  error?: string | null;
+}
+
+export interface CardHedgeBatchFmvResponse {
+  results: CardHedgeBatchFmvResult[];
+  total_requested: number;
+  total_successful: number;
+}
+
+/** Per-item result from /v1/cards/batch-price-estimate. Same envelope
+ *  shape as the FMV variant; the `estimate` field carries the per-item
+ *  payload. */
+export interface CardHedgeBatchEstimateResult {
+  card_id: string;
+  grade: string;
+  status: "success" | "error" | "not_found" | string;
+  estimate: CardHedgePriceEstimate | null;
+  error?: string | null;
+}
+
+export interface CardHedgeBatchEstimateResponse {
+  results: CardHedgeBatchEstimateResult[];
+  total_requested: number;
+  total_successful: number;
+}
+
+/** Per-item result from /v1/cards/batch-prices-by-cert. */
+export interface CardHedgeCertPriceResult {
+  cert_info: {
+    cert_number: string;
+    grader: string;
+    grade?: string | null;
+    [k: string]: unknown;
+  };
+  card: { card_id?: string; description?: string; [k: string]: unknown } | null;
+  price: number | null;
+  price_low: number | null;
+  price_high: number | null;
+  confidence: number | null;
+  method: string | null;
+  card_source: "gemrate_id" | "card_match" | string | null;
+  match_confidence: number | null;
+}
+
+export interface CardHedgeCertPriceResponse {
+  results: CardHedgeCertPriceResult[];
+  total_requested: number;
+  total_found: number;
+}
+
+/** Single price-update event from /v1/cards/price-updates (delta poll). */
+export interface CardHedgePriceUpdate {
+  card_id: string;
+  card_desc: string;
+  card_set: string;
+  card_number: string;
+  player: string;
+  variant: string;
+  grade: string;
+  price: string;        // CH ships as string — caller coerces
+  sale_date: string;    // YYYY-MM-DD
+  update_timestamp: string;
+}
+
+export interface CardHedgePriceUpdatesResponse {
+  updates: CardHedgePriceUpdate[];
+  count: number;
+}
+
+/** Internal: POST a batch request with up to N items and return the typed
+ *  response. Splits oversized batches into chunks of CH's max (100) and
+ *  concatenates the result arrays — caller doesn't need to know about
+ *  the cap. Non-fatal: a chunk failure → that chunk omitted, others kept.
+ *
+ *  CH uses two slightly different total-field names: `total_successful`
+ *  for FMV/estimate batches, `total_found` for cert batches. The merger
+ *  reads both from the raw body and pumps them back into the response
+ *  via bracket access — keeps each endpoint's response type clean
+ *  without forcing a fake field into the shape.
+ */
+async function _postBatchChunks<TItem, TResult, TResp extends { results: TResult[]; total_requested: number }>(
+  path: string,
+  items: TItem[],
+  buildBody: (chunk: TItem[]) => Record<string, unknown>,
+  emptyResponse: () => TResp,
+  h: Record<string, string>,
+  totalField: "total_successful" | "total_found",
+  chunkSize = 100,
+): Promise<TResp | null> {
+  if (items.length === 0) return emptyResponse();
+  const merged = emptyResponse();
+  // Dynamic field — cast through `any` for the bracket access. The
+  // emptyResponse factory already seeded `totalField` to 0; we just
+  // accumulate per-chunk increments.
+  const mergedAny = merged as unknown as Record<string, number | unknown>;
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method: "POST",
+        headers: h,
+        body: JSON.stringify(buildBody(chunk)),
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        console.warn(`[cardhedge.client] ${path} HTTP ${res.status} (chunk ${i}-${i + chunk.length})`);
+        continue;
+      }
+      const body: any = await res.json();
+      const chunkResults: TResult[] = Array.isArray(body?.results) ? body.results : [];
+      merged.results.push(...chunkResults);
+      merged.total_requested += Number(body?.total_requested ?? chunk.length) || chunk.length;
+      const prior = Number(mergedAny[totalField]) || 0;
+      mergedAny[totalField] = prior + (Number(body?.[totalField] ?? 0) || 0);
+    } catch (err: any) {
+      console.warn(`[cardhedge.client] ${path} threw on chunk ${i}:`, err?.message ?? err);
+    }
+  }
+  return merged;
+}
+
+/**
+ * Batch FMV lookup. Accepts any number of items; transparently chunks at
+ * CH's 100-item limit. Order of results MAY differ from input — caller
+ * should re-index by (card_id, grade) when matching back to holdings.
+ */
+export async function getCardFmvBatch(
+  items: CardHedgeBatchItem[],
+): Promise<CardHedgeBatchFmvResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const valid = items.filter((it) => it?.cardId && it?.grade);
+  return _postBatchChunks<CardHedgeBatchItem, CardHedgeBatchFmvResult, CardHedgeBatchFmvResponse>(
+    "/cards/card-fmv-batch",
+    valid,
+    (chunk) => ({ items: chunk.map((it) => ({ card_id: it.cardId, grade: it.grade })) }),
+    () => ({ results: [], total_requested: 0, total_successful: 0 }),
+    h,
+    "total_successful",
+  );
+}
+
+/** Batch price-estimate. Same shape as getCardFmvBatch but routes to the
+ *  correlated price-estimation service instead of the FMV service. Use
+ *  this for grade-ladder reconstruction; use card-fmv-batch for the
+ *  authoritative valuation that ships to iOS. */
+export async function getBatchPriceEstimate(
+  items: CardHedgeBatchItem[],
+): Promise<CardHedgeBatchEstimateResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const valid = items.filter((it) => it?.cardId && it?.grade);
+  return _postBatchChunks<CardHedgeBatchItem, CardHedgeBatchEstimateResult, CardHedgeBatchEstimateResponse>(
+    "/cards/batch-price-estimate",
+    valid,
+    (chunk) => ({ items: chunk.map((it) => ({ card_id: it.cardId, grade: it.grade })) }),
+    () => ({ results: [], total_requested: 0, total_successful: 0 }),
+    h,
+    "total_successful",
+  );
+}
+
+/** Batch cert-number price lookup. CH resolves each cert → card via GemRate
+ *  and emits a price estimate. `grader` defaults to PSA on CH's side. */
+export async function getBatchPricesByCert(
+  certs: string[],
+  grader?: string,
+): Promise<CardHedgeCertPriceResponse | null> {
+  const h = headers();
+  if (!h) return null;
+  const valid = certs.filter((c) => typeof c === "string" && c.trim().length > 0).map((c) => c.trim());
+  return _postBatchChunks<string, CardHedgeCertPriceResult, CardHedgeCertPriceResponse>(
+    "/cards/batch-prices-by-cert",
+    valid,
+    (chunk) => ({ certs: chunk, ...(grader ? { grader } : {}) }),
+    () => ({ results: [], total_requested: 0, total_found: 0 }),
+    h,
+    "total_found",
+  );
+}
+
+/**
+ * Delta poll: fetch price updates since the given ISO timestamp. Returns
+ * only cards CH has been subscribed to via subscribe-price-updates;
+ * unsubscribed cards never appear here.
+ *
+ * NO cache: by design, delta polls should be fresh. The caller is
+ * expected to record the latest observed `update_timestamp` and pass it
+ * as `since` on the next call.
+ */
+export async function getPriceUpdates(
+  since: string,
+  opts: { ignoreGrades?: string[] } = {},
+): Promise<CardHedgePriceUpdatesResponse | null> {
+  const h = headers();
+  if (!h || !since) return null;
+  try {
+    const body: Record<string, unknown> = { since };
+    if (Array.isArray(opts.ignoreGrades) && opts.ignoreGrades.length > 0) {
+      body.ignore_grades = opts.ignoreGrades;
+    }
+    const res = await fetch(`${BASE_URL}/cards/price-updates`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] price-updates HTTP ${res.status}`);
+      return null;
+    }
+    const respBody: any = await res.json();
+    return {
+      updates: Array.isArray(respBody?.updates) ? respBody.updates : [],
+      count: typeof respBody?.count === "number" ? respBody.count : 0,
+    };
+  } catch (err: any) {
+    console.warn("[cardhedge.client] price-updates threw:", err?.message ?? err);
+    return null;
+  }
+}
+
 async function _postFmvShape<T extends { price: number }>(
   path: string,
   body: Record<string, unknown>,
