@@ -4687,6 +4687,131 @@ export async function listAllPortfolioUserIds(): Promise<string[]> {
   return (resources as unknown as string[]).filter((u) => typeof u === "string" && u.length > 0);
 }
 
+// CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): scan all user docs for
+// holdings matching a (cardsightCardId, grade) pair. The delta-poll
+// worker calls this with each unique (card_id, grade) from a price-
+// updates batch and triggers a targeted reprice on each match.
+//
+// O(users × holdings) per call. With ~1000 holdings across all users
+// and ~10 updates per poll cycle, that's ~10K holding checks per
+// cycle — well within budget for an in-process scan.
+//
+// Returns an array of {userId, holdingId} pairs. Empty on any failure
+// (cosmos unavailable, scan error) — the delta worker treats empty as
+// "no holdings affected, no reprice needed".
+export async function findHoldingsByCardAndGrade(
+  cardsightCardId: string,
+  grade: string,
+): Promise<Array<{ userId: string; holdingId: string }>> {
+  if (!cardsightCardId || !grade) return [];
+  const matches: Array<{ userId: string; holdingId: string }> = [];
+  try {
+    const userIds = await listAllPortfolioUserIds();
+    for (const userId of userIds) {
+      try {
+        const doc = await readUserDoc(userId);
+        for (const [holdingId, h] of Object.entries(doc.holdings ?? {})) {
+          if (!h) continue;
+          if (String(h.cardsightCardId ?? "").trim() !== cardsightCardId) continue;
+          const company = String(h.gradingCompany ?? "").trim().toUpperCase();
+          const value = h.gradeValue;
+          const holdingGrade =
+            !company || value == null
+              ? "Raw"
+              : Number.isFinite(value) && value > 0
+                ? `${company} ${value}`
+                : null;
+          if (holdingGrade !== grade) continue;
+          matches.push({ userId, holdingId });
+        }
+      } catch (err) {
+        console.warn(
+          `[findHoldingsByCardAndGrade] read userId=${userId} failed (non-fatal):`,
+          (err as Error)?.message ?? err,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "[findHoldingsByCardAndGrade] listAllPortfolioUserIds failed:",
+      (err as Error)?.message ?? err,
+    );
+  }
+  return matches;
+}
+
+// CF-CH-DELTA-POLL-REVERSE-MAP (2026-06-30): re-price a single holding
+// in response to a CH delta-poll update. Reads the user doc, runs
+// autoPriceHolding, persists. Non-fatal: read / write / autoprice
+// failures log + return without throwing — the next poll cycle will
+// retry if the update is still relevant.
+export async function repriceHoldingByDelta(
+  userId: string,
+  holdingId: string,
+): Promise<{ repriced: boolean; reason?: string }> {
+  try {
+    const doc = await readUserDoc(userId);
+    const holding = doc.holdings?.[holdingId];
+    if (!holding) return { repriced: false, reason: "holding_not_found" };
+    const previous = { ...holding };
+    await autoPriceHolding(doc, holding, previous, "refresh", userId);
+    await writeUserDoc(userId, doc);
+    return { repriced: true };
+  } catch (err) {
+    const reason = (err as Error)?.message ?? String(err);
+    console.warn(
+      `[repriceHoldingByDelta] failed userId=${userId} holdingId=${holdingId} (non-fatal): ${reason}`,
+    );
+    return { repriced: false, reason };
+  }
+}
+
+// CF-CH-DELTA-POLL-MIGRATION (2026-06-30): one-shot batch-subscribe of
+// EVERY existing holding across all users. Used to enroll holdings
+// created before delta-poll subscription was wired (PR #212), or to
+// re-enroll after CH-side subscription state is lost. Idempotent —
+// CH dedupes (card_id, grade) per client_id, so re-running is safe.
+//
+// Throttles to BATCH_SIZE holdings per CH call (subscribePriceUpdates
+// chunks at 100). Reports the totals back.
+export async function migrateExistingHoldingsToDeltaPoll(): Promise<{
+  usersScanned: number;
+  holdingsSubmitted: number;
+  holdingsSubscribed: number;
+}> {
+  const { batchSubscribeHoldings } = await import("./deltaPollSubscriptions.service.js");
+  const items: Array<{ userId: string; holding: PortfolioHolding }> = [];
+  let usersScanned = 0;
+  try {
+    const userIds = await listAllPortfolioUserIds();
+    for (const userId of userIds) {
+      usersScanned++;
+      try {
+        const doc = await readUserDoc(userId);
+        for (const h of Object.values(doc.holdings ?? {})) {
+          if (h) items.push({ userId, holding: h });
+        }
+      } catch (err) {
+        console.warn(
+          `[migrateExistingHoldings] read userId=${userId} failed (skipped):`,
+          (err as Error)?.message ?? err,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "[migrateExistingHoldings] user iteration failed:",
+      (err as Error)?.message ?? err,
+    );
+  }
+  const result = await batchSubscribeHoldings(items);
+  return {
+    usersScanned,
+    holdingsSubmitted: result.submitted,
+    holdingsSubscribed: result.subscribed,
+  };
+}
+
 export async function runBatchReprice(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;

@@ -66,15 +66,61 @@ traces
 
 Healthy baseline: a row per 15min interval, `updatesReceived` between 0 and a few hundred depending on how much portfolio activity CH has subscribed.
 
-### Step 5 — Subscribe portfolio cards (separate follow-up CF)
+### Step 5 — Subscribe portfolio cards (PRs #212 + #213)
 
-This PR ships the foundation only. Cards must still be enrolled via `subscribePriceUpdates` for their updates to flow into the poll feed. The follow-up CF wires:
+**PR #212 (subscribe-on-add/update)** — every new holding via `POST /api/portfolio/holdings` auto-enrolls. Grade or `cardsightCardId` updates re-enroll. Quantity / notes edits skip the call. Dormant when `CARD_HEDGE_CLIENT_ID` is unset.
 
-1. On `POST /api/portfolio/holdings` add → fire `subscribePriceUpdates([{cardId, grade, externalId: holdingId}])`
-2. On startup migration → batch-subscribe every existing holding's (cardId, grade) pair
-3. On update arrival → reverse-map via `external_id` → `holdingId` → trigger reprice for that holding only
+**PR #213 (reverse-map + migration helper)** — when the delta poll receives an update:
 
-Until that CF lands, the delta poll runs but yields zero updates (nothing is subscribed yet) — the cycles are wasted but harmless. Disable via `CH_DELTA_POLL_ENABLED=false` if needed.
+1. Dedupe to unique (card_id, grade) pairs
+2. For each, call `findHoldingsByCardAndGrade(cardId, grade)` — scans every user doc
+3. For each match, call `repriceHoldingByDelta(userId, holdingId)` — reads, autoPrices, persists
+
+The cycle telemetry event now includes `holdingsAffected` and `holdingsRepriced` so you can see the cost-reduction in action.
+
+### Step 6 — Run the back-catalog migration
+
+Holdings created BEFORE PR #212 shipped aren't subscribed yet. Run the migration script once:
+
+```bash
+cd backend
+npm run build    # produces dist/ — required by the script
+
+# Verify what would happen (no CH calls):
+node scripts/migrate-ch-delta-poll-subscribe.cjs --dry-run
+
+# Then enroll:
+node scripts/migrate-ch-delta-poll-subscribe.cjs --apply
+```
+
+The script reports:
+
+```text
+Users scanned:       N
+Holdings submitted:  M     (holdings with cardsightCardId + buildable grade)
+Holdings subscribed: M'    (CH success count — usually == submitted)
+```
+
+Idempotent — CH dedupes per (client_id, card_id, grade), so re-running is safe (e.g., after a CH-side subscription state reset).
+
+### Step 7 — Verify reverse-map actually triggers reprices
+
+In App Insights, look at the enhanced telemetry event:
+
+```kql
+traces
+| where timestamp > ago(2h)
+| where message contains "ch_delta_poll_cycle"
+| extend p = parse_json(message)
+| project timestamp,
+    updates = toint(p.updatesReceived),
+    uniquePairs = toint(p.uniquePairs),
+    affected = toint(p.holdingsAffected),
+    repriced = toint(p.holdingsRepriced)
+| order by timestamp desc
+```
+
+Healthy: `repriced` > 0 on cycles where `affected` > 0. If `affected` > 0 but `repriced` = 0, check the warnings emitted by `repriceHoldingByDelta` (logs the userId + holdingId + reason).
 
 ## Cost / capacity model
 
