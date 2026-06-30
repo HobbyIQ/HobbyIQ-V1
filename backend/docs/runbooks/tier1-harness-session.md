@@ -68,10 +68,33 @@ Without the env var, every case fails with the actionable "secret missing" error
 
 In each case, repeat Step 2.
 
+## Long-lived token bypass (CF-TIER1-HARNESS-TOKEN-BYPASS, PR #219)
+
+Drew's actual setup: a fixed, non-rotating token rather than capturing a real session-id. Shipped in PR #219:
+
+- **Backend middleware (`requireSession.ts`)** — short-circuits before session lookup when `x-session-id` matches `process.env.TIER1_HARNESS_TOKEN`. Authenticates as a synthetic harness user (`userId: "tier1-harness"`, `plan: "pro_seller"`, `email: "tier1-harness@hobbyiq.internal"`).
+- **Fail-closed** — if `TIER1_HARNESS_TOKEN` is unset or empty in the backend env, the bypass is unreachable. No accidental enable in dev or other environments.
+- **GitHub Secret `TIER1_HARNESS_SESSION_ID`** — the harness sends this value as `x-session-id`. Set to match the backend's `TIER1_HARNESS_TOKEN`.
+
+**One-line activation (Drew's offline step, after PR #219 deploys):**
+
+```bash
+az webapp config appsettings set \
+  --name HobbyIQ3 \
+  --resource-group rg-hobbyiq-dev \
+  --settings TIER1_HARNESS_TOKEN=<value-matching-the-github-secret>
+```
+
+App Service restarts on settings change → next Tier 1 run authenticates. Verify with the same `gh workflow run "CompIQ Pricing Regression Harness" --ref main` from Step 3 above.
+
+**Rotation:** to rotate, change both the App Service env var AND the GitHub Secret to a new value. They must match.
+
+**Telemetry filter:** any analytics that key off `userId` can exclude harness traffic with `where userId != "tier1-harness"`. The `.internal` TLD in the email also makes filtering trivial.
+
 ## Out of scope (follow-ups)
 
-- **Dedicated harness user with never-expiring session** — requires a small auth path on the backend (or a manually-issued long-lived token). When the harness becomes load-bearing for ship decisions, do this.
-- **Auto-renewal** — the harness could call an auth-refresh endpoint on startup if/when the backend exposes one. Not worth building until the dedicated-user path lands.
+- **HMAC-signed token** — the current bypass is plain string compare. Fine for a CI shared secret; not fine if the token ever leaks beyond CI/App Service.
+- **Auto-renewal of a real session-id** — the harness could call an auth-refresh endpoint on startup if/when the backend exposes one. Not relevant under the token-bypass model.
 
 ## Related
 

@@ -6,7 +6,7 @@
 //   - attaches req.user + calls next() on success.
 //   - short-circuits (no re-auth) when req.user already attached.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/services/authService.js", () => ({
   // Defined here so the import below resolves; per-test overrides via
@@ -89,5 +89,72 @@ describe("requireSession middleware", () => {
     expect(req.user).toBe(preAttached);
     expect(next).toHaveBeenCalledTimes(1);
     expect(auth.getUserBySession).not.toHaveBeenCalled();
+  });
+});
+
+// CF-TIER1-HARNESS-TOKEN-BYPASS (2026-06-30): pins the env-gated bypass
+// that lets the Tier 1 Production Harness authenticate without a real
+// session. Fail-closed by design when TIER1_HARNESS_TOKEN is unset.
+describe("requireSession — Tier 1 harness token bypass", () => {
+  const originalToken = process.env.TIER1_HARNESS_TOKEN;
+  beforeEach(() => {
+    delete process.env.TIER1_HARNESS_TOKEN;
+  });
+  // Restore env after the suite so other tests aren't polluted
+  afterAll(() => {
+    if (originalToken === undefined) {
+      delete process.env.TIER1_HARNESS_TOKEN;
+    } else {
+      process.env.TIER1_HARNESS_TOKEN = originalToken;
+    }
+  });
+
+  it("matching token + env set → authenticates as synthetic harness user", async () => {
+    process.env.TIER1_HARNESS_TOKEN = "match-me";
+    const { req, res, next } = makeReqRes({ "x-session-id": "match-me" });
+    await requireSession(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user).toBeTruthy();
+    expect(req.user.userId).toBe("tier1-harness");
+    expect(req.user.plan).toBe("pro_seller");
+    // session store NEVER consulted on the bypass path
+    expect(auth.getUserBySession).not.toHaveBeenCalled();
+  });
+
+  it("env unset → bypass unreachable, falls through to session lookup", async () => {
+    // No process.env.TIER1_HARNESS_TOKEN — bypass disabled
+    (auth.getUserBySession as any).mockResolvedValueOnce(null);
+    const { req, res, next } = makeReqRes({ "x-session-id": "any-string" });
+    await requireSession(req, res, next);
+    expect(res._status).toBe(401);
+    expect(auth.getUserBySession).toHaveBeenCalledWith("any-string");
+  });
+
+  it("env set to empty string → bypass unreachable (fail-closed)", async () => {
+    process.env.TIER1_HARNESS_TOKEN = "";
+    (auth.getUserBySession as any).mockResolvedValueOnce(null);
+    const { req, res, next } = makeReqRes({ "x-session-id": "" });
+    await requireSession(req, res, next);
+    // empty header → 401 from the initial guard, before any lookup
+    expect(res._status).toBe(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("env set but header doesn't match → falls through to session lookup", async () => {
+    process.env.TIER1_HARNESS_TOKEN = "secret-A";
+    (auth.getUserBySession as any).mockResolvedValueOnce(null);
+    const { req, res, next } = makeReqRes({ "x-session-id": "secret-B" });
+    await requireSession(req, res, next);
+    expect(auth.getUserBySession).toHaveBeenCalledWith("secret-B");
+    expect(res._status).toBe(401);
+  });
+
+  it("matching token authenticates with email pattern that's clearly synthetic", async () => {
+    process.env.TIER1_HARNESS_TOKEN = "Carolina23!";
+    const { req, res, next } = makeReqRes({ "x-session-id": "Carolina23!" });
+    await requireSession(req, res, next);
+    expect(req.user.email).toBe("tier1-harness@hobbyiq.internal");
+    // Synthetic .internal TLD ensures any downstream code that key off
+    // domain (e.g., email filters, notifications) trivially excludes it.
   });
 });
