@@ -147,7 +147,7 @@ function emitPerHoldingSkipEvents(
     id: string;
     status: "repriced" | "skipped" | "error" | "fresh";
     reason?: string;
-    cardsightCardId?: string | null;
+    cardId?: string | null;
   }>,
 ): void {
   for (const u of updates) {
@@ -167,7 +167,7 @@ function emitPerHoldingSkipEvents(
         source: "portfolioReprice.job",
         userId,
         holdingId: u.id,
-        cardsightCardId: u.cardsightCardId ?? null,
+        cardId: u.cardId ?? null,
         verdict: verdictFromUpdate(u.status, reason),
         reason: truncated,
       }),

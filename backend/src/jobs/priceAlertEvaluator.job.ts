@@ -158,7 +158,7 @@ export async function runPriceAlertEvaluator(): Promise<EvaluatorSummary> {
         // field — only userId + cardId (where cardId is a Cardsight
         // catalog UUID, not a portfolio reference). buildEstimateRequest
         // above builds a free-text-style CompIQEstimateRequest from
-        // alert.cardSnapshot, not a cardsightCardId-pinned one. So:
+        // alert.cardSnapshot, not a cardId-pinned one. So:
         // userId known, holdingId null, routedFromHolding=false per
         // the conservative explicit-opt-in rule. If alerts ever grow
         // a holdingId field, the routedFromHolding=true path is one

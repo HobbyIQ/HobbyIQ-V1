@@ -13,7 +13,7 @@
  * Post-CF the job emits one structured warn per skipped holding:
  *   { event: "portfolioReprice_skipped_holding",
  *     source: "portfolioReprice.job",
- *     userId, holdingId, cardsightCardId,
+ *     userId, holdingId, cardId,
  *     verdict: "variant-mismatch" | "insufficient-comps"
  *            | "low-confidence" | "error",
  *     reason: <truncated to 500 chars> }
@@ -112,19 +112,19 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
         id: "h-variant",
         status: "skipped",
         reason: "confidence-gate: confidence=0<55, compsUsed=0<3, fairValue=0<=0 (source=variant-mismatch)",
-        cardsightCardId: "uuid-variant",
+        cardId: "uuid-variant",
       },
       {
         id: "h-noComps",
         status: "skipped",
         reason: "confidence-gate: compsUsed=0<3 (source=no-recent-comps, daysSinceNewestComp=null)",
-        cardsightCardId: "uuid-no-comps",
+        cardId: "uuid-no-comps",
       },
       {
         id: "h-cardless",
         status: "skipped",
-        reason: "missing_card_identity (cardYear=null AND cardsightCardId=null)",
-        cardsightCardId: null,
+        reason: "missing_card_identity (cardYear=null AND cardId=null)",
+        cardId: null,
       },
       {
         id: "h-repriced",
@@ -151,14 +151,14 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
     expect(variantEvent.event).toBe("portfolioReprice_skipped_holding");
     expect(variantEvent.source).toBe("portfolioReprice.job");
     expect(variantEvent.userId).toBe("test-user-abc");
-    expect(variantEvent.cardsightCardId).toBe("uuid-variant");
+    expect(variantEvent.cardId).toBe("uuid-variant");
     expect(variantEvent.verdict).toBe("variant-mismatch");
     expect(variantEvent.reason).toMatch(/source=variant-mismatch/);
 
     const noCompsEvent = parsed.find((p) => p.holdingId === "h-noComps");
     expect(noCompsEvent).toBeTruthy();
     expect(noCompsEvent.verdict).toBe("insufficient-comps");
-    expect(noCompsEvent.cardsightCardId).toBe("uuid-no-comps");
+    expect(noCompsEvent.cardId).toBe("uuid-no-comps");
 
     // Cardless explicitly NOT in the emitted set.
     expect(parsed.find((p) => p.holdingId === "h-cardless")).toBeUndefined();
@@ -176,7 +176,7 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
         id: "h-error",
         status: "error",
         reason: longReason,
-        cardsightCardId: "uuid-err",
+        cardId: "uuid-err",
       },
     ]);
 
@@ -186,7 +186,7 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
     expect(emits.length).toBe(1);
     const parsed = JSON.parse(emits[0]);
     expect(parsed.verdict).toBe("error");
-    expect(parsed.cardsightCardId).toBe("uuid-err");
+    expect(parsed.cardId).toBe("uuid-err");
     // Reason payload bounded — 500 char cap + truncation marker.
     expect(parsed.reason.length).toBe(500 + "...(truncated)".length);
     expect(parsed.reason.endsWith("...(truncated)")).toBe(true);
@@ -204,7 +204,7 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
   it("entries missing reason field still emit (defensive — verdict falls back to low-confidence)", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     emitPerHoldingSkipEvents("user-no-reason", [
-      { id: "h-no-reason", status: "skipped", cardsightCardId: "uuid-x" },
+      { id: "h-no-reason", status: "skipped", cardId: "uuid-x" },
     ]);
     const emits = warnSpy.mock.calls
       .map((c) => String(c[0]))
@@ -215,14 +215,14 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
     expect(parsed.reason).toBe("");
   });
 
-  it("entries with missing cardsightCardId emit cardsightCardId=null (not undefined or omitted)", () => {
+  it("entries with missing cardId emit cardId=null (not undefined or omitted)", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     emitPerHoldingSkipEvents("user-no-csid", [
       {
         id: "h-no-csid",
         status: "skipped",
         reason: "confidence-gate: confidence=0<55 (source=live)",
-        // cardsightCardId field omitted entirely
+        // cardId field omitted entirely
       },
     ]);
     const emits = warnSpy.mock.calls
@@ -230,6 +230,6 @@ describe("emitPerHoldingSkipEvents — mixed-skip run", () => {
       .filter((s) => s.includes("portfolioReprice_skipped_holding"));
     expect(emits.length).toBe(1);
     const parsed = JSON.parse(emits[0]);
-    expect(parsed.cardsightCardId).toBeNull();
+    expect(parsed.cardId).toBeNull();
   });
 });

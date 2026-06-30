@@ -165,7 +165,7 @@ describe("CF-CH-RESPONSE-SURFACE-SUBBLOCKS — populated sub-blocks propagate th
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
-      .send({ cardsightCardId: "fixture-card-id" });
+      .send({ cardId: "fixture-card-id" });
     expect(res.status).toBe(200);
     expectSubBlocksPopulated(res.body);
   });
@@ -229,7 +229,7 @@ describe("CF-CH-RESPONSE-SURFACE-SUBBLOCKS — keys-always-present invariant for
     const res = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "test-sess")
-      .send({ cardsightCardId: "fixture-observed-card" });
+      .send({ cardId: "fixture-observed-card" });
     expect(res.status).toBe(200);
     expectSubBlocksKeysPresent(res.body);
     expect(res.body.modelExpectation).toBeNull();

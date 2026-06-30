@@ -43,14 +43,14 @@ export function gradeStringFromHolding(holding: PortfolioHolding): string | null
 }
 
 /** Pull the (cardId, grade, externalId) tuple from a holding, or null
- *  when the holding lacks identity (no cardsightCardId / no usable
+ *  when the holding lacks identity (no cardId / no usable
  *  grade derivation). Skipping is silent — callers don't need to
  *  branch on a missing identity, the wrapper itself short-circuits. */
 export function subscriptionItemFromHolding(
   userId: string,
   holding: PortfolioHolding,
 ): { cardId: string; grade: string; externalId: string } | null {
-  const cardId = String(holding.cardsightCardId ?? "").trim();
+  const cardId = String(holding.cardId ?? "").trim();
   if (!cardId) return null;
   const grade = gradeStringFromHolding(holding);
   if (!grade) return null;
@@ -65,7 +65,7 @@ export function subscriptionItemFromHolding(
  * Fire-and-forget: subscribe a single holding to CH's delta-poll feed.
  * Returns nothing — caller doesn't need to await beyond the
  * subscribePriceUpdates call returning. Non-fatal on any failure:
- *   - Missing cardsightCardId or unparseable grade → silent skip
+ *   - Missing cardId or unparseable grade → silent skip
  *   - subscribePriceUpdates returning null (no client_id) → silent skip
  *   - HTTP / network failure inside the wrapper → already logged by the
  *     CH client; no propagation to the caller.
@@ -96,8 +96,8 @@ export function holdingSubscriptionChanged(
   next: PortfolioHolding,
 ): boolean {
   if (!previous) return true;  // brand-new on this code path = changed
-  const prevCardId = String(previous.cardsightCardId ?? "").trim();
-  const nextCardId = String(next.cardsightCardId ?? "").trim();
+  const prevCardId = String(previous.cardId ?? "").trim();
+  const nextCardId = String(next.cardId ?? "").trim();
   if (prevCardId !== nextCardId) return true;
   const prevGrade = gradeStringFromHolding(previous);
   const nextGrade = gradeStringFromHolding(next);

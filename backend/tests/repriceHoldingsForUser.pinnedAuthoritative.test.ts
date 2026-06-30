@@ -4,14 +4,14 @@
 // (scheduled job + POST /reprice/batch) did not — so the engine re-resolved
 // by sparse identity on every 6h tick and overwrote $331 back to $2.
 //
-// This file proves the second site now passes cardsightCardId +
+// This file proves the second site now passes cardId +
 // pinnedAuthoritative through computeEstimate, with the same default-off
 // semantics for unpinned holdings.
 //
 // Test surface: mock computeEstimate to CAPTURE the body argument, then exercise
 // the scheduled-path route POST /api/portfolio/reprice/batch on:
-//   (1) a pinned holding (cardsightCardId set + sparse identity)        → flag=true, cardsightCardId set
-//   (2) an unpinned holding (no cardsightCardId, full identity)         → flag absent/false, no cardsightCardId
+//   (1) a pinned holding (cardId set + sparse identity)        → flag=true, cardId set
+//   (2) an unpinned holding (no cardId, full identity)         → flag absent/false, no cardId
 //
 // Mirrors the pattern in autoPricePersistTrendIQ.test.ts (which exercises BOTH
 // persistence sites for trendIQ field plumbing — the same "two persistence
@@ -116,16 +116,16 @@ async function seedHolding(
 }
 
 describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PINNED-AUTHORITATIVE-SECOND-SITE)", () => {
-  it("PINNED holding (cardsightCardId + sparse identity): /reprice/batch passes cardsightCardId + pinnedAuthoritative=true to computeEstimate", async () => {
+  it("PINNED holding (cardId + sparse identity): /reprice/batch passes cardId + pinnedAuthoritative=true to computeEstimate", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = `pinned-sparse-${Date.now()}`;
 
-    // Seed: cardsightCardId set, identity fields ABSENT (the exact Drew Trout
+    // Seed: cardId set, identity fields ABSENT (the exact Drew Trout
     // shape that surfaced the bug). lastUpdated old enough to pass the
     // PORTFOLIO_REPRICE_HTTP_MIN_AGE_MS=1 gate.
     await seedHolding(userId, holdingId, {
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_2011_PINNED_ID,
+      cardId: TROUT_2011_PINNED_ID,
       // intentionally NO cardYear / product / parallel / gradeCompany /
       // gradeValue — the sparse-identity case.
       lastUpdated: "2026-06-17T00:00:00.000Z",
@@ -154,9 +154,9 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     ).toBeGreaterThan(0);
 
     // The PINNED-AUTHORITATIVE assertion: body must carry the stored
-    // cardsightCardId AND pinnedAuthoritative=true.
+    // cardId AND pinnedAuthoritative=true.
     const [body, callContext] = calls[0];
-    expect(body.cardsightCardId).toBe(TROUT_2011_PINNED_ID);
+    expect(body.cardId).toBe(TROUT_2011_PINNED_ID);
     expect(body.pinnedAuthoritative).toBe(true);
     // playerName preserved as REAL (no UUID overload, corpus-clean rule).
     expect(body.playerName).toBe("Mike Trout");
@@ -166,11 +166,11 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     expect(callContext.routedFromHolding).toBe(true);
   });
 
-  it("UNPINNED holding (no cardsightCardId, full identity): /reprice/batch leaves cardsightCardId undefined + pinnedAuthoritative=false (unaffected)", async () => {
+  it("UNPINNED holding (no cardId, full identity): /reprice/batch leaves cardId undefined + pinnedAuthoritative=false (unaffected)", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = `unpinned-full-${Date.now()}`;
 
-    // Seed: NO cardsightCardId, full identity fields populated. Default-off
+    // Seed: NO cardId, full identity fields populated. Default-off
     // semantics: flag must NOT fire, gate behaves exactly as today.
     await seedHolding(userId, holdingId, {
       playerName: "Paul Skenes",
@@ -197,7 +197,7 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
     expect(calls.length).toBeGreaterThan(0);
 
     const [body] = calls[0];
-    expect(body.cardsightCardId).toBeUndefined();
+    expect(body.cardId).toBeUndefined();
     expect(body.pinnedAuthoritative).toBe(false);
     expect(body.playerName).toBe("Paul Skenes");
     expect(body.cardYear).toBe(2024);
@@ -221,7 +221,7 @@ describe("repriceHoldingsForUser — pinned-authoritative wiring (CF-REPRICE-PIN
 
     await seedHolding(userId, holdingId, {
       playerName: "Eric Hartman",
-      cardsightCardId: HARTMAN_PINNED_ID,
+      cardId: HARTMAN_PINNED_ID,
       parallel: "Blue X-Fractor /150",                                   // user-entered
       parallelId: "b83de312-609d-4d58-af41-c8766a81835f",                // system-set
       // ALL other identity fields undefined — same as Drew's real

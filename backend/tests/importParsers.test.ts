@@ -138,8 +138,8 @@ describe("CF-IMPORT-BE — autoMapHeaders", () => {
     expect(r.isRoundTrip).toBe(true);
   });
 
-  it("detects round-trip sheet by cardsightCardId presence", () => {
-    const r = autoMapHeaders(["cardsightCardId", "playerName"]);
+  it("detects round-trip sheet by cardId presence", () => {
+    const r = autoMapHeaders(["cardId", "playerName"]);
     expect(r.isRoundTrip).toBe(true);
   });
 
@@ -175,15 +175,15 @@ describe("CF-IMPORT-BE — autoMapHeaders", () => {
 
 describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenario)", () => {
   const HARTMAN_HOLDINGS = {
-    "h1": { id: "h1", cardsightCardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
-    "h2": { id: "h2", cardsightCardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
-    "h3": { id: "h3", cardsightCardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
-    "h4": { id: "h4", cardsightCardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
+    "h1": { id: "h1", cardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
+    "h2": { id: "h2", cardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
+    "h3": { id: "h3", cardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
+    "h4": { id: "h4", cardId: "befe9bcc", parallel: "Blue X-Fractor /150", isAuto: true, playerName: "Eric Hartman" },
   } as Record<string, import("../src/types/portfolioiq.types.js").PortfolioHolding>;
 
   it("Hartman-4× re-import: collision detected on all 4 existing holdings", () => {
     const r = detectCollision(
-      { cardsightCardId: "befe9bcc", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
+      { cardId: "befe9bcc", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(true);
@@ -194,7 +194,7 @@ describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenari
 
   it("4-prime refinement: incoming holdingId + cardId match → defaultAction flips to update-cost", () => {
     const r = detectCollision(
-      { cardsightCardId: "befe9bcc", holdingId: "h2", parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
+      { cardId: "befe9bcc", holdingId: "h2", parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(true);
@@ -204,25 +204,25 @@ describe("CF-IMPORT-BE — collision detector (the #2 guard, Hartman-4× scenari
 
   it("no existing match → no collision", () => {
     const r = detectCollision(
-      { cardsightCardId: "different-card", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
+      { cardId: "different-card", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: null, gradeValue: null, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(false);
   });
 
-  it("no cardsightCardId on incoming row → no collision check possible", () => {
+  it("no cardId on incoming row → no collision check possible", () => {
     const r = detectCollision(
-      { cardsightCardId: null, holdingId: null, parallel: "anything", gradeCompany: null, gradeValue: null, serialNumber: null },
+      { cardId: null, holdingId: null, parallel: "anything", gradeCompany: null, gradeValue: null, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(false);
-    expect(r.reason).toContain("no cardsightCardId");
+    expect(r.reason).toContain("no cardId");
   });
 
   it("different grade → not a collision", () => {
     // Same cardId but different grade = different physical card
     const r = detectCollision(
-      { cardsightCardId: "befe9bcc", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: "PSA", gradeValue: 10, serialNumber: null },
+      { cardId: "befe9bcc", holdingId: null, parallel: "Blue X-Fractor /150", gradeCompany: "PSA", gradeValue: 10, serialNumber: null },
       HARTMAN_HOLDINGS,
     );
     expect(r.collides).toBe(false);

@@ -98,7 +98,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
     // displayLabel; no structured cardYear/product/parallel set.
     await computeEstimate({
       playerName: "2011 Topps Update Baseball Mike Trout US175 Base",
-      cardsightCardId: "fake-pinned-id",
+      cardId: "fake-pinned-id",
     } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
@@ -128,7 +128,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
   it("queryContext is passed even when /price-by-id arrives without structured fields (Bonemer iOS displayLabel)", async () => {
     await computeEstimate({
       playerName: "2024 Bowman Draft Chrome Baseball Caleb Bonemer CPA-CBO Base Auto",
-      cardsightCardId: "fake-pinned-id-bonemer",
+      cardId: "fake-pinned-id-bonemer",
     } as any, testCallContext);
 
     expect(mockFindCompsRouted).toHaveBeenCalled();
@@ -143,7 +143,7 @@ describe("computeEstimate — Phase 2 queryContext plumbing", () => {
   it("defect #11: queryContext.cardNumber populated from defensive parseCardQuery of iOS displayLabel", async () => {
     await computeEstimate({
       playerName: "2011 Topps Update Baseball Mike Trout US175 Base",
-      cardsightCardId: "fake-pinned-id-trout",
+      cardId: "fake-pinned-id-trout",
     } as any, testCallContext);
 
     const [, opts] = mockFindCompsRouted.mock.calls[0];

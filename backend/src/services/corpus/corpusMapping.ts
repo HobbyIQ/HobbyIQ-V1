@@ -28,7 +28,7 @@
  *
  *   If the request doesn't include `query` (the /price-by-id case
  *   where the caller pinned the request to a Cardsight UUID), the
- *   corpus entry stores `cardsightCardId` in the `query` field with
+ *   corpus entry stores `cardId` in the `query` field with
  *   querySource: "card_id". This is "self-describing semantics" —
  *   the discriminator tells downstream analysts how to read the slot.
  *   (Pre-2026-05-30 this slot held a Card Hedge cardHedgeCardId; the

@@ -17,8 +17,8 @@
 // Cosmos:
 //   db        = COSMOS_DB ?? "hobbyiq"
 //   container = "prediction_log"
-//   partition = /cardsightCardId
-//   doc id    = `${cardsightCardId}_${epochMs}`            for resolved rows
+//   partition = /cardId
+//   doc id    = `${cardId}_${epochMs}`            for resolved rows
 //             = `__unresolved___${inputSigShort}_${epochMs}` for sentinel rows
 //
 // NULL-CARDID HANDLING (Option A per CF kickoff partition decision):
@@ -83,7 +83,7 @@ const RATE_LIMIT_MS = 60 * 60 * 1000; // 60 minutes per (cardId-or-sentinel, sig
 
 /**
  * Sentinel partition value for prediction rows emitted without a resolved
- * cardsightCardId. Never collides with a real 36-char Cardsight UUID.
+ * cardId. Never collides with a real 36-char Cardsight UUID.
  * See methodology doc §2.2 "Null-cardId handling" addendum.
  *
  * STAYS WRITER-LOCAL by design. The sentinel is a write-path concern;
@@ -128,7 +128,7 @@ async function getContainer(): Promise<Container | null> {
       const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
       const { container } = await database.containers.createIfNotExists({
         id: CONTAINER_NAME,
-        partitionKey: { paths: ["/cardsightCardId"] },
+        partitionKey: { paths: ["/cardId"] },
       });
       cachedContainer = container;
       return container;
@@ -155,11 +155,11 @@ const lastWriteByKey = new Map<string, number>();
  * builds for its existing [compiq.prediction_emitted] stdout JSON.stringify.
  *
  * Caller passes this verbatim from the emission site; writer transforms into
- * the PredictionLogDocument by adding `id`, sentinel-handling cardsightCardId,
+ * the PredictionLogDocument by adding `id`, sentinel-handling cardId,
  * deriving `joinable` + `predictionDirection`.
  */
 export interface PredictionEmitInput {
-  cardsightCardId: string | null;
+  cardId: string | null;
   playerName: string | null;
   cardYear: number | null;
   product: string | null;
@@ -216,7 +216,7 @@ export interface PredictionEmitInput {
   // enforces every caller supplies one of the documented members.
   // routedFromHolding is the §4.2/4.3 sale-join switch (true → join
   // via holdingId+userId to PortfolioLedgerEntry; false → join via
-  // cardsightCardId to the broader eBay-sold path).
+  // cardId to the broader eBay-sold path).
   source: PredictionCorpusSource;
   userId: string | null;
   holdingId: string | null;
@@ -228,22 +228,22 @@ export interface PredictionEmitInput {
  *
  * Differs from PredictionEmitInput in three ways:
  *   1. `id` added — composed per the sentinel/resolved id-format rules
- *   2. `cardsightCardId` is ALWAYS a string (sentinel `__unresolved__` when
+ *   2. `cardId` is ALWAYS a string (sentinel `__unresolved__` when
  *      input was null) — required for partition key resolution
- *   3. `joinable` added — true iff cardsightCardId is a real Cardsight UUID
+ *   3. `joinable` added — true iff cardId is a real Cardsight UUID
  *   4. `predictionDirection` added — derived per DIRECTION_BAND_PCT
  *   5. `source` always set (defaulted to "estimate" when input omitted)
  */
 interface PredictionLogDocument {
   id: string;
-  cardsightCardId: string;
+  cardId: string;
   /**
-   * MIGRATION-STABLE FILTER. True iff cardsightCardId is a real Cardsight
+   * MIGRATION-STABLE FILTER. True iff cardId is a real Cardsight
    * UUID; false iff it's a sentinel value.
    *
    * LOAD-BEARING for downstream accuracy queries: every accuracy consumer
    * MUST filter on `joinable === true` — NEVER on the partition value
-   * pattern (e.g. `WHERE cardsightCardId != "__unresolved__"`). The future
+   * pattern (e.g. `WHERE cardId != "__unresolved__"`). The future
    * A→B upgrade at CF-LAUNCH-READINESS-500 (sentinel `__unresolved__` →
    * hashed buckets `__unresolved_XX__`) changes the partition value set
    * but does NOT change `joinable` semantics. Queries filtering on
@@ -274,7 +274,7 @@ interface PredictionLogDocument {
   // identical shape to PredictionEmitInput (the writer copies these
   // verbatim from the input). The §4.2/4.3 sale-join consumer reads
   // `routedFromHolding` to switch between PortfolioLedgerEntry-join
-  // (true) vs eBay-sold cardsightCardId-join (false). Methodology §2.2.
+  // (true) vs eBay-sold cardId-join (false). Methodology §2.2.
   source: PredictionEmitInput["source"];
   userId: string | null;
   holdingId: string | null;
@@ -382,9 +382,9 @@ function buildDocument(
   let docId: string;
   let joinable: boolean;
 
-  if (input.cardsightCardId) {
-    partitionKey = input.cardsightCardId;
-    docId = `${input.cardsightCardId}_${epochMs}`;
+  if (input.cardId) {
+    partitionKey = input.cardId;
+    docId = `${input.cardId}_${epochMs}`;
     joinable = true;
   } else {
     partitionKey = UNRESOLVED_CARDID_SENTINEL;
@@ -394,7 +394,7 @@ function buildDocument(
 
   return {
     id: docId,
-    cardsightCardId: partitionKey,
+    cardId: partitionKey,
     joinable,
     predictionDirection: derivePredictionDirection(
       input.predictedPrice,
@@ -479,7 +479,7 @@ function buildDocument(
  * CF-ACCOUNT-DELETION (2026-06-04): anonymize every prediction_log row for
  * a user — null `userId`, null `holdingId`, set `routedFromHolding=false`.
  *
- * Card-identity fields (cardsightCardId, playerName, cardYear, etc.) are
+ * Card-identity fields (cardId, playerName, cardYear, etc.) are
  * PUBLIC information and stay intact — they're the ML training signal.
  * The §4.2/4.3 sale-join trace breaks post-deletion anyway (the user's
  * holdings/ledger are gone), so nulling these attribution axes is the
@@ -495,14 +495,14 @@ export async function anonymizePredictionLogForUser(userId: string): Promise<num
   let updated = 0;
   try {
     const { resources } = await container.items
-      .query<{ id: string; cardsightCardId: string }>({
-        query: "SELECT c.id, c.cardsightCardId FROM c WHERE c.userId = @uid",
+      .query<{ id: string; cardId: string }>({
+        query: "SELECT c.id, c.cardId FROM c WHERE c.userId = @uid",
         parameters: [{ name: "@uid", value: userId }],
       })
       .fetchAll();
     for (const row of resources) {
       try {
-        await container.item(row.id, row.cardsightCardId).patch([
+        await container.item(row.id, row.cardId).patch([
           { op: "set", path: "/userId", value: null },
           { op: "set", path: "/holdingId", value: null },
           { op: "set", path: "/routedFromHolding", value: false },
@@ -522,7 +522,7 @@ export async function anonymizePredictionLogForUser(userId: string): Promise<num
 export function writePredictionLog(input: PredictionEmitInput): void {
   const sig = inputSignature(input);
   const sigShort = sig.slice(0, 8);
-  const partitionKey = input.cardsightCardId ?? UNRESOLVED_CARDID_SENTINEL;
+  const partitionKey = input.cardId ?? UNRESOLVED_CARDID_SENTINEL;
   const rateLimitKey = `${partitionKey}::${sigShort}`;
 
   const now = Date.now();
@@ -534,7 +534,7 @@ export function writePredictionLog(input: PredictionEmitInput): void {
   // STEP 3 — record attempt POST-rate-limit-dedup, PRE-async-write.
   // joinable mirrors the buildDocument logic: real cardId → true; null → false.
   // Counter is fire-and-forget (per the health-service contract); never blocks.
-  const joinable = !!input.cardsightCardId;
+  const joinable = !!input.cardId;
   recordAttempt(joinable);
 
   void (async () => {

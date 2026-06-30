@@ -118,15 +118,15 @@ export function buildUpstreamTimeoutPriceResponse(query: string): Record<string,
 /**
  * /price-by-id response payload on Cardsight timeout. Mirrors the
  * /price-by-id unsupported-sport branch at compiq.routes.ts:788-826;
- * difference vs /price: exposes `cardsightCardId` (pinned id) instead
+ * difference vs /price: exposes `cardId` (pinned id) instead
  * of the parsed query.
  */
 export function buildUpstreamTimeoutPriceByIdResponse(
-  cardsightCardId: string,
+  cardId: string,
 ): Record<string, unknown> {
   return {
     success: true,
-    cardsightCardId,
+    cardId,
     summary: UPSTREAM_TIMEOUT_SUMMARY,
     marketTier: { value: null, high: null },
     buyZone: [null, null],

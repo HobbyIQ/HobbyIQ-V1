@@ -68,7 +68,7 @@ Healthy baseline: a row per 15min interval, `updatesReceived` between 0 and a fe
 
 ### Step 5 — Subscribe portfolio cards (PRs #212 + #213)
 
-**PR #212 (subscribe-on-add/update)** — every new holding via `POST /api/portfolio/holdings` auto-enrolls. Grade or `cardsightCardId` updates re-enroll. Quantity / notes edits skip the call. Dormant when `CARD_HEDGE_CLIENT_ID` is unset.
+**PR #212 (subscribe-on-add/update)** — every new holding via `POST /api/portfolio/holdings` auto-enrolls. Grade or `cardId` updates re-enroll. Quantity / notes edits skip the call. Dormant when `CARD_HEDGE_CLIENT_ID` is unset.
 
 **PR #213 (reverse-map + migration helper)** — when the delta poll receives an update:
 
@@ -97,7 +97,7 @@ The script reports:
 
 ```text
 Users scanned:       N
-Holdings submitted:  M     (holdings with cardsightCardId + buildable grade)
+Holdings submitted:  M     (holdings with cardId + buildable grade)
 Holdings subscribed: M'    (CH success count — usually == submitted)
 ```
 

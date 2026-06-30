@@ -46,7 +46,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "d3b35b59-7d0d-493b-a837-2bc56524ff30",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
       quantity: 1,
       fairMarketValue: 331,
       // ALL identity fields undefined.
@@ -68,7 +68,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "d0e61670-1234-5678-9abc-def012345678",
       playerName: "Eric Hartman",
-      cardsightCardId: HARTMAN_PINNED_ID,
+      cardId: HARTMAN_PINNED_ID,
       parallel: "Blue X-Fractor /150",                              // user-entered
       parallelId: "b83de312-609d-4d58-af41-c8766a81835f",           // system-set
       quantity: 1,
@@ -93,7 +93,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-manual",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
       cardYear: 2010,                                               // INTENTIONALLY wrong by user (manual override)
       setName: "Custom Hand-Cut",                                   // also manual
       // product / cardNumber undefined
@@ -108,12 +108,12 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
   });
 
   // ── Test 4 — unpinned holding ─────────────────────────────────────────────
-  it("unpinned holding (no cardsightCardId) → helper no-op even with rich cardIdentity", () => {
+  it("unpinned holding (no cardId) → helper no-op even with rich cardIdentity", () => {
     const holding: any = {
       id: "h-unpinned",
       playerName: "Paul Skenes",
       cardYear: 2024,
-      // NO cardsightCardId
+      // NO cardId
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, TROUT_CARDIDENTITY);
     expect(patch).toEqual({});
@@ -123,7 +123,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-flap",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
     };
     // Engine resolved a DIFFERENT card_id (the consistency guard at
     // compiqEstimate.service.ts:1310 usually catches this with a stub
@@ -137,7 +137,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-x",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
     };
     expect(hydrateHoldingIdentityFromEstimate(holding, null)).toEqual({});
     expect(hydrateHoldingIdentityFromEstimate(holding, undefined)).toEqual({});
@@ -148,7 +148,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-false-auto",
       playerName: "Eric Hartman",
-      cardsightCardId: HARTMAN_PINNED_ID,
+      cardId: HARTMAN_PINNED_ID,
       isAuto: false,                                                // user-set false (deliberate or default)
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, HARTMAN_CARDIDENTITY);
@@ -163,7 +163,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-undef-auto",
       playerName: "Eric Hartman",
-      cardsightCardId: HARTMAN_PINNED_ID,
+      cardId: HARTMAN_PINNED_ID,
       // isAuto undefined
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, HARTMAN_CARDIDENTITY);
@@ -174,7 +174,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-undef-base",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, TROUT_CARDIDENTITY);
     expect(patch.isAuto).toBe(false);
@@ -183,7 +183,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
   it("isAuto:undefined with auto-prefix card number (CPA-) but no auto-word in set → true via prefix regex", () => {
     const holding: any = {
       id: "h-prefix-only",
-      cardsightCardId: HARTMAN_PINNED_ID,
+      cardId: HARTMAN_PINNED_ID,
     };
     // Synthetic case: clean set name ("Base Set") but autograph-prefixed
     // card number. Real Cardsight rarely produces this combination, but
@@ -202,7 +202,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-legacy",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
       // cardYear undefined; year (legacy field) also undefined
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, TROUT_CARDIDENTITY);
@@ -213,7 +213,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-legacy-year",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
       // cardYear undefined but legacy year is set (rare; pre-migration)
       year: "2010",
     };
@@ -226,7 +226,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
     const holding: any = {
       id: "h-empty-string",
       playerName: "Mike Trout",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
       setName: "   ",                                               // whitespace-only
       product: "",
     };
@@ -239,7 +239,7 @@ describe("hydrateHoldingIdentityFromEstimate", () => {
   it("catalog identity with null `year` → cardYear NOT filled (don't synthesize)", () => {
     const holding: any = {
       id: "h-null-year",
-      cardsightCardId: TROUT_PINNED_ID,
+      cardId: TROUT_PINNED_ID,
     };
     const patch = hydrateHoldingIdentityFromEstimate(holding, {
       ...TROUT_CARDIDENTITY,

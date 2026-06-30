@@ -105,7 +105,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -143,7 +143,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     mockGetPricing.mockResolvedValue(buildPricingResponse([]));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -185,7 +185,7 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Shohei Ohtani",
       cardYear: 2018,
       product: "Topps Chrome",
@@ -203,7 +203,7 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       // NO playerName, NO cardYear, NO product — pure pinned-cardId call.
     });
 

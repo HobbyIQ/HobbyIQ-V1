@@ -287,7 +287,7 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
       product: "Bowman",
       parallel: "Blue X-Fractor /150",
       parallelId: "b83de312-609d-4d58-af41-c8766a81835f",
-      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      cardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
       isAuto: true,
       fairMarketValue: 8.5,            // ← the residue
       estimatedValue: null,
@@ -321,7 +321,7 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
     expect(merged.estimateBasis).toBeNull();
     expect(merged.isEstimate).toBe(false);
     // Identity fields preserved (the patch only touches FMV-class):
-    expect(merged.cardsightCardId).toBe("befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
+    expect(merged.cardId).toBe("befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
     expect(merged.parallelId).toBe("b83de312-609d-4d58-af41-c8766a81835f");
     expect(merged.playerName).toBe("Eric Hartman");
   });
@@ -336,7 +336,7 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
       playerName: "Mike Trout",
       cardYear: 2011,
       product: "Topps Update",
-      cardsightCardId: "fda530ab-e925-460e-ab88-63199ef975e9",
+      cardId: "fda530ab-e925-460e-ab88-63199ef975e9",
       fairMarketValue: 1250.5,
       valuationStatus: "observed" as const,
     };
@@ -363,7 +363,7 @@ describe("buildChLastSalePatch — writeback semantics (CF-CH-THIN-COMP-FMV-CLEA
     const chN2Holding = {
       id: "test-ch-n2-holding",
       playerName: "Eric Hartman",
-      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      cardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
       fairMarketValue: 450,
       valuationStatus: "observed" as const,
     };
@@ -433,7 +433,7 @@ describe("buildChLastSalePatch — modelExpectation + modelSignal persistence", 
     // values — same pattern as the FMV-clear from CF-CH-THIN-COMP-FMV-CLEAR.
     const staleHolding = {
       id: "test-stale-model",
-      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      cardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
       lastSaleSurface: { price: 380, date: "2026-06-10", compCount: 1 },
       modelExpectation: validExpectation,  // ← stale
       modelSignal: validSignal,            // ← stale
@@ -761,7 +761,7 @@ describe("buildChLastSalePatch — CF-CH-PERSISTENCE-PATCH sub-block round-trip"
     // writeback spread CLEARS the stale value.
     const staleHolding = {
       id: "test-stale-trend",
-      cardsightCardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
+      cardId: "befe9bcc-e7e8-458c-9cd8-ce831848b9a1",
       modelExpectation: {
         ...baseExpectation,
         trendAnchor: validTrendAnchor,         // ← stale

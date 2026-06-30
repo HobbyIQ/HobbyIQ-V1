@@ -1,6 +1,6 @@
-// CF-INVENTORYIQ-R1 — PortfolioHolding cardsightCardId round-trip.
+// CF-INVENTORYIQ-R1 — PortfolioHolding cardId round-trip.
 //
-// Verifies the additive field shipped by R1 (cardsightCardId) flows
+// Verifies the additive field shipped by R1 (cardId) flows
 // cleanly through the full write/read path:
 //   POST /api/portfolio/holdings -> store -> GET /api/portfolio/holdings/:id
 //
@@ -39,11 +39,11 @@ async function signIn(): Promise<string> {
   return response.body.sessionId as string;
 }
 
-describe("PortfolioHolding cardsightCardId field (R1)", () => {
+describe("PortfolioHolding cardId field (R1)", () => {
   it("round-trips a bare Cardsight UUID through POST -> GET", async () => {
     const session = await signIn();
     const holdingId = `r1-bare-uuid-${Date.now()}`;
-    const cardsightCardId = "6134bc63-1a2b-4c3d-9e0f-aabbccddeeff";
+    const cardId = "6134bc63-1a2b-4c3d-9e0f-aabbccddeeff";
 
     const add = await request(app)
       .post("/api/portfolio/holdings")
@@ -53,7 +53,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         playerName: "Aaron Judge",
         cardTitle: "2017 Topps Chrome RC",
         cardYear: 2017,
-        cardsightCardId,
+        cardId,
       });
     expect(add.status).toBe(201);
 
@@ -61,7 +61,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBe(cardsightCardId);
+    expect(get.body.cardId).toBe(cardId);
   });
 
   it("strips a leading 'cardsight:' prefix on write and emits a warn event", async () => {
@@ -79,7 +79,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         .send({
           id: holdingId,
           playerName: "Mike Trout",
-          cardsightCardId: prefixed,
+          cardId: prefixed,
         });
       expect(add.status).toBe(201);
 
@@ -88,7 +88,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         .get(`/api/portfolio/holdings/${holdingId}`)
         .set("x-session-id", session);
       expect(get.status).toBe(200);
-      expect(get.body.cardsightCardId).toBe(bareUuid);
+      expect(get.body.cardId).toBe(bareUuid);
 
       // Warn event fired with the structured shape required by
       // post-deploy telemetry grep.
@@ -107,7 +107,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
     }
   });
 
-  it("accepts explicit null cardsightCardId (absence-as-data)", async () => {
+  it("accepts explicit null cardId (absence-as-data)", async () => {
     const session = await signIn();
     const holdingId = `r1-null-${Date.now()}`;
 
@@ -121,7 +121,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         // csid does NOT satisfy the identity gate; cardYear+product do.
         cardYear: 2024,
         product: "Test Set",
-        cardsightCardId: null,
+        cardId: null,
       });
     expect(add.status).toBe(201);
 
@@ -129,10 +129,10 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBeNull();
+    expect(get.body.cardId).toBeNull();
   });
 
-  it("normalizes empty string cardsightCardId to null on write", async () => {
+  it("normalizes empty string cardId to null on write", async () => {
     const session = await signIn();
     const holdingId = `r1-empty-string-${Date.now()}`;
 
@@ -146,7 +146,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         // csid does NOT satisfy the identity gate; cardYear+product do.
         cardYear: 2024,
         product: "Test Set",
-        cardsightCardId: "",
+        cardId: "",
       });
     expect(add.status).toBe(201);
 
@@ -154,12 +154,12 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBeNull();
+    expect(get.body.cardId).toBeNull();
   });
 
-  it("backward compatibility — holdings without cardsightCardId persist + retrieve without error", async () => {
+  it("backward compatibility — holdings without cardId persist + retrieve without error", async () => {
     // The schema addition is optional. Existing client flows that
-    // never send cardsightCardId must continue working unchanged.
+    // never send cardId must continue working unchanged.
     const session = await signIn();
     const holdingId = `r1-omitted-${Date.now()}`;
 
@@ -180,20 +180,20 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBeUndefined();
+    expect(get.body.cardId).toBeUndefined();
     // And the rest of the holding round-trips unchanged.
     expect(get.body.playerName).toBe("Legacy Holding");
     expect(get.body.cardYear).toBe(1989);
   });
 
-  it("PATCH preserves cardsightCardId on a holding when not included in the update body", async () => {
+  it("PATCH preserves cardId on a holding when not included in the update body", async () => {
     // updateHolding spreads req.body over the existing holding
     // (`{ ...doc.holdings[id], ...req.body, id }`), so omitted fields
-    // are preserved. Confirm cardsightCardId survives a partial PATCH
+    // are preserved. Confirm cardId survives a partial PATCH
     // that touches only quantity.
     const session = await signIn();
     const holdingId = `r1-patch-${Date.now()}`;
-    const cardsightCardId = "12345678-1234-1234-1234-123456789abc";
+    const cardId = "12345678-1234-1234-1234-123456789abc";
 
     await request(app)
       .post("/api/portfolio/holdings")
@@ -201,7 +201,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .send({
         id: holdingId,
         playerName: "Test",
-        cardsightCardId,
+        cardId,
         quantity: 1,
       });
 
@@ -216,7 +216,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .set("x-session-id", session);
     expect(get.status).toBe(200);
     expect(get.body.quantity).toBe(2);
-    expect(get.body.cardsightCardId).toBe(cardsightCardId);
+    expect(get.body.cardId).toBe(cardId);
   });
 
   it("survives full holding lifecycle (add -> refresh -> PATCH-other-field) without being dropped", async () => {
@@ -228,13 +228,13 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
     //
     // Per Phase 1 code-read findings, autoPriceHolding spreads
     // `{ ...holding, currentValue, ... }` (line 454) with an override
-    // list that does NOT include cardsightCardId; same for
+    // list that does NOT include cardId; same for
     // repriceHoldingsForUser (line ~1996). This test confirms the
     // spread preservation empirically rather than relying on the
     // code-read alone.
     const session = await signIn();
     const holdingId = `r1-lifecycle-${Date.now()}`;
-    const cardsightCardId = "aabbccdd-eeff-0011-2233-445566778899";
+    const cardId = "aabbccdd-eeff-0011-2233-445566778899";
 
     // Step 1+2: addHolding + GET (addHolding internally routes through
     // autoPriceHolding at portfolioStore.service.ts:1181, so this also
@@ -248,7 +248,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
         playerName: "Aaron Judge",
         cardTitle: "2017 Topps Chrome RC",
         cardYear: 2017,
-        cardsightCardId,
+        cardId,
         quantity: 1,
       });
     expect(add.status).toBe(201);
@@ -257,7 +257,7 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBe(cardsightCardId);
+    expect(get.body.cardId).toBe(cardId);
 
     // Step 3+4: refreshHolding routes through autoPriceHolding for an
     // EXISTING holding (distinct code path from addHolding's first
@@ -274,9 +274,9 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightCardId).toBe(cardsightCardId);
+    expect(get.body.cardId).toBe(cardId);
 
-    // Step 5+6: PATCH a different field; cardsightCardId must persist
+    // Step 5+6: PATCH a different field; cardId must persist
     // through updateHolding's spread (`{ ...doc.holdings[id], ...req.body, id }`).
     const patch = await request(app)
       .patch(`/api/portfolio/holdings/${holdingId}`)
@@ -289,10 +289,10 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       .set("x-session-id", session);
     expect(get.status).toBe(200);
     expect(get.body.quantity).toBe(3);
-    expect(get.body.cardsightCardId).toBe(cardsightCardId);
+    expect(get.body.cardId).toBe(cardId);
   });
 
-  it("PATCH applies the prefix-strip normalizer when cardsightCardId is updated", async () => {
+  it("PATCH applies the prefix-strip normalizer when cardId is updated", async () => {
     // updateHolding routes through the same normalizer as addHolding —
     // confirm a PATCH that sends the prefixed form lands as the bare
     // UUID with the warn event reporting the updateHolding source.
@@ -314,14 +314,14 @@ describe("PortfolioHolding cardsightCardId field (R1)", () => {
       const patch = await request(app)
         .patch(`/api/portfolio/holdings/${holdingId}`)
         .set("x-session-id", session)
-        .send({ cardsightCardId: prefixed });
+        .send({ cardId: prefixed });
       expect([200, 204]).toContain(patch.status);
 
       const get = await request(app)
         .get(`/api/portfolio/holdings/${holdingId}`)
         .set("x-session-id", session);
       expect(get.status).toBe(200);
-      expect(get.body.cardsightCardId).toBe(bareUuid);
+      expect(get.body.cardId).toBe(bareUuid);
 
       const stripEvents = warnSpy.mock.calls
         .map((args) => (typeof args[0] === "string" ? args[0] : ""))

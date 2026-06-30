@@ -1,7 +1,7 @@
 // CF-IMPORT-BE (2026-06-21) — collision (dedup) detector.
 //
 // The #2 guard: detect when an incoming row collides with an existing
-// holding on (cardsightCardId + parallel + grade + serial). This is the
+// holding on (cardId + parallel + grade + serial). This is the
 // Hartman-4× scenario — same physical card across multiple holdings.
 // The preview returns per-row actions {skip / add-copy / update-cost};
 // the user picks per-row, with skip-default for safety.
@@ -17,7 +17,7 @@ import type { PortfolioHolding } from "../../../types/portfolioiq.types.js";
 export type CollisionAction = "skip" | "add-as-copy" | "update-cost";
 
 export interface CollisionRow {
-  cardsightCardId: string | null;
+  cardId: string | null;
   holdingId: string | null;
   parallel: string | null;
   gradeCompany: string | null;
@@ -44,20 +44,20 @@ export function detectCollision(
   row: CollisionRow,
   existingHoldings: Record<string, PortfolioHolding>,
 ): CollisionDetection {
-  // No cardsightCardId on the incoming row → no collision detection possible
+  // No cardId on the incoming row → no collision detection possible
   // via the canonical key. Fall through to NEW lane (no collision).
-  if (!row.cardsightCardId) {
+  if (!row.cardId) {
     return {
       collides: false,
       existingHoldingIds: [],
       defaultAction: "skip",
-      reason: "no cardsightCardId on incoming row; no collision check possible",
+      reason: "no cardId on incoming row; no collision check possible",
     };
   }
 
   const matches: string[] = [];
   for (const [hid, h] of Object.entries(existingHoldings)) {
-    if (!h || h.cardsightCardId !== row.cardsightCardId) continue;
+    if (!h || h.cardId !== row.cardId) continue;
     // Match on the canonical key: cardId + parallel + grade + serial.
     const parallelMatch = norm(h.parallel) === norm(row.parallel);
     const gradeCompanyMatch = norm(h.gradeCompany) === norm(row.gradeCompany);
@@ -93,7 +93,7 @@ export function detectCollision(
     collides: true,
     existingHoldingIds: matches,
     defaultAction: "skip",
-    reason: `collision on cardId ${row.cardsightCardId.slice(0, 8)}… (parallel/grade/serial match); skip-default applied`,
+    reason: `collision on cardId ${row.cardId.slice(0, 8)}… (parallel/grade/serial match); skip-default applied`,
   };
 }
 

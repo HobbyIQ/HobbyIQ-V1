@@ -21,12 +21,12 @@ export interface CompIQEstimateRequest {
    * filtering applied to the response's raw + graded company/grade tree.
    *
    * Wire key for `/api/compiq/price-by-id` request body is
-   * `cardsightCardId` (CardHedge fully decommissioned at 10ad39d).
+   * `cardId` (CardHedge fully decommissioned at 10ad39d).
    */
-  cardsightCardId?: string;
+  cardId?: string;
   /**
    * CF-PARALLEL-AWARE-VALUE (2026-06-09): pin pricing to a specific
-   * parallel of the parent cardsightCardId. When present:
+   * parallel of the parent cardId. When present:
    *   - records with parallel_id === parallelId are kept
    *   - all other records (including base/unnumbered) are dropped
    * When absent:
@@ -45,16 +45,16 @@ export interface CompIQEstimateRequest {
   parallelName?: string;
   /**
    * CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): when true AND
-   * `cardsightCardId` is set, the engine fires the pinned-id branch in
+   * `cardId` is set, the engine fires the pinned-id branch in
    * fetchComps REGARDLESS of whether the composed cardTitle looks like a
    * "meaningful query" different from the pinned id.
    *
-   * Semantically: "the stored cardsightCardId is authoritative; the
+   * Semantically: "the stored cardId is authoritative; the
    * composed cardTitle/playerName is a derived display label, not a
    * free-text override."
    *
    * Used by `autoPriceHolding` for portfolio reprice — the holding's
-   * resolved cardsightCardId is the source of truth and must not be
+   * resolved cardId is the source of truth and must not be
    * overridden by a name-resolution fall-through, which would lead to
    * pricing off the wrong card when identity fields are sparse (e.g. a
    * 2011 Topps Update Trout RC mis-priced as a 2026 Bowman Trout at $2).
@@ -92,7 +92,7 @@ export interface CompIQEstimateRequest {
  * attributes to + whether it routes from a portfolio holding (which
  * decides the §4.2/4.3 join-key: routedFromHolding=true rows join to
  * PortfolioLedgerEntry sales via holdingId+userId; routedFromHolding=false
- * rows join to outcomes only via cardsightCardId / the broader
+ * rows join to outcomes only via cardId / the broader
  * eBay-sold path).
  */
 export type PredictionCorpusSource =
@@ -100,7 +100,7 @@ export type PredictionCorpusSource =
   | "compiq-search-freetext"
   /** POST /api/compiq/price — free-text alias of /search */
   | "compiq-price-freetext"
-  /** POST /api/compiq/price-by-id — cardsightCardId-pinned price */
+  /** POST /api/compiq/price-by-id — cardId-pinned price */
   | "compiq-price-by-id"
   /** POST /api/compiq/trendiq — investor+ TrendIQ composite surface */
   | "compiq-trendiq"

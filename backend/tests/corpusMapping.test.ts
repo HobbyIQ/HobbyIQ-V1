@@ -25,7 +25,7 @@
  *   4. querySource discrimination:
  *      - free_text path: query string passed through with
  *        querySource: "free_text".
- *      - card_id path: cardsightCardId stored in the `query` slot
+ *      - card_id path: cardId stored in the `query` slot
  *        with querySource: "card_id".
  *
  *   5. Query truncation cap enforced through the mapper (not bypassed)
@@ -261,11 +261,11 @@ describe("corpusEntryFromPricingResult — querySource discrimination", () => {
     expect(entry.querySource).toBe("free_text");
   });
 
-  it("card_id: stores cardsightCardId in the query slot and tags it card_id (/price-by-id without query)", () => {
+  it("card_id: stores cardId in the query slot and tags it card_id (/price-by-id without query)", () => {
     // Mirrors the route logic: /price-by-id received no query, so the
-    // corpus records cardsightCardId in the query slot with
+    // corpus records cardId in the query slot with
     // querySource="card_id" (CF-PRICE-BY-ID-MIGRATION renamed the
-    // request body field from cardHedgeCardId to cardsightCardId).
+    // request body field from cardHedgeCardId to cardId).
     const entry = corpusEntryFromPricingResult({
       query: "6134bc63-1a2b-4c3d-9e0f-aabbccddeeff",
       querySource: "card_id",

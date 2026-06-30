@@ -10,7 +10,7 @@
 // re-validated.
 //
 // This file pins the new route-level validator: after cacheWrap returns,
-// assert response.cardIdentity.card_id === requested cardsightCardId.
+// assert response.cardIdentity.card_id === requested cardId.
 // On mismatch: bust the entry, recompute ONCE via the direct producer
 // (bypassing cacheWrap), and either cache the corrected result OR — if
 // fresh recompute is STILL mismatched — return the unresolved shape and
@@ -94,7 +94,7 @@ function buildRouteResponseShape(opts: {
 }) {
   return {
     success: true,
-    cardsightCardId: TROUT_ID, // route echoes the REQUESTED id verbatim
+    cardId: TROUT_ID, // route echoes the REQUESTED id verbatim
     summary: "ok",
     marketTier: { value: opts.fmv ?? 1, high: opts.fmv ?? 1 },
     buyZone: [null, null],
@@ -194,7 +194,7 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
     const resp = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "s")
-      .send({ cardsightCardId: TROUT_ID });
+      .send({ cardId: TROUT_ID });
 
     expect(resp.status).toBe(200);
 
@@ -203,7 +203,7 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
     expect(resp.body.cardIdentity.card_id).toBe(TROUT_ID);
     expect(resp.body.cardIdentity.player).toBe("Mike Trout");
     expect(resp.body.cardIdentity.number).toBe("US175");
-    expect(resp.body.cardsightCardId).toBe(TROUT_ID);
+    expect(resp.body.cardId).toBe(TROUT_ID);
 
     // cacheDel was called on the poisoned routeKey.
     expect(cacheDelCalls.length).toBe(1);
@@ -255,13 +255,13 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
     const resp = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "s")
-      .send({ cardsightCardId: TROUT_ID });
+      .send({ cardId: TROUT_ID });
 
     expect(resp.status).toBe(200);
 
     // Unresolved shape: no FMV, no comps, stub identity keyed on REQUESTED
     // id (NOT Frazier's). The "couldn't price" UI renders.
-    expect(resp.body.cardsightCardId).toBe(TROUT_ID);
+    expect(resp.body.cardId).toBe(TROUT_ID);
     expect(resp.body.marketTier).toEqual({ value: null, high: null });
     expect(resp.body.marketValue).toBeNull();
     expect(resp.body.compsUsed).toBe(0);
@@ -307,7 +307,7 @@ describe("CF-ROUTE-CACHE-VALIDATION: poisoned cache → bust + recompute → cor
     const resp = await request(app)
       .post("/api/compiq/price-by-id")
       .set("x-session-id", "s")
-      .send({ cardsightCardId: TROUT_ID });
+      .send({ cardId: TROUT_ID });
 
     expect(resp.status).toBe(200);
     expect(resp.body.cardIdentity.card_id).toBe(TROUT_ID);

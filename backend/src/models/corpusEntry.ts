@@ -104,7 +104,7 @@ export interface CorpusEntry {
    * Semantics depend on the sibling `querySource` field:
    *   - querySource === "free_text": this is the user's literal query
    *     string (e.g. "luka prizm rookie auto").
-   *   - querySource === "card_id": this is a Cardsight `cardsightCardId`
+   *   - querySource === "card_id": this is a Cardsight `cardId`
    *     stored in the `query` slot because the pricing request was
    *     pinned by ID and carried no free-text query. (Pre-2026-05-30
    *     this was a Card Hedge cardHedgeCardId; the CF-CARDHEDGE-HARD-
@@ -119,7 +119,7 @@ export interface CorpusEntry {
    * Discriminator describing how to interpret the `query` field.
    *
    *   - "free_text": query is the user's literal search string.
-   *   - "card_id":   query is a Cardsight cardsightCardId (UUID); the
+   *   - "card_id":   query is a Cardsight cardId (UUID); the
    *                  request was pinned to a specific catalog entry and
    *                  carried no free-text query. When CardHedge served
    *                  the comps for this row, vendor provenance is on
@@ -318,7 +318,7 @@ export interface BuildCorpusEntryOptions {
   /**
    * Discriminator for the `query` field. "free_text" when query is the
    * user's literal search string; "card_id" when query holds a
-   * Cardsight cardsightCardId because the request was pinned by ID.
+   * Cardsight cardId because the request was pinned by ID.
    */
   querySource: "free_text" | "card_id";
 

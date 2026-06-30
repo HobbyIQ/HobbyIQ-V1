@@ -9,7 +9,7 @@
 //                     (post-rate-limit-dedup, pre-async-write)
 //   successes       — how many of those resolved successfully
 //   failures        — { count, lastError, lastErrorAt } summary
-//   joinableCount   — attempts where input had a real cardsightCardId
+//   joinableCount   — attempts where input had a real cardId
 //   unresolvedCount — attempts where input was null (sentinel partition)
 //
 // joinableRate (= joinableCount / attempts) is MANDATORY-not-optional

@@ -32,7 +32,7 @@ export interface TradeOutgoingInput {
 }
 
 export interface TradeIncomingInput {
-  cardsightCardId?: string;
+  cardId?: string;
   cardTitle: string;
   grade?: string;
   fmvAtTrade: number;

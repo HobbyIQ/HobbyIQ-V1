@@ -83,7 +83,7 @@ Tappable: opens a "How we estimate" explainer modal (one-time educational sheet)
 
 Per PR #180 + the auto-multipliers / vintage-multipliers refresh, the ladder fallback fires for any holding where:
 - engine returned no usable FMV (insufficient comps, variant mismatch, etc.)
-- AND `cardsightCardId` is present
+- AND `cardId` is present
 - AND a same-card sale exists in another grade
 
 Drew's volume-test inventory had 41 holdings rescued this way out of 83 total (~50% rate). Production-wide rate should be similar for graded holdings.

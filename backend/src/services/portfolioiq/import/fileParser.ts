@@ -1,6 +1,6 @@
 // CF-IMPORT-BE (2026-06-21) — xlsx/csv file → parsed rows.
 //
-// Path detection happens here: presence of holdingId/cardsightCardId in
+// Path detection happens here: presence of holdingId/cardId in
 // the header row triggers round-trip mode (strict numeric parse, skip
 // auto-map). Otherwise arbitrary mode (lenient parse + auto-map proposed).
 

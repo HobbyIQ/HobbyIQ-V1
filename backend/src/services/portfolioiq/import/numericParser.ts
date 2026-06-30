@@ -5,7 +5,7 @@
 //   - Arbitrary path   → lenient on unambiguous formatting ($/,/%/whitespace)
 //
 // Same parser, different mode. The path detection happens upstream at the
-// file-parse step (presence of holdingId/cardsightCardId columns).
+// file-parse step (presence of holdingId/cardId columns).
 
 export type NumericParseMode = "strict" | "lenient";
 

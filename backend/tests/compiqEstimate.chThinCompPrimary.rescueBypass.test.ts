@@ -173,7 +173,7 @@ describe("CF-CH-THIN-COMP-RESCUE-BYPASS — sibling-pool rescue MUST NOT interce
     } as any);
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       // Bowman-family product (mechanism1 has a chance to fire — we're
@@ -258,7 +258,7 @@ describe("CF-CH-THIN-COMP-RESCUE-BYPASS — sibling-pool rescue MUST NOT interce
     } as any);
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",

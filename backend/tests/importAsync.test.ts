@@ -58,7 +58,7 @@ describe("CF-IMPORT-ASYNC — sync/async threshold boundary (p95-sized)", () => 
   it("≤ threshold (40 rows) → sync result with envelopes inline", async () => {
     const { sessionId } = await signIn();
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product"],
       Array.from({ length: SYNC_PREVIEW_ROW_THRESHOLD }, (_, i) => [
         `sync-h-${i}-${Date.now()}`,
         `sync-card-${i}-${Date.now()}`,
@@ -82,7 +82,7 @@ describe("CF-IMPORT-ASYNC — sync/async threshold boundary (p95-sized)", () => 
   it("> threshold (41 rows) → async kickoff with jobId, no envelopes inline", async () => {
     const { sessionId } = await signIn();
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product"],
       Array.from({ length: SYNC_PREVIEW_ROW_THRESHOLD + 1 }, (_, i) => [
         `async-h-${i}-${Date.now()}`,
         `async-card-${i}-${Date.now()}`,
@@ -112,7 +112,7 @@ describe("CF-IMPORT-ASYNC — job lifecycle: kick → poll → ready", () => {
   it("kick async, poll until status === ready, envelopes available", async () => {
     const { sessionId } = await signIn();
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product"],
       Array.from({ length: SYNC_PREVIEW_ROW_THRESHOLD + 5 }, (_, i) => [
         `lifecycle-h-${i}-${Date.now()}`,
         `lifecycle-card-${i}-${Date.now()}`,
@@ -298,7 +298,7 @@ describe("CF-IMPORT-ASYNC — per-doc TTL (24h, with container defaultTtl: -1 sa
   it("preview-kickoff path: the doc the async preview writes has ttl set", async () => {
     const { sessionId, userId } = await signIn();
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product"],
       Array.from({ length: SYNC_PREVIEW_ROW_THRESHOLD + 1 }, (_, i) => [
         `ttl-kick-${i}`, `ttl-card-${i}`, `Player ${i}`, 2026, "Bowman",
       ]),

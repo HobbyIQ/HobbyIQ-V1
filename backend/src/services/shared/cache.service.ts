@@ -97,7 +97,7 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number): 
 
 // CF-ROUTE-CACHE-VALIDATION (2026-06-08): delete a single cache entry.
 // Used by the /price-by-id route's read-time validation to bust a poisoned
-// memoized response (cardIdentity.card_id ≠ requested cardsightCardId)
+// memoized response (cardIdentity.card_id ≠ requested cardId)
 // before recomputing once. Fails silent — a Redis blip during a bust is
 // non-fatal; the entry will TTL-expire naturally and the validator will
 // catch it again on the next request.

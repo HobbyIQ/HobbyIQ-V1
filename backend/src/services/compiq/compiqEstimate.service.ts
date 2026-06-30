@@ -1968,7 +1968,7 @@ async function fetchBroaderTrend(
   };
 }
 
-// CF-PRICE-BY-ID-MIGRATION — Grade selector for the pinned cardsightCardId
+// CF-PRICE-BY-ID-MIGRATION — Grade selector for the pinned cardId
 // branch in fetchComps. Cardsight returns raw + graded as separate
 // structures; CardHedge's getCardSales filtered by grade server-side.
 // We replicate the filter on our side from the grade string.
@@ -2156,7 +2156,7 @@ async function fetchComps(
 
   // ----- Phase 2 — meaningful-query fall-through ------------------------
   // When the iOS client sends a meaningful `query` text alongside
-  // cardsightCardId, fetchComps falls through to findCompsRouted →
+  // cardId, fetchComps falls through to findCompsRouted →
   // resolveCardId → Cardsight getPricing. The pinned-cardId path below
   // is the fast direct route when we already have the resolved cardId.
   //
@@ -2186,7 +2186,7 @@ async function fetchComps(
     !trimmedQuery.toLowerCase().startsWith(trimmedPinned.toLowerCase());
 
   // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): caller (e.g.
-  // autoPriceHolding) declares the stored cardsightCardId authoritative —
+  // autoPriceHolding) declares the stored cardId authoritative —
   // the composed cardTitle is a derived display label, not a free-text
   // override. Skip the meaningful-query check and fire the pinned branch
   // even when "Mike Trout" doesn't start with the pinned UUID. Default-off:
@@ -2194,7 +2194,7 @@ async function fetchComps(
   // existing free-text-override semantics.
   const pinnedAuthoritative = queryContext?.pinnedAuthoritative === true;
 
-  // ----- Pinned cardsightCardId path ------------------------------------
+  // ----- Pinned cardId path ------------------------------------
   // CF-PRICE-BY-ID-MIGRATION (first sub-CF of CF-CARDHEDGE-DECOMMISSION-
   // FULL Phase 2): when the caller has already resolved a Cardsight
   // cardId (UUID), call cardsight.client.getPricing() directly. Skips
@@ -2210,7 +2210,7 @@ async function fetchComps(
   // structures; we select records based on the requested grade string.
   if (pinnedCardId && (!hasMeaningfulQuery || pinnedAuthoritative)) {
     // ── CF-PRICE-BY-ID-PLAYER-RESOLVE (2026-06-27) ───────────────────────
-    // iOS pins the cardsightCardId and deliberately sends query=nil (see
+    // iOS pins the cardId and deliberately sends query=nil (see
     // APIService.priceByCardId / CF-PRICE-BY-ID-ROUTE). The route layer
     // then falls back to body.playerName = resolvedCardId, so by the time
     // we reach here queryContext.playerName is the raw numeric card_id (or
@@ -2321,7 +2321,7 @@ async function fetchComps(
     // UI still renders the card honestly.
     const identity = buildIdentityFromContext(queryContext, pinnedCardId);
     console.warn(
-      `[compiq.fetchComps] pinned cardsightCardId=${pinnedCardId} not served by CardHedge; ` +
+      `[compiq.fetchComps] pinned cardId=${pinnedCardId} not served by CardHedge; ` +
         `Cardsight fallback removed — returning 0 comps`,
     );
     return {
@@ -2867,7 +2867,7 @@ export function emitPredictionToCorpus(params: {
     parallel?: string;
     gradeCompany?: string;
     gradeValue?: number;
-    cardsightCardId?: string;
+    cardId?: string;
   };
   fairMarketValue: number | null;
   fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "unavailable";
@@ -2953,8 +2953,8 @@ export function emitPredictionToCorpus(params: {
     const __predictionEmit = {
       eventType: "prediction_emitted" as const,
       timestamp: new Date().toISOString(),
-      cardsightCardId:
-        params.cardIdentity?.card_id ?? params.body.cardsightCardId ?? null,
+      cardId:
+        params.cardIdentity?.card_id ?? params.body.cardId ?? null,
       playerName: params.body.playerName ?? null,
       cardYear: params.body.cardYear ?? null,
       product: params.body.product ?? null,
@@ -2977,7 +2977,7 @@ export function emitPredictionToCorpus(params: {
       //   - routedFromHolding=true → join via holdingId+userId to
       //     PortfolioLedgerEntry sale outcomes (the portfolio-attributable
       //     forward-direction hit-rate signal);
-      //   - routedFromHolding=false → join via cardsightCardId to the
+      //   - routedFromHolding=false → join via cardId to the
       //     broader eBay-sold outcome path (population MAPE).
       source: params.callContext.source,
       userId: params.callContext.userId ?? null,
@@ -3022,7 +3022,7 @@ export function emitPredictionToCorpus(params: {
   // pricing latency. getCardFmv is cached (12h TTL) so the audit is
   // essentially free when the pricing path already touched it.
   emitCompPoolAuditAsync({
-    chCardId: params.cardIdentity?.card_id ?? params.body.cardsightCardId ?? null,
+    chCardId: params.cardIdentity?.card_id ?? params.body.cardId ?? null,
     gradeCompany: params.body.gradeCompany ?? null,
     gradeValue: params.body.gradeValue ?? null,
     engineFmv:
@@ -3436,7 +3436,7 @@ export async function computeEstimate(
     isAuto: effectiveIsAuto,
     // CF-REPRICE-PINNED-AUTHORITATIVE (2026-06-17): forward body flag to
     // fetchComps so reprice (autoPriceHolding) can declare the stored
-    // cardsightCardId authoritative without overloading playerName.
+    // cardId authoritative without overloading playerName.
     pinnedAuthoritative: body.pinnedAuthoritative === true,
   };
 
@@ -3506,7 +3506,7 @@ export async function computeEstimate(
   let fetched = await fetchComps(
     cardTitle,
     cardHedgeGrade,
-    body.cardsightCardId,
+    body.cardId,
     queryContext,
     body.parallelId ?? null,
   );
@@ -3522,10 +3522,10 @@ export async function computeEstimate(
   //     query OR file as catalog gap
   //   - no-recent-comps: pricing might appear once a sale lands; OK to
   //     refresh later
-  // Skip on the pinned cardsightCardId path — that path already resolved
+  // Skip on the pinned cardId path — that path already resolved
   // a catalog entry by id; if no comps, it's definitionally no-recent-comps
   // not a catalog miss.
-  if (!body.cardsightCardId && fetched.card === null && fetched.comps.length === 0) {
+  if (!body.cardId && fetched.card === null && fetched.comps.length === 0) {
     console.log(
       `[compiq.computeEstimate] catalog-miss short-circuit: query="${cardTitle}"`,
     );
@@ -3665,7 +3665,7 @@ export async function computeEstimate(
   // that the pinned path can't always populate (the card_id may not appear
   // in the top-20 `searchCards` hits used for the cosmetic identity lookup),
   // which would otherwise wipe valid comps.
-  if (fetched.card && body.playerName && !body.cardsightCardId) {
+  if (fetched.card && body.playerName && !body.cardId) {
     const wanted = body.playerName
       .toLowerCase()
       .split(/\s+/)
@@ -5488,7 +5488,7 @@ export async function computeEstimate(
 
   // Structured event log for the ML training corpus.
   // CF-PREDICTION-CORPUS STEP 1 (cardId emission, prior commit) added
-  // cardsightCardId so the corpus's join axis to outcomes is clean from
+  // cardId so the corpus's join axis to outcomes is clean from
   // day 1. CF-PREDICTION-CORPUS STEP 2 (this commit) added the Cosmos
   // writer consuming the same emit object verbatim per methodology §2.2.
   //

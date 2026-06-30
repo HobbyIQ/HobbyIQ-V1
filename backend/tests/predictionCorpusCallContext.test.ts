@@ -305,7 +305,7 @@ describe("Descriptive-not-identity rule: attribution fields do NOT enter inputSi
       gradeValue: 10,
       fairMarketValue: 100,
       fmvMechanism: "main-pipeline",
-      cardsightCardId: "ohtani-base-uuid",
+      cardId: "ohtani-base-uuid",
     };
     const sigSearchFreetext = __predictionCorpusInternals.inputSignature({
       ...baseInput,

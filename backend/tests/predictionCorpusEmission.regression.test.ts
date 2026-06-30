@@ -1,7 +1,7 @@
 // CF-PREDICTION-CORPUS STEP 2 — regression test.
 //
 // Purpose: confirm `[compiq.prediction_emitted]` stdout emission shape is
-// IDENTICAL across the dual-emit transition (STEP 1 added cardsightCardId;
+// IDENTICAL across the dual-emit transition (STEP 1 added cardId;
 // STEP 2 adds the Cosmos writer alongside but the stdout shape MUST stay
 // stable for the burn-in week per methodology §2.4).
 //
@@ -107,7 +107,7 @@ import { writePredictionLog } from "../src/services/compiq/predictionCorpus.serv
 const EXPECTED_TOP_LEVEL_KEYS = [
   "eventType",
   "timestamp",
-  "cardsightCardId",   // added STEP 1
+  "cardId",   // added STEP 1
   "playerName",
   "cardYear",
   "product",
@@ -133,7 +133,7 @@ const EXPECTED_TOP_LEVEL_KEYS = [
   // fields landed flat on the payload. Methodology §2.2 amended for the
   // join-key role: routedFromHolding=true → PortfolioLedgerEntry-join
   // via holdingId+userId; routedFromHolding=false → eBay-sold
-  // cardsightCardId-join. source is the closed PredictionCorpusSource
+  // cardId-join. source is the closed PredictionCorpusSource
   // literal union — tsc enforces every caller supplies a documented value.
   "source",
   "userId",
@@ -212,8 +212,8 @@ describe("CF-PREDICTION-CORPUS STEP 2 — prediction_emitted stdout shape regres
     // eventType discriminator.
     expect(payload.eventType).toBe("prediction_emitted");
 
-    // cardsightCardId resolved from mock (verifies STEP 1 cardId emission).
-    expect(payload.cardsightCardId).toBe("ohtani-base-uuid");
+    // cardId resolved from mock (verifies STEP 1 cardId emission).
+    expect(payload.cardId).toBe("ohtani-base-uuid");
 
     // trendIQ sub-shape lock.
     expect(payload.trendIQ).toBeTypeOf("object");

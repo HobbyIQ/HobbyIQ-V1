@@ -146,7 +146,7 @@ describe("CF-LAUNCH-HARDENING — catalog-miss source split", () => {
     expect((result.verdict as string).toLowerCase()).toContain("catalog");
   });
 
-  it("does NOT fire catalog-miss on the pinned cardsightCardId path", async () => {
+  it("does NOT fire catalog-miss on the pinned cardId path", async () => {
     // Pinned path: even if comps are 0, this is no-recent-comps, not catalog-miss.
     // The card_id was authoritatively resolved upstream.
     (cardHedge.findCompsRouted as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -161,7 +161,7 @@ describe("CF-LAUNCH-HARDENING — catalog-miss source split", () => {
         playerName: "Test",
         cardYear: 2024,
         product: "Bowman Chrome",
-        cardsightCardId: "test-card-uuid",
+        cardId: "test-card-uuid",
       } as any,
       testCallContext,
     )) as Record<string, unknown>;

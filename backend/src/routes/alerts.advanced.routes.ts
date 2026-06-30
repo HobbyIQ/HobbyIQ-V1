@@ -54,10 +54,10 @@ function validateScope(raw: unknown): AdvancedAlertScope | null {
   const r = raw as Record<string, unknown>;
   switch (r.type) {
     case "card":
-      if (typeof r.cardsightCardId !== "string" || !r.cardsightCardId.trim()) return null;
+      if (typeof r.cardId !== "string" || !r.cardId.trim()) return null;
       return {
         type: "card",
-        cardsightCardId: String(r.cardsightCardId).trim(),
+        cardId: String(r.cardId).trim(),
         gradeCompany:
           typeof r.gradeCompany === "string" && r.gradeCompany ? r.gradeCompany : undefined,
         gradeValue: typeof r.gradeValue === "number" ? r.gradeValue : undefined,

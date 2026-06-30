@@ -565,7 +565,7 @@ const RAW_BOWMAN_2022_FAMILY_ENTRIES: ReadonlyArray<BowmanFamilyEntry> = [
   //
   // Subject lookup is year-strict on year=2026, so these rows don't
   // collide with any 2022 entry. Hartman's actual holding
-  // (cardsightCardId befe9bcc…) carries:
+  // (cardId befe9bcc…) carries:
   //   year=2026, product="Bowman", subset="Chrome Prospects Autographs"
   //   (Cardsight uses plural "Prospects"; engine hardcodes singular
   //   "Prospect" — known string mismatch, out of CF-X scope. Engine

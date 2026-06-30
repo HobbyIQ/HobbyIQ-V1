@@ -736,7 +736,7 @@ router.post("/cardsearch", async (req, res, next) => {
   }
 });
 
-// GET /api/compiq/card-image/:cardsightCardId
+// GET /api/compiq/card-image/:cardId
 //
 // CF-CARD-IMAGE-PROXY (2026-06-08): backend proxy for Cardsight's
 // catalog card-image endpoint (/v1/images/cards/<id>). iOS cannot hit
@@ -756,11 +756,11 @@ router.post("/cardsearch", async (req, res, next) => {
 // Returns 404 when Cardsight 404s (parallel ids share the base card
 // image and aren't served directly; the caller is expected to use the
 // base cardId from search / detail). Returns 504 on upstream timeout.
-router.get("/card-image/:cardsightCardId", async (req, res, next) => {
+router.get("/card-image/:cardId", async (req, res, next) => {
   try {
-    const cardId = req.params.cardsightCardId;
+    const cardId = req.params.cardId;
     if (!cardId || !CARDSIGHT_CARD_ID_RE.test(cardId)) {
-      return res.status(400).json({ success: false, error: "Invalid cardsightCardId" });
+      return res.status(400).json({ success: false, error: "Invalid cardId" });
     }
     const result = await getCardImage(cardId);
     if (result.notFound) {
@@ -1536,7 +1536,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 //                                     Cardsight cardId (UUID).
 //                                     fetchComps's pinned-id branch calls
 //                                     cardsight.client.getPricing() directly.
-//                                     Request body wire key: cardsightCardId.
+//                                     Request body wire key: cardId.
 //
 // `/api/compiq/search-list` was the legacy CardHedge-shape picker endpoint.
 // **Deleted** in this commit per Phase 1 caller grep (no runtime consumers
@@ -1549,15 +1549,24 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
-    const { cardsightCardId, query, gradeCompany, gradeValue, parallelId, parallelName, parallel } =
+    const { cardId, query, gradeCompany, gradeValue, parallelId, parallelName, parallel } =
       req.body || {};
 
-    const resolvedCardId =
-      typeof cardsightCardId === "string" && cardsightCardId.length > 0
-        ? cardsightCardId
+    // CF-CARDID-RENAME (2026-06-30): accept the legacy `cardsightCardId`
+    // field for back-compat with iOS clients that haven't migrated yet.
+    // Prefer the new field when both are present; iOS sends one or the
+    // other, never both. Drop in a future CF once iOS minimum supported
+    // version emits only `cardId`.
+    const legacyCardId =
+      typeof (req.body as any)?.cardsightCardId === "string" && (req.body as any).cardsightCardId.length > 0
+        ? (req.body as any).cardsightCardId
         : null;
+    const resolvedCardId =
+      typeof cardId === "string" && cardId.length > 0
+        ? cardId
+        : legacyCardId;
     if (!resolvedCardId) {
-      return res.status(400).json({ success: false, error: 'Missing "cardsightCardId" field' });
+      return res.status(400).json({ success: false, error: 'Missing "cardId" field' });
     }
 
     // CF-PARALLEL-AWARE-VALUE (2026-06-09): UUID-shape validation on
@@ -1601,7 +1610,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     const producePriceByIdResponse = async () => {
       const body: CompIQEstimateRequest = {
         playerName: typeof query === "string" ? query.trim() : resolvedCardId,
-        cardsightCardId: resolvedCardId,
+        cardId: resolvedCardId,
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
         // CF-PARALLEL-AWARE-VALUE (2026-06-09)
@@ -1639,7 +1648,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         return {
           ...buildEngineMeta(),
           success: true,
-          cardsightCardId: resolvedCardId,
+          cardId: resolvedCardId,
           summary: (est.verdict as string) ?? "Unsupported sport.",
           marketTier: { value: null, high: null },
           buyZone: [null, null],
@@ -1886,7 +1895,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       return {
         ...buildEngineMeta(),
         success: true,
-        cardsightCardId: resolvedCardId,
+        cardId: resolvedCardId,
         summary: est.verdict ?? "Estimate based on available market data.",
         marketTier: isThin ? { value: null, high: null } : { value: fmv, high: premium },
         buyZone: isThin ? [null, null] : [quick * 0.9, quick],
@@ -2018,7 +2027,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // every identical request, never re-validated.
     //
     // Fix: after cacheWrap returns, assert that the served response's
-    // cardIdentity.card_id matches the requested cardsightCardId. On
+    // cardIdentity.card_id matches the requested cardId. On
     // mismatch: bust the poisoned entry, recompute ONCE via the direct
     // producer (bypassing cacheWrap so we get fresh Cardsight data), and
     // either cache + return the corrected result OR — if the fresh
@@ -2033,7 +2042,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     const buildUnresolvedRouteResponse = (): Record<string, unknown> => ({
       ...buildEngineMeta(),
       success: true,
-      cardsightCardId: resolvedCardId,
+      cardId: resolvedCardId,
       summary: "Couldn't price reliably right now — try again shortly.",
       marketTier: { value: null, high: null },
       buyZone: [null, null],
@@ -2228,7 +2237,7 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request
     // carried a non-empty free-text `query`, store that with
-    // querySource="free_text"; otherwise store cardsightCardId in the
+    // querySource="free_text"; otherwise store cardId in the
     // query slot with querySource="card_id" (self-describing semantics).
     {
       const trimmedQuery =
@@ -2252,10 +2261,10 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     }
   } catch (err) {
     // PREDICTION-ROBUSTNESS-RECON #1: Cardsight upstream timeout -> graceful
-    // 200 with pinned cardsightCardId exposed.
+    // 200 with pinned cardId exposed.
     if (isCardsightTimeoutError(err)) {
-      const { cardsightCardId } = req.body || {};
-      const pinnedId = typeof cardsightCardId === "string" ? cardsightCardId : "";
+      const { cardId } = req.body || {};
+      const pinnedId = typeof cardId === "string" ? cardId : "";
       return res
         .status(200)
         .json({ ...buildEngineMeta(), ...buildUpstreamTimeoutPriceByIdResponse(pinnedId) });
@@ -2671,17 +2680,17 @@ function projectSegmentTrajectoryFull(
 
 function parseTrendIQBody(req: import("express").Request) {
   const body = (req.body ?? {}) as {
-    cardsightCardId?: unknown;
+    cardId?: unknown;
     query?: unknown;
     gradeCompany?: unknown;
     gradeValue?: unknown;
   };
   const resolvedCardId =
-    typeof body.cardsightCardId === "string" && body.cardsightCardId.length > 0
-      ? body.cardsightCardId
+    typeof body.cardId === "string" && body.cardId.length > 0
+      ? body.cardId
       : null;
   if (!resolvedCardId) {
-    return { error: 'Missing "cardsightCardId" field' as const };
+    return { error: 'Missing "cardId" field' as const };
   }
   return {
     resolvedCardId,
@@ -2716,7 +2725,7 @@ router.post(
         async () => {
           const body: CompIQEstimateRequest = {
             playerName: typeof query === "string" ? query.trim() : resolvedCardId,
-            cardsightCardId: resolvedCardId,
+            cardId: resolvedCardId,
             gradeCompany,
             gradeValue,
           };
@@ -2728,7 +2737,7 @@ router.post(
           });
           return {
             success: true,
-            cardsightCardId: resolvedCardId,
+            cardId: resolvedCardId,
             trendIQ: (est as any).trendIQ ?? null,
             signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
             cardIdentity: (est as any).cardIdentity ?? null,
@@ -2742,9 +2751,9 @@ router.post(
       if (isCardsightTimeoutError(err)) {
         return res.status(200).json({
           success: true,
-          cardsightCardId:
-            typeof (req.body ?? {}).cardsightCardId === "string"
-              ? (req.body as any).cardsightCardId
+          cardId:
+            typeof (req.body ?? {}).cardId === "string"
+              ? (req.body as any).cardId
               : "",
           trendIQ: null,
           signalsLastUpdated: null,
@@ -2780,7 +2789,7 @@ router.post(
           let captured: SegmentTrajectoryFull | null = null;
           const body: CompIQEstimateRequest = {
             playerName: typeof query === "string" ? query.trim() : resolvedCardId,
-            cardsightCardId: resolvedCardId,
+            cardId: resolvedCardId,
             gradeCompany,
             gradeValue,
           };
@@ -2800,7 +2809,7 @@ router.post(
           );
           return {
             success: true,
-            cardsightCardId: resolvedCardId,
+            cardId: resolvedCardId,
             trendIQ: (est as any).trendIQ ?? null,
             signalsLastUpdated: (est as any).signalsLastUpdated ?? null,
             cardIdentity: (est as any).cardIdentity ?? null,
@@ -2815,9 +2824,9 @@ router.post(
       if (isCardsightTimeoutError(err)) {
         return res.status(200).json({
           success: true,
-          cardsightCardId:
-            typeof (req.body ?? {}).cardsightCardId === "string"
-              ? (req.body as any).cardsightCardId
+          cardId:
+            typeof (req.body ?? {}).cardId === "string"
+              ? (req.body as any).cardId
               : "",
           trendIQ: null,
           signalsLastUpdated: null,

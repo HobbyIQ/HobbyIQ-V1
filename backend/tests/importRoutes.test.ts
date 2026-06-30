@@ -50,7 +50,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
   it("round-trip sheet → isRoundTrip true + envelopes returned", async () => {
     const { sessionId } = await signIn();
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product", "purchasePrice"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product", "purchasePrice"],
       [
         ["new-import-h1", "abc12345", "Test Player A", 2026, "Bowman", 100],
         ["new-import-h2", "def67890", "Test Player B", 2024, "Bowman Chrome", 200],
@@ -103,7 +103,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/preview", () => {
       100,
     ]);
     const file = makeXlsxBase64(
-      ["holdingId", "cardsightCardId", "playerName", "cardYear", "product", "purchasePrice"],
+      ["holdingId", "cardId", "playerName", "cardYear", "product", "purchasePrice"],
       rows,
     );
     const res = await request(app)
@@ -144,10 +144,10 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
         rowNumber: 2,
         lane: "new",
         bucket: "resolved-clean",
-        cardsightCardId: "card-import-1",
+        cardId: "card-import-1",
         payload: {
           id: "import-commit-h1",
-          cardsightCardId: "card-import-1",
+          cardId: "card-import-1",
           playerName: "Import Test Player",
           cardYear: 2026,
           product: "Bowman",
@@ -187,7 +187,7 @@ describe("CF-IMPORT-BE — POST /api/portfolio/import/commit", () => {
         rowNumber: 2,
         lane: "new",
         bucket: "unresolved",
-        cardsightCardId: null,
+        cardId: null,
         payload: { playerName: "Unresolved Player" },
         parseFlags: [],
         message: "no match",
@@ -216,10 +216,10 @@ describe("CF-IMPORT-VOLUME §1.a — fresh collision re-check at commit", () => 
       rowNumber: 2,
       lane: "new",
       bucket: "resolved-clean",
-      cardsightCardId: sharedCardId,
+      cardId: sharedCardId,
       payload: {
         id: `fc-holding-${Date.now()}-1`,
-        cardsightCardId: sharedCardId,
+        cardId: sharedCardId,
         playerName: "Fresh Collision Test",
         cardYear: 2026,
         product: "Bowman",
@@ -270,8 +270,8 @@ describe("CF-IMPORT-VOLUME §1.a — fresh collision re-check at commit", () => 
         idempotencyToken: tokenA,
         envelopes: [{
           rowNumber: 2, lane: "new", bucket: "resolved-clean",
-          cardsightCardId: sharedCardId,
-          payload: { id: holdingId, cardsightCardId: sharedCardId, playerName: "Explicit", cardYear: 2026, product: "Bowman", parallel: "Blue" },
+          cardId: sharedCardId,
+          payload: { id: holdingId, cardId: sharedCardId, playerName: "Explicit", cardYear: 2026, product: "Bowman", parallel: "Blue" },
           parseFlags: [], message: "first",
         }],
       });
@@ -286,8 +286,8 @@ describe("CF-IMPORT-VOLUME §1.a — fresh collision re-check at commit", () => 
         idempotencyToken: tokenB,
         envelopes: [{
           rowNumber: 2, lane: "new", bucket: "resolved-collision",
-          cardsightCardId: sharedCardId,
-          payload: { cardsightCardId: sharedCardId, playerName: "Explicit", cardYear: 2026, product: "Bowman", parallel: "Blue" },
+          cardId: sharedCardId,
+          payload: { cardId: sharedCardId, playerName: "Explicit", cardYear: 2026, product: "Bowman", parallel: "Blue" },
           parseFlags: [], message: "user accepted dup",
         }],
         actions: { 2: "add-as-copy" },
@@ -312,10 +312,10 @@ describe("CF-IMPORT-VOLUME §1.b — Redis-backed idempotency (with in-memory fa
     const token = `redis-cache-test-${Date.now()}`;
     const envelopes = [{
       rowNumber: 2, lane: "new", bucket: "resolved-clean",
-      cardsightCardId: `redis-test-card-${Date.now()}`,
+      cardId: `redis-test-card-${Date.now()}`,
       payload: {
         id: `redis-test-holding-${Date.now()}`,
-        cardsightCardId: `redis-test-card-${Date.now()}`,
+        cardId: `redis-test-card-${Date.now()}`,
         playerName: "Redis Cache Test",
         cardYear: 2026,
         product: "Bowman",
@@ -351,10 +351,10 @@ describe("CF-IMPORT-VOLUME §1.c — commit-side capacity re-enforcement", () =>
       rowNumber: 2 + i,
       lane: "new" as const,
       bucket: "resolved-clean" as const,
-      cardsightCardId: `cap-test-card-${i}-${Date.now()}`,
+      cardId: `cap-test-card-${i}-${Date.now()}`,
       payload: {
         id: `cap-test-holding-${i}-${Date.now()}`,
-        cardsightCardId: `cap-test-card-${i}-${Date.now()}`,
+        cardId: `cap-test-card-${i}-${Date.now()}`,
         playerName: `Capacity Test ${i}`,
         cardYear: 2026,
         product: "Bowman",
@@ -384,10 +384,10 @@ describe("CF-IMPORT-VOLUME §1.c — commit-side capacity re-enforcement", () =>
       rowNumber: 2,
       lane: "new" as const,
       bucket: "resolved-clean" as const,
-      cardsightCardId: `unlim-${Date.now()}`,
+      cardId: `unlim-${Date.now()}`,
       payload: {
         id: `unlim-holding-${Date.now()}`,
-        cardsightCardId: `unlim-${Date.now()}`,
+        cardId: `unlim-${Date.now()}`,
         playerName: "Unlimited Test",
         cardYear: 2026,
         product: "Bowman",

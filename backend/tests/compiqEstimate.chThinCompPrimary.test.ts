@@ -135,7 +135,7 @@ describe("CF-CH-THIN-COMP-PRIMARY — Blue X-Fractor /150 (CH n=1, CS base-only 
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -217,7 +217,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
     mockGetPricing.mockResolvedValue(sharedCsPool);
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -249,7 +249,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
     mockGetPricing.mockResolvedValue(sharedCsPool);
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -279,7 +279,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
     mockGetPricing.mockResolvedValue(sharedCsPool);
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -313,7 +313,7 @@ describe("CF-CH-THIN-COMP-PRIMARY — CH trusted n>=2 (legacy 'cardhedge' branch
     mockGetPricing.mockResolvedValue(buildCsPricingResponse([]));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -351,7 +351,7 @@ describe("CF-CH-THIN-COMP-PRIMARY — FLOOR PRESERVED: CH no match → Cardsight
     );
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",

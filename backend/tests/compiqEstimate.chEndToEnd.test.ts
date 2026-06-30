@@ -129,7 +129,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge wins through the REAL seam", (
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -202,7 +202,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
@@ -243,7 +243,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
     ));
 
     const result = await computeEstimate({
-      cardsightCardId: HARTMAN_CS_ID,
+      cardId: HARTMAN_CS_ID,
       playerName: "Eric Hartman",
       cardYear: 2026,
       product: "Bowman Chrome",
