@@ -25,8 +25,14 @@
 //      (proving the gate flipped from "observed-skip" to "estimate")
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { filterCredibleObserved } from "../src/services/compiq/gradedPriceProjection.js";
-import type { CardsightSaleRecord } from "../src/services/compiq/catalogSource.js";
+import {
+  filterCredibleObserved,
+  computeGradedProjection,
+} from "../src/services/compiq/gradedPriceProjection.js";
+import type {
+  CardsightPricingResponse,
+  CardsightSaleRecord,
+} from "../src/services/compiq/catalogSource.js";
 
 const NOW = Date.parse("2026-06-29T00:00:00Z");
 const DAY = 86_400_000;
@@ -110,5 +116,98 @@ describe("CF-COMP-SPARSITY-STALENESS-FILTER — filterCredibleObserved", () => {
     expect(filterCredibleObserved(r, NOW + 200 * DAY)).toEqual([]);
     // Bump nowMs to NOW + 100d. Still fresh.
     expect(filterCredibleObserved(r, NOW + 100 * DAY)).toHaveLength(1);
+  });
+});
+
+describe("CF-COMP-SPARSITY-STALENESS-FILTER — Mays-shaped integration", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function pricing(opts: {
+    psa9Comps: CardsightSaleRecord[];
+    psa10Comps: CardsightSaleRecord[];
+  }): CardsightPricingResponse {
+    return {
+      card: {
+        card_id: "test-mays-1959",
+        name: "Willie Mays",
+        number: "50",
+        set: { set_id: "test", name: "Baseball", year: "1959", release: "Topps" },
+      } as never,
+      raw: {
+        count: 1,
+        records: [rec(10, 75)],
+      },
+      graded: [
+        {
+          company_name: "PSA",
+          grades: [
+            { grade_value: "9", count: opts.psa9Comps.length, records: opts.psa9Comps },
+            { grade_value: "10", count: opts.psa10Comps.length, records: opts.psa10Comps },
+          ],
+        },
+      ],
+      meta: { total_records: 1 + opts.psa9Comps.length + opts.psa10Comps.length, last_sale_date: null },
+    } as never;
+  }
+
+  it("PRE-CF behavior reproduced: PSA 10 with single FRESH comp is observed → rail skips", () => {
+    // Control: a 30d-old singleton is still observed (180d threshold not breached).
+    const p = pricing({
+      psa9Comps: Array.from({ length: 12 }, (_, i) => rec(20 + i, 28000 + i * 100)),
+      psa10Comps: [rec(30, 1692)],
+    });
+    const results = computeGradedProjection({ pricing: p });
+    const psa10 = results.find((r) => r.grade === "PSA 10");
+    // No result emitted for PSA 10 — gate counts it as observed.
+    expect(psa10).toBeUndefined();
+  });
+
+  it("Mays canonical: PSA 10 with single STALE comp (224d) is NOT observed → rail emits an estimate", () => {
+    // The actual Vol Test #2 anomaly. PSA 9 has 12 fresh comps (n>=2 →
+    // credible regardless). PSA 10 has 1 sale 224d ago (singleton
+    // stale → no longer credibly observed → rail estimates instead).
+    const p = pricing({
+      psa9Comps: Array.from({ length: 12 }, (_, i) => rec(20 + i, 28000 + i * 100)),
+      psa10Comps: [rec(224, 1692)],
+    });
+    const results = computeGradedProjection({ pricing: p });
+    const psa10 = results.find((r) => r.grade === "PSA 10");
+    // Rail emitted SOMETHING for PSA 10 (instead of skipping as observed).
+    // The actual value depends on R-scaling — the existence of a result
+    // is what we're pinning. Pre-CF: undefined. Post-CF: a result object.
+    expect(psa10).toBeDefined();
+    // And it's NOT the outlier $1,692. The rail's estimate should be
+    // higher than raw ($75) — that's the structural correctness check.
+    if (psa10?.estimatedValue != null) {
+      expect(psa10.estimatedValue).toBeGreaterThan(75);
+      expect(psa10.estimatedValue).not.toBeCloseTo(1692, 0);
+    }
+  });
+
+  it("Boundary: PSA 10 singleton exactly 180d stays observed (gate inclusive)", () => {
+    const p = pricing({
+      psa9Comps: Array.from({ length: 12 }, (_, i) => rec(20 + i, 28000 + i * 100)),
+      psa10Comps: [rec(180, 1692)],
+    });
+    const results = computeGradedProjection({ pricing: p });
+    const psa10 = results.find((r) => r.grade === "PSA 10");
+    expect(psa10).toBeUndefined();
+  });
+
+  it("Corroboration overrides staleness: 2 stale PSA 10 comps stay observed (n>=2 rule)", () => {
+    const p = pricing({
+      psa9Comps: Array.from({ length: 12 }, (_, i) => rec(20 + i, 28000 + i * 100)),
+      psa10Comps: [rec(300, 1600), rec(310, 1700)],
+    });
+    const results = computeGradedProjection({ pricing: p });
+    const psa10 = results.find((r) => r.grade === "PSA 10");
+    // Two stale corroborating sales → still observed → rail skips.
+    expect(psa10).toBeUndefined();
   });
 });
