@@ -12,11 +12,11 @@ import {
 describe("chromeDraftMultipliers — spot-check baseline values", () => {
   it("Base Auto = 1.000 baseMultiplier", () => {
     expect(CHROME_DRAFT_MULTIPLIERS["Base Auto"].baseMultiplier).toBe(1.0);
-    expect(CHROME_DRAFT_MULTIPLIERS["Base Auto"].refractorMultiplier).toBeCloseTo(0.455, 3);
+    expect(CHROME_DRAFT_MULTIPLIERS["Base Auto"].refractorMultiplier).toBeCloseTo(0.670, 3);  // CF-REFRACTOR-ANCHOR-RECOMPUTE 2026-06-30: 1.0/1.492 (was 1.0/2.2=0.455)
   });
 
-  it("Refractor = 2.200 / 1.000", () => {
-    expect(CHROME_DRAFT_MULTIPLIERS["Refractor"].baseMultiplier).toBe(2.2);
+  it("Refractor = 1.492 / 1.000 (CF-REFRACTOR-ANCHOR-RECOMPUTE 2026-06-30)", () => {
+    expect(CHROME_DRAFT_MULTIPLIERS["Refractor"].baseMultiplier).toBe(1.492);  // CF-REFRACTOR-ANCHOR-RECOMPUTE 2026-06-30: was 2.2
     expect(CHROME_DRAFT_MULTIPLIERS["Refractor"].refractorMultiplier).toBe(1.0);
   });
 

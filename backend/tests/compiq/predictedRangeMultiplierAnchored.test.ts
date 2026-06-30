@@ -20,11 +20,11 @@ describe("computeMultiplierAnchoredRange — happy paths", () => {
     });
     expect(r.predictedRange).not.toBeNull();
     expect(r.diagnostics.subjectMultiplier).toBe(3.12);
-    expect(r.diagnostics.playerBaseline).toBe(100);
-    expect(r.diagnostics.midpoint).toBe(312);
+    expect(r.diagnostics.playerBaseline).toBeCloseTo(147.45, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 220/1.492 (was 220/2.2=100)
+    expect(r.diagnostics.midpoint).toBeCloseTo(460.05, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 147.45*3.12 (was 100*3.12=312)
     // stable spread: ±15%
-    expect(r.predictedRange!.low).toBeCloseTo(312 * 0.85, 2);
-    expect(r.predictedRange!.high).toBeCloseTo(312 * 1.15, 2);
+    expect(r.predictedRange!.low).toBeCloseTo(391.04, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(529.06, 1);
   });
 
   it("subject = Gold (14.5x), four mixed-tier peers, regime=gradually_rising", () => {
@@ -76,8 +76,8 @@ describe("computeMultiplierAnchoredRange — happy paths", () => {
       subjectRegime: "stable",
       peerComps: [peer("Refractor", 176), peer("Refractor", 220), peer("Refractor", 264)],
     });
-    expect(r.diagnostics.playerBaseline).toBe(100);
-    expect(r.diagnostics.midpoint).toBe(312);
+    expect(r.diagnostics.playerBaseline).toBeCloseTo(147.45, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 220/1.492 (was 220/2.2=100)
+    expect(r.diagnostics.midpoint).toBeCloseTo(460.05, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 147.45*3.12 (was 100*3.12=312)
   });
 
   it("median over even count averages middle two", () => {
@@ -87,8 +87,8 @@ describe("computeMultiplierAnchoredRange — happy paths", () => {
       subjectRegime: "stable",
       peerComps: [peer("Refractor", 176), peer("Refractor", 220), peer("Refractor", 264), peer("Refractor", 308)],
     });
-    expect(r.diagnostics.playerBaseline).toBe(110);
-    expect(r.diagnostics.midpoint).toBe(343.2);
+    expect(r.diagnostics.playerBaseline).toBeCloseTo(162.20, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 242/1.492 (was 242/2.2=110)
+    expect(r.diagnostics.midpoint).toBeCloseTo(506.07, 1);  // CF-REFRACTOR-ANCHOR-RECOMPUTE: 162.20*3.12 (was 110*3.12=343.2)
   });
 
   it("accepts 'Blue Refractor' as alias for 'Blue'", () => {
@@ -174,28 +174,28 @@ describe("computeMultiplierAnchoredRange — regime spreads", () => {
   // midpoint = 312 for all regimes
   it("stable: 0.85 to 1.15", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "stable" });
-    expect(r.predictedRange!.low).toBeCloseTo(265.2, 1);
-    expect(r.predictedRange!.high).toBeCloseTo(358.8, 1);
+    expect(r.predictedRange!.low).toBeCloseTo(391.04, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(529.06, 1);
   });
   it("gradually_rising: 0.95 to 1.15", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "gradually_rising" });
-    expect(r.predictedRange!.low).toBeCloseTo(296.4, 1);
-    expect(r.predictedRange!.high).toBeCloseTo(358.8, 1);
+    expect(r.predictedRange!.low).toBeCloseTo(437.05, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(529.06, 1);
   });
   it("sharply_breaking_out: 1.0 to 1.3", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "sharply_breaking_out" });
-    expect(r.predictedRange!.low).toBeCloseTo(312, 1);
-    expect(r.predictedRange!.high).toBeCloseTo(405.6, 1);  // 312 * 1.3 (was 741 = 570 * 1.3 pre-CF-WORKSHEET-CALIBRATION)
+    expect(r.predictedRange!.low).toBeCloseTo(460.05, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(598.07, 1);  // 460.05 * 1.3 (CF-REFRACTOR-ANCHOR-RECOMPUTE)
   });
   it("declining: 0.85 to 0.95", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "declining" });
-    expect(r.predictedRange!.low).toBeCloseTo(265.2, 1);
-    expect(r.predictedRange!.high).toBeCloseTo(296.4, 1);
+    expect(r.predictedRange!.low).toBeCloseTo(391.04, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(437.05, 1);
   });
   it("sharply_crashing: 0.7 to 0.95", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "sharply_crashing" });
-    expect(r.predictedRange!.low).toBeCloseTo(218.4, 1);
-    expect(r.predictedRange!.high).toBeCloseTo(296.4, 1);
+    expect(r.predictedRange!.low).toBeCloseTo(322.04, 1);
+    expect(r.predictedRange!.high).toBeCloseTo(437.05, 1);
   });
   it("insufficient_data → null", () => {
     const r = computeMultiplierAnchoredRange({ ...baseInput, subjectRegime: "insufficient_data" });

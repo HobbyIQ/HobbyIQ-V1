@@ -11,9 +11,14 @@
 // empirical parallel-premiums-latest.json (Bowman Draft Chrome scope,
 // n=26-30 samples each, audit script scripts/audit-chromedraft-worksheet.cjs
 // surfaced these as >30% drift). Calibrated entries are tagged inline.
-// The Refractor anchor (2.2× → empirical 1.492×) is intentionally NOT
-// updated — changing the anchor requires recomputing every other
-// refractorMultiplier; deferred to a separate CF.
+//
+// CF-REFRACTOR-ANCHOR-RECOMPUTE (2026-06-30): the Refractor anchor was
+// itself stale (worksheet 2.2× vs empirical 1.492×, -32.2% drift,
+// n=30 Bowman Draft Chrome). Updated Refractor.baseMultiplier 2.2 → 1.492
+// AND recomputed every entry's refractorMultiplier = baseMultiplier / 1.492
+// (was / 2.2). Net effect: all refractorMultipliers scaled up by factor
+// 2.2/1.492 ≈ 1.475×. baseMultipliers unchanged (those represent
+// base-auto-relative, not refractor-relative).
 //
 // Replaces the earlier coarse 8-tier integer system (tierMultipliers.ts).
 // Per-parallel-name multipliers are dramatically more precise than the
@@ -67,71 +72,71 @@ export interface ChromeDraftEntry {
 
 const RAW_ENTRIES: ReadonlyArray<ChromeDraftEntry> = [
   // Base / Refractor anchors
-  { parallelName: "Base Auto",           printRun: "unnumbered", colorTier: "Base",         baseMultiplier:   1.000, refractorMultiplier:  0.455, productType: "chrome-draft" },
-  { parallelName: "Refractor",           printRun: "/499",       colorTier: "Base",         baseMultiplier:   2.200, refractorMultiplier:  1.000, productType: "chrome-draft" },
+  { parallelName: "Base Auto",           printRun: "unnumbered", colorTier: "Base",         baseMultiplier:   1.000, refractorMultiplier:  0.670, productType: "chrome-draft" },
+  { parallelName: "Refractor",           printRun: "/499",       colorTier: "Base",         baseMultiplier:   1.492, refractorMultiplier:  1.000, productType: "chrome-draft" },
   // Early color
-  { parallelName: "Speckle",             printRun: "/299",       colorTier: "Early Color",  baseMultiplier:   2.700, refractorMultiplier:  1.227, productType: "chrome-draft" },
-  { parallelName: "Purple",              printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.721, refractorMultiplier:  1.691, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=29)
-  { parallelName: "Purple Shimmer",      printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.000, refractorMultiplier:  1.364, productType: "chrome-draft" },
-  { parallelName: "Purple RayWave",      printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.100, refractorMultiplier:  1.409, productType: "chrome-draft" },
+  { parallelName: "Speckle",             printRun: "/299",       colorTier: "Early Color",  baseMultiplier:   2.700, refractorMultiplier:  1.810, productType: "chrome-draft" },
+  { parallelName: "Purple",              printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.721, refractorMultiplier:  2.494, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=29)
+  { parallelName: "Purple Shimmer",      printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.000, refractorMultiplier:  2.011, productType: "chrome-draft" },
+  { parallelName: "Purple RayWave",      printRun: "/250",       colorTier: "Early Color",  baseMultiplier:   3.100, refractorMultiplier:  2.078, productType: "chrome-draft" },
   // Atomic
-  { parallelName: "Atomic",              printRun: "/100",       colorTier: "Atomic Tier",  baseMultiplier:   4.200, refractorMultiplier:  1.909, productType: "chrome-draft" },
+  { parallelName: "Atomic",              printRun: "/100",       colorTier: "Atomic Tier",  baseMultiplier:   4.200, refractorMultiplier:  2.815, productType: "chrome-draft" },
   // Blue
-  { parallelName: "Blue",                printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   3.120, refractorMultiplier:  1.418, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
-  { parallelName: "Blue Wave",           printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.900, refractorMultiplier:  2.227, productType: "chrome-draft" },
-  { parallelName: "Blue Shimmer",        printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.800, refractorMultiplier:  2.182, productType: "chrome-draft" },
-  { parallelName: "Blue RayWave",        printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.600, refractorMultiplier:  2.091, productType: "chrome-draft" },
-  { parallelName: "Blue Reptilian",      printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.700, refractorMultiplier:  2.136, productType: "chrome-draft" },
-  { parallelName: "Blue Sapphire",       printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   5.200, refractorMultiplier:  2.364, productType: "chrome-draft" },
+  { parallelName: "Blue",                printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   3.120, refractorMultiplier:  2.091, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
+  { parallelName: "Blue Wave",           printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.900, refractorMultiplier:  3.284, productType: "chrome-draft" },
+  { parallelName: "Blue Shimmer",        printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.800, refractorMultiplier:  3.217, productType: "chrome-draft" },
+  { parallelName: "Blue RayWave",        printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.600, refractorMultiplier:  3.083, productType: "chrome-draft" },
+  { parallelName: "Blue Reptilian",      printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   4.700, refractorMultiplier:  3.150, productType: "chrome-draft" },
+  { parallelName: "Blue Sapphire",       printRun: "/150",       colorTier: "Blue Tier",    baseMultiplier:   5.200, refractorMultiplier:  3.485, productType: "chrome-draft" },
   // Green
-  { parallelName: "Green",               printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   7.433, refractorMultiplier:  3.379, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
-  { parallelName: "Green Wave",          printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   5.600, refractorMultiplier:  2.545, productType: "chrome-draft" },
-  { parallelName: "Green Shimmer",       printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.000, refractorMultiplier:  2.727, productType: "chrome-draft" },
-  { parallelName: "Green Sapphire",      printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   5.300, refractorMultiplier:  2.409, productType: "chrome-draft" },
-  { parallelName: "Green Reptilian",     printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.200, refractorMultiplier:  2.818, productType: "chrome-draft" },
-  { parallelName: "Green Grass",         printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.400, refractorMultiplier:  2.909, productType: "chrome-draft" },
+  { parallelName: "Green",               printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   7.433, refractorMultiplier:  4.982, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
+  { parallelName: "Green Wave",          printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   5.600, refractorMultiplier:  3.753, productType: "chrome-draft" },
+  { parallelName: "Green Shimmer",       printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.000, refractorMultiplier:  4.021, productType: "chrome-draft" },
+  { parallelName: "Green Sapphire",      printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   5.300, refractorMultiplier:  3.552, productType: "chrome-draft" },
+  { parallelName: "Green Reptilian",     printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.200, refractorMultiplier:  4.155, productType: "chrome-draft" },
+  { parallelName: "Green Grass",         printRun: "/99",        colorTier: "Green Tier",   baseMultiplier:   6.400, refractorMultiplier:  4.290, productType: "chrome-draft" },
   // Yellow
-  { parallelName: "Yellow",              printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   6.700, refractorMultiplier:  3.045, productType: "chrome-draft" },
-  { parallelName: "Yellow RayWave",      printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   6.500, refractorMultiplier:  2.955, productType: "chrome-draft" },
-  { parallelName: "Yellow Mini Diamond", printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   7.000, refractorMultiplier:  3.182, productType: "chrome-draft" },
+  { parallelName: "Yellow",              printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   6.700, refractorMultiplier:  4.491, productType: "chrome-draft" },
+  { parallelName: "Yellow RayWave",      printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   6.500, refractorMultiplier:  4.357, productType: "chrome-draft" },
+  { parallelName: "Yellow Mini Diamond", printRun: "/75",        colorTier: "Yellow Tier",  baseMultiplier:   7.000, refractorMultiplier:  4.692, productType: "chrome-draft" },
   // Gold
-  { parallelName: "Gold",                printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  14.500, refractorMultiplier:  7.045, productType: "chrome-draft" },
-  { parallelName: "Gold Wave",           printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   8.700, refractorMultiplier:  3.955, productType: "chrome-draft" },
-  { parallelName: "Gold Shimmer",        printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   9.300, refractorMultiplier:  4.227, productType: "chrome-draft" },
-  { parallelName: "Gold Mini Diamond",   printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  10.300, refractorMultiplier:  4.682, productType: "chrome-draft" },
-  { parallelName: "Gold Sapphire",       printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  10.900, refractorMultiplier:  4.955, productType: "chrome-draft" },
-  { parallelName: "Gold Lava",           printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   9.000, refractorMultiplier:  4.091, productType: "chrome-draft" },
+  { parallelName: "Gold",                printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  14.500, refractorMultiplier:  9.718, productType: "chrome-draft" },
+  { parallelName: "Gold Wave",           printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   8.700, refractorMultiplier:  5.831, productType: "chrome-draft" },
+  { parallelName: "Gold Shimmer",        printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   9.300, refractorMultiplier:  6.233, productType: "chrome-draft" },
+  { parallelName: "Gold Mini Diamond",   printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  10.300, refractorMultiplier:  6.903, productType: "chrome-draft" },
+  { parallelName: "Gold Sapphire",       printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:  10.900, refractorMultiplier:  7.306, productType: "chrome-draft" },
+  { parallelName: "Gold Lava",           printRun: "/50",        colorTier: "Gold Tier",    baseMultiplier:   9.000, refractorMultiplier:  6.032, productType: "chrome-draft" },
   // Orange
-  { parallelName: "Orange",              printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:   9.596, refractorMultiplier:  4.362, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
-  { parallelName: "Orange Wave",         printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  10.675, refractorMultiplier:  4.852, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=29)
-  { parallelName: "Orange Shimmer",      printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  16.200, refractorMultiplier:  7.364, productType: "chrome-draft" },
-  { parallelName: "Orange Mini Diamond", printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  17.500, refractorMultiplier:  7.955, productType: "chrome-draft" },
-  { parallelName: "Orange Sapphire",     printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  18.500, refractorMultiplier:  8.409, productType: "chrome-draft" },
-  { parallelName: "Orange Lava",         printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  17.800, refractorMultiplier:  8.091, productType: "chrome-draft" },
+  { parallelName: "Orange",              printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:   9.596, refractorMultiplier:  6.432, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=30)
+  { parallelName: "Orange Wave",         printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  10.675, refractorMultiplier:  7.155, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=29)
+  { parallelName: "Orange Shimmer",      printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  16.200, refractorMultiplier:  10.858, productType: "chrome-draft" },
+  { parallelName: "Orange Mini Diamond", printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  17.500, refractorMultiplier:  11.729, productType: "chrome-draft" },
+  { parallelName: "Orange Sapphire",     printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  18.500, refractorMultiplier:  12.399, productType: "chrome-draft" },
+  { parallelName: "Orange Lava",         printRun: "/25",        colorTier: "Orange Tier",  baseMultiplier:  17.800, refractorMultiplier:  11.930, productType: "chrome-draft" },
   // Black
-  { parallelName: "Black",               printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  21.089, refractorMultiplier:  9.586, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=28)
-  { parallelName: "Black Wave",          printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  30.000, refractorMultiplier: 13.636, productType: "chrome-draft" },
-  { parallelName: "Black Shimmer",       printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  30.000, refractorMultiplier: 13.636, productType: "chrome-draft" },
-  { parallelName: "Black Mini Diamond",  printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  33.000, refractorMultiplier: 15.000, productType: "chrome-draft" },
-  { parallelName: "Black Sapphire",      printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  34.000, refractorMultiplier: 15.455, productType: "chrome-draft" },
+  { parallelName: "Black",               printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  21.089, refractorMultiplier:  14.135, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=28)
+  { parallelName: "Black Wave",          printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  30.000, refractorMultiplier: 20.107, productType: "chrome-draft" },
+  { parallelName: "Black Shimmer",       printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  30.000, refractorMultiplier: 20.107, productType: "chrome-draft" },
+  { parallelName: "Black Mini Diamond",  printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  33.000, refractorMultiplier: 22.118, productType: "chrome-draft" },
+  { parallelName: "Black Sapphire",      printRun: "/10",        colorTier: "Black Tier",   baseMultiplier:  34.000, refractorMultiplier: 22.788, productType: "chrome-draft" },
   // Red
-  { parallelName: "Red",                 printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  22.790, refractorMultiplier: 10.359, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=26)
-  { parallelName: "Red Wave",            printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  52.000, refractorMultiplier: 23.636, productType: "chrome-draft" },
-  { parallelName: "Red Shimmer",         printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  54.000, refractorMultiplier: 24.545, productType: "chrome-draft" },
-  { parallelName: "Red Sapphire",        printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  56.000, refractorMultiplier: 25.455, productType: "chrome-draft" },
-  { parallelName: "Red Lava",            printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  57.000, refractorMultiplier: 25.909, productType: "chrome-draft" },
+  { parallelName: "Red",                 printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  22.790, refractorMultiplier: 15.275, productType: "chrome-draft" }, // CF-WORKSHEET-CALIBRATION-2026-06-29: empirical (Bowman Draft Chrome, n=26)
+  { parallelName: "Red Wave",            printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  52.000, refractorMultiplier: 34.853, productType: "chrome-draft" },
+  { parallelName: "Red Shimmer",         printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  54.000, refractorMultiplier: 36.193, productType: "chrome-draft" },
+  { parallelName: "Red Sapphire",        printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  56.000, refractorMultiplier: 37.534, productType: "chrome-draft" },
+  { parallelName: "Red Lava",            printRun: "/5",         colorTier: "Red Tier",     baseMultiplier:  57.000, refractorMultiplier: 38.204, productType: "chrome-draft" },
   // 1/1
-  { parallelName: "Printing Plate",        printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier:   4.000, refractorMultiplier:  4.000, productType: "chrome-draft" },
-  { parallelName: "Superfractor",          printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 125.000, refractorMultiplier: 56.818, productType: "chrome-draft" },
-  { parallelName: "Superfractor Wave",     printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 130.000, refractorMultiplier: 59.091, productType: "chrome-draft" },
-  { parallelName: "Superfractor Sapphire", printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 135.000, refractorMultiplier: 61.364, productType: "chrome-draft" },
+  { parallelName: "Printing Plate",        printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier:   4.000, refractorMultiplier:  2.681, productType: "chrome-draft" },
+  { parallelName: "Superfractor",          printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 125.000, refractorMultiplier: 83.780, productType: "chrome-draft" },
+  { parallelName: "Superfractor Wave",     printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 130.000, refractorMultiplier: 87.131, productType: "chrome-draft" },
+  { parallelName: "Superfractor Sapphire", printRun: "1/1",      colorTier: "1/1 Tier",     baseMultiplier: 135.000, refractorMultiplier: 90.483, productType: "chrome-draft" },
   // HTA Choice
-  { parallelName: "HTA Choice Refractor", printRun: "/499",      colorTier: "HTA",          baseMultiplier:   2.300, refractorMultiplier:  1.045, productType: "chrome-draft" },
-  { parallelName: "HTA Choice Green",     printRun: "/99",       colorTier: "HTA",          baseMultiplier:   5.000, refractorMultiplier:  2.273, productType: "chrome-draft" },
-  { parallelName: "HTA Choice Gold",      printRun: "/50",       colorTier: "HTA",          baseMultiplier:   8.500, refractorMultiplier:  3.864, productType: "chrome-draft" },
-  { parallelName: "HTA Choice Orange",    printRun: "/25",       colorTier: "HTA",          baseMultiplier:  18.000, refractorMultiplier:  8.182, productType: "chrome-draft" },
-  { parallelName: "HTA Choice Red",       printRun: "/5",        colorTier: "HTA",          baseMultiplier:  45.000, refractorMultiplier: 20.455, productType: "chrome-draft" },
-  { parallelName: "HTA Choice Black",     printRun: "1/1",       colorTier: "HTA",          baseMultiplier: 110.000, refractorMultiplier: 50.000, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Refractor", printRun: "/499",      colorTier: "HTA",          baseMultiplier:   2.300, refractorMultiplier:  1.542, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Green",     printRun: "/99",       colorTier: "HTA",          baseMultiplier:   5.000, refractorMultiplier:  3.351, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Gold",      printRun: "/50",       colorTier: "HTA",          baseMultiplier:   8.500, refractorMultiplier:  5.697, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Orange",    printRun: "/25",       colorTier: "HTA",          baseMultiplier:  18.000, refractorMultiplier:  12.064, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Red",       printRun: "/5",        colorTier: "HTA",          baseMultiplier:  45.000, refractorMultiplier: 30.161, productType: "chrome-draft" },
+  { parallelName: "HTA Choice Black",     printRun: "1/1",       colorTier: "HTA",          baseMultiplier: 110.000, refractorMultiplier: 73.727, productType: "chrome-draft" },
 ];
 
 // Frozen, indexable-by-name lookup view — keys are the canonical owner-authored
