@@ -1,9 +1,9 @@
 {
-  "calibratedAt": "2026-06-29T22:19:35.354Z",
+  "calibratedAt": "2026-06-30T00:18:56.802Z",
   "method": "parallel_over_base_auto_empirical",
   "sampleSize": {
-    "totalCombos": 116,
-    "totalPairs": 3370
+    "totalCombos": 258,
+    "totalPairs": 6920
   },
   "entries": [
     {
@@ -27,13 +27,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Mini-Diamond Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 1.332,
+      "baseRelativePremium": 1.318,
       "sampleSize": 30,
       "ratioRange": [
         0.373,
         4.888
       ],
-      "p25": 1.332,
+      "p25": 1.318,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -59,13 +59,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.238,
-      "sampleSize": 29,
+      "baseRelativePremium": 2.414,
+      "sampleSize": 30,
       "ratioRange": [
         0.607,
         6.459
       ],
-      "p25": 2.238,
+      "p25": 2.414,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -75,13 +75,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Mini Diamond",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 1.839,
+      "baseRelativePremium": 2.039,
       "sampleSize": 30,
       "ratioRange": [
         0.373,
         10.827
       ],
-      "p25": 1.839,
+      "p25": 2.039,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -155,13 +155,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Purple",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 5.85,
+      "baseRelativePremium": 5.164,
       "sampleSize": 30,
       "ratioRange": [
         0.973,
         14.204
       ],
-      "p25": 5.85,
+      "p25": 5.164,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -217,22 +217,6 @@
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
-      "parallel": "Purple Geometric Refractor",
-      "printRun": "(unspecified)",
-      "baseRelativePremium": 3.337,
-      "sampleSize": 30,
-      "ratioRange": [
-        0.837,
-        13.889
-      ],
-      "p25": 3.337,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
-    },
-    {
-      "year": 2025,
-      "set": "Bowman Chrome Prospects",
       "parallel": "Speckle",
       "printRun": "(unspecified)",
       "baseRelativePremium": 3.078,
@@ -242,6 +226,22 @@
         18.966
       ],
       "p25": 3.078,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.337,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.837,
+        13.889
+      ],
+      "p25": 3.337,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -315,13 +315,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Purple Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 5.85,
+      "baseRelativePremium": 5.164,
       "sampleSize": 30,
       "ratioRange": [
         0.973,
         14.204
       ],
-      "p25": 5.85,
+      "p25": 5.164,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -507,13 +507,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Yellow",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 8.163,
-      "sampleSize": 30,
+      "baseRelativePremium": 7.397,
+      "sampleSize": 16,
       "ratioRange": [
-        2.194,
+        2.613,
         57.788
       ],
-      "p25": 8.163,
+      "p25": 7.397,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -523,77 +523,65 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Fuchsia Shimmer Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.094,
-      "sampleSize": 30,
+      "sampleSize": 0,
       "ratioRange": [
-        0.505,
-        12.255
+        null,
+        null
       ],
-      "p25": 2.094,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
     },
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
       "parallel": "Green Geometric",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 4.036,
-      "sampleSize": 30,
+      "sampleSize": 0,
       "ratioRange": [
-        0.814,
-        36.076
+        null,
+        null
       ],
-      "p25": 4.036,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
     },
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
       "parallel": "Aqua X-Fractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 3.675,
-      "sampleSize": 30,
+      "sampleSize": 0,
       "ratioRange": [
-        0.066,
-        37.056
+        null,
+        null
       ],
-      "p25": 3.675,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
     },
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
       "parallel": "Purple Raywave",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.399,
-      "sampleSize": 29,
+      "sampleSize": 0,
       "ratioRange": [
-        0.831,
-        16.968
+        null,
+        null
       ],
-      "p25": 2.399,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
     },
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
       "parallel": "Reptilian Green",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 5.634,
-      "sampleSize": 30,
+      "baseRelativePremium": 6.204,
+      "sampleSize": 28,
       "ratioRange": [
-        0.118,
+        0.731,
         22.805
       ],
-      "p25": 5.634,
+      "p25": 6.204,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -619,15 +607,15 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Green Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 5.759,
-      "sampleSize": 30,
+      "baseRelativePremium": 5.882,
+      "sampleSize": 3,
       "ratioRange": [
-        0.118,
-        36.076
+        1.145,
+        13.207
       ],
-      "p25": 5.759,
+      "p25": 5.882,
       "p75": 0,
-      "provenance": "empirical",
+      "provenance": "thin_provisional",
       "skippedReason": null
     },
     {
@@ -635,29 +623,26 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Blue X-Fractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.515,
-      "sampleSize": 30,
+      "sampleSize": 0,
       "ratioRange": [
-        1.264,
-        5
+        null,
+        null
       ],
-      "p25": 2.515,
-      "p75": 0,
-      "provenance": "empirical",
-      "skippedReason": null
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
     },
     {
       "year": 2025,
       "set": "Bowman Chrome Prospects",
       "parallel": "Green Shimmer",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 4.713,
-      "sampleSize": 30,
+      "baseRelativePremium": 5.318,
+      "sampleSize": 10,
       "ratioRange": [
-        1.005,
+        2.528,
         31.984
       ],
-      "p25": 4.713,
+      "p25": 5.318,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -667,13 +652,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Pearl Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 12.894,
-      "sampleSize": 30,
+      "baseRelativePremium": 13.174,
+      "sampleSize": 22,
       "ratioRange": [
-        4.317,
+        4.921,
         63.445
       ],
-      "p25": 12.894,
+      "p25": 13.174,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -699,13 +684,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Green Wave Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.937,
-      "sampleSize": 30,
+      "baseRelativePremium": 3.947,
+      "sampleSize": 27,
       "ratioRange": [
         0.246,
         19.417
       ],
-      "p25": 2.937,
+      "p25": 3.947,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -715,13 +700,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Green Geometric Refractor",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 4.036,
-      "sampleSize": 30,
+      "baseRelativePremium": 3.781,
+      "sampleSize": 28,
       "ratioRange": [
         0.814,
-        36.076
+        30.029
       ],
-      "p25": 4.036,
+      "p25": 3.781,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -763,13 +748,13 @@
       "set": "Bowman Chrome Prospects",
       "parallel": "Blue Geometric",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 2.959,
-      "sampleSize": 30,
+      "baseRelativePremium": 2.854,
+      "sampleSize": 14,
       "ratioRange": [
-        0.638,
+        0.977,
         20.38
       ],
-      "p25": 2.959,
+      "p25": 2.854,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -1784,13 +1769,13 @@
       "set": "Bowman Draft Chrome",
       "parallel": "Sparkle",
       "printRun": "(unspecified)",
-      "baseRelativePremium": 6.174,
+      "baseRelativePremium": 6.152,
       "sampleSize": 27,
       "ratioRange": [
         1.87,
         54.821
       ],
-      "p25": 6.174,
+      "p25": 6.152,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
@@ -1855,6 +1840,2263 @@
         67.797
       ],
       "p25": 23.425,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Lunar Glow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.519,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.382,
+        3.657
+      ],
+      "p25": 1.519,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.676,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.536,
+        15.633
+      ],
+      "p25": 2.676,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.845,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.734,
+        3.066
+      ],
+      "p25": 1.845,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.185,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.909,
+        16.494
+      ],
+      "p25": 3.185,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Mini-Diamond",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.847,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.42,
+        35.042
+      ],
+      "p25": 1.847,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.809,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.005,
+        15.78
+      ],
+      "p25": 2.809,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.84,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.004,
+        4.331
+      ],
+      "p25": 1.84,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.671,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.602,
+        23.413
+      ],
+      "p25": 2.671,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.972,
+      "sampleSize": 27,
+      "ratioRange": [
+        1.102,
+        5.319
+      ],
+      "p25": 1.972,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Lunar",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.278,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.93,
+        5.213
+      ],
+      "p25": 2.278,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.633,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.285,
+        20.159
+      ],
+      "p25": 3.633,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.975,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.501,
+        18.298
+      ],
+      "p25": 2.975,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.673,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.609,
+        12.553
+      ],
+      "p25": 2.673,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.39,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.581,
+        21.705
+      ],
+      "p25": 2.39,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.46,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.817,
+        41.489
+      ],
+      "p25": 4.46,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Purple Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.849,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.604,
+        18.178
+      ],
+      "p25": 2.849,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.714,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.637,
+        7.91
+      ],
+      "p25": 2.714,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Grass",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.91,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.604,
+        33.333
+      ],
+      "p25": 3.91,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.279,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.155,
+        17.979
+      ],
+      "p25": 2.279,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.902,
+      "sampleSize": 18,
+      "ratioRange": [
+        0.262,
+        22.094
+      ],
+      "p25": 4.902,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.39,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.531,
+        42.477
+      ],
+      "p25": 9.39,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.036,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.545,
+        19.651
+      ],
+      "p25": 3.036,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Mini Diamond",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.766,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.971,
+        7.495
+      ],
+      "p25": 2.766,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.452,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.655,
+        19.536
+      ],
+      "p25": 3.452,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.356,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.087,
+        42.373
+      ],
+      "p25": 6.356,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.092,
+      "sampleSize": 27,
+      "ratioRange": [
+        1.389,
+        6.907
+      ],
+      "p25": 3.092,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.709,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.845,
+        17.567
+      ],
+      "p25": 3.709,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow Lunar",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.405,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.7,
+        14.894
+      ],
+      "p25": 3.405,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua Lunar",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.627,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.893,
+        20.056
+      ],
+      "p25": 2.627,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.243,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.262,
+        13.689
+      ],
+      "p25": 3.243,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Gold Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.573,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.797,
+        17.53
+      ],
+      "p25": 5.573,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Orange Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 12.366,
+      "sampleSize": 30,
+      "ratioRange": [
+        2.01,
+        65.675
+      ],
+      "p25": 12.366,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.361,
+      "sampleSize": 30,
+      "ratioRange": [
+        1.087,
+        31.536
+      ],
+      "p25": 6.361,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Pearl",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 14.113,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.383,
+        84.725
+      ],
+      "p25": 14.113,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.402,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.597,
+        6.907
+      ],
+      "p25": 2.402,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Green Grass",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.002,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.29,
+        7.297
+      ],
+      "p25": 3.002,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Aqua Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.505,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.381,
+        15.887
+      ],
+      "p25": 3.505,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Yellow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.599,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.29,
+        11.438
+      ],
+      "p25": 4.599,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 11.012,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.439,
+        65.675
+      ],
+      "p25": 11.012,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.255,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.655,
+        80.851
+      ],
+      "p25": 3.255,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Fuchsia Lunar Glow",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.369,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.686,
+        18.298
+      ],
+      "p25": 2.369,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Blue Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.604,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.693,
+        19.536
+      ],
+      "p25": 3.604,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.071,
+      "sampleSize": 29,
+      "ratioRange": [
+        2.077,
+        31.604
+      ],
+      "p25": 8.071,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Orange Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.942,
+      "sampleSize": 29,
+      "ratioRange": [
+        2.077,
+        31.604
+      ],
+      "p25": 8.942,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 13.145,
+      "sampleSize": 30,
+      "ratioRange": [
+        3.2,
+        61.069
+      ],
+      "p25": 13.145,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Red",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 26.951,
+      "sampleSize": 10,
+      "ratioRange": [
+        0.212,
+        56.425
+      ],
+      "p25": 26.951,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Black Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 25.628,
+      "sampleSize": 29,
+      "ratioRange": [
+        4.8,
+        86.777
+      ],
+      "p25": 25.628,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Rose Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 18.173,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.684,
+        92.593
+      ],
+      "p25": 18.173,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Red",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 35.156,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.581,
+        95.628
+      ],
+      "p25": 35.156,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Red Lava",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 21.705,
+      "sampleSize": 17,
+      "ratioRange": [
+        0.353,
+        85.47
+      ],
+      "p25": 21.705,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Black",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 22.793,
+      "sampleSize": 28,
+      "ratioRange": [
+        5.151,
+        78.244
+      ],
+      "p25": 22.793,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Red Shimmer",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 24.684,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.327,
+        93.023
+      ],
+      "p25": 24.684,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Speckle Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.972,
+      "sampleSize": 27,
+      "ratioRange": [
+        1.102,
+        5.319
+      ],
+      "p25": 1.972,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Chrome Prospects",
+      "parallel": "Reptilian Red",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 33.592,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.395,
+        95.628
+      ],
+      "p25": 33.592,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.083,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.06,
+        3.589
+      ],
+      "p25": 2.083,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.135,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.22,
+        20.655
+      ],
+      "p25": 5.135,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.472,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.297,
+        30.34
+      ],
+      "p25": 4.472,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.584,
+      "sampleSize": 25,
+      "ratioRange": [
+        0.517,
+        5.647
+      ],
+      "p25": 2.584,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "HTA Choice Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.372,
+      "sampleSize": 23,
+      "ratioRange": [
+        0.844,
+        3.973
+      ],
+      "p25": 2.372,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Fuchsia Lunar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.869,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.04,
+        16.253
+      ],
+      "p25": 4.869,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Grass Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.691,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.541,
+        23.722
+      ],
+      "p25": 6.691,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.561,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.593,
+        34.143
+      ],
+      "p25": 3.561,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 12.048,
+      "sampleSize": 29,
+      "ratioRange": [
+        1.471,
+        57.857
+      ],
+      "p25": 12.048,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Steel Metal Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.637,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.088,
+        34.757
+      ],
+      "p25": 5.637,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Lunar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.024,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.063,
+        17.433
+      ],
+      "p25": 3.024,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Lunar Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.506,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.334,
+        54.313
+      ],
+      "p25": 6.506,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.211,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.498,
+        6.627
+      ],
+      "p25": 2.211,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.958,
+      "sampleSize": 22,
+      "ratioRange": [
+        0.448,
+        23.722
+      ],
+      "p25": 6.958,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Orange Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 9.596,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.256,
+        54.094
+      ],
+      "p25": 9.596,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Aqua Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.335,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.633,
+        4.273
+      ],
+      "p25": 2.335,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.224,
+      "sampleSize": 25,
+      "ratioRange": [
+        0.553,
+        5.385
+      ],
+      "p25": 3.224,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.846,
+      "sampleSize": 24,
+      "ratioRange": [
+        0.7,
+        5.233
+      ],
+      "p25": 2.846,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.242,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.553,
+        6.378
+      ],
+      "p25": 3.242,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Orange Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 10.675,
+      "sampleSize": 29,
+      "ratioRange": [
+        3.464,
+        43.478
+      ],
+      "p25": 10.675,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Red Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 33.095,
+      "sampleSize": 22,
+      "ratioRange": [
+        1.423,
+        97.765
+      ],
+      "p25": 33.095,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.251,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.467,
+        22.403
+      ],
+      "p25": 5.251,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Green Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.975,
+      "sampleSize": 25,
+      "ratioRange": [
+        0.489,
+        28.49
+      ],
+      "p25": 2.975,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 8.318,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.667,
+        28.182
+      ],
+      "p25": 8.318,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sunflower Seed Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 16.393,
+      "sampleSize": 29,
+      "ratioRange": [
+        3.617,
+        72.079
+      ],
+      "p25": 16.393,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Black Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 21.089,
+      "sampleSize": 28,
+      "ratioRange": [
+        2.632,
+        67.771
+      ],
+      "p25": 21.089,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Bubble Gum Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 16.893,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.846,
+        55.556
+      ],
+      "p25": 16.893,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 51.911,
+      "sampleSize": 22,
+      "ratioRange": [
+        0.922,
+        97.765
+      ],
+      "p25": 51.911,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Rose Gold Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 25.258,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.761,
+        88.235
+      ],
+      "p25": 25.258,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Gold Shimmer Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.207,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.473,
+        20.458
+      ],
+      "p25": 7.207,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Red Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 22.79,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.021,
+        67.077
+      ],
+      "p25": 22.79,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Yellow Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.506,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.334,
+        54.313
+      ],
+      "p25": 6.506,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Sparkles Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.311,
+      "sampleSize": 26,
+      "ratioRange": [
+        1.128,
+        22.299
+      ],
+      "p25": 4.311,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Black Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 27.169,
+      "sampleSize": 8,
+      "ratioRange": [
+        12.667,
+        72.776
+      ],
+      "p25": 27.169,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Black X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 24.69,
+      "sampleSize": 21,
+      "ratioRange": [
+        2.632,
+        67.771
+      ],
+      "p25": 24.69,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Bowman Draft Chrome",
+      "parallel": "Red Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 55.172,
+      "sampleSize": 21,
+      "ratioRange": [
+        0.922,
+        97.765
+      ],
+      "p25": 55.172,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": null,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.042,
+        3.291
+      ],
+      "p25": 0.932,
+      "p75": 0,
+      "provenance": "thin_provisional",
+      "skippedReason": "sub-1.0 ratio (0.932) \u2014 parallel < base impossible, data quirk"
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.32,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.823,
+        7.015
+      ],
+      "p25": 1.32,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Sepia Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": null,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.088,
+        2.781
+      ],
+      "p25": 0.805,
+      "p75": 0,
+      "provenance": "thin_provisional",
+      "skippedReason": "sub-1.0 ratio (0.805) \u2014 parallel < base impossible, data quirk"
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Prism Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": null,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.033,
+        3.775
+      ],
+      "p25": 0.916,
+      "p75": 0,
+      "provenance": "thin_provisional",
+      "skippedReason": "sub-1.0 ratio (0.916) \u2014 parallel < base impossible, data quirk"
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Negative Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.083,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.103,
+        18.811
+      ],
+      "p25": 2.083,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.697,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.173,
+        19.55
+      ],
+      "p25": 1.697,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Aqua Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.598,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.126,
+        24.834
+      ],
+      "p25": 2.598,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Aqua Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.545,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.174,
+        24.834
+      ],
+      "p25": 3.545,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Teal Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.541,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.058,
+        20.255
+      ],
+      "p25": 1.541,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.987,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.15,
+        20.129
+      ],
+      "p25": 1.987,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.942,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.15,
+        44.392
+      ],
+      "p25": 3.942,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue Raywave Refractor",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Purple Speckle Refractor",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.296,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.103,
+        5.082
+      ],
+      "p25": 1.296,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Green Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.791,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.345,
+        40.909
+      ],
+      "p25": 7.791,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Green Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.364,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.238,
+        52.07
+      ],
+      "p25": 2.364,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.663,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.448,
+        93.434
+      ],
+      "p25": 4.663,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.663,
+      "sampleSize": 28,
+      "ratioRange": [
+        1.448,
+        93.434
+      ],
+      "p25": 4.663,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 7.791,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.345,
+        40.909
+      ],
+      "p25": 7.791,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.567,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.144,
+        22.238
+      ],
+      "p25": 1.567,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.62,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.818,
+        25.994
+      ],
+      "p25": 4.62,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold Wave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.481,
+      "sampleSize": 27,
+      "ratioRange": [
+        0.528,
+        22.866
+      ],
+      "p25": 4.481,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Geometric Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.503,
+      "sampleSize": 1,
+      "ratioRange": [
+        2.503,
+        2.503
+      ],
+      "p25": 2.503,
+      "p75": 2.503,
+      "provenance": "thin_provisional",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 4.99,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.199,
+        57.394
+      ],
+      "p25": 4.99,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Red Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 20.427,
+      "sampleSize": 24,
+      "ratioRange": [
+        2.203,
+        80.311
+      ],
+      "p25": 20.427,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2025,
+      "set": "Topps Chrome Update",
+      "parallel": "Green Lava Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.335,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.247,
+        24.267
+      ],
+      "p25": 2.335,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "X-Fractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.341,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.115,
+        5.096
+      ],
+      "p25": 1.341,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.472,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.318,
+        9.082
+      ],
+      "p25": 1.472,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Purple Speckle",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Prism",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.263,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.061,
+        5.038
+      ],
+      "p25": 1.263,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.959,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.072,
+        43.046
+      ],
+      "p25": 1.959,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Negative",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.753,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.046,
+        14.599
+      ],
+      "p25": 1.753,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.771,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.038,
+        43.046
+      ],
+      "p25": 1.771,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Prism Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.263,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.061,
+        5.038
+      ],
+      "p25": 1.263,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Purple",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.034,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.091,
+        18.173
+      ],
+      "p25": 2.034,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.335,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.397,
+        38.857
+      ],
+      "p25": 3.335,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Magenta",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.651,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.021,
+        24.917
+      ],
+      "p25": 1.651,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Aqua Wave",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 5.025,
+      "sampleSize": 29,
+      "ratioRange": [
+        0.367,
+        67.745
+      ],
+      "p25": 5.025,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Green",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.188,
+      "sampleSize": 19,
+      "ratioRange": [
+        0.185,
+        5.725
+      ],
+      "p25": 2.188,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Aqua",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.862,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.099,
+        25.13
+      ],
+      "p25": 1.862,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Green Wave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.518,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.167,
+        41.436
+      ],
+      "p25": 2.518,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Blue Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.771,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.038,
+        43.046
+      ],
+      "p25": 1.771,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Orange",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 6.689,
+      "sampleSize": 28,
+      "ratioRange": [
+        0.732,
+        90.102
+      ],
+      "p25": 6.689,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold Wave",
+      "printRun": "(unspecified)",
+      "sampleSize": 0,
+      "ratioRange": [
+        null,
+        null
+      ],
+      "provenance": "thin_provisional",
+      "skippedReason": "no_parallel_cards_found"
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Green Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.991,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.056,
+        21.174
+      ],
+      "p25": 2.991,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Negative Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.753,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.046,
+        14.599
+      ],
+      "p25": 1.753,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Black",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.736,
+      "sampleSize": 25,
+      "ratioRange": [
+        0.579,
+        18.514
+      ],
+      "p25": 1.736,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Gold",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 3.854,
+      "sampleSize": 18,
+      "ratioRange": [
+        0.874,
+        10.326
+      ],
+      "p25": 3.854,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Purple Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 2.034,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.091,
+        18.173
+      ],
+      "p25": 2.034,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Red Raywave",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 13.35,
+      "sampleSize": 26,
+      "ratioRange": [
+        0.409,
+        82.927
+      ],
+      "p25": 13.35,
+      "p75": 0,
+      "provenance": "empirical",
+      "skippedReason": null
+    },
+    {
+      "year": 2024,
+      "set": "Topps Chrome Update",
+      "parallel": "Raywave Refractor",
+      "printRun": "(unspecified)",
+      "baseRelativePremium": 1.959,
+      "sampleSize": 30,
+      "ratioRange": [
+        0.072,
+        43.046
+      ],
+      "p25": 1.959,
       "p75": 0,
       "provenance": "empirical",
       "skippedReason": null
