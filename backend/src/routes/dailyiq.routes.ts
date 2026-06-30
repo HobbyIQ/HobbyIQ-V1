@@ -38,6 +38,12 @@ import {
 } from "../services/dailyiq/dailyScore.service.js";
 import { computeMovement } from "../services/dailyiq/movement.service.js";
 import { getMarketDeltasForPlayers } from "../services/dailyiq/marketDelta.service.js";
+// CF-DAILYIQ-CARD-MOVERS (2026-06-30): CardHedge's server-side computed
+// weekly top movers. Adds a card-centric surface alongside the existing
+// player-centric DailyIQ brief. iOS renders as an optional new tile if
+// the field is present (back-compat: clients on older versions ignore
+// the unknown field).
+import { getTopMovers, type TopMoverCard } from "../services/compiq/cardhedge.client.js";
 import { searchMlbPerson, levelFromSport } from "../services/playerScore/mlbStats.service.js";
 import {
   ingestDailyPlayers,
@@ -906,6 +912,73 @@ async function buildWatchlistSectionPlayers(
     .filter((v): v is BasePlayerResponse => Boolean(v));
 }
 
+// CF-DAILYIQ-CARD-MOVERS (2026-06-30): iOS-visible shape for the new
+// cardMovers surface. Field names normalized to camelCase JSON-friendly
+// (CH's source schema has "7 Day Sales" with a space, which iOS would
+// have to decode via custom CodingKeys). Image URL is normalized to
+// always include the scheme so iOS doesn't have to do URL fix-up.
+export interface DailyIQCardMover {
+  cardId: string;
+  player: string;
+  set: string;
+  number: string;
+  variant: string;
+  imageUrl: string | null;
+  rookie: boolean;
+  /** Weekly gain % (CH already filters out >500% as data errors). */
+  gainPct: number;
+  sales7d: number;
+  sales30d: number;
+  /** Prices at each available grade. */
+  prices: Array<{ grade: string; price: number }>;
+}
+
+function mapTopMoverCard(c: TopMoverCard): DailyIQCardMover {
+  // CH ships images with protocol-relative URLs (//s3.amazonaws.com/...).
+  // iOS prefers full https: URLs — normalize at the boundary.
+  const rawImage = typeof c.image === "string" ? c.image.trim() : "";
+  const imageUrl = !rawImage
+    ? null
+    : rawImage.startsWith("//")
+      ? `https:${rawImage}`
+      : rawImage;
+  const prices = Array.isArray(c.prices)
+    ? c.prices
+        .map((p) => ({ grade: String(p.grade ?? "").trim(), price: Number(p.price) }))
+        .filter((p) => p.grade.length > 0 && Number.isFinite(p.price))
+    : [];
+  return {
+    cardId: String(c.card_id ?? ""),
+    player: String(c.player ?? ""),
+    set: String(c.set ?? ""),
+    number: String(c.number ?? ""),
+    variant: String(c.variant ?? ""),
+    imageUrl,
+    rookie: Boolean(c.rookie),
+    gainPct: Number.isFinite(c.gain) ? Number(c.gain) : 0,
+    sales7d: Number(c["7 Day Sales"] ?? 0) || 0,
+    sales30d: Number(c["30 Day Sales"] ?? 0) || 0,
+    prices,
+  };
+}
+
+/**
+ * Fetch and normalize CH top-movers for the DailyIQ brief surface.
+ * Non-fatal: any failure (CH down, rate limit, bad shape) returns []
+ * so the rest of the brief still ships. Caching lives in the CH client
+ * (6h server-side cache + CH's 1h cache).
+ */
+export async function buildCardMoversSurface(): Promise<DailyIQCardMover[]> {
+  try {
+    const cards = await getTopMovers({ count: 25, category: "Baseball" });
+    if (!Array.isArray(cards) || cards.length === 0) return [];
+    return cards.map(mapTopMoverCard);
+  } catch (err) {
+    console.warn(`[dailyiq.brief] cardMovers fetch failed (non-fatal): ${(err as Error)?.message ?? err}`);
+    return [];
+  }
+}
+
 const handleBriefRequest = async (req: Request, res: Response) => {
   const date = normalizeDate(req.query.date);
   const wantFresh = req.query.fresh === "true";
@@ -990,13 +1063,17 @@ const handleBriefRequest = async (req: Request, res: Response) => {
       .map((p, idx) => ({ ...p, rank: idx + 1 }));
 
     const { risers, fallers, breakouts } = pickMovers([...mlbRanked, ...milbRanked]);
-    const [mlbEnriched, milbEnriched, watchlistEnriched, risersEnriched, fallersEnriched, breakoutsEnriched] = await Promise.all([
+    // CF-DAILYIQ-CARD-MOVERS (2026-06-30): fetch CH top-movers in parallel
+    // with the existing player-IQ enrichment passes — same Promise.all so
+    // the brief is no slower than before. Non-fatal: failure surfaces as [].
+    const [mlbEnriched, milbEnriched, watchlistEnriched, risersEnriched, fallersEnriched, breakoutsEnriched, cardMovers] = await Promise.all([
       enrichWithPlayerIQ(decorateWithWatchlistStatus(mlbRanked, watchlist)),
       enrichWithPlayerIQ(decorateWithWatchlistStatus(milbRanked, watchlist)),
       enrichWithPlayerIQ(decorateWithWatchlistStatus(watchlistRanked, watchlist)),
       enrichWithPlayerIQ(decorateWithWatchlistStatus(risers, watchlist)),
       enrichWithPlayerIQ(decorateWithWatchlistStatus(fallers, watchlist)),
       enrichWithPlayerIQ(decorateWithWatchlistStatus(breakouts, watchlist)),
+      buildCardMoversSurface(),
     ]);
     const byLevel = buildByLevelMap(milbEnriched as unknown as BasePlayerResponse[]);
     return res.json({
@@ -1010,6 +1087,7 @@ const handleBriefRequest = async (req: Request, res: Response) => {
       risers: risersEnriched,
       fallers: fallersEnriched,
       breakouts: breakoutsEnriched,
+      cardMovers,
       _meta: meta,
     });
   } catch (error: any) {
