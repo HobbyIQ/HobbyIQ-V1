@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import {
   classifySupplyTrend,
+  classifySupplyTrendFromRatios,
   supplyTrendProjectionAdjuster,
   SUPPLY_DRY_BOOST,
   SUPPLY_FLOOD_DISCOUNT,
@@ -91,6 +92,45 @@ describe("classifySupplyTrend — Eric Hartman real data (2026-07-01 prod probe)
     // leading indicator. Aligned with the "hot prospect starting to fade"
     // pattern DailyIQ should surface.
     expect(classifySupplyTrend(makeMomentum(0.922, 1.421))).toBe("supply_flood");
+  });
+});
+
+describe("classifySupplyTrendFromRatios — CF-SUPPLY-TREND-PREFER-MATCHED-COHORT", () => {
+  it("Eric Hartman REGRESSION (2026-07-01): raw signal alone → supply_flood (WRONG), matched-cohort → demand_growth (CORRECT)", () => {
+    // Real prod probe: raw momentumRatio=0.922 + volumeRatio=1.421
+    // → old classification: supply_flood (bearish, WRONG)
+    const raw = classifySupplyTrendFromRatios(0.922, 1.421);
+    expect(raw).toBe("supply_flood");
+
+    // Matched-cohort medianRatio=1.363 + same volumeRatio 1.421
+    // → correct classification: demand_growth (bullish)
+    const matched = classifySupplyTrendFromRatios(1.363, 1.421);
+    expect(matched).toBe("demand_growth");
+  });
+
+  it("accepts null ratios gracefully (returns flat)", () => {
+    expect(classifySupplyTrendFromRatios(null, 1.5)).toBe("flat");
+    expect(classifySupplyTrendFromRatios(1.5, null)).toBe("flat");
+    expect(classifySupplyTrendFromRatios(null, null)).toBe("flat");
+  });
+
+  it("legacy classifySupplyTrend(momentum) still delegates correctly (backward compat)", () => {
+    const momentum: PlayerMomentumSignal = {
+      latestCompleteWeek: {
+        weekStart: "2026-06-22",
+        weekEnd: "2026-06-28",
+        count: 500,
+        totalDollars: 50000,
+        avgSale: 100,
+      },
+      priorMeanAvgSale: 80,
+      priorMeanCount: 400,
+      priorWeeksCount: 4,
+      momentumRatio: 1.35,
+      volumeRatio: 0.7,
+    };
+    // Same as classifySupplyTrendFromRatios(1.35, 0.7) → supply_dry
+    expect(classifySupplyTrend(momentum)).toBe("supply_dry");
   });
 });
 

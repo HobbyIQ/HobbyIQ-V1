@@ -42,13 +42,28 @@ const MIN_MEANINGFUL_DEVIATION = 0.05;
 export const SUPPLY_DRY_BOOST = 1.05;
 export const SUPPLY_FLOOD_DISCOUNT = 0.95;
 
-export function classifySupplyTrend(
-  momentum: PlayerMomentumSignal,
+/**
+ * Ratio-based classification. Downstream callers choose which price ratio
+ * to pass in — the mix-bias-free matched-cohort medianRatio when
+ * available (STRONGLY preferred), else the raw sales-stats-by-player
+ * weekly average. See classifySupplyTrend(momentum) below for the
+ * backward-compat wrapper.
+ *
+ * CF-SUPPLY-TREND-PREFER-MATCHED-COHORT (2026-07-01): the raw
+ * momentumRatio input was found to misclassify same-store scenarios
+ * as supply_flood when high-value cards rotated in/out of the weekly
+ * mix. Eric Hartman 2026-07-01 real data: raw ratio 0.922 + volume
+ * 1.421 classified as supply_flood (bearish), but matched-cohort
+ * ratio 1.363 correctly classifies as demand_growth. The provider
+ * now feeds matched-cohort when the cache is warm.
+ */
+export function classifySupplyTrendFromRatios(
+  priceRatio: number | null,
+  volumeRatio: number | null,
 ): SupplyTrendClassification {
-  const { momentumRatio, volumeRatio } = momentum;
-  if (momentumRatio === null || volumeRatio === null) return "flat";
+  if (priceRatio === null || volumeRatio === null) return "flat";
 
-  const priceDelta = momentumRatio - 1;
+  const priceDelta = priceRatio - 1;
   const volumeDelta = volumeRatio - 1;
 
   // Both ratios must clear the noise threshold to classify anything but flat.
@@ -67,6 +82,17 @@ export function classifySupplyTrend(
   if (!volumeUp && priceUp) return "supply_dry";
   if (volumeUp && !priceUp) return "supply_flood";
   return "demand_crash";
+}
+
+/**
+ * Backward-compat: thin wrapper that uses the momentum's raw ratios.
+ * Prefer classifySupplyTrendFromRatios directly in new code so callers
+ * can plug in matched-cohort medianRatio when it's available.
+ */
+export function classifySupplyTrend(
+  momentum: PlayerMomentumSignal,
+): SupplyTrendClassification {
+  return classifySupplyTrendFromRatios(momentum.momentumRatio, momentum.volumeRatio);
 }
 
 /**

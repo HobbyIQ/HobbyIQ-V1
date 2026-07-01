@@ -14,7 +14,7 @@ import {
   getTotalSalesByPlayer,
 } from "../compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "./momentum.compute.js";
-import { classifySupplyTrend } from "./supplyTrend.classify.js";
+import { classifySupplyTrendFromRatios } from "./supplyTrend.classify.js";
 import { readMatchedCohortFromCache } from "./matchedCohortCache.js";
 import type {
   NormalizedWeeklySales,
@@ -65,7 +65,17 @@ export const cardHedgePlayerTrendProvider: PlayerTrendProvider = {
       .slice(-Math.max(1, weeksBack));
 
     const momentum = computeMomentumFromNormalizedWeeks(buckets);
-    const supplyTrend = classifySupplyTrend(momentum);
+    // CF-SUPPLY-TREND-PREFER-MATCHED-COHORT (2026-07-01): feed the mix-
+    // bias-free matched-cohort medianRatio as the price signal when the
+    // background job has populated it. Falls back to the raw
+    // momentumRatio (with known mix bias) when the cache is empty for
+    // this player (new addition or job hasn't caught up).
+    const preferredPriceRatio =
+      cachedCohort?.result.medianRatio ?? momentum.momentumRatio;
+    const supplyTrend = classifySupplyTrendFromRatios(
+      preferredPriceRatio,
+      momentum.volumeRatio,
+    );
 
     const totalSales30d =
       totals?.results?.find((r) => r.player === playerName)?.total_sales ?? null;
