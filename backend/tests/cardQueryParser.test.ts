@@ -286,3 +286,48 @@ describe("parseCardQuery — CF-CARDQUERY-PARSER-PARALLEL-EXPANSION", () => {
     expect(p.parallel).toBe("Red Refractor");
   });
 });
+
+/**
+ * CF-CARDQUERY-PARSER-COLOR-WORD-BOUNDARY (2026-07-01).
+ *
+ * Bare-color parallel patterns previously matched color-name SUBSTRINGS.
+ * "jared jones" made /red/i return true → parallel="Red" got substring-
+ * stripped from "jared", playerName became "Ja Jones", CH's player
+ * filter got a name that doesn't exist, all Jared Jones queries only
+ * returned the AI-matched card (1 of 100 possible).
+ *
+ * Fix: bare-color patterns use `\b` word boundaries.
+ */
+describe("parseCardQuery — CF-CARDQUERY-PARSER-COLOR-WORD-BOUNDARY (color substring bug)", () => {
+  it("REGRESSION: 'jared jones' preserves 'Jared' — /red/i must not match inside 'jared'", () => {
+    const p = parseCardQuery("jared jones");
+    expect(p.playerName).toBe("Jared Jones");
+    expect(p.parallel).toBeNull();
+  });
+
+  it("REGRESSION: '2026 bowman jared jones auto' — 'Jared' fully preserved with year+brand+auto", () => {
+    const p = parseCardQuery("2026 bowman jared jones auto");
+    expect(p.playerName).toBe("Jared Jones");
+    expect(p.parallel).toBeNull();
+    expect(p.isAuto).toBe(true);
+  });
+
+  it("'goldberg' preserves 'Goldberg' — /gold/i must not match inside 'goldberg'", () => {
+    const p = parseCardQuery("goldberg");
+    expect(p.playerName).toBe("Goldberg");
+    expect(p.parallel).toBeNull();
+  });
+
+  it("names with color substrings preserved (silvestre, greenwood, blueprint)", () => {
+    expect(parseCardQuery("silvestre santos").playerName).toBe("Silvestre Santos");
+    expect(parseCardQuery("greenwood taylor").playerName).toBe("Greenwood Taylor");
+    expect(parseCardQuery("blueprint johnson").playerName).toBe("Blueprint Johnson");
+  });
+
+  it("bare color still detected when it's a REAL WHOLE WORD in the query", () => {
+    // Query with a legitimate "Blue" as a parallel token
+    const p = parseCardQuery("2026 Bowman Chrome Blue Auto Josh Hammond");
+    expect(p.parallel).toBe("Blue");
+    expect(p.playerName).toBe("Josh Hammond");
+  });
+});
