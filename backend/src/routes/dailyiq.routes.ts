@@ -3,6 +3,7 @@ import { getUserBySession } from "../services/authService.js";
 import { resolveCurrentPlayerAssignments } from "../services/dailyiq/milbBoxScoreService.js";
 import { fetchRecentForm, type RecentForm } from "../services/dailyiq/recentFormService.js";
 import { readMarketPlayersPayload } from "../services/dailyiq/marketPlayers.service.js";
+import { assembleMyPlayersForUser } from "../services/dailyiq/myPlayers.service.js";
 import { fetchTomorrowProbablePitchers, getTomorrowDateUTC, type TomorrowMatchup } from "../services/dailyiq/probablePitchersService.js";
 import {
   getAllWatchCounts,
@@ -1116,6 +1117,17 @@ const handleBriefRequest = async (req: Request, res: Response) => {
 // "/" is the iOS-visible alias. Both gated.
 router.get("/", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
 router.get("/brief", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
+
+// CF-DAILYIQ-MY-PLAYERS (2026-07-01): per-user view of matched-cohort
+// trends for players the user OWNS. Complements /market/players
+// (discovery); this is the personal side. Returns one row per unique
+// player in the user's holdings with the matched-cohort summary +
+// per-owned-card ratios.
+router.get("/market/my-players", requireSession, requireEntitlement("dailyIQBriefs"), async (req, res) => {
+  const userId = req.user!.userId;
+  const payload = await assembleMyPlayersForUser(userId);
+  res.json(payload);
+});
 
 // CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): market-facing player signals
 // derived from matched-cohort momentum + CH sales-stats-by-player.
