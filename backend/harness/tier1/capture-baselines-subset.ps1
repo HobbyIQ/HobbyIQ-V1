@@ -16,6 +16,17 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $casesPath = Join-Path $root "cases.json"
 $baselineDir = Join-Path $root "baselines"
 
+# CF-TIER1-HARNESS-SESSION (2026-06-30): requireSession gate on all
+# /api/compiq/* — attach x-session-id from env (same value used by the
+# runtime harness).
+$sessionId = $env:TIER1_HARNESS_SESSION_ID
+if ([string]::IsNullOrWhiteSpace($sessionId)) {
+    Write-Error "TIER1_HARNESS_SESSION_ID env var not set. See backend/docs/runbooks/tier1-harness-session.md."
+    exit 1
+}
+$sessionId = $sessionId.Trim()
+$authHeaders = @{ "x-session-id" = $sessionId }
+
 $manifest = Get-Content -Raw -Path $casesPath | ConvertFrom-Json
 $cases = $manifest.cases | Where-Object { $Only -contains $_.id }
 
@@ -44,7 +55,7 @@ foreach ($c in $cases) {
     $searchBody = @{ query = $c.query } | ConvertTo-Json -Compress
     try {
         $resp = Invoke-RestMethod -Method POST -Uri "$Base/api/compiq/search" `
-            -ContentType "application/json" -Body $searchBody -TimeoutSec 90
+            -ContentType "application/json" -Headers $authHeaders -Body $searchBody -TimeoutSec 90
         $entry.search = $resp
     }
     catch {
@@ -83,7 +94,7 @@ foreach ($c in $cases) {
         $pbiBody = $pbi | ConvertTo-Json -Compress
         try {
             $resp2 = Invoke-RestMethod -Method POST -Uri "$Base/api/compiq/price-by-id" `
-                -ContentType "application/json" -Body $pbiBody -TimeoutSec 90
+                -ContentType "application/json" -Headers $authHeaders -Body $pbiBody -TimeoutSec 90
             $entry.priceById = $resp2
         }
         catch {

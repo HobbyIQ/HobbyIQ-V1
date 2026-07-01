@@ -125,7 +125,7 @@ describeTier("Tier 1 · popular-baseline (cases 12-14)", () => {
       itAnchor(
         `FMV reflects market reality${
           isShelvedAnchor
-            ? " (SHELVED: see tier1-anchor-blocked-by-vendor.test.ts — Cardsight catalog gap)"
+            ? " (SHELVED: see tier1-anchor-blocked-by-vendor.test.ts — CH catalog gap)"
             : (blockReason ? ` (SOFT: ${blockReason})` : "")
         }`,
         () => {

@@ -450,6 +450,24 @@ const ALLOWED_SOURCES = new Set([
   // Issue #7 fix: free-text queries that CH's AI identified as non-baseball
   // short-circuit to this source with all pricing fields nulled out.
   "unsupported_sport",
+  // CF-LAUNCH-HARDENING (2026-06-02): free-text queries whose CardHedge
+  // catalog search yields zero candidates short-circuit here. Distinct
+  // from "no-recent-comps" (catalog HIT, no sales) — this is catalog MISS.
+  // CH is the engine's sole comp vendor as of the CardHedge hard-cutover
+  // (2026-05-30); prior Cardsight references in older comments are stale.
+  "catalog-miss",
+  // Pre-modern (< PRE_MODERN_YEAR_CUTOFF) cards intentionally out of launch
+  // scope. Same iOS branch as unsupported_sport (both flag outOfScopeReason).
+  "out-of-scope",
+  // CF-SIBLING-POOL: when a pinned parallel has no direct comps but sibling
+  // parallels of the same base card do, engine pools those siblings.
+  "sibling-pool",
+  // eBay-sourced pricing path (fallback when CH doesn't have the card).
+  "ebay",
+  // upstreamTimeout.helpers.ts: HTTP 200 short-circuit when an upstream
+  // vendor (CardHedge, eBay) exceeds its budget. Distinct from the
+  // caller-timeout / 5xx path.
+  "upstream-timeout",
 ]);
 
 export function expectWellFormed(
