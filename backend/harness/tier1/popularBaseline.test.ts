@@ -16,6 +16,7 @@ import {
   CASE_BUDGET_MS,
   expectLiveData,
   expectWellFormed,
+  handleSnapshotDiff,
   hitPriceById,
   hitSearch,
   loadBaseline,
@@ -125,7 +126,7 @@ describeTier("Tier 1 · popular-baseline (cases 12-14)", () => {
       itAnchor(
         `FMV reflects market reality${
           isShelvedAnchor
-            ? " (SHELVED: see tier1-anchor-blocked-by-vendor.test.ts — Cardsight catalog gap)"
+            ? " (SHELVED: see tier1-anchor-blocked-by-vendor.test.ts — CH catalog gap)"
             : (blockReason ? ` (SOFT: ${blockReason})` : "")
         }`,
         () => {
@@ -148,13 +149,7 @@ describeTier("Tier 1 · popular-baseline (cases 12-14)", () => {
           diff,
           notes: ctx.notes,
         });
-        if (diff.warnings.length > 0) {
-          // eslint-disable-next-line no-console
-          console.warn(`  [SNAPSHOT WARN] ${c.id}: ${diff.warnings.join("; ")}`);
-        }
-        if (diff.fatal.length > 0) {
-          throw new Error(`snapshot fatal: ${diff.fatal.join("; ")}`);
-        }
+        handleSnapshotDiff(c, diff);
       });
     });
   }

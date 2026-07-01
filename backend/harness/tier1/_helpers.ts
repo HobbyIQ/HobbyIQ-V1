@@ -172,6 +172,12 @@ export const CASES: TestCase[] = [
     grade: "Raw",
     sport: "MLB",
     category: "real-lookup",
+    // Post-CardHedge-cutover: this narrow modern parallel returns
+    // catalog-miss on CH (was variant-mismatch with 69 candidate comps
+    // on the 2026-05-20 baseline). Same "not-priced" functional
+    // outcome, but the snapshot shape differs. Track as CH thin
+    // supply until CH indexes this parallel.
+    blockedBy: [55],
     baselineFile: "case-09-caleb-bonemer-2024-bowman-draft-chrome-blue-auto-raw.json",
   },
   {
@@ -337,6 +343,39 @@ export function isBlocked(c: TestCase, issue?: number): boolean {
   return c.blockedBy.includes(issue);
 }
 
+/**
+ * Uniform snapshot-fatal handling across all Tier 1 test files.
+ *
+ * When the case has ANY tracked `blockedBy` issue, treat fatal drift as
+ * a WARN (log + record, don't throw). The tracked issue is the durable
+ * record; a fatal throw would just re-report what the issue already says.
+ *
+ * When the case has NO blockedBy, treat fatal drift as a real regression
+ * and throw — those are the actionable signals we want Tier 1 to surface.
+ *
+ * CF-TIER1-BLOCKED-SNAPSHOT-SOFT (2026-06-30): pre-fix, `recentComps
+ * emptied (baseline had N entries)` was fatal on every case, including
+ * cases already blocked by issue #55 (CH supply thinned) — the exact
+ * cause of the "emptied" state. Result: Tier 1 was permanent red on
+ * cases everyone had already agreed were noise.
+ */
+export function handleSnapshotDiff(c: TestCase, diff: DiffResult): void {
+  if (diff.warnings.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`  [SNAPSHOT WARN] ${c.id}: ${diff.warnings.join("; ")}`);
+  }
+  if (diff.fatal.length > 0) {
+    if (isBlocked(c)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `  [SNAPSHOT WARN — soft, blocked by ${c.blockedBy!.map((n) => `#${n}`).join(", ")}] ${c.id}: ${diff.fatal.join("; ")}`,
+      );
+      return;
+    }
+    throw new Error(`snapshot fatal: ${diff.fatal.join("; ")}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Baseline loading
 // ---------------------------------------------------------------------------
@@ -450,6 +489,24 @@ const ALLOWED_SOURCES = new Set([
   // Issue #7 fix: free-text queries that CH's AI identified as non-baseball
   // short-circuit to this source with all pricing fields nulled out.
   "unsupported_sport",
+  // CF-LAUNCH-HARDENING (2026-06-02): free-text queries whose CardHedge
+  // catalog search yields zero candidates short-circuit here. Distinct
+  // from "no-recent-comps" (catalog HIT, no sales) — this is catalog MISS.
+  // CH is the engine's sole comp vendor as of the CardHedge hard-cutover
+  // (2026-05-30); prior Cardsight references in older comments are stale.
+  "catalog-miss",
+  // Pre-modern (< PRE_MODERN_YEAR_CUTOFF) cards intentionally out of launch
+  // scope. Same iOS branch as unsupported_sport (both flag outOfScopeReason).
+  "out-of-scope",
+  // CF-SIBLING-POOL: when a pinned parallel has no direct comps but sibling
+  // parallels of the same base card do, engine pools those siblings.
+  "sibling-pool",
+  // eBay-sourced pricing path (fallback when CH doesn't have the card).
+  "ebay",
+  // upstreamTimeout.helpers.ts: HTTP 200 short-circuit when an upstream
+  // vendor (CardHedge, eBay) exceeds its budget. Distinct from the
+  // caller-timeout / 5xx path.
+  "upstream-timeout",
 ]);
 
 export function expectWellFormed(
