@@ -407,6 +407,58 @@ struct LedgerPatchResponse: Decodable {
     let entry: PortfolioLedgerEntry
 }
 
+/// CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30): view-layer helpers on
+/// the wire struct. Kept in the view file (per Q3) so the Codable struct
+/// stays pure wire data. `shortAge` powers the row's compact "8 mo ago"
+/// caption; `longAge` powers the detail sheet's "8 months ago". Tint and
+/// band labels drive the confidence-tier styling.
+extension NearestGradedAnchor {
+    var tintColor: Color {
+        if confidence >= 0.5 { return HobbyIQTheme.Colors.mutedText }
+        if confidence >= 0.3 { return .orange }
+        return .red
+    }
+
+    /// "solid" / "rough" / "ballpark" — one-word confidence band label used
+    /// in the detail-sheet Source subsection ("… · ballpark confidence").
+    var confidenceBand: String {
+        if confidence >= 0.5 { return "solid" }
+        if confidence >= 0.3 { return "rough" }
+        return "ballpark"
+    }
+
+    /// Compact form for the inventory row. Per CF: <30 → "N days ago",
+    /// <365 → "N mo ago" (floor(days/30)), >=365 → "Y yr ago".
+    /// `daysOld == 0` short-circuits to "today" so 0/1 both read
+    /// naturally.
+    var shortAge: String {
+        if daysOld <= 0 { return "today" }
+        if daysOld < 30 { return "\(daysOld) days ago" }
+        if daysOld < 365 { return "\(daysOld / 30) mo ago" }
+        return "\(daysOld / 365) yr ago"
+    }
+
+    /// Long form for the detail-sheet Source line. Same buckets as
+    /// `shortAge` but uses "months"/"years" for legibility in a full
+    /// sentence context.
+    var longAge: String {
+        if daysOld <= 0 { return "today" }
+        if daysOld < 30 { return "\(daysOld) days ago" }
+        if daysOld < 365 {
+            let months = daysOld / 30
+            return months == 1 ? "1 month ago" : "\(months) months ago"
+        }
+        let years = daysOld / 365
+        return years == 1 ? "1 year ago" : "\(years) years ago"
+    }
+
+    /// Comp-count phrase for the Source subsection. 1 → "1 comp",
+    /// N>1 → "N comps".
+    var compCountPhrase: String {
+        sampleSize == 1 ? "1 comp" : "\(sampleSize) comps"
+    }
+}
+
 extension InventoryCard {
     /// Composed display title for the detail page. Prefers the stored
     /// `cardName` when populated; otherwise composes from year + setName +
@@ -955,28 +1007,6 @@ struct PortfolioHoldingDetailSheet: View {
         }
     }
 
-    /// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): natural-language phrasing
-    /// for the anchor sale's freshness + grade. Raw anchors read as
-    /// "Last sold: $1185 raw, 4 days ago"; graded anchors read as
-    /// "Anchor: PSA 9 $755, today".
-    private func anchorCaption(for a: NearestGradedAnchor) -> String {
-        let priceStr = portfolioCurrencyString(a.price)
-        let agePhrase: String
-        if a.daysOld <= 1 {
-            agePhrase = "today"
-        } else if a.daysOld < 14 {
-            agePhrase = "\(a.daysOld) days ago"
-        } else if a.daysOld < 60 {
-            agePhrase = "\(a.daysOld / 7) weeks ago"
-        } else {
-            agePhrase = "\(a.daysOld / 30) months ago"
-        }
-        if a.grade.lowercased() == "raw" {
-            return "Last sold: \(priceStr) raw, \(agePhrase)"
-        } else {
-            return "Anchor: \(a.grade) \(priceStr), \(agePhrase)"
-        }
-    }
 
     var body: some View {
         // CF-TABBAR-PERSISTENT (2026-06-27): pushed onto the InventoryIQ
@@ -1023,15 +1053,31 @@ struct PortfolioHoldingDetailSheet: View {
                                         .clipShape(Capsule(style: .continuous))
                                 }
                             }
+                            // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30):
+                            // 4-row "Source" subsection replaces the prior
+                            // one-line "Anchor:" caption. Line 1: the sale
+                            // that anchored the estimate. Line 2: freshness
+                            // + comp-count + confidence band. Confidence
+                            // drives the band's tint.
                             if let anchor = card.nearestGradedAnchor {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "info.circle")
-                                        .font(.caption2)
-                                    Text(anchorCaption(for: anchor))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Source")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        .textCase(.uppercase)
+                                        .tracking(0.4)
+                                    Rectangle()
+                                        .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                                        .frame(height: 1)
+                                    Text("\(anchor.grade) sold for \(portfolioCurrencyString(anchor.price))")
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    Text("\(anchor.longAge) · \(anchor.compCountPhrase) · \(anchor.confidenceBand) confidence")
                                         .font(.caption)
-                                    Spacer(minLength: 0)
+                                        .foregroundStyle(anchor.tintColor)
                                 }
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
                             }
                             if card.valuationStatus == "estimated",
                                let basis = card.estimateBasis,
@@ -1717,6 +1763,15 @@ struct PortfolioCardGridCard: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
                             .lineLimit(1)
+                        // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30):
+                        // grid variant of the "based on ..." caption.
+                        if let anchor = card.nearestGradedAnchor {
+                            Text("based on \(anchor.grade) · \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)")
+                                .font(.caption2)
+                                .foregroundStyle(anchor.tintColor)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
                     }
                 } else {
                     Text(card.displayValueText)
@@ -1854,6 +1909,17 @@ private func inventoryRightColumn(card: InventoryCard) -> some View {
             Text("Estimated")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+            // CF-IOS-NEAREST-GRADED-ANCHOR-UI-V2 (2026-06-30): compact
+            // "based on PSA 9 · $1,325 · 8 mo ago" caption when the
+            // ladder fallback surfaced an anchor. Tint follows the
+            // confidence band (muted / amber / red).
+            if let anchor = card.nearestGradedAnchor {
+                Text("based on \(anchor.grade) · \(portfolioCurrencyString(anchor.price)) · \(anchor.shortAge)")
+                    .font(.caption2)
+                    .foregroundStyle(anchor.tintColor)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         } else {
             Text(card.displayValueText)
                 .font(.subheadline.weight(.medium))
