@@ -123,7 +123,7 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     [/purple\s+raywave/i, "Purple Raywave"],
     [/orange\s+raywave/i, "Orange Raywave"],
     [/pink\s+raywave/i, "Pink Raywave"],
-    [/raywave/i, "Raywave"],
+    [/\braywave\b/i, "Raywave"],
     // Lava — Bowman Draft Chrome color-refractor sub-family.
     [/red\s+lava/i, "Red Lava"],
     [/blue\s+lava/i, "Blue Lava"],
@@ -131,7 +131,7 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     [/green\s+lava/i, "Green Lava"],
     [/purple\s+lava/i, "Purple Lava"],
     [/orange\s+lava/i, "Orange Lava"],
-    [/lava/i, "Lava"],
+    [/\blava\b/i, "Lava"],
     // X-Fractor — Bowman Chrome specialty. Hyphen / no-hyphen / space all
     // observed in the wild.
     [/x[-\s]?fractor/i, "X-Fractor"],
@@ -148,21 +148,28 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     [/green\s+refractor/i, "Green Refractor"],
     [/purple\s+refractor/i, "Purple Refractor"],
     [/pink\s+refractor/i, "Pink Refractor"],
-    [/refractor/i, "Refractor"],
-    [/gold/i, "Gold"],
-    [/red/i, "Red"],
-    [/orange/i, "Orange"],
-    [/purple/i, "Purple"],
-    [/pink/i, "Pink"],
-    [/green/i, "Green"],
-    [/blue/i, "Blue"],
-    [/yellow/i, "Yellow"],
-    [/black/i, "Black"],
-    [/white/i, "White"],
-    [/silver/i, "Silver"],
-    [/platinum/i, "Platinum"],
-    [/aqua/i, "Aqua"],
-    [/cyan/i, "Cyan"],
+    [/\brefractor\b/i, "Refractor"],
+    // CF-CARDQUERY-PARSER-COLOR-WORD-BOUNDARY (2026-07-01): bare-color
+    // patterns MUST use `\b` word boundaries. Without them,
+    // `/red/i.test("jared jones") === true` — parser mangled "Jared" to
+    // "Ja" (substring-stripped "red"), CH's player filter got "Ja Jones"
+    // which doesn't exist, all Jared Jones queries returned only the AI-
+    // matched card (1 of 100 possible). Same class of bug affects any
+    // name with a color substring: Jaredin, Silvestre, Goldberg, etc.
+    [/\bgold\b/i, "Gold"],
+    [/\bred\b/i, "Red"],
+    [/\borange\b/i, "Orange"],
+    [/\bpurple\b/i, "Purple"],
+    [/\bpink\b/i, "Pink"],
+    [/\bgreen\b/i, "Green"],
+    [/\bblue\b/i, "Blue"],
+    [/\byellow\b/i, "Yellow"],
+    [/\bblack\b/i, "Black"],
+    [/\bwhite\b/i, "White"],
+    [/\bsilver\b/i, "Silver"],
+    [/\bplatinum\b/i, "Platinum"],
+    [/\baqua\b/i, "Aqua"],
+    [/\bcyan\b/i, "Cyan"],
     [/1st\s+bowman/i, "1st Bowman"],
     [/1st\s+edition/i, "1st Edition"],
     [/printing\s+plate/i, "Printing Plate"],
@@ -245,7 +252,11 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     const setOnly = set.replace(new RegExp(`^${escapeRegex(brand ?? "")}\\s*`, "i"), "").trim();
     if (setOnly) remaining = remaining.replace(new RegExp(escapeRegex(setOnly), "gi"), " ");
   }
-  if (parallel) remaining = remaining.replace(new RegExp(escapeRegex(parallel), "gi"), " ");
+  // CF-CARDQUERY-PARSER-COLOR-WORD-BOUNDARY (2026-07-01): defensive `\b`
+  // on the parallel-substitution so canonical "Red" doesn't strip "red"
+  // from "jared". Belt-and-suspenders with the boundary fix on the
+  // PARALLEL_PATTERNS above.
+  if (parallel) remaining = remaining.replace(new RegExp(`\\b${escapeRegex(parallel)}\\b`, "gi"), " ");
   if (cardNumber) remaining = remaining.replace(new RegExp(`#?${escapeRegex(cardNumber)}`, "gi"), " ");
   if (printRun != null) remaining = remaining.replace(/(?:\/|#\/)?\s*\d{1,4}/g, " ");
   if (gradingCompany) remaining = remaining.replace(new RegExp(`\\b${escapeRegex(gradingCompany)}\\b`, "gi"), " ");
