@@ -14,6 +14,7 @@ import {
   getTotalSalesByPlayer,
 } from "../compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "./momentum.compute.js";
+import { classifySupplyTrend } from "./supplyTrend.classify.js";
 import type {
   NormalizedWeeklySales,
   PlayerTrendProvider,
@@ -57,6 +58,7 @@ export const cardHedgePlayerTrendProvider: PlayerTrendProvider = {
       .slice(-Math.max(1, weeksBack));
 
     const momentum = computeMomentumFromNormalizedWeeks(buckets);
+    const supplyTrend = classifySupplyTrend(momentum);
 
     const totalSales30d =
       totals?.results?.find((r) => r.player === playerName)?.total_sales ?? null;
@@ -64,6 +66,7 @@ export const cardHedgePlayerTrendProvider: PlayerTrendProvider = {
     return {
       player: playerName,
       momentum,
+      supplyTrend,
       totalSales30d,
       providerName: PROVIDER_NAME,
       capturedAtMs: Date.now(),
