@@ -86,6 +86,11 @@ import {
 } from "../services/compiq/cardQueryParser.js";
 import { fetchCompsByPlayer } from "../services/compiq/compsByPlayer.service.js";
 import { fetchPlayerInSetMomentum } from "../services/compiq/playerInSetMomentum.service.js";
+import { getPlayerTrendSnapshot } from "../services/playerTrend/index.js";
+import {
+  evaluateMomentumProjection,
+  isMomentumProjectionEnabled,
+} from "../services/compiq/momentumProjection.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
 import {
   classifyRegime,
@@ -336,6 +341,115 @@ function recordCHReferenceTelemetry(opts: {
     } catch (err) {
       console.warn(
         `[${opts.source}] sales-momentum telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  })();
+}
+
+/**
+ * CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION (2026-07-01):
+ * Fire-and-forget telemetry that evaluates the momentum projection
+ * against the just-served response and logs the result. Runs alongside
+ * recordCHReferenceTelemetry — same fire-and-forget contract, same
+ * player-keyed gate, same never-throws guarantee.
+ *
+ * Purely observational for now:
+ * - Fetches getPlayerTrendSnapshot (vendor-neutral via services/playerTrend/)
+ * - Evaluates evaluateMomentumProjection with the response's implied
+ *   lastCardSale + daysSinceNewestComp
+ * - Emits player_momentum_projection_evaluated with the full attribution
+ * - Does NOT touch the response — the response is already flushed to
+ *   the client by the time this callback fires
+ *
+ * Once prod data validates the projection is producing sensible numbers,
+ * a follow-up CF plumbs the momentumAnchor field onto the wire response
+ * and (optionally) drives estimatedValue for thin-comp cases.
+ *
+ * Gated by PLAYER_MOMENTUM_PROJECTION_ENABLED — same flag that later
+ * turns on the pricing path. Setting flag → false disables telemetry
+ * too (matches "the whole feature is off" semantics).
+ */
+function recordMomentumProjectionEvaluated(opts: {
+  source: string;
+  cardId: string | null;
+  player: string | null;
+  result: Record<string, unknown>;
+}): void {
+  if (!opts.player) return;
+  if (!isMomentumProjectionEnabled()) return;
+  void (async () => {
+    try {
+      const snapshot = await getPlayerTrendSnapshot(opts.player!);
+      if (!snapshot) {
+        console.log(JSON.stringify({
+          event: "player_momentum_projection_evaluated",
+          source: opts.source,
+          player: opts.player,
+          cardId: opts.cardId,
+          applied: false,
+          reason: "no_trend_snapshot",
+        }));
+        return;
+      }
+
+      // Derive last card sale + days-since-newest from the response's
+      // recentComps. If the response didn't carry any, we still evaluate
+      // so we can distinguish "no comp visible" from "comp too stale".
+      const recentComps = Array.isArray(opts.result.recentComps)
+        ? (opts.result.recentComps as Array<{ price?: unknown; soldDate?: unknown; date?: unknown }>)
+        : [];
+      let lastCardSalePrice: number | null = null;
+      let lastCardSaleDate: string | null = null;
+      let newestTs = 0;
+      for (const c of recentComps) {
+        const ds = (typeof c.soldDate === "string" ? c.soldDate : typeof c.date === "string" ? c.date : null) as string | null;
+        const ts = ds ? Date.parse(ds) || 0 : 0;
+        const p = typeof c.price === "number" ? c.price : null;
+        if (ts > newestTs && p !== null && p > 0) {
+          newestTs = ts;
+          lastCardSalePrice = p;
+          lastCardSaleDate = ds;
+        }
+      }
+      const daysSinceNewestComp =
+        newestTs > 0 ? Math.floor((Date.now() - newestTs) / (24 * 3600 * 1000)) : null;
+
+      const projection = evaluateMomentumProjection({
+        playerName: opts.player!,
+        trendSnapshot: snapshot,
+        lastCardSalePrice,
+        lastCardSaleDate,
+        directCompCount: recentComps.length,
+        daysSinceNewestComp,
+      });
+
+      console.log(JSON.stringify({
+        event: "player_momentum_projection_evaluated",
+        source: opts.source,
+        player: opts.player,
+        cardId: opts.cardId,
+        supplyTrend: snapshot.supplyTrend,
+        momentumRatio: snapshot.momentum.momentumRatio,
+        volumeRatio: snapshot.momentum.volumeRatio,
+        latestWeekCount: snapshot.momentum.latestCompleteWeek?.count ?? null,
+        providerName: snapshot.providerName,
+        applied: projection.applied,
+        ...(projection.applied
+          ? {
+              projectedPrice: projection.projectedPrice,
+              confidence: projection.confidence,
+              attribution: projection.attribution,
+              engineFairMarketValueLive:
+                typeof opts.result.fairMarketValueLive === "number"
+                  ? (opts.result.fairMarketValueLive as number)
+                  : null,
+              engineSource: typeof opts.result.source === "string" ? opts.result.source : null,
+            }
+          : { reason: projection.reason }),
+      }));
+    } catch (err) {
+      console.warn(
+        `[${opts.source}] momentum-projection telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
       );
     }
   })();
@@ -1194,6 +1308,15 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
           ? ((result as any).fairMarketValueLive as number)
           : null,
     });
+    // CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION observational telemetry —
+    // runs alongside recordCHReferenceTelemetry, gated by the same flag
+    // that later drives pricing.
+    recordMomentumProjectionEvaluated({
+      source: "compiq.search",
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      result: result as Record<string, unknown>,
+    });
     res.json(result);
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
@@ -1499,6 +1622,12 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof (result as any).fairMarketValueLive === "number"
           ? ((result as any).fairMarketValueLive as number)
           : null,
+    });
+    recordMomentumProjectionEvaluated({
+      source: "compiq.price",
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      result: result as Record<string, unknown>,
     });
     res.json(result);
     // Telemetry â€” see /search for rationale.
@@ -2162,6 +2291,12 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         typeof (result as any).fairMarketValueLive === "number"
           ? ((result as any).fairMarketValueLive as number)
           : null,
+    });
+    recordMomentumProjectionEvaluated({
+      source: "compiq.price-by-id",
+      cardId: resolvedCardId,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      result: result as Record<string, unknown>,
     });
 
     // CF-CH-NEAREST-GRADED-ANCHOR (2026-06-28): surface the best graded
