@@ -1030,3 +1030,61 @@ struct DailyIQFullBriefResponse: Codable {
         case meta = "_meta"
     }
 }
+
+// MARK: - CF-DAILYIQ-MARKET-PLAYERS (2026-07-01) — matched-cohort momentum lists
+
+/// Response envelope for GET /api/dailyiq/market/players. Backend cache
+/// TTL is 26h so iOS can safely cache the response for ~1h without
+/// re-fetching. `generatedAt == nil` means the background job hasn't
+/// populated yet — render the empty state; do NOT retry aggressively.
+/// Investor-tier gated via the same `dailyIQBriefs` entitlement as the
+/// full brief.
+struct DailyIQMarketSignalsResponse: Codable {
+    let success: Bool?
+    /// ISO8601 timestamp of the last job cycle. `nil` before the first
+    /// populated cycle — pair with the empty-state UI.
+    let generatedAt: String?
+    /// Optional server-supplied empty-state copy. iOS falls back to a
+    /// canned string when this is absent.
+    let note: String?
+    let trending: [DailyIQMarketPlayerEntry]?
+    let fading: [DailyIQMarketPlayerEntry]?
+    let topVolume30d: [DailyIQMarketVolumeEntry]?
+    let supplyDryLeadingUp: [DailyIQMarketSupplyEntry]?
+}
+
+/// Shared shape for `trending` + `fading`. `medianRatio` is a raw ratio
+/// centered on 1.0 (>1 = up, <1 = down). Convert to a signed percent
+/// via `(medianRatio - 1) * 100` at render time.
+struct DailyIQMarketPlayerEntry: Codable, Identifiable, Hashable {
+    let player: String
+    let medianRatio: Double?
+    let cohortSize: Int?
+    let latestWeekActiveCards: Int?
+    let latestWeekStart: String?
+    let computedAtMs: Double?
+
+    var id: String { player }
+}
+
+/// 30-day trailing volume list. Sales count is the raw integer from
+/// the matched-cohort snapshot.
+struct DailyIQMarketVolumeEntry: Codable, Identifiable, Hashable {
+    let player: String
+    let totalSales30d: Int?
+
+    var id: String { player }
+}
+
+/// Leading indicator: rising median price + falling listings.
+/// `volumeRatio < 1.0` means supply is drying up (fewer listings vs
+/// prior window). Distinct from `trending` which is lagging.
+struct DailyIQMarketSupplyEntry: Codable, Identifiable, Hashable {
+    let player: String
+    let medianRatio: Double?
+    let volumeRatio: Double?
+    let cohortSize: Int?
+    let latestWeekActiveCards: Int?
+
+    var id: String { player }
+}

@@ -771,6 +771,16 @@ struct APIService {
         try await get(path: "/api/dailyiq/brief", responseType: DailyIQFullBriefResponse.self)
     }
 
+    /// CF-DAILYIQ-MARKET-PLAYERS (2026-07-01 / PR #235): matched-cohort
+    /// momentum lists (trending / fading / most-traded / supply-squeeze).
+    /// Investor-tier gated via `dailyIQBriefs`. Backend cache TTL 26h;
+    /// iOS should NOT poll — one fetch per tab visit is sufficient.
+    /// Empty payload (generatedAt == nil) is expected before the
+    /// backend job populates; do NOT retry aggressively.
+    func fetchMarketSignals() async throws -> DailyIQMarketSignalsResponse {
+        try await get(path: "/api/dailyiq/market/players", responseType: DailyIQMarketSignalsResponse.self)
+    }
+
     // MARK: - Dashboard Player Stats (gated dailyIQBriefs)
 
     func fetchDashboardPlayerStats() async throws -> DashboardPlayerStatsResponse {

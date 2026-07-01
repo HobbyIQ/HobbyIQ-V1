@@ -23,6 +23,8 @@ struct DailyIQView: View {
     @State private var fullBrief: DailyIQFullBriefResponse?
     @State private var isLoadingBrief = false
     @State private var showUpgradePaywall = false
+    @State private var marketSignals: DailyIQMarketSignalsResponse?
+    @State private var isLoadingMarketSignals = false
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -471,6 +473,8 @@ struct DailyIQView: View {
                 briefMoverSection(title: "Risers", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
                 briefMoverSection(title: "Fallers", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
                 briefMoverSection(title: "Breakouts", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
+
+                marketSignalsSection
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "newspaper")
@@ -484,7 +488,291 @@ struct DailyIQView: View {
                 .padding(.vertical, 20)
             }
         }
-        .task { await loadFullBrief() }
+        .task {
+            await loadFullBrief()
+            await loadMarketSignals()
+        }
+    }
+
+    // MARK: - Market Signals (CF-DAILYIQ-MARKET-PLAYERS, 2026-07-01)
+
+    /// Bottom-of-brief section: four matched-cohort momentum lists —
+    /// Trending Up (lagging, prices rising), Cooling Off (lagging,
+    /// prices falling), Most Traded (30d volume), Supply Squeeze
+    /// (leading: prices rising + listings drying up). Player-level
+    /// signals distinct from the card-level Risers/Fallers/Breakouts
+    /// above it. Renders an empty-state message before the backend
+    /// job populates.
+    @ViewBuilder
+    private var marketSignalsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("MARKET SIGNALS")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(0.6)
+                Spacer()
+            }
+            .padding(.top, 4)
+
+            if isLoadingMarketSignals && marketSignals == nil {
+                HStack(spacing: 10) {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Loading market signals…")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+            } else if let signals = marketSignals {
+                if signals.generatedAt == nil {
+                    marketSignalsEmptyState(note: signals.note)
+                } else {
+                    marketPlayerSection(
+                        title: "Trending Up",
+                        subtitle: marketSectionSubtitle(from: signals.trending?.first?.latestWeekStart),
+                        entries: signals.trending ?? [],
+                        color: HobbyIQTheme.Colors.hobbyGreen,
+                        icon: "arrow.up.right"
+                    )
+                    marketPlayerSection(
+                        title: "Cooling Off",
+                        subtitle: marketSectionSubtitle(from: signals.fading?.first?.latestWeekStart),
+                        entries: signals.fading ?? [],
+                        color: HobbyIQTheme.Colors.danger,
+                        icon: "arrow.down.right"
+                    )
+                    marketVolumeSection(
+                        title: "Most Traded (30d)",
+                        entries: signals.topVolume30d ?? []
+                    )
+                    marketSupplySection(
+                        title: "Supply Squeeze",
+                        entries: signals.supplyDryLeadingUp ?? []
+                    )
+
+                    if let updatedFooter = marketUpdatedFooter(from: signals.generatedAt) {
+                        Text(updatedFooter)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    private func marketSignalsEmptyState(note: String?) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "hourglass")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(note?.isEmpty == false
+                 ? note!
+                 : "Market signals populating overnight — check back tomorrow.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(HobbyIQTheme.Colors.mutedText.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func marketPlayerSection(
+        title: String,
+        subtitle: String?,
+        entries: [DailyIQMarketPlayerEntry],
+        color: Color,
+        icon: String
+    ) -> some View {
+        Group {
+            if entries.isEmpty == false {
+                VStack(alignment: .leading, spacing: 8) {
+                    marketSubsectionHeader(title: title, subtitle: subtitle, icon: icon, color: color, count: entries.count, badge: nil)
+                    ForEach(entries.prefix(5)) { entry in
+                        Button {
+                            playerIQName = entry.player
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(entry.player)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                Spacer(minLength: 8)
+                                if let pct = signedPercent(from: entry.medianRatio) {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: entry.medianRatio ?? 1.0 >= 1.0 ? "arrow.up" : "arrow.down")
+                                            .font(.caption2.weight(.bold))
+                                        Text(pct)
+                                            .font(.caption.weight(.bold))
+                                            .monospacedDigit()
+                                    }
+                                    .foregroundStyle(color)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func marketVolumeSection(
+        title: String,
+        entries: [DailyIQMarketVolumeEntry]
+    ) -> some View {
+        Group {
+            if entries.isEmpty == false {
+                VStack(alignment: .leading, spacing: 8) {
+                    marketSubsectionHeader(title: title, subtitle: nil, icon: "chart.bar.fill", color: HobbyIQTheme.Colors.electricBlue, count: entries.count, badge: nil)
+                    ForEach(entries.prefix(5)) { entry in
+                        Button {
+                            playerIQName = entry.player
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(entry.player)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                Spacer(minLength: 8)
+                                if let sales = entry.totalSales30d {
+                                    Text("\(sales.formatted(.number)) sales")
+                                        .font(.caption.weight(.bold))
+                                        .monospacedDigit()
+                                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func marketSupplySection(
+        title: String,
+        entries: [DailyIQMarketSupplyEntry]
+    ) -> some View {
+        Group {
+            if entries.isEmpty == false {
+                VStack(alignment: .leading, spacing: 8) {
+                    marketSubsectionHeader(
+                        title: title,
+                        subtitle: nil,
+                        icon: "arrow.triangle.merge",
+                        color: HobbyIQTheme.Colors.hobbyGreen,
+                        count: entries.count,
+                        badge: "LEADING"
+                    )
+                    ForEach(entries.prefix(5)) { entry in
+                        Button {
+                            playerIQName = entry.player
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text(entry.player)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                Spacer(minLength: 8)
+                                if let supplyText = supplyChangeText(from: entry.volumeRatio) {
+                                    Text(supplyText)
+                                        .font(.caption.weight(.bold))
+                                        .monospacedDigit()
+                                        .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private func marketSubsectionHeader(
+        title: String,
+        subtitle: String?,
+        icon: String,
+        color: Color,
+        count: Int,
+        badge: String?
+    ) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(color)
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            if let badge {
+                Text(badge)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                    .clipShape(Capsule())
+            }
+            if let subtitle {
+                Text("· \(subtitle)")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+            Spacer()
+            Text("\(count)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(color)
+        }
+    }
+
+    /// medianRatio (raw ratio centered on 1.0) → "+36%" / "-21%".
+    /// Returns nil on missing / flat (±1%) ratios so the pill hides.
+    private func signedPercent(from ratio: Double?) -> String? {
+        guard let ratio, ratio > 0 else { return nil }
+        let pct = (ratio - 1.0) * 100
+        guard abs(pct) >= 1.0 else { return nil }
+        let sign = pct >= 0 ? "+" : ""
+        return "\(sign)\(Int(pct.rounded()))%"
+    }
+
+    /// volumeRatio < 1.0 → supply drying up. Rendered as "supply -28%"
+    /// (negative percent of the shortfall). Values >= 1.0 suppress the
+    /// pill — Supply Squeeze rows are always drying supply.
+    private func supplyChangeText(from ratio: Double?) -> String? {
+        guard let ratio, ratio > 0, ratio < 1.0 else { return nil }
+        let pct = Int(((1.0 - ratio) * 100).rounded())
+        return "supply -\(pct)%"
+    }
+
+    /// "Week of Jun 22" subtitle parsed from latestWeekStart (ISO date).
+    private func marketSectionSubtitle(from isoDate: String?) -> String? {
+        guard let isoDate else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withFullDate]
+        guard let date = iso.date(from: isoDate) else { return nil }
+        let df = DateFormatter()
+        df.dateFormat = "MMM d"
+        return "Week of \(df.string(from: date))"
+    }
+
+    /// "Updated 6h ago" from an ISO8601 generatedAt timestamp.
+    private func marketUpdatedFooter(from generatedAt: String?) -> String? {
+        guard let generatedAt else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: generatedAt) ?? {
+            let plain = ISO8601DateFormatter()
+            plain.formatOptions = [.withInternetDateTime]
+            return plain.date(from: generatedAt)
+        }()
+        guard let date else { return nil }
+        let rf = RelativeDateTimeFormatter()
+        rf.unitsStyle = .abbreviated
+        return "Updated \(rf.localizedString(for: date, relativeTo: Date()))"
     }
 
     private func briefMoverSection(title: String, movers: [DailyBriefMover], color: Color, icon: String) -> some View {
@@ -611,6 +899,23 @@ struct DailyIQView: View {
             fullBrief = try await APIService.shared.fetchFullBrief()
         } catch {
             fullBrief = nil
+        }
+    }
+
+    /// CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): fetches matched-cohort
+    /// momentum lists once per tab visit. Session-scoped cache — the
+    /// backend job runs at most once per day so re-fetching on every
+    /// re-render is wasteful. Empty payload (generatedAt nil) is a
+    /// valid state, NOT an error.
+    private func loadMarketSignals() async {
+        guard marketSignals == nil else { return }
+        isLoadingMarketSignals = true
+        defer { isLoadingMarketSignals = false }
+
+        do {
+            marketSignals = try await APIService.shared.fetchMarketSignals()
+        } catch {
+            marketSignals = nil
         }
     }
 
