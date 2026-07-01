@@ -48,7 +48,7 @@ export interface PlayerMomentumSignal {
 
 /**
  * Full trend snapshot for a player — momentum + 30d cumulative volume +
- * supply-trend classification.
+ * supply-trend classification + optional matched-cohort momentum.
  * Callers of `getPlayerTrendSnapshot` receive this or null.
  */
 export interface PlayerTrendSnapshot {
@@ -65,10 +65,43 @@ export interface PlayerTrendSnapshot {
   supplyTrend: SupplyTrendClassification;
   /** Total sales count for this player over the last 30 days. */
   totalSales30d: number | null;
+  /**
+   * CF-MATCHED-COHORT-PLAYER-MOMENTUM (2026-07-01): mix-bias-free
+   * momentum derived from per-card ratios across cards that sold in
+   * BOTH the latest week AND the prior 4-week window. Present when a
+   * background job has populated the matched-cohort cache for this
+   * player within the last 48h; null otherwise. When present, this is
+   * the SUPERIOR signal to `momentum.momentumRatio` — downstream should
+   * prefer this ratio for pricing decisions and only fall back to the
+   * raw weekly average when null.
+   */
+  matchedCohort: PlayerMatchedCohortSummary | null;
   /** Provider that produced this snapshot (for telemetry + rollback). */
   providerName: string;
   /** Unix ms when the snapshot was captured. Nulls if provider doesn't stamp. */
   capturedAtMs: number;
+}
+
+/**
+ * Compact summary of matched-cohort momentum surfaced on the snapshot.
+ * Full detail (per-card ratios) is available in the cache; this shape
+ * is what runtime code needs.
+ */
+export interface PlayerMatchedCohortSummary {
+  /** Median of per-card ratios across the cohort. Primary signal. */
+  medianRatio: number;
+  /** Mean of per-card ratios. Kept for debugging + comparison. */
+  meanRatio: number;
+  /** How many cards contributed to the cohort. */
+  cohortSize: number;
+  /** How many cards had ≥1 sale in the latest week (superset of cohort). */
+  latestWeekActiveCards: number;
+  /** Latest week's Monday date. */
+  latestWeekStart: string;
+  /** How many prior weeks contributed to the "prior" comparison. */
+  priorWindowWeeksCount: number;
+  /** Unix ms when the matched-cohort was computed (cache hit time). */
+  computedAtMs: number;
 }
 
 export type SupplyTrendClassification =
