@@ -15,8 +15,10 @@ import {
 } from "../compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "./momentum.compute.js";
 import { classifySupplyTrend } from "./supplyTrend.classify.js";
+import { readMatchedCohortFromCache } from "./matchedCohortCache.js";
 import type {
   NormalizedWeeklySales,
+  PlayerMatchedCohortSummary,
   PlayerTrendProvider,
   PlayerTrendSnapshot,
 } from "./playerTrend.types.js";
@@ -31,9 +33,14 @@ export const cardHedgePlayerTrendProvider: PlayerTrendProvider = {
     weeksBack: number,
   ): Promise<PlayerTrendSnapshot | null> {
     if (!playerName || playerName.trim().length === 0) return null;
-    const [stats, totals] = await Promise.all([
+    // Kick off the raw-stats fetch + matched-cohort cache read in parallel.
+    // Matched-cohort is a background-populated cache; if it's empty for this
+    // player, we ship the snapshot with `matchedCohort: null` — downstream
+    // gracefully falls back to the raw signal.
+    const [stats, totals, cachedCohort] = await Promise.all([
       getSalesStatsByPlayer([playerName], "week"),
       getTotalSalesByPlayer([playerName]),
+      readMatchedCohortFromCache(playerName),
     ]);
 
     if (!stats) return null; // provider unavailable (missing key / network fail)
@@ -63,11 +70,25 @@ export const cardHedgePlayerTrendProvider: PlayerTrendProvider = {
     const totalSales30d =
       totals?.results?.find((r) => r.player === playerName)?.total_sales ?? null;
 
+    const matchedCohort: PlayerMatchedCohortSummary | null =
+      cachedCohort && cachedCohort.result.medianRatio !== null
+        ? {
+            medianRatio: cachedCohort.result.medianRatio,
+            meanRatio: cachedCohort.result.meanRatio ?? cachedCohort.result.medianRatio,
+            cohortSize: cachedCohort.result.cohort.length,
+            latestWeekActiveCards: cachedCohort.result.latestWeekActiveCards,
+            latestWeekStart: cachedCohort.result.latestWeekStart,
+            priorWindowWeeksCount: cachedCohort.result.priorWindowWeeksCount,
+            computedAtMs: cachedCohort.computedAtMs,
+          }
+        : null;
+
     return {
       player: playerName,
       momentum,
       supplyTrend,
       totalSales30d,
+      matchedCohort,
       providerName: PROVIDER_NAME,
       capturedAtMs: Date.now(),
     };

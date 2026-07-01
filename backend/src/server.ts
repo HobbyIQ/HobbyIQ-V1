@@ -8,6 +8,7 @@ import { startPriceAlertEvaluatorJob } from "./jobs/priceAlertEvaluator.job.js";
 import { startAdvancedAlertsEvaluatorJob } from "./services/advancedAlerts/ruleEvaluator.js";
 import { startEbayOrderPollJob } from "./jobs/ebayOrderPoll.job.js";
 import { startChDeltaPollJob } from "./jobs/chDeltaPoll.job.js";
+import { startMatchedCohortJob } from "./jobs/matchedCohortMomentum.job.js";
 import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.job.js";
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { startEbayFinancesEnrichmentJob } from "./jobs/ebayFinancesEnrichment.job.js";
@@ -89,6 +90,14 @@ app.listen(port, "0.0.0.0", () => {
     startChDeltaPollJob();
   } catch (err: any) {
     console.error("[server] startChDeltaPollJob failed:", err?.message ?? err);
+  }
+  // CF-MATCHED-COHORT-PLAYER-MOMENTUM (2026-07-01): nightly refresh of
+  // mix-bias-free per-player momentum. Gated by MATCHED_COHORT_JOB_ENABLED.
+  // No-op when off. Populates a Redis cache read by getPlayerTrendSnapshot.
+  try {
+    startMatchedCohortJob();
+  } catch (err: any) {
+    console.error("[server] startMatchedCohortJob failed:", err?.message ?? err);
   }
   // CF-PAYMENTS-APPLE-2 (2026-06-03): nightly subscription safety-net.
   // Catches App Store Server Notifications V2 events Apple failed to
