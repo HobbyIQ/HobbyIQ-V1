@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { getUserBySession } from "../services/authService.js";
 import { resolveCurrentPlayerAssignments } from "../services/dailyiq/milbBoxScoreService.js";
 import { fetchRecentForm, type RecentForm } from "../services/dailyiq/recentFormService.js";
+import { readMarketPlayersPayload } from "../services/dailyiq/marketPlayers.service.js";
 import { fetchTomorrowProbablePitchers, getTomorrowDateUTC, type TomorrowMatchup } from "../services/dailyiq/probablePitchersService.js";
 import {
   getAllWatchCounts,
@@ -1115,6 +1116,28 @@ const handleBriefRequest = async (req: Request, res: Response) => {
 // "/" is the iOS-visible alias. Both gated.
 router.get("/", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
 router.get("/brief", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
+
+// CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): market-facing player signals
+// derived from matched-cohort momentum + CH sales-stats-by-player.
+// Precomputed nightly by the matched-cohort background job (see
+// matchedCohortMomentum.job.ts). Response is cheap — single Redis GET.
+// Empty payload when the job hasn't run yet OR when the cache expired.
+router.get("/market/players", requireSession, requireEntitlement("dailyIQBriefs"), async (_req, res) => {
+  const payload = await readMarketPlayersPayload();
+  if (!payload) {
+    res.json({
+      success: true,
+      generatedAt: null,
+      trending: [],
+      fading: [],
+      topVolume30d: [],
+      supplyDryLeadingUp: [],
+      note: "Market signals not yet precomputed. First cycle populates within 24h of MATCHED_COHORT_JOB_ENABLED=true.",
+    });
+    return;
+  }
+  res.json({ success: true, ...payload });
+});
 
 router.get("/watchlist", requireSession, requireEntitlement("watchlist"), async (req, res) => {
   const userId = req.user!.userId;

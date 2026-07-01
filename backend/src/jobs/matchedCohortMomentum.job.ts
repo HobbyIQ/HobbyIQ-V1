@@ -25,6 +25,17 @@ import {
   listAllPortfolioUserIds,
   readUserDoc,
 } from "../services/portfolioiq/portfolioStore.service.js";
+import {
+  getSalesStatsByPlayer,
+  getTotalSalesByPlayer,
+} from "../services/compiq/cardhedge.client.js";
+import { computeMomentumFromNormalizedWeeks } from "../services/playerTrend/momentum.compute.js";
+import type { NormalizedWeeklySales } from "../services/playerTrend/playerTrend.types.js";
+import {
+  assembleMarketPlayersPayload,
+  writeMarketPlayersPayload,
+  type MarketPlayersJobInput,
+} from "../services/dailyiq/marketPlayers.service.js";
 
 const DEFAULT_INTERVAL_HOURS = 24;
 const DEFAULT_FIRST_DELAY_MS = 5 * 60 * 1000; // 5min after boot
@@ -106,6 +117,9 @@ async function runCycle(): Promise<void> {
   let succeeded = 0;
   let failed = 0;
   let cohortSizes = 0;
+  // Accumulators for the DailyIQ market-players precompute — populated
+  // alongside the per-player cache writes so we don't re-scan CH later.
+  const perPlayerCohorts: MarketPlayersJobInput["perPlayerCohorts"] = [];
   for (const player of players) {
     try {
       const result = await fetchCardHedgeMatchedCohort(player);
@@ -113,6 +127,20 @@ async function runCycle(): Promise<void> {
         await writeMatchedCohortToCache(player, result, PROVIDER_NAME);
         succeeded += 1;
         cohortSizes += result.cohort.length;
+        if (result.medianRatio !== null) {
+          perPlayerCohorts.push({
+            player,
+            cohort: {
+              medianRatio: result.medianRatio,
+              meanRatio: result.meanRatio ?? result.medianRatio,
+              cohortSize: result.cohort.length,
+              latestWeekActiveCards: result.latestWeekActiveCards,
+              latestWeekStart: result.latestWeekStart,
+              priorWindowWeeksCount: result.priorWindowWeeksCount,
+              computedAtMs: Date.now(),
+            },
+          });
+        }
       } else {
         failed += 1;
       }
@@ -125,6 +153,73 @@ async function runCycle(): Promise<void> {
     if (DEFAULT_PER_PLAYER_DELAY_MS > 0) {
       await new Promise((r) => setTimeout(r, DEFAULT_PER_PLAYER_DELAY_MS));
     }
+  }
+
+  // ── DailyIQ market-players precompute ───────────────────────────
+  // For every player that produced a cohort, ALSO grab their raw
+  // volume ratio + 30d total-sales so the assembled payload can
+  // classify supply_dry and rank by volume. Batched into a single
+  // getTotalSalesByPlayer call and per-player weekly stats.
+  const cohortPlayerNames = perPlayerCohorts.map((r) => r.player);
+  const perPlayerTotal30d: MarketPlayersJobInput["perPlayerTotal30d"] = [];
+  const perPlayerVolumeRatio: MarketPlayersJobInput["perPlayerVolumeRatio"] = [];
+  try {
+    const totals = cohortPlayerNames.length > 0
+      ? await getTotalSalesByPlayer(cohortPlayerNames)
+      : null;
+    for (const r of totals?.results ?? []) {
+      perPlayerTotal30d.push({ player: r.player, totalSales30d: r.total_sales });
+    }
+  } catch (err) {
+    console.warn(
+      `[matched-cohort] getTotalSalesByPlayer batch failed (non-fatal): ${(err as Error)?.message ?? err}`,
+    );
+  }
+  // Volume ratio requires the per-player weekly stats; done one-by-one
+  // since the endpoint returns per-player already, and this data is
+  // already cached from earlier /search calls in most cases.
+  for (const player of cohortPlayerNames) {
+    try {
+      const stats = await getSalesStatsByPlayer([player], "week");
+      const pr = stats?.results?.find((r) => r.player === player);
+      if (!pr) continue;
+      const buckets: NormalizedWeeklySales[] = (pr.buckets ?? [])
+        .filter((b) => !b.partial)
+        .map((b) => ({
+          weekStart: b.start,
+          weekEnd: b.end,
+          count: Number.isFinite(b.count) ? b.count : 0,
+          totalDollars: Number.isFinite(b.total_amount) ? b.total_amount : 0,
+          avgSale: Number.isFinite(b.average_sale) ? b.average_sale : 0,
+        }));
+      const momentum = computeMomentumFromNormalizedWeeks(buckets);
+      perPlayerVolumeRatio.push({ player, volumeRatio: momentum.volumeRatio });
+    } catch (err) {
+      // absorb; player is skipped from supply_dry classification only
+    }
+  }
+
+  try {
+    const payload = assembleMarketPlayersPayload({
+      perPlayerCohorts,
+      perPlayerTotal30d,
+      perPlayerVolumeRatio,
+    });
+    await writeMarketPlayersPayload(payload);
+    console.log(
+      JSON.stringify({
+        event: "market_players_payload_written",
+        source: "matched-cohort-job",
+        trending: payload.trending.length,
+        fading: payload.fading.length,
+        topVolume30d: payload.topVolume30d.length,
+        supplyDryLeadingUp: payload.supplyDryLeadingUp.length,
+      }),
+    );
+  } catch (err) {
+    console.warn(
+      `[matched-cohort] market-players precompute failed (non-fatal): ${(err as Error)?.message ?? err}`,
+    );
   }
 
   console.log(
