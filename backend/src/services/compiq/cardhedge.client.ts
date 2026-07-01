@@ -47,6 +47,16 @@ export interface CardHedgeCard {
   card_id: string;
   player?: string;
   set?: string;
+  /**
+   * CardHedge groups cards under a subset (e.g. "Base Set",
+   * "Prospect Autographs", "Chrome Prospect Autograph", "Prospect Retail
+   * Autograph"). Used by CF-CH-STRUCTURED-SEARCH-MERCY to distinguish
+   * auto SKUs from base parallels when the caller's identity specifies
+   * isAuto. The interface was previously missing this field despite CH
+   * always populating it — the mercy fallback saw them as unknown and
+   * picked base cards for auto queries.
+   */
+  subset?: string;
   year?: number | string;
   number?: string;
   variant?: string;
