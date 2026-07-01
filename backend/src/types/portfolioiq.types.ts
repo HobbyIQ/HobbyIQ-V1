@@ -142,10 +142,10 @@ export interface PortfolioHolding {
   // taxonomy. SUPPLEMENTARY aggregation FK alongside the existing
   // text grade fields (gradeCompany, gradeValue, certNumber,
   // certGrader); NOT a replacement. Holdings remain valid in any of:
-  //   - certNumber + certGrader + cardsightGradeId
+  //   - certNumber + certGrader + gradeId
   //   - certNumber + certGrader only (Cardsight doesn't cover the
   //     grader / type)
-  //   - gradeCompany + gradeValue + cardsightGradeId (text grade
+  //   - gradeCompany + gradeValue + gradeId (text grade
   //     matched to taxonomy)
   //   - gradeCompany + gradeValue only (text grade only, no
   //     Cardsight match — including manual ungradeable entries)
@@ -158,7 +158,7 @@ export interface PortfolioHolding {
   // Per InventoryIQ design Section 2.3 R2; per CF-CARDSIGHT-GRADES-
   // ENDPOINT-EVAL (006176d) Finding 2 GREEN. Same posture as R1
   // (cardId) -- additive, backward-compatible, no migration.
-  cardsightGradeId?: string | null;
+  gradeId?: string | null;
 
   // CF-GRADED-RAIL-WIRE-IN (2026-06-14): pinned-parallel Cardsight UUID
   // for a parallel holding (e.g. Leo Blue Refractor /150 → parallelId

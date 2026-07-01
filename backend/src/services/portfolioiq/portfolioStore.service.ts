@@ -241,8 +241,13 @@ function normalizeHoldingCatalogId(holding: Record<string, unknown> | undefined)
   if (holding.cardId == null && typeof holding.cardsightCardId === "string") {
     holding.cardId = holding.cardsightCardId;
   }
-  // Don't delete legacy field here — preserve it through the read so a
-  // single deploy can be rolled back without losing data; the field is
+  // CF-GRADEID-RENAME (2026-06-30): companion hoist of legacy
+  // cardsightGradeId → gradeId on the same data-boundary pass.
+  if (holding.gradeId == null && typeof holding.cardsightGradeId === "string") {
+    holding.gradeId = holding.cardsightGradeId;
+  }
+  // Don't delete legacy fields here — preserve them through the read so a
+  // single deploy can be rolled back without losing data; the fields are
   // dropped at write time by writeUserDoc-side normalization.
 }
 
@@ -1286,7 +1291,7 @@ function normalizeR1CardsightCardId<T extends { cardId?: string | null }>(
 }
 
 // CF-CARDSIGHT-GRADE-ID-PATTERN R2. Opportunistically populates
-// `cardsightGradeId` on the holding by resolving (gradeCompany,
+// `gradeId` on the holding by resolving (gradeCompany,
 // gradeValue, isAuto) against Cardsight's grades taxonomy.
 //
 // Additive complementary per the R2 design -- on resolver miss the
@@ -1311,7 +1316,7 @@ async function populateCardsightGradeId<T extends PortfolioHolding>(
   );
 
   if (resolved) {
-    return { ...holding, cardsightGradeId: resolved };
+    return { ...holding, gradeId: resolved };
   }
   return holding;
 }

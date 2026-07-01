@@ -1,4 +1,4 @@
-// CF-CARDSIGHT-GRADE-ID-PATTERN -- PortfolioHolding cardsightGradeId
+// CF-CARDSIGHT-GRADE-ID-PATTERN -- PortfolioHolding gradeId
 // round-trip integration tests.
 //
 // Mirrors the W4 cert-fields + R1 cardId test patterns at
@@ -6,7 +6,7 @@
 // portfolioHoldingR1CardsightCardId.test.ts (bf836c0). Verifies the
 // additive R2 field shipped by this CF:
 //
-//   POST /api/portfolio/holdings -> resolver populates cardsightGradeId
+//   POST /api/portfolio/holdings -> resolver populates gradeId
 //     when (gradeCompany, gradeValue, isAuto) matches Cardsight taxonomy
 //   GET /api/portfolio/holdings/:id -> field surfaces in response
 //   PATCH -> field re-resolves
@@ -94,7 +94,7 @@ async function signIn(): Promise<string> {
   return response.body.sessionId as string;
 }
 
-describe("PortfolioHolding cardsightGradeId field (R2)", () => {
+describe("PortfolioHolding gradeId field (R2)", () => {
   it("addHolding -- PSA 10 Card resolves to gradeId UUID via resolver", async () => {
     const session = await signIn();
     const holdingId = `r2-psa10-${Date.now()}`;
@@ -118,7 +118,7 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightGradeId).toBe(PSA_10_GRADE_UUID);
+    expect(get.body.gradeId).toBe(PSA_10_GRADE_UUID);
   });
 
   it("addHolding -- gradingCompany (legacy field name) is honored by the resolver coalesce", async () => {
@@ -144,7 +144,7 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightGradeId).toBe(PSA_9_GRADE_UUID);
+    expect(get.body.gradeId).toBe(PSA_9_GRADE_UUID);
   });
 
   it("addHolding -- unknown grader returns no gradeId; field stays unset", async () => {
@@ -172,10 +172,10 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
     expect(get.status).toBe(200);
     // Field is either undefined or null -- both signal "not populated"
     // and are permanent valid states per the additive R2 design.
-    expect(get.body.cardsightGradeId == null).toBe(true);
+    expect(get.body.gradeId == null).toBe(true);
   });
 
-  it("addHolding -- ungraded holding (no grade fields) leaves cardsightGradeId unset", async () => {
+  it("addHolding -- ungraded holding (no grade fields) leaves gradeId unset", async () => {
     const session = await signIn();
     const holdingId = `r2-ungraded-${Date.now()}`;
 
@@ -196,10 +196,10 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
     expect(get.status).toBe(200);
-    expect(get.body.cardsightGradeId == null).toBe(true);
+    expect(get.body.gradeId == null).toBe(true);
   });
 
-  it("updateHolding -- changing grade re-resolves cardsightGradeId", async () => {
+  it("updateHolding -- changing grade re-resolves gradeId", async () => {
     const session = await signIn();
     const holdingId = `r2-update-${Date.now()}`;
 
@@ -222,7 +222,7 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
     let get = await request(app)
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
-    expect(get.body.cardsightGradeId).toBe(PSA_10_GRADE_UUID);
+    expect(get.body.gradeId).toBe(PSA_10_GRADE_UUID);
 
     // PATCH: PSA 9 -> resolver fires again
     const patch = await request(app)
@@ -234,6 +234,6 @@ describe("PortfolioHolding cardsightGradeId field (R2)", () => {
     get = await request(app)
       .get(`/api/portfolio/holdings/${holdingId}`)
       .set("x-session-id", session);
-    expect(get.body.cardsightGradeId).toBe(PSA_9_GRADE_UUID);
+    expect(get.body.gradeId).toBe(PSA_9_GRADE_UUID);
   });
 });

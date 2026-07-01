@@ -147,7 +147,7 @@ export interface PortfolioHoldingWire {
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
   // Cardsight FK
   cardId?: string | null;
-  cardsightGradeId?: string | null;
+  gradeId?: string | null;
   // Cached pipeline (10)
   fairMarketValue: number | null;
   predictedPrice: number | null;
@@ -335,7 +335,7 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     certGrader: holding.certGrader,
     // Cardsight FK
     cardId: holding.cardId,
-    cardsightGradeId: holding.cardsightGradeId,
+    gradeId: holding.gradeId,
     // Cached pipeline (10)
     fairMarketValue: fmvPerUnit,
     predictedPrice: holding.predictedPrice ?? null,

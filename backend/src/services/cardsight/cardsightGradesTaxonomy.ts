@@ -13,7 +13,7 @@
 //
 // R2 pattern per InventoryIQ design (06a5d4e) Section 2.3 + per
 // CF-CARDSIGHT-GRADES-ENDPOINT-EVAL (006176d) Finding 2 GREEN:
-// `cardsightGradeId` is a SUPPLEMENTARY aggregation FK on
+// `gradeId` is a SUPPLEMENTARY aggregation FK on
 // PortfolioHolding alongside existing text grade fields. Null is a
 // permanent valid state. Resolver returns null on every miss path
 // (unknown grader, unknown type, unknown grade value, network failure,

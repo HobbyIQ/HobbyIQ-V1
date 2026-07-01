@@ -53,7 +53,7 @@ export const EXPORT_COLUMNS: ReadonlyArray<ExportColumn> = [
   // ─── Stable identity (round-trip anchor) ───────────────────────────────
   { header: "holdingId",            key: "id",                  group: "identity" },
   { header: "cardId",      key: "cardId",     group: "identity" },
-  { header: "cardsightGradeId",     key: "cardsightGradeId",    group: "identity" },
+  { header: "gradeId",     key: "gradeId",    group: "identity" },
   // ─── Card identity (user-editable; resolver fallback) ──────────────────
   { header: "playerName",           key: "playerName",          group: "identity-edit" },
   { header: "cardYear",             key: "cardYear",            group: "identity-edit" },
