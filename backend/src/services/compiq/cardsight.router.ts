@@ -300,28 +300,73 @@ function isMercyEnabled(): boolean {
 }
 
 /**
- * Structured-search mercy fallback. Only fires when identity has both
- * playerName and parallel. Returns a card_id + synthetic confidence
- * (0.75 — below the AI matcher's 0.80 threshold but above zero) or null.
+ * CF-MERCY-BASE-AUTO-NO-PARALLEL (2026-07-01): pick the "Base Auto" card
+ * from a CH search result set. Fires when the user's query indicates an
+ * autographed card without specifying any color/variant parallel — e.g.
+ * "2026 Bowman Jared Jones Base Auto" (CH indexes this as subset
+ * "Chrome Prospects Autographs", variant "Base", number CPA-JJ).
+ *
+ * Filters cards to: subset contains "auto" (case-insensitive) AND
+ * variant equals "base" (case-insensitive). Returns exactly one card
+ * when the filter narrows to a single match; null when zero or
+ * multiple.
+ */
+export function pickBaseAuto(cards: CardHedgeCard[]): CardHedgeCard | null {
+  const matches = cards.filter((c) => {
+    const subsetLc = (c.subset ?? "").toLowerCase();
+    const variantLc = (c.variant ?? "").toLowerCase();
+    return subsetLc.includes("auto") && variantLc === "base";
+  });
+  if (matches.length !== 1) return null;
+  return matches[0];
+}
+
+/**
+ * Structured-search mercy fallback. Fires in two modes:
+ *
+ * 1. Parallel-specified: identity has playerName + parallel → search CH
+ *    by player + parallel, pickBestByParallel to disambiguate variants.
+ * 2. Base-auto: identity has playerName + isAuto (parallel null) →
+ *    search CH by player, pickBaseAuto to grab the base auto card. Added
+ *    2026-07-01 after Jared Jones Base Auto case surfaced a gap.
+ *
+ * Returns card_id + synthetic confidence (0.75 — below AI matcher's
+ * 0.80 threshold but above zero) or null.
  */
 async function structuredMercyFallback(
   identity: CardIdentityHint,
 ): Promise<{ chCardId: string; confidence: number } | null> {
   if (!isMercyEnabled()) return null;
-  if (!identity.playerName || !identity.parallel) return null;
+  if (!identity.playerName) return null;
+  // Must have EITHER a parallel to disambiguate OR isAuto=true (base auto).
+  if (!identity.parallel && !identity.isAuto) return null;
 
-  const searchQuery = `${identity.playerName} ${identity.parallel}`.trim();
   try {
-    const results = await chSearchCards(searchQuery, 10, { player: identity.playerName });
-    if (!results.length) return null;
-    const rescued = pickBestByParallel(results, identity.parallel, { isAuto: identity.isAuto });
-    if (!rescued) return null;
-    return { chCardId: rescued.card_id, confidence: 0.75 };
+    if (identity.parallel) {
+      // Path 1 — parallel-specified rescue (original behavior).
+      const searchQuery = `${identity.playerName} ${identity.parallel}`.trim();
+      const results = await chSearchCards(searchQuery, 10, { player: identity.playerName });
+      if (!results.length) return null;
+      const rescued = pickBestByParallel(results, identity.parallel, { isAuto: identity.isAuto });
+      if (!rescued) return null;
+      return { chCardId: rescued.card_id, confidence: 0.75 };
+    } else {
+      // Path 2 — base-auto rescue (CF-MERCY-BASE-AUTO-NO-PARALLEL).
+      // Include an auto-tokened search query to bias CH's ranker; then
+      // narrow to the base auto via subset+variant filter.
+      const searchQuery = `${identity.playerName} auto`.trim();
+      const results = await chSearchCards(searchQuery, 20, { player: identity.playerName });
+      if (!results.length) return null;
+      const rescued = pickBaseAuto(results);
+      if (!rescued) return null;
+      return { chCardId: rescued.card_id, confidence: 0.75 };
+    }
   } catch (err) {
     log.warn("router.mercy_fallback_error", {
       error: err instanceof Error ? err.message : String(err),
       player: identity.playerName,
       parallel: identity.parallel,
+      isAuto: identity.isAuto,
     });
     return null;
   }
