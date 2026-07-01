@@ -38,12 +38,6 @@ struct DailyIQView: View {
             VStack(spacing: 16) {
                 heroCard
 
-                if isSyncingWatchlist {
-                    backendStatusBanner(
-                        title: "Updating watchlist…",
-                        message: "Pushing the change to the backend and refreshing DailyIQ."
-                    )
-                }
                 if let message = service.errorMessage {
                     backendStatusBanner(
                         title: "DailyIQ sync issue",
@@ -75,7 +69,12 @@ struct DailyIQView: View {
                         showUpgradePaywall = true
                     }
 
-                watchlistCard
+                // CF-DAILYIQ-DROP-WATCHLIST (2026-07-01): Watchlist +
+                // Top Watched + Suggestions removed from DailyIQ.
+                // `watchlistCard` view + helper methods retained as
+                // dead code below to keep the diff surgical — a
+                // follow-up cleanup CF can delete them once we've
+                // confirmed no other surface calls them.
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
             .padding(.top, 8)
@@ -85,7 +84,6 @@ struct DailyIQView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             await refreshDailyIQ(for: nil)
-            await loadTopAndSuggest()
             await loadFullBrief()
             await loadMarketSignals()
         }
@@ -139,12 +137,11 @@ struct DailyIQView: View {
                     .clipShape(Capsule(style: .continuous))
             }
 
-            // CF-DAILYIQ-TREND-FIRST (2026-07-01): count line now
-            // surfaces trend-relevant totals only. MLB / MiLB counts
-            // dropped with the player-stats segments.
-            Text(heroSubtitleText)
-                .font(.caption)
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            // CF-DAILYIQ-DROP-WATCHLIST (2026-07-01): hero count line
+            // removed. The trend-first subtitle above ("Daily market
+            // movers & momentum signals") is now the only descriptor —
+            // player watching total would read as an orphan metric
+            // now that the watchlist section is gone.
         }
         .padding(HobbyIQTheme.Spacing.medium)
         .padding(.vertical, 4)
