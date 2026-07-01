@@ -1081,6 +1081,14 @@ struct CompIQPricedCardView: View {
                     }
                     .padding(.top, 2)
                 }
+
+                // CF-IOS-COMPIQ-PREDICTED-PRICE (2026-07-01): "Predicted
+                // Next Price" companion line beneath the FMV headline.
+                // Powered by `response.predictedPrice` +
+                // `predictedPriceAttribution.trendIQDirection`. Self-
+                // suppresses when the backend didn't return a prediction;
+                // never renders $0 for null.
+                predictedNextPriceRow(response)
             }
             .frame(maxWidth: .infinity)
 
@@ -1108,6 +1116,73 @@ struct CompIQPricedCardView: View {
             }
         }
         .hiqHeroCard()
+    }
+
+    // MARK: - Predicted Next Price (CF-IOS-COMPIQ-PREDICTED-PRICE, 2026-07-01)
+
+    /// Compact companion row beneath the FMV headline. Renders the
+    /// backend's `predictedPrice` with a directional arrow (green ▲ /
+    /// red ▼ from `predictedPriceAttribution.trendIQDirection`, or a
+    /// vs-FMV comparison fallback) and an optional `low – high` range
+    /// subtitle. Self-suppresses on nil / zero prediction so the fmvCard
+    /// stays visually clean for holdings the engine can't predict.
+    @ViewBuilder
+    private func predictedNextPriceRow(_ response: CompIQPriceByIdResponse) -> some View {
+        if let predicted = response.predictedPrice, predicted > 0 {
+            let direction = resolvePredictedDirection(response)
+            let indicator = directionIndicator(direction)
+            VStack(spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("PREDICTED NEXT")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(0.8)
+                    Text(predicted.formatted(.currency(code: "USD")))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let indicator {
+                        Image(systemName: indicator.icon)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(indicator.tint)
+                    }
+                }
+                if let range = response.predictedPriceRange,
+                   let low = range.low, low > 0,
+                   let high = range.high, high > 0 {
+                    Text("\(low.formatted(.currency(code: "USD"))) – \(high.formatted(.currency(code: "USD")))")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    /// Prefers the backend's explicit `trendIQDirection` when present,
+    /// falls back to comparing `predictedPrice` against `marketTier.value`
+    /// with a ±1% dead-band so tiny movements read as flat.
+    private func resolvePredictedDirection(_ response: CompIQPriceByIdResponse) -> String? {
+        if let raw = response.predictedPriceAttribution?.trendIQDirection?.lowercased(),
+           raw.isEmpty == false {
+            return raw
+        }
+        guard let predicted = response.predictedPrice,
+              let fmv = response.marketTier?.value, fmv > 0 else {
+            return nil
+        }
+        if predicted > fmv * 1.01 { return "up" }
+        if predicted < fmv * 0.99 { return "down" }
+        return "flat"
+    }
+
+    /// Direction → (SF Symbol, tint) tuple. `flat` and nil suppress the
+    /// arrow so a flat prediction reads as a naked value + range.
+    private func directionIndicator(_ direction: String?) -> (icon: String, tint: Color)? {
+        switch direction {
+        case "up":   return ("arrow.up", HobbyIQTheme.Colors.successGreen)
+        case "down": return ("arrow.down", AppColors.danger)
+        default:     return nil
+        }
     }
 
     private func priceTileBlock(label: String, value: String, icon: String, tint: Color) -> some View {

@@ -147,6 +147,16 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     // (per-card detail / list / grid chips + Movement modal + portfolio
     // pulse card + CompIQ Market Analysis group). Wire keys silently
     // ignored on decode (Codable init uses `try?` for every field).
+    //
+    // TODO(CF-INVENTORY-PREDICTED-PRICE, 2026-07-01): backend re-added
+    // `predictedPrice` + `fairMarketValueLive` on /api/compiq/search
+    // (matched-cohort momentum infrastructure), but the PortfolioHolding
+    // wire shape still doesn't emit these fields on GET /api/portfolio.
+    // CompIQ page renders Predicted Next Price today
+    // (CompIQPricedCardView, CF-IOS-COMPIQ-PREDICTED-PRICE); the
+    // inventory row + detail sheet are DEFERRED until the holding wire
+    // shape carries `predictedPrice` and `fairMarketValueLive`. Do NOT
+    // re-add fields here without a matching backend wire-shape CF.
 
     // Anchor field (already persisted backend-side)
     let fairMarketValue: Double?
