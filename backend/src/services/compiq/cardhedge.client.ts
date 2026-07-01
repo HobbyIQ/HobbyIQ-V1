@@ -1330,6 +1330,22 @@ export interface CardHedgeTrustedComps {
 const BLOB_REJECT_THRESHOLD = 0.1;   // <10% titles match either token → blob
 const TRUST_ACCEPT_THRESHOLD = 0.8;  // ≥80% titles match BOTH tokens → trust
 
+/**
+ * CF-CH-TRUST-WINDOW-90 (2026-07-01): default trust window widened from
+ * hardcoded 30d to 90d. Prod App Insights showed 32 no_real_data
+ * rejections in 6h all against GOAT-tier / low-turnover cards (Mike
+ * Trout 2009 BC auto, Griffey 1989 UD, Franco 2019 BDC, Acuna 2017
+ * Bowman) — direct CH probes confirmed ≥1 sale in 90d window but zero
+ * in 30d. Widening restores trust for cards that CH has real data on
+ * but that turn over infrequently. Env-tunable via CH_TRUST_WINDOW_DAYS
+ * (rollback: set to "30"). Recency signal preserved: only the trust
+ * gate widens; aggregate daily-series computation is unaffected.
+ */
+export function resolveTrustWindowDays(): number {
+  const raw = Number(process.env.CH_TRUST_WINDOW_DAYS);
+  return Number.isFinite(raw) && raw > 0 ? raw : 90;
+}
+
 function median(prices: number[]): number | null {
   if (!prices.length) return null;
   const s = prices.slice().sort((a, b) => a - b);
@@ -1425,7 +1441,7 @@ export async function getTrustedComps(
 
   if (!cardId) return empty("no_real_data");
 
-  const series = await getPricesByCard(cardId, grade, 30);
+  const series = await getPricesByCard(cardId, grade, resolveTrustWindowDays());
   if (series.length === 0) {
     return empty("no_real_data");
   }
