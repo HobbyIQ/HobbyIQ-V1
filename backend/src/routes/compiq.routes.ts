@@ -1675,6 +1675,29 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 // ---------------------------------------------------------------------------
 
 // CF-PAYMENTS-B1: standalone FMV user-initiated check.
+// CF-COMPIQ-PER-GRADE-BREAKDOWN (2026-07-01): return per-grade comp
+// breakdown for a card. iOS renders as a grade picker on the card
+// detail — user sees live comps for grades that have them + projected
+// prices for grades that don't. See services/compiq/perGradeBreakdown.
+router.post("/card-grades", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId, cardYear, isAutograph } = req.body || {};
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId" field' });
+    }
+    const { computeCardGradesBreakdown } = await import(
+      "../services/compiq/perGradeBreakdown.service.js"
+    );
+    const result = await computeCardGradesBreakdown(cardId.trim(), {
+      cardYear: typeof cardYear === "number" ? cardYear : null,
+      isAutograph: typeof isAutograph === "boolean" ? isAutograph : false,
+    });
+    res.json(result);
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
