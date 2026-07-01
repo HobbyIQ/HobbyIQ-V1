@@ -105,6 +105,42 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     [/pink\s+wave/i, "Pink Wave"],
     [/atomic\s+refractor/i, "Atomic Refractor"],
     [/superfractor/i, "Superfractor"],
+    // CF-CARDQUERY-PARSER-PARALLEL-EXPANSION (2026-07-01): parallels/products
+    // that were leaking into playerName via App Insights probe. The 5-item
+    // audit showed 10.9% of parsed queries had product/parallel tokens
+    // contaminating the extracted player name — worst case was "Sapphire
+    // Ethan Conrad", which caused the engine to price a real card at $9
+    // when weekly sales averaged $62.50 (phantom-aggregation from wrong
+    // candidate pool). Adding these entries strips the tokens as first-
+    // class parallels — semantically correct AND clean-player fix.
+    // Multi-word variants (Blue Raywave, Red Lava) precede singles so
+    // downstream keeps the color info.
+    //
+    // Raywave — Bowman Chrome color-refractor sub-family.
+    [/blue\s+raywave/i, "Blue Raywave"],
+    [/green\s+raywave/i, "Green Raywave"],
+    [/red\s+raywave/i, "Red Raywave"],
+    [/purple\s+raywave/i, "Purple Raywave"],
+    [/orange\s+raywave/i, "Orange Raywave"],
+    [/pink\s+raywave/i, "Pink Raywave"],
+    [/raywave/i, "Raywave"],
+    // Lava — Bowman Draft Chrome color-refractor sub-family.
+    [/red\s+lava/i, "Red Lava"],
+    [/blue\s+lava/i, "Blue Lava"],
+    [/gold\s+lava/i, "Gold Lava"],
+    [/green\s+lava/i, "Green Lava"],
+    [/purple\s+lava/i, "Purple Lava"],
+    [/orange\s+lava/i, "Orange Lava"],
+    [/lava/i, "Lava"],
+    // X-Fractor — Bowman Chrome specialty. Hyphen / no-hyphen / space all
+    // observed in the wild.
+    [/x[-\s]?fractor/i, "X-Fractor"],
+    // Bowman Sapphire — product tier, not strictly a parallel, but treated
+    // as one for query-disambiguation purposes (CH catalog indexes it by
+    // "Sapphire" as an attribute).
+    [/sapphire/i, "Sapphire"],
+    // Topps Transcendent — product tier, same reasoning as Sapphire.
+    [/transcendent/i, "Transcendent"],
     [/gold\s+refractor/i, "Gold Refractor"],
     [/red\s+refractor/i, "Red Refractor"],
     [/blue\s+refractor/i, "Blue Refractor"],
@@ -231,6 +267,13 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     // "Drake Baldwin 2025 Bowman Chrome Image Variation" → playerName
     // "Drake Baldwin Image" pre-fix → CardHedge player filter mismatched).
     "image",
+    // CF-CARDQUERY-PARSER-PARALLEL-EXPANSION (2026-07-01): these are ALSO
+    // added to PARALLEL_PATTERNS above. The pattern-based strip at
+    // `remaining.replace(escapeRegex(parallel), ...)` uses the canonical
+    // pattern name — "Xfractor" (no hyphen) in user input can't be
+    // stripped by canonical "X-Fractor" (with hyphen). NOISE catches
+    // the raw text regardless of the parallel field.
+    "sapphire", "transcendent", "xfractor", "raywave", "lava",
   ];
   for (const noise of NOISE) {
     remaining = remaining.replace(new RegExp(`\\b${noise}\\b`, "gi"), " ");
