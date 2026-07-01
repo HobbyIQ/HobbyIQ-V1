@@ -9,7 +9,6 @@ import SwiftUI
 struct DailyIQView: View {
     private let userId: String
     @ObservedObject private var service: DailyIQService
-    @State private var selectedSegment: DailySegment = .watchlist
     @State private var selectedDate: Date
     @State private var watchlistQuery = ""
     @State private var trackedWatchlist: [DailyWatchlistEntry] = []
@@ -53,39 +52,13 @@ struct DailyIQView: View {
                     )
                 }
 
-                segmentControl
-
-                switch selectedSegment {
-                case .milb:
-                    backendPlayersCard(
-                        title: "MiLB Daily Prospect Brief",
-                        subtitle: "Top MiLB performers for the day",
-                        players: milbPlayers
-                    )
-                case .mlb:
-                    backendPlayersCard(
-                        title: "MLB Daily Brief",
-                        subtitle: "Top MLB performers for the day",
-                        players: mlbPlayers
-                    )
-                case .watchlist:
-                    watchlistCard
-                case .brief:
-                    briefCard
-                        .lockedOverlay(
-                            feature: GatedFeature.dailyIQBriefs,
-                            subscriptionManager: sessionViewModel.subscriptionManager
-                        ) {
-                            showUpgradePaywall = true
-                        }
-                }
-
-                // CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): Market Signals
-                // is a top-level tab-scoped section — always visible on
-                // DailyIQ regardless of which player-stats segment is
-                // selected. Investor-gated via `dailyIQBriefs` so
-                // non-Investor users see the same paywall stub as
-                // briefCard.
+                // CF-DAILYIQ-TREND-FIRST (2026-07-01): Rebuilt DailyIQ as a
+                // trend-first newsfeed. Player-stats segments (MLB / MiLB
+                // box scores) removed; Market Signals + card movers +
+                // watchlist stack in one scroll. Investor-tier gate on
+                // Market Signals + Card Movers matches the prior briefCard
+                // gate (both surface the same `dailyIQBriefs` content
+                // category).
                 marketSignalsSection
                     .lockedOverlay(
                         feature: GatedFeature.dailyIQBriefs,
@@ -93,6 +66,16 @@ struct DailyIQView: View {
                     ) {
                         showUpgradePaywall = true
                     }
+
+                cardMoversSection
+                    .lockedOverlay(
+                        feature: GatedFeature.dailyIQBriefs,
+                        subscriptionManager: sessionViewModel.subscriptionManager
+                    ) {
+                        showUpgradePaywall = true
+                    }
+
+                watchlistCard
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
             .padding(.top, 8)
@@ -103,6 +86,7 @@ struct DailyIQView: View {
         .task {
             await refreshDailyIQ(for: nil)
             await loadTopAndSuggest()
+            await loadFullBrief()
             await loadMarketSignals()
         }
         .onChange(of: selectedDate) { _, newValue in
@@ -134,7 +118,7 @@ struct DailyIQView: View {
                         .font(HobbyIQTheme.Typography.title)
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                    Text("Daily player performance & hobby \(Labels.signals)")
+                    Text("Daily market movers & momentum \(Labels.signals)")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
@@ -155,9 +139,10 @@ struct DailyIQView: View {
                     .clipShape(Capsule(style: .continuous))
             }
 
-            // Single calm count line — replaces the bordered sub-card with
-            // big colored zeros AND the redundant second date display.
-            Text("\(milbPlayers.count) MiLB · \(mlbPlayers.count) MLB · \(trackedWatchlist.count) watching")
+            // CF-DAILYIQ-TREND-FIRST (2026-07-01): count line now
+            // surfaces trend-relevant totals only. MLB / MiLB counts
+            // dropped with the player-stats segments.
+            Text(heroSubtitleText)
                 .font(.caption)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
         }
@@ -172,39 +157,12 @@ struct DailyIQView: View {
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.1), radius: 20, x: 0, y: 10)
     }
 
-    private var segmentControl: some View {
-        HStack(spacing: 6) {
-            ForEach(DailySegment.allCases) { segment in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedSegment = segment
-                    }
-                } label: {
-                    Text(segment.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(selectedSegment == segment ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background {
-                            if selectedSegment == segment {
-                                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.pill, style: .continuous)
-                                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.2))
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(HobbyIQTheme.Colors.cardNavy)
-        .overlay(
-            Capsule(style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(Capsule(style: .continuous))
-    }
+    // CF-DAILYIQ-TREND-FIRST (2026-07-01): segmentControl removed. The
+    // Watchlist / MLB / MiLB / Brief tabs are gone; DailyIQ now renders
+    // Market Signals + Card Movers + Watchlist as a single trend-first
+    // scroll. See body for the new layout.
 
-    private var watchlistCard: some View {
+private var watchlistCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Search + Add bar
             HStack(spacing: 10) {
@@ -395,113 +353,64 @@ struct DailyIQView: View {
         }
     }
 
-    private func backendPlayersCard(
-        title: String,
-        subtitle: String,
-        players: [DailyPlayerStat]
-    ) -> some View {
+    // MARK: - Card Movers (formerly briefCard, CF-DAILYIQ-TREND-FIRST 2026-07-01)
+
+    /// CF-DAILYIQ-TREND-FIRST (2026-07-01): the card-level movers block
+    /// hoisted out of the retired `briefCard`. Section header + freshness
+    /// pill + Risers / Fallers / Breakouts + graceful empty state. Fetch
+    /// (`loadFullBrief`) is now driven by the top-level `.task` alongside
+    /// the other DailyIQ loads.
+    private var cardMoversSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                Text(subtitle)
-                    .font(.caption)
+            HStack(spacing: 6) {
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("CARD MOVERS")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if service.isLoading && players.isEmpty {
-                VStack(spacing: 10) {
-                    ProgressView()
-                        .tint(HobbyIQTheme.Colors.electricBlue)
-                    Text("Loading…")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else if players.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "person.3")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Text("No data available yet.")
-                        .font(.subheadline)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 10) {
-                    ForEach(players.prefix(50)) { stat in
-                        Button {
-                            playerIQName = stat.playerName
-                        } label: {
-                            DailyPlayerStatRow(
-                                stat: stat,
-                                isTracked: watchedPlayerNames.contains(stat.playerName),
-                                onToggleWatch: { _ = Task { await toggleWatch(for: stat) } }
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    .tracking(0.6)
+                Spacer()
+                if let freshness = fullBrief?.meta?.dataFreshness {
+                    Text(freshness)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Capsule())
                 }
             }
-        }
-    }
+            .padding(.top, 4)
 
-    // MARK: - Brief Tab (gated investor+)
-
-    private var briefCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if isLoadingBrief {
+            if isLoadingBrief && fullBrief == nil {
                 HStack(spacing: 10) {
                     ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
-                    Text("Loading brief…")
-                        .font(.subheadline)
+                    Text("Loading movers…")
+                        .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     Spacer()
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 10)
             } else if let brief = fullBrief {
-                if let meta = brief.meta {
-                    HStack(spacing: 6) {
-                        if let gen = meta.generatedAt {
-                            Text("Generated: \(gen)")
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        }
-                        Spacer()
-                        if let freshness = meta.dataFreshness {
-                            Text(freshness)
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-
                 briefMoverSection(title: "Risers", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
                 briefMoverSection(title: "Fallers", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
                 briefMoverSection(title: "Breakouts", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
             } else {
-                VStack(spacing: 8) {
+                HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "newspaper")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    Text("No brief data available yet.")
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Text("No mover data available yet.")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer(minLength: 0)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
+                .padding(10)
+                .background(HobbyIQTheme.Colors.mutedText.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
-        .task { await loadFullBrief() }
     }
 
     // MARK: - Market Signals (CF-DAILYIQ-MARKET-PLAYERS, 2026-07-01)
@@ -931,6 +840,15 @@ struct DailyIQView: View {
         }
     }
 
+    // CF-DAILYIQ-TREND-FIRST (2026-07-01): milbPlayers / mlbPlayers /
+    // currentPlayers retained as internal utilities. Not rendered on
+    // the DailyIQ tab anymore (the MLB / MiLB segments were removed);
+    // still used by `addWatchlistEntry(from:)` +
+    // `watchlistMutationMetadata(for:)` to enrich a name-only watch
+    // add with team / level / position when the user's date already
+    // has the player's box-score row in memory. Data continues to
+    // populate via `refreshDailyIQ` which hits the same /api/dailyiq
+    // endpoint the watchlist flow already needs.
     private var milbPlayers: [DailyPlayerStat] {
         Array(service.brief?.topMiLB.prefix(50) ?? [])
     }
@@ -941,6 +859,15 @@ struct DailyIQView: View {
 
     private var currentPlayers: [DailyPlayerStat] {
         milbPlayers + mlbPlayers
+    }
+
+    /// CF-DAILYIQ-TREND-FIRST (2026-07-01): hero card subtitle. With
+    /// player-stats segments retired, the count line now surfaces just
+    /// the watching total. Kept the count line rather than deleting so
+    /// the hero doesn't visually collapse.
+    private var heroSubtitleText: String {
+        let count = trackedWatchlist.count
+        return count == 1 ? "1 player on your watchlist" : "\(count) players on your watchlist"
     }
 
     private func backendStatusBanner(title: String, message: String, systemImage: String = "arrow.triangle.2.circlepath") -> some View {
@@ -1198,15 +1125,8 @@ private struct FlowChipsView<Item: Hashable>: View {
     }
 }
 
-private enum DailySegment: String, CaseIterable, Identifiable {
-    case milb = "MiLB"
-    case mlb = "MLB"
-    case watchlist = "Watchlist"
-    case brief = "Brief"
-
-    var id: String { rawValue }
-    var title: String { rawValue }
-}
+// CF-DAILYIQ-TREND-FIRST (2026-07-01): DailySegment enum removed with
+// the segment control. DailyIQ is now a single-scroll trend view.
 
 private struct DailyPlayerStatRow: View {
     let stat: DailyPlayerStat
