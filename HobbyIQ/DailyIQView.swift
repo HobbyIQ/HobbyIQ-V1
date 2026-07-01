@@ -24,6 +24,10 @@ struct DailyIQView: View {
     @State private var showUpgradePaywall = false
     @State private var marketSignals: DailyIQMarketSignalsResponse?
     @State private var isLoadingMarketSignals = false
+    @State private var myPlayers: DailyIQMyPlayersResponse?
+    @State private var isLoadingMyPlayers = false
+    @State private var dailySegment: DailyIQSegment = .myPlayers
+    @State private var drillPlayer: DailyIQMyPlayerEntry?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -46,35 +50,31 @@ struct DailyIQView: View {
                     )
                 }
 
-                // CF-DAILYIQ-TREND-FIRST (2026-07-01): Rebuilt DailyIQ as a
-                // trend-first newsfeed. Player-stats segments (MLB / MiLB
-                // box scores) removed; Market Signals + card movers +
-                // watchlist stack in one scroll. Investor-tier gate on
-                // Market Signals + Card Movers matches the prior briefCard
-                // gate (both surface the same `dailyIQBriefs` content
-                // category).
-                marketSignalsSection
-                    .lockedOverlay(
-                        feature: GatedFeature.dailyIQBriefs,
-                        subscriptionManager: sessionViewModel.subscriptionManager
-                    ) {
-                        showUpgradePaywall = true
-                    }
+                // CF-DAILYIQ-TWO-SEGMENTS (2026-07-01): DailyIQ splits
+                // into two selectable segments — "Your Players" (personal
+                // matched-cohort momentum) and "Market Trends" (hobby-
+                // wide discover). Both Investor-gated. Card Movers and
+                // the watchlist were removed in prior CFs.
+                dailySegmentControl
 
-                cardMoversSection
-                    .lockedOverlay(
-                        feature: GatedFeature.dailyIQBriefs,
-                        subscriptionManager: sessionViewModel.subscriptionManager
-                    ) {
-                        showUpgradePaywall = true
-                    }
-
-                // CF-DAILYIQ-DROP-WATCHLIST (2026-07-01): Watchlist +
-                // Top Watched + Suggestions removed from DailyIQ.
-                // `watchlistCard` view + helper methods retained as
-                // dead code below to keep the diff surgical — a
-                // follow-up cleanup CF can delete them once we've
-                // confirmed no other surface calls them.
+                switch dailySegment {
+                case .myPlayers:
+                    yourPlayersSection
+                        .lockedOverlay(
+                            feature: GatedFeature.dailyIQBriefs,
+                            subscriptionManager: sessionViewModel.subscriptionManager
+                        ) {
+                            showUpgradePaywall = true
+                        }
+                case .discover:
+                    marketSignalsSection
+                        .lockedOverlay(
+                            feature: GatedFeature.dailyIQBriefs,
+                            subscriptionManager: sessionViewModel.subscriptionManager
+                        ) {
+                            showUpgradePaywall = true
+                        }
+                }
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
             .padding(.top, 8)
@@ -86,6 +86,7 @@ struct DailyIQView: View {
             await refreshDailyIQ(for: nil)
             await loadFullBrief()
             await loadMarketSignals()
+            await loadMyPlayers()
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }
@@ -104,6 +105,9 @@ struct DailyIQView: View {
                 PlayerIQView(initialQuery: name)
                     .preferredColorScheme(.dark)
             }
+        }
+        .sheet(item: $drillPlayer) { entry in
+            OwnedCardsInCohortSheet(entry: entry)
         }
     }
 
@@ -837,6 +841,191 @@ private var watchlistCard: some View {
         }
     }
 
+    /// CF-DAILYIQ-MY-PLAYERS (2026-07-01): personal cohort momentum for
+    /// the user's holdings. Same session-scoped cache pattern as
+    /// `loadMarketSignals`. Failure is quiet — the view surfaces an
+    /// empty state, not an error UI.
+    private func loadMyPlayers() async {
+        guard myPlayers == nil else { return }
+        isLoadingMyPlayers = true
+        defer { isLoadingMyPlayers = false }
+
+        do {
+            myPlayers = try await APIService.shared.fetchMyPlayersMarket()
+        } catch {
+            myPlayers = nil
+        }
+    }
+
+    // MARK: - Segment control (CF-DAILYIQ-TWO-SEGMENTS, 2026-07-01)
+
+    private var dailySegmentControl: some View {
+        HStack(spacing: 6) {
+            ForEach(DailyIQSegment.allCases) { segment in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        dailySegment = segment
+                    }
+                } label: {
+                    Text(segment.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(dailySegment == segment ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background {
+                            if dailySegment == segment {
+                                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.pill, style: .continuous)
+                                    .fill(HobbyIQTheme.Colors.electricBlue.opacity(0.2))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(Capsule(style: .continuous))
+    }
+
+    // MARK: - Your Players section (CF-DAILYIQ-MY-PLAYERS, 2026-07-01)
+
+    /// Personal matched-cohort momentum. Rows are pre-sorted DESC by
+    /// holdingCount server-side. Each row shows the player's aggregate
+    /// %-change badge from `matchedCohort.medianRatio` and drills to a
+    /// sheet listing the user's owned cards in that cohort. Rows with
+    /// null matchedCohort fall back to `momentumRatio` / `supplyTrend`
+    /// so the view degrades gracefully in the first-day production
+    /// window (many players have no cohort match yet).
+    @ViewBuilder
+    private var yourPlayersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "person.crop.rectangle.stack.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("YOUR PLAYERS")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .tracking(0.6)
+                Spacer()
+            }
+            .padding(.top, 4)
+
+            if isLoadingMyPlayers && myPlayers == nil {
+                HStack(spacing: 10) {
+                    ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                    Text("Loading your players…")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                }
+                .padding(.vertical, 10)
+            } else if let response = myPlayers {
+                let entries = response.myPlayers ?? []
+                if entries.isEmpty {
+                    myPlayersEmptyState
+                } else {
+                    ForEach(entries) { entry in
+                        Button {
+                            if entry.ownedCardsInCohort?.isEmpty == false {
+                                drillPlayer = entry
+                            }
+                        } label: {
+                            myPlayerRow(entry)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if let updatedFooter = marketUpdatedFooter(from: response.generatedAt) {
+                        Text(updatedFooter)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    private var myPlayersEmptyState: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Add holdings to see your personal trends.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(HobbyIQTheme.Colors.mutedText.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func myPlayerRow(_ entry: DailyIQMyPlayerEntry) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.player)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                HStack(spacing: 4) {
+                    if let count = entry.holdingCount, count > 0 {
+                        Text(count == 1 ? "1 holding" : "\(count) holdings")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    if let cohort = entry.matchedCohort,
+                       let size = cohort.cohortSize, size > 0,
+                       let week = cohort.latestWeekStart,
+                       let weekPhrase = marketSectionSubtitle(from: week) {
+                        Text("· \(size) cards · \(weekPhrase.replacingOccurrences(of: "Week of ", with: "week of "))")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+            }
+            Spacer(minLength: 8)
+            myPlayerTrendBadge(entry)
+        }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func myPlayerTrendBadge(_ entry: DailyIQMyPlayerEntry) -> some View {
+        if let cohort = entry.matchedCohort, let ratio = cohort.medianRatio,
+           let pct = signedPercent(from: ratio) {
+            let isUp = ratio >= 1.0
+            HStack(spacing: 3) {
+                Image(systemName: isUp ? "arrow.up" : "arrow.down")
+                    .font(.caption2.weight(.bold))
+                Text(pct)
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger)
+        } else if let ratio = entry.momentumRatio, let pct = signedPercent(from: ratio) {
+            let isUp = ratio >= 1.0
+            HStack(spacing: 3) {
+                Image(systemName: isUp ? "arrow.up" : "arrow.down")
+                    .font(.caption2.weight(.bold))
+                Text(pct)
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle((isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger).opacity(0.75))
+        } else {
+            Text("Trend data updating…")
+                .font(.caption2)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+        }
+    }
+
     // CF-DAILYIQ-TREND-FIRST (2026-07-01): milbPlayers / mlbPlayers /
     // currentPlayers retained as internal utilities. Not rendered on
     // the DailyIQ tab anymore (the MLB / MiLB segments were removed);
@@ -1122,8 +1311,181 @@ private struct FlowChipsView<Item: Hashable>: View {
     }
 }
 
-// CF-DAILYIQ-TREND-FIRST (2026-07-01): DailySegment enum removed with
-// the segment control. DailyIQ is now a single-scroll trend view.
+// CF-DAILYIQ-TWO-SEGMENTS (2026-07-01): 2-option segment control.
+// Replaces the 4-option DailySegment enum (Watchlist / MLB / MiLB /
+// Brief) that was removed in the trend-first sweep.
+enum DailyIQSegment: String, CaseIterable, Identifiable {
+    case myPlayers = "Your Players"
+    case discover = "Market Trends"
+
+    var id: String { rawValue }
+    var title: String { rawValue }
+}
+
+// MARK: - Owned Cards In Cohort drill-down sheet
+// (CF-DAILYIQ-MY-PLAYERS, 2026-07-01)
+
+/// Presented from a "Your Players" row tap. Lists the user's owned
+/// cards inside that player's matched cohort with per-card ratio +
+/// latest / prior median price + quantity. Resolves cardId → the
+/// stored InventoryCard for a friendly display title when the user
+/// still holds it; falls back to a truncated cardId ("Card #ABCD1234")
+/// when the local cache doesn't have the row.
+private struct OwnedCardsInCohortSheet: View {
+    let entry: DailyIQMyPlayerEntry
+    @Environment(\.dismiss) private var dismiss
+    @State private var localInventory: [InventoryCard] = []
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    header
+
+                    let cards = entry.ownedCardsInCohort ?? []
+                    if cards.isEmpty {
+                        emptyState
+                    } else {
+                        ForEach(cards) { card in
+                            row(card)
+                        }
+                    }
+                }
+                .padding(HobbyIQTheme.Spacing.medium)
+            }
+            .background(HobbyIQBackground())
+            .navigationTitle(entry.player)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+            }
+            .task {
+                localInventory = await LocalPortfolioProvider.shared.getInventory()
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("OWNED IN COHORT")
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            if let cohort = entry.matchedCohort,
+               let size = cohort.cohortSize, size > 0 {
+                Text("You own \((entry.ownedCardsInCohort ?? []).count) of \(size) cards in this cohort")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Your holdings for this player haven't been matched into the cohort yet — try again after the next daily cycle.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(HobbyIQTheme.Colors.mutedText.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func row(_ card: DailyIQOwnedCardInCohort) -> some View {
+        let title = resolvedCardTitle(for: card.cardId)
+        let ratio = card.ratio ?? 1.0
+        let isUp = ratio >= 1.0
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .lineLimit(2)
+                    if let qty = card.quantity, qty > 0 {
+                        Text(qty == 1 ? "You own 1" : "You own \(qty)")
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                }
+                Spacer(minLength: 8)
+                if let pct = pctFromRatio(card.ratio) {
+                    HStack(spacing: 3) {
+                        Image(systemName: isUp ? "arrow.up" : "arrow.down")
+                            .font(.caption2.weight(.bold))
+                        Text(pct)
+                            .font(.caption.weight(.bold))
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger)
+                }
+            }
+
+            HStack(spacing: 14) {
+                if let latest = card.latestWeekMedianPrice {
+                    priceCell(label: "Latest", price: latest, count: card.latestWeekSaleCount)
+                }
+                if let prior = card.priorWindowMedianPrice {
+                    priceCell(label: "Prior", price: prior, count: card.priorWindowSaleCount)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(12)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+    }
+
+    private func priceCell(label: String, price: Double, count: Int?) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .font(.caption2.weight(.bold))
+                .tracking(0.4)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text(price.formatted(.currency(code: "USD")))
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            if let count, count > 0 {
+                Text(count == 1 ? "1 sale" : "\(count) sales")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    /// Resolves cardId → the local InventoryCard's display title.
+    /// Falls back to `Card #ABCD1234` when the user no longer holds
+    /// the card or the local cache hasn't hydrated yet.
+    private func resolvedCardTitle(for cardId: String) -> String {
+        if let match = localInventory.first(where: { $0.cardId == cardId }) {
+            let stored = match.cardName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if stored.isEmpty == false { return stored }
+        }
+        let prefix = cardId.replacingOccurrences(of: "-", with: "").prefix(8).uppercased()
+        return "Card #\(prefix)"
+    }
+
+    private func pctFromRatio(_ ratio: Double?) -> String? {
+        guard let ratio, ratio > 0 else { return nil }
+        let pct = (ratio - 1.0) * 100
+        guard abs(pct) >= 1.0 else { return nil }
+        let sign = pct >= 0 ? "+" : ""
+        return "\(sign)\(Int(pct.rounded()))%"
+    }
+}
 
 private struct DailyPlayerStatRow: View {
     let stat: DailyPlayerStat

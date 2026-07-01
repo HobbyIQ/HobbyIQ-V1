@@ -781,6 +781,16 @@ struct APIService {
         try await get(path: "/api/dailyiq/market/players", responseType: DailyIQMarketSignalsResponse.self)
     }
 
+    /// CF-DAILYIQ-MY-PLAYERS (2026-07-01): personal cohort momentum —
+    /// one entry per player the user has holdings for, pre-sorted
+    /// DESC by holdingCount. Same Investor-tier gate + no-polling
+    /// contract as `fetchMarketSignals`. First-day production reality:
+    /// most `matchedCohort` values return nil until the background job
+    /// cycles reach the user's players (~4-24h).
+    func fetchMyPlayersMarket() async throws -> DailyIQMyPlayersResponse {
+        try await get(path: "/api/dailyiq/market/my-players", responseType: DailyIQMyPlayersResponse.self)
+    }
+
     // MARK: - Dashboard Player Stats (gated dailyIQBriefs)
 
     func fetchDashboardPlayerStats() async throws -> DashboardPlayerStatsResponse {

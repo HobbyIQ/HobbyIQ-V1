@@ -1088,3 +1088,69 @@ struct DailyIQMarketSupplyEntry: Codable, Identifiable, Hashable {
 
     var id: String { player }
 }
+
+// MARK: - CF-DAILYIQ-MY-PLAYERS (2026-07-01) — personal matched-cohort momentum
+
+/// Response envelope for GET /api/dailyiq/market/my-players. Rows are
+/// pre-sorted DESC by holdingCount so the user's most-invested players
+/// lead. Investor-tier gated via `dailyIQBriefs`. Empty myPlayers → the
+/// user has no priced holdings yet, or backend job hasn't matched them
+/// to a cohort yet.
+struct DailyIQMyPlayersResponse: Codable {
+    let success: Bool?
+    let generatedAt: String?
+    let myPlayers: [DailyIQMyPlayerEntry]?
+}
+
+/// One player the user has holdings for. `matchedCohort` is nil until
+/// the backend job cycles through this player (first-day production
+/// state); the fallback `momentumRatio` / `supplyTrend` fields still
+/// let iOS render a soft trend badge in that window.
+struct DailyIQMyPlayerEntry: Codable, Identifiable, Hashable {
+    let player: String
+    let holdingCount: Int?
+    /// Pre-sorted DESC by ratio (best-trending owned card leads).
+    let ownedCardsInCohort: [DailyIQOwnedCardInCohort]?
+    let matchedCohort: DailyIQMatchedCohort?
+    /// One of `demand_growth`, `supply_dry`, `supply_flood`,
+    /// `demand_crash`, `flat`. Used for a small qualitative chip when
+    /// numeric ratios aren't yet available.
+    let supplyTrend: String?
+    /// Fallback momentum signal — used when matchedCohort is nil.
+    let momentumRatio: Double?
+    let volumeRatio: Double?
+    let totalSales30d: Int?
+    let providerName: String?
+    let capturedAtMs: Double?
+
+    var id: String { player }
+}
+
+/// Per-owned-card cohort membership. Ratio > 1.0 = the user's specific
+/// card is up week-over-week within the matched cohort. `cardId` maps
+/// to a local InventoryCard when the user still holds it — iOS can
+/// resolve display titles via `LocalPortfolioProvider.shared`.
+struct DailyIQOwnedCardInCohort: Codable, Identifiable, Hashable {
+    let cardId: String
+    let ratio: Double?
+    let quantity: Int?
+    let latestWeekMedianPrice: Double?
+    let priorWindowMedianPrice: Double?
+    let latestWeekSaleCount: Int?
+    let priorWindowSaleCount: Int?
+
+    var id: String { cardId }
+}
+
+/// Aggregated matched-cohort statistics powering the player-level "+36%"
+/// badge on the myPlayers row. Nil until backend job cycles through the
+/// player.
+struct DailyIQMatchedCohort: Codable, Hashable {
+    let medianRatio: Double?
+    let meanRatio: Double?
+    let cohortSize: Int?
+    let latestWeekActiveCards: Int?
+    let latestWeekStart: String?
+    let priorWindowWeeksCount: Int?
+    let computedAtMs: Double?
+}
