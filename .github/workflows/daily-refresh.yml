@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Run only at 5:00 AM America/New_York
         id: et-gate
@@ -45,7 +45,7 @@ jobs:
 
       - name: Setup Node.js 24
         if: steps.et-gate.outputs.should_run == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: 'npm'
@@ -92,7 +92,7 @@ jobs:
       # Login to Azure using OIDC service principal (more reliable than JSON creds parsing)
       - name: Login to Azure
         if: steps.et-gate.outputs.should_run == 'true'
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
