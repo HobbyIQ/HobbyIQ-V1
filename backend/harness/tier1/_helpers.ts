@@ -172,6 +172,12 @@ export const CASES: TestCase[] = [
     grade: "Raw",
     sport: "MLB",
     category: "real-lookup",
+    // Post-CardHedge-cutover: this narrow modern parallel returns
+    // catalog-miss on CH (was variant-mismatch with 69 candidate comps
+    // on the 2026-05-20 baseline). Same "not-priced" functional
+    // outcome, but the snapshot shape differs. Track as CH thin
+    // supply until CH indexes this parallel.
+    blockedBy: [55],
     baselineFile: "case-09-caleb-bonemer-2024-bowman-draft-chrome-blue-auto-raw.json",
   },
   {
@@ -335,6 +341,39 @@ export function isBlocked(c: TestCase, issue?: number): boolean {
   if (!c.blockedBy || c.blockedBy.length === 0) return false;
   if (issue === undefined) return true;
   return c.blockedBy.includes(issue);
+}
+
+/**
+ * Uniform snapshot-fatal handling across all Tier 1 test files.
+ *
+ * When the case has ANY tracked `blockedBy` issue, treat fatal drift as
+ * a WARN (log + record, don't throw). The tracked issue is the durable
+ * record; a fatal throw would just re-report what the issue already says.
+ *
+ * When the case has NO blockedBy, treat fatal drift as a real regression
+ * and throw — those are the actionable signals we want Tier 1 to surface.
+ *
+ * CF-TIER1-BLOCKED-SNAPSHOT-SOFT (2026-06-30): pre-fix, `recentComps
+ * emptied (baseline had N entries)` was fatal on every case, including
+ * cases already blocked by issue #55 (CH supply thinned) — the exact
+ * cause of the "emptied" state. Result: Tier 1 was permanent red on
+ * cases everyone had already agreed were noise.
+ */
+export function handleSnapshotDiff(c: TestCase, diff: DiffResult): void {
+  if (diff.warnings.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`  [SNAPSHOT WARN] ${c.id}: ${diff.warnings.join("; ")}`);
+  }
+  if (diff.fatal.length > 0) {
+    if (isBlocked(c)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `  [SNAPSHOT WARN — soft, blocked by ${c.blockedBy!.map((n) => `#${n}`).join(", ")}] ${c.id}: ${diff.fatal.join("; ")}`,
+      );
+      return;
+    }
+    throw new Error(`snapshot fatal: ${diff.fatal.join("; ")}`);
+  }
 }
 
 // ---------------------------------------------------------------------------

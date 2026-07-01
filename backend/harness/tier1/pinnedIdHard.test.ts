@@ -15,6 +15,7 @@ import {
   CASE_BUDGET_MS,
   expectPinnedIdAllowedSource,
   expectWellFormed,
+  handleSnapshotDiff,
   hitPriceById,
   hitSearch,
   loadBaseline,
@@ -153,13 +154,7 @@ describeTier("Tier 1 · pinned-id-hard (cases 19-20)", () => {
           diff,
           notes: ctx.notes,
         });
-        if (diff.warnings.length > 0) {
-          // eslint-disable-next-line no-console
-          console.warn(`  [SNAPSHOT WARN] ${c.id}: ${diff.warnings.join("; ")}`);
-        }
-        if (diff.fatal.length > 0) {
-          throw new Error(`snapshot fatal: ${diff.fatal.join("; ")}`);
-        }
+        handleSnapshotDiff(c, diff);
       });
     });
   }

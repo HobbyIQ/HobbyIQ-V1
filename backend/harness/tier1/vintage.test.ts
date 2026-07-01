@@ -12,6 +12,7 @@ import {
   casesIn,
   CASE_BUDGET_MS,
   expectWellFormed,
+  handleSnapshotDiff,
   hitSearch,
   loadBaseline,
   printFinalSummary,
@@ -97,13 +98,7 @@ describeTier("Tier 1 · vintage (cases 15-16)", () => {
           diff,
           notes: ctx.notes,
         });
-        if (diff.warnings.length > 0) {
-          // eslint-disable-next-line no-console
-          console.warn(`  [SNAPSHOT WARN] ${c.id}: ${diff.warnings.join("; ")}`);
-        }
-        if (diff.fatal.length > 0) {
-          throw new Error(`snapshot fatal: ${diff.fatal.join("; ")}`);
-        }
+        handleSnapshotDiff(c, diff);
       });
     });
   }
