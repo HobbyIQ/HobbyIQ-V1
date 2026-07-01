@@ -178,6 +178,126 @@ function identityCacheKey(query: string): string {
   return ["router:ch-identify", query.toLowerCase().replace(/\s+/g, " ").trim()].join(":");
 }
 
+// ── Structured-search mercy fallback ─────────────────────────────────────────
+// CF-CH-STRUCTURED-SEARCH-MERCY (2026-07-01): CH's AI matcher rejects real
+// cards it can't confidently identify (< MIN_BRIDGE_CONFIDENCE 0.80).
+// Evidence: prod probe on 2026-07-01 hit Ethan Conrad Blue Refractor Auto
+// — /card-match returned null with candidates_evaluated=10; /card-search
+// returned the card as result #3. Once bridged, CH had 1 price in 90d,
+// so PR #224's trust window would accept it. The gap is the bridge.
+//
+// Fallback logic: when card-match returns null OR low confidence, AND the
+// parsed identity has BOTH playerName AND parallel, retry via structured
+// /card-search filtered by player. Then pick the CH card whose title
+// contains the parsed parallel as an EXACT adjacent-token match AND is not
+// preceded by a color-qualifier token that would indicate a sibling
+// parallel (e.g. "Sky Blue Refractor" is rejected when parsed parallel is
+// "Blue Refractor"). If exactly one card wins, use it.
+//
+// Gated by CH_STRUCTURED_MERCY_ENABLED env (default "true"). Rollback lever:
+// set to "false" on App Service.
+
+const COLOR_QUALIFIERS = new Set([
+  // Colors that could combine to form a distinct sibling parallel.
+  "sky", "royal", "ice", "dark", "neon",
+  "gold", "red", "orange", "purple", "pink", "green", "blue", "yellow",
+  "black", "white", "silver", "platinum", "aqua", "cyan",
+  // Non-color qualifiers that combine similarly.
+  "geometric", "mojo", "cracked", "shimmer", "wave", "raywave", "lava",
+  "atomic", "superfractor",
+]);
+
+/**
+ * Given a set of CardHedge card-search results and the parsed parallel
+ * string, return the single card whose title matches the parallel exactly
+ * — or null if zero / multiple / ambiguous.
+ *
+ * Pure function. Exported for direct pin testing.
+ */
+export function pickBestByParallel(
+  cards: CardHedgeCard[],
+  parallel: string,
+): CardHedgeCard | null {
+  if (!parallel) return null;
+  const parallelTokens = parallel.toLowerCase().split(/\s+/).filter(Boolean);
+  if (parallelTokens.length === 0) return null;
+
+  const matches: { card: CardHedgeCard; extraTokens: number }[] = [];
+  for (const c of cards) {
+    const title = (c.title ?? "").toLowerCase();
+    if (!title) continue;
+
+    const tokens = title.split(/\s+/).filter(Boolean);
+    // Find the parallel tokens appearing in adjacent order.
+    let matchIdx = -1;
+    for (let i = 0; i <= tokens.length - parallelTokens.length; i++) {
+      let ok = true;
+      for (let j = 0; j < parallelTokens.length; j++) {
+        if (tokens[i + j] !== parallelTokens[j]) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) {
+        matchIdx = i;
+        break;
+      }
+    }
+    if (matchIdx < 0) continue;
+
+    // Reject if the token IMMEDIATELY preceding the parallel is a color/
+    // qualifier — that indicates a sibling parallel (e.g. "sky blue refractor"
+    // when parsed is "blue refractor").
+    if (matchIdx > 0 && COLOR_QUALIFIERS.has(tokens[matchIdx - 1])) {
+      continue;
+    }
+
+    matches.push({ card: c, extraTokens: tokens.length - parallelTokens.length });
+  }
+
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => a.extraTokens - b.extraTokens);
+  // If top is meaningfully cleaner than second, pick top. Ties (< 1 token
+  // difference) are ambiguous — return null.
+  if (matches.length === 1 || matches[0].extraTokens < matches[1].extraTokens) {
+    return matches[0].card;
+  }
+  return null;
+}
+
+/** Env-gated mercy fallback. Default on; rollback via CH_STRUCTURED_MERCY_ENABLED="false". */
+function isMercyEnabled(): boolean {
+  return String(process.env.CH_STRUCTURED_MERCY_ENABLED ?? "true").toLowerCase() !== "false";
+}
+
+/**
+ * Structured-search mercy fallback. Only fires when identity has both
+ * playerName and parallel. Returns a card_id + synthetic confidence
+ * (0.75 — below the AI matcher's 0.80 threshold but above zero) or null.
+ */
+async function structuredMercyFallback(
+  identity: CardIdentityHint,
+): Promise<{ chCardId: string; confidence: number } | null> {
+  if (!isMercyEnabled()) return null;
+  if (!identity.playerName || !identity.parallel) return null;
+
+  const searchQuery = `${identity.playerName} ${identity.parallel}`.trim();
+  try {
+    const results = await chSearchCards(searchQuery, 10, { player: identity.playerName });
+    if (!results.length) return null;
+    const rescued = pickBestByParallel(results, identity.parallel);
+    if (!rescued) return null;
+    return { chCardId: rescued.card_id, confidence: 0.75 };
+  } catch (err) {
+    log.warn("router.mercy_fallback_error", {
+      error: err instanceof Error ? err.message : String(err),
+      player: identity.playerName,
+      parallel: identity.parallel,
+    });
+    return null;
+  }
+}
+
 /**
  * Resolve an identity hint to a CardHedge card_id via /v1/cards/card-match.
  * Cached 24h on the natural-language query. Returns null on no match or
@@ -194,10 +314,35 @@ async function resolveChCardId(
     async () => {
       const match = await chIdentifyCard(query);
       if (!match || !match.card_id) {
+        // CF-CH-STRUCTURED-SEARCH-MERCY: try structured search rescue
+        // before conceding bridge_no_match.
+        const rescued = await structuredMercyFallback(identity);
+        if (rescued) {
+          log.info("router.bridge_rescued_via_structured", {
+            chCardId: rescued.chCardId,
+            player: identity.playerName,
+            parallel: identity.parallel,
+            reason: "ai_matcher_returned_null",
+          });
+          return JSON.stringify(rescued);
+        }
         log.info("router.bridge_no_match", { query });
         return "";
       }
       if (match.confidence < MIN_BRIDGE_CONFIDENCE) {
+        // CF-CH-STRUCTURED-SEARCH-MERCY: try structured rescue on
+        // below-threshold matches too.
+        const rescued = await structuredMercyFallback(identity);
+        if (rescued) {
+          log.info("router.bridge_rescued_via_structured", {
+            chCardId: rescued.chCardId,
+            player: identity.playerName,
+            parallel: identity.parallel,
+            reason: "ai_matcher_below_threshold",
+            originalConfidence: match.confidence,
+          });
+          return JSON.stringify(rescued);
+        }
         log.info("router.bridge_low_confidence", { query, confidence: match.confidence });
         return "";
       }
