@@ -209,3 +209,80 @@ describe("isCompVariantMatch — defect #4 (AUTO regex coverage for Autographs /
     expect(r.reason).toBe("comp_missing_auto");
   });
 });
+
+/**
+ * CF-CARDQUERY-PARSER-PARALLEL-EXPANSION (2026-07-01).
+ *
+ * Pre-fix: App Insights probe found 5 distinct product/parallel tokens
+ * (Sapphire, Transcendent, X-Fractor, Raywave, Lava) leaking into the
+ * extracted playerName in 10.9% of parsed queries. Worst case:
+ * "2025 Bowman Draft Sapphire Ethan Conrad" → playerName="Sapphire
+ * Ethan Conrad" → CH bridge fails → fallback aggregation prices a
+ * real card at $9 when the underlying weekly average was $62.50.
+ *
+ * Each test below pins one of the observed contaminations. Positive
+ * assertions: the parallel is captured AND the player name is clean.
+ */
+describe("parseCardQuery — CF-CARDQUERY-PARSER-PARALLEL-EXPANSION", () => {
+  it("captures Sapphire as parallel; player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Draft Sapphire Ethan Conrad");
+    expect(p.parallel).toBe("Sapphire");
+    expect(p.playerName).toBe("Ethan Conrad");
+  });
+
+  it("captures X-Fractor (hyphenated); player name clean", () => {
+    const p = parseCardQuery("2024 Bowman Draft Chrome X-Fractor Auto Caden Bodine");
+    expect(p.parallel).toBe("X-Fractor");
+    expect(p.playerName).toBe("Caden Bodine");
+  });
+
+  it("captures Xfractor (no-hyphen variant); player name clean", () => {
+    const p = parseCardQuery("2024 Bowman Draft Chrome Xfractor Auto Caden Bodine");
+    expect(p.parallel).toBe("X-Fractor");
+    expect(p.playerName).toBe("Caden Bodine");
+  });
+
+  it("captures Blue Raywave (color+parallel first); player name clean", () => {
+    const p = parseCardQuery("2024 Bowman Chrome Blue Raywave Auto Leo De Vries PSA 10");
+    expect(p.parallel).toBe("Blue Raywave");
+    expect(p.playerName).toBe("Leo De Vries");
+  });
+
+  it("captures bare Raywave (no color prefix); player name clean", () => {
+    const p = parseCardQuery("2024 Bowman Chrome Raywave Leo De Vries");
+    expect(p.parallel).toBe("Raywave");
+    expect(p.playerName).toBe("Leo De Vries");
+  });
+
+  it("captures Transcendent as parallel; player name clean", () => {
+    const p = parseCardQuery("2025 Topps Transcendent Auto Shohei Ohtani");
+    expect(p.parallel).toBe("Transcendent");
+    expect(p.playerName).toBe("Shohei Ohtani");
+  });
+
+  it("captures Red Lava (color+parallel first); player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Draft Chrome Red Lava Auto Josiah Hartshorn PSA 9");
+    expect(p.parallel).toBe("Red Lava");
+    expect(p.playerName).toBe("Josiah Hartshorn");
+  });
+
+  it("captures bare Lava (no color prefix); player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Draft Chrome Lava Auto Josiah Hartshorn");
+    expect(p.parallel).toBe("Lava");
+    expect(p.playerName).toBe("Josiah Hartshorn");
+  });
+
+  // Regression pins — make sure the new patterns don't cannibalize existing
+  // parallel matches. Blue/Red/etc. bare colors must still work when no
+  // Raywave/Lava keyword follows.
+  it("plain Blue still parses as Blue (not Blue Raywave)", () => {
+    const p = parseCardQuery("2024 Bowman Chrome Blue Auto Josh Hammond");
+    expect(p.parallel).toBe("Blue");
+    expect(p.playerName).toBe("Josh Hammond");
+  });
+
+  it("Red Refractor still parses as Red Refractor (not Red Lava)", () => {
+    const p = parseCardQuery("2024 Bowman Chrome Red Refractor Auto Player");
+    expect(p.parallel).toBe("Red Refractor");
+  });
+});
