@@ -1,0 +1,200 @@
+/**
+ * CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION (2026-07-01):
+ * Project a current price for thin-comp cards using player-level
+ * momentum from the vendor-neutral player-trend layer.
+ *
+ * Intended trigger: card has 1-2 real comps in the trust window, so
+ * the AI matcher and trust guard PASS, but the resulting FMV is based
+ * on stale data. Applying the player's momentum ratio bumps the last
+ * known sale to a current-market estimate.
+ *
+ * Purely a decision function. Fetching happens elsewhere; this file
+ * evaluates trigger conditions and computes the projected price with
+ * an explicit confidence downgrade so downstream can render the
+ * appropriate "estimated / low confidence" UI treatment.
+ *
+ * Env-gated for rollback: PLAYER_MOMENTUM_PROJECTION_ENABLED must be
+ * literal "true" (case-insensitive) — matches the MULTIPLIER_BASE_TABLE
+ * flag semantics for consistency.
+ */
+
+import type { PlayerTrendSnapshot } from "../playerTrend/playerTrend.types.js";
+
+// ── Constants (empirically-derived guardrails) ─────────────────────────────
+/** Cap upward projection. Even if player momentum spikes 5×, we clamp. */
+const MAX_UPSIDE_MULTIPLIER = 2.0;
+/** Cap downward projection symmetrically. */
+const MIN_DOWNSIDE_MULTIPLIER = 0.5;
+/** Player-week must have this many sales to trust the momentum ratio. */
+const MIN_LATEST_WEEK_COUNT = 50;
+/** Minimum |ratio - 1| to bother projecting (below this, no meaningful trend). */
+const MIN_TREND_DELTA = 0.05;
+/** Confidence ceiling for momentum-projected prices (they're derived, not observed). */
+const CONFIDENCE_CEILING = 0.5;
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+export interface MomentumProjectionInput {
+  /** Player name — used only for telemetry / attribution. */
+  playerName: string;
+  /** Snapshot from the player-trend layer. May be null (no signal). */
+  trendSnapshot: PlayerTrendSnapshot | null;
+  /** Most recent comp price for the specific card (any grade). Null when unknown. */
+  lastCardSalePrice: number | null;
+  /** ISO date of the last comp sale, or null. */
+  lastCardSaleDate: string | null;
+  /** Number of direct comps present for this card_id (post-trust-guard). */
+  directCompCount: number;
+  /** Days since the most recent direct comp (null when no comp). */
+  daysSinceNewestComp: number | null;
+}
+
+export interface MomentumProjection {
+  /** The projected current price. */
+  projectedPrice: number;
+  /** Downgraded confidence (max CONFIDENCE_CEILING). */
+  confidence: number;
+  /** For UI attribution: what fed the projection. */
+  attribution: {
+    lastCardSalePrice: number;
+    lastCardSaleDate: string | null;
+    lastCardSaleDaysOld: number | null;
+    playerMomentumRatio: number;
+    playerVolumeRatio: number | null;
+    playerLatestWeekCount: number;
+    cappedRatio: number;
+    providerName: string;
+  };
+}
+
+export interface MomentumProjectionSkip {
+  applied: false;
+  reason:
+    | "flag_disabled"
+    | "no_trend_snapshot"
+    | "no_last_card_sale"
+    | "player_week_too_thin"
+    | "no_momentum_ratio"
+    | "trend_below_threshold"
+    | "not_thin_comp";
+}
+
+export type MomentumProjectionResult =
+  | ({ applied: true } & MomentumProjection)
+  | MomentumProjectionSkip;
+
+// ── Env gate ───────────────────────────────────────────────────────────────
+
+/**
+ * Read each call so test-time env stubs flip immediately.
+ * Matches MULTIPLIER_BASE_TABLE_ENABLED semantics: only literal "true"
+ * (case-insensitive) enables. "1", "yes", empty, unset all disable.
+ */
+export function isMomentumProjectionEnabled(): boolean {
+  return (
+    String(process.env.PLAYER_MOMENTUM_PROJECTION_ENABLED ?? "")
+      .toLowerCase() === "true"
+  );
+}
+
+// ── Trigger evaluation ─────────────────────────────────────────────────────
+
+/**
+ * Is this card thin-comp enough to warrant projection?
+ * Trigger: <= 2 direct comps, OR newest comp older than 60 days.
+ */
+export function isThinCompCard(
+  directCompCount: number,
+  daysSinceNewestComp: number | null,
+): boolean {
+  if (directCompCount <= 2) return true;
+  if (daysSinceNewestComp !== null && daysSinceNewestComp > 60) return true;
+  return false;
+}
+
+// ── Main projection function ───────────────────────────────────────────────
+
+/**
+ * Evaluate all triggers and, if they pass, compute the projected price.
+ * Always returns a shape — never throws. Callers inspect `.applied` to
+ * distinguish projection-fired from projection-skipped.
+ */
+export function evaluateMomentumProjection(
+  input: MomentumProjectionInput,
+): MomentumProjectionResult {
+  if (!isMomentumProjectionEnabled()) {
+    return { applied: false, reason: "flag_disabled" };
+  }
+
+  if (!isThinCompCard(input.directCompCount, input.daysSinceNewestComp)) {
+    return { applied: false, reason: "not_thin_comp" };
+  }
+
+  if (!input.trendSnapshot) {
+    return { applied: false, reason: "no_trend_snapshot" };
+  }
+
+  const { momentum, providerName } = input.trendSnapshot;
+  const latestWeek = momentum.latestCompleteWeek;
+  if (!latestWeek || latestWeek.count < MIN_LATEST_WEEK_COUNT) {
+    return { applied: false, reason: "player_week_too_thin" };
+  }
+
+  if (momentum.momentumRatio === null) {
+    return { applied: false, reason: "no_momentum_ratio" };
+  }
+
+  if (Math.abs(momentum.momentumRatio - 1) < MIN_TREND_DELTA) {
+    return { applied: false, reason: "trend_below_threshold" };
+  }
+
+  if (input.lastCardSalePrice === null || input.lastCardSalePrice <= 0) {
+    return { applied: false, reason: "no_last_card_sale" };
+  }
+
+  // Cap the ratio symmetrically so a runaway player-week doesn't inflate
+  // a specific card's price beyond reason.
+  const cappedRatio = clamp(momentum.momentumRatio, MIN_DOWNSIDE_MULTIPLIER, MAX_UPSIDE_MULTIPLIER);
+
+  const projectedPrice = roundCents(input.lastCardSalePrice * cappedRatio);
+
+  // Confidence scales inversely with how far we had to project.
+  // 5% delta → confidence 0.5 (ceiling). 50% delta → confidence ~0.3.
+  const delta = Math.abs(cappedRatio - 1);
+  const confidence = Math.min(
+    CONFIDENCE_CEILING,
+    Math.max(0.15, CONFIDENCE_CEILING - delta * 0.4),
+  );
+
+  return {
+    applied: true,
+    projectedPrice,
+    confidence: round3(confidence),
+    attribution: {
+      lastCardSalePrice: input.lastCardSalePrice,
+      lastCardSaleDate: input.lastCardSaleDate,
+      lastCardSaleDaysOld: input.daysSinceNewestComp,
+      playerMomentumRatio: momentum.momentumRatio,
+      playerVolumeRatio: momentum.volumeRatio,
+      playerLatestWeekCount: latestWeek.count,
+      cappedRatio,
+      providerName,
+    },
+  };
+}
+
+// ── helpers ────────────────────────────────────────────────────────────────
+
+function clamp(n: number, lo: number, hi: number): number {
+  if (n < lo) return lo;
+  if (n > hi) return hi;
+  return n;
+}
+
+function roundCents(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
