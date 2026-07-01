@@ -7,19 +7,22 @@ import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
-@preconcurrency import Vision
 
 /// Camera-first flow for the Dashboard "Scan a graded slab" affordance.
 ///
-/// Pipeline:
+/// Pipeline (CF-COMPIQ-SCAN-ROUTE, 2026-06-30):
 ///   1. Launch the camera straight into the viewfinder (same routing rules
 ///      as `ScanFlow` — simulator + permission-denied fall back to a photo
 ///      library picker so the user is never stranded).
-///   2. Run on-device Vision OCR over the captured slab label to pull the
-///      grading company (PSA / BGS / SGC / CGC), the numeric grade, and the
-///      cert / serial number.
-///   3. Present a theme-matched confirmation sheet pre-filled with what was
-///      read. The cert number is editable so a mis-read is a one-tap fix.
+///   2. Send the captured slab image to `POST /api/compiq/scan` with
+///      `hint: "graded"`. Backend runs cert-OCR and returns cert info +
+///      the resolved card identity (when confident). This replaced the
+///      previous on-device Vision OCR path — telemetry, matcher quality,
+///      and code-path simplicity all improve when the backend owns the
+///      OCR.
+///   3. Present a theme-matched confirmation sheet pre-filled with what
+///      was read. The cert number is editable so a mis-read is a
+///      one-tap fix.
 ///   4. On confirm, route INTO the existing graded pipeline:
 ///        - cert number present -> `CertResolveView(input:)` (the same path
 ///          the Dashboard search bar uses for typed cert numbers; backend
@@ -28,6 +31,11 @@ import UIKit
 ///        - no cert number -> `CompIQVariantPickerView(initialQuery:initialGrade:)`
 ///          so a slab with an unreadable cert still lands on priced comps,
 ///          with the detected grade carried through.
+///
+/// Downstream routing intentionally unchanged in this CF. A follow-up can
+/// leverage `GradedSlabReading.cardId` (populated by /scan when
+/// confidence is high) to short-circuit CertResolveView and land the
+/// user directly on the priced comp page.
 ///
 /// The whole flow is self-contained inside a sheet with its own
 /// `NavigationStack` (mirrors `CardIdentifyView`) so the Dashboard only has
@@ -41,18 +49,29 @@ struct GradedSlabReading: Identifiable, Equatable {
     var certNumber: String?
     var gradeCompany: String?
     var gradeValue: Double?
+    /// Card-identity strings the backend already resolved for us. Used to
+    /// build a good `fallbackQuery` when there's no usable cert number,
+    /// and available to future flow-overhaul CFs that want to skip
+    /// CertResolveView entirely.
     var rawLines: [String]
+    /// CF-COMPIQ-SCAN-ROUTE (2026-06-30): resolved CardHedge catalog id
+    /// when `/scan` matched a card with confidence. Not consumed by the
+    /// current downstream routing — reserved for a follow-up CF that
+    /// short-circuits directly to `/price-by-id`.
+    var cardId: String?
 
     init(
         certNumber: String? = nil,
         gradeCompany: String? = nil,
         gradeValue: Double? = nil,
-        rawLines: [String] = []
+        rawLines: [String] = [],
+        cardId: String? = nil
     ) {
         self.certNumber = certNumber
         self.gradeCompany = gradeCompany
         self.gradeValue = gradeValue
         self.rawLines = rawLines
+        self.cardId = cardId
     }
 
     /// Best-effort free-text description built from the recognized lines,
@@ -87,153 +106,67 @@ struct GradedSlabReading: Identifiable, Equatable {
     }
 }
 
-// MARK: - Vision OCR
+// MARK: - Backend /scan reader
 
+/// CF-COMPIQ-SCAN-ROUTE (2026-06-30 / PR #215): the on-device Vision
+/// OCR path was replaced with a POST to `/api/compiq/scan` (hint =
+/// "graded"). Backend runs cert-OCR and returns cert info + resolved
+/// card identity. Rationale: telemetry (`compiq_scan_attempt` fires
+/// only when /scan is called), matcher quality, and single-code-path
+/// simplicity all win when the backend owns OCR. There is no local
+/// fallback — an offline scan surfaces as an empty reading and the
+/// user is nudged to try again once online.
 enum GradedSlabOCR {
-    /// Recognize text on the slab label and parse it into a `GradedSlabReading`.
-    /// Runs the Vision request off the main thread; always resolves (an empty
-    /// reading on failure) so the caller never hangs.
+    /// Post the captured slab image to `/api/compiq/scan` and map the
+    /// response into a `GradedSlabReading`. Always resolves — a network
+    /// error / low-confidence result / 429 rate-limit returns an empty
+    /// reading so the caller never hangs.
     static func read(from image: UIImage) async -> GradedSlabReading {
-        guard let cgImage = image.cgImage else {
+        // JPEG 0.7 keeps the base64 payload under a few hundred KB even
+        // for a 12MP capture — well under the request-body ceiling.
+        guard let jpeg = image.jpegData(compressionQuality: 0.7) else {
             return GradedSlabReading()
         }
-        let orientation = image.cgImagePropertyOrientation
-
-        return await withCheckedContinuation { continuation in
-            let request = VNRecognizeTextRequest { request, _ in
-                let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
-                let lines = observations.compactMap { $0.topCandidates(1).first?.string }
-                continuation.resume(returning: parse(lines: lines))
-            }
-            request.recognitionLevel = .accurate
-            // Cert numbers and grades are not dictionary words; correction hurts.
-            request.usesLanguageCorrection = false
-
-            let handler = VNImageRequestHandler(
-                cgImage: cgImage,
-                orientation: orientation,
-                options: [:]
+        let base64 = jpeg.base64EncodedString()
+        do {
+            let response = try await APIService.shared.scanCard(
+                imageBase64: base64,
+                hint: "graded"
             )
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try handler.perform([request])
-                } catch {
-                    continuation.resume(returning: GradedSlabReading())
-                }
-            }
+            return reading(from: response)
+        } catch {
+            return GradedSlabReading()
         }
     }
 
-    /// Parse recognized text lines into a structured reading. Heuristic by
-    /// design — the confirmation sheet lets the user correct any field.
-    static func parse(lines: [String]) -> GradedSlabReading {
-        let trimmed = lines
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Map the /scan wire response into the existing `GradedSlabReading`
+    /// shape so the downstream confirmation sheet + routing keep working
+    /// without change. `rawLines` is synthesized from the backend's
+    /// resolved card-identity fields (year/set/player/variant/number)
+    /// so `fallbackQuery` still produces a useful search string when
+    /// there's no cert.
+    static func reading(from response: CompIQScanResponse) -> GradedSlabReading {
+        let gradeValue: Double? = {
+            guard let raw = response.certInfo?.grade?.trimmingCharacters(in: .whitespaces),
+                  raw.isEmpty == false else { return nil }
+            return Double(raw)
+        }()
+        let identityLines: [String] = [
+            response.set,
+            response.player,
+            response.variant,
+            response.number
+        ]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
 
         return GradedSlabReading(
-            certNumber: detectCertNumber(trimmed),
-            gradeCompany: detectCompany(trimmed),
-            gradeValue: detectGrade(trimmed),
-            rawLines: trimmed
+            certNumber: response.certInfo?.certNumber,
+            gradeCompany: response.certInfo?.grader,
+            gradeValue: gradeValue,
+            rawLines: identityLines,
+            cardId: response.cardId
         )
-    }
-
-    // MARK: Field detectors
-
-    private static func detectCompany(_ lines: [String]) -> String? {
-        let joined = lines.joined(separator: " ").uppercased()
-        // Order matters: check the longer / more specific tokens first.
-        if joined.contains("BECKETT") || joined.contains("BGS") { return "BGS" }
-        if joined.contains("PSA") { return "PSA" }
-        if joined.contains("SGC") { return "SGC" }
-        if joined.contains("CGC") { return "CGC" }
-        if joined.contains("CSG") { return "CSG" }
-        if joined.contains("HGA") { return "HGA" }
-        return nil
-    }
-
-    /// Longest all-digit run of length 7...11 across every line. PSA certs are
-    /// 8–9 digits, SGC ~10, BGS serials ~9–10; a 4-digit year never qualifies.
-    private static func detectCertNumber(_ lines: [String]) -> String? {
-        var best: String?
-        let pattern = try? NSRegularExpression(pattern: "[0-9]{7,11}")
-        for line in lines {
-            guard let pattern else { break }
-            let range = NSRange(line.startIndex..<line.endIndex, in: line)
-            pattern.enumerateMatches(in: line, range: range) { match, _, _ in
-                guard let match, let r = Range(match.range, in: line) else { return }
-                let candidate = String(line[r])
-                if best == nil || candidate.count > (best?.count ?? 0) {
-                    best = candidate
-                }
-            }
-        }
-        return best
-    }
-
-    /// Detect the numeric grade (1...10, optional half). Prefers labeled
-    /// patterns ("GEM MT 10", "MINT 9", "NM-MT 8"); falls back to a standalone
-    /// 1–10 value sitting on a short line near the company/grade wording.
-    private static func detectGrade(_ lines: [String]) -> Double? {
-        let upper = lines.map { $0.uppercased() }
-
-        let labeledPatterns = [
-            "GEM\\s*-?\\s*MT\\s*([0-9]{1,2}(?:\\.5)?)",
-            "GEM\\s*MINT\\s*([0-9]{1,2}(?:\\.5)?)",
-            "MINT\\s*([0-9]{1,2}(?:\\.5)?)",
-            "NM\\s*-?\\s*MT\\s*([0-9]{1,2}(?:\\.5)?)",
-            "GRADE\\s*([0-9]{1,2}(?:\\.5)?)"
-        ]
-        for line in upper {
-            for pattern in labeledPatterns {
-                if let value = firstCapturedDouble(in: line, pattern: pattern),
-                   (1.0...10.0).contains(value) {
-                    return value
-                }
-            }
-        }
-
-        // Fallback: a short line whose entire content is a 1–10 (half) grade,
-        // e.g. PSA's big "10" sitting alone under "GEM MT".
-        for line in upper {
-            let token = line.trimmingCharacters(in: .whitespaces)
-            if token.count <= 4,
-               let value = Double(token),
-               (1.0...10.0).contains(value),
-               value.truncatingRemainder(dividingBy: 0.5) == 0 {
-                return value
-            }
-        }
-        return nil
-    }
-
-    private static func firstCapturedDouble(in text: String, pattern: String) -> Double? {
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        guard let match = regex.firstMatch(in: text, range: range),
-              match.numberOfRanges >= 2,
-              let captured = Range(match.range(at: 1), in: text) else { return nil }
-        return Double(text[captured])
-    }
-}
-
-// MARK: - UIImage orientation bridge
-
-private extension UIImage {
-    /// Map UIKit image orientation to the CGImagePropertyOrientation Vision wants.
-    var cgImagePropertyOrientation: CGImagePropertyOrientation {
-        switch imageOrientation {
-        case .up: return .up
-        case .down: return .down
-        case .left: return .left
-        case .right: return .right
-        case .upMirrored: return .upMirrored
-        case .downMirrored: return .downMirrored
-        case .leftMirrored: return .leftMirrored
-        case .rightMirrored: return .rightMirrored
-        @unknown default: return .up
-        }
     }
 }
 

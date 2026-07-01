@@ -105,6 +105,29 @@ struct APIService {
         return try await post(path: "/api/compiq/search", body: body, responseType: CompIQSearchResponse.self)
     }
 
+    /// CF-COMPIQ-SCAN-ROUTE (2026-06-30 / PR #215+#217): POST /api/compiq/scan.
+    /// Two paths in one endpoint — cert-OCR on graded slabs and image-match
+    /// on raw cards. `hint` steers routing: `"graded"` cert-OCR only,
+    /// `"raw"` image-match only, `"auto"` (default) tries cert-OCR then
+    /// falls back to image-match. Rate-limited on the same `priceChecksPerDay`
+    /// budget as `/price` and `/price-by-id`. Backend emits a
+    /// `compiq_scan_attempt` telemetry event with matchPath +
+    /// matchConfidence + hadCertInfo (no image content).
+    ///
+    /// One of `imageUrl` / `imageBase64` is required; sending both is
+    /// permitted but backend prefers `imageUrl` when present (10-min cache).
+    /// Longer timeout (30s) than the default 10s because the CV matcher on
+    /// a cold instance can take several seconds.
+    func scanCard(imageUrl: String? = nil, imageBase64: String? = nil, hint: String = "auto") async throws -> CompIQScanResponse {
+        let body = CompIQScanRequest(imageUrl: imageUrl, imageBase64: imageBase64, hint: hint)
+        return try await post(
+            path: "/api/compiq/scan",
+            body: body,
+            responseType: CompIQScanResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
     /// CF-FIND-CARDS-PHASE-B: typeahead suggestions for the Find Cards
     /// field. GET /api/compiq/suggest?q=<text>. Cardsight ignores `take`
     /// (always returns ~10) and ignores `segment`, so we cap the display
@@ -2498,6 +2521,48 @@ struct GraderStatusUpdateRequest: Encodable {
 struct AddHoldingResponse: Decodable {
     let holding: InventoryCard?
     let success: Bool?
+}
+
+// MARK: - CF-COMPIQ-SCAN-ROUTE (2026-06-30) — /api/compiq/scan wire models
+
+/// Request body for POST /api/compiq/scan. One of `imageUrl` /
+/// `imageBase64` is required. `hint` steers backend routing:
+/// `"raw"` (image-match only), `"graded"` (cert-OCR only), or
+/// `"auto"` (default; cert-OCR first, image-match fallback).
+struct CompIQScanRequest: Encodable {
+    let imageUrl: String?
+    let imageBase64: String?
+    let hint: String
+}
+
+/// Response envelope for /api/compiq/scan. Every field is Optional
+/// because backend emits sparse shapes: `cardId == nil` when nothing
+/// matched, `certInfo == nil` when `matchPath != "cert-ocr"`. iOS
+/// callers should branch on `cardId` first, then bucket the
+/// `matchConfidence` against 0.7 / 0.5 thresholds for UI messaging.
+struct CompIQScanResponse: Decodable {
+    let success: Bool?
+    let cardId: String?
+    let player: String?
+    let set: String?
+    let number: String?
+    let variant: String?
+    /// `"cert-ocr"` when the slab-label OCR path resolved the card,
+    /// `"image-match"` when the CV matcher resolved it, `nil` when
+    /// neither path returned a match.
+    let matchPath: String?
+    /// 0.0–1.0. Below 0.7 warrants a disambiguation nudge; below 0.5
+    /// should be treated as an unmatched result.
+    let matchConfidence: Double?
+    /// Populated only when `matchPath == "cert-ocr"`. Pre-fill the
+    /// add-holding form's grader / grade / cert-number fields.
+    let certInfo: CompIQScanCertInfo?
+}
+
+struct CompIQScanCertInfo: Decodable, Hashable {
+    let certNumber: String?
+    let grader: String?
+    let grade: String?
 }
 
 struct PortfolioIQHoldingsEnvelope: Decodable {
