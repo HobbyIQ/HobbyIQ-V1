@@ -218,18 +218,41 @@ const COLOR_QUALIFIERS = new Set([
  * string, return the single card whose title matches the parallel exactly
  * — or null if zero / multiple / ambiguous.
  *
+ * When `opts.isAuto === true`, only cards whose subset field contains
+ * "auto" (case-insensitive: "Prospect Autographs", "Chrome Prospect
+ * Autograph", "Prospect Retail Autograph", "Prospect Mega Autographs
+ * Chrome") are considered. When `opts.isAuto === false`, only cards
+ * whose subset does NOT contain "auto" are considered. When `opts.isAuto`
+ * is undefined, no subset filter applies (backward-compatible).
+ *
+ * The subset gate closes CF-CH-STRUCTURED-SEARCH-MERCY's false-match
+ * hole: pre-fix, a query for "Blue Refractor Auto" on a card CH didn't
+ * catalog as an auto would match the base-set Blue Refractor card and
+ * price the wrong SKU (observed on Ethan Conrad 2026-07-01: $67 base
+ * matched instead of the ~$400 auto Drew was looking for).
+ *
  * Pure function. Exported for direct pin testing.
  */
 export function pickBestByParallel(
   cards: CardHedgeCard[],
   parallel: string,
+  opts?: { isAuto?: boolean },
 ): CardHedgeCard | null {
   if (!parallel) return null;
   const parallelTokens = parallel.toLowerCase().split(/\s+/).filter(Boolean);
   if (parallelTokens.length === 0) return null;
 
+  // Auto/non-auto subset filter — see JSDoc above.
+  const filtered = opts?.isAuto === undefined
+    ? cards
+    : cards.filter((c) => {
+        const subsetLc = (c.subset ?? "").toLowerCase();
+        const hasAuto = subsetLc.includes("auto");
+        return opts.isAuto === true ? hasAuto : !hasAuto;
+      });
+
   const matches: { card: CardHedgeCard; extraTokens: number }[] = [];
-  for (const c of cards) {
+  for (const c of filtered) {
     const title = (c.title ?? "").toLowerCase();
     if (!title) continue;
 
@@ -291,7 +314,7 @@ async function structuredMercyFallback(
   try {
     const results = await chSearchCards(searchQuery, 10, { player: identity.playerName });
     if (!results.length) return null;
-    const rescued = pickBestByParallel(results, identity.parallel);
+    const rescued = pickBestByParallel(results, identity.parallel, { isAuto: identity.isAuto });
     if (!rescued) return null;
     return { chCardId: rescued.card_id, confidence: 0.75 };
   } catch (err) {
