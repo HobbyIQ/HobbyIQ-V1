@@ -63,10 +63,20 @@ export interface MomentumProjection {
     lastCardSalePrice: number;
     lastCardSaleDate: string | null;
     lastCardSaleDaysOld: number | null;
-    playerMomentumRatio: number;
+    /** Raw sales-stats-by-player momentum ratio. Null when unavailable. */
+    playerMomentumRatio: number | null;
     playerVolumeRatio: number | null;
     playerLatestWeekCount: number;
-    /** Momentum ratio after upside/downside cap. */
+    /**
+     * CF-MATCHED-COHORT-PLAYER-MOMENTUM (2026-07-01): which signal actually
+     * drove the projection. `matched_cohort` = mix-bias-free ratio from the
+     * background-cached matched-cohort compute (SUPERIOR). `raw_weekly_avg`
+     * = fallback to raw sales-stats-by-player when the cohort cache misses.
+     */
+    activeRatioSource: "matched_cohort" | "raw_weekly_avg";
+    /** The unclamped ratio used, whichever source was active. */
+    activeRatio: number;
+    /** Active ratio after upside/downside cap. */
     cappedRatio: number;
     /** Supply-trend leading-indicator classification. */
     supplyTrend: SupplyTrendClassification;
@@ -146,16 +156,34 @@ export function evaluateMomentumProjection(
   }
 
   const { momentum, supplyTrend, providerName } = input.trendSnapshot;
+  // Coerce undefined → null so downstream `!== null` checks work whether
+  // the snapshot was built with the new-shape (explicit null) or with
+  // an older factory that omitted the field entirely.
+  const matchedCohort = input.trendSnapshot.matchedCohort ?? null;
   const latestWeek = momentum.latestCompleteWeek;
   if (!latestWeek || latestWeek.count < MIN_LATEST_WEEK_COUNT) {
     return { applied: false, reason: "player_week_too_thin" };
   }
 
-  if (momentum.momentumRatio === null) {
+  // CF-MATCHED-COHORT-PLAYER-MOMENTUM (2026-07-01): prefer the mix-bias-free
+  // matched-cohort medianRatio when the background job has populated the
+  // cache. This is materially better than the raw sales-stats-by-player
+  // weekly average — real prod validation on Eric Hartman (2026-07-01)
+  // showed raw signal misleading by 44 points (raw=-8%, matched=+36%).
+  // Fall back to raw momentumRatio when the cohort is unavailable
+  // (cache miss, new player, or background job hasn't caught up).
+  const activeRatio: number | null =
+    matchedCohort !== null ? matchedCohort.medianRatio : momentum.momentumRatio;
+  const activeRatioSource: "matched_cohort" | "raw_weekly_avg" =
+    matchedCohort !== null ? "matched_cohort" : "raw_weekly_avg";
+
+  if (activeRatio === null) {
     return { applied: false, reason: "no_momentum_ratio" };
   }
+  // Explicit narrow — TS loses the null-check on the const later otherwise.
+  const activeRatioNarrowed: number = activeRatio;
 
-  if (Math.abs(momentum.momentumRatio - 1) < MIN_TREND_DELTA) {
+  if (Math.abs(activeRatioNarrowed - 1) < MIN_TREND_DELTA) {
     return { applied: false, reason: "trend_below_threshold" };
   }
 
@@ -163,9 +191,9 @@ export function evaluateMomentumProjection(
     return { applied: false, reason: "no_last_card_sale" };
   }
 
-  // Cap the ratio symmetrically so a runaway player-week doesn't inflate
+  // Cap the ratio symmetrically so a runaway signal doesn't inflate
   // a specific card's price beyond reason.
-  const cappedRatio = clamp(momentum.momentumRatio, MIN_DOWNSIDE_MULTIPLIER, MAX_UPSIDE_MULTIPLIER);
+  const cappedRatio = clamp(activeRatioNarrowed, MIN_DOWNSIDE_MULTIPLIER, MAX_UPSIDE_MULTIPLIER);
 
   // Supply-trend leading-indicator kicker (see supplyTrend.classify.ts):
   // supply_dry (vol↓, price↑) boosts +5%; supply_flood (vol↑, price↓)
@@ -199,6 +227,8 @@ export function evaluateMomentumProjection(
       playerMomentumRatio: momentum.momentumRatio,
       playerVolumeRatio: momentum.volumeRatio,
       playerLatestWeekCount: latestWeek.count,
+      activeRatio: activeRatioNarrowed,
+      activeRatioSource,
       cappedRatio,
       supplyTrend,
       supplyTrendAdjuster: supplyAdjuster,
