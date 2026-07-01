@@ -7,7 +7,7 @@ import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
-import Vision
+@preconcurrency import Vision
 
 /// Camera-first flow for the Dashboard "Scan a graded slab" affordance.
 ///

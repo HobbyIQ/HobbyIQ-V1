@@ -596,6 +596,10 @@ struct APIService {
             return (data, httpResponse)
         } catch let error as APIServiceError {
             throw error
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw APIServiceError.networkFailed(error)
         }
@@ -771,10 +775,15 @@ struct APIService {
     }
 
     func fetchPortfolioHoldings(userId: String = "") async throws -> [InventoryCard] {
+        // Azure App Service cold-start on /api/portfolio routinely exceeds the
+        // default 10s budget, surfacing as URLError.cancelled (-999) and the
+        // "Live holdings unavailable" banner. 30s mirrors the cardsearch /
+        // price-by-id headroom and is the longest single-request override.
         let envelope: PortfolioIQHoldingsEnvelope = try await get(
             path: "/api/portfolio",
             queryItems: portfolioUserQueryItems(userId: userId),
-            responseType: PortfolioIQHoldingsEnvelope.self
+            responseType: PortfolioIQHoldingsEnvelope.self,
+            timeoutSeconds: 30
         )
         return envelope.holdings
     }
@@ -1022,6 +1031,19 @@ struct APIService {
         )
     }
 
+    /// CF-IOS-GRADER-STATUS-UI (2026-06-28): narrow PATCH that mutates only
+    /// the grader-status bucket. Backend PATCH /api/portfolio/holdings/:id
+    /// accepts arbitrary fields via `...rest` spread, so a single-field
+    /// body lands without touching the rest of the holding doc.
+    func updateHoldingGraderStatus(holdingId: UUID, status: GraderStatus) async throws -> PortfolioIQActionResponse {
+        let body = GraderStatusUpdateRequest(graderStatus: status.rawValue)
+        return try await patch(
+            path: "/api/portfolio/holdings/\(holdingId.uuidString)",
+            body: body,
+            responseType: PortfolioIQActionResponse.self
+        )
+    }
+
     func deletePortfolioHolding(holdingId: String) async throws -> PortfolioIQActionResponse {
         try await delete(
             path: "/api/portfolio/holdings/\(holdingId)",
@@ -1163,8 +1185,8 @@ struct APIService {
         try await get(path: servicePath, responseType: HealthStatusResponse.self)
     }
 
-    private func get<Response: Decodable>(path: String, queryItems: [URLQueryItem] = [], responseType: Response.Type, sessionId: String? = nil) async throws -> Response {
-        let request = try makeRequest(path: path, queryItems: queryItems, method: "GET", bodyData: nil, sessionId: sessionId)
+    private func get<Response: Decodable>(path: String, queryItems: [URLQueryItem] = [], responseType: Response.Type, sessionId: String? = nil, timeoutSeconds: TimeInterval? = nil) async throws -> Response {
+        let request = try makeRequest(path: path, queryItems: queryItems, method: "GET", bodyData: nil, sessionId: sessionId, timeoutSeconds: timeoutSeconds)
         return try await perform(request, responseType: responseType)
     }
 
@@ -1345,6 +1367,10 @@ struct APIService {
             print("[APIService] API error", context, error.errorDescription ?? error.localizedDescription)
             #endif
             throw error
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             #if DEBUG
             print("[APIService] Network error", context, error.localizedDescription)
@@ -2430,10 +2456,16 @@ struct AddHoldingRequest: Encodable {
     let cardsightCardId: String
     let parallel: String?
     let parallelId: String?
+    let isAuto: Bool?
     let gradeCompany: String?
     let gradeValue: Double?
     let purchasePrice: Double?
     let quantity: Int
+    /// CF-IOS-GRADER-STATUS-UI (2026-06-28): grader-status bucket raw value
+    /// ("at_psa" / "pending_redemption"). Nil for the .available default
+    /// keeps the wire body minimal — backend defaults missing field to
+    /// available on persist.
+    let graderStatus: String?
     /// CF-IOS-HOLDING-METADATA-CAPTURE (2026-06-25): structured card-
     /// identity fields captured at add-time so the holding renders as
     /// "{Year} · {Set}" subtitle + real player title instead of a raw
@@ -2446,6 +2478,18 @@ struct AddHoldingRequest: Encodable {
     let year: String?
     let setName: String?
     let cardNumber: String?
+    /// Composed display title (e.g. "2026 Bowman Baseball Eric Hartman
+    /// CPA-EHA Speckle Refractor"). Without this the holding's `cardName`
+    /// persists as empty and the inventory hero subtitle / mark-sold sheet
+    /// / edit form render with a blank Card Title.
+    let cardTitle: String?
+}
+
+/// CF-IOS-GRADER-STATUS-UI (2026-06-28): single-field PATCH body for the
+/// detail-view Status dropdown. Backend spreads body fields into the
+/// holding doc, so a one-field body mutates only `graderStatus`.
+struct GraderStatusUpdateRequest: Encodable {
+    let graderStatus: String
 }
 
 /// CF-ADD-TO-INVENTORY (2026-06-12): backend returns 201 with the

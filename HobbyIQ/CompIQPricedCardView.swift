@@ -2704,7 +2704,7 @@ struct CompIQPricedCardView: View {
                 AsyncImage(url: primaryURL) { phase in
                     switch phase {
                     case .success(let image):
-                        image.resizable().scaledToFill()
+                        image.resizable().scaledToFit()
                     case .empty, .failure:
                         cardHeroFallback(fallback)
                     @unknown default:
@@ -2729,7 +2729,7 @@ struct CompIQPricedCardView: View {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFill()
+                    image.resizable().scaledToFit()
                 case .empty, .failure:
                     compThumbnailPlaceholder
                 @unknown default:
@@ -3332,6 +3332,11 @@ struct CompIQPricedCardView: View {
 
 struct PortfolioCompIQBridgeView: View {
     let holding: InventoryCard
+    /// CF-IOS-VIEWCOMPIQ-CRASHFIX (2026-06-28): passed explicitly instead of
+    /// pulled from `@EnvironmentObject` so the sheet content can construct
+    /// safely even when SwiftUI's environment propagation through a sheet
+    /// → NavigationStack → Group chain hasn't fully settled.
+    let sessionViewModel: AppSessionViewModel
     @State private var resolvedHit: CompIQVariantHit?
     @State private var isSearching = true
     @State private var searchError: String?
@@ -3347,6 +3352,7 @@ struct PortfolioCompIQBridgeView: View {
         Group {
             if let hit = resolvedHit {
                 CompIQPricedCardView(hit: hit)
+                    .environmentObject(sessionViewModel)
             } else if isSearching {
                 VStack(spacing: 16) {
                     ProgressView()

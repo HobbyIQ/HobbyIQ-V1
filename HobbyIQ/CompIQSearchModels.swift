@@ -70,7 +70,13 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     enum ConfidenceLevel { case high, medium, low }
 
     var confidenceLevel: ConfidenceLevel? {
-        if attribution?.lowercased() == "authoritative" { return .high }
+        // CF-IOS-AI-MATCHED-CONFIDENCE (2026-06-28): `ai-matched` candidates
+        // come from CardHedge's AI semantic matcher (CF-CH-MATCH-CARD-BOOST,
+        // backend confidence=1.0). Force-bucket to .high alongside
+        // `authoritative` so the semantic intent survives unrelated numeric
+        // tweaks to the confidence scale.
+        let attr = attribution?.lowercased()
+        if attr == "authoritative" || attr == "ai-matched" { return .high }
         guard let confidence else { return nil }
         if confidence >= 0.8 { return .high }
         if confidence >= 0.5 { return .medium }
@@ -573,30 +579,54 @@ struct CardHedgeLastSaleSurface: Codable, Hashable {
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): trend-anchor sub-block on
 /// `CardHedgeModelExpectation`. Renders the "Base market rising/falling"
 /// chip when `direction` resolves to up/down (flat suppressed). View
-/// dims the chip opacity by `rSquared` so low-confidence trends fade.
+/// dims the chip opacity by `trendConfidence` so low-confidence trends
+/// fade.
+///
+/// CF-CH-RESPONSE-SURFACE-SUBBLOCKS (backend 17cea1b7, 2026-06-27):
+/// wire shape expanded — `rSquared` removed in favor of
+/// `trendConfidence`, plus diagnostic fields the view doesn't render
+/// today but decodes for forward-compat.
 struct CardHedgeTrendAnchor: Codable, Hashable {
     let direction: String?
     let slopePctPerDay: Double?
-    let rSquared: Double?
+    let trendConfidence: Double?
+    let windowDays: Int?
+    let daysWithSales: Int?
+    let projectedBaseAtSale: Double?
+    let projectedBaseToday: Double?
+    let allTimeBaseMedian: Double?
 }
 
-/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): forward-projection range
-/// sub-block. View renders "Next likely $L–$H if trend holds" when both
-/// range bounds decode cleanly. Read as range[0]/[1] matching the
-/// existing model-expectation range pattern.
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): forward-projection sub-block.
+/// View renders "Next likely $L–$H if trend holds" when both bounds
+/// decode cleanly.
+///
+/// CF-CH-RESPONSE-SURFACE-SUBBLOCKS (backend 17cea1b7, 2026-06-27):
+/// wire shape changed from `range: [low, high]` to discrete `low` /
+/// `high` fields. `basis` + `confidence` are decoded for forward-
+/// compat but not surfaced yet.
 struct CardHedgeForwardProjection: Codable, Hashable {
-    let range: [Double]?
-
-    var low: Double? { range?.first }
-    var high: Double? { (range?.count ?? 0) > 1 ? range?[1] : nil }
+    let low: Double?
+    let high: Double?
+    let basis: String?
+    let confidence: Double?
 }
 
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): position-signal sub-block.
-/// Backend-computed gain/loss vs the holding's purchase price — view
-/// renders a signed dollar line when `gainLoss` is present.
+/// View renders a signed dollar line when `gainVsLastSale` is present.
+///
+/// CF-CH-RESPONSE-SURFACE-SUBBLOCKS (backend 17cea1b7, 2026-06-27):
+/// shape replaced — `gainLoss`/`gainLossPct` removed, backend now ships
+/// `purchasePrice`, `gainVsLastSale`, `gainVsExpectation`, `gainPct`.
+/// View bindings redirect to the closest semantic equivalents
+/// (gainVsLastSale + gainPct); the rendered "vs purchase" copy may
+/// read as semantically loose now — separate CF to relabel the line
+/// or compute vs-purchase client-side from `purchasePrice`.
 struct CardHedgePositionSignal: Codable, Hashable {
-    let gainLoss: Double?
-    let gainLossPct: Double?
+    let purchasePrice: Double?
+    let gainVsLastSale: Double?
+    let gainVsExpectation: Double?
+    let gainPct: Double?
 }
 
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model expectation

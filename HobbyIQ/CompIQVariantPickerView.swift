@@ -391,6 +391,14 @@ struct CompIQVariantPickerView: View {
     /// pick grade later on the comp page.
     private func enrichedPills(for hit: CompIQVariantHit) -> [VariantPill] {
         var pills: [VariantPill] = []
+        // CF-IOS-AI-MATCHED-PILL (2026-06-28): CardHedge's AI semantic
+        // matcher (CF-CH-MATCH-CARD-BOOST) flags the best-fit candidate
+        // with `attribution: "ai-matched"`. Surface a "Best Match" pill
+        // so the user can trust the system picked the right card rather
+        // than just relevance-ranking by text similarity.
+        if hit.attribution?.lowercased() == "ai-matched" {
+            pills.append(VariantPill(text: "Best Match", kind: .bestMatch))
+        }
         if let parallel = parallelLine(for: hit) {
             pills.append(VariantPill(text: parallel, kind: .accent))
         }
@@ -654,7 +662,7 @@ struct CompIQVariantPickerView: View {
     private struct VariantPill: Hashable {
         let text: String
         let kind: Kind
-        enum Kind { case accent, neutral, auto, grade }
+        enum Kind { case accent, neutral, auto, grade, bestMatch }
     }
 
     @ViewBuilder
@@ -691,6 +699,12 @@ struct CompIQVariantPickerView: View {
             return (HobbyIQTheme.Colors.electricBlue,
                     HobbyIQTheme.Colors.electricBlue.opacity(0.18),
                     HobbyIQTheme.Colors.electricBlue.opacity(0.5))
+        case .bestMatch:
+            // Solid electric-blue fill so it reads as a stronger signal than
+            // the .accent parallel pill (which uses electric-blue at 0.14).
+            return (HobbyIQTheme.Colors.pureWhite,
+                    HobbyIQTheme.Colors.electricBlue,
+                    HobbyIQTheme.Colors.electricBlue)
         }
     }
 

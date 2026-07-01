@@ -1585,9 +1585,13 @@ extension InventoryCard {
         case purchaseDate, purchasePlatform, quantity, notes
         case imageFrontUrl, imageBackUrl
         case lowValue, highValue, confidence, method, summary, isAuto
+        case graderStatus
         case photos, clientId
         case fairMarketValue
         case valuationStatus
+        // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29)
+        case estimatedValue, estimateLow, estimateHigh, estimateBasis, estimateConfidence
+        case nearestGradedAnchor
         case cardsightCardId
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
         case lastSaleSurface, modelExpectation, modelSignal
@@ -1615,10 +1619,17 @@ extension InventoryCard {
         case highValue = "high_value"
         case confidence, method, summary
         case isAuto = "is_auto"
+        case graderStatus = "grader_status"
         case photos
         case clientId = "client_id"
         case fairMarketValue = "fair_market_value"
         case valuationStatus = "valuation_status"
+        case estimatedValue = "estimated_value"
+        case estimateLow = "estimate_low"
+        case estimateHigh = "estimate_high"
+        case estimateBasis = "estimate_basis"
+        case estimateConfidence = "estimate_confidence"
+        case nearestGradedAnchor = "nearest_graded_anchor"
         case cardsightCardId = "cardsight_card_id"
     }
 
@@ -1762,6 +1773,12 @@ extension InventoryCard {
             ?? (try? b.decode(String.self, forKey: .freshnessStatus))
         self.isAuto = (try? c.decode(Bool.self, forKey: .isAuto))
             ?? (try? s.decode(Bool.self, forKey: .isAuto)) ?? false
+        // CF-IOS-GRADER-STATUS-UI (2026-06-28): backend stores the raw enum
+        // value (e.g. "at_psa"); missing/null/unknown values fall back to
+        // .available so legacy holdings pre-PR-#166 render cleanly.
+        let decodedGraderStatusRaw = (try? c.decode(String.self, forKey: .graderStatus))
+            ?? (try? s.decode(String.self, forKey: .graderStatus))
+        self.graderStatus = decodedGraderStatusRaw.flatMap(GraderStatus.init(rawValue:)) ?? .available
         self.photos = decodedPhotos
         self.clientId = (try? c.decode(String.self, forKey: .clientId))
             ?? (try? s.decode(String.self, forKey: .clientId))
@@ -1774,6 +1791,22 @@ extension InventoryCard {
         // may add new bucket values without an iOS decode break.
         self.valuationStatus = (try? c.decode(String.self, forKey: .valuationStatus))
             ?? (try? s.decode(String.self, forKey: .valuationStatus))
+        // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): ladder-fallback wire
+        // fields. Each is independently optional; nil on legacy / observed
+        // holdings, populated on ladder-rescued ones.
+        self.estimatedValue = (try? c.decode(Double.self, forKey: .estimatedValue))
+            ?? (try? s.decode(Double.self, forKey: .estimatedValue))
+        self.estimateLow = (try? c.decode(Double.self, forKey: .estimateLow))
+            ?? (try? s.decode(Double.self, forKey: .estimateLow))
+        self.estimateHigh = (try? c.decode(Double.self, forKey: .estimateHigh))
+            ?? (try? s.decode(Double.self, forKey: .estimateHigh))
+        self.estimateBasis = (try? c.decode(String.self, forKey: .estimateBasis))
+            ?? (try? s.decode(String.self, forKey: .estimateBasis))
+        self.estimateConfidence = (try? c.decode(String.self, forKey: .estimateConfidence))
+            ?? (try? s.decode(String.self, forKey: .estimateConfidence))
+        self.nearestGradedAnchor = (try? c.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
+            ?? (try? s.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
+            ?? nil
         self.cardsightCardId = (try? c.decode(String.self, forKey: .cardsightCardId))
             ?? (try? s.decode(String.self, forKey: .cardsightCardId))
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
@@ -1811,10 +1844,17 @@ extension InventoryCard {
         try container.encodeIfPresent(method, forKey: .method)
         try container.encodeIfPresent(summary, forKey: .summary)
         try container.encode(isAuto, forKey: .isAuto)
+        try container.encode(graderStatus.rawValue, forKey: .graderStatus)
         try container.encodeIfPresent(photos, forKey: .photos)
         try container.encodeIfPresent(clientId, forKey: .clientId)
         try container.encodeIfPresent(fairMarketValue, forKey: .fairMarketValue)
         try container.encodeIfPresent(valuationStatus, forKey: .valuationStatus)
+        try container.encodeIfPresent(estimatedValue, forKey: .estimatedValue)
+        try container.encodeIfPresent(estimateLow, forKey: .estimateLow)
+        try container.encodeIfPresent(estimateHigh, forKey: .estimateHigh)
+        try container.encodeIfPresent(estimateBasis, forKey: .estimateBasis)
+        try container.encodeIfPresent(estimateConfidence, forKey: .estimateConfidence)
+        try container.encodeIfPresent(nearestGradedAnchor, forKey: .nearestGradedAnchor)
         try container.encodeIfPresent(cardsightCardId, forKey: .cardsightCardId)
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
@@ -2074,9 +2114,22 @@ final class AddPortfolioCardViewModel: ObservableObject {
             year = existingCard.year
             setName = existingCard.setName
             parallel = existingCard.parallel
-            grade = existingCard.grade
+            // Seed the dropdowns from the structured fields when present so
+            // the Grader / Grade menus pre-select instead of showing
+            // "Select". Falls back to parsing the composed grade label
+            // ("PSA 10") when only the legacy string is stored.
+            grader = existingCard.gradeCompany ?? Self.parseGradeCompany(from: existingCard.grade)
+            let numericGrade: String = {
+                if let v = existingCard.gradeValue {
+                    return v.truncatingRemainder(dividingBy: 1) == 0
+                        ? String(format: "%.0f", v)
+                        : String(format: "%.1f", v)
+                }
+                return Self.parseGradeValue(from: existingCard.grade)
+            }()
+            grade = numericGrade
             isGraded = existingCard.grade.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && existingCard.grade.lowercased() != "raw"
-            gradeValue = existingCard.grade
+            gradeValue = numericGrade.isEmpty ? existingCard.grade : numericGrade
             quantity = existingCard.quantity.map { String(format: "%.0f", $0) } ?? ""
             notes = existingCard.notes ?? ""
             frontPhotoUrl = existingCard.imageFrontUrl
@@ -2371,6 +2424,26 @@ final class AddPortfolioCardViewModel: ObservableObject {
         formatter.timeStyle = .none
         return formatter
     }()
+
+    /// Parse the company prefix out of a composed grade label like "PSA 10"
+    /// / "BGS 9.5". Returns "" when no recognised company token leads.
+    private static func parseGradeCompany(from label: String) -> String {
+        let token = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: .whitespaces)
+            .first?
+            .uppercased() ?? ""
+        return ["PSA", "BGS", "SGC", "CGC"].contains(token) ? token : ""
+    }
+
+    /// Parse the numeric portion of a composed grade label. "PSA 10" → "10",
+    /// "BGS 9.5" → "9.5". Returns "" when no number is present.
+    private static func parseGradeValue(from label: String) -> String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let match = trimmed.range(of: #"\d+(?:\.\d+)?"#, options: .regularExpression) else {
+            return ""
+        }
+        return String(trimmed[match])
+    }
 
     private static func estimateResult(for card: InventoryCard) -> CardEstimateResponse {
         CardEstimateResponse(

@@ -408,6 +408,53 @@ struct LedgerPatchResponse: Decodable {
 }
 
 extension InventoryCard {
+    /// Composed display title for the detail page. Prefers the stored
+    /// `cardName` when populated; otherwise composes from year + setName +
+    /// playerName + parallel so legacy holdings (added before iOS sent
+    /// `cardTitle` on the wire) still surface a readable heading.
+    var fullDisplayName: String {
+        let stored = cardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if stored.isEmpty == false { return stored }
+        let parts: [String] = [year, setName, playerName, parallel]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        if parts.isEmpty { return playerName.isEmpty ? "Card Details" : playerName }
+        return parts.joined(separator: " ")
+    }
+
+    /// Year for the Card Details row. Returns the stored `year` when
+    /// populated; otherwise extracts the first 4-digit year from
+    /// `cardName` ("2026 Bowman Baseball Eric Hartman …" → "2026") so
+    /// holdings whose structured `year` field never landed still surface
+    /// the year on the detail page.
+    var displayYear: String {
+        let stored = year.trimmingCharacters(in: .whitespacesAndNewlines)
+        if stored.isEmpty == false { return stored }
+        let title = cardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let match = title.range(of: #"(?:19|20)\d{2}"#, options: .regularExpression) {
+            return String(title[match])
+        }
+        return ""
+    }
+
+    /// Set name for the Card Details row. Returns the stored `setName`
+    /// when populated; otherwise derives "everything between the year and
+    /// the player name" from `cardName`. Conservative: if the player name
+    /// isn't found inside the title (or the title lacks a year), returns
+    /// empty so the row shows "—" instead of a misleading slice.
+    var displaySet: String {
+        let stored = setName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if stored.isEmpty == false { return stored }
+        let title = cardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let player = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard title.isEmpty == false, player.isEmpty == false else { return "" }
+        guard let yearRange = title.range(of: #"(?:19|20)\d{2}"#, options: .regularExpression) else { return "" }
+        guard let playerRange = title.range(of: player, options: [.caseInsensitive]),
+              playerRange.lowerBound > yearRange.upperBound else { return "" }
+        let between = title[yearRange.upperBound..<playerRange.lowerBound]
+        return between.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var costFormatted: String {
         portfolioCurrencyString(cost)
     }
@@ -432,6 +479,23 @@ extension InventoryCard {
         guard let fmv = fairMarketValue else { return "—" }
         let qty = max(1.0, quantity ?? 1.0)
         return portfolioCurrencyString(fmv * qty)
+    }
+
+    /// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): variant of
+    /// `displayValueFormatted` that falls back to `estimatedValue` with a
+    /// leading tilde when fairMarketValue is absent. Used by the Card
+    /// Details "Fair Market" row so ladder-rescued holdings show their
+    /// number instead of `—`.
+    var fairMarketValueDisplay: String {
+        if let fmv = fairMarketValue {
+            let qty = max(1.0, quantity ?? 1.0)
+            return portfolioCurrencyString(fmv * qty)
+        }
+        if let estimated = estimatedValue, estimated > 0 {
+            let qty = max(1.0, quantity ?? 1.0)
+            return "~" + portfolioCurrencyString(estimated * qty)
+        }
+        return "—"
     }
 
     var isUnpriced: Bool { fairMarketValue == nil }
@@ -818,6 +882,7 @@ struct PortfolioHoldingDetailSheet: View {
     let onUpdated: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
     @ObservedObject private var ebayStore = EBayOAuthCoordinator.shared
     @State private var showingEditSheet = false
     @State private var showingSoldSheet = false
@@ -831,16 +896,95 @@ struct PortfolioHoldingDetailSheet: View {
     @State private var showingCompIQAnalysis = false
     @State private var lastEbayListingResponse: PortfolioEbayListingResponse?
     @State private var localError: String?
+    /// CF-IOS-GRADER-STATUS-UI (2026-06-28): mirrors `card.graderStatus`
+    /// for the dropdown's optimistic UI. Seeded in init from the holding;
+    /// PATCH commits update it (and the row stays correct because the
+    /// inventory list refreshes on `onUpdated`).
+    @State private var selectedStatus: GraderStatus
 
     init(viewModel: PortfolioIQViewModel, card: InventoryCard, onUpdated: @escaping () -> Void) {
         self.viewModel = viewModel
         self.card = card
         self.onUpdated = onUpdated
+        _selectedStatus = State(initialValue: card.graderStatus)
+    }
+
+    private var graderStatusRow: some View {
+        HStack {
+            Text("Status")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            Spacer()
+            Menu {
+                ForEach(GraderStatus.allCases) { status in
+                    Button {
+                        let previous = selectedStatus
+                        selectedStatus = status
+                        Task { await commitStatusChange(status, previous: previous) }
+                    } label: {
+                        HStack {
+                            Text(status.displayLabel)
+                            if selectedStatus == status {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedStatus.displayLabel)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(selectedStatus.tintColor)
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func commitStatusChange(_ newStatus: GraderStatus, previous: GraderStatus) async {
+        do {
+            _ = try await APIService.shared.updateHoldingGraderStatus(holdingId: card.id, status: newStatus)
+            onUpdated()
+        } catch {
+            // Roll back the optimistic UI and surface the failure inline.
+            selectedStatus = previous
+            localError = "Could not update status: \(APIService.errorMessage(from: error))"
+        }
+    }
+
+    /// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): natural-language phrasing
+    /// for the anchor sale's freshness + grade. Raw anchors read as
+    /// "Last sold: $1185 raw, 4 days ago"; graded anchors read as
+    /// "Anchor: PSA 9 $755, today".
+    private func anchorCaption(for a: NearestGradedAnchor) -> String {
+        let priceStr = portfolioCurrencyString(a.price)
+        let agePhrase: String
+        if a.daysOld <= 1 {
+            agePhrase = "today"
+        } else if a.daysOld < 14 {
+            agePhrase = "\(a.daysOld) days ago"
+        } else if a.daysOld < 60 {
+            agePhrase = "\(a.daysOld / 7) weeks ago"
+        } else {
+            agePhrase = "\(a.daysOld / 30) months ago"
+        }
+        if a.grade.lowercased() == "raw" {
+            return "Last sold: \(priceStr) raw, \(agePhrase)"
+        } else {
+            return "Anchor: \(a.grade) \(priceStr), \(agePhrase)"
+        }
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        // CF-TABBAR-PERSISTENT (2026-06-27): pushed onto the InventoryIQ
+        // NavigationStack instead of presented as a sheet so the bottom
+        // tab bar stays visible. The wrapping `NavigationStack` was
+        // removed to avoid nesting stacks — the parent (InventoryIQView)
+        // owns the stack.
+        ZStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         PortfolioHoldingHeroCard(card: card) {
@@ -860,9 +1004,48 @@ struct PortfolioHoldingDetailSheet: View {
                         PortfolioContextCard(title: "Pricing Context") {
                             detailRow(
                                 title: "Fair Market",
-                                value: card.displayValueFormatted,
+                                value: card.fairMarketValueDisplay,
                                 subtitle: card.isUnpriced ? card.method : nil
                             )
+                            // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29):
+                            // "Estimated" pill when the ladder fallback
+                            // sourced the FMV; informational caption +
+                            // basis disclosure beneath surface provenance.
+                            if card.valuationStatus == "estimated" {
+                                HStack {
+                                    Spacer(minLength: 0)
+                                    Text("Estimated")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                                        .clipShape(Capsule(style: .continuous))
+                                }
+                            }
+                            if let anchor = card.nearestGradedAnchor {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "info.circle")
+                                        .font(.caption2)
+                                    Text(anchorCaption(for: anchor))
+                                        .font(.caption)
+                                    Spacer(minLength: 0)
+                                }
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            }
+                            if card.valuationStatus == "estimated",
+                               let basis = card.estimateBasis,
+                               basis.isEmpty == false {
+                                DisclosureGroup("Why this estimate") {
+                                    Text(basis)
+                                        .font(.caption)
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                                        .multilineTextAlignment(.leading)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .font(.subheadline.weight(.medium))
+                                .tint(HobbyIQTheme.Colors.electricBlue)
+                            }
                             detailRow(title: "Quick Sale", value: card.lowValue.map { portfolioCurrencyString($0) } ?? "—")
                             detailRow(title: "Suggested List", value: card.highValue.map { portfolioCurrencyString($0) } ?? "—")
 
@@ -874,7 +1057,7 @@ struct PortfolioHoldingDetailSheet: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "doc.text.magnifyingglass")
                                         .font(.caption.weight(.semibold))
-                                    Text("View comp analysis")
+                                    Text("View CompIQ")
                                         .font(.caption.weight(.semibold))
                                 }
                                 .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
@@ -919,11 +1102,12 @@ struct PortfolioHoldingDetailSheet: View {
                             detailRow(title: Labels.roi, value: card.roiFormatted, valueColor: card.profitLoss >= 0 ? .green : .red)
                             detailRow(title: "Purchase Date", value: card.purchaseDateFormatted)
                             detailRow(title: "Purchase Location", value: card.purchasePlatformText)
-                            detailRow(title: "Year", value: card.year.isEmpty ? "—" : card.year)
-                            detailRow(title: "Set", value: card.setName.isEmpty ? "—" : card.setName)
+                            detailRow(title: "Year", value: card.displayYear.isEmpty ? "—" : card.displayYear)
+                            detailRow(title: "Set", value: card.displaySet.isEmpty ? "—" : card.displaySet)
                             detailRow(title: "Parallel", value: card.parallel.isEmpty ? "—" : card.parallel)
                             detailRow(title: "Grade", value: card.grade.isEmpty ? "—" : card.grade)
                             detailRow(title: "Auto", value: card.isAuto ? "Yes" : "No")
+                            graderStatusRow
                             detailRow(title: "Quantity", value: card.quantity.map { String(format: "%.0f", $0) } ?? "—")
                             detailRow(title: "Notes", value: card.notes?.isEmpty == false ? card.notes! : "—")
                             detailRow(title: Labels.confidence, value: card.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "—")
@@ -993,7 +1177,7 @@ struct PortfolioHoldingDetailSheet: View {
                     .padding(.vertical, 20)
                 }
                 .background { HobbyIQBackground() }
-                .navigationTitle("Card Details")
+                .navigationTitle(card.fullDisplayName)
                 .navigationBarTitleDisplayMode(.inline)
                 .themedNavigationSurface()
                 .toolbar {
@@ -1022,7 +1206,8 @@ struct PortfolioHoldingDetailSheet: View {
                 }
                 .sheet(isPresented: $showingCompIQAnalysis) {
                     NavigationStack {
-                        PortfolioCompIQBridgeView(holding: card)
+                        PortfolioCompIQBridgeView(holding: card, sessionViewModel: sessionViewModel)
+                            .environmentObject(sessionViewModel)
                     }
                 }
 
@@ -1052,7 +1237,6 @@ struct PortfolioHoldingDetailSheet: View {
                     .zIndex(10)
                 }
             }
-        }
         .task {
             await ebayStore.refreshConnectionStatus()
         }
@@ -1088,12 +1272,14 @@ struct PortfolioHoldingHeroCard: View {
             // Top row: name + edit
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(card.playerName)
-                        .font(.title2.weight(.bold))
+                    Text(card.fullDisplayName)
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    if !cardSubtitle.isEmpty {
-                        Text(cardSubtitle)
+                    if !card.playerName.isEmpty, card.fullDisplayName != card.playerName {
+                        Text(card.playerName)
                             .font(.subheadline)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }
@@ -1433,6 +1619,21 @@ struct PortfolioCardRow: View {
                             .truncationMode(.tail)
                     }
 
+                    // CF-IOS-GRADER-STATUS-UI (2026-06-28): surface the
+                    // grader bucket as a labeled line. .available stays
+                    // implicit (no row) so in-hand holdings don't gain
+                    // visual clutter.
+                    if card.graderStatus != .available {
+                        HStack(spacing: 4) {
+                            Text("Status:")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            Text(card.graderStatus.displayLabel)
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(card.graderStatus.tintColor)
+                        }
+                    }
+
                     inventoryGradePill(text: card.gradeChipText)
                 }
 
@@ -1484,6 +1685,18 @@ struct PortfolioCardGridCard: View {
                         .lineLimit(1)
                 }
 
+                if card.graderStatus != .available {
+                    HStack(spacing: 3) {
+                        Text("Status:")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Text(card.graderStatus.displayLabel)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(card.graderStatus.tintColor)
+                            .lineLimit(1)
+                    }
+                }
+
                 inventoryGradePill(text: card.gradeChipText)
             }
             .padding(.horizontal, 10)
@@ -1492,10 +1705,25 @@ struct PortfolioCardGridCard: View {
             Spacer(minLength: 6)
 
             HStack(alignment: .center, spacing: 4) {
-                Text(card.displayValueText)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                    .lineLimit(1)
+                if (card.fairMarketValue ?? 0) <= 0,
+                   let estimated = card.estimatedValue, estimated > 0 {
+                    let qty = max(1.0, card.quantity ?? 1.0)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("~" + inventoryWholeDollarString(estimated * qty))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .lineLimit(1)
+                        Text("Estimated")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text(card.displayValueText)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .lineLimit(1)
+                }
                 Spacer(minLength: 4)
                 inventoryGridMovement(card: card)
             }
@@ -1555,9 +1783,20 @@ struct PortfolioCardGridCard: View {
 }
 
 private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
-    let parts = [card.year, card.setName]
-        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        .filter { !$0.isEmpty }
+    // Mirror the detail view's cardSubtitle (PortfolioIQModels.swift:1078-1085)
+    // so the list/grid row also surfaces parallel + Auto. Pre-CF the list
+    // showed only year + setName, which made the CPA-EHA Blue X-Fractor
+    // auto holding indistinguishable from the BCP-102 non-auto with the
+    // same year and set. Each part is trimmed; empty parts are dropped.
+    var parts: [String] = []
+    let year = card.year.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !year.isEmpty { parts.append(year) }
+    let setName = card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !setName.isEmpty { parts.append(setName) }
+    let parallel = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !parallel.isEmpty { parts.append(parallel) }
+    if card.isAuto { parts.append("Auto") }
+
     if parts.isEmpty {
         let fallback = card.cardName.trimmingCharacters(in: .whitespacesAndNewlines)
         return fallback.isEmpty ? nil : fallback
@@ -1597,10 +1836,30 @@ private func inventoryGradePill(text: String) -> some View {
 @ViewBuilder
 private func inventoryRightColumn(card: InventoryCard) -> some View {
     VStack(alignment: .trailing, spacing: 3) {
-        Text(card.displayValueText)
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-            .monospacedDigit()
+        // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): when the engine
+        // couldn't observe a real FMV but the ladder fallback produced an
+        // `estimatedValue`, surface that with a tilde + muted color +
+        // "Estimated" tag so the user sees a number rather than "—".
+        if let fmv = card.fairMarketValue, fmv > 0 {
+            Text(card.displayValueText)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .monospacedDigit()
+        } else if let estimated = card.estimatedValue, estimated > 0 {
+            let qty = max(1.0, card.quantity ?? 1.0)
+            Text("~" + inventoryWholeDollarString(estimated * qty))
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .monospacedDigit()
+            Text("Estimated")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+        } else {
+            Text(card.displayValueText)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .monospacedDigit()
+        }
 
         if let (icon, label, color) = inventoryMovementDescriptor(for: card) {
             HStack(spacing: 3) {

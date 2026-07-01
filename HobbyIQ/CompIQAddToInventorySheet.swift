@@ -26,6 +26,10 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
     @Published var selectedGrade: GradeChoice
     @Published var purchasePriceText: String = ""
     @Published var quantity: Int = 1
+    /// CF-IOS-GRADER-STATUS-UI (2026-06-28): default to .available so the
+    /// existing in-hand add flow is unchanged. User flips this in the
+    /// Status picker when shipping a raw to a grader.
+    @Published var selectedGraderStatus: GraderStatus = .available
     @Published private(set) var saveState: SaveState = .idle
 
     let hit: CompIQVariantHit
@@ -95,19 +99,35 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
             cardsightCardId: hit.cardsightCardId,
             parallel: parallelName,
             parallelId: hit.parallelId,
+            isAuto: hit.isAuto,
             gradeCompany: selectedGrade.gradeCompany,
             gradeValue: selectedGrade.gradeValue,
             purchasePrice: purchasePrice,
             quantity: max(1, quantity),
+            graderStatus: selectedGraderStatus == .available ? nil : selectedGraderStatus.rawValue,
             year: resolvedAddYear(),
             setName: resolvedAddSetName(),
-            cardNumber: resolvedAddCardNumber()
+            cardNumber: resolvedAddCardNumber(),
+            cardTitle: resolvedAddCardTitle()
         )
 
         saveState = .saving
         Task {
             do {
                 let response = try await apiService.addPortfolioHolding(body)
+                // Persist the just-created holding to the local cache before
+                // notifying the inventory view to refresh. Without this, the
+                // next `fetch` reads a stale local cache AND can race a
+                // backend eventual-consistency lag — the new card visually
+                // disappears between the add-confirmation and the backend
+                // write propagating to /api/portfolio reads.
+                if let holding = response.holding {
+                    let existing = await LocalPortfolioProvider.shared.getInventory()
+                    let alreadyCached = existing.contains(where: { $0.id == holding.id })
+                    if alreadyCached == false {
+                        await LocalPortfolioProvider.shared.saveInventory(existing + [holding])
+                    }
+                }
                 self.saveState = .saved(response.holding)
                 completion(response.holding)
             } catch {
@@ -174,6 +194,14 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
            n.isEmpty == false { return n }
         if let n = hit.number?.trimmingCharacters(in: .whitespacesAndNewlines),
            n.isEmpty == false { return n }
+        return nil
+    }
+
+    private func resolvedAddCardTitle() -> String? {
+        if let t = hit.title?.trimmingCharacters(in: .whitespacesAndNewlines),
+           t.isEmpty == false, isLikelyUUID(t) == false { return t }
+        if let t = hit.displayLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+           t.isEmpty == false, isLikelyUUID(t) == false { return t }
         return nil
     }
 
@@ -346,6 +374,7 @@ struct CompIQAddToInventorySheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     pinnedHeader
                     gradeSection
+                    graderStatusSection
                     previewSection
                     costSection
                     quantitySection
@@ -386,6 +415,48 @@ struct CompIQAddToInventorySheet: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var graderStatusSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Status")
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .textCase(.uppercase)
+            Menu {
+                ForEach(GraderStatus.allCases) { status in
+                    Button {
+                        viewModel.selectedGraderStatus = status
+                    } label: {
+                        HStack {
+                            Text(status.displayLabel)
+                            if viewModel.selectedGraderStatus == status {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Text(viewModel.selectedGraderStatus.displayLabel)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(viewModel.selectedGraderStatus.tintColor)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(HobbyIQTheme.Colors.steelGray.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1)
+                )
+            }
+        }
     }
 
     private var gradeSection: some View {

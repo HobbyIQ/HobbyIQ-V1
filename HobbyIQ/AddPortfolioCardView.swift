@@ -325,8 +325,18 @@ struct AddPortfolioCardView: View {
 
             if viewModel.isGraded {
                 HStack(spacing: 10) {
-                    themedFormField("Grader", text: $viewModel.grader)
-                    themedFormField("Grade", text: $viewModel.grade, keyboard: .numbersAndPunctuation)
+                    themedMenuField(
+                        "Grader",
+                        selection: $viewModel.grader,
+                        options: ["PSA", "BGS", "SGC", "CGC"],
+                        placeholder: "Select"
+                    )
+                    themedMenuField(
+                        "Grade",
+                        selection: $viewModel.grade,
+                        options: ["10", "9.5", "9", "8.5", "8", "7.5", "7", "6.5", "6", "5.5", "5", "4.5", "4", "3.5", "3", "2.5", "2", "1.5", "1"],
+                        placeholder: "Select"
+                    )
                 }
             }
 
@@ -585,6 +595,37 @@ struct AddPortfolioCardView: View {
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 .tracking(1.2)
         }
+    }
+
+    private func themedMenuField(_ title: String, selection: Binding<String>, options: [String], placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+            Menu {
+                ForEach(options, id: \.self) { option in
+                    Button(option) { selection.wrappedValue = option }
+                }
+            } label: {
+                HStack {
+                    Text(selection.wrappedValue.isEmpty ? placeholder : selection.wrappedValue)
+                        .foregroundStyle(selection.wrappedValue.isEmpty ? HobbyIQTheme.Colors.mutedText : HobbyIQTheme.Colors.pureWhite)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .padding(12)
+                .background(HobbyIQTheme.Colors.steelGray.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                        .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1)
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func themedFormField(_ title: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {

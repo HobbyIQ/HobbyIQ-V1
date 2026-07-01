@@ -463,9 +463,12 @@ struct CardHedgeModelSignalView: View {
             let sign = slope >= 0 ? "+" : "−"
             text += " \(sign)\(String(format: "%.2f%%", abs(slope)))/day"
         }
-        // R² dims the chip: high R² = full opacity, low R² = faded.
-        // Floor at 0.35 so a near-zero R² still reads as intentional fade.
-        let dimming = trend.rSquared.map { max(0.35, min(1.0, $0)) } ?? 0.7
+        // trendConfidence dims the chip: high confidence = full opacity,
+        // low = faded. Floor at 0.35 so a near-zero confidence still reads
+        // as intentional fade. (Renamed from rSquared per backend
+        // CF-CH-RESPONSE-SURFACE-SUBBLOCKS, semantics identical: 0-1
+        // quality-of-fit number.)
+        let dimming = trend.trendConfidence.map { max(0.35, min(1.0, $0)) } ?? 0.7
         let tint = isUp ? HobbyIQTheme.Colors.successGreen : Color.red
         return (text, tint, dimming)
     }
@@ -480,15 +483,21 @@ struct CardHedgeModelSignalView: View {
         return "Next likely \(loStr)–\(hiStr) if trend holds"
     }
 
-    /// positionSignal → gain/loss vs purchase line. Signed; green when
-    /// positive, red when negative. Suppressed when `gainLoss` is nil.
+    /// positionSignal → gain/loss line. Signed; green when positive, red
+    /// when negative. Suppressed when `gainVsLastSale` is nil.
+    /// Per backend CF-CH-RESPONSE-SURFACE-SUBBLOCKS the wire dropped
+    /// `gainLoss` (vs purchase) in favor of `gainVsLastSale` (vs the
+    /// closest comp). Binding redirected to the closest signed-dollar
+    /// equivalent so the existing component continues to render; the
+    /// "vs purchase" copy is now semantically loose — relabel + vs-
+    /// purchase compute lives in a separate CF.
     private func positionSignalString() -> (text: String, tint: Color)? {
         guard let pos = modelExpectation?.positionSignal,
-              let gainLoss = pos.gainLoss else { return nil }
+              let gainLoss = pos.gainVsLastSale else { return nil }
         let sign = gainLoss >= 0 ? "+" : "−"
         let absDollar = abs(gainLoss).formatted(.currency(code: "USD"))
         var text = "\(sign)\(absDollar) vs purchase"
-        if let pct = pos.gainLossPct {
+        if let pct = pos.gainPct {
             let pctSign = pct >= 0 ? "+" : "−"
             text += " (\(pctSign)\(String(format: "%.0f%%", abs(pct))))"
         }
@@ -626,7 +635,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 trendAnchor: CardHedgeTrendAnchor(
                     direction: "rising",
                     slopePctPerDay: 0.42,
-                    rSquared: 0.74
+                    trendConfidence: 0.74,
+                    windowDays: nil,
+                    daysWithSales: nil,
+                    projectedBaseAtSale: nil,
+                    projectedBaseToday: nil,
+                    allTimeBaseMedian: nil
                 )
             ),
             modelSignal: nil
@@ -645,7 +659,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 range: [250, 273],
                 basis: "prices_by_card_honest",
                 n: 11,
-                forwardProjection: CardHedgeForwardProjection(range: [460, 490])
+                forwardProjection: CardHedgeForwardProjection(
+                    low: 460,
+                    high: 490,
+                    basis: nil,
+                    confidence: nil
+                )
             ),
             modelSignal: nil
         )
@@ -670,10 +689,25 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 trendAnchor: CardHedgeTrendAnchor(
                     direction: "rising",
                     slopePctPerDay: 0.42,
-                    rSquared: 0.74
+                    trendConfidence: 0.74,
+                    windowDays: nil,
+                    daysWithSales: nil,
+                    projectedBaseAtSale: nil,
+                    projectedBaseToday: nil,
+                    allTimeBaseMedian: nil
                 ),
-                forwardProjection: CardHedgeForwardProjection(range: [460, 490]),
-                positionSignal: CardHedgePositionSignal(gainLoss: 188, gainLossPct: 71.97)
+                forwardProjection: CardHedgeForwardProjection(
+                    low: 460,
+                    high: 490,
+                    basis: nil,
+                    confidence: nil
+                ),
+                positionSignal: CardHedgePositionSignal(
+                    purchasePrice: nil,
+                    gainVsLastSale: 188,
+                    gainVsExpectation: nil,
+                    gainPct: 71.97
+                )
             ),
             modelSignal: CardHedgeModelSignal(
                 lean: "sell",

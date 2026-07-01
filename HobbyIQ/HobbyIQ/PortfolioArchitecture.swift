@@ -5,6 +5,37 @@
 
 import Combine
 import Foundation
+import SwiftUI
+
+/// CF-IOS-GRADER-STATUS-UI (2026-06-28): backend's persisted grader-status
+/// bucket on each holding. Three real states power the dropdown today:
+/// `available` (in-hand), `atPsa` (sent in for grading), `pendingRedemption`
+/// (graded but waiting for slab pickup). Backend type retains a 4th
+/// `in_route` for forward-compat but iOS deliberately omits it — no rows
+/// use it and surfacing it would clutter the picker.
+enum GraderStatus: String, Codable, Hashable, CaseIterable, Identifiable {
+    case available
+    case atPsa = "at_psa"
+    case pendingRedemption = "pending_redemption"
+
+    var id: String { rawValue }
+
+    var displayLabel: String {
+        switch self {
+        case .available:          return "Available"
+        case .atPsa:              return "At PSA"
+        case .pendingRedemption:  return "Pending Redemption"
+        }
+    }
+
+    var tintColor: Color {
+        switch self {
+        case .available:          return HobbyIQTheme.Colors.mutedText
+        case .atPsa:              return HobbyIQTheme.Colors.electricBlue
+        case .pendingRedemption:  return .orange
+        }
+    }
+}
 
 struct CardInput: Identifiable, Hashable {
     let id: UUID
@@ -40,6 +71,19 @@ struct CardEstimate: Identifiable, Hashable {
         self.estimatedValue = estimatedValue
         self.confidence = confidence
     }
+}
+
+/// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): per-grade anchor sale the
+/// backend ladder fallback uses when computing an estimated FMV. Renders
+/// in the detail view as "Anchor: PSA 9 $755, today" or, for raw anchors,
+/// "Last sold: $1185 raw, 4 days ago". `confidence` is 0.0–1.0 (engine-
+/// internal), not currently surfaced.
+struct NearestGradedAnchor: Codable, Hashable {
+    let grade: String
+    let price: Double
+    let daysOld: Int
+    let sampleSize: Int
+    let confidence: Double
 }
 
 struct InventoryCard: Identifiable, Hashable, Codable {
@@ -89,6 +133,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let method: String?
     let summary: String?
     var isAuto: Bool = false
+    /// CF-IOS-GRADER-STATUS-UI (2026-06-28): backend-persisted grader bucket.
+    /// `available` is the default; missing/null on the wire decodes to it.
+    var graderStatus: GraderStatus = .available
 
     // PR B: photo-storage-sas schema additions
     let photos: [String]?
@@ -117,6 +164,19 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     // collection-value card is the surface that includes the estimated
     // bucket in its headline.
     let valuationStatus: String?
+
+    /// CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29): backend ladder-fallback
+    /// fields populated on holdings the engine couldn't observe directly.
+    /// `estimatedValue` is the ladder-derived FMV; `estimateBasis` is the
+    /// engine's human-readable provenance prose surfaced in the detail
+    /// view's "Why this estimate" disclosure. `nearestGradedAnchor`
+    /// carries the anchor sale itself for the row's context caption.
+    let estimatedValue: Double?
+    let estimateLow: Double?
+    let estimateHigh: Double?
+    let estimateBasis: String?
+    let estimateConfidence: String?
+    let nearestGradedAnchor: NearestGradedAnchor?
 
     // CF-IOS-DIRECTION-SWEEP (2026-06-18): movement* fields removed —
     // direction-class signals every render site of which was stripped
@@ -169,10 +229,17 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         method: String? = nil,
         summary: String? = nil,
         isAuto: Bool = false,
+        graderStatus: GraderStatus = .available,
         photos: [String]? = nil,
         clientId: String? = nil,
         fairMarketValue: Double? = nil,
         valuationStatus: String? = nil,
+        estimatedValue: Double? = nil,
+        estimateLow: Double? = nil,
+        estimateHigh: Double? = nil,
+        estimateBasis: String? = nil,
+        estimateConfidence: String? = nil,
+        nearestGradedAnchor: NearestGradedAnchor? = nil,
         cardsightCardId: String? = nil,
         lastSaleSurface: CardHedgeLastSaleSurface? = nil,
         modelExpectation: CardHedgeModelExpectation? = nil,
@@ -202,10 +269,17 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.method = method
         self.summary = summary
         self.isAuto = isAuto
+        self.graderStatus = graderStatus
         self.photos = photos
         self.clientId = clientId
         self.fairMarketValue = fairMarketValue
         self.valuationStatus = valuationStatus
+        self.estimatedValue = estimatedValue
+        self.estimateLow = estimateLow
+        self.estimateHigh = estimateHigh
+        self.estimateBasis = estimateBasis
+        self.estimateConfidence = estimateConfidence
+        self.nearestGradedAnchor = nearestGradedAnchor
         self.cardsightCardId = cardsightCardId
         self.lastSaleSurface = lastSaleSurface
         self.modelExpectation = modelExpectation

@@ -21,8 +21,10 @@ struct InventoryIQView: View {
     @State private var cachedFilteredCards: [InventoryCard] = []
 
     var body: some View {
-        NavigationView {
-            ZStack {
+        // CF-TABBAR-PERSISTENT (2026-06-27): MainAppView already wraps
+        // InventoryIQView in a NavigationStack — adding another here
+        // double-nests stacks and breaks push navigation.
+        ZStack {
                 background
 
                 if vm.summary == nil && vm.isLoading {
@@ -55,7 +57,7 @@ struct InventoryIQView: View {
                     .refreshable {
                         await vm.refresh()
                     }
-                    .sheet(item: $selectedCard) { card in
+                    .navigationDestination(item: $selectedCard) { card in
                         PortfolioHoldingDetailSheet(
                             viewModel: vm,
                             card: card,
@@ -97,8 +99,6 @@ struct InventoryIQView: View {
             .onChange(of: inventoryQuery) { _, _ in recomputeFilteredCards() }
             .onChange(of: inventoryFilter) { _, _ in recomputeFilteredCards() }
             .onChange(of: inventorySort) { _, _ in recomputeFilteredCards() }
-        }
-        .navigationViewStyle(.stack)
     }
 
     // MARK: - Background & States

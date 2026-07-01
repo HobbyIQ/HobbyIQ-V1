@@ -557,11 +557,18 @@ final class PortfolioIQViewModel: ObservableObject {
         do {
             let liveHoldings = try await service.fetchPortfolioHoldings(userId: userId)
             didLoadLiveHoldings = true
-            // Guard against the API returning empty when we already have data
+            // Backend is the authoritative source. The previous "union
+            // cached-only items" guard was removed (CF 2026-06-28): it
+            // hid sync bugs by surfacing stale local-only items. Refresh
+            // now mirrors the backend's holdings list verbatim, and the
+            // local cache is overwritten on success so the next launch
+            // starts from a clean snapshot. Live-empty guard remains so
+            // a transient empty response doesn't wipe a non-empty list.
             if liveHoldings.isEmpty, preserveExistingSummaryOnError, !inventoryCards.isEmpty {
                 loadMessages.append("Live data returned empty. Keeping your current inventory.")
             } else {
                 fetchedHoldings = liveHoldings
+                await LocalPortfolioProvider.shared.saveInventory(liveHoldings)
             }
             // Derive summary from holdings instead of separate API call
             let totalCost = fetchedHoldings.reduce(0) { $0 + $1.cost }
@@ -579,6 +586,13 @@ final class PortfolioIQViewModel: ObservableObject {
                 month: nil,
                 year: nil
             )
+        } catch is CancellationError {
+            // The fetch task was cancelled (typically by SwiftUI's .refreshable
+            // closure or a view re-render). This is not a user-facing failure —
+            // a fresh load will be triggered by the next onAppear / refreshable
+            // gesture. Do NOT append a "live holdings unavailable" message: it
+            // surfaces a banner for what is, semantically, a no-op.
+            logger.info("Portfolio holdings fetch cancelled (cooperative cancellation, not a failure).")
         } catch {
             logger.error("Portfolio holdings load failed: \(error.localizedDescription, privacy: .public)")
             if cachedHoldings.isEmpty {
