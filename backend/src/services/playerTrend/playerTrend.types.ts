@@ -47,7 +47,8 @@ export interface PlayerMomentumSignal {
 }
 
 /**
- * Full trend snapshot for a player — momentum + 30d cumulative volume.
+ * Full trend snapshot for a player — momentum + 30d cumulative volume +
+ * supply-trend classification.
  * Callers of `getPlayerTrendSnapshot` receive this or null.
  */
 export interface PlayerTrendSnapshot {
@@ -55,6 +56,13 @@ export interface PlayerTrendSnapshot {
   player: string;
   /** Derived momentum signal from the weekly buckets. */
   momentum: PlayerMomentumSignal;
+  /**
+   * Leading-indicator classification derived from the momentum + volume
+   * ratios. See `supplyTrend.classify.ts` for the 4-quadrant matrix.
+   * `flat` when either ratio is null or below the meaningful-deviation
+   * threshold.
+   */
+  supplyTrend: SupplyTrendClassification;
   /** Total sales count for this player over the last 30 days. */
   totalSales30d: number | null;
   /** Provider that produced this snapshot (for telemetry + rollback). */
@@ -62,6 +70,13 @@ export interface PlayerTrendSnapshot {
   /** Unix ms when the snapshot was captured. Nulls if provider doesn't stamp. */
   capturedAtMs: number;
 }
+
+export type SupplyTrendClassification =
+  | "demand_growth"
+  | "supply_dry"
+  | "supply_flood"
+  | "demand_crash"
+  | "flat";
 
 /**
  * Provider abstraction. Any implementation adapts the underlying vendor's

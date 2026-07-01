@@ -18,7 +18,11 @@
  * flag semantics for consistency.
  */
 
-import type { PlayerTrendSnapshot } from "../playerTrend/playerTrend.types.js";
+import type {
+  PlayerTrendSnapshot,
+  SupplyTrendClassification,
+} from "../playerTrend/playerTrend.types.js";
+import { supplyTrendProjectionAdjuster } from "../playerTrend/supplyTrend.classify.js";
 
 // ── Constants (empirically-derived guardrails) ─────────────────────────────
 /** Cap upward projection. Even if player momentum spikes 5×, we clamp. */
@@ -62,7 +66,14 @@ export interface MomentumProjection {
     playerMomentumRatio: number;
     playerVolumeRatio: number | null;
     playerLatestWeekCount: number;
+    /** Momentum ratio after upside/downside cap. */
     cappedRatio: number;
+    /** Supply-trend leading-indicator classification. */
+    supplyTrend: SupplyTrendClassification;
+    /** Multiplier applied on top of cappedRatio to reflect supply-trend
+     *  leading-indicator quadrants (`supply_dry` boosts, `supply_flood`
+     *  discounts, others = 1.0). */
+    supplyTrendAdjuster: number;
     providerName: string;
   };
 }
@@ -134,7 +145,7 @@ export function evaluateMomentumProjection(
     return { applied: false, reason: "no_trend_snapshot" };
   }
 
-  const { momentum, providerName } = input.trendSnapshot;
+  const { momentum, supplyTrend, providerName } = input.trendSnapshot;
   const latestWeek = momentum.latestCompleteWeek;
   if (!latestWeek || latestWeek.count < MIN_LATEST_WEEK_COUNT) {
     return { applied: false, reason: "player_week_too_thin" };
@@ -156,10 +167,21 @@ export function evaluateMomentumProjection(
   // a specific card's price beyond reason.
   const cappedRatio = clamp(momentum.momentumRatio, MIN_DOWNSIDE_MULTIPLIER, MAX_UPSIDE_MULTIPLIER);
 
-  const projectedPrice = roundCents(input.lastCardSalePrice * cappedRatio);
+  // Supply-trend leading-indicator kicker (see supplyTrend.classify.ts):
+  // supply_dry (vol↓, price↑) boosts +5%; supply_flood (vol↑, price↓)
+  // discounts -5%. Other quadrants get 1.0 (already reflected in
+  // cappedRatio). Adjuster is small enough that a misclassification
+  // isn't catastrophic; the momentum ratio dominates the projection.
+  const supplyAdjuster = supplyTrendProjectionAdjuster(supplyTrend);
+  const effectiveRatio = cappedRatio * supplyAdjuster;
+
+  const projectedPrice = roundCents(input.lastCardSalePrice * effectiveRatio);
 
   // Confidence scales inversely with how far we had to project.
   // 5% delta → confidence 0.5 (ceiling). 50% delta → confidence ~0.3.
+  // Uses the momentum-only delta (not adjuster-inclusive) so the supply
+  // kicker doesn't inflate the confidence penalty on top of already
+  // legitimate momentum.
   const delta = Math.abs(cappedRatio - 1);
   const confidence = Math.min(
     CONFIDENCE_CEILING,
@@ -178,6 +200,8 @@ export function evaluateMomentumProjection(
       playerVolumeRatio: momentum.volumeRatio,
       playerLatestWeekCount: latestWeek.count,
       cappedRatio,
+      supplyTrend,
+      supplyTrendAdjuster: supplyAdjuster,
       providerName,
     },
   };

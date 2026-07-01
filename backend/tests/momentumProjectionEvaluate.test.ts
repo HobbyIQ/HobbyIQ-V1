@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 function makeSnapshot(overrides: Partial<PlayerTrendSnapshot> = {}): PlayerTrendSnapshot {
-  return {
+  const base: PlayerTrendSnapshot = {
     player: "Test Player",
     providerName: "cardhedge",
     capturedAtMs: 1_700_000_000_000,
@@ -44,8 +44,11 @@ function makeSnapshot(overrides: Partial<PlayerTrendSnapshot> = {}): PlayerTrend
       momentumRatio: 1.25, // 25% up
       volumeRatio: 1.25,
     },
-    ...overrides,
+    // Default: demand_growth (vol↑ + price↑) — adjuster = 1.0 so existing
+    // pin values (projectedPrice = lastSale × cappedRatio) still hold.
+    supplyTrend: "demand_growth",
   };
+  return { ...base, ...overrides } as PlayerTrendSnapshot;
 }
 
 function makeInput(overrides: Partial<MomentumProjectionInput> = {}): MomentumProjectionInput {
@@ -225,5 +228,80 @@ describe("evaluateMomentumProjection — applied paths", () => {
     );
     if (!r.applied) throw new Error("expected applied");
     expect(r.projectedPrice).toBe(125);
+  });
+});
+
+describe("evaluateMomentumProjection — supply-trend leading-indicator kicker", () => {
+  it("supply_dry (bullish) → +5% boost on top of momentum multiplier", () => {
+    // Vol↓ + price↑: momentum ratio 1.25, adjuster 1.05
+    // 100 × 1.25 × 1.05 = 131.25
+    const snap = makeSnapshot({
+      supplyTrend: "supply_dry",
+      momentum: { ...makeSnapshot().momentum, volumeRatio: 0.7, momentumRatio: 1.25 },
+    });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap, lastCardSalePrice: 100 }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.projectedPrice).toBe(131.25);
+    expect(r.attribution.supplyTrend).toBe("supply_dry");
+    expect(r.attribution.supplyTrendAdjuster).toBe(1.05);
+    expect(r.attribution.cappedRatio).toBe(1.25);
+  });
+
+  it("supply_flood (bearish) → -5% discount on top of momentum multiplier", () => {
+    // Vol↑ + price↓: momentum ratio 0.75, adjuster 0.95
+    // 100 × 0.75 × 0.95 = 71.25
+    const snap = makeSnapshot({
+      supplyTrend: "supply_flood",
+      momentum: { ...makeSnapshot().momentum, volumeRatio: 1.5, momentumRatio: 0.75 },
+    });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap, lastCardSalePrice: 100 }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.projectedPrice).toBe(71.25);
+    expect(r.attribution.supplyTrend).toBe("supply_flood");
+    expect(r.attribution.supplyTrendAdjuster).toBe(0.95);
+  });
+
+  it("demand_growth → adjuster=1.0 (no extra nudge; momentum already captures)", () => {
+    const snap = makeSnapshot({ supplyTrend: "demand_growth" });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.attribution.supplyTrend).toBe("demand_growth");
+    expect(r.attribution.supplyTrendAdjuster).toBe(1.0);
+    // Same as pre-supply-trend behavior: 100 × 1.25 = 125
+    expect(r.projectedPrice).toBe(125);
+  });
+
+  it("demand_crash → adjuster=1.0 (no extra nudge)", () => {
+    const snap = makeSnapshot({
+      supplyTrend: "demand_crash",
+      momentum: { ...makeSnapshot().momentum, momentumRatio: 0.75, volumeRatio: 0.6 },
+    });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap, lastCardSalePrice: 100 }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.attribution.supplyTrendAdjuster).toBe(1.0);
+    expect(r.projectedPrice).toBe(75);
+  });
+
+  it("supply_dry cap-crash: momentum caps at 2.0 then +5% → 210 (2 × 1.05 × 100)", () => {
+    const snap = makeSnapshot({
+      supplyTrend: "supply_dry",
+      momentum: { ...makeSnapshot().momentum, momentumRatio: 5.0, volumeRatio: 0.5 },
+    });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap, lastCardSalePrice: 100 }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.attribution.cappedRatio).toBe(2.0);
+    expect(r.projectedPrice).toBe(210); // 100 × 2.0 × 1.05
+  });
+
+  it("confidence downgrade uses momentum-only delta, not supply-inclusive", () => {
+    // supply_dry with 25% momentum. Confidence should be 0.5 - 0.25*0.4 = 0.4,
+    // NOT influenced by the extra 5% supply kicker.
+    const snap = makeSnapshot({
+      supplyTrend: "supply_dry",
+      momentum: { ...makeSnapshot().momentum, momentumRatio: 1.25, volumeRatio: 0.7 },
+    });
+    const r = evaluateMomentumProjection(makeInput({ trendSnapshot: snap }));
+    if (!r.applied) throw new Error("expected applied");
+    expect(r.confidence).toBe(0.4);
   });
 });
