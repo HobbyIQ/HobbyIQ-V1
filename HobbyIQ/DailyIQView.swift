@@ -79,6 +79,20 @@ struct DailyIQView: View {
                             showUpgradePaywall = true
                         }
                 }
+
+                // CF-DAILYIQ-MARKET-PLAYERS (2026-07-01): Market Signals
+                // is a top-level tab-scoped section — always visible on
+                // DailyIQ regardless of which player-stats segment is
+                // selected. Investor-gated via `dailyIQBriefs` so
+                // non-Investor users see the same paywall stub as
+                // briefCard.
+                marketSignalsSection
+                    .lockedOverlay(
+                        feature: GatedFeature.dailyIQBriefs,
+                        subscriptionManager: sessionViewModel.subscriptionManager
+                    ) {
+                        showUpgradePaywall = true
+                    }
             }
             .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
             .padding(.top, 8)
@@ -89,6 +103,7 @@ struct DailyIQView: View {
         .task {
             await refreshDailyIQ(for: nil)
             await loadTopAndSuggest()
+            await loadMarketSignals()
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }
@@ -473,8 +488,6 @@ struct DailyIQView: View {
                 briefMoverSection(title: "Risers", movers: brief.risers ?? [], color: HobbyIQTheme.Colors.hobbyGreen, icon: "arrow.up.right")
                 briefMoverSection(title: "Fallers", movers: brief.fallers ?? [], color: HobbyIQTheme.Colors.danger, icon: "arrow.down.right")
                 briefMoverSection(title: "Breakouts", movers: brief.breakouts ?? [], color: HobbyIQTheme.Colors.electricBlue, icon: "star.fill")
-
-                marketSignalsSection
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "newspaper")
@@ -488,21 +501,20 @@ struct DailyIQView: View {
                 .padding(.vertical, 20)
             }
         }
-        .task {
-            await loadFullBrief()
-            await loadMarketSignals()
-        }
+        .task { await loadFullBrief() }
     }
 
     // MARK: - Market Signals (CF-DAILYIQ-MARKET-PLAYERS, 2026-07-01)
 
-    /// Bottom-of-brief section: four matched-cohort momentum lists —
-    /// Trending Up (lagging, prices rising), Cooling Off (lagging,
-    /// prices falling), Most Traded (30d volume), Supply Squeeze
-    /// (leading: prices rising + listings drying up). Player-level
-    /// signals distinct from the card-level Risers/Fallers/Breakouts
-    /// above it. Renders an empty-state message before the backend
-    /// job populates.
+    /// Top-level tab-scoped section: four matched-cohort momentum
+    /// lists — Trending Up (lagging, prices rising), Cooling Off
+    /// (lagging, prices falling), Most Traded (30d volume), Supply
+    /// Squeeze (leading: prices rising + listings drying up).
+    /// Rendered on every DailyIQ segment (not nested inside `.brief`)
+    /// so the signals are visible regardless of which player-stats
+    /// segment the user is on. Investor-gated at the callsite via
+    /// `.lockedOverlay(feature: .dailyIQBriefs)`. Empty state renders
+    /// before the backend job populates.
     @ViewBuilder
     private var marketSignalsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
