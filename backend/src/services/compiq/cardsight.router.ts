@@ -175,7 +175,13 @@ function extractSurname(playerName: string): string {
 }
 
 function identityCacheKey(query: string): string {
-  return ["router:ch-identify", query.toLowerCase().replace(/\s+/g, " ").trim()].join(":");
+  // CF-CH-STRUCTURED-SEARCH-MERCY-CACHE-BUST (2026-07-01): bump key prefix
+  // to invalidate the 24h-TTL "" empty-string entries cached BEFORE the
+  // mercy fallback shipped in PR #226. Without this bump, queries whose
+  // pre-#226 bridge_no_match / bridge_low_confidence result got cached
+  // continue to short-circuit past the new mercy code for up to 24h.
+  // Version tag scheme so future cache-invalidating changes are explicit.
+  return ["router:ch-identify:v2", query.toLowerCase().replace(/\s+/g, " ").trim()].join(":");
 }
 
 // ── Structured-search mercy fallback ─────────────────────────────────────────
