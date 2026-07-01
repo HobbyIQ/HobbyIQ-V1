@@ -1592,7 +1592,7 @@ extension InventoryCard {
         // CF-IOS-NEAREST-GRADED-ANCHOR-UI (2026-06-29)
         case estimatedValue, estimateLow, estimateHigh, estimateBasis, estimateConfidence
         case nearestGradedAnchor
-        case cardsightCardId
+        case cardId
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
         case lastSaleSurface, modelExpectation, modelSignal
     }
@@ -1630,7 +1630,7 @@ extension InventoryCard {
         case estimateBasis = "estimate_basis"
         case estimateConfidence = "estimate_confidence"
         case nearestGradedAnchor = "nearest_graded_anchor"
-        case cardsightCardId = "cardsight_card_id"
+        case cardId = "card_id"
     }
 
     // Backend autoPriceHolding() uses different field names for pricing/freshness
@@ -1807,8 +1807,8 @@ extension InventoryCard {
         self.nearestGradedAnchor = (try? c.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
             ?? (try? s.decodeIfPresent(NearestGradedAnchor.self, forKey: .nearestGradedAnchor))
             ?? nil
-        self.cardsightCardId = (try? c.decode(String.self, forKey: .cardsightCardId))
-            ?? (try? s.decode(String.self, forKey: .cardsightCardId))
+        self.cardId = (try? c.decode(String.self, forKey: .cardId))
+            ?? (try? s.decode(String.self, forKey: .cardId))
         // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
         // model + lean badge wire envelope. All three independently
         // optional; defensive `try?` so any absent/null/malformed entry
@@ -1855,7 +1855,7 @@ extension InventoryCard {
         try container.encodeIfPresent(estimateBasis, forKey: .estimateBasis)
         try container.encodeIfPresent(estimateConfidence, forKey: .estimateConfidence)
         try container.encodeIfPresent(nearestGradedAnchor, forKey: .nearestGradedAnchor)
-        try container.encodeIfPresent(cardsightCardId, forKey: .cardsightCardId)
+        try container.encodeIfPresent(cardId, forKey: .cardId)
         try container.encodeIfPresent(lastSaleSurface, forKey: .lastSaleSurface)
         try container.encodeIfPresent(modelExpectation, forKey: .modelExpectation)
         try container.encodeIfPresent(modelSignal, forKey: .modelSignal)
@@ -2090,7 +2090,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
     /// Resolved Cardsight catalog id, populated when the add-card flow is
     /// seeded from an identify detection or a cert lookup. Persisted on save
     /// so the new holding can be priced without a re-match round-trip.
-    @Published var cardsightCardId: String?
+    @Published var cardId: String?
     @Published var isUploadingFrontPhoto = false
     @Published var isUploadingBackPhoto = false
     @Published var isSaving = false
@@ -2135,7 +2135,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
             frontPhotoUrl = existingCard.imageFrontUrl
             backPhotoUrl = existingCard.imageBackUrl
             isAutoCard = existingCard.isAuto
-            cardsightCardId = existingCard.cardsightCardId
+            cardId = existingCard.cardId
             if let purchaseDateString = existingCard.purchaseDate, let parsed = Self.purchaseDateFormatter.date(from: purchaseDateString) {
                 includePurchaseDate = true
                 purchaseDate = parsed
@@ -2292,7 +2292,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
         let resolvedGradeValue: Double? = isGraded
             ? Double(gradeValue.trimmingCharacters(in: .whitespacesAndNewlines))
             : nil
-        let trimmedCardsightId = cardsightCardId?
+        let trimmedCardsightId = cardId?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let resolvedCardsightId: String? = trimmedCardsightId.isEmpty ? nil : trimmedCardsightId
         let request = InventoryCard(
@@ -2320,7 +2320,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
             method: estimateResult?.source,
             summary: estimateResult?.explanation?.joined(separator: " "),
             isAuto: isAutoCard,
-            cardsightCardId: resolvedCardsightId
+            cardId: resolvedCardsightId
         )
 
         do {
@@ -2357,7 +2357,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
     /// - Grade is taken from `detection.grading` ONLY when present; raw cards
     ///   keep `isGraded = false` and a blank `grade` string (which renders
     ///   as "Raw" via `gradeChipText`). No fabricated grade for raw.
-    /// - `cardsightCardId` is the resolved Cardsight catalog UUID so the new
+    /// - `cardId` is the resolved Cardsight catalog UUID so the new
     ///   holding can be priced without re-matching.
     /// - The identify upload's permanent `blobUrl` is used as the front
     ///   photo (same field the manual photo path writes) so the inventory
@@ -2403,7 +2403,7 @@ final class AddPortfolioCardViewModel: ObservableObject {
             grade = ""
         }
 
-        cardsightCardId = card?.id
+        cardId = card?.id
         frontPhotoUrl = blobUrl
         // Cardsight doesn't return an auto-detection flag today; leave isAuto
         // alone so the user can flip it in the detail sheet if needed.

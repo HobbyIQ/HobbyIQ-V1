@@ -109,7 +109,7 @@ struct BatchRepriceUpdate: Codable, Identifiable {
     let id: String
     let status: String?
     let reason: String?
-    let cardsightCardId: String?
+    let cardId: String?
 }
 
 // MARK: - SAS Upload (card-photo)

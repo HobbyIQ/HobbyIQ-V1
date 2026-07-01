@@ -445,12 +445,12 @@ struct CompIQVariantPickerView: View {
     private var pickerRows: [PickerRow] {
         var rows: [PickerRow] = []
         for hit in hits {
-            rows.append(PickerRow(id: hit.cardsightCardId, hit: hit, isParallel: false))
+            rows.append(PickerRow(id: hit.cardId, hit: hit, isParallel: false))
             if let parallels = hit.parallels, parallels.isEmpty == false {
                 for parallel in parallels {
                     let synth = parallelHit(parent: hit, parallel: parallel)
                     rows.append(PickerRow(
-                        id: "\(hit.cardsightCardId)::\(parallel.id)",
+                        id: "\(hit.cardId)::\(parallel.id)",
                         hit: synth,
                         isParallel: true
                     ))
@@ -610,12 +610,12 @@ struct CompIQVariantPickerView: View {
     /// request body (compiq.routes.ts:1158 — destructures parallelId +
     /// parallelName from req.body, validates UUID-shape, cache-keys on
     /// the parallel so base vs Blue Refractor sit at distinct entries).
-    /// Previously sending `cardsightCardId = parallel.id` left the
+    /// Previously sending `cardId = parallel.id` left the
     /// pricing id unrecognized (parallel UUIDs aren't first-class
     /// pricing keys) and returned all-null cardIdentity + zero comps.
     ///
     /// Carry-through:
-    ///   - `cardsightCardId` = `parent.cardsightCardId` (base — pricing id)
+    ///   - `cardId` = `parent.cardId` (base — pricing id)
     ///   - `parallelId`      = `parallel.id` (sub-market filter)
     ///   - `variant`         = `parallel.name` (also wired as
     ///     `parallelName` on the wire body so the backend's logs +
@@ -633,7 +633,7 @@ struct CompIQVariantPickerView: View {
             return parallel.name
         }()
         return CompIQVariantHit(
-            cardsightCardId: parent.cardsightCardId,
+            cardId: parent.cardId,
             player: parent.player,
             set: parent.set,
             year: parent.year,

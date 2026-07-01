@@ -21,7 +21,7 @@ struct CompIQCardsightParallel: Codable, Identifiable, Hashable {
 }
 
 struct CompIQVariantHit: Codable, Identifiable, Hashable {
-    let cardsightCardId: String
+    let cardId: String
     let player: String?
     let set: String?
     let year: Int?
@@ -55,13 +55,13 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     let attributes: [String]?
     let parallels: [CompIQCardsightParallel]?
 
-    var id: String { cardsightCardId }
+    var id: String { cardId }
 
     var resolvedLabel: String {
         if let displayLabel, displayLabel.isEmpty == false { return displayLabel }
         if let title, title.isEmpty == false { return title }
         let parts = [set, player, number, variant].compactMap { $0 }
-        return parts.isEmpty ? cardsightCardId : parts.joined(separator: " ")
+        return parts.isEmpty ? cardId : parts.joined(separator: " ")
     }
 
     /// Bucketed confidence used by the footnote dot. `attribution == "authoritative"`
@@ -119,9 +119,9 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         // /api/compiq/price-by-id expects a bare Cardsight UUID, so strip
         // the "cardsight:" prefix here; preserve other prefixes (cert ids
         // pass through intact).
-        let rawCandidateId = try container.decode(String.self, forKey: .cardsightCardId)
+        let rawCandidateId = try container.decode(String.self, forKey: .cardId)
         let cardsightPrefix = "cardsight:"
-        cardsightCardId = rawCandidateId.hasPrefix(cardsightPrefix)
+        cardId = rawCandidateId.hasPrefix(cardsightPrefix)
             ? String(rawCandidateId.dropFirst(cardsightPrefix.count))
             : rawCandidateId
         player = try? container.decodeIfPresent(String.self, forKey: .player)
@@ -163,8 +163,10 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         parallelId = nil
     }
 
-    // Backend CardIdentity (cardIdentity.ts) field names:
-    //   candidateId, source, attribution, confidence,
+    // Backend CardIdentity (cardIdentity.ts) field names after
+    // CF-CARDID-RENAME (2026-06-30 / PR #216): `cardId` replaces
+    // `candidateId` on candidate wire responses.
+    //   cardId, source, attribution, confidence,
     //   player, year, brand, setName, cardNumber, parallel, variation,
     //   isAuto, serialNumber,
     //   grade, gradeCompany, gradeValue, certNumber,
@@ -173,7 +175,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     // There is no `displayLabel` on the wire; the computed `resolvedLabel`
     // falls back to title + parts when displayLabel is nil.
     private enum CodingKeys: String, CodingKey {
-        case cardsightCardId = "candidateId"
+        case cardId
         case player, year, brand
         case set = "setName"
         case number = "cardNumber"
@@ -189,7 +191,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     init(
-        cardsightCardId: String,
+        cardId: String,
         player: String? = nil,
         set: String? = nil,
         year: Int? = nil,
@@ -213,7 +215,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         parallels: [CompIQCardsightParallel]? = nil,
         parallelId: String? = nil
     ) {
-        self.cardsightCardId = cardsightCardId
+        self.cardId = cardId
         self.player = player
         self.set = set
         self.year = year
@@ -239,7 +241,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
     }
 
     init(from holding: InventoryCard) {
-        self.cardsightCardId = holding.id.uuidString
+        self.cardId = holding.id.uuidString
         self.player = holding.playerName
         self.set = holding.setName.isEmpty ? nil : holding.setName
         self.year = Int(holding.year)
@@ -302,7 +304,7 @@ struct CompIQVariantListResponse: Codable {
 // MARK: - Price By ID (POST /api/compiq/price-by-id)
 
 struct CompIQPriceByIdRequest: Codable {
-    let cardsightCardId: String
+    let cardId: String
     let query: String?
     let gradeCompany: String?
     let gradeValue: Double?
@@ -925,7 +927,7 @@ struct CardHedgeProvenance: Codable, Hashable {
 
 struct CompIQPriceByIdResponse: Codable {
     let success: Bool?
-    let cardsightCardId: String?
+    let cardId: String?
     let summary: String?
     let marketTier: CompIQPriceMarketTier?
     /// Phase 3: renamed from `fmv`. The canonical market value from the engine.
@@ -1105,7 +1107,7 @@ struct CompIQPriceByIdResponse: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         success = try? container.decodeIfPresent(Bool.self, forKey: .success)
-        cardsightCardId = try? container.decodeIfPresent(String.self, forKey: .cardsightCardId)
+        cardId = try? container.decodeIfPresent(String.self, forKey: .cardId)
         summary = try? container.decodeIfPresent(String.self, forKey: .summary)
         marketTier = try? container.decodeIfPresent(CompIQPriceMarketTier.self, forKey: .marketTier)
         marketValue = try? container.decodeIfPresent(Double.self, forKey: .marketValue)
@@ -1189,7 +1191,7 @@ struct CompIQPriceByIdResponse: Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case success, cardsightCardId, summary, marketTier
+        case success, cardId, summary, marketTier
         case marketValue, predictedPrice, predictedPriceRange, predictedPriceAttribution
         case buyZone, holdZone, sellZone
         case confidence, source, trendAnalysis, recentComps, excludedComps, priceHistory

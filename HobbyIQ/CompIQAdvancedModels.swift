@@ -8,7 +8,7 @@ import Foundation
 // MARK: - TrendIQ Dedicated Endpoints
 
 struct TrendIQRequest: Encodable {
-    let cardsightCardId: String
+    let cardId: String
     let query: String?
     let gradeCompany: String?
     let gradeValue: Double?
@@ -16,7 +16,7 @@ struct TrendIQRequest: Encodable {
 
 struct TrendIQDedicatedResponse: Codable {
     let success: Bool?
-    let cardsightCardId: String?
+    let cardId: String?
     let trendIQ: TrendIQResponse?
     let signalsLastUpdated: String?
     let cardIdentity: CompIQPriceCardIdentity?
@@ -25,7 +25,7 @@ struct TrendIQDedicatedResponse: Codable {
 
 struct TrendIQFullResponse: Codable {
     let success: Bool?
-    let cardsightCardId: String?
+    let cardId: String?
     let trendIQ: TrendIQResponse?
     let signalsLastUpdated: String?
     let cardIdentity: CompIQPriceCardIdentity?

@@ -186,7 +186,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     /// present, the backend can comp the holding without re-matching from
     /// text fields. Optional + backward-compatible: legacy holdings decode
     /// with this as nil and continue to work via text-based matching.
-    let cardsightCardId: String?
+    let cardId: String?
 
     /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
     /// model-line + lean-badge wire fields surfaced on the holdings
@@ -240,7 +240,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         estimateBasis: String? = nil,
         estimateConfidence: String? = nil,
         nearestGradedAnchor: NearestGradedAnchor? = nil,
-        cardsightCardId: String? = nil,
+        cardId: String? = nil,
         lastSaleSurface: CardHedgeLastSaleSurface? = nil,
         modelExpectation: CardHedgeModelExpectation? = nil,
         modelSignal: CardHedgeModelSignal? = nil
@@ -280,7 +280,7 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.estimateBasis = estimateBasis
         self.estimateConfidence = estimateConfidence
         self.nearestGradedAnchor = nearestGradedAnchor
-        self.cardsightCardId = cardsightCardId
+        self.cardId = cardId
         self.lastSaleSurface = lastSaleSurface
         self.modelExpectation = modelExpectation
         self.modelSignal = modelSignal

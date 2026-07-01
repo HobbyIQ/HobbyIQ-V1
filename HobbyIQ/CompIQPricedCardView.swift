@@ -193,7 +193,7 @@ struct CompIQPricedCardView: View {
 
     /// CF-ADD-TO-INVENTORY (2026-06-12): "Add to inventory" CTA rendered
     /// directly under the value block. Hidden until a priced response
-    /// has settled (no hit.cardsightCardId is fine — that just means the
+    /// has settled (no hit.cardId is fine — that just means the
     /// holding will value at the base scope on save).
     @ViewBuilder
     private func addToInventoryButton(_ response: CompIQPriceByIdResponse) -> some View {
@@ -3293,7 +3293,7 @@ struct CompIQPricedCardView: View {
             // align with that view again. The rail still picks per-grade
             // values from gradeBreakdown ∪ gradedEstimates locally.
             let response = try await CompIQSearchService.shared.priceByCardId(
-                hit.cardsightCardId,
+                hit.cardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
                 gradeCompany: selectedGrade.gradeCompany,
                 gradeValue: selectedGrade.gradeValue,
@@ -3315,7 +3315,7 @@ struct CompIQPricedCardView: View {
 
         do {
             let request = TrendIQRequest(
-                cardsightCardId: hit.cardsightCardId,
+                cardId: hit.cardId,
                 query: hit.displayLabel ?? hit.resolvedLabel,
                 gradeCompany: selectedGrade.gradeCompany,
                 gradeValue: selectedGrade.gradeValue
@@ -3511,7 +3511,7 @@ private extension CompIQPriceByIdResponse {
         let json = #"""
         {
             "success": true,
-            "cardsightCardId": "preview-1",
+            "cardId": "preview-1",
             "summary": "Buy — Strong value at current pricing with rising trend and 8 recent comps in the last 30 days.",
             "marketTier": { "value": 42.50, "high": 67.00 },
             "buyZone": [28.00, 38.00],

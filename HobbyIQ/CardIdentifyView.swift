@@ -115,7 +115,7 @@ struct CardIdentifyView: View {
                 NavigationStack {
                     CompIQPricedCardView(
                         hit: CompIQVariantHit(
-                            cardsightCardId: card.id,
+                            cardId: card.id,
                             player: card.name,
                             set: card.setName,
                             year: card.year.flatMap { Int($0) },

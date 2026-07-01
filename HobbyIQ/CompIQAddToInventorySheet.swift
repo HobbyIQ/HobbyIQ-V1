@@ -96,7 +96,7 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
 
         let body = AddHoldingRequest(
             playerName: resolvedAddPlayerName(),
-            cardsightCardId: hit.cardsightCardId,
+            cardId: hit.cardId,
             parallel: parallelName,
             parallelId: hit.parallelId,
             isAuto: hit.isAuto,
@@ -144,7 +144,7 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
     // (brand-new releases / unparsed candidates) but the pricing engine
     // resolves the catalog identity and ships it back. Fall back to the
     // picker hit's per-field values, and as an absolute last resort to
-    // a "Card #abcdef12" placeholder built from the cardsightCardId
+    // a "Card #abcdef12" placeholder built from the cardId
     // prefix. NEVER emit a full UUID as a holding's playerName.
 
     private func resolvedAddPlayerName() -> String {
@@ -160,7 +160,7 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
         if label.isEmpty == false, isLikelyUUID(label) == false {
             return label
         }
-        let shortId = hit.cardsightCardId.replacingOccurrences(of: "-", with: "").prefix(8)
+        let shortId = hit.cardId.replacingOccurrences(of: "-", with: "").prefix(8)
         return "Card #\(shortId)"
     }
 
@@ -206,7 +206,7 @@ final class CompIQAddToInventoryViewModel: ObservableObject {
     }
 
     /// UUID-shape detector. Defends against accidentally storing a raw
-    /// cardsightCardId (8-4-4-4-12 hex) as a holding's display name.
+    /// cardId (8-4-4-4-12 hex) as a holding's display name.
     private func isLikelyUUID(_ s: String) -> Bool {
         let pattern = #"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"#
         return s.range(of: pattern, options: .regularExpression) != nil

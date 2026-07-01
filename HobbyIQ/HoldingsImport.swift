@@ -125,7 +125,7 @@ struct ImportRowEnvelope: Codable, Hashable, Identifiable {
     /// "resolved-clean" | "resolved-collision" | "ambiguous"
     /// | "unresolved" | "identity-edited". Render-keyed.
     let bucket: String
-    let cardsightCardId: String?
+    let cardId: String?
     let existingHoldingId: String?
     let collision: ImportCollision?
     /// Raw normalized payload from the backend, opaque to iOS. Carries

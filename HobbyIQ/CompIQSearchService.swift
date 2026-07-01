@@ -49,7 +49,7 @@ final class CompIQSearchService {
     ) async throws -> CompIQPriceByIdResponse {
         logger.info("Fetching price for cardId: \(id)")
         let response = try await APIService.shared.priceByCardId(
-            cardsightCardId: id,
+            cardId: id,
             query: query,
             gradeCompany: gradeCompany,
             gradeValue: gradeValue,

@@ -140,7 +140,7 @@ struct APIService {
     }
 
     func priceByCardId(
-        cardsightCardId: String,
+        cardId: String,
         query: String?,
         gradeCompany: String?,
         gradeValue: Double?,
@@ -149,7 +149,7 @@ struct APIService {
     ) async throws -> CompIQPriceByIdResponse {
         // CF-PRICE-BY-ID-ROUTE (2026-06-07): when a candidate id is pinned,
         // send id + grade ONLY — omit a meaningful query. Backend treats a
-        // non-empty `query` alongside `cardsightCardId` as free-text intent
+        // non-empty `query` alongside `cardId` as free-text intent
         // and routes through findCompsRouted, which bypasses the pinned-card
         // schema fix and the returned-id consistency guard shipped in
         // f7d2f97 (resulting in Frazier $1 / 4-of-4 instead of Trout $377 /
@@ -157,12 +157,12 @@ struct APIService {
         // hasMeaningfulQuery=true on the backend so the request lands on
         // the pinned path. Callers keep their query string for ergonomics;
         // we only strip it on the wire when an id is actually present.
-        let pinnedQuery: String? = cardsightCardId.isEmpty ? query : nil
+        let pinnedQuery: String? = cardId.isEmpty ? query : nil
         // CF-PARALLEL-SUBMARKET (2026-06-10): when a parallel is selected,
-        // backend wants `cardsightCardId = parent base UUID` PLUS
+        // backend wants `cardId = parent base UUID` PLUS
         // `parallelId = parallel UUID` so the comp filter narrows to the
         // matched sub-market (vs the parallel UUID landing on
-        // cardsightCardId alone, which doesn't resolve as a pricing key).
+        // cardId alone, which doesn't resolve as a pricing key).
         // Empty/whitespace parallelId is dropped to nil so the wire body
         // doesn't carry a meaningless field.
         let cleanParallelId: String? = {
@@ -176,7 +176,7 @@ struct APIService {
             return raw
         }()
         let body = CompIQPriceByIdRequest(
-            cardsightCardId: cardsightCardId,
+            cardId: cardId,
             query: pinnedQuery,
             gradeCompany: gradeCompany,
             gradeValue: gradeValue,
@@ -2453,7 +2453,7 @@ struct PortfolioIQBackendSummaryResponse: Decodable {
 /// this holding.
 struct AddHoldingRequest: Encodable {
     let playerName: String
-    let cardsightCardId: String
+    let cardId: String
     let parallel: String?
     let parallelId: String?
     let isAuto: Bool?

@@ -71,7 +71,7 @@ struct EbayListingDraftView: View {
     @State private var selectedReturnPolicyId: String?
 
     // CF-EBAY-HYDRATE-FROM-CARDSIGHT (2026-06-17): one-shot hydration of
-    // empty year/setName/brand fields from the holding's cardsightCardId
+    // empty year/setName/brand fields from the holding's cardId
     // when present. Guards against re-fire on view re-appear; only fills
     // EMPTY fields (never clobbers a user edit).
     @State private var hydrationAttempted = false
@@ -974,7 +974,7 @@ struct EbayListingDraftView: View {
     // when manual entry skipped them. buildTitle on the publish path
     // composes from structured fields — empty fields produce a sparse
     // title ("Eric Hartman" alone). When the holding carries a
-    // cardsightCardId, /api/compiq/price-by-id returns a `cardIdentity`
+    // cardId, /api/compiq/price-by-id returns a `cardIdentity`
     // block (release/set/year) we can use to fill the empty draft text
     // fields. Backend's `getCardDetail` cache is 24h so repeat opens
     // are cheap.
@@ -983,7 +983,7 @@ struct EbayListingDraftView: View {
     //   - Only fires once per view appearance (hydrationAttempted guard).
     //   - Only fills EMPTY @State fields — never clobbers user edits.
     //   - Only triggers when at least one field is missing AND we have
-    //     a cardsightCardId to query.
+    //     a cardId to query.
     //   - Failures are non-fatal: log, fall through to the default
     //     empty/`"Trading Card"` state. User can still type values.
     //   - The hydrated values are local-only (do NOT PATCH the holding
@@ -994,7 +994,7 @@ struct EbayListingDraftView: View {
         guard !hydrationAttempted else { return }
         hydrationAttempted = true
 
-        guard let csid = card.cardsightCardId?
+        guard let csid = card.cardId?
                 .trimmingCharacters(in: .whitespaces),
               csid.isEmpty == false else {
             return
@@ -1015,7 +1015,7 @@ struct EbayListingDraftView: View {
             // cache; cardIdentity comes back identically regardless of
             // grade scope.
             let response = try await APIService.shared.priceByCardId(
-                cardsightCardId: csid,
+                cardId: csid,
                 query: nil,
                 gradeCompany: card.gradeCompany,
                 gradeValue: card.gradeValue,

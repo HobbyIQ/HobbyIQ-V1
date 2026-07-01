@@ -29,7 +29,7 @@ final class HoldingsImportTests: XCTestCase {
           "envelopes": [
             {
               "rowNumber": 1, "lane": "new", "bucket": "resolved-clean",
-              "cardsightCardId": "csc_abc",
+              "cardId": "csc_abc",
               "payload": { "playerName": "Mike Trout", "cardName": "2011 Topps Update", "year": "2011" },
               "parseFlags": []
             }

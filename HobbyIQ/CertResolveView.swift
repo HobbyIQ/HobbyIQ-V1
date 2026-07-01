@@ -13,7 +13,7 @@ import os
 ///   1. If no candidate was supplied, POST `/api/search/cards` to classify
 ///      the input (this is the path the backend already uses to recognise
 ///      PSA cert numbers and surface their metadata).
-///   2. Future-proof: if the candidate ever carries a `cardsightCardId`,
+///   2. Future-proof: if the candidate ever carries a `cardId`,
 ///      route to pricing directly. (Backend gap filed: SearchCandidate
 ///      currently does not carry one — see HALT report.)
 ///   3. Build a loose variant-search query from the candidate's PSA fields
@@ -102,7 +102,7 @@ struct CertResolveView: View {
         }
 
         // 2. Future-proof Cardsight-id pickup. SearchCandidate currently has
-        //    no cardsightCardId field, so this branch is dormant today. When
+        //    no cardId field, so this branch is dormant today. When
         //    the backend gap closes (see HALT report), add the field to
         //    SearchCandidate and dispatch here without the variant-search
         //    hop. The grade pre-fill remains identical.
