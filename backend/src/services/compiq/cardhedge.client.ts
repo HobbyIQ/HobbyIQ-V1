@@ -142,10 +142,25 @@ export async function searchCards(
   const filterKey = filters
     ? [filters.player ?? "", filters.set ?? "", filters.rookie ?? ""].join("|")
     : "";
-  return cacheWrap(
+  // CF-CH-SEARCH-NO-CACHE-EMPTY (2026-07-01): don't persist a zero-hit
+  // result. CardHedge occasionally returns [] on transient conditions
+  // (rate-limit backpressure, deploy warmup, transient CDN edge blips),
+  // and the prior 6-hour cache TTL would then hold that empty result
+  // for 6 hours — turning a transient blip into a persistent picker
+  // failure. Observable pre-CF: post-deploy of PR #241, "Pete Alonso
+  // Auto" and "Bo Bichette Auto" persistently returned 0/1 candidates
+  // while identical direct CH probes returned 50 every time; changing
+  // the raw query enough to change the cache key (e.g. adding "rookie")
+  // instantly recovered the 50-candidate result. Non-empty results
+  // still cache for the full TTL — the cache remains effective for
+  // the common case, we just don't LOCK IN empty responses.
+  return cacheWrap<CardHedgeCard[]>(
     cacheKey("ch:search", query, String(limit), filterKey),
     async () => _searchCards(query, limit, h, filters),
-    SEARCH_TTL_SEC,
+    {
+      freshTtlSeconds: SEARCH_TTL_SEC,
+      skipCacheWhen: (result) => result.length === 0,
+    },
   );
 }
 
