@@ -768,7 +768,7 @@ export async function getSalesStatsByPlayer(
 ): Promise<SalesStatsByPlayerResponse | null> {
   const h = headers();
   if (!h || !players?.length) return null;
-  return cacheWrap(
+  return cacheWrap<SalesStatsByPlayerResponse | null>(
     cacheKey("ch:sales-stats", category, interval, players.slice().sort().join(",")),
     async () =>
       _postTyped<SalesStatsByPlayerResponse>(
@@ -776,7 +776,17 @@ export async function getSalesStatsByPlayer(
         { players, interval, category },
         h,
       ),
-    TREND_TTL_SEC,
+    {
+      freshTtlSeconds: TREND_TTL_SEC,
+      // CF-SALES-STATS-NO-CACHE-EMPTY (2026-07-02): don't lock in a
+      // transient empty response for 12 hours. Same class as PR #242
+      // (CF-CH-SEARCH-NO-CACHE-EMPTY) — CH batch endpoints can drop to
+      // 0 results on transient conditions (rate-limit backpressure,
+      // silent batch-size ceiling, deploy warmup); the fresh-TTL cache
+      // then holds that empty for the full window. skipCacheWhen lets
+      // the next call self-heal.
+      skipCacheWhen: (r) => !r || !Array.isArray(r.results) || r.results.length === 0,
+    },
   );
 }
 
@@ -824,7 +834,7 @@ export async function getTotalSalesByPlayer(
 ): Promise<TotalSalesByPlayerResponse | null> {
   const h = headers();
   if (!h || !players?.length) return null;
-  return cacheWrap(
+  return cacheWrap<TotalSalesByPlayerResponse>(
     cacheKey("ch:total-sales", category, players.slice().sort().join(",")),
     async () => {
       const chunks: string[][] = [];
@@ -846,7 +856,15 @@ export async function getTotalSalesByPlayer(
         days: days ?? 30,
       } satisfies TotalSalesByPlayerResponse;
     },
-    TREND_TTL_SEC,
+    {
+      freshTtlSeconds: TREND_TTL_SEC,
+      // CF-SALES-STATS-NO-CACHE-EMPTY (2026-07-02): pre-#244 cycles
+      // cached an empty response (from CH's silent batch-size cutoff),
+      // and PR #244's internal chunking never got to run because
+      // cacheWrap served the poison before the chunker fired. Same
+      // pattern as PR #242 — never lock in an empty result.
+      skipCacheWhen: (r) => !r || r.results.length === 0,
+    },
   );
 }
 
