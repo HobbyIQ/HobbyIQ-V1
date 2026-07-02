@@ -100,6 +100,13 @@ export type PredictionCorpusSource =
   | "compiq-search-freetext"
   /** POST /api/compiq/price — free-text alias of /search */
   | "compiq-price-freetext"
+  /**
+   * POST /api/compiq/price — retry after catalog-miss via CH AI-matcher
+   * (CF-PRICE-AI-MATCHER-FALLBACK, 2026-07-02). Separated from
+   * compiq-price-freetext so corpus analysis can measure the fallback's
+   * hit rate + downstream pricing quality independently.
+   */
+  | "compiq-price-ai-matched"
   /** POST /api/compiq/price-by-id — cardId-pinned price */
   | "compiq-price-by-id"
   /** POST /api/compiq/trendiq — investor+ TrendIQ composite surface */
