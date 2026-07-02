@@ -780,6 +780,44 @@ export async function getSalesStatsByPlayer(
   );
 }
 
+/**
+ * CF-CH-TOTAL-SALES-BATCH-LIMIT (2026-07-02): CardHedge's
+ * `/cards/total-sales-by-player` silently returns `{results:[], days:null}`
+ * when the request body carries more than ~20 players (empirically verified:
+ * 20 works, 30 returns empty; no error, no HTTP failure — just an empty
+ * results array). The DailyIQ matched-cohort job was passing all 60+
+ * portfolio players in one call and getting nothing back — `topVolume30d`
+ * silently held zero rows for the entire lifetime of that cache entry.
+ *
+ * Fix: chunk internally at 20 players per HTTP call, run the chunks
+ * concurrently (bounded by CH's own rate handling), and merge the
+ * results back into a single response. Cache key still keyed on the
+ * FULL sorted player list so callers get identical cache semantics.
+ * When a chunk fails, its rows are simply absent from the merged
+ * results — never propagate one chunk's failure into whole-response
+ * failure (partial data is preferable to zero data for this signal).
+ */
+const TOTAL_SALES_BATCH_MAX = 20;
+
+async function _fetchTotalSalesChunk(
+  players: string[],
+  category: string,
+  h: Record<string, string>,
+): Promise<TotalSalesByPlayerResponse | null> {
+  try {
+    return await _postTyped<TotalSalesByPlayerResponse>(
+      "/cards/total-sales-by-player",
+      { players, category },
+      h,
+    );
+  } catch (err) {
+    console.warn(
+      `[cardhedge.client] total-sales chunk failed (${players.length} players): ${(err as Error)?.message ?? err}`,
+    );
+    return null;
+  }
+}
+
 export async function getTotalSalesByPlayer(
   players: string[],
   category: string = "Baseball",
@@ -788,12 +826,26 @@ export async function getTotalSalesByPlayer(
   if (!h || !players?.length) return null;
   return cacheWrap(
     cacheKey("ch:total-sales", category, players.slice().sort().join(",")),
-    async () =>
-      _postTyped<TotalSalesByPlayerResponse>(
-        "/cards/total-sales-by-player",
-        { players, category },
-        h,
-      ),
+    async () => {
+      const chunks: string[][] = [];
+      for (let i = 0; i < players.length; i += TOTAL_SALES_BATCH_MAX) {
+        chunks.push(players.slice(i, i + TOTAL_SALES_BATCH_MAX));
+      }
+      const chunkResults = await Promise.all(
+        chunks.map((c) => _fetchTotalSalesChunk(c, category, h)),
+      );
+      const merged: TotalSalesByPlayerResult[] = [];
+      let days: number | null = null;
+      for (const r of chunkResults) {
+        if (!r) continue;
+        if (Array.isArray(r.results)) merged.push(...r.results);
+        if (days === null && typeof r.days === "number") days = r.days;
+      }
+      return {
+        results: merged,
+        days: days ?? 30,
+      } satisfies TotalSalesByPlayerResponse;
+    },
     TREND_TTL_SEC,
   );
 }

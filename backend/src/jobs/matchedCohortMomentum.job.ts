@@ -117,6 +117,14 @@ async function runCycle(): Promise<void> {
   let succeeded = 0;
   let failed = 0;
   let cohortSizes = 0;
+  // CF-MATCHED-COHORT-FAILURE-VISIBILITY (2026-07-02): the null-return case
+  // (fetchCardHedgeMatchedCohort resolves to null, without throwing) was
+  // being counted toward `failed` but not logged with the player name. That
+  // hid ~17% of daily traffic in an opaque bucket — 13/74 in the observed
+  // cycle. Emit a structured event per null-return so KQL can slice by
+  // player name and drive the next tranche of CH catalog escalations or
+  // sales-stats fixes.
+  const nullPlayers: string[] = [];
   // Accumulators for the DailyIQ market-players precompute — populated
   // alongside the per-player cache writes so we don't re-scan CH later.
   const perPlayerCohorts: MarketPlayersJobInput["perPlayerCohorts"] = [];
@@ -143,6 +151,7 @@ async function runCycle(): Promise<void> {
         }
       } else {
         failed += 1;
+        nullPlayers.push(player);
       }
     } catch (err) {
       failed += 1;
@@ -153,6 +162,19 @@ async function runCycle(): Promise<void> {
     if (DEFAULT_PER_PLAYER_DELAY_MS > 0) {
       await new Promise((r) => setTimeout(r, DEFAULT_PER_PLAYER_DELAY_MS));
     }
+  }
+  if (nullPlayers.length > 0) {
+    // Single structured event with the full list — KQL can `mv-expand`
+    // for per-player slicing. Cheaper than N per-player events for a
+    // list that's expected to be O(20) in steady state.
+    console.log(
+      JSON.stringify({
+        event: "matched_cohort_null_returns",
+        source: "matched-cohort-job",
+        count: nullPlayers.length,
+        players: nullPlayers,
+      }),
+    );
   }
 
   // ── DailyIQ market-players precompute ───────────────────────────
