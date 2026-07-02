@@ -79,6 +79,7 @@ const CARDSIGHT_CARD_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
 import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
+import { identifyCard } from "../services/compiq/cardhedge.client.js";
 import {
   parseCardQuery,
   buildCompSearchQuery,
@@ -1363,12 +1364,75 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       );
       // CF-PREDICTION-CORPUS-CALL-CONTEXT (2026-06-01): /api/compiq/price
       // is the free-text alias of /search.
-      const est = await computeEstimate(body, {
+      let est = await computeEstimate(body, {
         source: "compiq-price-freetext",
         userId: null,
         holdingId: null,
         routedFromHolding: false,
       });
+
+      // CF-PRICE-AI-MATCHER-FALLBACK (2026-07-02): free-text catalog-miss
+      // hardening. computeEstimate's fetchComps uses a token-based search
+      // + subset filter; that path silently misses cards whose autograph
+      // SKU uses a non-CPA prefix (verified against CH: 2025 Bowman Paul
+      // Skenes auto is HSA-PS, Dylan Crews RRA-DC, Jackson Holliday
+      // PRV-JH, none of which the token search reliably surfaces). For
+      // real prospects the batch failure rate on
+      //   "2025 Bowman <name> Auto"
+      // was 75% (12/16) even though CH's AI matcher /cards/card-match
+      // resolves the same queries at 0.96 confidence.
+      //
+      // Fix: on catalog-miss (never the pinned-id branch, which is
+      // definitionally "no-recent-comps" not a miss), ask CH's AI
+      // matcher for a card_id. If it returns a high-confidence match
+      // (>= 0.85) AND the parser had enough signal to trust the query
+      // (>= 0.5 confidence), re-run the estimator pinned to that
+      // card_id. The pinned-id branch trusts the ID and skips fetchComps'
+      // free-text step, so cards CH can identify but our token search
+      // can't find get priced correctly.
+      //
+      // Worst case: pinned-id retry yields no-recent-comps (still
+      // cardIdentity-populated), which is a strictly better UX than
+      // "catalog-miss" (users see "we found the card, no recent sales"
+      // vs "we couldn't find this card in our catalog").
+      if (
+        est.source === "catalog-miss" &&
+        parsed.confidence >= 0.5 &&
+        !body.cardId
+      ) {
+        try {
+          const aiMatch = await identifyCard(query);
+          const conf =
+            aiMatch && typeof (aiMatch as { confidence?: unknown }).confidence === "number"
+              ? ((aiMatch as { confidence: number }).confidence)
+              : 0;
+          if (aiMatch && aiMatch.card_id && conf >= 0.85) {
+            console.log(
+              JSON.stringify({
+                event: "price_ai_matcher_fallback",
+                source: "compiq.routes",
+                originalQuery: query,
+                aiMatchCardId: aiMatch.card_id,
+                aiMatchConfidence: conf,
+                aiMatchNumber: (aiMatch as { number?: string }).number ?? null,
+              }),
+            );
+            const pinnedBody: CompIQEstimateRequest = {
+              ...body,
+              cardId: aiMatch.card_id,
+            };
+            est = await computeEstimate(pinnedBody, {
+              source: "compiq-price-ai-matched",
+              userId: null,
+              holdingId: null,
+              routedFromHolding: false,
+            });
+          }
+        } catch {
+          // Fallback is best-effort — swallow errors and return the
+          // original catalog-miss result untouched.
+        }
+      }
 
       // Unsupported-sport short-circuit â€” mirrors /search response shape so
       // iOS clients receive identical behavior across the two endpoints.
