@@ -197,7 +197,7 @@ export function stopCacheHitRateEmit(): void {
 
 // ─── PHASE-4A-2.2: cacheWrap with optional stale-serve ──────────────────────
 
-export interface CacheWrapOpts {
+export interface CacheWrapOpts<T = unknown> {
   freshTtlSeconds: number;
   /**
    * If > 0, entries are stored with a total Redis TTL of
@@ -208,6 +208,22 @@ export interface CacheWrapOpts {
    * (no stale-serve; behavior identical to the legacy single-number form).
    */
   staleServeTtlSeconds?: number;
+  /**
+   * CF-CH-SEARCH-NO-CACHE-EMPTY (2026-07-01): predicate that suppresses
+   * writing a specific result to the cache. When it returns true, the
+   * result is returned to the caller as normal but NOT persisted — the
+   * next call for the same key hits the underlying fn again.
+   *
+   * Motivating case: CardHedge's card-search occasionally returns [] on
+   * transient conditions (rate-limit backpressure, deploy warmup blips);
+   * the prior 6-hour TTL then locked in that empty response for the
+   * full window, turning a blip into a persistent picker failure. Skip
+   * caching empty results and the next call self-heals.
+   *
+   * Non-empty results (or any result the predicate returns false for)
+   * cache normally.
+   */
+  skipCacheWhen?: (result: T) => boolean;
 }
 
 interface ParsedEntry<T> {
@@ -272,9 +288,9 @@ function tallyStats(outcome: "hit" | "miss" | "stale"): void {
 export async function cacheWrap<T>(
   key: string,
   fn: () => Promise<T>,
-  ttlOrOpts: number | CacheWrapOpts,
+  ttlOrOpts: number | CacheWrapOpts<T>,
 ): Promise<T> {
-  const opts: CacheWrapOpts =
+  const opts: CacheWrapOpts<T> =
     typeof ttlOrOpts === "number" ? { freshTtlSeconds: ttlOrOpts } : ttlOrOpts;
   const staleTtl = opts.staleServeTtlSeconds ?? 0;
   const totalTtl = opts.freshTtlSeconds + staleTtl;
@@ -300,11 +316,20 @@ export async function cacheWrap<T>(
   // Try fresh fetch.
   try {
     const result = await fn();
-    await cacheSet(
-      key,
-      JSON.stringify({ _v: result, _ts: Date.now() }),
-      totalTtl,
-    );
+    // CF-CH-SEARCH-NO-CACHE-EMPTY (2026-07-01): suppress cache write when
+    // the caller-provided predicate flags this result as unworth persisting
+    // (typically an empty/zero-hit response from a transient upstream blip).
+    // The result still returns to the caller; only the cache write is
+    // skipped, so the next call retries the fn.
+    const shouldSkipCache =
+      typeof opts.skipCacheWhen === "function" && opts.skipCacheWhen(result);
+    if (!shouldSkipCache) {
+      await cacheSet(
+        key,
+        JSON.stringify({ _v: result, _ts: Date.now() }),
+        totalTtl,
+      );
+    }
     tallyStats("miss");
     recordPrefixOutcome(key, "miss");
     return result;
