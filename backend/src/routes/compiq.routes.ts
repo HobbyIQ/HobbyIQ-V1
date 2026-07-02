@@ -1537,12 +1537,26 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             1,
           );
           const sameYearBase = playerCards.find((c) => {
-            const cYear =
+            // CF-PRICE-FALLBACK-LAYER-2-YEAR-FALLBACK (2026-07-02): CH's
+            // /cards/card-search returns year: null on every candidate;
+            // extract from the set string (same pattern as PR #243 in
+            // the dispatcher rerank). Set names always carry a 4-digit
+            // year prefix ("2025 Bowman Baseball").
+            const cYearNumeric =
               typeof c.year === "number"
                 ? c.year
                 : typeof c.year === "string"
                   ? Number(c.year)
                   : NaN;
+            const cSetYearMatch =
+              !Number.isFinite(cYearNumeric) && typeof c.set === "string"
+                ? c.set.match(/\b(19|20)\d{2}\b/)
+                : null;
+            const cYear = Number.isFinite(cYearNumeric)
+              ? (cYearNumeric as number)
+              : cSetYearMatch
+                ? Number(cSetYearMatch[0])
+                : null;
             const cNum =
               typeof c.number === "string" ? c.number : "";
             const cVar =
