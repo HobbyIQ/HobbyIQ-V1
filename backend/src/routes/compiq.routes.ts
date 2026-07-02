@@ -1395,11 +1395,23 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       // cardIdentity-populated), which is a strictly better UX than
       // "catalog-miss" (users see "we found the card, no recent sales"
       // vs "we couldn't find this card in our catalog").
-      if (
-        est.source === "catalog-miss" &&
+      // CF-PRICE-FALLBACK-LAYER-1 (2026-07-02): trigger the AI-matcher
+      // fallback on BOTH catalog-miss AND (no-recent-comps + 0 comps).
+      // Original #250 only fired on catalog-miss, so queries like
+      // "2024 Bowman Chrome Paul Skenes Auto" (initial estimator found
+      // A card but zero comps, source=no-recent-comps) never got the
+      // fallback even when the AI matcher could resolve to a better
+      // card_id with real sales. Widening the trigger closes that gap.
+      const estCompsAvail =
+        typeof (est as { compsAvailable?: unknown }).compsAvailable === "number"
+          ? ((est as { compsAvailable: number }).compsAvailable)
+          : null;
+      const triggerFallback =
+        !body.cardId &&
         parsed.confidence >= 0.5 &&
-        !body.cardId
-      ) {
+        (est.source === "catalog-miss" ||
+          (est.source === "no-recent-comps" && estCompsAvail === 0));
+      if (triggerFallback) {
         try {
           const aiMatch = await identifyCard(query);
           const conf =
@@ -1412,6 +1424,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                 event: "price_ai_matcher_fallback",
                 source: "compiq.routes",
                 originalQuery: query,
+                originalEstSource: est.source,
+                originalCompsAvailable: estCompsAvail,
                 aiMatchCardId: aiMatch.card_id,
                 aiMatchConfidence: conf,
                 aiMatchNumber: (aiMatch as { number?: string }).number ?? null,
@@ -1427,10 +1441,43 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               holdingId: null,
               routedFromHolding: false,
             });
+
+            // CF-PRICE-FALLBACK-LAYER-1 (2026-07-02): enrich cardIdentity
+            // from the AI-match metadata so iOS can render "we found
+            // <player> <year> <set> <number>" even when the pinned
+            // lookup yields no-recent-comps (empty cardIdentity is
+            // useless — the whole point of surfacing the resolved SKU
+            // is telling the user which card the engine identified).
+            const aiPlayer = (aiMatch as { player?: string }).player ?? null;
+            const aiSet = (aiMatch as { set?: string }).set ?? null;
+            const aiNumber = (aiMatch as { number?: string }).number ?? null;
+            const aiVariant = (aiMatch as { variant?: string }).variant ?? null;
+            const aiDescription = (aiMatch as { description?: string }).description ?? null;
+            const aiYearMatch = aiSet ? aiSet.match(/\b(19|20)\d{2}\b/) : null;
+            const aiYear = aiYearMatch ? Number(aiYearMatch[0]) : null;
+            const enriched = {
+              card_id: aiMatch.card_id,
+              title: aiDescription,
+              player: aiPlayer,
+              set: aiSet,
+              release: aiSet,
+              year: aiYear,
+              number: aiNumber,
+              variant: aiVariant,
+            };
+            const existing =
+              (est as { cardIdentity?: unknown }).cardIdentity &&
+              typeof (est as { cardIdentity?: unknown }).cardIdentity === "object"
+                ? ((est as { cardIdentity: Record<string, unknown> }).cardIdentity)
+                : {};
+            (est as { cardIdentity?: unknown }).cardIdentity = {
+              ...existing,
+              ...enriched,
+            };
           }
         } catch {
           // Fallback is best-effort — swallow errors and return the
-          // original catalog-miss result untouched.
+          // original result untouched.
         }
       }
 
