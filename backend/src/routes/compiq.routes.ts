@@ -1417,11 +1417,58 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           (est.source === "no-recent-comps" && estCompsAvail === 0));
       if (triggerFallback) {
         try {
-          const aiMatch = await identifyCard(query);
-          const conf =
+          let aiMatch = await identifyCard(query);
+          let conf =
             aiMatch && typeof (aiMatch as { confidence?: unknown }).confidence === "number"
               ? ((aiMatch as { confidence: number }).confidence)
               : 0;
+          let broaderYearUsed = false;
+
+          // CF-PRICE-FALLBACK-LAYER-3 (2026-07-02): broader-year retry.
+          // When the initial AI match returns nothing (or below the 0.85
+          // confidence floor), the user's stated year may not exist as
+          // an auto SKU for that player (real observed cases: Ethan
+          // Salas 2025 Bowman Auto → no 2025, but 2023/2024 Bowman
+          // Chrome autos exist; same shape for Roman Anthony, Cam
+          // Smith, Termarr Johnson, Junior Caminero). Strip the year
+          // from the query and retry — if the broader match clears the
+          // confidence floor, use it. Attribution surfaces that we
+          // used a year-broadened lookup so downstream corpus + iOS UX
+          // can flag the year mismatch.
+          if ((!aiMatch || conf < 0.85) && /\b(19|20)\d{2}\b/.test(query)) {
+            const yearStripped = query
+              .replace(/\b(19|20)\d{2}\b/g, "")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (yearStripped.length > 0 && yearStripped !== query.trim()) {
+              try {
+                const broaderMatch = await identifyCard(yearStripped);
+                const broaderConf =
+                  broaderMatch && typeof (broaderMatch as { confidence?: unknown }).confidence === "number"
+                    ? ((broaderMatch as { confidence: number }).confidence)
+                    : 0;
+                if (broaderMatch && broaderMatch.card_id && broaderConf >= 0.85) {
+                  console.log(
+                    JSON.stringify({
+                      event: "price_broader_year_match",
+                      source: "compiq.routes",
+                      originalQuery: query,
+                      broadenedQuery: yearStripped,
+                      broaderMatchCardId: broaderMatch.card_id,
+                      broaderMatchConfidence: broaderConf,
+                      broaderMatchNumber: (broaderMatch as { number?: string }).number ?? null,
+                    }),
+                  );
+                  aiMatch = broaderMatch;
+                  conf = broaderConf;
+                  broaderYearUsed = true;
+                }
+              } catch {
+                // absorb; keep primary result
+              }
+            }
+          }
+
           if (aiMatch && aiMatch.card_id && conf >= 0.85) {
             console.log(
               JSON.stringify({
@@ -1433,6 +1480,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                 aiMatchCardId: aiMatch.card_id,
                 aiMatchConfidence: conf,
                 aiMatchNumber: (aiMatch as { number?: string }).number ?? null,
+                broaderYearUsed,
               }),
             );
             const pinnedBody: CompIQEstimateRequest = {
@@ -1507,6 +1555,25 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       // was built from.
       const AUTO_PREFIX_RE =
         /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV)(-|$)/i;
+
+      // CF-PRICE-FALLBACK-LAYER-2-MULTIPLIER-TUNE (2026-07-02): first-pass
+      // 10× multiplier under-priced rare special-insert autos
+      // (HSA/RRA/PRV run /5-/25 and empirically trade ~50-100× base;
+      // the batch showed Skenes HSA-PS projected at $21 vs real market
+      // ~$200+). Regular prospect-auto prefixes (CPA/CDA/BCPA) empirically
+      // trade ~15-30× base (Nick Kurtz CPA-NK projected $32 vs real ~$80,
+      // so 20× is closer). Split the multiplier by prefix class.
+      //
+      //   HSA / RRA / PRV / USA / AU (rare/special)  → 50×
+      //   CPA / CDA / BCPA / BCDA / BDPA / BDA / BPA
+      //     / BCRA / TCRA / TRA / FCA (regular)       → 20×
+      //
+      // ±50% range still signals uncertainty.
+      const RARE_AUTO_PREFIX_RE = /^(HSA|RRA|PRV|USA|AU)(-|$)/i;
+      function autoPremiumMultiplierFor(num: string): number {
+        return RARE_AUTO_PREFIX_RE.test(num) ? 50 : 20;
+      }
+
       const ciAfterLayer1 = (est as { cardIdentity?: Record<string, unknown> }).cardIdentity ?? {};
       const ciPlayer =
         typeof ciAfterLayer1.player === "string" ? (ciAfterLayer1.player as string) : null;
@@ -1576,8 +1643,13 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                 .sort((a, b) => a - b);
               if (sorted.length >= 3) {
                 const median = sorted[Math.floor(sorted.length / 2)];
-                const AUTO_PREMIUM_MULT = 10;
-                const projected = median * AUTO_PREMIUM_MULT;
+                // CF-PRICE-FALLBACK-LAYER-2-MULTIPLIER-TUNE (2026-07-02):
+                // multiplier now varies by autograph prefix class — rare
+                // insert autos (HSA/RRA/PRV) get 50×; regular prospect
+                // autos (CPA/CDA/BCPA/…) get 20×. See the helper's
+                // header comment for the empirical anchor.
+                const autoPremium = autoPremiumMultiplierFor(ciNumber as string);
+                const projected = median * autoPremium;
                 const low = projected * 0.5;
                 const high = projected * 1.5;
                 console.log(
@@ -1588,7 +1660,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                     anchorCardId: sameYearBase.card_id,
                     anchorMedian: median,
                     anchorSampleSize: sorted.length,
-                    multiplier: AUTO_PREMIUM_MULT,
+                    multiplier: autoPremium,
                     projected,
                   }),
                 );
@@ -1604,7 +1676,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                   anchorSampleSize: sorted.length,
                   anchorNumber: sameYearBase.number,
                   anchorSet: sameYearBase.set,
-                  multiplier: AUTO_PREMIUM_MULT,
+                  multiplier: autoPremium,
                   note: "Rough projection — auto premium multipliers vary widely by rarity",
                 };
                 (est as { source?: string }).source = "projected";
