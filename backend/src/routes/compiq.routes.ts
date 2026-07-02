@@ -1583,11 +1583,160 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
           : null;
       const ciNumber =
         typeof ciAfterLayer1.number === "string" ? (ciAfterLayer1.number as string) : null;
+      const ciCardId =
+        typeof ciAfterLayer1.card_id === "string" ? (ciAfterLayer1.card_id as string) : null;
       const estCompsAvailL2 =
         typeof (est as { compsAvailable?: unknown }).compsAvailable === "number"
           ? ((est as { compsAvailable: number }).compsAvailable)
           : null;
+
+      // Shared helper for year extraction from CH's set string; CH's
+      // card-search returns year: null on every row so we consistently
+      // recover the year from the set prefix ("2025 Bowman Baseball").
+      const extractYearFromSet = (setStr: unknown): number | null => {
+        if (typeof setStr !== "string") return null;
+        const m = setStr.match(/\b(19|20)\d{2}\b/);
+        return m ? Number(m[0]) : null;
+      };
+
+      // CF-PRICE-FALLBACK-LAYER-4 (2026-07-02): cross-parallel anchor.
+      // When the target auto card has 0 comps, price it from a sibling
+      // autograph (same player+year, auto prefix, different card_id)
+      // as:
+      //     projected = latest_sale × trend_factor × parallel_multiplier
+      //
+      // - latest_sale       — sibling's most recent sale in the 90d window
+      //                       (freshest market read, not backward-looking
+      //                       median)
+      // - trend_factor      — recent-2wk avg / prior-2wk avg, bounded to
+      //                       [0.5, 2.0] to prevent one hot week from
+      //                       blowing the projection out
+      // - parallel_multiplier — 1.0 in v1 (target variant vs sibling
+      //                       variant tier adjustment is a follow-up;
+      //                       for now the ±60% range signals uncertainty)
+      //
+      // Rationale (Drew's spec 2026-07-02): sibling auto pricing is a
+      // MUCH tighter anchor than "base × 50" because the multiplier gap
+      // between auto parallels is 1-3×, not 20-50×. Multiplying LATEST
+      // by TREND captures market momentum without waiting for the
+      // matched-cohort cycle. Layer 4 runs before Layer 2 and shorts it
+      // out on success.
+      const triggerSiblingAuto =
+        est.source === "no-recent-comps" &&
+        estCompsAvailL2 === 0 &&
+        !!ciPlayer &&
+        !!ciYear &&
+        !!ciNumber &&
+        AUTO_PREFIX_RE.test(ciNumber) &&
+        !!ciCardId;
+      let siblingAutoUsed = false;
+      if (triggerSiblingAuto) {
+        try {
+          const playerCards = await searchCards(
+            "",
+            50,
+            { player: ciPlayer as string },
+            1,
+          );
+          const siblingCandidates = playerCards.filter((c) => {
+            const cYear = extractYearFromSet(c.set);
+            const cNum = typeof c.number === "string" ? c.number : "";
+            return (
+              cYear === ciYear &&
+              AUTO_PREFIX_RE.test(cNum) &&
+              c.card_id !== ciCardId
+            );
+          });
+          // Fetch prices for up to 8 candidates in parallel. Prices come
+          // back sorted ASC by closing_date (see cardhedge.client.ts
+          // _getPricesByCard) — no need to re-sort chronologically.
+          const priced = await Promise.all(
+            siblingCandidates.slice(0, 8).map(async (c) => {
+              const dailyPrices = await getPricesByCard(c.card_id, "Raw", 90);
+              return { card: c, dailyPrices };
+            }),
+          );
+          const withData = priced.filter((r) => r.dailyPrices.length >= 3);
+          // Sort by sample size DESC so the sibling with the most sales
+          // wins (most reliable trend + latest-sale signal).
+          withData.sort((a, b) => b.dailyPrices.length - a.dailyPrices.length);
+          const winner = withData[0];
+          if (winner && winner.dailyPrices.length >= 3) {
+            const dp = winner.dailyPrices; // chronological ASC
+            const latestSale = dp[dp.length - 1].price;
+
+            // Trend: split window into recent-2-weeks (last ~14 entries)
+            // vs prior-2-weeks (14 before that). Ratio bounded [0.5, 2.0]
+            // so a single hot spike or thin week can't blow the
+            // projection out.
+            const window = 14;
+            const recentSlice = dp.slice(-window);
+            const priorSlice = dp.slice(-2 * window, -window);
+            const avg = (arr: typeof dp) =>
+              arr.length > 0
+                ? arr.reduce((s, p) => s + p.price, 0) / arr.length
+                : 0;
+            const recentAvg = avg(recentSlice);
+            const priorAvg = avg(priorSlice);
+            let trendFactor = priorAvg > 0 ? recentAvg / priorAvg : 1.0;
+            if (!Number.isFinite(trendFactor) || trendFactor <= 0) {
+              trendFactor = 1.0;
+            }
+            trendFactor = Math.max(0.5, Math.min(2.0, trendFactor));
+
+            const parallelMultiplier = 1.0; // v1: target/sibling parallel-tier gap not modeled yet
+            const projected = latestSale * trendFactor * parallelMultiplier;
+            const low = projected * 0.6;
+            const high = projected * 1.6;
+            console.log(
+              JSON.stringify({
+                event: "price_sibling_auto_anchor",
+                source: "compiq.routes",
+                originalQuery: query,
+                targetCardId: ciCardId,
+                targetNumber: ciNumber,
+                anchorCardId: winner.card.card_id,
+                anchorNumber: winner.card.number,
+                anchorVariant: winner.card.variant,
+                anchorLatestSale: latestSale,
+                anchorRecentAvg: Math.round(recentAvg * 100) / 100,
+                anchorPriorAvg: Math.round(priorAvg * 100) / 100,
+                trendFactor: Math.round(trendFactor * 100) / 100,
+                parallelMultiplier,
+                anchorSampleSize: dp.length,
+                projected,
+              }),
+            );
+            (est as { predictedPrice?: number | null }).predictedPrice = projected;
+            (est as { predictedPriceRange?: { low: number; high: number } | null }).predictedPriceRange = {
+              low,
+              high,
+            };
+            (est as { predictedPriceAttribution?: Record<string, unknown> | null }).predictedPriceAttribution = {
+              mechanism: "sibling_auto_latest_x_trend",
+              anchorCardId: winner.card.card_id,
+              anchorPrice: latestSale,
+              anchorLatestSale: latestSale,
+              anchorRecentAvg: recentAvg,
+              anchorPriorAvg: priorAvg,
+              trendFactor,
+              parallelMultiplier,
+              anchorSampleSize: dp.length,
+              anchorNumber: winner.card.number,
+              anchorVariant: winner.card.variant,
+              anchorSet: winner.card.set,
+              note: "Estimated from sibling autograph's latest sale × recent momentum; actual target-parallel premium not modeled in v1",
+            };
+            (est as { source?: string }).source = "projected";
+            siblingAutoUsed = true;
+          }
+        } catch {
+          // Layer 4 best-effort; fall through to Layer 2.
+        }
+      }
+
       const triggerBaseXAuto =
+        !siblingAutoUsed &&
         est.source === "no-recent-comps" &&
         estCompsAvailL2 === 0 &&
         !!ciPlayer &&
