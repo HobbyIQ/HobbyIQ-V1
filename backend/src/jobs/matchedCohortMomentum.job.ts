@@ -158,13 +158,56 @@ async function collectUniquePortfolioPlayers(): Promise<string[]> {
 
 async function runCycle(): Promise<void> {
   const start = Date.now();
-  const playersAll = await collectUniquePortfolioPlayers();
+
+  // CF-DAILYIQ-BOWMAN-2YR-WIDEN-MOMENTUM (2026-07-02): Bowman universe is
+  // discovered UP FRONT so the matched-cohort loop can run on the union
+  // of portfolio + Bowman universe. Previously discovery was mid-cycle
+  // and the loop only ran on portfolio players; that made
+  // bowman2yrTopMomentum stuck at ~2 rows (only Bowman players Drew owned
+  // AND had a cohort). Running matched-cohort on the full Bowman universe
+  // gives every 2025-2026 Bowman prospect a chance at the momentum list
+  // regardless of whether the user holds one of their cards.
+  //
+  // Cost: ~500 additional matched-cohort computations. Each is one CH
+  // /prices-by-card fan-out call (up to 30 cards, internal concurrency 5).
+  // Sequential + 250ms per-player pacing = ~500 × ~750ms ≈ 6 min. Fits
+  // comfortably in a 24h nightly cycle; iOS reads the precomputed cache
+  // and doesn't feel this cost.
+  const portfolioPlayers = await collectUniquePortfolioPlayers();
+  let bowmanUniverse: string[] = [];
+  try {
+    bowmanUniverse = await collectBowman2YrPlayerUniverse();
+    console.log(
+      JSON.stringify({
+        event: "bowman_universe_discovered",
+        source: "matched-cohort-job",
+        count: bowmanUniverse.length,
+      }),
+    );
+  } catch (err) {
+    console.warn(
+      `[matched-cohort] bowman universe discovery failed (non-fatal): ${(err as Error)?.message ?? err}`,
+    );
+  }
+
+  // Union with case-insensitive dedup. Portfolio players come first so
+  // if we hit the MAX_PLAYERS cap, the user's own holdings are guaranteed
+  // to be covered before any prospect discovery is trimmed.
+  const unionMap = new Map<string, string>();
+  for (const p of portfolioPlayers) unionMap.set(p.toLowerCase(), p);
+  for (const p of bowmanUniverse) {
+    const k = p.toLowerCase();
+    if (!unionMap.has(k)) unionMap.set(k, p);
+  }
+  const playersAll = Array.from(unionMap.values());
   const maxPlayers = readMaxPlayers();
   const players = playersAll.slice(0, maxPlayers);
   console.log(
     JSON.stringify({
       event: "matched_cohort_cycle_start",
       source: "matched-cohort-job",
+      portfolioPlayers: portfolioPlayers.length,
+      bowmanUniverse: bowmanUniverse.length,
       playersDiscovered: playersAll.length,
       playersProcessing: players.length,
       cap: maxPlayers,
@@ -259,35 +302,13 @@ async function runCycle(): Promise<void> {
   // two lists into one CH batch. The Bowman universe is ~450 players
   // in steady state; portfolio is ~75. After dedup + chunk-at-20,
   // that's ~25 CH HTTP calls per cycle — negligible cost, one batch.
-  let bowmanUniverse: string[] = [];
+  // CF-DAILYIQ-BOWMAN-2YR-WIDEN-MOMENTUM (2026-07-02): discovery already
+  // happened at the top of the cycle, so `players` here is the union of
+  // (portfolio + Bowman universe). Feed that same list to total-sales so
+  // volume covers everyone the matched-cohort loop covered.
   try {
-    bowmanUniverse = await collectBowman2YrPlayerUniverse();
-    console.log(
-      JSON.stringify({
-        event: "bowman_universe_discovered",
-        source: "matched-cohort-job",
-        count: bowmanUniverse.length,
-      }),
-    );
-  } catch (err) {
-    console.warn(
-      `[matched-cohort] bowman universe discovery failed (non-fatal): ${(err as Error)?.message ?? err}`,
-    );
-  }
-
-  // Case-insensitive dedup of portfolio + Bowman universe. Preserves the
-  // first-seen display form so the payload shows nice names.
-  const totalSalesRequestSet = new Map<string, string>();
-  for (const p of players) totalSalesRequestSet.set(p.toLowerCase(), p);
-  for (const p of bowmanUniverse) {
-    const k = p.toLowerCase();
-    if (!totalSalesRequestSet.has(k)) totalSalesRequestSet.set(k, p);
-  }
-  const totalSalesRequestList = Array.from(totalSalesRequestSet.values());
-
-  try {
-    const totals = totalSalesRequestList.length > 0
-      ? await getTotalSalesByPlayer(totalSalesRequestList)
+    const totals = players.length > 0
+      ? await getTotalSalesByPlayer(players)
       : null;
     for (const r of totals?.results ?? []) {
       perPlayerTotal30d.push({ player: r.player, totalSales30d: r.total_sales });

@@ -812,6 +812,38 @@ export async function getSalesStatsByPlayer(
  * failure (partial data is preferable to zero data for this signal).
  */
 const TOTAL_SALES_BATCH_MAX = 20;
+/**
+ * CF-TOTAL-SALES-THROTTLE (2026-07-02): 27+ concurrent chunks (after
+ * CF-DAILYIQ-BOWMAN-2YR widened the fetch to ~530 players) started
+ * timing out — CH couldn't service that many concurrent connections.
+ * Cap concurrent chunks at 5; total wall-clock for 27 chunks becomes
+ * ~5 × (chunk latency ~2s) = 10 sec, well under any timeout, and CH's
+ * per-chunk work stays comfortably below its rate ceiling.
+ */
+const TOTAL_SALES_CONCURRENCY = 5;
+
+/**
+ * Bounded-concurrency map. Runs `fn(item)` for each item with at most
+ * `concurrency` running at once. Preserves input order in the output.
+ */
+async function boundedMap<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  const width = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: width }, () => worker()));
+  return results;
+}
 
 async function _fetchTotalSalesChunk(
   players: string[],
@@ -845,8 +877,12 @@ export async function getTotalSalesByPlayer(
       for (let i = 0; i < players.length; i += TOTAL_SALES_BATCH_MAX) {
         chunks.push(players.slice(i, i + TOTAL_SALES_BATCH_MAX));
       }
-      const chunkResults = await Promise.all(
-        chunks.map((c) => _fetchTotalSalesChunk(c, category, h)),
+      // CF-TOTAL-SALES-THROTTLE (2026-07-02): bounded concurrency to
+      // prevent CH from timing out under 27+ concurrent connections.
+      const chunkResults = await boundedMap(
+        chunks,
+        TOTAL_SALES_CONCURRENCY,
+        (c) => _fetchTotalSalesChunk(c, category, h),
       );
       const merged: TotalSalesByPlayerResult[] = [];
       let days: number | null = null;
