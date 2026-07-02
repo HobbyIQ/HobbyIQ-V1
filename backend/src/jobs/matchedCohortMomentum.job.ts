@@ -20,7 +20,10 @@
  */
 
 import { fetchCardHedgeMatchedCohort } from "../services/playerTrend/cardHedgeMatchedCohortProvider.js";
-import { writeMatchedCohortToCache } from "../services/playerTrend/matchedCohortCache.js";
+import {
+  readMatchedCohortFromCache,
+  writeMatchedCohortToCache,
+} from "../services/playerTrend/matchedCohortCache.js";
 import {
   listAllPortfolioUserIds,
   readUserDoc,
@@ -216,6 +219,7 @@ async function runCycle(): Promise<void> {
 
   let succeeded = 0;
   let failed = 0;
+  let skipped = 0;
   let cohortSizes = 0;
   // CF-MATCHED-COHORT-FAILURE-VISIBILITY (2026-07-02): the null-return case
   // (fetchCardHedgeMatchedCohort resolves to null, without throwing) was
@@ -228,7 +232,47 @@ async function runCycle(): Promise<void> {
   // Accumulators for the DailyIQ market-players precompute — populated
   // alongside the per-player cache writes so we don't re-scan CH later.
   const perPlayerCohorts: MarketPlayersJobInput["perPlayerCohorts"] = [];
+  // CF-MATCHED-COHORT-CACHE-SKIP (2026-07-02): after CF-DAILYIQ-BOWMAN-2YR-
+  // WIDEN-MOMENTUM (#248) the loop scans up to 500 players, and each
+  // fetchCardHedgeMatchedCohort call fans out ~30 prices-by-card
+  // requests to CH (5 concurrent internal, 6+ sec worst case per player).
+  // Full-cycle runtime blew past 30 min in observed traffic — an
+  // unacceptable oscillation between cycle refreshes.
+  //
+  // Fix: per-player cache-first. `readMatchedCohortFromCache` returns
+  // null past the 48h stale tolerance; anything inside that window we
+  // trust, populate the DailyIQ accumulator from, and skip the CH work
+  // entirely. Steady state after the first cycle warms the cache:
+  // ~500 fresh reads (fast Redis GETs, no CH) + a handful of expired-
+  // entry refetches. Cycle time drops back to ~1-2 min.
+  //
+  // Freshness: cache TTL is 24h (DEFAULT_TTL_SEC in matchedCohortCache),
+  // so this skip window == the job's cadence — no player goes more than
+  // one cycle without a refresh.
   for (const player of players) {
+    const cached = await readMatchedCohortFromCache(player);
+    if (cached && cached.result) {
+      const result = cached.result;
+      succeeded += 1;
+      skipped += 1;
+      cohortSizes += result.cohort.length;
+      if (result.medianRatio !== null) {
+        perPlayerCohorts.push({
+          player,
+          cohort: {
+            medianRatio: result.medianRatio,
+            meanRatio: result.meanRatio ?? result.medianRatio,
+            cohortSize: result.cohort.length,
+            latestWeekActiveCards: result.latestWeekActiveCards,
+            latestWeekStart: result.latestWeekStart,
+            priorWindowWeeksCount: result.priorWindowWeeksCount,
+            computedAtMs: cached.computedAtMs,
+          },
+        });
+      }
+      // Cache-hit path: no CH work, no rate-limit pacing needed.
+      continue;
+    }
     try {
       const result = await fetchCardHedgeMatchedCohort(player);
       if (result) {
@@ -259,6 +303,8 @@ async function runCycle(): Promise<void> {
         `[matched-cohort] player=${player} failed: ${(err as Error)?.message ?? err}`,
       );
     }
+    // Only pace on the CH-hitting path; cache-hits above don't consume
+    // upstream quota so we've already `continue`d past this.
     if (DEFAULT_PER_PLAYER_DELAY_MS > 0) {
       await new Promise((r) => setTimeout(r, DEFAULT_PER_PLAYER_DELAY_MS));
     }
@@ -375,6 +421,8 @@ async function runCycle(): Promise<void> {
       elapsedMs: Date.now() - start,
       succeeded,
       failed,
+      skipped,           // CF-MATCHED-COHORT-CACHE-SKIP (2026-07-02)
+      fetched: succeeded - skipped,
       avgCohortSize: succeeded > 0 ? Math.round((cohortSizes / succeeded) * 10) / 10 : 0,
     }),
   );
