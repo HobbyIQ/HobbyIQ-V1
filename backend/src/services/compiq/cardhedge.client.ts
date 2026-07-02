@@ -131,6 +131,7 @@ export async function searchCards(
   query: string,
   limit = 10,
   filters?: CardSearchFilters,
+  page = 1,
 ): Promise<CardHedgeCard[]> {
   const h = headers();
   if (!h) {
@@ -139,9 +140,11 @@ export async function searchCards(
   }
   // Filter values folded into the cache key so the same `query` with
   // different structured filters doesn't collide on a stale cached payload.
+  // CF-DAILYIQ-BOWMAN-2YR (2026-07-02): page number folded in too so
+  // different pages of the same query don't collide.
   const filterKey = filters
-    ? [filters.player ?? "", filters.set ?? "", filters.rookie ?? ""].join("|")
-    : "";
+    ? [filters.player ?? "", filters.set ?? "", filters.rookie ?? "", String(page)].join("|")
+    : `|||${page}`;
   // CF-CH-SEARCH-NO-CACHE-EMPTY (2026-07-01): don't persist a zero-hit
   // result. CardHedge occasionally returns [] on transient conditions
   // (rate-limit backpressure, deploy warmup, transient CDN edge blips),
@@ -156,7 +159,7 @@ export async function searchCards(
   // the common case, we just don't LOCK IN empty responses.
   return cacheWrap<CardHedgeCard[]>(
     cacheKey("ch:search", query, String(limit), filterKey),
-    async () => _searchCards(query, limit, h, filters),
+    async () => _searchCards(query, limit, h, filters, page),
     {
       freshTtlSeconds: SEARCH_TTL_SEC,
       skipCacheWhen: (result) => result.length === 0,
@@ -169,12 +172,13 @@ async function _searchCards(
   limit: number,
   h: Record<string, string>,
   filters?: CardSearchFilters,
+  page = 1,
 ): Promise<CardHedgeCard[]> {
   try {
     const body: Record<string, unknown> = {
       search: query,
       category: "Baseball",
-      page: 1,
+      page,
       page_size: Math.max(1, Math.min(limit, 50)),
     };
     // CF-CH-STRUCTURED-SEARCH-FILTERS: only emit each filter key when the

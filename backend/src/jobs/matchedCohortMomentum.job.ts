@@ -28,6 +28,7 @@ import {
 import {
   getSalesStatsByPlayer,
   getTotalSalesByPlayer,
+  searchCards,
 } from "../services/compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "../services/playerTrend/momentum.compute.js";
 import type { NormalizedWeeklySales } from "../services/playerTrend/playerTrend.types.js";
@@ -60,6 +61,62 @@ function readIntervalMs(): number {
 function readMaxPlayers(): number {
   const n = Number(process.env.MATCHED_COHORT_JOB_MAX_PLAYERS);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_MAX_PLAYERS_PER_CYCLE;
+}
+
+/**
+ * CF-DAILYIQ-BOWMAN-2YR (2026-07-02): the 2025-2026 Bowman set names we
+ * scan to build the Bowman universe. CH's naming is inconsistent across
+ * years — 2025 products use "Chrome Baseball" in the set string; 2026
+ * Bowman drops the "Chrome" suffix (verified via direct probe).
+ * Bowman Draft Chrome exists for 2025 but not yet for 2026 (the draft
+ * happens later in the year).
+ */
+const BOWMAN_2YR_SET_NAMES: readonly string[] = [
+  "2025 Bowman Chrome Baseball",
+  "2025 Bowman Draft Chrome Baseball",
+  "2026 Bowman Baseball",
+];
+const BOWMAN_DISCOVERY_PAGE_SIZE = 50;
+const BOWMAN_DISCOVERY_MAX_PAGES = 12; // 12 × 50 = 600 cards per set
+
+/**
+ * CF-DAILYIQ-BOWMAN-2YR: paginate CH's `/cards/card-search` across the
+ * 2025-2026 Bowman set names to collect the unique player universe. Uses
+ * the existing searchCards client (already cache-wrapped + no-empty-skip
+ * via PR #242) so repeat calls hit cache. Errors on any set are absorbed
+ * with a warning — a partial universe is preferable to no universe.
+ */
+async function collectBowman2YrPlayerUniverse(): Promise<string[]> {
+  const seen = new Map<string, string>();
+  for (const setName of BOWMAN_2YR_SET_NAMES) {
+    for (let page = 1; page <= BOWMAN_DISCOVERY_MAX_PAGES; page++) {
+      let cards: Awaited<ReturnType<typeof searchCards>> = [];
+      try {
+        cards = await searchCards(
+          "",
+          BOWMAN_DISCOVERY_PAGE_SIZE,
+          { set: setName },
+          page,
+        );
+      } catch (err) {
+        console.warn(
+          `[matched-cohort] bowman-discovery ${setName} page=${page} failed: ${(err as Error)?.message ?? err}`,
+        );
+        break;
+      }
+      if (!cards.length) break;
+      for (const c of cards) {
+        const p = (c.player ?? "").trim();
+        if (!p) continue;
+        const key = p.toLowerCase();
+        if (!seen.has(key)) seen.set(key, p);
+      }
+      // If the page returned fewer than page-size cards, we've reached the
+      // end of the set — no need to poll further pages.
+      if (cards.length < BOWMAN_DISCOVERY_PAGE_SIZE) break;
+    }
+  }
+  return Array.from(seen.values());
 }
 
 /**
@@ -196,9 +253,41 @@ async function runCycle(): Promise<void> {
   const cohortPlayerNames = perPlayerCohorts.map((r) => r.player);
   const perPlayerTotal30d: MarketPlayersJobInput["perPlayerTotal30d"] = [];
   const perPlayerVolumeRatio: MarketPlayersJobInput["perPlayerVolumeRatio"] = [];
+
+  // CF-DAILYIQ-BOWMAN-2YR (2026-07-02): discover the 2025-2026 Bowman
+  // player universe BEFORE the total-sales fetch so we can union the
+  // two lists into one CH batch. The Bowman universe is ~450 players
+  // in steady state; portfolio is ~75. After dedup + chunk-at-20,
+  // that's ~25 CH HTTP calls per cycle — negligible cost, one batch.
+  let bowmanUniverse: string[] = [];
   try {
-    const totals = players.length > 0
-      ? await getTotalSalesByPlayer(players)
+    bowmanUniverse = await collectBowman2YrPlayerUniverse();
+    console.log(
+      JSON.stringify({
+        event: "bowman_universe_discovered",
+        source: "matched-cohort-job",
+        count: bowmanUniverse.length,
+      }),
+    );
+  } catch (err) {
+    console.warn(
+      `[matched-cohort] bowman universe discovery failed (non-fatal): ${(err as Error)?.message ?? err}`,
+    );
+  }
+
+  // Case-insensitive dedup of portfolio + Bowman universe. Preserves the
+  // first-seen display form so the payload shows nice names.
+  const totalSalesRequestSet = new Map<string, string>();
+  for (const p of players) totalSalesRequestSet.set(p.toLowerCase(), p);
+  for (const p of bowmanUniverse) {
+    const k = p.toLowerCase();
+    if (!totalSalesRequestSet.has(k)) totalSalesRequestSet.set(k, p);
+  }
+  const totalSalesRequestList = Array.from(totalSalesRequestSet.values());
+
+  try {
+    const totals = totalSalesRequestList.length > 0
+      ? await getTotalSalesByPlayer(totalSalesRequestList)
       : null;
     for (const r of totals?.results ?? []) {
       perPlayerTotal30d.push({ player: r.player, totalSales30d: r.total_sales });
@@ -237,6 +326,7 @@ async function runCycle(): Promise<void> {
       perPlayerCohorts,
       perPlayerTotal30d,
       perPlayerVolumeRatio,
+      bowmanUniverse,
     });
     await writeMarketPlayersPayload(payload);
     console.log(
@@ -247,6 +337,8 @@ async function runCycle(): Promise<void> {
         fading: payload.fading.length,
         topVolume30d: payload.topVolume30d.length,
         supplyDryLeadingUp: payload.supplyDryLeadingUp.length,
+        bowman2yrTopVolume30d: payload.bowman2yrTopVolume30d.length,
+        bowman2yrTopMomentum: payload.bowman2yrTopMomentum.length,
       }),
     );
   } catch (err) {
