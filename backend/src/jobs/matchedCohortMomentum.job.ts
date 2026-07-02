@@ -178,16 +178,27 @@ async function runCycle(): Promise<void> {
   }
 
   // ── DailyIQ market-players precompute ───────────────────────────
-  // For every player that produced a cohort, ALSO grab their raw
-  // volume ratio + 30d total-sales so the assembled payload can
-  // classify supply_dry and rank by volume. Batched into a single
-  // getTotalSalesByPlayer call and per-player weekly stats.
+  // Volume rank + supply-dry classification. Volume-rank must include
+  // ALL discovered portfolio players, not just those with a matched-
+  // cohort. Vintage HOFers (Griffey, Bonds, McGwire, Sandberg, etc.)
+  // return null from the cohort-discovery step because their catalog
+  // spans decades and the "same card sold in latest AND prior week"
+  // matching doesn't fit the vintage sales pattern — but they can
+  // dominate raw 30d volume (Griffey: 30k+, Bonds: 10k, McGwire: 6k)
+  // and users absolutely want to see them ranked. Previously
+  // topVolume30d was scoped to cohortPlayerNames, silently excluding
+  // every vintage holding from the volume signal.
+  //
+  // CF-DAILYIQ-TOTAL-SALES-WIDEN (2026-07-02): pass the full discovered
+  // player list into getTotalSalesByPlayer so the volume rank reflects
+  // real market activity across the entire portfolio. Chunking + cache-
+  // empty-skip (PRs #244/#245) make this safe at 60+ player batches.
   const cohortPlayerNames = perPlayerCohorts.map((r) => r.player);
   const perPlayerTotal30d: MarketPlayersJobInput["perPlayerTotal30d"] = [];
   const perPlayerVolumeRatio: MarketPlayersJobInput["perPlayerVolumeRatio"] = [];
   try {
-    const totals = cohortPlayerNames.length > 0
-      ? await getTotalSalesByPlayer(cohortPlayerNames)
+    const totals = players.length > 0
+      ? await getTotalSalesByPlayer(players)
       : null;
     for (const r of totals?.results ?? []) {
       perPlayerTotal30d.push({ player: r.player, totalSales30d: r.total_sales });
