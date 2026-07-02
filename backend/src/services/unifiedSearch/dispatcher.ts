@@ -287,38 +287,37 @@ export function buildFiltersFromParsedQuery(
       filters.player = cleaned;
     }
   }
-  // CF-CH-SET-FILTER-ONLY-WHEN-SPECIFIC (2026-06-28): only send the set
-  // filter when the parser identified a SUBSET more specific than the
-  // brand alone (e.g. "Bowman Chrome", "Bowman Draft Chrome", "Topps
-  // Chrome", "Topps Heritage"). When parsed.set equals parsed.brand
-  // (user only typed "Bowman" / "Topps"), the composed set name
-  // "${year} Bowman Baseball" doesn't match any CardHedge set — CH's
-  // set names are granular and brand-only doesn't correspond to any
-  // real set row. The exact-match filter then narrows to 0 candidates
-  // even though hundreds of cards exist.
+  // CF-CARDSEARCH-FIRSTPASS (2026-07-01): the set filter is intentionally
+  // NOT emitted. CardHedge's set filter is exact-match and their canonical
+  // set names vary per-product in ways our synthesizer can't predict from
+  // (year, brand, subset) alone — Vlad Jr's 2016 Bowman Chrome lives at
+  // "2016 Bowman Chrome Prospects Baseball" not "2016 Bowman Chrome
+  // Baseball"; Hammond's 2025 Bowman Chrome auto lives at "2025 Bowman
+  // Draft Chrome Baseball". The prior CF-CH-SET-FILTER-ONLY-WHEN-SPECIFIC
+  // guard tried to skip the emission when parsed.set == brand, but even
+  // subset-confident parses (Bowman Chrome, Topps Chrome) miss on CH's
+  // real set string ~half the time — 79% NO_RESULT rate across a 92-card
+  // stress test (2026-07-01), all driven by the set-filter exact-match
+  // mismatch.
   //
-  // Observable pre-fix: "2025 bowman josh hammond" → 0 candidates
-  // (Hammond CPA-JH Refractor lives in "2025 Bowman Draft Chrome
-  // Baseball" but the filter sent "2025 Bowman Baseball"). Bare
-  // "josh hammond" returned 50 candidates including the Refractor auto.
+  // Empirically verified: dropping `filters.set` moves every one of those
+  // failing cases from 0 candidates → 50 candidates (CH's page_size cap).
+  // The downstream rerank (scoreCandidateForIntent) already scores by
+  // year-delta (+4 exact, -5 for >3-year drift), parallel-token match,
+  // and auto-intent, so the right variant surfaces from the wider pool
+  // without needing pre-filter narrowing. The trade-off (rerank a bigger
+  // pool vs pre-filter narrowly and sometimes zero out) is unambiguous.
   //
-  // When user types a specific subset, the composition may still fail
-  // (CH might use "Bowman Draft Chrome Baseball" vs our "Bowman Chrome
-  // Baseball"), but at least the user expressed intent and a slight
-  // mismatch is recoverable via the free-text search ranking. The
-  // brand-only case has NO recovery — set filter just kills everything.
-  if (parsed.set && parsed.set.length > 0 && parsed.set !== parsed.brand) {
-    filters.set = parsed.year
-      ? `${parsed.year} ${parsed.set} Baseball`
-      : `${parsed.set} Baseball`;
-  }
+  // When CH gains a set-alias registry we can revisit; until then, the
+  // player filter carries all of the narrowing weight and the rerank
+  // does variant selection.
   if (parsed.isRookie) {
     filters.rookie = "Rookie";
   }
 
   // Only return a filter object when at least one field was set — keeps the
   // CH request body identical to pre-CF when no structured signal exists.
-  if (!filters.player && !filters.set && !filters.rookie) return undefined;
+  if (!filters.player && !filters.rookie) return undefined;
   return filters;
 }
 
