@@ -534,6 +534,29 @@ async function dispatchFreetextMode(
   const scoredHits = filteredHits
     .map((card, originalIndex) => {
       const isAuto = detectIsAutoFromCardNumber(card.number);
+      // CF-CH-RERANK-YEAR-FROM-SET (2026-07-02): CardHedge's card-search
+      // response often carries a null `year` field even when the year is
+      // clearly present in the `set` string ("2024 Bowman Chrome Baseball
+      // Paul Skenes 31 Base"). The rerank's year-delta scoring was
+      // silently no-op'ing for those candidates — Number.isFinite(NaN)
+      // is false so the entire year branch skipped.
+      //
+      // Observable pre-fix: "2023 Bowman Chrome Paul Skenes Base"
+      // returned "2025 Topps Chrome Platinum" at position 1 because the
+      // -2 delta-2 penalty on the Topps card never fired (year=null →
+      // NaN → skipped), and 2024 Bowman Chrome (which SHOULD have won
+      // with a 0-penalty delta-1 score) sat at position 2 by CH's
+      // original ranking.
+      //
+      // Fix: fall back to setName year extraction when CH's `year`
+      // field is null. `extractYearFromSetText` already exists (used
+      // by the year_mismatch_resolved telemetry); reuse it here so
+      // the rerank sees a real year for every candidate whose set
+      // string carries one.
+      const candidateYear =
+        card.year != null && Number.isFinite(Number(card.year))
+          ? Number(card.year)
+          : extractYearFromSetText(card.set);
       const score = scoreCandidateForIntent({
         isAuto,
         parallel: card.variant,
@@ -545,7 +568,7 @@ async function dispatchFreetextMode(
         // Pass user-stated year into rerank so cards matching the year
         // beat the reissues.
         intentYear: parsed.year,
-        candidateYear: card.year,
+        candidateYear,
       });
       return { card, originalIndex, score };
     })
