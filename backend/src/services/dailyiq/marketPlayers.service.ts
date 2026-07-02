@@ -47,6 +47,23 @@ export interface MarketPlayersPayload {
   fading: TrendingPlayerRow[];
   topVolume30d: VolumeRankRow[];
   supplyDryLeadingUp: SupplyDryRow[];
+  /**
+   * CF-DAILYIQ-BOWMAN-2YR (2026-07-02): Bowman-scoped top-20 volume list.
+   * Ranks players who appear in the 2025-2026 Bowman universe (2025 Bowman
+   * Chrome, 2025 Bowman Draft Chrome, 2026 Bowman) by their 30d total
+   * sales. Volume signal covers the full player universe from CH, so this
+   * list is populated regardless of matched-cohort coverage.
+   */
+  bowman2yrTopVolume30d: VolumeRankRow[];
+  /**
+   * CF-DAILYIQ-BOWMAN-2YR (2026-07-02): Bowman-scoped top-20 momentum list.
+   * Ranks players who appear in BOTH the Bowman universe AND have a valid
+   * matched-cohort (via portfolio scan) by medianRatio DESC. Trending-up
+   * only (>= 1.05); non-trending players omitted from the list. Rows are
+   * a superset shape of TrendingPlayerRow so the iOS renderer can reuse
+   * the existing cell.
+   */
+  bowman2yrTopMomentum: TrendingPlayerRow[];
 }
 
 /**
@@ -69,6 +86,14 @@ export interface MarketPlayersJobInput {
     player: string;
     volumeRatio: number | null;
   }>;
+  /**
+   * CF-DAILYIQ-BOWMAN-2YR (2026-07-02): unique player set discovered from
+   * CH's 2025-2026 Bowman catalog (Bowman Chrome + Bowman Draft Chrome).
+   * Used to scope the bowman2yr* lists. Empty array → those lists are
+   * emitted empty (defensive; the job may fail to discover on a CH blip).
+   * Player names in this set are compared case-insensitively.
+   */
+  bowmanUniverse?: string[];
   /** How many rows per list. Default 20. */
   topN?: number;
 }
@@ -138,12 +163,39 @@ export function assembleMarketPlayersPayload(
     .sort((a, b) => b.medianRatio - a.medianRatio)
     .slice(0, topN);
 
+  // ── CF-DAILYIQ-BOWMAN-2YR (2026-07-02) ────────────────────────────────
+  // Bowman-scoped lists are derived from the same per-player inputs, but
+  // filtered by membership in the discovered Bowman universe. When
+  // bowmanUniverse is missing or empty, both lists emit as empty arrays —
+  // the payload shape stays stable so iOS can render "no data" cleanly.
+  const bowmanSet = new Set(
+    (input.bowmanUniverse ?? []).map((p) => p.toLowerCase()),
+  );
+
+  const bowman2yrTopVolume30d = bowmanSet.size === 0
+    ? []
+    : input.perPlayerTotal30d
+        .filter((r) => r.totalSales30d > 0)
+        .filter((r) => bowmanSet.has(r.player.toLowerCase()))
+        .sort((a, b) => b.totalSales30d - a.totalSales30d)
+        .slice(0, topN);
+
+  const bowman2yrTopMomentum = bowmanSet.size === 0
+    ? []
+    : trendingRowsAll
+        .filter((r) => bowmanSet.has(r.player.toLowerCase()))
+        .filter((r) => r.medianRatio >= TREND_UP_FLOOR)
+        .sort((a, b) => b.medianRatio - a.medianRatio)
+        .slice(0, topN);
+
   return {
     generatedAt: new Date().toISOString(),
     trending,
     fading,
     topVolume30d,
     supplyDryLeadingUp,
+    bowman2yrTopVolume30d,
+    bowman2yrTopMomentum,
   };
 }
 
