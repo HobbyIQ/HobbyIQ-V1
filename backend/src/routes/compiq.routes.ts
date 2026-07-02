@@ -79,7 +79,11 @@ const CARDSIGHT_CARD_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { getNormalizationDictionary } from "../services/compiq/normalizationDictionary.service.js";
 import { dispatchSearch } from "../services/unifiedSearch/dispatcher.js";
-import { identifyCard } from "../services/compiq/cardhedge.client.js";
+import {
+  identifyCard,
+  searchCards,
+  getPricesByCard,
+} from "../services/compiq/cardhedge.client.js";
 import {
   parseCardQuery,
   buildCompSearchQuery,
@@ -1478,6 +1482,123 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         } catch {
           // Fallback is best-effort — swallow errors and return the
           // original result untouched.
+        }
+      }
+
+      // CF-PRICE-FALLBACK-LAYER-2 (2026-07-02): base × auto-multiplier
+      // projection. When the pinned card has 0 recent comps AND its
+      // number matches an autograph prefix (CPA/CDA/HSA/RRA/PRV/etc.),
+      // look for the player's non-auto base card in the same year and
+      // project pricing as base_median × auto_premium_multiplier.
+      //
+      // Motivation: after Layer 1 populated cardIdentity for cards
+      // whose auto SKU had zero recorded sales (Skenes HSA-PS,
+      // Crews RRA-DC, Holliday PRV-JH, Kurtz CPA-NK, ...), iOS could
+      // render "we found <player> <year> <number>" but no price.
+      // For most of these autos the corresponding base card DOES
+      // have active sales; base × auto_premium gives users a rough
+      // but honest number rather than "no data".
+      //
+      // Multiplier heuristic: 10× as a defensible prospect-auto
+      // starting point (empirical: CPA-* prospect autos trade
+      // ~5-15× base). Wide ±50% range signals the low confidence.
+      // Attribution surfaces the anchor card_id + anchor price so
+      // iOS + corpus analysis can see exactly what the projection
+      // was built from.
+      const AUTO_PREFIX_RE =
+        /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV)(-|$)/i;
+      const ciAfterLayer1 = (est as { cardIdentity?: Record<string, unknown> }).cardIdentity ?? {};
+      const ciPlayer =
+        typeof ciAfterLayer1.player === "string" ? (ciAfterLayer1.player as string) : null;
+      const ciYear =
+        typeof ciAfterLayer1.year === "number"
+          ? (ciAfterLayer1.year as number)
+          : null;
+      const ciNumber =
+        typeof ciAfterLayer1.number === "string" ? (ciAfterLayer1.number as string) : null;
+      const estCompsAvailL2 =
+        typeof (est as { compsAvailable?: unknown }).compsAvailable === "number"
+          ? ((est as { compsAvailable: number }).compsAvailable)
+          : null;
+      const triggerBaseXAuto =
+        est.source === "no-recent-comps" &&
+        estCompsAvailL2 === 0 &&
+        !!ciPlayer &&
+        !!ciYear &&
+        !!ciNumber &&
+        AUTO_PREFIX_RE.test(ciNumber);
+      if (triggerBaseXAuto) {
+        try {
+          // Fetch player's cards, filter to same year, find base non-auto.
+          const playerCards = await searchCards(
+            "",
+            50,
+            { player: ciPlayer as string },
+            1,
+          );
+          const sameYearBase = playerCards.find((c) => {
+            const cYear =
+              typeof c.year === "number"
+                ? c.year
+                : typeof c.year === "string"
+                  ? Number(c.year)
+                  : NaN;
+            const cNum =
+              typeof c.number === "string" ? c.number : "";
+            const cVar =
+              typeof c.variant === "string" ? c.variant.toLowerCase() : "";
+            return (
+              cYear === ciYear &&
+              !AUTO_PREFIX_RE.test(cNum) &&
+              cVar === "base"
+            );
+          });
+          if (sameYearBase && sameYearBase.card_id) {
+            const prices = await getPricesByCard(sameYearBase.card_id, "Raw", 90);
+            if (prices.length >= 3) {
+              const sorted = prices
+                .map((p) => p.price)
+                .filter((p) => Number.isFinite(p) && p > 0)
+                .sort((a, b) => a - b);
+              if (sorted.length >= 3) {
+                const median = sorted[Math.floor(sorted.length / 2)];
+                const AUTO_PREMIUM_MULT = 10;
+                const projected = median * AUTO_PREMIUM_MULT;
+                const low = projected * 0.5;
+                const high = projected * 1.5;
+                console.log(
+                  JSON.stringify({
+                    event: "price_base_x_auto_projection",
+                    source: "compiq.routes",
+                    originalQuery: query,
+                    anchorCardId: sameYearBase.card_id,
+                    anchorMedian: median,
+                    anchorSampleSize: sorted.length,
+                    multiplier: AUTO_PREMIUM_MULT,
+                    projected,
+                  }),
+                );
+                (est as { predictedPrice?: number | null }).predictedPrice = projected;
+                (est as { predictedPriceRange?: { low: number; high: number } | null }).predictedPriceRange = {
+                  low,
+                  high,
+                };
+                (est as { predictedPriceAttribution?: Record<string, unknown> | null }).predictedPriceAttribution = {
+                  mechanism: "base_x_auto_premium",
+                  anchorCardId: sameYearBase.card_id,
+                  anchorPrice: median,
+                  anchorSampleSize: sorted.length,
+                  anchorNumber: sameYearBase.number,
+                  anchorSet: sameYearBase.set,
+                  multiplier: AUTO_PREMIUM_MULT,
+                  note: "Rough projection — auto premium multipliers vary widely by rarity",
+                };
+                (est as { source?: string }).source = "projected";
+              }
+            }
+          }
+        } catch {
+          // Layer 2 is best-effort; leave est untouched on failure.
         }
       }
 
