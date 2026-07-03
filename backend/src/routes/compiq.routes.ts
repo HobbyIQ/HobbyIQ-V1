@@ -148,13 +148,20 @@ import { requireRateLimited } from "../middleware/requireRateLimited.js";
 // base × auto multiplier). Previously Layer 2 + 4 were inline in /price only.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Autograph card-number prefixes recognized by the projection fallbacks. */
+/** Autograph card-number prefixes recognized by the projection fallbacks.
+ *  Extend as new sets are catalogued. TEK added 2026-07-03 after App
+ *  Insights showed real users searching "Ohtani 2025 Topps transcendent
+ *  Auto" — the AI matcher resolved to TEK-SO (Topps Clearly Authentic
+ *  autograph) but our helper didn't recognize it, so the projection
+ *  stack silently no-op'd on all of those queries. */
 const AUTO_PROJECT_PREFIX_RE =
-  /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV)(-|$)/i;
+  /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV|TEK)(-|$)/i;
 
 /** Rare/special-insert autograph prefixes — priced at a higher premium than
- *  the regular CPA-family. */
-const RARE_AUTO_PROJECT_PREFIX_RE = /^(HSA|RRA|PRV|USA|AU)(-|$)/i;
+ *  the regular CPA-family. TEK (Topps Clearly Authentic) is a numbered
+ *  acetate autograph line; base variants for Ohtani/Judge/Trout trade in
+ *  the same $150-400 range as HSA/RRA/PRV so it lives in the rare bucket. */
+const RARE_AUTO_PROJECT_PREFIX_RE = /^(HSA|RRA|PRV|USA|AU|TEK)(-|$)/i;
 
 /**
  * Empirical auto-premium multiplier per prefix class, calibrated from CH
