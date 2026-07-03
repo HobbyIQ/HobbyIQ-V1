@@ -139,6 +139,239 @@ import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-PRICE-AUTO-PROJECTION-HELPERS (2026-07-02)
+//
+// Hoisted at module scope so both /price and /price-by-id can reuse the
+// autograph projection fallback stack (Layer 4 sibling anchor → Layer 2
+// base × auto multiplier). Previously Layer 2 + 4 were inline in /price only.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Autograph card-number prefixes recognized by the projection fallbacks. */
+const AUTO_PROJECT_PREFIX_RE =
+  /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV)(-|$)/i;
+
+/** Rare/special-insert autograph prefixes — priced at a higher premium than
+ *  the regular CPA-family. */
+const RARE_AUTO_PROJECT_PREFIX_RE = /^(HSA|RRA|PRV|USA|AU)(-|$)/i;
+
+/**
+ * Empirical auto-premium multiplier per prefix class, calibrated from CH
+ * sampling on 2026-07-02:
+ *   CPA-family (regular prospect autos)   — median 42.7× (n=13 pairs)
+ *   HSA/RRA/PRV/USA/AU (rare inserts)     — no calibrated sample (kept
+ *                                            conservatively at 50×)
+ *
+ * See scratchpad/calibrate_multipliers.py for the sampling procedure. To
+ * recalibrate, rerun the script and update these constants.
+ */
+function autoProjectMultiplierFor(num: string): number {
+  return RARE_AUTO_PROJECT_PREFIX_RE.test(num) ? 50 : 40;
+}
+
+/**
+ * CH's /cards/card-search returns year: null on every row (verified 2026-07-01
+ * during PR #243 rerank fix). Extract from the set string ("2025 Bowman
+ * Baseball") instead.
+ */
+function autoProjectExtractYearFromSet(setStr: unknown): number | null {
+  if (typeof setStr !== "string") return null;
+  const m = setStr.match(/\b(19|20)\d{2}\b/);
+  return m ? Number(m[0]) : null;
+}
+
+/**
+ * Apply the autograph projection fallback stack to a computeEstimate result.
+ * When the target auto card has zero recent comps, tries in order:
+ *   1. Sibling auto (same player + year + auto prefix, different card_id)
+ *      priced as latest_sale × trend_factor. Preferred — tightest anchor.
+ *   2. Base × auto multiplier — fixed empirical premium by prefix class.
+ *
+ * Mutates `est` in place with predictedPrice / predictedPriceRange /
+ * predictedPriceAttribution + upgrades `est.source` to "projected". Silently
+ * no-ops when the trigger conditions aren't met OR when neither anchor path
+ * finds ≥3 valid Raw prices.
+ */
+async function applyAutoProjectionFallbacks(
+  est: Record<string, unknown>,
+  query: string,
+): Promise<void> {
+  const cardIdentity =
+    est.cardIdentity && typeof est.cardIdentity === "object"
+      ? (est.cardIdentity as Record<string, unknown>)
+      : {};
+  const ciPlayer = typeof cardIdentity.player === "string" ? cardIdentity.player : null;
+  const ciYear =
+    typeof cardIdentity.year === "number" ? cardIdentity.year : null;
+  const ciNumber = typeof cardIdentity.number === "string" ? cardIdentity.number : null;
+  const ciCardId = typeof cardIdentity.card_id === "string" ? cardIdentity.card_id : null;
+  const estSource = typeof est.source === "string" ? est.source : null;
+  const estCompsAvail =
+    typeof est.compsAvailable === "number" ? est.compsAvailable : null;
+
+  const triggerBase =
+    estSource === "no-recent-comps" &&
+    estCompsAvail === 0 &&
+    !!ciPlayer &&
+    !!ciYear &&
+    !!ciNumber &&
+    AUTO_PROJECT_PREFIX_RE.test(ciNumber);
+
+  if (!triggerBase) return;
+
+  let siblingUsed = false;
+
+  // ── Layer 4: sibling auto (latest × trend) ──────────────────────────────
+  if (ciCardId) {
+    try {
+      const playerCards = await searchCards("", 50, { player: ciPlayer as string }, 1);
+      const siblingCandidates = playerCards.filter((c) => {
+        const cYear = autoProjectExtractYearFromSet(c.set);
+        const cNum = typeof c.number === "string" ? c.number : "";
+        return (
+          cYear === ciYear &&
+          AUTO_PROJECT_PREFIX_RE.test(cNum) &&
+          c.card_id !== ciCardId
+        );
+      });
+      const priced = await Promise.all(
+        siblingCandidates.slice(0, 8).map(async (c) => {
+          const dailyPrices = await getPricesByCard(c.card_id, "Raw", 90);
+          return { card: c, dailyPrices };
+        }),
+      );
+      const withData = priced.filter((r) => r.dailyPrices.length >= 3);
+      withData.sort((a, b) => b.dailyPrices.length - a.dailyPrices.length);
+      const winner = withData[0];
+      if (winner && winner.dailyPrices.length >= 3) {
+        const dp = winner.dailyPrices;
+        const latestSale = dp[dp.length - 1].price;
+        const window = 14;
+        const recentSlice = dp.slice(-window);
+        const priorSlice = dp.slice(-2 * window, -window);
+        const avg = (arr: typeof dp) =>
+          arr.length > 0 ? arr.reduce((s, p) => s + p.price, 0) / arr.length : 0;
+        const recentAvg = avg(recentSlice);
+        const priorAvg = avg(priorSlice);
+        let trendFactor = priorAvg > 0 ? recentAvg / priorAvg : 1.0;
+        if (!Number.isFinite(trendFactor) || trendFactor <= 0) trendFactor = 1.0;
+        trendFactor = Math.max(0.5, Math.min(2.0, trendFactor));
+
+        const parallelMultiplier = 1.0; // v1
+        const projected = latestSale * trendFactor * parallelMultiplier;
+        const low = projected * 0.6;
+        const high = projected * 1.6;
+        console.log(
+          JSON.stringify({
+            event: "price_sibling_auto_anchor",
+            source: "compiq.routes",
+            originalQuery: query,
+            targetCardId: ciCardId,
+            targetNumber: ciNumber,
+            anchorCardId: winner.card.card_id,
+            anchorNumber: winner.card.number,
+            anchorVariant: winner.card.variant,
+            anchorLatestSale: latestSale,
+            anchorRecentAvg: Math.round(recentAvg * 100) / 100,
+            anchorPriorAvg: Math.round(priorAvg * 100) / 100,
+            trendFactor: Math.round(trendFactor * 100) / 100,
+            parallelMultiplier,
+            anchorSampleSize: dp.length,
+            projected,
+          }),
+        );
+        est.predictedPrice = projected;
+        est.predictedPriceRange = { low, high };
+        est.predictedPriceAttribution = {
+          mechanism: "sibling_auto_latest_x_trend",
+          anchorCardId: winner.card.card_id,
+          anchorPrice: latestSale,
+          anchorLatestSale: latestSale,
+          anchorRecentAvg: recentAvg,
+          anchorPriorAvg: priorAvg,
+          trendFactor,
+          parallelMultiplier,
+          anchorSampleSize: dp.length,
+          anchorNumber: winner.card.number,
+          anchorVariant: winner.card.variant,
+          anchorSet: winner.card.set,
+          note: "Estimated from sibling autograph's latest sale × recent momentum; actual target-parallel premium not modeled in v1",
+        };
+        est.source = "projected";
+        siblingUsed = true;
+      }
+    } catch {
+      // fall through to Layer 2
+    }
+  }
+
+  if (siblingUsed) return;
+
+  // ── Layer 2: base × auto multiplier ─────────────────────────────────────
+  try {
+    const playerCards = await searchCards("", 50, { player: ciPlayer as string }, 1);
+    const sameYearBase = playerCards.find((c) => {
+      const cYearNumeric =
+        typeof c.year === "number"
+          ? c.year
+          : typeof c.year === "string"
+          ? Number(c.year)
+          : NaN;
+      const cYear = Number.isFinite(cYearNumeric)
+        ? (cYearNumeric as number)
+        : autoProjectExtractYearFromSet(c.set);
+      const cNum = typeof c.number === "string" ? c.number : "";
+      const cVar = typeof c.variant === "string" ? c.variant.toLowerCase() : "";
+      return (
+        cYear === ciYear &&
+        !AUTO_PROJECT_PREFIX_RE.test(cNum) &&
+        cVar === "base"
+      );
+    });
+    if (sameYearBase && sameYearBase.card_id) {
+      const prices = await getPricesByCard(sameYearBase.card_id, "Raw", 90);
+      const sorted = prices
+        .map((p) => p.price)
+        .filter((p) => Number.isFinite(p) && p > 0)
+        .sort((a, b) => a - b);
+      if (sorted.length >= 3) {
+        const median = sorted[Math.floor(sorted.length / 2)];
+        const autoPremium = autoProjectMultiplierFor(ciNumber as string);
+        const projected = median * autoPremium;
+        const low = projected * 0.5;
+        const high = projected * 1.5;
+        console.log(
+          JSON.stringify({
+            event: "price_base_x_auto_projection",
+            source: "compiq.routes",
+            originalQuery: query,
+            anchorCardId: sameYearBase.card_id,
+            anchorMedian: median,
+            anchorSampleSize: sorted.length,
+            multiplier: autoPremium,
+            projected,
+          }),
+        );
+        est.predictedPrice = projected;
+        est.predictedPriceRange = { low, high };
+        est.predictedPriceAttribution = {
+          mechanism: "base_x_auto_premium",
+          anchorCardId: sameYearBase.card_id,
+          anchorPrice: median,
+          anchorSampleSize: sorted.length,
+          anchorNumber: sameYearBase.number,
+          anchorSet: sameYearBase.set,
+          multiplier: autoPremium,
+          note: "Rough projection — empirical median CPA-family multiplier is ~42×; rare inserts kept conservatively at 50×",
+        };
+        est.source = "projected";
+      }
+    }
+  } catch {
+    // Layer 2 best-effort; leave est untouched on failure.
+  }
+}
+
 // CF-LAUNCH-HARDENING (2026-06-02): centralized thin-data + approximate
 // helpers used by /search, /price, /price-by-id, /bulk happy-path response
 // builders. Two distinct iOS signals:
@@ -1533,309 +1766,13 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         }
       }
 
-      // CF-PRICE-FALLBACK-LAYER-2 (2026-07-02): base × auto-multiplier
-      // projection. When the pinned card has 0 recent comps AND its
-      // number matches an autograph prefix (CPA/CDA/HSA/RRA/PRV/etc.),
-      // look for the player's non-auto base card in the same year and
-      // project pricing as base_median × auto_premium_multiplier.
-      //
-      // Motivation: after Layer 1 populated cardIdentity for cards
-      // whose auto SKU had zero recorded sales (Skenes HSA-PS,
-      // Crews RRA-DC, Holliday PRV-JH, Kurtz CPA-NK, ...), iOS could
-      // render "we found <player> <year> <number>" but no price.
-      // For most of these autos the corresponding base card DOES
-      // have active sales; base × auto_premium gives users a rough
-      // but honest number rather than "no data".
-      //
-      // Multiplier heuristic: 10× as a defensible prospect-auto
-      // starting point (empirical: CPA-* prospect autos trade
-      // ~5-15× base). Wide ±50% range signals the low confidence.
-      // Attribution surfaces the anchor card_id + anchor price so
-      // iOS + corpus analysis can see exactly what the projection
-      // was built from.
-      const AUTO_PREFIX_RE =
-        /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV)(-|$)/i;
+      // CF-PRICE-AUTO-PROJECTION-HELPERS (2026-07-02): Layer 2 + Layer 4
+      // are now shared with /price-by-id via applyAutoProjectionFallbacks
+      // at module scope. The helper checks the same trigger (no-recent-
+      // comps + auto prefix) and mutates est with sibling_auto_latest_
+      // x_trend (Layer 4) OR base_x_auto_premium (Layer 2 fallback).
+      await applyAutoProjectionFallbacks(est as Record<string, unknown>, query);
 
-      // CF-PRICE-FALLBACK-LAYER-2-MULTIPLIER-TUNE (2026-07-02): first-pass
-      // 10× multiplier under-priced rare special-insert autos
-      // (HSA/RRA/PRV run /5-/25 and empirically trade ~50-100× base;
-      // the batch showed Skenes HSA-PS projected at $21 vs real market
-      // ~$200+). Regular prospect-auto prefixes (CPA/CDA/BCPA) empirically
-      // trade ~15-30× base (Nick Kurtz CPA-NK projected $32 vs real ~$80,
-      // so 20× is closer). Split the multiplier by prefix class.
-      //
-      //   HSA / RRA / PRV / USA / AU (rare/special)  → 50×
-      //   CPA / CDA / BCPA / BCDA / BDPA / BDA / BPA
-      //     / BCRA / TCRA / TRA / FCA (regular)       → 20×
-      //
-      // ±50% range still signals uncertainty.
-      const RARE_AUTO_PREFIX_RE = /^(HSA|RRA|PRV|USA|AU)(-|$)/i;
-      function autoPremiumMultiplierFor(num: string): number {
-        return RARE_AUTO_PREFIX_RE.test(num) ? 50 : 20;
-      }
-
-      const ciAfterLayer1 = (est as { cardIdentity?: Record<string, unknown> }).cardIdentity ?? {};
-      const ciPlayer =
-        typeof ciAfterLayer1.player === "string" ? (ciAfterLayer1.player as string) : null;
-      const ciYear =
-        typeof ciAfterLayer1.year === "number"
-          ? (ciAfterLayer1.year as number)
-          : null;
-      const ciNumber =
-        typeof ciAfterLayer1.number === "string" ? (ciAfterLayer1.number as string) : null;
-      const ciCardId =
-        typeof ciAfterLayer1.card_id === "string" ? (ciAfterLayer1.card_id as string) : null;
-      const estCompsAvailL2 =
-        typeof (est as { compsAvailable?: unknown }).compsAvailable === "number"
-          ? ((est as { compsAvailable: number }).compsAvailable)
-          : null;
-
-      // Shared helper for year extraction from CH's set string; CH's
-      // card-search returns year: null on every row so we consistently
-      // recover the year from the set prefix ("2025 Bowman Baseball").
-      const extractYearFromSet = (setStr: unknown): number | null => {
-        if (typeof setStr !== "string") return null;
-        const m = setStr.match(/\b(19|20)\d{2}\b/);
-        return m ? Number(m[0]) : null;
-      };
-
-      // CF-PRICE-FALLBACK-LAYER-4 (2026-07-02): cross-parallel anchor.
-      // When the target auto card has 0 comps, price it from a sibling
-      // autograph (same player+year, auto prefix, different card_id)
-      // as:
-      //     projected = latest_sale × trend_factor × parallel_multiplier
-      //
-      // - latest_sale       — sibling's most recent sale in the 90d window
-      //                       (freshest market read, not backward-looking
-      //                       median)
-      // - trend_factor      — recent-2wk avg / prior-2wk avg, bounded to
-      //                       [0.5, 2.0] to prevent one hot week from
-      //                       blowing the projection out
-      // - parallel_multiplier — 1.0 in v1 (target variant vs sibling
-      //                       variant tier adjustment is a follow-up;
-      //                       for now the ±60% range signals uncertainty)
-      //
-      // Rationale (Drew's spec 2026-07-02): sibling auto pricing is a
-      // MUCH tighter anchor than "base × 50" because the multiplier gap
-      // between auto parallels is 1-3×, not 20-50×. Multiplying LATEST
-      // by TREND captures market momentum without waiting for the
-      // matched-cohort cycle. Layer 4 runs before Layer 2 and shorts it
-      // out on success.
-      const triggerSiblingAuto =
-        est.source === "no-recent-comps" &&
-        estCompsAvailL2 === 0 &&
-        !!ciPlayer &&
-        !!ciYear &&
-        !!ciNumber &&
-        AUTO_PREFIX_RE.test(ciNumber) &&
-        !!ciCardId;
-      let siblingAutoUsed = false;
-      if (triggerSiblingAuto) {
-        try {
-          const playerCards = await searchCards(
-            "",
-            50,
-            { player: ciPlayer as string },
-            1,
-          );
-          const siblingCandidates = playerCards.filter((c) => {
-            const cYear = extractYearFromSet(c.set);
-            const cNum = typeof c.number === "string" ? c.number : "";
-            return (
-              cYear === ciYear &&
-              AUTO_PREFIX_RE.test(cNum) &&
-              c.card_id !== ciCardId
-            );
-          });
-          // Fetch prices for up to 8 candidates in parallel. Prices come
-          // back sorted ASC by closing_date (see cardhedge.client.ts
-          // _getPricesByCard) — no need to re-sort chronologically.
-          const priced = await Promise.all(
-            siblingCandidates.slice(0, 8).map(async (c) => {
-              const dailyPrices = await getPricesByCard(c.card_id, "Raw", 90);
-              return { card: c, dailyPrices };
-            }),
-          );
-          const withData = priced.filter((r) => r.dailyPrices.length >= 3);
-          // Sort by sample size DESC so the sibling with the most sales
-          // wins (most reliable trend + latest-sale signal).
-          withData.sort((a, b) => b.dailyPrices.length - a.dailyPrices.length);
-          const winner = withData[0];
-          if (winner && winner.dailyPrices.length >= 3) {
-            const dp = winner.dailyPrices; // chronological ASC
-            const latestSale = dp[dp.length - 1].price;
-
-            // Trend: split window into recent-2-weeks (last ~14 entries)
-            // vs prior-2-weeks (14 before that). Ratio bounded [0.5, 2.0]
-            // so a single hot spike or thin week can't blow the
-            // projection out.
-            const window = 14;
-            const recentSlice = dp.slice(-window);
-            const priorSlice = dp.slice(-2 * window, -window);
-            const avg = (arr: typeof dp) =>
-              arr.length > 0
-                ? arr.reduce((s, p) => s + p.price, 0) / arr.length
-                : 0;
-            const recentAvg = avg(recentSlice);
-            const priorAvg = avg(priorSlice);
-            let trendFactor = priorAvg > 0 ? recentAvg / priorAvg : 1.0;
-            if (!Number.isFinite(trendFactor) || trendFactor <= 0) {
-              trendFactor = 1.0;
-            }
-            trendFactor = Math.max(0.5, Math.min(2.0, trendFactor));
-
-            const parallelMultiplier = 1.0; // v1: target/sibling parallel-tier gap not modeled yet
-            const projected = latestSale * trendFactor * parallelMultiplier;
-            const low = projected * 0.6;
-            const high = projected * 1.6;
-            console.log(
-              JSON.stringify({
-                event: "price_sibling_auto_anchor",
-                source: "compiq.routes",
-                originalQuery: query,
-                targetCardId: ciCardId,
-                targetNumber: ciNumber,
-                anchorCardId: winner.card.card_id,
-                anchorNumber: winner.card.number,
-                anchorVariant: winner.card.variant,
-                anchorLatestSale: latestSale,
-                anchorRecentAvg: Math.round(recentAvg * 100) / 100,
-                anchorPriorAvg: Math.round(priorAvg * 100) / 100,
-                trendFactor: Math.round(trendFactor * 100) / 100,
-                parallelMultiplier,
-                anchorSampleSize: dp.length,
-                projected,
-              }),
-            );
-            (est as { predictedPrice?: number | null }).predictedPrice = projected;
-            (est as { predictedPriceRange?: { low: number; high: number } | null }).predictedPriceRange = {
-              low,
-              high,
-            };
-            (est as { predictedPriceAttribution?: Record<string, unknown> | null }).predictedPriceAttribution = {
-              mechanism: "sibling_auto_latest_x_trend",
-              anchorCardId: winner.card.card_id,
-              anchorPrice: latestSale,
-              anchorLatestSale: latestSale,
-              anchorRecentAvg: recentAvg,
-              anchorPriorAvg: priorAvg,
-              trendFactor,
-              parallelMultiplier,
-              anchorSampleSize: dp.length,
-              anchorNumber: winner.card.number,
-              anchorVariant: winner.card.variant,
-              anchorSet: winner.card.set,
-              note: "Estimated from sibling autograph's latest sale × recent momentum; actual target-parallel premium not modeled in v1",
-            };
-            (est as { source?: string }).source = "projected";
-            siblingAutoUsed = true;
-          }
-        } catch {
-          // Layer 4 best-effort; fall through to Layer 2.
-        }
-      }
-
-      const triggerBaseXAuto =
-        !siblingAutoUsed &&
-        est.source === "no-recent-comps" &&
-        estCompsAvailL2 === 0 &&
-        !!ciPlayer &&
-        !!ciYear &&
-        !!ciNumber &&
-        AUTO_PREFIX_RE.test(ciNumber);
-      if (triggerBaseXAuto) {
-        try {
-          // Fetch player's cards, filter to same year, find base non-auto.
-          const playerCards = await searchCards(
-            "",
-            50,
-            { player: ciPlayer as string },
-            1,
-          );
-          const sameYearBase = playerCards.find((c) => {
-            // CF-PRICE-FALLBACK-LAYER-2-YEAR-FALLBACK (2026-07-02): CH's
-            // /cards/card-search returns year: null on every candidate;
-            // extract from the set string (same pattern as PR #243 in
-            // the dispatcher rerank). Set names always carry a 4-digit
-            // year prefix ("2025 Bowman Baseball").
-            const cYearNumeric =
-              typeof c.year === "number"
-                ? c.year
-                : typeof c.year === "string"
-                  ? Number(c.year)
-                  : NaN;
-            const cSetYearMatch =
-              !Number.isFinite(cYearNumeric) && typeof c.set === "string"
-                ? c.set.match(/\b(19|20)\d{2}\b/)
-                : null;
-            const cYear = Number.isFinite(cYearNumeric)
-              ? (cYearNumeric as number)
-              : cSetYearMatch
-                ? Number(cSetYearMatch[0])
-                : null;
-            const cNum =
-              typeof c.number === "string" ? c.number : "";
-            const cVar =
-              typeof c.variant === "string" ? c.variant.toLowerCase() : "";
-            return (
-              cYear === ciYear &&
-              !AUTO_PREFIX_RE.test(cNum) &&
-              cVar === "base"
-            );
-          });
-          if (sameYearBase && sameYearBase.card_id) {
-            const prices = await getPricesByCard(sameYearBase.card_id, "Raw", 90);
-            if (prices.length >= 3) {
-              const sorted = prices
-                .map((p) => p.price)
-                .filter((p) => Number.isFinite(p) && p > 0)
-                .sort((a, b) => a - b);
-              if (sorted.length >= 3) {
-                const median = sorted[Math.floor(sorted.length / 2)];
-                // CF-PRICE-FALLBACK-LAYER-2-MULTIPLIER-TUNE (2026-07-02):
-                // multiplier now varies by autograph prefix class — rare
-                // insert autos (HSA/RRA/PRV) get 50×; regular prospect
-                // autos (CPA/CDA/BCPA/…) get 20×. See the helper's
-                // header comment for the empirical anchor.
-                const autoPremium = autoPremiumMultiplierFor(ciNumber as string);
-                const projected = median * autoPremium;
-                const low = projected * 0.5;
-                const high = projected * 1.5;
-                console.log(
-                  JSON.stringify({
-                    event: "price_base_x_auto_projection",
-                    source: "compiq.routes",
-                    originalQuery: query,
-                    anchorCardId: sameYearBase.card_id,
-                    anchorMedian: median,
-                    anchorSampleSize: sorted.length,
-                    multiplier: autoPremium,
-                    projected,
-                  }),
-                );
-                (est as { predictedPrice?: number | null }).predictedPrice = projected;
-                (est as { predictedPriceRange?: { low: number; high: number } | null }).predictedPriceRange = {
-                  low,
-                  high,
-                };
-                (est as { predictedPriceAttribution?: Record<string, unknown> | null }).predictedPriceAttribution = {
-                  mechanism: "base_x_auto_premium",
-                  anchorCardId: sameYearBase.card_id,
-                  anchorPrice: median,
-                  anchorSampleSize: sorted.length,
-                  anchorNumber: sameYearBase.number,
-                  anchorSet: sameYearBase.set,
-                  multiplier: autoPremium,
-                  note: "Rough projection — auto premium multipliers vary widely by rarity",
-                };
-                (est as { source?: string }).source = "projected";
-              }
-            }
-          }
-        } catch {
-          // Layer 2 is best-effort; leave est untouched on failure.
-        }
-      }
 
       // Unsupported-sport short-circuit â€” mirrors /search response shape so
       // iOS clients receive identical behavior across the two endpoints.
@@ -2256,6 +2193,20 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         holdingId: null,
         routedFromHolding: false,
       });
+
+      // CF-PRICE-BY-ID-AUTO-PROJECTION-FALLBACKS (2026-07-02): apply
+      // Layer 4 (sibling auto latest × trend) → Layer 2 (base × auto
+      // multiplier) when the pinned card has 0 recent comps AND is an
+      // autograph. Same behavior /price gets via the shared helper.
+      // Layer 1 / Layer 3 (AI-matcher + broader-year retry) are NOT
+      // applicable here — the card is already pinned so identity is
+      // known; those layers are only useful when the free-text
+      // resolver comes up empty.
+      const priceByIdQueryHint =
+        typeof query === "string" && query.trim().length > 0
+          ? query.trim()
+          : `cardId:${resolvedCardId}`;
+      await applyAutoProjectionFallbacks(est as Record<string, unknown>, priceByIdQueryHint);
 
       // Unsupported-sport short-circuit — defensive guard for /price-by-id.
       // UI normally only pins card_ids surfaced via the picker
