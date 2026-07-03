@@ -266,20 +266,21 @@ async function applyAutoProjectionFallbacks(
 
   // CF-PRICE-PHANTOM-CARD-GATE (2026-07-03): before projecting, verify the
   // target card_id has SOMETHING in its extended (365d) sales history.
+  // If zero 365d sales, return no-recent-comps honestly (Skenes HSA-PS,
+  // Ohtani MLP-SO, other AI-matcher phantoms — CH catalog carries
+  // card_ids for SKUs that never really traded).
   //
-  // Motivation: Drew's calibration feedback on 2026-07-03 confirmed that
-  // CH's AI matcher confidently returns card_ids for SKUs that don't
-  // really exist (or existed but never traded) — Skenes HSA-PS,
-  // Ohtani TEK-SO, Crews RRA-DC all match at ≥0.85 confidence but every
-  // one has ZERO Raw sales in the last 365 days. Projecting base × 50
-  // for these fake SKUs surfaces confident-looking numbers built on
-  // nothing. "Found the card, no sales" is a strictly better UX than
-  // "estimated $107 based on fabricated multiplier."
+  // CF-EXTENDED-WINDOW-DIRECT-ANCHOR (2026-07-03): when the target DOES
+  // have some 365d sales (real but thin — outside the 90d live window),
+  // use the target's OWN median directly rather than falling through to
+  // Layer 4 sibling / Layer 2 base × multiplier. The target is its own
+  // best price signal.
   //
-  // Gate: if the target card_id has zero 365d Raw sales, log a
-  // `phantom_target_detected` event and return without projecting.
-  // The response stays no-recent-comps with cardIdentity populated,
-  // so iOS shows the honest "we found the card, no market data" state.
+  // Motivating case: Dylan Crews 2025 Bowman RRA-DC has 3 sales in 365d
+  // ($77 in July, $125 in Oct — real market ~$100). Pre-fix, Layer 2
+  // ran base × 50 → $2050. Post-fix, we use the $100 median directly.
+  // Users get a realistic thin-market estimate instead of an inflated
+  // fabricated one.
   if (ciCardId) {
     try {
       const targetHistory = await getPricesByCard(ciCardId, "Raw", 365);
@@ -296,6 +297,49 @@ async function applyAutoProjectionFallbacks(
           }),
         );
         return;
+      }
+      // Extended-window direct anchor when target has thin-but-real history.
+      // Require ≥2 sales to guard against a single outlier defining the
+      // price; anything below that is treated as too-thin and falls
+      // through to Layer 4 / Layer 2.
+      if (targetHistory.length >= 2) {
+        const sorted = targetHistory
+          .map((p) => p.price)
+          .filter((p) => Number.isFinite(p) && p > 0)
+          .sort((a, b) => a - b);
+        if (sorted.length >= 2) {
+          const median = sorted[Math.floor(sorted.length / 2)];
+          const projected = median;
+          const low = projected * 0.6;
+          const high = projected * 1.6;
+          console.log(
+            JSON.stringify({
+              event: "price_extended_window_direct_anchor",
+              source: "compiq.routes",
+              originalQuery: query,
+              targetCardId: ciCardId,
+              targetNumber: ciNumber,
+              targetPlayer: ciPlayer,
+              targetMedian: median,
+              targetSampleSize: sorted.length,
+              projected,
+            }),
+          );
+          est.predictedPrice = projected;
+          est.predictedPriceRange = { low, high };
+          est.predictedPriceAttribution = {
+            mechanism: "target_extended_window_direct",
+            anchorCardId: ciCardId,
+            anchorPrice: median,
+            anchorSampleSize: sorted.length,
+            anchorNumber: ciNumber,
+            windowDays: 365,
+            note:
+              "Estimated from the target card's own thin (365d) sales history rather than a base-card projection",
+          };
+          est.source = "projected";
+          return;
+        }
       }
     } catch {
       // If the phantom check itself fails (upstream blip), proceed with the
