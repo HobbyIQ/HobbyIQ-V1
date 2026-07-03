@@ -22,7 +22,7 @@ import {
   getCardDetailsByCertImage,
   type ImageInput,
 } from "../services/compiq/cardhedge.client.js";
-import { cacheWrap, cacheSet, cacheDel } from "../services/shared/cache.service.js";
+import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
 // for /price-by-id. Reads from the cs:pricing cached payload — no new
@@ -1181,23 +1181,31 @@ router.post("/cardsearch", async (req, res, next) => {
     }
     const response = await dispatchSearch(query, hintParam);
     // CF-CARD-IMAGE-PROXY (2026-06-08): patch each candidate's imageUrl
-    // to point at our card-image proxy route. The catalog adapter emits
-    // imageUrl: null (Cardsight's catalog/search response carries no
-    // image — confirmed in the CF-C recon); we fill it in with the
-    // proxy URL here so iOS can render thumbnails on each picker row.
-    // Candidates whose `candidateId` is shaped `cardsight:<uuid>` get a
-    // URL; cert-grader rows (different attribution) keep imageUrl null.
+    // to point at our card-image proxy route. Two shapes:
+    //   1. Legacy Cardsight uuid ids → /card-image/<uuid> (stub, notFound)
+    //   2. CardHedge CDN URLs → /card-image-proxy?u=<url> (crops to
+    //      physical 2.5:3.5 card aspect via sharp, cached in Redis)
+    //
+    // CF-CARD-IMAGE-ASPECT-CROP-PROXY (2026-07-03): the CH-supplied
+    // 754×1028 image has aspect 0.733, but a real trading card is 2.5:3.5
+    // = 0.714. iOS was distorting it by forcing 2.5:3.5 on the wrong-
+    // aspect source. Route ALL CardHedge CDN URLs through our crop proxy
+    // so iOS receives images already at the correct physical aspect.
     const candidates: any[] = Array.isArray((response as any)?.candidates)
       ? (response as any).candidates
       : [];
     for (const c of candidates) {
-      // CF-CARDHEDGE-CARD-IMAGE (2026-06-30): a candidate that already
-      // carries a real http(s) image (CardHedge CDN URL set by the
-      // dispatcher) is authoritative — never overwrite it with the
-      // dead Cardsight proxy URL.
-      if (typeof c?.imageUrl === "string" && /^https?:\/\//i.test(c.imageUrl)) {
+      const existing =
+        typeof c?.imageUrl === "string" ? c.imageUrl : null;
+      if (existing && isCardHedgeCdnUrl(existing)) {
+        c.imageUrl = absoluteApiUrl(
+          req,
+          `/api/compiq/card-image-proxy?u=${encodeURIComponent(existing)}`,
+        );
         continue;
       }
+      // Legacy Cardsight uuid path (returns 404 today; stays for shape
+      // compatibility while iOS migrates off any lingering references).
       const cid: string | undefined =
         typeof c?.candidateId === "string" ? c.candidateId : undefined;
       const m = cid?.match(/^cardsight:([0-9a-f-]+)$/i);
@@ -1264,6 +1272,122 @@ router.get("/card-image/:cardId", async (req, res, next) => {
   } catch (err) {
     if (isCardsightTimeoutError(err)) {
       return res.status(504).json({ success: false, error: "Upstream timeout" });
+    }
+    next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CARD-IMAGE-ASPECT-CROP-PROXY (2026-07-03): GET /api/compiq/card-image-proxy
+//
+// Fetches a CardHedge CDN image (Bubble.io storage, served at 754×1028 with
+// aspect 0.733), center-crops horizontally to the physical trading-card
+// aspect of 2.5:3.5 (0.714), and streams the JPEG. Result is cached in
+// Redis by URL-hash for 24h so subsequent requests are fast.
+//
+// iOS was distorting the CH image because it forced 2.5:3.5 on the served
+// wrong-aspect source. Doing the crop server-side means iOS receives an
+// image already at the right aspect and can render it with .scaledToFit()
+// or any fixed 2.5:3.5 frame without distortion.
+//
+// Crop math (constants in the code):
+//   input  754 × 1028 (aspect 0.7335)
+//   target height 1028, target width = 1028 × 2.5/3.5 = 734
+//   trim 20 px total (10 px each side) — inside the CDN's border padding,
+//   safe for card content.
+//
+// Public route (matches the existing /card-image/:cardId posture). SSRF
+// guard: only accepts upstream URLs that match the CardHedge CDN host
+// pattern. Cache key derives from the sha256 of the URL so any attempt to
+// smuggle in a different upstream fails the guard.
+// ─────────────────────────────────────────────────────────────────────────────
+const CARDHEDGE_CDN_HOST_RE = /^https:\/\/[a-z0-9]+\.cdn\.bubble\.io\//i;
+const CARDHEDGE_CDN_HOST_RE_LEGACY = /^https:\/\/[a-z0-9]+\.cdnh\.bubble\.io\//i;
+const CROP_TARGET_WIDTH = 734;
+const CROP_TARGET_HEIGHT = 1028;
+const CROPPED_IMAGE_TTL_SEC = 24 * 60 * 60;
+
+function isCardHedgeCdnUrl(u: string): boolean {
+  if (typeof u !== "string" || u.length === 0 || u.length > 512) return false;
+  return CARDHEDGE_CDN_HOST_RE.test(u) || CARDHEDGE_CDN_HOST_RE_LEGACY.test(u);
+}
+
+router.get("/card-image-proxy", async (req, res, next) => {
+  try {
+    const rawUrl = req.query.u;
+    if (typeof rawUrl !== "string" || rawUrl.length === 0) {
+      return res.status(400).json({ success: false, error: "Missing u" });
+    }
+    if (!isCardHedgeCdnUrl(rawUrl)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Unsupported image source" });
+    }
+
+    const { createHash } = await import("node:crypto");
+    const cacheKey = `card-image-cropped:v1:${createHash("sha256").update(rawUrl).digest("hex").slice(0, 16)}`;
+
+    const cachedRaw = await cacheGet(cacheKey);
+    if (cachedRaw) {
+      try {
+        const parsed = JSON.parse(cachedRaw) as {
+          contentType: string;
+          bytes: string;
+        };
+        const cachedBuf = Buffer.from(parsed.bytes, "base64");
+        res.setHeader("Content-Type", parsed.contentType);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.setHeader("Content-Length", String(cachedBuf.length));
+        res.setHeader("X-Image-Cache", "hit");
+        return res.status(200).send(cachedBuf);
+      } catch {
+        // Fall through to a fresh fetch on cache-parse failure.
+      }
+    }
+
+    const upstream = await fetch(rawUrl, {
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!upstream.ok) {
+      return res
+        .status(upstream.status)
+        .json({ success: false, error: "Upstream image fetch failed" });
+    }
+    const upstreamBuf = Buffer.from(await upstream.arrayBuffer());
+
+    const sharp = (await import("sharp")).default;
+    const cropped = await sharp(upstreamBuf)
+      .resize({
+        width: CROP_TARGET_WIDTH,
+        height: CROP_TARGET_HEIGHT,
+        fit: "cover",
+        position: "center",
+      })
+      .jpeg({ quality: 85, progressive: true })
+      .toBuffer();
+
+    void cacheSet(
+      cacheKey,
+      JSON.stringify({
+        contentType: "image/jpeg",
+        bytes: cropped.toString("base64"),
+      }),
+      CROPPED_IMAGE_TTL_SEC,
+    ).catch(() => {
+      // Cache write failure never blocks the response.
+    });
+
+    res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Content-Length", String(cropped.length));
+    res.setHeader("X-Image-Cache", "miss");
+    return res.status(200).send(cropped);
+  } catch (err) {
+    const msg = (err as Error)?.message ?? String(err);
+    if (msg.includes("aborted due to timeout") || msg.includes("TimeoutError")) {
+      return res
+        .status(504)
+        .json({ success: false, error: "Upstream image timeout" });
     }
     next(err);
   }
