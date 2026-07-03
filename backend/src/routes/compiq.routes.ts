@@ -264,6 +264,45 @@ async function applyAutoProjectionFallbacks(
 
   if (!triggerBase) return;
 
+  // CF-PRICE-PHANTOM-CARD-GATE (2026-07-03): before projecting, verify the
+  // target card_id has SOMETHING in its extended (365d) sales history.
+  //
+  // Motivation: Drew's calibration feedback on 2026-07-03 confirmed that
+  // CH's AI matcher confidently returns card_ids for SKUs that don't
+  // really exist (or existed but never traded) — Skenes HSA-PS,
+  // Ohtani TEK-SO, Crews RRA-DC all match at ≥0.85 confidence but every
+  // one has ZERO Raw sales in the last 365 days. Projecting base × 50
+  // for these fake SKUs surfaces confident-looking numbers built on
+  // nothing. "Found the card, no sales" is a strictly better UX than
+  // "estimated $107 based on fabricated multiplier."
+  //
+  // Gate: if the target card_id has zero 365d Raw sales, log a
+  // `phantom_target_detected` event and return without projecting.
+  // The response stays no-recent-comps with cardIdentity populated,
+  // so iOS shows the honest "we found the card, no market data" state.
+  if (ciCardId) {
+    try {
+      const targetHistory = await getPricesByCard(ciCardId, "Raw", 365);
+      if (targetHistory.length === 0) {
+        console.log(
+          JSON.stringify({
+            event: "phantom_target_detected",
+            source: "compiq.routes",
+            originalQuery: query,
+            targetCardId: ciCardId,
+            targetNumber: ciNumber,
+            targetPlayer: ciPlayer,
+            note: "Zero 365d sales — refusing to project rather than fabricate",
+          }),
+        );
+        return;
+      }
+    } catch {
+      // If the phantom check itself fails (upstream blip), proceed with the
+      // projection stack — favor coverage over strictness on transient errors.
+    }
+  }
+
   let siblingUsed = false;
 
   // ── Layer 4: sibling auto (latest × trend) ──────────────────────────────
