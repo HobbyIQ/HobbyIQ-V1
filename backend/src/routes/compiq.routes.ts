@@ -189,6 +189,42 @@ function autoProjectExtractYearFromSet(setStr: unknown): number | null {
 }
 
 /**
+ * CF-PRICE-FALLBACK-LAYER-4-PARALLEL-TIER (2026-07-03): map an autograph
+ * variant string to a rough price tier. Layer 4 anchors on a sibling
+ * auto's latest sale × trend — but the sibling might be a different
+ * parallel than the target (e.g., sibling is Base auto, target is Gold
+ * Refractor /50). Applying `target_tier / sibling_tier` as an additional
+ * multiplier closes the gap so the projection reflects the target's
+ * rarity band.
+ *
+ * Tiers are empirical from CH market observation (2026-07-03):
+ *
+ *   Superfractor /1        →  35×
+ *   Gold Refractor /50     →  6×
+ *   Red / Orange Refractor →  4× (typically /5-/25 print run)
+ *   Blue / Green / Purple  →  2.5× (typically /150-/250)
+ *   Regular Refractor      →  1.3× (unnumbered)
+ *   Shimmer / Wave / Lava  →  1.4× (die-cut / thematic parallels)
+ *   Base / Unknown         →  1×
+ *
+ * When either variant is Base or unrecognized, the ratio collapses to
+ * 1× (safe fallback — no under- or over-adjustment). Unknown text
+ * defaults to 1× so we never accidentally over-multiply on a novel
+ * variant name.
+ */
+function autoProjectVariantTier(variantStr: unknown): number {
+  if (typeof variantStr !== "string" || variantStr.trim().length === 0) return 1;
+  const v = variantStr.toLowerCase();
+  if (/superfractor|\/1\b/.test(v)) return 35;
+  if (/gold.*refract|gold.*wave|gold.*shimmer/.test(v)) return 6;
+  if (/red.*refract|orange.*refract|red.*wave|orange.*wave/.test(v)) return 4;
+  if (/blue.*refract|green.*refract|purple.*refract|blue.*wave|green.*wave|purple.*wave/.test(v)) return 2.5;
+  if (/refractor|x-?fractor|prizm/.test(v)) return 1.3;
+  if (/shimmer|wave|lava|speckle|geometric|raywave/.test(v)) return 1.4;
+  return 1;
+}
+
+/**
  * Apply the autograph projection fallback stack to a computeEstimate result.
  * When the target auto card has zero recent comps, tries in order:
  *   1. Sibling auto (same player + year + auto prefix, different card_id)
@@ -213,6 +249,7 @@ async function applyAutoProjectionFallbacks(
     typeof cardIdentity.year === "number" ? cardIdentity.year : null;
   const ciNumber = typeof cardIdentity.number === "string" ? cardIdentity.number : null;
   const ciCardId = typeof cardIdentity.card_id === "string" ? cardIdentity.card_id : null;
+  const ciVariant = typeof cardIdentity.variant === "string" ? cardIdentity.variant : null;
   const estSource = typeof est.source === "string" ? est.source : null;
   const estCompsAvail =
     typeof est.compsAvailable === "number" ? est.compsAvailable : null;
@@ -265,7 +302,15 @@ async function applyAutoProjectionFallbacks(
         if (!Number.isFinite(trendFactor) || trendFactor <= 0) trendFactor = 1.0;
         trendFactor = Math.max(0.5, Math.min(2.0, trendFactor));
 
-        const parallelMultiplier = 1.0; // v1
+        // CF-PRICE-FALLBACK-LAYER-4-PARALLEL-TIER (2026-07-03): apply
+        // (target_tier / anchor_tier) so a Base-auto anchor still projects
+        // reasonably when the target is a color parallel (Blue Refractor,
+        // Gold, Superfractor, etc.). When either variant is Base/unknown
+        // the ratio collapses to 1× (safe fallback — same behavior as v1).
+        const anchorTier = autoProjectVariantTier(winner.card.variant);
+        const targetTier = autoProjectVariantTier(ciVariant);
+        const parallelMultiplier =
+          anchorTier > 0 ? targetTier / anchorTier : 1.0;
         const projected = latestSale * trendFactor * parallelMultiplier;
         const low = projected * 0.6;
         const high = projected * 1.6;
@@ -276,6 +321,7 @@ async function applyAutoProjectionFallbacks(
             originalQuery: query,
             targetCardId: ciCardId,
             targetNumber: ciNumber,
+            targetVariant: ciVariant,
             anchorCardId: winner.card.card_id,
             anchorNumber: winner.card.number,
             anchorVariant: winner.card.variant,
@@ -283,7 +329,9 @@ async function applyAutoProjectionFallbacks(
             anchorRecentAvg: Math.round(recentAvg * 100) / 100,
             anchorPriorAvg: Math.round(priorAvg * 100) / 100,
             trendFactor: Math.round(trendFactor * 100) / 100,
-            parallelMultiplier,
+            anchorTier,
+            targetTier,
+            parallelMultiplier: Math.round(parallelMultiplier * 100) / 100,
             anchorSampleSize: dp.length,
             projected,
           }),
