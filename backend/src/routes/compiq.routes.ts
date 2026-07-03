@@ -83,6 +83,7 @@ import {
   identifyCard,
   searchCards,
   getPricesByCard,
+  getCardDetailsById,
 } from "../services/compiq/cardhedge.client.js";
 import {
   parseCardQuery,
@@ -2199,13 +2200,59 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // multiplier) when the pinned card has 0 recent comps AND is an
       // autograph. Same behavior /price gets via the shared helper.
       // Layer 1 / Layer 3 (AI-matcher + broader-year retry) are NOT
-      // applicable here — the card is already pinned so identity is
-      // known; those layers are only useful when the free-text
-      // resolver comes up empty.
+      // applicable here — the card is already pinned.
       const priceByIdQueryHint =
         typeof query === "string" && query.trim().length > 0
           ? query.trim()
           : `cardId:${resolvedCardId}`;
+
+      // CF-PRICE-BY-ID-CARDIDENTITY-ENRICHMENT (2026-07-02): the pinned
+      // path's cardIdentity is minimal by design — the engine returns
+      // { card_id, player: card_id_string, set: null, year: null,
+      // number: null, variant: null } for the /price-by-id branch, and
+      // the shared projection helper requires populated player/year/
+      // number to fire the trigger. Fetch card-details via CH and merge
+      // real metadata into est.cardIdentity so the helper can see the
+      // autograph prefix and same-year sibling/base candidates.
+      const priceByIdEstSource =
+        typeof (est as { source?: unknown }).source === "string"
+          ? ((est as { source: string }).source)
+          : null;
+      const priceByIdCompsAvail =
+        typeof (est as { compsAvailable?: unknown }).compsAvailable === "number"
+          ? ((est as { compsAvailable: number }).compsAvailable)
+          : null;
+      if (priceByIdEstSource === "no-recent-comps" && priceByIdCompsAvail === 0) {
+        try {
+          const chCard = await getCardDetailsById(resolvedCardId);
+          if (chCard) {
+            const chSet = typeof chCard.set === "string" ? chCard.set : null;
+            const chYearMatch = chSet ? chSet.match(/\b(19|20)\d{2}\b/) : null;
+            const chYear = chYearMatch ? Number(chYearMatch[0]) : null;
+            const existing =
+              (est as { cardIdentity?: unknown }).cardIdentity &&
+              typeof (est as { cardIdentity?: unknown }).cardIdentity === "object"
+                ? ((est as { cardIdentity: Record<string, unknown> }).cardIdentity)
+                : {};
+            (est as { cardIdentity?: unknown }).cardIdentity = {
+              ...existing,
+              card_id: resolvedCardId,
+              player: chCard.player ?? existing.player ?? null,
+              set: chSet ?? existing.set ?? null,
+              year: chYear ?? existing.year ?? null,
+              number: chCard.number ?? existing.number ?? null,
+              variant: chCard.variant ?? existing.variant ?? null,
+              title:
+                (typeof chCard.title === "string" ? chCard.title : null) ??
+                existing.title ??
+                null,
+            };
+          }
+        } catch {
+          // Enrichment best-effort; helper will simply no-op if cardIdentity
+          // stays sparse.
+        }
+      }
       await applyAutoProjectionFallbacks(est as Record<string, unknown>, priceByIdQueryHint);
 
       // Unsupported-sport short-circuit — defensive guard for /price-by-id.
