@@ -189,7 +189,7 @@ describe("CF-CH-THIN-COMP-RESCUE-BYPASS — sibling-pool rescue MUST NOT interce
     // ════════════════════════════════════════════════════════════════════
     // PRIMARY ASSERTIONS — the cardhedge-last-sale path won
     // ════════════════════════════════════════════════════════════════════
-    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.estimateSource).toBe("live-market-last-sale");
 
     // FMV is null (NOT the $8.50 weighted median that fired in prod).
     expect(result.fairMarketValue).toBeNull();
@@ -271,8 +271,8 @@ describe("CF-CH-THIN-COMP-RESCUE-BYPASS — sibling-pool rescue MUST NOT interce
     // Sibling-pool rescue STILL fires for this case (it's the genuine
     // CS-thin valuable-rescue path, not the wrong-card override case).
     // estimateSource is NOT cardhedge-last-sale (no CH match).
-    expect(result.estimateSource).not.toBe("cardhedge-last-sale");
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market-last-sale");
+    expect(result.estimateSource).not.toBe("live-market");
     // The bypass is SCOPED — non-CH-trusted-n=1 keeps existing behavior.
     // We don't assert the exact sibling-pool source here (it might fire
     // or not depending on combined-sufficiency math), just that the
