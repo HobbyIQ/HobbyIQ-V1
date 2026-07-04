@@ -2588,6 +2588,68 @@ router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("pric
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-OBSERVED-GRADE-CURVE (2026-07-04): GET /api/compiq/observed-grade-curve/:cardId
+//
+// HobbyIQ's OWN per-grade aggregation from raw observed sales. Sibling
+// to /api/compiq/all-grade-prices/:cardId, which returns a third-party
+// model estimate. This route returns our own median + confidence + range
+// per grade, computed by our aggregation module.
+//
+// Strategic intent (Drew, 2026-07-04): "our entire goal is to learn from
+// CH; when we get access to eBay we will then be able to do it on our
+// own." The observed-grade-curve service isolates the fetch to ONE
+// function (`fetchRawSalesForGrade`) — everything else is HobbyIQ math.
+// When eBay Browse is wired we swap the fetch and the rest keeps working.
+//
+// Response contract: vendor-neutral. Every field is our own signal.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId } = req.params;
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
+    const curve = await buildObservedGradeCurve(cardId.trim());
+
+    // Fire-and-forget corpus capture — our own signal, tagged internally
+    // as engine-derived. Joins against reference_prices_captured (CH's
+    // guess) on cardId + grade later to measure standalone quality.
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "observed_grade_curve_captured",
+          source: "compiq.observed-grade-curve",
+          cardId: curve.cardId,
+          totalSampleCount: curve.totalSampleCount,
+          grades: curve.entries.map((e) => ({
+            grade: e.grade,
+            grader: e.grader,
+            sampleCount: e.sampleCount,
+            observedMedian: e.weightedMedianPrice,
+            confidenceScore: e.confidenceScore,
+            newestSaleDate: e.newestSaleDate,
+          })),
+          timestamp: curve.computedAt,
+        }));
+      } catch {
+        // Telemetry never blocks the response.
+      }
+    })();
+
+    res.json({
+      success: true,
+      cardId: curve.cardId,
+      totalSampleCount: curve.totalSampleCount,
+      computedAt: curve.computedAt,
+      entries: curve.entries,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.post("/card-grades", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cardId, cardYear, isAutograph } = req.body || {};
