@@ -2482,21 +2482,25 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 // detail — user sees live comps for grades that have them + projected
 // prices for grades that don't. See services/compiq/perGradeBreakdown.
 // ─────────────────────────────────────────────────────────────────────────────
-// CF-CH-ALL-GRADES-CALIBRATION (2026-07-04): GET /api/compiq/all-grade-prices/:cardId
+// CF-GRADE-REFERENCE-PRICES (2026-07-04): GET /api/compiq/all-grade-prices/:cardId
 //
-// Returns CH's model estimate for a card at every grade in ONE call. The
-// engine treats these as CH's GUESS — not authoritative — and pairs them
-// with our own engine numbers + observed comps downstream for calibration.
+// Returns per-grade reference market estimates for a card in one call.
+// INTERNAL: currently backed by CH's /v1/cards/all-prices-by-card model
+// estimates; the abstraction is intentional so we can swap the backing
+// signal (eBay-direct medians, our own trained model, blended) without
+// changing the customer contract. The response NEVER leaks the vendor
+// name to iOS — see project memory (project_engine_owns_signals_not_
+// ch_product): HobbyIQ is building toward standalone.
 //
-// Design intent (project_engine_owns_signals_not_ch_product): HobbyIQ is
-// building toward standalone. CH is one signal; observed sales are the
-// ground truth; the engine's own model is the primary output. This route
-// surfaces the three side-by-side so iOS can render "our number / CH's
-// number / observed floor" and users can see when we agree vs diverge.
+// Framing: these are REFERENCE estimates, not authoritative FMV. Our
+// engine's per-grade FMV (surfaced on /price-by-id gradedEstimates)
+// remains the primary output. This route is for calibration display
+// ("here's another perspective") and internal signal-drift tracking.
 //
-// The response is CH-scoped only. If callers want calibration side-by-side
-// they should also hit /price-by-id and compare. A future consolidated
-// /calibration route can bundle both if the UX calls for it.
+// Telemetry: emits a "reference_prices_observed" event on every call
+// so we can later join reference estimates vs observed sales vs
+// engine FMV — building the corpus that proves standalone quality
+// before we retire the third-party backing.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
@@ -2505,20 +2509,21 @@ router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("pric
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
     const rows = await getAllPricesByCard(cardId.trim());
-    // Fire-and-forget calibration telemetry — captures CH's per-grade
-    // guesses keyed by cardId so we can later join against observed
-    // outcomes + our engine numbers.
+    // Fire-and-forget calibration telemetry — internal event log; the
+    // vendor identity is captured for future join analysis + eventual
+    // retirement decisioning.
     void (async () => {
       try {
         console.log(JSON.stringify({
-          event: "ch_all_grades_observed",
+          event: "reference_prices_observed",
           source: "compiq.all-grade-prices",
+          referenceVendor: "cardhedge",
           cardId: cardId.trim(),
           rowCount: rows.length,
           grades: rows.map((r) => ({
             grade: r.grade,
             grader: r.grader,
-            chPrice: r.price,
+            referencePrice: r.price,
           })),
           timestamp: new Date().toISOString(),
         }));
@@ -2526,12 +2531,18 @@ router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("pric
         // Telemetry must never block the response.
       }
     })();
+    // Customer-facing response — no vendor name, no CH branding. Just
+    // per-grade reference prices. iOS renders these labeled "market
+    // estimate" (or similar), NOT "CardHedge estimate."
     res.json({
       success: true,
       cardId: cardId.trim(),
-      source: "cardhedge-model-estimate",
-      note: "CH catalog model estimates, not observed sale medians. Treat as one calibration signal alongside engine FMV + recent comps.",
-      prices: rows,
+      prices: rows.map((r) => ({
+        grade: r.grade,
+        grader: r.grader,
+        referencePrice: r.price,
+        displayOrder: r.display_order,
+      })),
     });
   } catch (err) {
     return next(err);
