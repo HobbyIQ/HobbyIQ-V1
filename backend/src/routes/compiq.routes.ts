@@ -2698,6 +2698,64 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-OBSERVED-GRADE-CURVES-BULK (2026-07-04): POST /api/compiq/observed-grade-curves-bulk
+//
+// Batch build observed grade curves for a set of cards in one request.
+// Powers portfolio reprice, watchlist refresh, and any UI needing per-grade
+// values for many cards at once. Server-side dedup + bounded concurrency
+// + 12h cache leverage make this the right call for portfolio-scale work.
+//
+// Body: { cardIds: string[] } (up to 500 per request)
+// Response: { success, count, curves: [ObservedGradeCurve, ...] }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("predictions"), async (req, res, next) => {
+  try {
+    const { cardIds } = req.body || {};
+    if (!Array.isArray(cardIds) || cardIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Missing or empty "cardIds" array' });
+    }
+    if (cardIds.length > 500) {
+      return res.status(400).json({ success: false, error: 'cardIds may not exceed 500 per request' });
+    }
+    if (!cardIds.every((id) => typeof id === "string")) {
+      return res.status(400).json({ success: false, error: 'Every cardIds entry must be a string' });
+    }
+
+    const { buildObservedGradeCurvesBulk } = await import(
+      "../services/compiq/observedGradeCurve.service.js"
+    );
+    const start = Date.now();
+    const map = await buildObservedGradeCurvesBulk(cardIds);
+    const durationMs = Date.now() - start;
+
+    void (async () => {
+      try {
+        const totalSamples = Array.from(map.values()).reduce((sum, c) => sum + c.totalSampleCount, 0);
+        console.log(JSON.stringify({
+          event: "observed_grade_curves_bulk_composed",
+          source: "compiq.observed-grade-curves-bulk",
+          requestedCount: cardIds.length,
+          uniqueCount: map.size,
+          durationMs,
+          totalSampleCount: totalSamples,
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry never blocks.
+      }
+    })();
+
+    res.json({
+      success: true,
+      count: map.size,
+      curves: Array.from(map.values()),
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cardId } = req.params;

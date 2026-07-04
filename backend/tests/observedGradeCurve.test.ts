@@ -344,6 +344,57 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
   });
 
+  describe("CF-OBSERVED-GRADE-CURVES-BULK — batch build with dedup + concurrency", () => {
+    it("dedupes input cardIds — same id used 3 times yields one fetch group", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockResolvedValue([]);
+      const { buildObservedGradeCurvesBulk } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const map = await buildObservedGradeCurvesBulk(["a", "a", "b", "a", "b"]);
+      expect(map.size).toBe(2);
+      expect(map.has("a")).toBe(true);
+      expect(map.has("b")).toBe(true);
+    });
+
+    it("filters empty/non-string ids without breaking", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockResolvedValue([]);
+      const { buildObservedGradeCurvesBulk } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const map = await buildObservedGradeCurvesBulk(["good", "", "  ", "also-good"]);
+      expect(map.size).toBe(2);
+      expect(Array.from(map.keys()).sort()).toEqual(["also-good", "good"]);
+    });
+
+    it("returns a curve with empty entries when a card's fetch throws", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      let call = 0;
+      vi.mocked(getCardSales).mockImplementation(async (cardId) => {
+        call++;
+        if (cardId === "broken") throw new Error("upstream boom");
+        return [];
+      });
+      const { buildObservedGradeCurvesBulk } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const map = await buildObservedGradeCurvesBulk(["ok", "broken"]);
+      expect(map.size).toBe(2);
+      const brokenCurve = map.get("broken")!;
+      expect(brokenCurve.totalSampleCount).toBe(0);
+      expect(brokenCurve.entries.every((e) => e.valueSource === "unavailable")).toBe(true);
+    });
+
+    it("empty input array returns empty map", async () => {
+      const { buildObservedGradeCurvesBulk } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const map = await buildObservedGradeCurvesBulk([]);
+      expect(map.size).toBe(0);
+    });
+  });
+
   it("multi-grade aggregation covers every canonical grade in one build call", async () => {
     const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
     vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {

@@ -273,3 +273,79 @@ export async function buildObservedGradeCurve(cardId: string): Promise<ObservedG
     computedAt: new Date().toISOString(),
   };
 }
+
+/**
+ * CF-OBSERVED-GRADE-CURVES-BULK (2026-07-04): batch-build the observed
+ * grade curve for many cards at once. Used by portfolio reprice, watchlist
+ * refresh, and any caller with a set of cards to price.
+ *
+ * Behavior:
+ *   1. Deduplicates cardIds — same id used by 5 holdings = 1 fetch.
+ *   2. Bounded concurrency (8 cards in flight) — each card runs 10
+ *      parallel grade fetches internally, so peak in-flight CH HTTPs
+ *      is ~80. Keeps CH rate limit + local memory well under budget.
+ *   3. Leverages the existing 12h getCardSales cache — repeated bulk
+ *      calls on the same set are near-instant.
+ *   4. Per-card failures degrade to empty curves (never fails the whole
+ *      batch). Errors are logged for observability.
+ *
+ * Returns a Map<cardId, ObservedGradeCurve>. Callers can iterate,
+ * transform, or emit a bulk API response as needed.
+ */
+const BULK_CONCURRENCY = 8;
+
+export async function buildObservedGradeCurvesBulk(
+  cardIds: readonly string[],
+): Promise<Map<string, ObservedGradeCurve>> {
+  const uniqueIds = Array.from(new Set(
+    cardIds.filter((id) => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim()),
+  ));
+  const results = new Map<string, ObservedGradeCurve>();
+
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (cursor < uniqueIds.length) {
+      const idx = cursor++;
+      const id = uniqueIds[idx];
+      try {
+        const curve = await buildObservedGradeCurve(id);
+        results.set(id, curve);
+      } catch (err) {
+        console.warn(
+          `[observedGradeCurve.bulk] card_id=${id} failed (non-fatal): ${
+            (err as Error)?.message ?? err
+          }`,
+        );
+        results.set(id, {
+          cardId: id,
+          entries: CANONICAL_GRADES.map((cfg) => ({
+            grade: cfg.label,
+            grader: cfg.grader,
+            sampleCount: 0,
+            weightedMedianPrice: null,
+            plainMedianPrice: null,
+            priceRangeLow: null,
+            priceRangeHigh: null,
+            newestSaleDate: null,
+            oldestSaleDate: null,
+            confidenceScore: 0,
+            value: null,
+            valueSource: "unavailable",
+            estimatedMultiplier: null,
+          })),
+          totalSampleCount: 0,
+          computedAt: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  const runners = Array.from(
+    { length: Math.min(BULK_CONCURRENCY, uniqueIds.length) },
+    () => worker(),
+  );
+  await Promise.all(runners);
+
+  return results;
+}
