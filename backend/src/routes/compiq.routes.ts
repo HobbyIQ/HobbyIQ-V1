@@ -2810,6 +2810,29 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
           totalSampleCount: totalSamples,
           timestamp: new Date().toISOString(),
         }));
+        // CF-CARDHEDGE-LEARN-CORPUS bulk gap fix (2026-07-04): the batched
+        // route was missing corpus persistence — portfolio reprice fires
+        // 500 curves at once and none of them were being persisted. Every
+        // curve now writes an observed_grade_curve corpus row via the
+        // same shape the single-card route uses. Fire-and-forget; failure
+        // on one card doesn't block the batch.
+        for (const curve of map.values()) {
+          persistObservedGradeCurve({
+            source: "compiq.observed-grade-curves-bulk",
+            cardId: curve.cardId,
+            totalSampleCount: curve.totalSampleCount,
+            grades: curve.entries.map((e) => ({
+              grade: e.grade,
+              grader: e.grader,
+              sampleCount: e.sampleCount,
+              observedMedian: e.weightedMedianPrice,
+              valueSource: e.valueSource,
+              estimatedMultiplier: e.estimatedMultiplier,
+              confidenceScore: e.confidenceScore,
+              newestSaleDate: e.newestSaleDate,
+            })),
+          });
+        }
       } catch {
         // Telemetry never blocks.
       }
