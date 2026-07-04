@@ -1305,6 +1305,8 @@ const CARDHEDGE_CDN_HOST_RE = /^https:\/\/[a-z0-9]+\.cdn\.bubble\.io\//i;
 const CARDHEDGE_CDN_HOST_RE_LEGACY = /^https:\/\/[a-z0-9]+\.cdnh\.bubble\.io\//i;
 const CROP_TARGET_WIDTH = 734;
 const CROP_TARGET_HEIGHT = 1028;
+const PHYSICAL_CARD_ASPECT = CROP_TARGET_WIDTH / CROP_TARGET_HEIGHT; // 0.7140
+const ASPECT_TOLERANCE = 0.10; // 10% band around physical — see fit switch below
 const CROPPED_IMAGE_TTL_SEC = 24 * 60 * 60;
 
 function isCardHedgeCdnUrl(u: string): boolean {
@@ -1325,7 +1327,10 @@ router.get("/card-image-proxy", async (req, res, next) => {
     }
 
     const { createHash } = await import("node:crypto");
-    const cacheKey = `card-image-cropped:v1:${createHash("sha256").update(rawUrl).digest("hex").slice(0, 16)}`;
+    // v2 bump (2026-07-03): aspect-detect fit switch. v1 entries used
+    // `cover` unconditionally and left stretched cards (e.g. Hartman)
+    // still-stretched with content bands trimmed. Retire those entries.
+    const cacheKey = `card-image-cropped:v2:${createHash("sha256").update(rawUrl).digest("hex").slice(0, 16)}`;
 
     const cachedRaw = await cacheGet(cacheKey);
     if (cachedRaw) {
@@ -1355,12 +1360,38 @@ router.get("/card-image-proxy", async (req, res, next) => {
     }
     const upstreamBuf = Buffer.from(await upstream.arrayBuffer());
 
+    // CF-PROXY-FIT-FILL-FOR-STRETCHED-SOURCES (2026-07-03): CH doesn't
+    // serve all cards at the same aspect. Skenes came through at 754x1028
+    // (aspect 0.7335 — 2.7% wider than physical 0.7143), where `fit: cover`
+    // trims 20px of width off the sides and preserves everything else.
+    // Hartman comes through at 705x1200 (aspect 0.5875 — 17.8% NARROWER
+    // than physical), where the card content itself has been stretched
+    // vertically by CH. `fit: cover` on that just discards top/bottom
+    // bands off an already-stretched card and iOS renders visibly
+    // squished content.
+    //
+    // Strategy: if the source aspect is close to physical (within ~10%),
+    // trust it and crop to the exact target dims with `cover` — content
+    // preserved, tiny sides trimmed. If the source aspect is outside that
+    // band, assume CH stretched uniformly and use `fit: fill` — resample
+    // to physical aspect, which reverses uniform stretching. The 10%
+    // band tolerates both directions (wider or narrower) and passes
+    // Skenes' 0.7335 (2.7% wide) through the cover branch while catching
+    // Hartman's 0.5875 (17.8% narrow) in the fill branch.
     const sharp = (await import("sharp")).default;
+    const inputMeta = await sharp(upstreamBuf).metadata();
+    const inputAspect =
+      inputMeta.width && inputMeta.height
+        ? inputMeta.width / inputMeta.height
+        : PHYSICAL_CARD_ASPECT;
+    const aspectDelta = Math.abs(inputAspect - PHYSICAL_CARD_ASPECT) / PHYSICAL_CARD_ASPECT;
+    const resizeFit: "cover" | "fill" =
+      aspectDelta <= ASPECT_TOLERANCE ? "cover" : "fill";
     const cropped = await sharp(upstreamBuf)
       .resize({
         width: CROP_TARGET_WIDTH,
         height: CROP_TARGET_HEIGHT,
-        fit: "cover",
+        fit: resizeFit,
         position: "center",
       })
       .jpeg({ quality: 85, progressive: true })
