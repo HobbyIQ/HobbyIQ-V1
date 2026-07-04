@@ -21,6 +21,11 @@ import {
   identifyCardByImage,
   getCardDetailsByCertImage,
   type ImageInput,
+  // CF-CH-ALL-PRICES-BY-CARD (2026-07-04): CH's per-grade catalog
+  // estimates for a single card. Used both as an iOS-facing display
+  // surface and as a calibration signal (CH's guess vs our engine's
+  // number vs actual sales).
+  getAllPricesByCard,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -761,7 +766,7 @@ function recordCHReferenceTelemetry(opts: {
     opts.gradingCompany && typeof opts.gradeValue === "number"
       ? `${opts.gradingCompany} ${opts.gradeValue}`
       : "Raw";
-  // FMV drift telemetry
+  // FMV drift telemetry (single-grade drift signal at the user's grade).
   void (async () => {
     try {
       const [chFmv, chEst] = await Promise.all([
@@ -791,6 +796,45 @@ function recordCHReferenceTelemetry(opts: {
     } catch (err) {
       console.warn(
         `[${opts.source}] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  })();
+  // CF-CH-CORPUS-CAPTURE-ALL-GRADES (2026-07-04): every priced request also
+  // captures the FULL per-grade reference-price snapshot to the corpus.
+  // This is the standalone-first play — Drew's directive: "our entire goal
+  // is to learn from CH; when eBay Browse lands we can do it on our own."
+  //
+  // Cost: one CH HTTP per unique card per 12h (getAllPricesByCard cache
+  // TTL matches FMV cache). Fire-and-forget; never blocks the response.
+  //
+  // Value: builds the (cardId, grade, referencePrice, timestamp) corpus
+  // continuously across every /price /price-by-id /bulk request. When
+  // eBay Browse is wired we join against observed per-grade sale medians
+  // → drift-per-grade → prove the standalone engine can operate without
+  // the third-party signal before we retire it. Data collected via server
+  // logs → available in App Insights for offline analysis.
+  void (async () => {
+    try {
+      const rows = await getAllPricesByCard(opts.cardId!);
+      if (rows.length === 0) return;
+      console.log(JSON.stringify({
+        event: "reference_prices_captured",
+        source: opts.source,
+        referenceVendor: "cardhedge",
+        cardId: opts.cardId,
+        player: opts.player,
+        rowCount: rows.length,
+        grades: rows.map((r) => ({
+          grade: r.grade,
+          grader: r.grader,
+          referencePrice: r.price,
+          displayOrder: r.display_order,
+        })),
+        timestamp: new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.warn(
+        `[${opts.source}] reference-prices capture failed (non-fatal): ${(err as Error)?.message ?? err}`,
       );
     }
   })();
@@ -2476,6 +2520,136 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 // breakdown for a card. iOS renders as a grade picker on the card
 // detail — user sees live comps for grades that have them + projected
 // prices for grades that don't. See services/compiq/perGradeBreakdown.
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-GRADE-REFERENCE-PRICES (2026-07-04): GET /api/compiq/all-grade-prices/:cardId
+//
+// Returns per-grade reference market estimates for a card in one call.
+// INTERNAL: currently backed by CH's /v1/cards/all-prices-by-card model
+// estimates; the abstraction is intentional so we can swap the backing
+// signal (eBay-direct medians, our own trained model, blended) without
+// changing the customer contract. The response NEVER leaks the vendor
+// name to iOS — see project memory (project_engine_owns_signals_not_
+// ch_product): HobbyIQ is building toward standalone.
+//
+// Framing: these are REFERENCE estimates, not authoritative FMV. Our
+// engine's per-grade FMV (surfaced on /price-by-id gradedEstimates)
+// remains the primary output. This route is for calibration display
+// ("here's another perspective") and internal signal-drift tracking.
+//
+// Telemetry: emits a "reference_prices_observed" event on every call
+// so we can later join reference estimates vs observed sales vs
+// engine FMV — building the corpus that proves standalone quality
+// before we retire the third-party backing.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId } = req.params;
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    const rows = await getAllPricesByCard(cardId.trim());
+    // Fire-and-forget calibration telemetry — internal event log; the
+    // vendor identity is captured for future join analysis + eventual
+    // retirement decisioning.
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "reference_prices_observed",
+          source: "compiq.all-grade-prices",
+          referenceVendor: "cardhedge",
+          cardId: cardId.trim(),
+          rowCount: rows.length,
+          grades: rows.map((r) => ({
+            grade: r.grade,
+            grader: r.grader,
+            referencePrice: r.price,
+          })),
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry must never block the response.
+      }
+    })();
+    // Customer-facing response — no vendor name, no CH branding. Just
+    // per-grade reference prices. iOS renders these labeled "market
+    // estimate" (or similar), NOT "CardHedge estimate."
+    res.json({
+      success: true,
+      cardId: cardId.trim(),
+      prices: rows.map((r) => ({
+        grade: r.grade,
+        grader: r.grader,
+        referencePrice: r.price,
+        displayOrder: r.display_order,
+      })),
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-OBSERVED-GRADE-CURVE (2026-07-04): GET /api/compiq/observed-grade-curve/:cardId
+//
+// HobbyIQ's OWN per-grade aggregation from raw observed sales. Sibling
+// to /api/compiq/all-grade-prices/:cardId, which returns a third-party
+// model estimate. This route returns our own median + confidence + range
+// per grade, computed by our aggregation module.
+//
+// Strategic intent (Drew, 2026-07-04): "our entire goal is to learn from
+// CH; when we get access to eBay we will then be able to do it on our
+// own." The observed-grade-curve service isolates the fetch to ONE
+// function (`fetchRawSalesForGrade`) — everything else is HobbyIQ math.
+// When eBay Browse is wired we swap the fetch and the rest keeps working.
+//
+// Response contract: vendor-neutral. Every field is our own signal.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId } = req.params;
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
+    const curve = await buildObservedGradeCurve(cardId.trim());
+
+    // Fire-and-forget corpus capture — our own signal, tagged internally
+    // as engine-derived. Joins against reference_prices_captured (CH's
+    // guess) on cardId + grade later to measure standalone quality.
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "observed_grade_curve_captured",
+          source: "compiq.observed-grade-curve",
+          cardId: curve.cardId,
+          totalSampleCount: curve.totalSampleCount,
+          grades: curve.entries.map((e) => ({
+            grade: e.grade,
+            grader: e.grader,
+            sampleCount: e.sampleCount,
+            observedMedian: e.weightedMedianPrice,
+            confidenceScore: e.confidenceScore,
+            newestSaleDate: e.newestSaleDate,
+          })),
+          timestamp: curve.computedAt,
+        }));
+      } catch {
+        // Telemetry never blocks the response.
+      }
+    })();
+
+    res.json({
+      success: true,
+      cardId: curve.cardId,
+      totalSampleCount: curve.totalSampleCount,
+      computedAt: curve.computedAt,
+      entries: curve.entries,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.post("/card-grades", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cardId, cardYear, isAutograph } = req.body || {};
