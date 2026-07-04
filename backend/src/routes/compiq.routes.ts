@@ -216,6 +216,11 @@ function autoProjectVariantTier(variantStr: unknown): number {
   if (typeof variantStr !== "string" || variantStr.trim().length === 0) return 1;
   const v = variantStr.toLowerCase();
   if (/superfractor|\/1\b/.test(v)) return 35;
+  // CF-VARIANT-TIER-LOGOFRACTOR (2026-07-04): LogoFractor is a top-tier
+  // Bowman parallel (typically /5-/10). Empirical from Hartman CPA-EHA
+  // catalog probe: LogoFractor at $1038 vs Base auto at $130 → 8×.
+  // Ordered BEFORE the generic /refractor/ rule so it hits first.
+  if (/logo.?fractor/.test(v)) return 8;
   if (/gold.*refract|gold.*wave|gold.*shimmer/.test(v)) return 6;
   if (/red.*refract|orange.*refract|red.*wave|orange.*wave/.test(v)) return 4;
   if (/blue.*refract|green.*refract|purple.*refract|blue.*wave|green.*wave|purple.*wave/.test(v)) return 2.5;
@@ -285,24 +290,38 @@ async function applyAutoProjectionFallbacks(
     try {
       const targetHistory = await getPricesByCard(ciCardId, "Raw", 365);
       if (targetHistory.length === 0) {
+        // CF-PHANTOM-GATE-DEMOTED-TO-LAST-RESORT (2026-07-04): originally
+        // this early-return killed the entire projection stack for cards
+        // with no 365d sales — treating "0 comps on this SKU" as "SKU
+        // doesn't really trade." That produced a Hartman LogoFractor
+        // ($9 via sibling-pool rescue) with no downstream projection
+        // pass to override. Real world: LogoFractor has a live market at
+        // $1000+ but CH doesn't index those sales.
+        //
+        // Fix: don't return here. Log the fact and let Layer 4 (sibling-
+        // auto anchor) try. Layer 4 filters to auto-prefix siblings and
+        // applies parallel-tier scaling, which produces a defensible
+        // estimate from the target's OWN parallel family. If Layer 4
+        // finds no siblings with ≥3 comps either, Layer 2 tries base ×
+        // multiplier. If BOTH fail, predictedPrice stays null (honest
+        // no-projection outcome — equivalent to the old phantom exit but
+        // reached by exhaustion instead of early-out).
         console.log(
           JSON.stringify({
-            event: "phantom_target_detected",
+            event: "phantom_target_note",
             source: "compiq.routes",
             originalQuery: query,
             targetCardId: ciCardId,
             targetNumber: ciNumber,
             targetPlayer: ciPlayer,
-            note: "Zero 365d sales — refusing to project rather than fabricate",
+            note: "Zero 365d sales on target card_id — attempting sibling/base fallbacks instead of early-exiting",
           }),
         );
-        return;
-      }
-      // Extended-window direct anchor when target has thin-but-real history.
-      // Require ≥2 sales to guard against a single outlier defining the
-      // price; anything below that is treated as too-thin and falls
-      // through to Layer 4 / Layer 2.
-      if (targetHistory.length >= 2) {
+      } else if (targetHistory.length >= 2) {
+        // Extended-window direct anchor when target has thin-but-real
+        // history. Require ≥2 sales to guard against a single outlier
+        // defining the price; single-sale is treated as too-thin and
+        // falls through to Layer 4 / Layer 2.
         const sorted = targetHistory
           .map((p) => p.price)
           .filter((p) => Number.isFinite(p) && p > 0)

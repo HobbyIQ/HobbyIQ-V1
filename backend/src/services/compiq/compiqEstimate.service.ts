@@ -4527,7 +4527,42 @@ export async function computeEstimate(
       // one consistent trust-guarded CH n=1 detection across all sites.
       // Non-CH cases (CS-served, CH untrusted) keep the existing sibling-
       // pool rescue verbatim.
-      if (siblingPool.sales.length > 0 && !isChTrustedSingleSaleForce) {
+      //
+      // CF-SIBLING-POOL-SKIP-FOR-AUTOS (2026-07-04): when the target's
+      // card_number is a Bowman-family autograph prefix (CPA-, HSA-, etc.),
+      // the sibling pool is drawn from the ENTIRE player+product+year
+      // segment — hundreds of base commons at $2-8 each drown out the
+      // handful of matching parallel-auto sales at $200-1500. The 2026-07-03
+      // Hartman LogoFractor (CPA-EHA) trace showed 315 sibling sales
+      // producing a weighted median of $9 for a card CH catalogs at $1038.
+      // Skip the rescue for auto targets and let applyAutoProjectionFallbacks
+      // (compiq.routes.ts) handle it — Layer 4 there filters siblings to
+      // auto-prefix-only and applies parallel-tier scaling, which is the
+      // right pool for high-value autos.
+      const NUMBER_IS_AUTO_PREFIX =
+        /^(CPA|CDA|BCPA|BCDA|BDPA|BDA|BPA|BCRA|TCRA|TRA|FCA|USA|AU|HSA|RRA|PRV|TEK)(-|$)/i;
+      const targetNumberForAutoCheck =
+        typeof cardIdentity?.number === "string" ? cardIdentity.number : "";
+      const targetIsAutoPrefix = NUMBER_IS_AUTO_PREFIX.test(
+        targetNumberForAutoCheck,
+      );
+      if (targetIsAutoPrefix) {
+        console.log(
+          JSON.stringify({
+            event: "sibling_pool_rescue_skipped_auto_target",
+            source: "compiq.computeEstimate",
+            cardId: cardIdentity?.card_id ?? null,
+            targetNumber: targetNumberForAutoCheck,
+            siblingPoolSize: siblingPool.sales.length,
+            note: "Skipping sibling-pool rescue for auto target — cross-tier pool contamination. Downstream Layer 4 will handle.",
+          }),
+        );
+      }
+      if (
+        siblingPool.sales.length > 0 &&
+        !isChTrustedSingleSaleForce &&
+        !targetIsAutoPrefix
+      ) {
         const directSales: Array<{ price: number; ts: number }> = fetched.comps
           .map((c) => ({ price: c.price, ts: Date.parse(c.soldDate || "") }))
           .filter((s) => Number.isFinite(s.ts) && s.price > 0);
