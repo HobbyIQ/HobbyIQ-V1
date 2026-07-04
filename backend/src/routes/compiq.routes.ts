@@ -2649,12 +2649,32 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       // the `/api/compiq/card-image/:id` proxy it backed always 404s. CardHedge
       // surfaces a public bubble.io CDN image per card, stashed on the
       // RoutedCard meta by the preceding search (cardsight.router.cacheCardMeta).
-      // Pull it directly — iOS loads the CDN URL with no proxy needed. Falls
-      // back to undefined on a cold-cache miss (iOS then renders the neutral
-      // placeholder), and `cardImageThumbUrl` below still provides the eBay
-      // most-recent-comp secondary.
+      // Falls back to undefined on a cold-cache miss (iOS then renders the
+      // neutral placeholder), and `cardImageThumbUrl` below still provides
+      // the eBay most-recent-comp secondary.
+      //
+      // CF-PRICE-BY-ID-CARDIMAGEURL-PROXY (2026-07-03): iOS' CardDetailHero
+      // (CompIQPricedCardView.swift:2734) reads response.cardImageUrl to
+      // render the big card image. Serving the raw CH CDN URL here bypasses
+      // the /card-image-proxy that the /cardsearch response already routes
+      // through — so the hero image renders at CH's off-spec 754x1028
+      // (aspect 0.7335) instead of the physical 2.5x3.5 (0.7143). iOS uses
+      // .scaledToFit() with no forced aspect, so it displays the served
+      // aspect natively — meaning off-spec source pixels produce off-spec
+      // rendered card. Route the CH URL through the same crop proxy so the
+      // hero, picker, and inventory tiles all consume identically-cropped
+      // physical-card-aspect images.
       const cardMetaForImage = await getCardMetaById(resolvedCardId);
-      let cardImageUrl: string | undefined = cardMetaForImage?.imageUrl ?? undefined;
+      const rawImageUrl = cardMetaForImage?.imageUrl ?? undefined;
+      let cardImageUrl: string | undefined;
+      if (rawImageUrl && isCardHedgeCdnUrl(rawImageUrl)) {
+        cardImageUrl = absoluteApiUrl(
+          req,
+          `/api/compiq/card-image-proxy?u=${encodeURIComponent(rawImageUrl)}`,
+        );
+      } else {
+        cardImageUrl = rawImageUrl;
+      }
       let cardImageThumbUrl: string | undefined;
       // CF-GRADE-BREAKDOWN (2026-06-09): per-graded-bucket menu off the
       // same cached cs:pricing payload — zero new Cardsight ops.
