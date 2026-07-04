@@ -1577,11 +1577,34 @@ export async function getTrustedComps(
   if (!cardId) return empty("no_real_data");
 
   const series = await getPricesByCard(cardId, grade, resolveTrustWindowDays());
-  if (series.length === 0) {
+
+  // CF-CH-THIN-SKU-COMPS-RECOVERY (2026-07-04): originally this path
+  // early-returned no_real_data when prices-by-card was empty, on the
+  // assumption that any getCardSales response for such a card_id would
+  // be blob fallback. But CH's /cards/comps returns REAL raw sales
+  // for thin SKUs where daily aggregation doesn't fire — the 2026-07-03
+  // Hartman LogoFractor case: 0 prices-by-card, 3 real ebay sales at
+  // $825, $1251, $900 (median ~$900 vs the engine's sibling-pool $9).
+  //
+  // Removing the early-return; always call getCardSales, then let
+  // checkCHTrust's title-cohesion path decide trust when prices-by-card
+  // is empty. Blob protection is still intact — title-cohesion at 80%+
+  // hit rate on both playerSurname AND year rejects the random-recent-
+  // sales blob (see checkCHTrust at ~L1520 for the rule).
+  //
+  // Cost: one extra CH HTTP call for cards CH truly has no data on.
+  // getCardSales is cached (12h) so the incremental cost per unique
+  // orphan card_id per 12h is one probe. Benefit: recover pricing on
+  // thin-SKU auto/parallel cards CH does index individual sales for
+  // but not daily aggregate. High-value autos with 2-5 sales/month
+  // are the entire high-margin segment; missing them was a real
+  // revenue-adjacent bug.
+  const sales = await getCardSales(cardId, grade, 50);
+
+  if (series.length === 0 && sales.length === 0) {
     return empty("no_real_data");
   }
 
-  const sales = await getCardSales(cardId, grade, 50);
   const verdict = checkCHTrust(sales, series.length, identity);
 
   if (!verdict.trusted) {

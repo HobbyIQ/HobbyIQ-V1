@@ -29,23 +29,23 @@ vi.mock("../src/services/compiq/cardsight.router.js", async (importActual) => {
     searchCardsRouted: vi.fn(async () => [
       {
         card_id: "exact-card-uuid",
-        title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
+        title: "2024 Bowman Draft Chrome Caleb Bonemer BDC-CBO",
         player: "Caleb Bonemer",
-        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-CBO prefix → CPA subset (Bowman Draft Chrome release)
+        set: "Bowman Draft Chrome", // CF-FIXTURE-BDC-CBO: non-auto base fixture. See CF-SIBLING-POOL-SKIP-FOR-AUTOS (2026-07-04) for why the previous CPA-CBO autograph fixture had to move — sibling-pool rescue is now correctly skipped for auto targets, so this test needs a non-auto card to exercise the rescue path it was designed to guard.
         year: 2024,
-        number: "CPA-CBO",
-        variant: "Chrome Prospect Autograph",
+        number: "BDC-CBO",
+        variant: "Base",
       },
     ]),
     findCompsRouted: vi.fn(async () => ({
       card: {
         card_id: "exact-card-uuid",
-        title: "2024 Bowman Draft Chrome Caleb Bonemer CPA-CBO Auto",
+        title: "2024 Bowman Draft Chrome Caleb Bonemer BDC-CBO",
         player: "Caleb Bonemer",
-        set: "Chrome Prospects Autographs", // CF-FIXTURE-AUDIT: CPA-CBO prefix → CPA subset (Bowman Draft Chrome release)
+        set: "Bowman Draft Chrome", // CF-FIXTURE-BDC-CBO: non-auto base fixture. See CF-SIBLING-POOL-SKIP-FOR-AUTOS (2026-07-04) for why the previous CPA-CBO autograph fixture had to move — sibling-pool rescue is now correctly skipped for auto targets, so this test needs a non-auto card to exercise the rescue path it was designed to guard.
         year: 2024,
-        number: "CPA-CBO",
-        variant: "Chrome Prospect Autograph",
+        number: "BDC-CBO",
+        variant: "Base",
       },
       sales: [], // ← thin-data trigger
       variantWarning: [],
@@ -106,8 +106,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
       playerName: "Caleb Bonemer",
       cardYear: 2024,
       product: "Bowman Draft Chrome",
-      parallel: "Chrome Prospect Autograph",
-      isAuto: true,
+      isAuto: false,
     });
 
     expect(res.status).toBe(200);
@@ -162,8 +161,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
         playerName: "Caleb Bonemer",
         cardYear: 2024,
         product: "Bowman Draft Chrome",
-        parallel: "Chrome Prospect Autograph",
-        isAuto: true,
+        isAuto: false,
       });
 
       expect(res.status).toBe(200);
@@ -227,8 +225,7 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
         playerName: "Caleb Bonemer",
         cardYear: 2024,
         product: "Bowman Draft Chrome",
-        parallel: "Chrome Prospect Autograph",
-        isAuto: true,
+        isAuto: false,
       });
       // These four assertions are the original sibling-pool contract.
       // Locked here a second time to catch any future drift introduced
@@ -239,5 +236,51 @@ describe("CF-AUTOPRICE-SIBLING-DISCOVERY-WIRING — sibling-pool rescue branch",
       expect(res.body.confidence.pricingConfidence).toBeLessThanOrEqual(65);
       expect(res.body.fairMarketValue).toBeGreaterThan(0);
     });
+  });
+});
+
+// CF-SIBLING-POOL-SKIP-FOR-AUTOS (2026-07-04): when the target's
+// card_number is a Bowman-family autograph prefix (CPA-, HSA-, TEK-,
+// etc.), the sibling pool would be dominated by base commons of the
+// same player+product+year, dragging the weighted median down by 10x
+// or more (Hartman LogoFractor CPA-EHA prod trace 2026-07-03: pool
+// median $9 for a card catalogued at $1038). Skip the rescue for auto
+// targets — the downstream applyAutoProjectionFallbacks (in the route
+// layer) filters siblings to auto-only and applies parallel-tier
+// scaling, which is the right pool for high-value autos.
+describe("CF-SIBLING-POOL-SKIP-FOR-AUTOS — auto targets skip cross-tier rescue", () => {
+  beforeAll(() => {
+    process.env.CARD_HEDGE_API_KEY = "test-key";
+  });
+
+  it("skips sibling-pool rescue and returns no-recent-comps when target is an auto prefix (CPA-EHA)", async () => {
+    const routerMod = await import("../src/services/compiq/cardsight.router.js");
+    const autoCard = {
+      card_id: "auto-target-uuid",
+      title: "2026 Bowman Chrome Eric Hartman CPA-EHA Auto",
+      player: "Eric Hartman",
+      set: "Bowman Chrome",
+      year: 2026,
+      number: "CPA-EHA",
+      variant: "Bowman LogoFractor",
+    };
+    vi.mocked(routerMod.searchCardsRouted).mockResolvedValueOnce([autoCard as any]);
+    vi.mocked(routerMod.findCompsRouted).mockResolvedValueOnce({
+      card: autoCard,
+      sales: [],
+      variantWarning: [],
+      aiCategory: "Baseball",
+    } as any);
+
+    const res = await request(app).post("/api/compiq/estimate").set("x-session-id", "test-sess").send({
+      playerName: "Eric Hartman",
+      cardYear: 2026,
+      product: "Bowman Chrome",
+      isAuto: true,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.source).toBe("no-recent-comps");
+    expect(res.body.fairMarketValue).toBeNull();
   });
 });
