@@ -30,6 +30,9 @@ import {
   // non-image path. Used by the /api/compiq/lookup-by-cert route.
   getFmvByCert,
   getPricesByCert,
+  // CF-CH-ADDITIONS-SUMMARY (2026-07-04): daily catalog additions.
+  // Powers /api/compiq/new-releases.
+  getAdditionsSummary,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -2765,6 +2768,88 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
       })),
       matchConfidence,
       windowDays: daysNorm,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-NEW-RELEASES (2026-07-04): GET /api/compiq/new-releases
+//
+// Powers the "new releases" iOS surface — a weekly/daily digest of freshly
+// released sets and card counts. Query params:
+//   startDate (default: 30 days ago), endDate (default: today),
+//   category (optional filter), page (default 1), pageSize (default 50)
+//
+// Backed by the catalog additions summary today (third-party), grouped by
+// (category, set, subset, variants, added_date). Vendor-neutral response.
+// When we own the catalog end-to-end this route stays; only the fetch
+// swaps.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/new-releases", requireSession, async (req, res, next) => {
+  try {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 3600 * 1000);
+    const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+    const startDate = typeof req.query.startDate === "string" && req.query.startDate.length >= 10
+      ? req.query.startDate.slice(0, 10)
+      : isoDate(thirtyDaysAgo);
+    const endDate = typeof req.query.endDate === "string" && req.query.endDate.length >= 10
+      ? req.query.endDate.slice(0, 10)
+      : isoDate(today);
+    const category = typeof req.query.category === "string" && req.query.category.trim().length > 0
+      ? req.query.category.trim()
+      : undefined;
+    const page = Math.max(1, parseInt(String(req.query.page ?? "1"), 10) || 1);
+    const pageSize = Math.max(1, Math.min(200, parseInt(String(req.query.pageSize ?? "50"), 10) || 50));
+
+    const result = await getAdditionsSummary({
+      startDate,
+      endDate,
+      category,
+      page,
+      pageSize,
+    });
+
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "new_releases_queried",
+          source: "compiq.new-releases",
+          referenceVendor: "cardhedge",
+          startDate,
+          endDate,
+          category: category ?? null,
+          page,
+          pageSize,
+          rowCount: result?.data.length ?? 0,
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry never blocks.
+      }
+    })();
+
+    const rows = (result?.data ?? []).map((r) => ({
+      category: r.category,
+      setName: r.set_name,
+      subset: r.subset,
+      variants: r.variants,
+      addedDate: r.added_date,
+      cardCount: r.card_count,
+    }));
+
+    res.json({
+      success: true,
+      startDate,
+      endDate,
+      category: category ?? null,
+      page,
+      pageSize,
+      totalRows: rows.length,
+      releases: rows,
     });
   } catch (err) {
     return next(err);

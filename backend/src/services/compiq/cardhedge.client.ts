@@ -1335,6 +1335,92 @@ export async function getPricesByCertImage(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-ADDITIONS-SUMMARY (2026-07-04): daily catalog-addition counts
+//
+// Powers the "new releases" feed. Groups new-card additions by
+// (category, set_name, subset, variants) per day. Callers filter by
+// category / set / date range and paginate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CardHedgeAdditionRow {
+  category: string;
+  set_name: string;
+  subset: string | null;
+  variants: string | null;
+  added_date: string;
+  card_count: number;
+}
+
+export interface CardHedgeAdditionsResponse {
+  data: CardHedgeAdditionRow[];
+  page: number;
+  page_size: number;
+}
+
+const ADDITIONS_TTL_SEC = 6 * 3600; // 6h — catalog additions cadence is daily
+
+export async function getAdditionsSummary(opts: {
+  startDate: string;
+  endDate?: string;
+  category?: string;
+  setName?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<CardHedgeAdditionsResponse | null> {
+  const h = headers();
+  if (!h || !opts.startDate) return null;
+  const body: Record<string, unknown> = {
+    start_date: opts.startDate,
+    ...(opts.endDate ? { end_date: opts.endDate } : {}),
+    ...(opts.category ? { category: opts.category } : {}),
+    ...(opts.setName ? { set_name: opts.setName } : {}),
+    page: opts.page ?? 1,
+    page_size: opts.pageSize ?? 50,
+  };
+  const key = cacheKey(
+    "ch:additions-summary",
+    opts.startDate,
+    opts.endDate ?? "",
+    opts.category ?? "",
+    opts.setName ?? "",
+    String(opts.page ?? 1),
+    String(opts.pageSize ?? 50),
+  );
+  return cacheWrap(
+    key,
+    async () => _postAdditionsSummary(body, h),
+    ADDITIONS_TTL_SEC,
+  );
+}
+
+async function _postAdditionsSummary(
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<CardHedgeAdditionsResponse | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/additions-summary`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] additions-summary HTTP ${res.status}`);
+      return null;
+    }
+    const data = (await res.json()) as any;
+    return {
+      data: Array.isArray(data?.data) ? data.data : [],
+      page: typeof data?.page === "number" ? data.page : 1,
+      page_size: typeof data?.page_size === "number" ? data.page_size : 50,
+    };
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] additions-summary threw:`, err?.message ?? err);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CF-CH-CERT-NUMBER-LOOKUP (2026-07-04): cert-number → card + prices
 //
 // Non-image sibling to the getCardDetailsByCertImage / getPricesByCertImage
