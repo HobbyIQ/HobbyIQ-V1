@@ -2611,6 +2611,93 @@ router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("pric
 //
 // Response contract: vendor-neutral. Every field is our own signal.
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CARD-PANEL (2026-07-04): GET /api/compiq/card-panel/:cardId
+//
+// Consolidated single-call surface for the iOS card-detail screen. Returns:
+//   • identity      — cardId, player, set, number, variant, imageUrl
+//   • gradeCurve    — HobbyIQ's per-grade observed values + estimated fallback
+//   • referencePrices — external reference model's per-grade estimates
+//
+// All three fetches fire in parallel; response latency = max(three fetches),
+// not sum. Reduces iOS network round-trips from 3 to 1 on card open.
+//
+// Vendor-neutral: response contains no vendor names. Server-side telemetry
+// tags the reference vendor internally for calibration join analysis.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId } = req.params;
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    const id = cardId.trim();
+    const { buildObservedGradeCurve } = await import(
+      "../services/compiq/observedGradeCurve.service.js"
+    );
+
+    const [identity, gradeCurve, referenceRows] = await Promise.all([
+      // Card metadata — meta cache miss triggers a direct CH lookup so the
+      // panel works for any pinned cardId, not just previously-searched ones.
+      (async () => {
+        const meta = await getCardMetaById(id);
+        if (meta) return meta;
+        const detail = await getCardDetailsById(id);
+        return detail;
+      })(),
+      buildObservedGradeCurve(id),
+      getAllPricesByCard(id),
+    ]);
+
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "card_panel_composed",
+          source: "compiq.card-panel",
+          referenceVendor: "cardhedge",
+          cardId: id,
+          identityResolved: identity !== null && identity !== undefined,
+          gradeCurveSampleCount: gradeCurve?.totalSampleCount ?? 0,
+          referenceRowCount: referenceRows.length,
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry never blocks.
+      }
+    })();
+
+    res.json({
+      success: true,
+      cardId: id,
+      identity: identity
+        ? {
+            cardId: id,
+            player: (identity as any).player ?? null,
+            set: (identity as any).set ?? null,
+            number: (identity as any).number ?? null,
+            variant: (identity as any).variant ?? null,
+            year: (identity as any).year ?? null,
+            imageUrl: (identity as any).image ?? (identity as any).imageUrl ?? null,
+            description: (identity as any).description ?? null,
+          }
+        : null,
+      gradeCurve: {
+        totalSampleCount: gradeCurve.totalSampleCount,
+        computedAt: gradeCurve.computedAt,
+        entries: gradeCurve.entries,
+      },
+      referencePrices: referenceRows.map((r) => ({
+        grade: r.grade,
+        grader: r.grader,
+        referencePrice: r.price,
+        displayOrder: r.display_order,
+      })),
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cardId } = req.params;
