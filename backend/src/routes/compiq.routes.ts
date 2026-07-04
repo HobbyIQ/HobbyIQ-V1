@@ -26,6 +26,10 @@ import {
   // surface and as a calibration signal (CH's guess vs our engine's
   // number vs actual sales).
   getAllPricesByCard,
+  // CF-CH-CERT-NUMBER-LOOKUP (2026-07-04): cert# → card + prices,
+  // non-image path. Used by the /api/compiq/lookup-by-cert route.
+  getFmvByCert,
+  getPricesByCert,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -2644,6 +2648,123 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       totalSampleCount: curve.totalSampleCount,
       computedAt: curve.computedAt,
       entries: curve.entries,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CERT-NUMBER-LOOKUP (2026-07-04): POST /api/compiq/lookup-by-cert
+//
+// Cert-number → card + observed price history. Sibling to /api/compiq/scan
+// (image-based slab OCR shipped 2026-06-30) — this handles the case where
+// iOS has the cert number typed / barcode-scanned but no photo of the slab.
+//
+// Request body: { cert, grader, days? }
+//   grader: "PSA" | "BGS" | "SGC" | "CGC" (case-normalized upstream)
+//   cert:   alphanumeric cert# printed on the slab
+//   days:   optional 1-365 window for price history (default 90)
+//
+// Response: vendor-neutral. Returns identity + observed prices; iOS can
+// hand the returned cardId to /price-by-id for the full pricing panel.
+//
+// Direct capability sale for eventual standalone: our cert lookup path
+// resolves through a third-party today, but the response contract is
+// designed to slot in a direct GemRate/PSA/BGS integration later without
+// touching consumers.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cert, grader, days } = req.body || {};
+    if (!cert || typeof cert !== "string" || !cert.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cert" field' });
+    }
+    if (!grader || typeof grader !== "string" || !grader.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "grader" field' });
+    }
+    const graderNorm = grader.trim().toUpperCase();
+    const validGraders = new Set(["PSA", "BGS", "SGC", "CGC"]);
+    if (!validGraders.has(graderNorm)) {
+      return res.status(400).json({ success: false, error: 'grader must be one of PSA, BGS, SGC, CGC' });
+    }
+    const daysNorm =
+      typeof days === "number" && Number.isFinite(days)
+        ? Math.max(1, Math.min(365, Math.floor(days)))
+        : 90;
+
+    const [fmvResult, pricesResult] = await Promise.all([
+      getFmvByCert(cert.trim(), graderNorm),
+      getPricesByCert(cert.trim(), graderNorm, { days: daysNorm }),
+    ]);
+
+    // Choose the identity + card source with the highest match confidence
+    // between the two responses (or fall through to whichever exists).
+    const card = fmvResult?.card ?? pricesResult?.card ?? null;
+    const certInfo = fmvResult?.cert_info ?? pricesResult?.cert_info ?? null;
+    const matchConfidence =
+      typeof fmvResult?.match_confidence === "number"
+        ? fmvResult.match_confidence
+        : typeof pricesResult?.match_confidence === "number"
+          ? pricesResult.match_confidence
+          : null;
+
+    // Fire-and-forget capture — cert lookups build the corpus of "actual
+    // graded transactions" which is exactly what we need for standalone
+    // grade calibration once we own the sales stream.
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "cert_lookup_captured",
+          source: "compiq.lookup-by-cert",
+          referenceVendor: "cardhedge",
+          grader: graderNorm,
+          cert: cert.trim(),
+          cardId: card?.card_id ?? null,
+          player: card?.player ?? null,
+          grade: certInfo?.grade ?? null,
+          matchConfidence,
+          fmvPrice: fmvResult?.fmv?.price ?? null,
+          priceSampleCount: pricesResult?.prices?.length ?? 0,
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry never blocks.
+      }
+    })();
+
+    if (!card || !certInfo) {
+      return res.json({
+        success: false,
+        error: "Cert not found or card could not be resolved",
+        cert: cert.trim(),
+        grader: graderNorm,
+      });
+    }
+
+    res.json({
+      success: true,
+      cert: certInfo.cert,
+      grader: certInfo.grader,
+      grade: certInfo.grade,
+      card: {
+        cardId: card.card_id,
+        description: card.description ?? null,
+        player: card.player ?? null,
+        set: card.set ?? null,
+        number: card.number ?? null,
+        variant: card.variant ?? null,
+        imageUrl: card.image ?? null,
+      },
+      referencePrice: fmvResult?.fmv?.price ?? null,
+      prices: (pricesResult?.prices ?? []).map((p) => ({
+        price: p.price,
+        date: p.date,
+        saleType: p.sale_type,
+        title: p.title,
+      })),
+      matchConfidence,
+      windowDays: daysNorm,
     });
   } catch (err) {
     return next(err);
