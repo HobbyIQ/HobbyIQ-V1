@@ -21,6 +21,11 @@ import {
   identifyCardByImage,
   getCardDetailsByCertImage,
   type ImageInput,
+  // CF-CH-ALL-PRICES-BY-CARD (2026-07-04): CH's per-grade catalog
+  // estimates for a single card. Used both as an iOS-facing display
+  // surface and as a calibration signal (CH's guess vs our engine's
+  // number vs actual sales).
+  getAllPricesByCard,
 } from "../services/compiq/cardhedge.client.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
@@ -2476,6 +2481,63 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
 // breakdown for a card. iOS renders as a grade picker on the card
 // detail — user sees live comps for grades that have them + projected
 // prices for grades that don't. See services/compiq/perGradeBreakdown.
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-ALL-GRADES-CALIBRATION (2026-07-04): GET /api/compiq/all-grade-prices/:cardId
+//
+// Returns CH's model estimate for a card at every grade in ONE call. The
+// engine treats these as CH's GUESS — not authoritative — and pairs them
+// with our own engine numbers + observed comps downstream for calibration.
+//
+// Design intent (project_engine_owns_signals_not_ch_product): HobbyIQ is
+// building toward standalone. CH is one signal; observed sales are the
+// ground truth; the engine's own model is the primary output. This route
+// surfaces the three side-by-side so iOS can render "our number / CH's
+// number / observed floor" and users can see when we agree vs diverge.
+//
+// The response is CH-scoped only. If callers want calibration side-by-side
+// they should also hit /price-by-id and compare. A future consolidated
+// /calibration route can bundle both if the UX calls for it.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
+  try {
+    const { cardId } = req.params;
+    if (!cardId || typeof cardId !== "string" || !cardId.trim()) {
+      return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
+    }
+    const rows = await getAllPricesByCard(cardId.trim());
+    // Fire-and-forget calibration telemetry — captures CH's per-grade
+    // guesses keyed by cardId so we can later join against observed
+    // outcomes + our engine numbers.
+    void (async () => {
+      try {
+        console.log(JSON.stringify({
+          event: "ch_all_grades_observed",
+          source: "compiq.all-grade-prices",
+          cardId: cardId.trim(),
+          rowCount: rows.length,
+          grades: rows.map((r) => ({
+            grade: r.grade,
+            grader: r.grader,
+            chPrice: r.price,
+          })),
+          timestamp: new Date().toISOString(),
+        }));
+      } catch {
+        // Telemetry must never block the response.
+      }
+    })();
+    res.json({
+      success: true,
+      cardId: cardId.trim(),
+      source: "cardhedge-model-estimate",
+      note: "CH catalog model estimates, not observed sale medians. Treat as one calibration signal alongside engine FMV + recent comps.",
+      prices: rows,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.post("/card-grades", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cardId, cardYear, isAutograph } = req.body || {};

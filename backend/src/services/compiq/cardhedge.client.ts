@@ -334,6 +334,94 @@ export async function getPriceEstimate(cardId: string, grade: string): Promise<C
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-ALL-PRICES-BY-CARD (2026-07-04): /v1/cards/all-prices-by-card
+//
+// Returns the latest CH-catalog price for a card at EVERY grade the card
+// has data for, in one HTTP call. Response shape (from CH docs):
+//   { prices: [{card_id, grade, grader, price, display_order}, ...] }
+//
+// Value: enables an iOS "show me every grade's current CH price for this
+// card" surface in a single call (vs N calls to getPriceEstimate, one per
+// grade). Also useful as a floor / discovery signal when our own
+// gradedEstimates come back thin.
+//
+// Semantics: these are CH's MODEL PRICES (not observed sold comps). Per
+// project memory (project_engine_owns_signals_not_ch_product), we do NOT
+// substitute these for our engine FMV. This is a display / enrichment
+// signal, not a training signal.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CardHedgeGradePriceRow {
+  card_id: string;
+  grade: string;
+  grader: string | null;
+  price: number;
+  /** CH's suggested UI ordering for the grade rail (Raw=-1, PSA10=1, PSA9=2, …).
+   *  Callers can sort by this or by our own convention. Numeric with string
+   *  values normalized. */
+  display_order: number | null;
+}
+
+export async function getAllPricesByCard(
+  cardId: string,
+): Promise<CardHedgeGradePriceRow[]> {
+  const h = headers();
+  if (!h || !cardId) return [];
+  return cacheWrap(
+    cacheKey("ch:all-prices-by-card", cardId),
+    async () => _getAllPricesByCard(cardId, h),
+    FMV_TTL_SEC,
+  );
+}
+
+async function _getAllPricesByCard(
+  cardId: string,
+  h: Record<string, string>,
+): Promise<CardHedgeGradePriceRow[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/cards/all-prices-by-card`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify({ card_id: cardId }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(
+        `[cardhedge.client] all-prices-by-card HTTP ${res.status} for card_id=${cardId}`,
+      );
+      return [];
+    }
+    const body: any = await res.json();
+    const arr: any[] = Array.isArray(body?.prices) ? body.prices : [];
+    return arr
+      .map((p) => {
+        const priceNum = toFloat(p?.price);
+        const displayOrderRaw = p?.display_order;
+        const displayOrder =
+          typeof displayOrderRaw === "number"
+            ? displayOrderRaw
+            : typeof displayOrderRaw === "string" && displayOrderRaw.trim() !== ""
+              ? Number(displayOrderRaw)
+              : NaN;
+        return {
+          card_id: typeof p?.card_id === "string" ? p.card_id : cardId,
+          grade: typeof p?.grade === "string" ? p.grade : "",
+          grader: typeof p?.grader === "string" ? p.grader : null,
+          price: priceNum,
+          display_order: Number.isFinite(displayOrder) ? displayOrder : null,
+        };
+      })
+      .filter((r) => r.grade && r.price > 0);
+  } catch (err: any) {
+    console.warn(
+      `[cardhedge.client] all-prices-by-card threw for card_id=${cardId}:`,
+      err?.message ?? err,
+    );
+    return [];
+  }
+}
+
 // ── BATCH ENDPOINTS (CF-CH-BATCH-PORTFOLIO-REFRESH 2026-06-30) ────────────
 //
 // CH supports up to 100 (card_id, grade) pairs per request for both FMV and
