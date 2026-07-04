@@ -34,6 +34,16 @@ import {
   // Powers /api/compiq/new-releases.
   getAdditionsSummary,
 } from "../services/compiq/cardhedge.client.js";
+// CF-CARDHEDGE-LEARN-CORPUS (2026-07-04): every calibration event that
+// currently only hits console.log also persists to Cosmos so we can
+// query the corpus at scale (train our own model, prove standalone
+// quality vs the reference vendor, spot data gaps).
+import {
+  persistReferencePrices,
+  persistObservedGradeCurve,
+  persistCertLookup,
+  persistCardPanel,
+} from "../services/compiq/cardhedgeLearnCorpus.service.js";
 import { cacheWrap, cacheGet, cacheSet, cacheDel } from "../services/shared/cache.service.js";
 import { CompIQEstimateRequest } from "../types/compiq.types.js";
 // CF-MARKET-READ (2026-06-08): grounded prose summary of the comp pool
@@ -839,6 +849,17 @@ function recordCHReferenceTelemetry(opts: {
         })),
         timestamp: new Date().toISOString(),
       }));
+      persistReferencePrices({
+        source: opts.source,
+        cardId: opts.cardId!,
+        player: opts.player,
+        grades: rows.map((r) => ({
+          grade: r.grade,
+          grader: r.grader,
+          referencePrice: r.price,
+          displayOrder: r.display_order,
+        })),
+      });
     } catch (err) {
       console.warn(
         `[${opts.source}] reference-prices capture failed (non-fatal): ${(err as Error)?.message ?? err}`,
@@ -2573,6 +2594,17 @@ router.get("/all-grade-prices/:cardId", requireSession, requireRateLimited("pric
           })),
           timestamp: new Date().toISOString(),
         }));
+        persistReferencePrices({
+          source: "compiq.all-grade-prices",
+          cardId: cardId.trim(),
+          player: null,
+          grades: rows.map((r) => ({
+            grade: r.grade,
+            grader: r.grader,
+            referencePrice: r.price,
+            displayOrder: r.display_order,
+          })),
+        });
       } catch {
         // Telemetry must never block the response.
       }
@@ -2661,6 +2693,43 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
           referenceRowCount: referenceRows.length,
           timestamp: new Date().toISOString(),
         }));
+        persistCardPanel({
+          source: "compiq.card-panel",
+          cardId: id,
+          identityResolved: identity !== null && identity !== undefined,
+          gradeCurveSampleCount: gradeCurve?.totalSampleCount ?? 0,
+          referenceRowCount: referenceRows.length,
+        });
+        // Bonus: the /card-panel call already loaded a full gradeCurve
+        // and full referencePrices for this card. Persist BOTH here so a
+        // single hit on the consolidated route builds three corpus rows
+        // in Cosmos instead of one.
+        persistReferencePrices({
+          source: "compiq.card-panel",
+          cardId: id,
+          player: (identity as any)?.player ?? null,
+          grades: referenceRows.map((r) => ({
+            grade: r.grade,
+            grader: r.grader,
+            referencePrice: r.price,
+            displayOrder: r.display_order,
+          })),
+        });
+        persistObservedGradeCurve({
+          source: "compiq.card-panel",
+          cardId: id,
+          totalSampleCount: gradeCurve.totalSampleCount,
+          grades: gradeCurve.entries.map((e) => ({
+            grade: e.grade,
+            grader: e.grader,
+            sampleCount: e.sampleCount,
+            observedMedian: e.weightedMedianPrice,
+            valueSource: e.valueSource,
+            estimatedMultiplier: e.estimatedMultiplier,
+            confidenceScore: e.confidenceScore,
+            newestSaleDate: e.newestSaleDate,
+          })),
+        });
       } catch {
         // Telemetry never blocks.
       }
@@ -2785,6 +2854,21 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
           })),
           timestamp: curve.computedAt,
         }));
+        persistObservedGradeCurve({
+          source: "compiq.observed-grade-curve",
+          cardId: curve.cardId,
+          totalSampleCount: curve.totalSampleCount,
+          grades: curve.entries.map((e) => ({
+            grade: e.grade,
+            grader: e.grader,
+            sampleCount: e.sampleCount,
+            observedMedian: e.weightedMedianPrice,
+            valueSource: e.valueSource,
+            estimatedMultiplier: e.estimatedMultiplier,
+            confidenceScore: e.confidenceScore,
+            newestSaleDate: e.newestSaleDate,
+          })),
+        });
       } catch {
         // Telemetry never blocks the response.
       }
@@ -2876,6 +2960,17 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
           priceSampleCount: pricesResult?.prices?.length ?? 0,
           timestamp: new Date().toISOString(),
         }));
+        persistCertLookup({
+          source: "compiq.lookup-by-cert",
+          cardId: card?.card_id ?? null,
+          cert: cert.trim(),
+          grader: graderNorm,
+          grade: certInfo?.grade ?? null,
+          player: card?.player ?? null,
+          matchConfidence,
+          referencePrice: fmvResult?.fmv?.price ?? null,
+          priceSampleCount: pricesResult?.prices?.length ?? 0,
+        });
       } catch {
         // Telemetry never blocks.
       }
