@@ -189,43 +189,123 @@ function autoProjectExtractYearFromSet(setStr: unknown): number | null {
 }
 
 /**
- * CF-PRICE-FALLBACK-LAYER-4-PARALLEL-TIER (2026-07-03): map an autograph
- * variant string to a rough price tier. Layer 4 anchors on a sibling
- * auto's latest sale × trend — but the sibling might be a different
- * parallel than the target (e.g., sibling is Base auto, target is Gold
- * Refractor /50). Applying `target_tier / sibling_tier` as an additional
- * multiplier closes the gap so the projection reflects the target's
- * rarity band.
+ * CF-PRICE-FALLBACK-LAYER-4-PARALLEL-TIER (2026-07-03; recalibrated 2026-07-04):
+ * map an autograph variant string to a price tier. Layer 4 anchors on a sibling
+ * auto's latest sale × trend, then multiplies by (target_tier / anchor_tier)
+ * to close the gap when the target is a rarer parallel than the sibling.
  *
- * Tiers are empirical from CH market observation (2026-07-03):
+ * Tiers below are calibrated from REAL sales data — the CF-VARIANT-TIER-
+ * CALIBRATION sweep (scratchpad/calibrate_deep.mjs → calibrate_deep.json,
+ * 2026-07-04): 15 auto families with base n≥3, 210 parallel probes hitting
+ * /cards/comps for each parallel's raw sales, ratio = parallel_median /
+ * base_median aggregated per normalized variant name. p50 with sample size:
  *
- *   Superfractor /1        →  35×
- *   Gold Refractor /50     →  6×
- *   Red / Orange Refractor →  4× (typically /5-/25 print run)
- *   Blue / Green / Purple  →  2.5× (typically /150-/250)
- *   Regular Refractor      →  1.3× (unnumbered)
- *   Shimmer / Wave / Lava  →  1.4× (die-cut / thematic parallels)
- *   Base / Unknown         →  1×
+ *   Sample counts and observed p50 (calibrate_deep.json):
+ *     refractor              n=14  p50=1.91   (was 1.3× — undershoot fixed)
+ *     purple refractor       n=6   p50=2.30
+ *     green lava refractor   n=5   p50=3.00
+ *     blue                   n=4   p50=2.40
+ *     aqua lava refractor    n=4   p50=2.45
+ *     hta choice refractor   n=4   p50=2.12
+ *     orange                 n=3   p50=5.98
+ *     purple                 n=2   p50=2.47
+ *     green                  n=2   p50=2.46
+ *     green refractor        n=2   p50=3.90
+ *     orange wave            n=2   p50=10.26  (was 1.4× via generic wave — MISS)
+ *     orange shimmer refract n=2   p50=12.25  (was 1.4× via generic shim — MISS)
+ *     gold shimmer           n=2   p50=9.38   (was 6× via gold rule — undershoot)
+ *     black refractor        n=2   p50=21.31  (was unmatched — MISS)
+ *     black                  n=2   p50=18.75  (was unmatched — MISS)
  *
- * When either variant is Base or unrecognized, the ratio collapses to
- * 1× (safe fallback — no under- or over-adjustment). Unknown text
- * defaults to 1× so we never accidentally over-multiply on a novel
- * variant name.
+ * Design rules:
+ *   1. COLOR word dominates finish. Orange > Red > Gold > Blue > Green > Purple.
+ *   2. Finish adjusts tier within a color: refractor > wave > lava > base color.
+ *   3. Specific rules before generic. Superfractor + Black caught before generic
+ *      "refractor" fallthrough; Orange/Red variants caught before "refractor".
+ *   4. Unmatched → 1× (safe fallback).
+ *
+ * Uncalibrated cases kept from the 2026-07-03 hand-tuned map: superfractor 35×
+ * (well-known market convention; no sweep data). LogoFractor 8× (single Hartman
+ * observation p50=7 in the sweep, held at 8 pending more samples).
  */
-function autoProjectVariantTier(variantStr: unknown): number {
+export function autoProjectVariantTier(variantStr: unknown): number {
   if (typeof variantStr !== "string" || variantStr.trim().length === 0) return 1;
   const v = variantStr.toLowerCase();
+
+  // ── Top-tier: superfractors and 1/1s (no calibration data; market convention)
   if (/superfractor|\/1\b/.test(v)) return 35;
-  // CF-VARIANT-TIER-LOGOFRACTOR (2026-07-04): LogoFractor is a top-tier
-  // Bowman parallel (typically /5-/10). Empirical from Hartman CPA-EHA
-  // catalog probe: LogoFractor at $1038 vs Base auto at $130 → 8×.
-  // Ordered BEFORE the generic /refractor/ rule so it hits first.
+
+  // ── Black variants (calibration n=2 refractor p50=21, n=2 base p50=19)
+  if (/black.*(refractor|x-?fractor)/.test(v)) return 21;
+  if (/\bblack\b/.test(v)) return 19;
+
+  // ── Orange variants (n=3 base p50=6, n=2 refractor variants p50=10-12)
+  if (/orange.*(shimmer|refractor|x-?fractor)/.test(v)) return 12;
+  if (/orange.*(wave|lava)/.test(v)) return 10;
+  if (/\borange\b/.test(v)) return 6;
+
+  // ── Red variants (n=1 base p50=10.91; treated as one tier below Orange)
+  if (/red.*(refractor|x-?fractor|lava|wave|shimmer)/.test(v)) return 9;
+  if (/\bred\b/.test(v)) return 8;
+
+  // ── Gold variants (n=2 shimmer p50=9.4, n=1 refractor p50=9.9, n=2 shim-refract p50=5.8)
+  if (/gold.*(shimmer.*refractor|shimmer-refractor)/.test(v)) return 6;
+  if (/gold.*(refractor|x-?fractor|shimmer|wave|lava)/.test(v)) return 9;
+  if (/\bgold\b/.test(v)) return 7;
+
+  // ── LogoFractor (n=1 p50=7 in sweep; held at 8 pending more samples)
   if (/logo.?fractor/.test(v)) return 8;
-  if (/gold.*refract|gold.*wave|gold.*shimmer/.test(v)) return 6;
-  if (/red.*refract|orange.*refract|red.*wave|orange.*wave/.test(v)) return 4;
-  if (/blue.*refract|green.*refract|purple.*refract|blue.*wave|green.*wave|purple.*wave/.test(v)) return 2.5;
-  if (/refractor|x-?fractor|prizm/.test(v)) return 1.3;
-  if (/shimmer|wave|lava|speckle|geometric|raywave/.test(v)) return 1.4;
+
+  // ── Sparkle (n=1 p50=6.29)
+  if (/sparkle/.test(v)) return 6;
+
+  // ── Yellow (n=1 refractor p50=3.8, n=1 x-fractor p50=4)
+  if (/yellow.*(refractor|x-?fractor)/.test(v)) return 4;
+  if (/\byellow\b/.test(v)) return 3;
+
+  // ── Blue variants. Order matters: check specific finish combos (Blue Wave
+  // Refractor, Blue X-Fractor) BEFORE the generic blue-refractor rule, since
+  // "Blue Wave Refractor" also matches `blue.*refractor` and would otherwise
+  // grab the wrong tier. Calibration: n=1 blue refractor p50=5.21, n=1 blue
+  // x-fractor p50=3.6, n=2 blue wave refractor p50=3.5, n=4 plain blue p50=2.40.
+  if (/blue.*(x-?fractor|wave|shimmer|lava)/.test(v)) return 3.5;
+  if (/blue.*refractor/.test(v)) return 5;
+  if (/\bblue\b/.test(v)) return 2.5;
+
+  // ── Green variants. Same ordering rule as Blue — the color-finish combos
+  // hit first because "Green Lava Refractor" contains both "lava" and
+  // "refractor". Calibration: n=2 green refractor p50=3.90, n=5 green
+  // lava-refractor p50=3.00 (high confidence), n=1 grass 3.89, n=2 plain
+  // green p50=2.46.
+  if (/green.*(lava|wave|shimmer|reptilian)/.test(v)) return 3;
+  if (/green.*(refractor|x-?fractor|grass)/.test(v)) return 4;
+  if (/\bgreen\b/.test(v)) return 2.5;
+
+  // ── Purple (n=6 refractor p50=2.30 — very high confidence)
+  if (/purple.*(refractor|x-?fractor|wave|lava)/.test(v)) return 2.3;
+  if (/\bpurple\b/.test(v)) return 2;
+
+  // ── Aqua variants (n=4 lava-refract p50=2.45)
+  if (/aqua/.test(v)) return 2.5;
+
+  // ── HTA Choice (n=4 refractor p50=2.12)
+  if (/hta.*choice/.test(v)) return 2;
+
+  // ── Mini-Diamond (n=1 refractor p50=3.25, n=2 base p50=2.13)
+  if (/mini.?diamond/.test(v)) return 2.5;
+
+  // ── Speckle (n=1 refractor p50=2.32)
+  if (/speckle/.test(v)) return 2.3;
+
+  // ── Reptilian (rare — no strong data; low tier)
+  if (/reptilian/.test(v)) return 2;
+
+  // ── Generic refractor / X-fractor / Prizm (n=14 p50=1.91 — very high confidence)
+  if (/refractor|x-?fractor|prizm/.test(v)) return 2;
+
+  // ── Other die-cut / thematic finishes (no strong color signal)
+  if (/shimmer|wave|lava|geometric|raywave/.test(v)) return 1.5;
+
   return 1;
 }
 
