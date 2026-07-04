@@ -766,7 +766,7 @@ function recordCHReferenceTelemetry(opts: {
     opts.gradingCompany && typeof opts.gradeValue === "number"
       ? `${opts.gradingCompany} ${opts.gradeValue}`
       : "Raw";
-  // FMV drift telemetry
+  // FMV drift telemetry (single-grade drift signal at the user's grade).
   void (async () => {
     try {
       const [chFmv, chEst] = await Promise.all([
@@ -796,6 +796,45 @@ function recordCHReferenceTelemetry(opts: {
     } catch (err) {
       console.warn(
         `[${opts.source}] fmv-drift telemetry failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+  })();
+  // CF-CH-CORPUS-CAPTURE-ALL-GRADES (2026-07-04): every priced request also
+  // captures the FULL per-grade reference-price snapshot to the corpus.
+  // This is the standalone-first play — Drew's directive: "our entire goal
+  // is to learn from CH; when eBay Browse lands we can do it on our own."
+  //
+  // Cost: one CH HTTP per unique card per 12h (getAllPricesByCard cache
+  // TTL matches FMV cache). Fire-and-forget; never blocks the response.
+  //
+  // Value: builds the (cardId, grade, referencePrice, timestamp) corpus
+  // continuously across every /price /price-by-id /bulk request. When
+  // eBay Browse is wired we join against observed per-grade sale medians
+  // → drift-per-grade → prove the standalone engine can operate without
+  // the third-party signal before we retire it. Data collected via server
+  // logs → available in App Insights for offline analysis.
+  void (async () => {
+    try {
+      const rows = await getAllPricesByCard(opts.cardId!);
+      if (rows.length === 0) return;
+      console.log(JSON.stringify({
+        event: "reference_prices_captured",
+        source: opts.source,
+        referenceVendor: "cardhedge",
+        cardId: opts.cardId,
+        player: opts.player,
+        rowCount: rows.length,
+        grades: rows.map((r) => ({
+          grade: r.grade,
+          grader: r.grader,
+          referencePrice: r.price,
+          displayOrder: r.display_order,
+        })),
+        timestamp: new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.warn(
+        `[${opts.source}] reference-prices capture failed (non-fatal): ${(err as Error)?.message ?? err}`,
       );
     }
   })();
