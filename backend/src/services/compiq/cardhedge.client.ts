@@ -1334,6 +1334,126 @@ export async function getPricesByCertImage(
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-CH-CERT-NUMBER-LOOKUP (2026-07-04): cert-number → card + prices
+//
+// Non-image sibling to the getCardDetailsByCertImage / getPricesByCertImage
+// pair. Used when iOS has a cert number typed (or scanned via barcode) but
+// no photo of the slab. Under the hood CH's cert lookup routes through
+// GemRate to resolve card identity → then joins price history.
+//
+// Grader is required (PSA / BGS / SGC / CGC). Cert is the alphanumeric
+// cert# printed on the slab. `days` on prices-by-cert bounds the history
+// window (defaults 90 CH-side).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Shared cert-lookup shape returned by both fmv-by-cert and prices-by-cert. */
+export interface CardHedgeCertInfo {
+  grader: string;
+  cert: string;
+  grade: string;
+  gemrate_id?: string | null;
+  universal_gemrate_id?: string | null;
+  description?: string | null;
+}
+
+export interface CardHedgeCertCard {
+  card_id: string;
+  description?: string | null;
+  player?: string | null;
+  set?: string | null;
+  number?: string | null;
+  variant?: string | null;
+  image?: string | null;
+  category?: string | null;
+}
+
+export interface CardHedgeFmvByCertResponse {
+  cert_info: CardHedgeCertInfo;
+  card: CardHedgeCertCard | null;
+  fmv: CardHedgeFmv | null;
+  card_source?: string | null;
+  match_confidence?: number | null;
+}
+
+export interface CardHedgeCertPriceRow {
+  price: number;
+  date: string | null;
+  source: string | null;
+  sale_type: string | null;
+  title: string | null;
+  url: string | null;
+}
+
+export interface CardHedgePricesByCertResponse {
+  cert_info: CardHedgeCertInfo;
+  card: CardHedgeCertCard | null;
+  prices: CardHedgeCertPriceRow[];
+  card_source?: string | null;
+  match_confidence?: number | null;
+}
+
+const CERT_LOOKUP_TTL_SEC = 24 * 3600; // 24h — cert identity is stable
+
+export async function getFmvByCert(
+  cert: string,
+  grader: string,
+): Promise<CardHedgeFmvByCertResponse | null> {
+  const h = headers();
+  if (!h || !cert || !grader) return null;
+  return cacheWrap(
+    cacheKey("ch:fmv-by-cert", cert, grader),
+    async () => _postCertEndpoint<CardHedgeFmvByCertResponse>("/cards/fmv-by-cert", { cert, grader }, h),
+    CERT_LOOKUP_TTL_SEC,
+  );
+}
+
+export async function getPricesByCert(
+  cert: string,
+  grader: string,
+  opts: { days?: number } = {},
+): Promise<CardHedgePricesByCertResponse | null> {
+  const h = headers();
+  if (!h || !cert || !grader) return null;
+  const days =
+    opts.days != null && Number.isFinite(opts.days)
+      ? Math.max(1, Math.min(365, Math.floor(opts.days)))
+      : 90;
+  return cacheWrap(
+    cacheKey("ch:prices-by-cert", cert, grader, String(days)),
+    async () => _postCertEndpoint<CardHedgePricesByCertResponse>(
+      "/cards/prices-by-cert",
+      { cert, grader, days },
+      h,
+    ),
+    CERT_LOOKUP_TTL_SEC,
+  );
+}
+
+async function _postCertEndpoint<T>(
+  path: string,
+  body: Record<string, unknown>,
+  h: Record<string, string>,
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(`[cardhedge.client] ${path} HTTP ${res.status}`);
+      return null;
+    }
+    const data = (await res.json()) as T;
+    return data;
+  } catch (err: any) {
+    console.warn(`[cardhedge.client] ${path} threw:`, err?.message ?? err);
+    return null;
+  }
+}
+
 export async function identifyCard(query: string): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   const h = headers();
   if (!h || !query.trim()) return null;
