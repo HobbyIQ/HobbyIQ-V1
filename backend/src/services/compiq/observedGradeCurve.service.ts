@@ -15,10 +15,11 @@
 //     consumers see "grade / observedMedian / sampleCount / confidence"
 //     with no vendor branding.
 //
-// Grades covered: Raw, PSA 10, PSA 9, BGS 9.5, SGC 10, CGC 10 — the
-// canonical set that covers >95% of real trading-card grades. The list
-// is deliberately narrow (5-6 grades × 12h cache = 6 CH calls per
-// unique card per 12h) so per-card fetch cost stays bounded.
+// Grades covered: Raw, PSA 10, PSA 9, BGS 10 (Pristine), BGS 9.5, BGS 9,
+// SGC 10, SGC 9, CGC 10, CGC 9 — the canonical set that covers essentially
+// every real trading-card grade users care about. The list is deliberately
+// bounded (10 grades × 12h cache = 10 CH calls per unique card per 12h)
+// so per-card fetch cost stays predictable.
 
 import { getCardSales } from "./cardhedge.client.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
@@ -34,9 +35,15 @@ const CANONICAL_GRADES: ReadonlyArray<{
   { label: "Raw", grader: "Raw", psaEquivalent: 0 },
   { label: "PSA 10", grader: "PSA", psaEquivalent: 10 },
   { label: "PSA 9", grader: "PSA", psaEquivalent: 9 },
+  // BGS 10 is the "Pristine 10" — a rarer tier above PSA 10 in most markets.
+  // BGS 9.5 is the workhorse gem-mint BGS grade.
+  { label: "BGS 10", grader: "BGS", psaEquivalent: 10 },
   { label: "BGS 9.5", grader: "BGS", psaEquivalent: 9.5 },
+  { label: "BGS 9", grader: "BGS", psaEquivalent: 9 },
   { label: "SGC 10", grader: "SGC", psaEquivalent: 10 },
+  { label: "SGC 9", grader: "SGC", psaEquivalent: 9 },
   { label: "CGC 10", grader: "CGC", psaEquivalent: 10 },
+  { label: "CGC 9", grader: "CGC", psaEquivalent: 9 },
 ];
 
 /** One aggregated grade row. Every number is HobbyIQ's own — computed
@@ -202,11 +209,17 @@ async function aggregateGrade(
  */
 const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = {
   "Raw": 1,
+  // 10-tier
   "PSA 10": 8,
-  "PSA 9": 3,
+  "BGS 10": 20, // Pristine — rare, big premium over PSA 10 in most markets
   "BGS 9.5": 5,
   "SGC 10": 5,
   "CGC 10": 5,
+  // 9-tier — all four graders similar; PSA 9 is the reference
+  "PSA 9": 3,
+  "BGS 9": 3,
+  "SGC 9": 3,
+  "CGC 9": 3,
 };
 
 /**

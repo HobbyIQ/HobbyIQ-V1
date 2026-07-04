@@ -35,10 +35,22 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
 
     expect(curve.cardId).toBe("card-1");
     expect(curve.totalSampleCount).toBe(0);
-    // Canonical grades: Raw, PSA 10, PSA 9, BGS 9.5, SGC 10, CGC 10
-    expect(curve.entries).toHaveLength(6);
+    // Canonical grades: Raw + top-tier (PSA 10, BGS 10 Pristine, BGS 9.5,
+    // SGC 10, CGC 10) + 9-tier (PSA 9, BGS 9, SGC 9, CGC 9) = 10 grades.
+    expect(curve.entries).toHaveLength(10);
     const grades = curve.entries.map((e) => e.grade);
-    expect(grades).toEqual(["Raw", "PSA 10", "PSA 9", "BGS 9.5", "SGC 10", "CGC 10"]);
+    expect(grades).toEqual([
+      "Raw",
+      "PSA 10",
+      "PSA 9",
+      "BGS 10",
+      "BGS 9.5",
+      "BGS 9",
+      "SGC 10",
+      "SGC 9",
+      "CGC 10",
+      "CGC 9",
+    ]);
     for (const e of curve.entries) {
       expect(e.sampleCount).toBe(0);
       expect(e.weightedMedianPrice).toBeNull();
@@ -257,6 +269,52 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa10.valueSource).toBe("observed");
       expect(psa10.value).toBe(500);
       expect(psa10.estimatedMultiplier).toBeNull();
+    });
+
+    it("BGS 10 Pristine estimates at Raw×20 (rarest tier gets highest multiplier)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 50, date: daysAgo(1) },
+            { price: 50, date: daysAgo(2) },
+            { price: 50, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const bgs10 = curve.entries.find((e) => e.grade === "BGS 10")!;
+      expect(bgs10.valueSource).toBe("estimated");
+      expect(bgs10.value).toBe(1000); // 50 × 20
+      expect(bgs10.estimatedMultiplier).toBe(20);
+    });
+
+    it("all four 9-tier grades (PSA/BGS/SGC/CGC) fall back to Raw×3", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(1) },
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      for (const g of ["PSA 9", "BGS 9", "SGC 9", "CGC 9"]) {
+        const entry = curve.entries.find((e) => e.grade === g)!;
+        expect(entry.valueSource).toBe("estimated");
+        expect(entry.value).toBe(300); // 100 × 3
+        expect(entry.estimatedMultiplier).toBe(3);
+      }
     });
 
     it("Raw empty → no other grade can estimate, all stay unavailable", async () => {
