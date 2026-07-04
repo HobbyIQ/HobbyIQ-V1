@@ -63,6 +63,23 @@ export interface ObservedGradeEntry {
    *  and recency. n=1 → 0.20; n=3 → 0.50; n=5 → 0.70; n=10 → 0.85;
    *  n=20+ → 1.00. If newest sale > 60d ago, multiply by 0.7. */
   confidenceScore: number;
+  /** CF-GRADE-VALUE-FALLBACK (2026-07-04): the ONE number iOS should
+   *  render in the pill for this grade. Falls back through:
+   *    1. Observed weighted median (when sampleCount > 0)
+   *    2. Estimated: Raw observed × grade multiplier (when observed for
+   *       this grade is null but Raw has data)
+   *    3. null (when neither observed nor Raw is available)
+   *  Consumers should pair this with `valueSource` to render an
+   *  "estimated" badge when it isn't observed. */
+  value: number | null;
+  /** Where `value` came from. `observed` = real weighted median from
+   *  actual sales; `estimated` = projected from Raw × grade multiplier;
+   *  `unavailable` = no data path yielded a number. */
+  valueSource: "observed" | "estimated" | "unavailable";
+  /** When valueSource === "estimated", the multiplier applied to the
+   *  Raw observed median. Null otherwise. Surfaced so iOS can render
+   *  "est. $600 (Raw × 4.0)" if desired. */
+  estimatedMultiplier: number | null;
 }
 
 export interface ObservedGradeCurve {
@@ -148,6 +165,9 @@ async function aggregateGrade(
   const newest = dates.length ? dates[dates.length - 1] : null;
   const oldest = dates.length ? dates[0] : null;
 
+  // Initial pass: observed-only. value + valueSource + estimatedMultiplier
+  // are filled by fillEstimatedFallback below once every grade has been
+  // aggregated (that's when we know if Raw has data to project from).
   return {
     grade: cfg.label,
     grader: cfg.grader,
@@ -159,7 +179,61 @@ async function aggregateGrade(
     newestSaleDate: newest,
     oldestSaleDate: oldest,
     confidenceScore: computeConfidence(sales.length, newest),
+    value: weighted, // finalized in fillEstimatedFallback
+    valueSource: weighted !== null ? "observed" : "unavailable",
+    estimatedMultiplier: null,
   };
+}
+
+/**
+ * CF-GRADE-VALUE-FALLBACK (2026-07-04) — HobbyIQ's grade-multiplier
+ * table for projecting observed Raw → estimated graded value when
+ * observed data at a grade is empty.
+ *
+ * These are ROUGH averages calibrated from Bowman-family autograph
+ * families — Drew's calibration sweep (calibrate_deep.json 2026-07-04)
+ * observed most autographs land in these ballparks. Users see the
+ * estimate labeled "est." in iOS so precision expectations are
+ * calibrated to "ballpark" not "authoritative."
+ *
+ * When the corpus grows enough that we can compute release-specific
+ * multipliers reliably, swap this for computeReleaseGradeCurve()
+ * (gradedPriceProjection.ts:2797). Same swap-point discipline.
+ */
+const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = {
+  "Raw": 1,
+  "PSA 10": 8,
+  "PSA 9": 3,
+  "BGS 9.5": 5,
+  "SGC 10": 5,
+  "CGC 10": 5,
+};
+
+/**
+ * Second-pass fill: for grades where observed sampleCount === 0, project
+ * an estimated value from the Raw observed median × the grade multiplier.
+ * When Raw itself has no observed data, valueSource stays "unavailable".
+ * Confidence stays at the observed-computed value (near-zero when no
+ * observed data) — iOS uses valueSource to render the "estimated" badge,
+ * not the confidence number.
+ */
+function fillEstimatedFallback(entries: ObservedGradeEntry[]): void {
+  const raw = entries.find((e) => e.grade === "Raw");
+  const rawObserved =
+    raw && raw.valueSource === "observed" && raw.weightedMedianPrice !== null
+      ? raw.weightedMedianPrice
+      : null;
+  if (rawObserved === null) return;
+
+  for (const entry of entries) {
+    if (entry.grade === "Raw") continue;
+    if (entry.valueSource === "observed") continue;
+    const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+    if (typeof multiplier !== "number" || multiplier <= 0) continue;
+    entry.value = Math.round(rawObserved * multiplier * 100) / 100;
+    entry.valueSource = "estimated";
+    entry.estimatedMultiplier = multiplier;
+  }
 }
 
 /**
@@ -176,6 +250,9 @@ export async function buildObservedGradeCurve(cardId: string): Promise<ObservedG
   const entries = await Promise.all(
     CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg)),
   );
+  // Second pass — fills value/valueSource on non-observed grades by
+  // projecting from Raw × multiplier. Mutates entries in place.
+  fillEstimatedFallback(entries);
   return {
     cardId,
     entries,

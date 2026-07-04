@@ -183,6 +183,109 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     expect(newestDaysAgo).toBeCloseTo(5, 0);
   });
 
+  describe("CF-GRADE-VALUE-FALLBACK — pill-ready value + valueSource", () => {
+    it("all grades empty → every value is null with valueSource='unavailable'", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockResolvedValue([]);
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("empty-card");
+      for (const e of curve.entries) {
+        expect(e.value).toBeNull();
+        expect(e.valueSource).toBe("unavailable");
+        expect(e.estimatedMultiplier).toBeNull();
+      }
+    });
+
+    it("Raw observed + PSA10 empty → PSA10 fills as estimated Raw×8", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(1) },
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.valueSource).toBe("observed");
+      expect(raw.value).toBe(100);
+
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(psa10.valueSource).toBe("estimated");
+      expect(psa10.value).toBe(800); // 100 × 8
+      expect(psa10.estimatedMultiplier).toBe(8);
+
+      const psa9 = curve.entries.find((e) => e.grade === "PSA 9")!;
+      expect(psa9.valueSource).toBe("estimated");
+      expect(psa9.value).toBe(300); // 100 × 3
+    });
+
+    it("observed grade WINS over estimation even when fallback is available", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(1) },
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+          ] as any;
+        }
+        if (grade === "PSA 10") {
+          return [
+            { price: 500, date: daysAgo(1) },
+            { price: 500, date: daysAgo(2) },
+            { price: 500, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      // Observed pool has 3 sales at $500 — must NOT overwrite with the
+      // $100 × 8 = $800 estimate.
+      expect(psa10.valueSource).toBe("observed");
+      expect(psa10.value).toBe(500);
+      expect(psa10.estimatedMultiplier).toBeNull();
+    });
+
+    it("Raw empty → no other grade can estimate, all stay unavailable", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "PSA 10") {
+          return [{ price: 500, date: daysAgo(1) }] as any;
+        }
+        return []; // Raw empty
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.valueSource).toBe("unavailable");
+      expect(raw.value).toBeNull();
+
+      // PSA10 has observed, so it's observed
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(psa10.valueSource).toBe("observed");
+
+      // Others can't be estimated (no Raw anchor) — stay unavailable
+      const bgs95 = curve.entries.find((e) => e.grade === "BGS 9.5")!;
+      expect(bgs95.valueSource).toBe("unavailable");
+      expect(bgs95.value).toBeNull();
+    });
+  });
+
   it("multi-grade aggregation covers every canonical grade in one build call", async () => {
     const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
     vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
