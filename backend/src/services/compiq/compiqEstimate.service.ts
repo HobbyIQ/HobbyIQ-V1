@@ -2885,10 +2885,17 @@ export function emitPredictionToCorpus(params: {
   // flag. Required field on every emit so analysts can assert the
   // invariant: no row with estimateSource="trend-extrapolated" has a
   // non-null fairMarketValue.
+  // CF-ESTIMATE-SOURCE-VENDOR-NEUTRAL (2026-07-04): renamed from
+  // "cardhedge" / "cardhedge-last-sale" to vendor-neutral "live-market"
+  // / "live-market-last-sale". The old literals should not appear on any
+  // wire response. Consumers that switched on the old values must accept
+  // both during the transition window — see corpusMapping.ts for the
+  // dual-recognition pattern. Historical prediction_log rows written
+  // before this rename still carry the legacy values as string data.
   estimateSource?:
     | "observed"
-    | "cardhedge"
-    | "cardhedge-last-sale"
+    | "live-market"
+    | "live-market-last-sale"
     | "trend-extrapolated"
     | "last-sale"
     | null;
@@ -4851,16 +4858,20 @@ export async function computeEstimate(
       lastSale !== null;
     const isChTrustedSingleSale =
       isChTrustedThin && fetched.comps.length === 1;
+    // CF-ESTIMATE-SOURCE-VENDOR-NEUTRAL (2026-07-04): "cardhedge" →
+    // "live-market", "cardhedge-last-sale" → "live-market-last-sale"
+    // for customer contract vendor-neutrality. Internal fetched.vendor
+    // field stays as-is (never emits on the wire).
     const resolvedEstimateSource:
-      | "cardhedge"
-      | "cardhedge-last-sale"
+      | "live-market"
+      | "live-market-last-sale"
       | "trend-extrapolated"
       | "last-sale"
       | null =
       isChTrustedSingleSale
-        ? "cardhedge-last-sale"
+        ? "live-market-last-sale"
         : isChTrustedThin
-        ? "cardhedge"
+        ? "live-market"
         : trendEstimate !== null
         ? "trend-extrapolated"
         : lastSale !== null
@@ -5988,9 +5999,12 @@ export async function computeEstimate(
     // it for "via N comp(s)" rendering even when FMV lands; corpus row's
     // chProvenance.compCount tracks the source's depth for analytics.
     chCompCount: fetched.vendor === "cardhedge" ? fetched.comps.length : undefined,
+    // CF-ESTIMATE-SOURCE-VENDOR-NEUTRAL (2026-07-04): "cardhedge" →
+    // "live-market". Internal `fetched.vendor === "cardhedge"` gate
+    // keeps its internal name (mechanism identifier — never wire-facing).
     estimateSource:
       typeof fairMarketValue === "number"
-        ? (fetched.vendor === "cardhedge" ? ("cardhedge" as const) : ("observed" as const))
+        ? (fetched.vendor === "cardhedge" ? ("live-market" as const) : ("observed" as const))
         : lastSale !== null
         ? ("last-sale" as const)
         : null,

@@ -125,7 +125,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
     expect(typeof result.fairMarketValue).toBe("number");
     expect(result.fairMarketValue as number).toBeGreaterThan(200);
     expect(result.fairMarketValue as number).toBeLessThan(300);
@@ -164,7 +164,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
       expect.objectContaining({ playerName: "Shohei Ohtani" }),
     );
     // ...but CH didn't serve, so the result is not CardHedge-attributed.
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     // DECOMMISSION INVARIANT: the removed Cardsight floor must not run.
     expect(mockGetPricing).not.toHaveBeenCalled();
     expect(mockGetCardDetail).not.toHaveBeenCalled();
@@ -178,7 +178,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
 
     // No identity bridge → CH provenance fn is not even attempted.
     expect(mockProvenance).not.toHaveBeenCalled();
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     // DECOMMISSION INVARIANT.
     expect(mockGetPricing).not.toHaveBeenCalled();
     expect(mockGetCardDetail).not.toHaveBeenCalled();
@@ -205,7 +205,7 @@ describe("CF-CARDSIGHT-REMOVAL — pinned-id path is CardHedge-only", () => {
     // Pinned branch taken → provenance fn used, free-text router NOT used.
     expect(mockProvenance).toHaveBeenCalledTimes(1);
     expect(mockFindCompsRouted).not.toHaveBeenCalled();
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
     expect(mockGetPricing).not.toHaveBeenCalled();
     expect(mockGetCardDetail).not.toHaveBeenCalled();
   });

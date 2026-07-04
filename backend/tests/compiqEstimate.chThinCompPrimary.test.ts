@@ -150,7 +150,7 @@ describe("CF-CH-THIN-COMP-PRIMARY — Blue X-Fractor /150 (CH n=1, CS base-only 
     expect((result as any).source).not.toBe("variant-mismatch");
 
     // estimateSource is the NEW value for n==1 CH-trusted.
-    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.estimateSource).toBe("live-market-last-sale");
 
     // FMV NOT presented (Drew: "Do NOT present n=1 as FMV").
     expect(result.fairMarketValue).toBeNull();
@@ -228,7 +228,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.estimateSource).toBe("live-market-last-sale");
     expect(result.fairMarketValue).toBeNull();
     expect((result as any).lastSale?.price).toBe(450);
     expect((result as any).chCompCount).toBe(1);
@@ -262,7 +262,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
 
     // The prod-case assertion: source IS "cardhedge-last-sale" on the
     // fresh path now, not null / "no-recent-comps" / "live".
-    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.estimateSource).toBe("live-market-last-sale");
     expect(result.fairMarketValue).toBeNull();
     expect((result as any).lastSale?.price).toBe(450);
     expect((result as any).chCompCount).toBe(1);
@@ -290,7 +290,7 @@ describe("CF-CH-THIN-COMP-FRESH-SALE — CH n=1 trusted reaches cardhedge-last-s
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge-last-sale");
+    expect(result.estimateSource).toBe("live-market-last-sale");
     expect((result as any).lastSale?.price).toBe(450);
   });
 });
@@ -324,7 +324,7 @@ describe("CF-CH-THIN-COMP-PRIMARY — CH trusted n>=2 (legacy 'cardhedge' branch
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
     expect(typeof result.fairMarketValue).toBe("number");
     expect(result.fairMarketValue as number).toBeGreaterThan(400);
     expect(result.fairMarketValue as number).toBeLessThan(500);
@@ -364,8 +364,8 @@ describe("CF-CH-THIN-COMP-PRIMARY — FLOOR PRESERVED: CH no match → Cardsight
     // CRITICAL FLOOR INVARIANT: estimateSource must NOT be the CH-thin path
     // when CH didn't actually serve. The bypass only fires when CH HAS a
     // trusted match.
-    expect(result.estimateSource).not.toBe("cardhedge-last-sale");
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market-last-sale");
+    expect(result.estimateSource).not.toBe("live-market");
 
     // No CH provenance on the response either.
     expect((result as any).chCardId).toBeUndefined();

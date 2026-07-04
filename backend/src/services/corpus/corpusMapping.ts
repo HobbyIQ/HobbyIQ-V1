@@ -140,10 +140,20 @@ export function corpusEntryFromPricingResult(
   // estimateSource values synthesize the same chProvenance block; any
   // other value (or undefined) emits a Cardsight-shape row byte-identical
   // to pre-P6 behavior (additive invariant preserved).
-  const isChSource =
+  // CF-ESTIMATE-SOURCE-VENDOR-NEUTRAL (2026-07-04): the enum was renamed
+  // from "cardhedge" / "cardhedge-last-sale" to "live-market" /
+  // "live-market-last-sale" for customer-contract vendor-neutrality. This
+  // dual-recognition preserves corpus mapping continuity for historical
+  // rows (still carrying legacy values) AND for any inflight requests
+  // during the deploy transition. Once corpus is fully re-emitted with
+  // new values (30-day retention window), the legacy string checks can
+  // be dropped.
+  const isLiveMarketSource =
+    args.result?.estimateSource === "live-market" ||
+    args.result?.estimateSource === "live-market-last-sale" ||
     args.result?.estimateSource === "cardhedge" ||
     args.result?.estimateSource === "cardhedge-last-sale";
-  if (isChSource) {
+  if (isLiveMarketSource) {
     chProvenance = { vendor: "cardhedge" };
     if (typeof args.result?.chCardId === "string" && args.result.chCardId) {
       chProvenance.chCardId = args.result.chCardId;

@@ -140,7 +140,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge wins through the REAL seam", (
     });
 
     // Engine-level: CH attribution all the way through.
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
     expect(typeof result.fairMarketValue).toBe("number");
     expect(result.chCardId).toBe(HARTMAN_CH_ID);
     expect(result.chTrustReason).toBe("prices_by_card_honest");
@@ -212,7 +212,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
     });
 
     // Floor invariant: CH attribution must NOT appear.
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     expect(result.chCardId).toBeUndefined();
     expect(result.chTrustReason).toBeUndefined();
 
@@ -252,7 +252,7 @@ describe("CF-CH-P8-TESTS END-TO-END — CardHedge blob → Cardsight floor throu
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     // Real router: bridge rejected on confidence; getTrustedComps was NEVER called.
     expect(mockIdentifyCard).toHaveBeenCalled();
     expect(mockGetTrustedComps).not.toHaveBeenCalled();

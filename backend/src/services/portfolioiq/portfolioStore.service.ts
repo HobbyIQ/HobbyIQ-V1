@@ -1528,7 +1528,14 @@ export function buildChLastSalePatch(
     modelExpectation?: unknown;
     modelSignal?: unknown;
   } | null | undefined;
-  if (!est || est.estimateSource !== "cardhedge-last-sale") return {};
+  // CF-ESTIMATE-SOURCE-VENDOR-NEUTRAL (2026-07-04): renamed from
+  // "cardhedge-last-sale" → "live-market-last-sale". Accept both so
+  // historical holdings written pre-rename still resolve correctly.
+  if (
+    !est
+    || (est.estimateSource !== "live-market-last-sale"
+        && est.estimateSource !== "cardhedge-last-sale")
+  ) return {};
   const rawPrice = est.lastSale?.price;
   if (typeof rawPrice !== "number" || !Number.isFinite(rawPrice) || rawPrice <= 0) {
     return {};

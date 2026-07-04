@@ -115,7 +115,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
       pinnedAuthoritative: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
     expect(typeof result.fairMarketValue).toBe("number");
     // CH median is ~242; FMV should be in the CH price family, not the unused Cardsight stub.
     expect(result.fairMarketValue as number).toBeGreaterThan(200);
@@ -163,7 +163,7 @@ describe("CF-CH-P5-PRIMARY — pinned-id path: CH-trusted → estimateSource='ca
     // estimateSource must reflect CH-served data (either the "cardhedge" success
     // mapping when fmv is numeric, OR — for engine-deemed-thin pools — the
     // thin-comp "cardhedge" branch in the trend-extrapolated fallback).
-    expect(["cardhedge", "last-sale", null]).toContain(result.estimateSource);
+    expect(["live-market", "last-sale", null]).toContain(result.estimateSource);
     if (result.estimateSource === "cardhedge") {
       expect(result.fairMarketValue as number).toBeGreaterThan(400);
       expect(result.fairMarketValue as number).toBeLessThan(500);
@@ -193,7 +193,7 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
     });
 
     // Floor invariant: estimateSource must NOT be "cardhedge" when CH didn't serve.
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     expect(typeof result.fairMarketValue === "number" || result.fairMarketValue === null).toBe(true);
   });
 
@@ -207,7 +207,7 @@ describe("CF-CH-P5-PRIMARY — FLOOR INVARIANT: CH miss → Cardsight path byte-
       // NO playerName, NO cardYear, NO product — pure pinned-cardId call.
     });
 
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
     // The provenance-aware router fn should NOT be called when there's no
     // identity hint.
     expect(mockGetCardSalesRoutedWithProvenance).not.toHaveBeenCalled();
@@ -242,7 +242,7 @@ describe("CF-CH-P5-PRIMARY — free-text path: vendor detected from findCompsRou
       isAuto: true,
     });
 
-    expect(result.estimateSource).toBe("cardhedge");
+    expect(result.estimateSource).toBe("live-market");
   });
 
   it("findCompsRouted returns CS sales → response.estimateSource='observed' (NOT 'cardhedge')", async () => {
@@ -266,6 +266,6 @@ describe("CF-CH-P5-PRIMARY — free-text path: vendor detected from findCompsRou
       product: "Bowman Chrome",
     });
 
-    expect(result.estimateSource).not.toBe("cardhedge");
+    expect(result.estimateSource).not.toBe("live-market");
   });
 });
