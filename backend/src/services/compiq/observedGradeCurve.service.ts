@@ -494,8 +494,8 @@ async function deriveWeeklyRate(
       signalSource = "matched-cohort-on-demand";
       cohortSize = onDemand.cohort.length;
     }
+    // Intentionally no `else if raw-weekly` — Brito Blue X-Fractor bug.
   }
-
   // CF-PARALLEL-TIER-TREND (2026-07-05): third fallback for long-tail
   // players whose CH matched-cohort can't be built. Uses the SAME
   // matched-cohort math but at the TIER level — compares Blue X-Fractor
