@@ -158,6 +158,16 @@ export interface ObservedGradeCurve {
   totalSampleCount: number;
   /** ISO timestamp when this curve was computed. */
   computedAt: string;
+  /** CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): the momentum rate that
+   *  drove all per-grade trajectory calculations. Surfaced on the curve
+   *  itself (not just individual entries) so callers can persist it to
+   *  the corpus for calibration analysis. Null when trajectory skipped. */
+  ratePerWeek: number | null;
+  signalSource:
+    | "matched-cohort-cached"
+    | "matched-cohort-on-demand"
+    | "raw-weekly"
+    | null;
 }
 
 /**
@@ -319,7 +329,12 @@ const FRESH_COMP_THRESHOLD_DAYS = 14;
  *
  * Bounded to ±10%/week regardless of source.
  */
-async function deriveWeeklyRate(playerName: string): Promise<number | null> {
+interface RateDerivation {
+  cappedRate: number;
+  signalSource: "matched-cohort-cached" | "matched-cohort-on-demand" | "raw-weekly";
+}
+
+async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | null> {
   let snapshot;
   try {
     snapshot = await getPlayerTrendSnapshot(playerName, 5);
@@ -329,7 +344,7 @@ async function deriveWeeklyRate(playerName: string): Promise<number | null> {
   if (!snapshot) return null;
 
   let rawRate: number | null = null;
-  let signalSource: "matched-cohort-cached" | "matched-cohort-on-demand" | "raw-weekly" | null = null;
+  let signalSource: RateDerivation["signalSource"] | null = null;
   let cohortSize: number | null = null;
 
   // Prefer matched-cohort medianRatio when the pre-computed cache has it.
@@ -363,7 +378,7 @@ async function deriveWeeklyRate(playerName: string): Promise<number | null> {
       signalSource = "raw-weekly";
     }
   }
-  if (rawRate === null) return null;
+  if (rawRate === null || signalSource === null) return null;
 
   const capped = Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
 
@@ -381,7 +396,7 @@ async function deriveWeeklyRate(playerName: string): Promise<number | null> {
     cohortSize,
   }));
 
-  return capped;
+  return { cappedRate: capped, signalSource };
 }
 
 /**
@@ -436,10 +451,11 @@ async function tryMatchedCohortOnDemand(playerName: string): Promise<
 async function applyTrajectory(
   entries: ObservedGradeEntry[],
   playerName: string | null,
-): Promise<void> {
-  if (!playerName) return;
-  const rate = await deriveWeeklyRate(playerName);
-  if (rate === null) return;
+): Promise<RateDerivation | null> {
+  if (!playerName) return null;
+  const derivation = await deriveWeeklyRate(playerName);
+  if (derivation === null) return null;
+  const rate = derivation.cappedRate;
 
   for (const entry of entries) {
     if (entry.valueSource !== "observed") continue;
@@ -468,6 +484,8 @@ async function applyTrajectory(
     entry.predictedPriceRangeLow = Math.round(predicted * (1 - PREDICTED_RANGE_PCT) * 100) / 100;
     entry.predictedPriceRangeHigh = Math.round(predicted * (1 + PREDICTED_RANGE_PCT) * 100) / 100;
   }
+
+  return derivation;
 }
 
 /**
@@ -550,12 +568,16 @@ export async function buildObservedGradeCurve(
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
   // player weekly buckets, then compute Market Value (today) + Predicted
   // (30d) for every observed entry so all three numbers sit on one line.
-  await applyTrajectory(entries, opts.playerName ?? null);
+  // Returns the derivation so it can be persisted to the corpus for
+  // later calibration analysis (CF-CORPUS-TRAJECTORY-FIELDS 2026-07-05).
+  const derivation = await applyTrajectory(entries, opts.playerName ?? null);
   return {
     cardId,
     entries,
     totalSampleCount: entries.reduce((sum, e) => sum + e.sampleCount, 0),
     computedAt: new Date().toISOString(),
+    ratePerWeek: derivation?.cappedRate ?? null,
+    signalSource: derivation?.signalSource ?? null,
   };
 }
 
@@ -628,6 +650,8 @@ export async function buildObservedGradeCurvesBulk(
           })),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),
+          ratePerWeek: null,
+          signalSource: null,
         });
       }
     }

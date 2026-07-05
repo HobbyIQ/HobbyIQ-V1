@@ -117,6 +117,21 @@ interface ReferencePricesDoc extends BaseCorpusDoc {
 interface ObservedGradeCurveDoc extends BaseCorpusDoc {
   eventType: "observed_grade_curve";
   totalSampleCount: number;
+  /** CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): the momentum rate that
+   *  drove all per-grade Market Value + Predicted calculations for this
+   *  card, at capture time. Enables the calibration loop — 30 days from
+   *  now we can query "when ratePerWeek was X, how far off were our
+   *  predictions vs the actual sales that landed?"
+   *  Null when no signal was available (trajectory skipped). */
+  ratePerWeek: number | null;
+  /** Which signal produced ratePerWeek. Nullable when trajectory skipped.
+   *  "matched-cohort-cached" is what we want to see; "raw-weekly" is
+   *  the known-buggy fallback. */
+  signalSource:
+    | "matched-cohort-cached"
+    | "matched-cohort-on-demand"
+    | "raw-weekly"
+    | null;
   grades: Array<{
     grade: string;
     grader: string | null;
@@ -126,6 +141,16 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
     estimatedMultiplier: number | null;
     confidenceScore: number;
     newestSaleDate: string | null;
+    /** CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): the trajectory
+     *  predictions we ISSUED at capture time. Later joined against
+     *  actual observed sales to measure calibration error. */
+    daysSinceNewestSale: number | null;
+    trendAdjustedValue: number | null;      // Market Value TODAY
+    trendAdjustmentPct: number | null;
+    predictedPriceAt30d: number | null;     // Predicted 30d forward
+    predictedPricePct: number | null;
+    predictedPriceRangeLow: number | null;  // ±15% confidence band
+    predictedPriceRangeHigh: number | null;
   }>;
 }
 
@@ -210,6 +235,15 @@ export function persistObservedGradeCurve(input: {
   source: string;
   cardId: string;
   totalSampleCount: number;
+  /** CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): momentum rate + signal
+   *  source that drove trajectory calculations. Optional — callers that
+   *  don't have trajectory context pass undefined. */
+  ratePerWeek?: number | null;
+  signalSource?:
+    | "matched-cohort-cached"
+    | "matched-cohort-on-demand"
+    | "raw-weekly"
+    | null;
   grades: Array<{
     grade: string;
     grader: string | null;
@@ -219,6 +253,13 @@ export function persistObservedGradeCurve(input: {
     estimatedMultiplier: number | null;
     confidenceScore: number;
     newestSaleDate: string | null;
+    daysSinceNewestSale?: number | null;
+    trendAdjustedValue?: number | null;
+    trendAdjustmentPct?: number | null;
+    predictedPriceAt30d?: number | null;
+    predictedPricePct?: number | null;
+    predictedPriceRangeLow?: number | null;
+    predictedPriceRangeHigh?: number | null;
   }>;
 }): void {
   const ts = Date.now();
@@ -232,7 +273,25 @@ export function persistObservedGradeCurve(input: {
     ts_iso: new Date(ts).toISOString(),
     docType: "cardhedgeLearnCorpus",
     totalSampleCount: input.totalSampleCount,
-    grades: input.grades,
+    ratePerWeek: input.ratePerWeek ?? null,
+    signalSource: input.signalSource ?? null,
+    grades: input.grades.map((g) => ({
+      grade: g.grade,
+      grader: g.grader,
+      sampleCount: g.sampleCount,
+      observedMedian: g.observedMedian,
+      valueSource: g.valueSource,
+      estimatedMultiplier: g.estimatedMultiplier,
+      confidenceScore: g.confidenceScore,
+      newestSaleDate: g.newestSaleDate,
+      daysSinceNewestSale: g.daysSinceNewestSale ?? null,
+      trendAdjustedValue: g.trendAdjustedValue ?? null,
+      trendAdjustmentPct: g.trendAdjustmentPct ?? null,
+      predictedPriceAt30d: g.predictedPriceAt30d ?? null,
+      predictedPricePct: g.predictedPricePct ?? null,
+      predictedPriceRangeLow: g.predictedPriceRangeLow ?? null,
+      predictedPriceRangeHigh: g.predictedPriceRangeHigh ?? null,
+    })),
   };
   void upsertOrWarn(doc);
 }

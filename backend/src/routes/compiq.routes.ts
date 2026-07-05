@@ -2722,10 +2722,16 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
             displayOrder: r.display_order,
           })),
         });
+        // CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): persist ratePerWeek
+        // + signalSource + per-grade trajectory predictions so the corpus
+        // has enough surface area to compute prediction error against
+        // future observed sales.
         persistObservedGradeCurve({
           source: "compiq.card-panel",
           cardId: id,
           totalSampleCount: gradeCurve.totalSampleCount,
+          ratePerWeek: gradeCurve.ratePerWeek,
+          signalSource: gradeCurve.signalSource,
           grades: gradeCurve.entries.map((e) => ({
             grade: e.grade,
             grader: e.grader,
@@ -2735,6 +2741,13 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
             estimatedMultiplier: e.estimatedMultiplier,
             confidenceScore: e.confidenceScore,
             newestSaleDate: e.newestSaleDate,
+            daysSinceNewestSale: e.daysSinceNewestSale,
+            trendAdjustedValue: e.trendAdjustedValue,
+            trendAdjustmentPct: e.trendAdjustmentPct,
+            predictedPriceAt30d: e.predictedPriceAt30d,
+            predictedPricePct: e.predictedPricePct,
+            predictedPriceRangeLow: e.predictedPriceRangeLow,
+            predictedPriceRangeHigh: e.predictedPriceRangeHigh,
           })),
         });
       } catch {
@@ -2828,6 +2841,8 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
             source: "compiq.observed-grade-curves-bulk",
             cardId: curve.cardId,
             totalSampleCount: curve.totalSampleCount,
+            ratePerWeek: curve.ratePerWeek,
+            signalSource: curve.signalSource,
             grades: curve.entries.map((e) => ({
               grade: e.grade,
               grader: e.grader,
@@ -2837,6 +2852,13 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
               estimatedMultiplier: e.estimatedMultiplier,
               confidenceScore: e.confidenceScore,
               newestSaleDate: e.newestSaleDate,
+              daysSinceNewestSale: e.daysSinceNewestSale,
+              trendAdjustedValue: e.trendAdjustedValue,
+              trendAdjustmentPct: e.trendAdjustmentPct,
+              predictedPriceAt30d: e.predictedPriceAt30d,
+              predictedPricePct: e.predictedPricePct,
+              predictedPriceRangeLow: e.predictedPriceRangeLow,
+              predictedPriceRangeHigh: e.predictedPriceRangeHigh,
             })),
           });
         }
@@ -2896,6 +2918,8 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
           source: "compiq.observed-grade-curve",
           cardId: curve.cardId,
           totalSampleCount: curve.totalSampleCount,
+          ratePerWeek: curve.ratePerWeek,
+          signalSource: curve.signalSource,
           grades: curve.entries.map((e) => ({
             grade: e.grade,
             grader: e.grader,
@@ -2905,6 +2929,13 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
             estimatedMultiplier: e.estimatedMultiplier,
             confidenceScore: e.confidenceScore,
             newestSaleDate: e.newestSaleDate,
+            daysSinceNewestSale: e.daysSinceNewestSale,
+            trendAdjustedValue: e.trendAdjustedValue,
+            trendAdjustmentPct: e.trendAdjustmentPct,
+            predictedPriceAt30d: e.predictedPriceAt30d,
+            predictedPricePct: e.predictedPricePct,
+            predictedPriceRangeLow: e.predictedPriceRangeLow,
+            predictedPriceRangeHigh: e.predictedPriceRangeHigh,
           })),
         });
       } catch {
