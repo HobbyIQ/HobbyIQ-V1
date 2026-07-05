@@ -130,6 +130,7 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
   signalSource:
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
+    | "parallel-tier"
     | "raw-weekly"
     | null;
   grades: Array<{
@@ -244,6 +245,7 @@ export function persistObservedGradeCurve(input: {
   signalSource?:
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
+    | "parallel-tier"
     | "raw-weekly"
     | null;
   grades: Array<{

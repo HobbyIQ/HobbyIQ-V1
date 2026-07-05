@@ -48,6 +48,16 @@ import {
   readMatchedCohortFromCache,
   writeMatchedCohortToCache,
 } from "../playerTrend/matchedCohortCache.js";
+// CF-PARALLEL-TIER-TREND (2026-07-05): third-tier trajectory fallback
+// for cards where matched-cohort is genuinely unavailable (long-tail
+// prospects, thin CH history). Computes tier-level momentum across all
+// cards in the same (year, set, parallel) cohort. Structurally
+// mix-bias-free because the tier definition IS the compositional guard.
+import {
+  getParallelTierTrend,
+  type ParallelTierKey,
+} from "../playerTrend/parallelTierTrend.service.js";
+export type { ParallelTierKey } from "../playerTrend/parallelTierTrend.service.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -179,6 +189,7 @@ export interface ObservedGradeCurve {
   signalSource:
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
+    | "parallel-tier"
     | "raw-weekly"
     | null;
 }
@@ -394,6 +405,14 @@ const ESTIMATED_PREDICTED_RANGE_PCT = 0.25;
 /** Minimum days since sale before we apply trajectory — a fresh comp
  *  doesn't need adjustment (would just add noise from partial weeks). */
 const FRESH_COMP_THRESHOLD_DAYS = 14;
+/** CF-PARALLEL-TIER-FRESHNESS (2026-07-05, Drew): parallel-tier signal
+ *  is only trustworthy when the tier has genuinely recent activity.
+ *  If the latest same-tier sale is older than this threshold, the
+ *  tier is stale and we discard the signal (fall through to null
+ *  rather than extrapolating from cold data). Drew's rule 2026-07-05:
+ *  "if like parallels sell very recently that's fine, but if it is
+ *  over 4 weeks ago, they become stale". */
+const PARALLEL_TIER_MAX_STALENESS_DAYS = 28;
 
 /**
  * Derive a bounded per-week rate from the player trend snapshot.
@@ -429,17 +448,23 @@ const FRESH_COMP_THRESHOLD_DAYS = 14;
  */
 interface RateDerivation {
   cappedRate: number;
-  signalSource: "matched-cohort-cached" | "matched-cohort-on-demand" | "raw-weekly";
+  signalSource:
+    | "matched-cohort-cached"
+    | "matched-cohort-on-demand"
+    | "parallel-tier"
+    | "raw-weekly";
 }
 
-async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | null> {
+async function deriveWeeklyRate(
+  playerName: string,
+  parallelTierKey: ParallelTierKey | null,
+): Promise<RateDerivation | null> {
   let snapshot;
   try {
     snapshot = await getPlayerTrendSnapshot(playerName, 5);
   } catch {
-    return null;
+    snapshot = null;
   }
-  if (!snapshot) return null;
 
   let rawRate: number | null = null;
   let signalSource: RateDerivation["signalSource"] | null = null;
@@ -447,18 +472,18 @@ async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | nu
 
   // Prefer matched-cohort medianRatio when the pre-computed cache has it.
   if (
-    snapshot.matchedCohort &&
+    snapshot?.matchedCohort &&
     Number.isFinite(snapshot.matchedCohort.medianRatio) &&
     snapshot.matchedCohort.cohortSize >= 2
   ) {
     rawRate = snapshot.matchedCohort.medianRatio - 1;
     signalSource = "matched-cohort-cached";
     cohortSize = snapshot.matchedCohort.cohortSize;
-  } else {
+  } else if (snapshot) {
     // Cache miss — compute matched-cohort on-demand. Cost is ~30 CH
     // calls (one prices-by-card per card); result cached 24h so the
     // next request skips the compute. Silently fails on any error —
-    // no raw-weekly fallback (see CF-KILL-RAW-WEEKLY note above).
+    // trajectory falls through to parallel-tier or null.
     const onDemand = await tryMatchedCohortOnDemand(playerName);
     if (
       onDemand &&
@@ -471,14 +496,57 @@ async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | nu
     }
     // Intentionally no `else if raw-weekly` — Brito Blue X-Fractor bug.
   }
+  // CF-PARALLEL-TIER-TREND (2026-07-05): third fallback for long-tail
+  // players whose CH matched-cohort can't be built. Uses the SAME
+  // matched-cohort math but at the TIER level — compares Blue X-Fractor
+  // /150 autos to other Blue X-Fractor /150 autos. Drew's directive:
+  // "why wouldn't we look at the overall card market and match like
+  // cards to find the trends?" Structural mix-bias-freeness because
+  // the tier definition IS the compositional guard.
+  //
+  // Freshness gate (Drew, 2026-07-05): only trust the tier signal when
+  // its latest sale is within PARALLEL_TIER_MAX_STALENESS_DAYS. A tier
+  // whose most recent activity is 6 weeks old is extrapolating from
+  // cold data — better to emit no signal than a stale one.
+  if (rawRate === null && parallelTierKey) {
+    const tierTrend = await getParallelTierTrend(parallelTierKey).catch(() => null);
+    if (
+      tierTrend &&
+      Number.isFinite(tierTrend.medianRatio ?? NaN) &&
+      tierTrend.cohort.length >= 2
+    ) {
+      // latestWeekEnd is an ISO date; parse safely (fallback to 0 → stale)
+      const latestMs = Date.parse(tierTrend.latestWeekEnd ?? "");
+      const nowMs = Date.now();
+      const staleDays = Number.isFinite(latestMs)
+        ? (nowMs - latestMs) / (24 * 3600 * 1000)
+        : Infinity;
+      if (staleDays <= PARALLEL_TIER_MAX_STALENESS_DAYS) {
+        rawRate = (tierTrend.medianRatio as number) - 1;
+        signalSource = "parallel-tier";
+        cohortSize = tierTrend.cohort.length;
+      } else {
+        console.log(JSON.stringify({
+          event: "parallel_tier_trend_stale",
+          source: "observedGradeCurve",
+          player: playerName,
+          latestWeekEnd: tierTrend.latestWeekEnd,
+          staleDays: Math.round(staleDays),
+          threshold: PARALLEL_TIER_MAX_STALENESS_DAYS,
+        }));
+      }
+    }
+  }
+
   if (rawRate === null || signalSource === null) {
     // Observability: log the miss so ops can see coverage gaps in
-    // matched-cohort and prioritize which players to backfill.
+    // matched-cohort AND parallel-tier and prioritize backfill.
     console.log(JSON.stringify({
       event: "trajectory_rate_no_signal",
       source: "observedGradeCurve",
       player: playerName,
-      reason: "no matched-cohort (cached or on-demand)",
+      hadParallelTierKey: !!parallelTierKey,
+      reason: "no matched-cohort AND no parallel-tier trend",
     }));
     return null;
   }
@@ -554,9 +622,13 @@ async function tryMatchedCohortOnDemand(playerName: string): Promise<
 async function applyTrajectory(
   entries: ObservedGradeEntry[],
   playerName: string | null,
+  parallelTierKey: ParallelTierKey | null,
 ): Promise<RateDerivation | null> {
-  if (!playerName) return null;
-  const derivation = await deriveWeeklyRate(playerName);
+  // Both a playerName AND a parallelTierKey can independently unlock
+  // trajectory now — even a cardId with no playerName can get a rate
+  // via parallel-tier alone. So only bail when BOTH are missing.
+  if (!playerName && !parallelTierKey) return null;
+  const derivation = await deriveWeeklyRate(playerName ?? "", parallelTierKey);
   if (derivation === null) return null;
   const rate = derivation.cappedRate;
 
@@ -717,6 +789,14 @@ export async function buildObservedGradeCurve(
      *  grade→price map here. Callers without it can omit — falls
      *  through to the multiplier as before. */
     referencePriceByGrade?: ReadonlyMap<string, number>;
+    /** CF-PARALLEL-TIER-TREND (2026-07-05): when provided, unlocks the
+     *  same-parallel-tier trajectory fallback for long-tail players
+     *  whose CH matched-cohort can't be built. `(year, set, variant)`
+     *  identifies the tier — e.g. `(2026, "Bowman Chrome", "Blue
+     *  X-Fractor")`. Callers with card meta on hand (routes fetching
+     *  getCardMetaById) should pass this; callers without it can omit
+     *  and trajectory will still fire when matched-cohort works. */
+    parallelTierKey?: ParallelTierKey | null;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
@@ -730,7 +810,11 @@ export async function buildObservedGradeCurve(
   // (30d) for every observed entry so all three numbers sit on one line.
   // Returns the derivation so it can be persisted to the corpus for
   // later calibration analysis (CF-CORPUS-TRAJECTORY-FIELDS 2026-07-05).
-  const derivation = await applyTrajectory(entries, opts.playerName ?? null);
+  const derivation = await applyTrajectory(
+    entries,
+    opts.playerName ?? null,
+    opts.parallelTierKey ?? null,
+  );
   return {
     cardId,
     entries,

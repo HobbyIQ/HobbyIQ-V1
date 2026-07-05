@@ -26,6 +26,11 @@ vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
   readMatchedCohortFromCache: vi.fn(async () => null),
   writeMatchedCohortToCache: vi.fn(async () => undefined),
 }));
+// CF-PARALLEL-TIER-TREND (2026-07-05): third-tier fallback. Mock returns
+// null → parallel-tier skips silently by default; specific tests override.
+vi.mock("../src/services/playerTrend/parallelTierTrend.service.js", () => ({
+  getParallelTierTrend: vi.fn(async () => null),
+}));
 
 // Deterministic "now" so recency-based confidence tests are stable.
 const FAKE_NOW = new Date("2026-07-04T12:00:00.000Z");
@@ -799,6 +804,155 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.predictedPriceAt30d).toBeNull();
       expect(raw.predictedPricePct).toBeNull();
       expect(curve.signalSource).toBeNull();
+    });
+
+    it("CF-PARALLEL-TIER-TREND: falls back to parallel-tier trend when matched-cohort is unavailable but parallelTierKey is provided", async () => {
+      // Brito Blue X-Fractor scenario resolved: matched-cohort still null,
+      // but same-parallel-tier trend supplies a clean tier-level rate.
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { fetchCardHedgeMatchedCohort } = await import(
+        "../src/services/playerTrend/cardHedgeMatchedCohortProvider.js"
+      );
+      const { getParallelTierTrend } = await import(
+        "../src/services/playerTrend/parallelTierTrend.service.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+            { price: 100, date: daysAgo(32) },
+          ] as any;
+        }
+        return [];
+      });
+      // No matched-cohort at either tier
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.08, "NoCohort", /* useMatchedCohort */ false) as any,
+      );
+      vi.mocked(fetchCardHedgeMatchedCohort).mockResolvedValueOnce(null as any);
+      // Parallel-tier says the whole (2026, Bowman Chrome, Blue X-Fractor)
+      // tier is trending +6%/week (medianRatio 1.06, cohort of 5 cards)
+      vi.mocked(getParallelTierTrend).mockResolvedValueOnce({
+        latestWeekStart: "2026-06-29",
+        latestWeekEnd: "2026-07-05",
+        priorWindowWeeksCount: 4,
+        cohort: [
+          { cardId: "a", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+          { cardId: "b", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+          { cardId: "c", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+          { cardId: "d", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+          { cardId: "e", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+        ],
+        medianRatio: 1.06,
+        meanRatio: 1.06,
+        latestWeekActiveCards: 5,
+        totalCardsEvaluated: 5,
+        droppedNewOrLongTail: 0,
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "NoCohort",
+        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+      });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Rate = 0.06/wk, weeksSinceSale ~4.3, so ~+26% market value
+      // Predicted at +30d ~= +26% × 30/7 factor on top
+      expect(curve.signalSource).toBe("parallel-tier");
+      expect(curve.ratePerWeek).toBeCloseTo(0.06, 2);
+      expect(raw.trendAdjustedValue).not.toBeNull();
+      expect(raw.trendAdjustedValue!).toBeGreaterThan(120);
+      expect(raw.trendAdjustedValue!).toBeLessThan(135);
+      expect(raw.predictedPriceAt30d).not.toBeNull();
+      expect(raw.predictedPriceAt30d!).toBeGreaterThan(raw.trendAdjustedValue!);
+    });
+
+    it("CF-PARALLEL-TIER-FRESHNESS: discards tier signal when latest tier sale is >4 weeks old", async () => {
+      // Drew's freshness rule (2026-07-05): tier trend is only trustworthy
+      // when the tier has genuinely recent activity. Stale tier → discard,
+      // fall through to null.
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { fetchCardHedgeMatchedCohort } = await import(
+        "../src/services/playerTrend/cardHedgeMatchedCohortProvider.js"
+      );
+      const { getParallelTierTrend } = await import(
+        "../src/services/playerTrend/parallelTierTrend.service.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [{ price: 100, date: daysAgo(30) }] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.08, "NoCohort", /* useMatchedCohort */ false) as any,
+      );
+      vi.mocked(fetchCardHedgeMatchedCohort).mockResolvedValueOnce(null as any);
+      // latestWeekEnd is 45 days before fake-now → stale
+      const staleEnd = new Date(FAKE_NOW.getTime() - 45 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      vi.mocked(getParallelTierTrend).mockResolvedValueOnce({
+        latestWeekStart: staleEnd,
+        latestWeekEnd: staleEnd,
+        priorWindowWeeksCount: 4,
+        cohort: [
+          { cardId: "a", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+          { cardId: "b", latestWeekMedianPrice: 100, latestWeekSaleCount: 1, priorWindowMedianPrice: 94, priorWindowSaleCount: 2, ratio: 1.06 },
+        ],
+        medianRatio: 1.06,
+        meanRatio: 1.06,
+        latestWeekActiveCards: 2,
+        totalCardsEvaluated: 2,
+        droppedNewOrLongTail: 0,
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "NoCohort",
+        parallelTierKey: { year: 2025, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+      });
+      // Signal discarded → no trajectory anywhere
+      expect(curve.signalSource).toBeNull();
+      expect(curve.ratePerWeek).toBeNull();
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.trendAdjustedValue).toBeNull();
+      expect(raw.predictedPriceAt30d).toBeNull();
+    });
+
+    it("CF-PARALLEL-TIER-TREND: parallel-tier is NOT invoked when matched-cohort already succeeded", async () => {
+      // Efficiency guard: cached matched-cohort wins → parallel-tier never called
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { getParallelTierTrend } = await import(
+        "../src/services/playerTrend/parallelTierTrend.service.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [{ price: 100, date: daysAgo(30) }] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.03, "HotPlayer", /* useMatchedCohort */ true) as any,
+      );
+      const tierMock = vi.mocked(getParallelTierTrend);
+      tierMock.mockClear();
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "HotPlayer",
+        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+      });
+      expect(curve.signalSource).toBe("matched-cohort-cached");
+      expect(tierMock).not.toHaveBeenCalled();
     });
 
     it("CF-MATCHED-COHORT-ON-DEMAND: computes matched-cohort inline when pre-populated cache is cold", async () => {
