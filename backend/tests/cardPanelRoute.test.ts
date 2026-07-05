@@ -70,6 +70,11 @@ vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
   readMatchedCohortFromCache: vi.fn(async () => null),
   writeMatchedCohortToCache: vi.fn(async () => undefined),
 }));
+// CF-PARALLEL-TIER-TREND (2026-07-05): third-tier fallback. Stub null
+// → parallel-tier silently skips (no trajectory adjustment, no throw).
+vi.mock("../src/services/playerTrend/parallelTierTrend.service.js", () => ({
+  getParallelTierTrend: vi.fn(async () => null),
+}));
 
 import app from "../src/app";
 

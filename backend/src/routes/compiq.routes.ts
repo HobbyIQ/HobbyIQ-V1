@@ -1132,6 +1132,28 @@ function normalizeCacheKey(prefix: string, query: string): string {
   return `${prefix}:${query.trim().toLowerCase().replace(/\s+/g, " ")}`;
 }
 
+/**
+ * CF-PARALLEL-TIER-TREND (2026-07-05): extract `(year, set, variant)`
+ * from a resolved card identity so the trajectory chain can invoke
+ * same-parallel-tier fallback. Returns null when any field is missing
+ * or unusable — parallel-tier trend service short-circuits safely on
+ * null.
+ *
+ * Fields drawn from either getCardMetaById or getCardDetailsById; both
+ * return the same shape { player, set, number, variant, year, image }.
+ */
+function extractParallelTierKey(
+  identity: unknown,
+): { year: number | string; set: string; variant: string } | null {
+  if (!identity || typeof identity !== "object") return null;
+  const rec = identity as Record<string, unknown>;
+  const year = rec.year;
+  const set = typeof rec.set === "string" ? rec.set.trim() : "";
+  const variant = typeof rec.variant === "string" ? rec.variant.trim() : "";
+  if (!year || !set || !variant) return null;
+  return { year: year as string | number, set, variant };
+}
+
 const router = Router();
 
 router.get("/health", (req, res) => {
@@ -2683,6 +2705,13 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         ? (identity as any).player
         : null;
 
+    // CF-PARALLEL-TIER-TREND (2026-07-05): extract (year, set, variant)
+    // from resolved identity so the trajectory chain can fall through
+    // to same-parallel-tier trend when matched-cohort is unavailable.
+    // Emits null when any field is missing — service short-circuits
+    // safely on null, so callers don't need extra branching.
+    const parallelTierKey = extractParallelTierKey(identity);
+
     // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
     // FIRST so we can thread them into buildObservedGradeCurve as a
     // preferred fallback for estimated grades. Adds one sequenced CH
@@ -2697,6 +2726,7 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     const gradeCurve = await buildObservedGradeCurve(id, {
       playerName: identityPlayer,
       referencePriceByGrade,
+      parallelTierKey,
     });
 
     void (async () => {
@@ -2905,6 +2935,10 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       meta && typeof (meta as any).player === "string"
         ? (meta as any).player
         : null;
+    // CF-PARALLEL-TIER-TREND (2026-07-05): pass tier key so trajectory
+    // can fall through to same-parallel-tier trend when matched-cohort
+    // is unavailable.
+    const parallelTierKey = extractParallelTierKey(meta);
     // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
     // so estimated grades prefer them over Raw × tier multiplier.
     const referenceRows = await getAllPricesByCard(cardId.trim());
@@ -2914,6 +2948,7 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
     const curve = await buildObservedGradeCurve(cardId.trim(), {
       playerName,
       referencePriceByGrade,
+      parallelTierKey,
     });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally
