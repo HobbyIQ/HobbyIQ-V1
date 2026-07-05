@@ -418,10 +418,20 @@ async function tryMatchedCohortOnDemand(playerName: string): Promise<
 }
 
 /**
- * Post-process: for every observed entry with a non-fresh newestSaleDate,
- * compute Market Value (today) AND Predicted (30d out) from the same
- * per-week rate. All three values (value / trendAdjustedValue /
- * predictedPriceAt30d) sit on one linear trajectory.
+ * Post-process trajectory pass. Two independent branches:
+ *
+ *   1. MARKET VALUE (trendAdjustedValue) — only fires when the last
+ *      observed sale is > FRESH_COMP_THRESHOLD_DAYS old. A fresh sale
+ *      IS the current market price; adjusting it just adds noise from
+ *      partial-week momentum. Fresh entries keep value == market value
+ *      (iOS falls back to `value` when trendAdjustedValue is null).
+ *
+ *   2. PREDICTED (predictedPriceAt30d) — ALWAYS fires when we have a
+ *      rate signal, regardless of comp freshness. Drew's directive
+ *      (2026-07-05): "we are predicting new market values so the next
+ *      price, so yes" — the whole point is the forward projection.
+ *      Anchors on the trend-adjusted market value when available, else
+ *      on the observed value (fresh-comp path).
  */
 async function applyTrajectory(
   entries: ObservedGradeEntry[],
@@ -435,18 +445,24 @@ async function applyTrajectory(
     if (entry.valueSource !== "observed") continue;
     if (entry.value === null || entry.value <= 0) continue;
     if (entry.daysSinceNewestSale === null) continue;
-    if (entry.daysSinceNewestSale < FRESH_COMP_THRESHOLD_DAYS) continue;
 
-    // Market Value at t=today: linear rate × capped weeks-since-sale.
-    const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
-    const marketMultiplier = 1 + rate * weeksSinceSale;
-    const trendAdjusted = Math.round(entry.value * marketMultiplier * 100) / 100;
-    entry.trendAdjustedValue = trendAdjusted;
-    entry.trendAdjustmentPct = Math.round((marketMultiplier - 1) * 10000) / 100;
+    // ── Market Value branch — only for stale comps ──────────────────
+    let marketValueForForwardAnchor: number = entry.value;
+    if (entry.daysSinceNewestSale >= FRESH_COMP_THRESHOLD_DAYS) {
+      const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
+      const marketMultiplier = 1 + rate * weeksSinceSale;
+      const trendAdjusted = Math.round(entry.value * marketMultiplier * 100) / 100;
+      entry.trendAdjustedValue = trendAdjusted;
+      entry.trendAdjustmentPct = Math.round((marketMultiplier - 1) * 10000) / 100;
+      marketValueForForwardAnchor = trendAdjusted;
+    }
+    // Fresh sale → trendAdjustedValue stays null; iOS uses entry.value
+    // as the Market Value. Forward projection below still fires.
 
-    // Predicted at t=+30d: continue the trajectory 30 more days.
+    // ── Predicted branch — ALWAYS fires when we have a rate ─────────
     const predictedMultiplier = 1 + rate * (PREDICTED_HORIZON_DAYS / 7);
-    const predicted = Math.round(trendAdjusted * predictedMultiplier * 100) / 100;
+    const predicted =
+      Math.round(marketValueForForwardAnchor * predictedMultiplier * 100) / 100;
     entry.predictedPriceAt30d = predicted;
     entry.predictedPricePct = Math.round((predictedMultiplier - 1) * 10000) / 100;
     entry.predictedPriceRangeLow = Math.round(predicted * (1 - PREDICTED_RANGE_PCT) * 100) / 100;
