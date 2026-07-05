@@ -148,6 +148,14 @@ export interface PortfolioHoldingWire {
   // Cardsight FK
   cardId?: string | null;
   gradeId?: string | null;
+  // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): publicly-hittable HTTPS URL
+  // to the canonical catalog card art — same image /api/compiq/price-by-id
+  // emits on `response.cardImageUrl`. iOS renders this as the fallback
+  // behind the user's own photo (imageFrontUrl):
+  //     row image = holding.imageFrontUrl ?? holding.catalogImageUrl
+  // Undefined key when the holding has no cardId or meta cache is cold
+  // (iOS then renders its initials placeholder). Never a synthesized URL.
+  catalogImageUrl?: string | null;
   // Cached pipeline (10)
   fairMarketValue: number | null;
   predictedPrice: number | null;
@@ -270,7 +278,14 @@ export interface PortfolioHoldingWire {
   };
 }
 
-export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHoldingWire {
+export function composeHoldingWireShape(
+  holding: PortfolioHolding,
+  /** CF-INVENTORY-CATALOG-IMAGE (2026-07-05): when the caller pre-resolved
+   *  catalog images (see composePortfolioListResponse), this map supplies
+   *  the URL by cardId. Undefined map / missing entry → catalogImageUrl
+   *  is omitted from the wire (iOS falls back to its placeholder). */
+  catalogImageByCardId?: ReadonlyMap<string, string>,
+): PortfolioHoldingWire {
   const fmvPerUnit = computePerUnitValue(holding);
 
   // CF-CURRENTVALUE-DIMENSION-CANONICALIZE Ship 1: currentValue is the
@@ -336,6 +351,14 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
     // Cardsight FK
     cardId: holding.cardId,
     gradeId: holding.gradeId,
+    // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): populated ONLY when the
+    // caller pre-resolved images AND the holding has a resolved cardId
+    // AND catalog meta was cached. Conditional spread — key omitted from
+    // the wire otherwise so byte-identity holds for uploads / unmatched
+    // holdings. Never synthesized: no cardId → no URL.
+    ...(holding.cardId && catalogImageByCardId?.has(holding.cardId)
+      ? { catalogImageUrl: catalogImageByCardId.get(holding.cardId) as string }
+      : {}),
     // Cached pipeline (10)
     fairMarketValue: fmvPerUnit,
     predictedPrice: holding.predictedPrice ?? null,
@@ -399,6 +422,14 @@ export function composeHoldingWireShape(holding: PortfolioHolding): PortfolioHol
   };
 }
 
-export function composePortfolioListResponse(items: PortfolioHolding[]): PortfolioHoldingWire[] {
-  return items.map(composeHoldingWireShape);
+export function composePortfolioListResponse(
+  items: PortfolioHolding[],
+  /** CF-INVENTORY-CATALOG-IMAGE (2026-07-05): pre-resolved catalog image
+   *  URLs keyed by cardId. The route (getPortfolioWithSummary) builds
+   *  this map once per request via resolveCatalogImageUrl so meta cache
+   *  hits are amortized across the whole portfolio. Optional — callers
+   *  without it (tests, legacy paths) get the pre-CF wire shape verbatim. */
+  catalogImageByCardId?: ReadonlyMap<string, string>,
+): PortfolioHoldingWire[] {
+  return items.map((h) => composeHoldingWireShape(h, catalogImageByCardId));
 }

@@ -14,6 +14,10 @@ import { resolvePlayer } from "../mlb/playerResolver.service.js";
 import { deleteBlobByUrl } from "../photoStorage/photoStorage.service.js";
 import { resolveCardsightGradeId } from "../cardsight/cardsightGradesTaxonomy.js";
 import { composeHoldingWireShape, composePortfolioListResponse } from "./responseAssembly.js";
+// CF-INVENTORY-CATALOG-IMAGE (2026-07-05): shared resolver produces the
+// SAME cropped URL /api/compiq/price-by-id emits on cardImageUrl. iOS
+// falls back to this behind the user's own uploaded photo.
+import { resolveCatalogImageUrl } from "../compiq/cardImageResolver.js";
 // CF-CH-DELTA-POLL-HOLDINGS-SUBSCRIBE (2026-06-30): subscribe holdings
 // to CH's price-tracking feed on add/update. Fire-and-forget — failure
 // must NEVER block the holding save. Dormant unless CARD_HEDGE_CLIENT_ID
@@ -2680,10 +2684,41 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   const doc = await readUserDoc(auth.userId);
   const rawItems = Object.values(doc.holdings);
   const summary = summarizeHoldings(rawItems);
+  // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): pre-resolve catalog card
+  // images for every holding that has a resolved cardId. Bounded
+  // concurrency 8 — meta cache is warm for common cards, so the fanout
+  // is effectively free after the first user in a session. Silent
+  // no-throw per-card: a single lookup failure leaves that holding's
+  // catalogImageUrl unset (iOS placeholder), doesn't break the payload.
+  const uniqueCardIds = Array.from(
+    new Set(
+      rawItems
+        .map((h) => h.cardId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  );
+  const catalogImageByCardId = new Map<string, string>();
+  if (uniqueCardIds.length > 0) {
+    const CONCURRENCY = 8;
+    const queue = [...uniqueCardIds];
+    const worker = async (): Promise<void> => {
+      while (queue.length > 0) {
+        const cardId = queue.shift();
+        if (!cardId) return;
+        try {
+          const url = await resolveCatalogImageUrl(req, cardId);
+          if (url) catalogImageByCardId.set(cardId, url);
+        } catch {
+          /* silent — falls back to iOS placeholder */
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+  }
   // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
   // layer; explicit wire-shape per contract_freeze_v1 §1.3. summary still
   // reads off raw holdings (uses Phase A compute-on-read helpers).
-  const items = composePortfolioListResponse(rawItems);
+  const items = composePortfolioListResponse(rawItems, catalogImageByCardId);
   res.json({ success: true, userId: auth.userId, items, summary });
 }
 
