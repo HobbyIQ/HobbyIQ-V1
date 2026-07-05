@@ -406,8 +406,11 @@ async function aggregateGrade(
 // Market Value tops at 1.6× observed; Predicted at 1.6 × 1.43 = 2.28× observed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Weekly rate cap — a single crazy CH bucket can't dominate a projection. */
-const RATE_CAP_PER_WEEK = 0.10;
+// CF-USE-ACTUALS-NO-CAP (2026-07-05, Drew): the ±10%/wk rate clamp was
+// removed. It was suppressing genuine hot moves — a top prospect
+// legitimately trading up +20%/wk got compressed to +10%/wk, so
+// Predicted came in below live bids. See deriveWeeklyRate() for the
+// full rationale + extreme-rate warning telemetry.
 /** Maximum weeks look-back — trends beyond 6 weeks aren't reliable enough
  *  to linearly extrapolate. A 6-month-old comp on a hot player gets treated
  *  as-if 6 weeks old for trajectory purposes. */
@@ -639,23 +642,50 @@ async function deriveWeeklyRate(
     return null;
   }
 
-  const capped = Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
+  // CF-USE-ACTUALS-NO-CAP (2026-07-05, Drew): "let's make it actuals and
+  // not clip it." Previously we clamped the rate to ±RATE_CAP_PER_WEEK
+  // to guard against a single crazy CH bucket blowing up projections.
+  // The clamp was suppressing genuine hot moves — a top prospect
+  // legitimately trading up +20%/wk got compressed to +10%/wk, so
+  // Predicted came in below live bids. Trust the matched-cohort signal
+  // as-is (medianRatio is robust — median of per-card ratios across a
+  // cohort of ≥2, so a single outlier can't dominate).
+  //
+  // Guardrails still in place downstream:
+  //   • MAX_WEEKS_LOOKBACK caps how many weeks we extrapolate over
+  //   • The rate itself is bounded by market realism (medianRatio ≤ 2
+  //     empirically implies rate ≤ 1.0 = 100%/wk, which IS possible
+  //     for a prospect on a hype spike)
+  //
+  // Extreme-rate warning telemetry — logs but does NOT clip. Ops can
+  // KQL for `rate_extreme` to spot pathological CH signals and decide
+  // whether a soft floor/ceiling is needed later.
+  if (Math.abs(rawRate) > 0.25) {
+    console.warn(JSON.stringify({
+      event: "trajectory_rate_extreme",
+      source: "observedGradeCurve",
+      player: playerName,
+      signal: signalSource,
+      rateWeekly: Math.round(rawRate * 10000) / 100,
+      cohortSize,
+      note: "not clipped — CF-USE-ACTUALS-NO-CAP 2026-07-05",
+    }));
+  }
 
   // Observability: log which signal drove the trajectory.
   //   matched-cohort-cached   → the overnight job covered this player
   //   matched-cohort-on-demand → we computed inline (cache was cold)
-  //   raw-weekly              → both matched-cohort paths failed
+  //   parallel-tier            → tier-level fallback (fresh only)
   console.log(JSON.stringify({
     event: "trajectory_rate_derived",
     source: "observedGradeCurve",
     player: playerName,
     signal: signalSource,
-    rawRate: Math.round(rawRate * 10000) / 100,
-    cappedRate: Math.round(capped * 10000) / 100,
+    rateWeekly: Math.round(rawRate * 10000) / 100,
     cohortSize,
   }));
 
-  return { cappedRate: capped, signalSource };
+  return { cappedRate: rawRate, signalSource };
 }
 
 /**
