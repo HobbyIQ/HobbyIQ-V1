@@ -39,6 +39,76 @@ function daysAgo(n: number): string {
 }
 
 describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
+  describe("CF-FILTER-IP-TTM-AUTOS — reject unauthenticated autos from the median", () => {
+    it("drops sales whose title flags them as In Person / TTM / hand-signed", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      // 6 sales — 3 with clean titles ($200 each), 3 clearly IP/TTM ($60 each)
+      // Median WITHOUT filter: (60,60,60,200,200,200) → 60 or 200 depending on middle
+      // Median WITH filter (only $200 kept): 200
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 200, date: daysAgo(2), title: "Mike Trout 2011 Topps Update PSA 10 Auto US175" },
+            { price: 200, date: daysAgo(3), title: "Mike Trout 2011 Bowman Chrome Autograph" },
+            { price: 200, date: daysAgo(4), title: "2011 Topps Update US175 Trout on-card autograph" },
+            { price: 60,  date: daysAgo(5), title: "Trout IN PERSON auto signed 2011 base card" },
+            { price: 60,  date: daysAgo(6), title: "Trout hand-signed base — IPA COA included" },
+            { price: 60,  date: daysAgo(7), title: "Mike Trout TTM autograph signed base RC" },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.sampleCount).toBe(3);
+      expect(raw.plainMedianPrice).toBe(200);
+    });
+
+    it("null / empty titles are NOT rejected (pre-fix behavior preserved for untitled sales)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 200, date: daysAgo(1), title: null },
+            { price: 200, date: daysAgo(2), title: "" },
+            { price: 200, date: daysAgo(3), title: "Some clean listing" },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.sampleCount).toBe(3);
+    });
+
+    it("only rejects tokens with autograph context — random 'IP' or 'TTM' substrings pass through", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            // These should all be KEPT — none flag as IP/TTM autographs
+            { price: 200, date: daysAgo(1), title: "Trout signed card, mint condition" },
+            { price: 200, date: daysAgo(2), title: "Trout Certified Autograph on-card" },
+            { price: 200, date: daysAgo(3), title: "Mike Trout autographed base card, sticker auto" },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.sampleCount).toBe(3);
+    });
+  });
+
   it("returns a row for EVERY canonical grade even when the pool is empty", async () => {
     const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
     // Every grade returns empty

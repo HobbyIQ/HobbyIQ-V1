@@ -190,12 +190,77 @@ export interface ObservedGradeCurve {
  * When eBay Browse is wired: replace the body with the eBay call,
  * keep the return shape identical. Callers keep working unchanged.
  */
+/**
+ * CF-FILTER-IP-TTM-AUTOS (2026-07-05): reject sales whose title flags
+ * them as "in-person" / "TTM" / "hand-signed" fan-obtained autographs.
+ *
+ * These are NOT manufacturer-authenticated. They typically trade at
+ * 30-50% of a certified card's price and contaminate the median for
+ * authenticated autos. Drew's directive: "we need to add the removal
+ * of comps from IP and In person — these are cheaper autos that are
+ * not authenticated by the card manufacturer."
+ *
+ * Patterns tuned to reject strongly-worded IP/TTM listings without
+ * false-positiving on random "IP" substrings. Each pattern requires
+ * IP/IPA/TTM to be adjacent to an "auto" / "autograph" / "signature"
+ * / "signed" token, OR be the more-specific IPA/TTM acronym anchored
+ * at word boundaries.
+ */
+const IP_TTM_TITLE_REJECT_PATTERNS: RegExp[] = [
+  /\bin[-\s.]?person\b.*\b(auto|autograph|signature|signed|sig)\b/i,
+  /\b(auto|autograph|signature|signed|sig)\b.*\bin[-\s.]?person\b/i,
+  /\bIP\s*(auto|autograph|signature|signed|sig)\b/i,
+  /\b(auto|autograph|signature|signed|sig)\s*IP\b/i,
+  /\bIPA\b/i,                         // "IPA" — specific enough to stand alone
+  /\bTTM\b/i,                         // "through the mail"
+  /\bthrough[-\s]the[-\s]mail\b/i,
+  /\bhand[-\s]?signed\b/i,
+  /\bfan[-\s]?signed\b/i,
+];
+
+/**
+ * Returns true when the sale title matches an IP/TTM/hand-signed
+ * pattern and should be excluded from the observed median. Null or
+ * empty titles are NOT rejected — we can't tell what they are, so
+ * we err on inclusion (preserves pre-fix behavior for the untitled
+ * subset of CH's comps).
+ */
+function shouldRejectSaleTitle(title: string | null): boolean {
+  if (!title) return false;
+  for (const re of IP_TTM_TITLE_REJECT_PATTERNS) {
+    if (re.test(title)) return true;
+  }
+  return false;
+}
+
 async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
 ): Promise<Array<{ price: number; date: string | null }>> {
   const sales = await getCardSales(cardId, grade, 50);
-  return sales
+  const rejected: string[] = [];
+  const kept = sales.filter((s) => {
+    if (shouldRejectSaleTitle(s.title)) {
+      rejected.push(s.title ?? "");
+      return false;
+    }
+    return true;
+  });
+  if (rejected.length > 0) {
+    // Observability — count of drops per (cardId, grade). Useful for
+    // measuring how often CH's aggregation is picking up IP contamination.
+    console.log(JSON.stringify({
+      event: "ip_ttm_sales_filtered",
+      source: "observedGradeCurve",
+      cardId,
+      grade,
+      keptCount: kept.length,
+      rejectedCount: rejected.length,
+      // First 3 sample titles for spot-checking (truncated).
+      sampleRejected: rejected.slice(0, 3).map((t) => t.slice(0, 100)),
+    }));
+  }
+  return kept
     .map((s) => ({
       price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
       date: s.date ?? null,
