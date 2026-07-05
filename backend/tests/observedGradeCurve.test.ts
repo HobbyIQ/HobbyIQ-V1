@@ -256,6 +256,64 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa9.value).toBe(300); // 100 × 3
     });
 
+    it("CF-BETTER-ESTIMATED-GRADE-MATH: reference-price is preferred over Raw × multiplier when caller provides it", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 500, date: daysAgo(1) },
+            { price: 500, date: daysAgo(2) },
+            { price: 500, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      // Reference-price map — third-party model says PSA 10 = $2500
+      // (much more accurate than Raw × 8 = $4000 for this card)
+      const refMap = new Map<string, number>([
+        ["PSA 10", 2500],
+        // PSA 9 not in reference map — should fall through to Raw × 3
+      ]);
+      const curve = await buildObservedGradeCurve("c1", { referencePriceByGrade: refMap });
+
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(psa10.valueSource).toBe("estimated");
+      expect(psa10.value).toBe(2500);              // ← reference wins
+      expect(psa10.estimatedFrom).toBe("reference-price");
+      expect(psa10.estimatedMultiplier).toBeNull(); // no multiplier used
+
+      const psa9 = curve.entries.find((e) => e.grade === "PSA 9")!;
+      expect(psa9.valueSource).toBe("estimated");
+      expect(psa9.value).toBe(1500);               // ← fallback: Raw × 3
+      expect(psa9.estimatedFrom).toBe("raw-multiplier");
+      expect(psa9.estimatedMultiplier).toBe(3);
+    });
+
+    it("CF-BETTER-ESTIMATED-GRADE-MATH: Raw × multiplier is used when no reference-price map is provided", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(1) },
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1"); // no reference map
+      const psa10 = curve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(psa10.valueSource).toBe("estimated");
+      expect(psa10.estimatedFrom).toBe("raw-multiplier");
+      expect(psa10.value).toBe(800); // 100 × 8
+    });
+
     it("observed grade WINS over estimation even when fallback is available", async () => {
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {

@@ -2683,10 +2683,21 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         ? (identity as any).player
         : null;
 
-    const [gradeCurve, referenceRows] = await Promise.all([
-      buildObservedGradeCurve(id, { playerName: identityPlayer }),
-      getAllPricesByCard(id),
-    ]);
+    // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
+    // FIRST so we can thread them into buildObservedGradeCurve as a
+    // preferred fallback for estimated grades. Adds one sequenced CH
+    // call (~200ms warm-cache) vs the parallel fanout — but it changes
+    // "PSA 10 est. = Raw × 8 = $4000" to "PSA 10 est. = <third-party
+    // reference> = $2500", which is materially closer to real market
+    // for the specific card.
+    const referenceRows = await getAllPricesByCard(id);
+    const referencePriceByGrade = new Map<string, number>(
+      referenceRows.map((r) => [r.grade, r.price]),
+    );
+    const gradeCurve = await buildObservedGradeCurve(id, {
+      playerName: identityPlayer,
+      referencePriceByGrade,
+    });
 
     void (async () => {
       try {
@@ -2739,6 +2750,7 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
             observedMedian: e.weightedMedianPrice,
             valueSource: e.valueSource,
             estimatedMultiplier: e.estimatedMultiplier,
+            estimatedFrom: e.estimatedFrom,
             confidenceScore: e.confidenceScore,
             newestSaleDate: e.newestSaleDate,
             daysSinceNewestSale: e.daysSinceNewestSale,
@@ -2850,6 +2862,7 @@ router.post("/observed-grade-curves-bulk", requireSession, requireEntitlement("p
               observedMedian: e.weightedMedianPrice,
               valueSource: e.valueSource,
               estimatedMultiplier: e.estimatedMultiplier,
+            estimatedFrom: e.estimatedFrom,
               confidenceScore: e.confidenceScore,
               newestSaleDate: e.newestSaleDate,
               daysSinceNewestSale: e.daysSinceNewestSale,
@@ -2892,7 +2905,16 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       meta && typeof (meta as any).player === "string"
         ? (meta as any).player
         : null;
-    const curve = await buildObservedGradeCurve(cardId.trim(), { playerName });
+    // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
+    // so estimated grades prefer them over Raw × tier multiplier.
+    const referenceRows = await getAllPricesByCard(cardId.trim());
+    const referencePriceByGrade = new Map<string, number>(
+      referenceRows.map((r) => [r.grade, r.price]),
+    );
+    const curve = await buildObservedGradeCurve(cardId.trim(), {
+      playerName,
+      referencePriceByGrade,
+    });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally
     // as engine-derived. Joins against reference_prices_captured (CH's
@@ -2927,6 +2949,7 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
             observedMedian: e.weightedMedianPrice,
             valueSource: e.valueSource,
             estimatedMultiplier: e.estimatedMultiplier,
+            estimatedFrom: e.estimatedFrom,
             confidenceScore: e.confidenceScore,
             newestSaleDate: e.newestSaleDate,
             daysSinceNewestSale: e.daysSinceNewestSale,
