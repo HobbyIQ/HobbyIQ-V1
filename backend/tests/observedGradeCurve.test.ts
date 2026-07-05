@@ -7,8 +7,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the CH client's getCardSales — the ONE swap point. Everything
 // else in observedGradeCurve.service is vendor-neutral math.
+// getSalesStatsByPlayer is mocked so the trajectory pass has a signal
+// source; defaults to null → trajectory skips silently.
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   getCardSales: vi.fn(),
+  getSalesStatsByPlayer: vi.fn(async () => null),
 }));
 
 // Deterministic "now" so recency-based confidence tests are stable.
@@ -392,6 +395,189 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const map = await buildObservedGradeCurvesBulk([]);
       expect(map.size).toBe(0);
+    });
+  });
+
+  describe("CF-ONE-TRAJECTORY — Market Value + Predicted from one rate", () => {
+    // Helper: 6 complete weekly buckets ending 0-7d ago, with a given
+    // rate profile. Rate is applied so latest = prior_4wk_mean × (1+rate).
+    function makeBuckets(rate: number) {
+      const priorAvg = 100;
+      const latestAvg = 100 * (1 + rate);
+      const b = (endDaysAgo: number, avg: number) => ({
+        start: new Date(FAKE_NOW.getTime() - (endDaysAgo + 7) * 24 * 3600 * 1000).toISOString(),
+        end:   new Date(FAKE_NOW.getTime() - endDaysAgo * 24 * 3600 * 1000).toISOString(),
+        count: 10, total_amount: avg * 10, average_sale: avg, partial: false,
+      });
+      return [
+        b(35, priorAvg),
+        b(28, priorAvg),
+        b(21, priorAvg),
+        b(14, priorAvg),
+        b(7, priorAvg),  // 4-week prior window ends here
+        b(0, latestAvg), // latest complete week
+      ];
+    }
+
+    it("hot player: Market Value > value, Predicted > Market Value, all on one curve", async () => {
+      const { getCardSales, getSalesStatsByPlayer } = await import(
+        "../src/services/compiq/cardhedge.client.js"
+      );
+      // 30-day-old comp at $100
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(29) },
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+          ] as any;
+        }
+        return [];
+      });
+      // Rate = +8% weekly (capped at ±10%)
+      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
+        interval: "week", periods: 6,
+        results: [{ player: "Josh", buckets: makeBuckets(0.08) }],
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Josh" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // value = $100 (observed last sale)
+      expect(raw.value).toBe(100);
+      // Market Value = value × (1 + 0.08 × daysSinceNewestSale/7)
+      // With daysSinceNewestSale ≈ 29d → weeks ≈ 4.14 → +33.14%
+      expect(raw.trendAdjustedValue).toBeGreaterThan(130);
+      expect(raw.trendAdjustedValue).toBeLessThan(140);
+      expect(raw.trendAdjustmentPct).toBeGreaterThan(30);
+      expect(raw.trendAdjustmentPct).toBeLessThan(40);
+      // Predicted 30d = Market Value × (1 + 0.08 × 30/7) — same rate applied
+      // for +34.29% more, so Predicted > Market Value
+      expect(raw.predictedPriceAt30d).toBeGreaterThan(raw.trendAdjustedValue!);
+      expect(raw.predictedPricePct).toBeCloseTo(34.29, 0);
+      // Ranges are ±15% around predictedPriceAt30d
+      expect(raw.predictedPriceRangeLow).toBeCloseTo(raw.predictedPriceAt30d! * 0.85, 1);
+      expect(raw.predictedPriceRangeHigh).toBeCloseTo(raw.predictedPriceAt30d! * 1.15, 1);
+    });
+
+    it("cooling player: Market Value < value, Predicted < Market Value", async () => {
+      const { getCardSales, getSalesStatsByPlayer } = await import(
+        "../src/services/compiq/cardhedge.client.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 500, date: daysAgo(20) },
+            { price: 500, date: daysAgo(21) },
+            { price: 500, date: daysAgo(22) },
+          ] as any;
+        }
+        return [];
+      });
+      // Rate = -5% weekly (cooling)
+      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
+        interval: "week", periods: 6,
+        results: [{ player: "Cold", buckets: makeBuckets(-0.05) }],
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Cold" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Market Value = 500 × (1 - 0.05 × 20/7) ≈ 500 × 0.857 ≈ 428.57
+      expect(raw.trendAdjustedValue).toBeLessThan(500);
+      expect(raw.trendAdjustmentPct).toBeLessThan(0);
+      // Predicted = Market Value × (1 - 0.05 × 30/7) < Market Value
+      expect(raw.predictedPriceAt30d).toBeLessThan(raw.trendAdjustedValue!);
+      expect(raw.predictedPricePct).toBeLessThan(0);
+    });
+
+    it("weeks-since-sale is capped at 6 (no runaway on 6-month-old comps)", async () => {
+      const { getCardSales, getSalesStatsByPlayer } = await import(
+        "../src/services/compiq/cardhedge.client.js"
+      );
+      // Sale is 180d old — would normally be 25.7 weeks
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(179) },
+            { price: 100, date: daysAgo(180) },
+            { price: 100, date: daysAgo(181) },
+          ] as any;
+        }
+        return [];
+      });
+      // Max rate = +10% weekly
+      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
+        interval: "week", periods: 6,
+        results: [{ player: "Hot", buckets: makeBuckets(0.10) }],
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Hot" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Capped at 6 weeks × 10%/wk = +60% → $160 (not 25.7 × 10% = 257%)
+      expect(raw.trendAdjustedValue).toBeCloseTo(160, 0);
+      expect(raw.trendAdjustmentPct).toBeCloseTo(60, 0);
+    });
+
+    it("fresh comp (<14d) skips trajectory — value is honest, no adjustment", async () => {
+      const { getCardSales, getSalesStatsByPlayer } = await import(
+        "../src/services/compiq/cardhedge.client.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(3) },
+            { price: 100, date: daysAgo(4) },
+            { price: 100, date: daysAgo(5) },
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
+        interval: "week", periods: 6,
+        results: [{ player: "Fresh", buckets: makeBuckets(0.10) }],
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Fresh" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Fresh — trajectory skips, all trajectory fields stay null
+      expect(raw.value).toBe(100);
+      expect(raw.trendAdjustedValue).toBeNull();
+      expect(raw.predictedPriceAt30d).toBeNull();
+    });
+
+    it("no playerName — trajectory is skipped, no adjustment fields populated", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+            { price: 100, date: daysAgo(32) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1"); // no opts
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.value).toBe(100);
+      expect(raw.trendAdjustedValue).toBeNull();
+      expect(raw.predictedPriceAt30d).toBeNull();
+      // But daysSinceNewestSale IS always populated
+      expect(raw.daysSinceNewestSale).toBeCloseTo(30, 0);
     });
   });
 

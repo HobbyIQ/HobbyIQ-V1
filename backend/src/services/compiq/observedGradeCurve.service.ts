@@ -21,7 +21,8 @@
 // bounded (10 grades × 12h cache = 10 CH calls per unique card per 12h)
 // so per-card fetch cost stays predictable.
 
-import { getCardSales } from "./cardhedge.client.js";
+import { getCardSales, getSalesStatsByPlayer } from "./cardhedge.client.js";
+import type { SalesStatsBucket } from "./cardhedge.client.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
@@ -87,6 +88,40 @@ export interface ObservedGradeEntry {
    *  Raw observed median. Null otherwise. Surfaced so iOS can render
    *  "est. $600 (Raw × 4.0)" if desired. */
   estimatedMultiplier: number | null;
+  /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
+   *  Value, and Predicted on ONE trend line — the SAME per-week rate
+   *  derives all three. Prevents the "$100 Market Value but $205
+   *  Predicted" incoherence users saw before this change.
+   *
+   *   value              — Last observed sale (past anchor)
+   *   trendAdjustedValue — Market Value TODAY  (value × trend to t=now)
+   *   predictedPriceAt30d — Predicted at t=+30d (trend continued 30 more days)
+   *
+   *  All bounded to a max ±10% per week and a max look-back of 6 weeks
+   *  from the last sale, so a hot player's momentum can't runaway-multiply
+   *  an old comp.
+   */
+  daysSinceNewestSale: number | null;
+  /** Market Value TODAY. Value observed at the last sale × trend since.
+   *  Null when the sale is fresh (<14d) or no momentum signal is
+   *  available — iOS should render `value` as-is in those cases. */
+  trendAdjustedValue: number | null;
+  /** Percentage change from `value` (past) to `trendAdjustedValue`
+   *  (today). Positive = trending up. Nullable when trendAdjustedValue
+   *  is null. */
+  trendAdjustmentPct: number | null;
+  /** Predicted price 30 days FROM TODAY (t = +30d beyond Market Value).
+   *  Computed from the SAME rate as trendAdjustedValue — extends the
+   *  trend line 30 more days forward. Null when we couldn't compute a
+   *  trajectory (no momentum signal). */
+  predictedPriceAt30d: number | null;
+  /** Percentage change from `trendAdjustedValue` (today) to
+   *  `predictedPriceAt30d` (30d out). Positive = expected to rise. */
+  predictedPricePct: number | null;
+  /** Confidence range on the Predicted number: ±15% band around
+   *  predictedPriceAt30d. Null when predictedPriceAt30d is null. */
+  predictedPriceRangeLow: number | null;
+  predictedPriceRangeHigh: number | null;
 }
 
 export interface ObservedGradeCurve {
@@ -189,7 +224,121 @@ async function aggregateGrade(
     value: weighted, // finalized in fillEstimatedFallback
     valueSource: weighted !== null ? "observed" : "unavailable",
     estimatedMultiplier: null,
+    daysSinceNewestSale:
+      newest !== null
+        ? Math.floor((Date.now() - Date.parse(newest)) / (24 * 3600 * 1000))
+        : null,
+    trendAdjustedValue: null,       // filled by applyTrajectory below
+    trendAdjustmentPct: null,
+    predictedPriceAt30d: null,
+    predictedPricePct: null,
+    predictedPriceRangeLow: null,
+    predictedPriceRangeHigh: null,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-ONE-TRAJECTORY (2026-07-04): trajectory math for Market Value + Predicted
+//
+// The problem this closes: earlier iterations had two DIFFERENT momentum
+// signals — one for trend-adjusted "today" (bucket ratio) and another for
+// engine's predictedPrice (trendIQ composite). Users saw incoherent
+// panels: Market Value $100, Predicted $205 — a 105% jump with no
+// intermediate step.
+//
+// Fix: derive ONE rate parameter from CH weekly avg-sale buckets, then
+// compute BOTH Market Value AND Predicted from the same rate. Last Sale
+// → Market Value (today) → Predicted (30d) sit on a single line.
+//
+// Model: linear extrapolation with hard caps.
+//   rate = (latest_week_avg / prior_4wk_mean) - 1     -- weekly change
+//        capped to [-0.10, +0.10]                     -- ±10% weekly
+//   weeksSinceSale = clamp(daysSinceNewest / 7, 0, 6) -- max 6-wk look-back
+//
+//   Market Value = observed × (1 + rate × weeksSinceSale)
+//   Predicted    = Market Value × (1 + rate × 30/7)
+//
+// Combined caps prevent runaway: even at max rate (+10%/wk) over max 6 weeks,
+// Market Value tops at 1.6× observed; Predicted at 1.6 × 1.43 = 2.28× observed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Weekly rate cap — a single crazy CH bucket can't dominate a projection. */
+const RATE_CAP_PER_WEEK = 0.10;
+/** Maximum weeks look-back — trends beyond 6 weeks aren't reliable enough
+ *  to linearly extrapolate. A 6-month-old comp on a hot player gets treated
+ *  as-if 6 weeks old for trajectory purposes. */
+const MAX_WEEKS_LOOKBACK = 6;
+/** Predicted horizon — 30 days forward from today. Fixed at 30 for now;
+ *  callers can override once we add a `horizon` param. */
+const PREDICTED_HORIZON_DAYS = 30;
+/** Confidence band on Predicted — ±15% around the point estimate. */
+const PREDICTED_RANGE_PCT = 0.15;
+/** Minimum days since sale before we apply trajectory — a fresh comp
+ *  doesn't need adjustment (would just add noise from partial weeks). */
+const FRESH_COMP_THRESHOLD_DAYS = 14;
+
+/**
+ * Derive a bounded per-week rate from the player's weekly buckets.
+ * Returns null when we lack sufficient signal (< 5 complete weeks).
+ */
+function deriveWeeklyRate(buckets: ReadonlyArray<SalesStatsBucket>): number | null {
+  const complete = buckets.filter((b) => !b.partial);
+  if (complete.length < 5) return null;
+  const latest = complete[complete.length - 1];
+  if (!latest || !Number.isFinite(latest.average_sale) || latest.average_sale <= 0) return null;
+  const priorWindow = complete.slice(-5, -1);
+  const priorMean =
+    priorWindow.reduce((s, b) => s + (Number.isFinite(b.average_sale) ? b.average_sale : 0), 0) /
+    priorWindow.length;
+  if (priorMean <= 0) return null;
+  const rawRate = latest.average_sale / priorMean - 1;
+  return Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
+}
+
+/**
+ * Post-process: for every observed entry with a non-fresh newestSaleDate,
+ * compute Market Value (today) AND Predicted (30d out) from the same
+ * per-week rate. All three values (value / trendAdjustedValue /
+ * predictedPriceAt30d) sit on one linear trajectory.
+ */
+async function applyTrajectory(
+  entries: ObservedGradeEntry[],
+  playerName: string | null,
+): Promise<void> {
+  if (!playerName) return;
+  let buckets: SalesStatsBucket[] | null = null;
+  try {
+    const stats = await getSalesStatsByPlayer([playerName], "week");
+    const result = stats?.results?.find((r) => r.player === playerName);
+    buckets = result?.buckets ?? null;
+  } catch {
+    return;
+  }
+  if (!buckets) return;
+  const rate = deriveWeeklyRate(buckets);
+  if (rate === null) return;
+
+  for (const entry of entries) {
+    if (entry.valueSource !== "observed") continue;
+    if (entry.value === null || entry.value <= 0) continue;
+    if (entry.daysSinceNewestSale === null) continue;
+    if (entry.daysSinceNewestSale < FRESH_COMP_THRESHOLD_DAYS) continue;
+
+    // Market Value at t=today: linear rate × capped weeks-since-sale.
+    const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
+    const marketMultiplier = 1 + rate * weeksSinceSale;
+    const trendAdjusted = Math.round(entry.value * marketMultiplier * 100) / 100;
+    entry.trendAdjustedValue = trendAdjusted;
+    entry.trendAdjustmentPct = Math.round((marketMultiplier - 1) * 10000) / 100;
+
+    // Predicted at t=+30d: continue the trajectory 30 more days.
+    const predictedMultiplier = 1 + rate * (PREDICTED_HORIZON_DAYS / 7);
+    const predicted = Math.round(trendAdjusted * predictedMultiplier * 100) / 100;
+    entry.predictedPriceAt30d = predicted;
+    entry.predictedPricePct = Math.round((predictedMultiplier - 1) * 10000) / 100;
+    entry.predictedPriceRangeLow = Math.round(predicted * (1 - PREDICTED_RANGE_PCT) * 100) / 100;
+    entry.predictedPriceRangeHigh = Math.round(predicted * (1 + PREDICTED_RANGE_PCT) * 100) / 100;
+  }
 }
 
 /**
@@ -259,13 +408,20 @@ function fillEstimatedFallback(entries: ObservedGradeEntry[]): void {
  * Every input grade produces a row (even empty ones) so consumers can
  * render a stable UI without extra null-coalescing.
  */
-export async function buildObservedGradeCurve(cardId: string): Promise<ObservedGradeCurve> {
+export async function buildObservedGradeCurve(
+  cardId: string,
+  opts: { playerName?: string | null } = {},
+): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
     CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg)),
   );
   // Second pass — fills value/valueSource on non-observed grades by
   // projecting from Raw × multiplier. Mutates entries in place.
   fillEstimatedFallback(entries);
+  // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
+  // player weekly buckets, then compute Market Value (today) + Predicted
+  // (30d) for every observed entry so all three numbers sit on one line.
+  await applyTrajectory(entries, opts.playerName ?? null);
   return {
     cardId,
     entries,
@@ -333,6 +489,13 @@ export async function buildObservedGradeCurvesBulk(
             value: null,
             valueSource: "unavailable",
             estimatedMultiplier: null,
+            daysSinceNewestSale: null,
+            trendAdjustedValue: null,
+            trendAdjustmentPct: null,
+            predictedPriceAt30d: null,
+            predictedPricePct: null,
+            predictedPriceRangeLow: null,
+            predictedPriceRangeHigh: null,
           })),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),

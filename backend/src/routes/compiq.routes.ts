@@ -2668,16 +2668,23 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       "../services/compiq/observedGradeCurve.service.js"
     );
 
-    const [identity, gradeCurve, referenceRows] = await Promise.all([
-      // Card metadata — meta cache miss triggers a direct CH lookup so the
-      // panel works for any pinned cardId, not just previously-searched ones.
-      (async () => {
-        const meta = await getCardMetaById(id);
-        if (meta) return meta;
-        const detail = await getCardDetailsById(id);
-        return detail;
-      })(),
-      buildObservedGradeCurve(id),
+    // CF-ONE-TRAJECTORY (2026-07-04): identity is resolved FIRST so its
+    // `player` field can feed the trajectory math on the grade curve.
+    // Sequenced fetch adds ~50-200ms warm-cache; small vs the 6-10 CH
+    // calls the grade curve itself fires in parallel afterwards.
+    const identity = await (async () => {
+      const meta = await getCardMetaById(id);
+      if (meta) return meta;
+      const detail = await getCardDetailsById(id);
+      return detail;
+    })();
+    const identityPlayer =
+      identity && typeof (identity as any).player === "string"
+        ? (identity as any).player
+        : null;
+
+    const [gradeCurve, referenceRows] = await Promise.all([
+      buildObservedGradeCurve(id, { playerName: identityPlayer }),
       getAllPricesByCard(id),
     ]);
 
@@ -2855,7 +2862,15 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
     const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
-    const curve = await buildObservedGradeCurve(cardId.trim());
+    // Meta-cache lookup for player name so the trajectory pass fires.
+    // If meta cache is cold, we just return the curve without trajectory
+    // enrichment — the sibling /card-panel does the full identity dance.
+    const meta = await getCardMetaById(cardId.trim());
+    const playerName =
+      meta && typeof (meta as any).player === "string"
+        ? (meta as any).player
+        : null;
+    const curve = await buildObservedGradeCurve(cardId.trim(), { playerName });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally
     // as engine-derived. Joins against reference_prices_captured (CH's
