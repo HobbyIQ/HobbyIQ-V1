@@ -544,7 +544,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.trendAdjustmentPct).toBeCloseTo(60, 0);
     });
 
-    it("fresh comp (<14d) skips trajectory — value is honest, no adjustment", async () => {
+    it("fresh comp (<14d): Market Value stays observed, Predicted STILL projects forward", async () => {
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
@@ -564,10 +564,17 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", { playerName: "Fresh" });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      // Fresh — trajectory skips, all trajectory fields stay null
+      // Fresh — Market Value stays observed (trendAdjustedValue null),
+      // but Predicted STILL projects forward 30d off the observed value.
       expect(raw.value).toBe(100);
       expect(raw.trendAdjustedValue).toBeNull();
-      expect(raw.predictedPriceAt30d).toBeNull();
+      expect(raw.trendAdjustmentPct).toBeNull();
+      // Predicted = 100 × (1 + 0.10 × 30/7) = 100 × 1.428 = 142.86
+      expect(raw.predictedPriceAt30d).toBeCloseTo(142.86, 1);
+      expect(raw.predictedPricePct).toBeCloseTo(42.86, 1);
+      // Range is ±15% around Predicted
+      expect(raw.predictedPriceRangeLow).toBeCloseTo(142.86 * 0.85, 1);
+      expect(raw.predictedPriceRangeHigh).toBeCloseTo(142.86 * 1.15, 1);
     });
 
     it("CF-MATCHED-COHORT: prefers matched-cohort medianRatio over raw momentumRatio when both present", async () => {
