@@ -757,9 +757,19 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.trendAdjustmentPct).toBeGreaterThan(0);
     });
 
-    it("CF-MATCHED-COHORT: falls back to raw momentumRatio when matched-cohort is null", async () => {
+    it("CF-KILL-RAW-WEEKLY: does NOT fall back to raw momentumRatio when matched-cohort is unavailable (Brito Blue X-Fractor bug)", async () => {
+      // Regression pin — 2026-07-05 Roldy Brito Blue X-Fractor /150 showed
+      // pill $164 but Market Value $109.85 and Predicted $62.77 (-43%).
+      // Root cause: matched-cohort missing for the player, so trajectory
+      // fell to raw-weekly momentumRatio which was mix-bias-contaminated
+      // (his cheap raw base drowned the /150 auto signal), hit the
+      // -10%/week floor cap, and stamped a false -43% Predicted on a
+      // thin-sample card. Fix: no matched-cohort → no trajectory.
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
       const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { fetchCardHedgeMatchedCohort } = await import(
+        "../src/services/playerTrend/cardHedgeMatchedCohortProvider.js"
+      );
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
           return [
@@ -770,18 +780,25 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         }
         return [];
       });
-      // No matched-cohort cached; raw momentum says +8%
+      // Snapshot has raw momentumRatio but NO matched-cohort
       vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
         makeSnapshot(0.08, "NoCohort", /* useMatchedCohort */ false) as any,
       );
+      // On-demand matched-cohort also returns null (no cohort could be built)
+      vi.mocked(fetchCardHedgeMatchedCohort).mockResolvedValueOnce(null as any);
 
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
       );
       const curve = await buildObservedGradeCurve("c1", { playerName: "NoCohort" });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      expect(raw.trendAdjustmentPct).toBeGreaterThan(30);
-      expect(raw.trendAdjustmentPct).toBeLessThan(40);
+      // No trajectory of any kind — Market Value falls back to `value`,
+      // Predicted stays null, iOS hides the projection line.
+      expect(raw.trendAdjustedValue).toBeNull();
+      expect(raw.trendAdjustmentPct).toBeNull();
+      expect(raw.predictedPriceAt30d).toBeNull();
+      expect(raw.predictedPricePct).toBeNull();
+      expect(curve.signalSource).toBeNull();
     });
 
     it("CF-MATCHED-COHORT-ON-DEMAND: computes matched-cohort inline when pre-populated cache is cold", async () => {
