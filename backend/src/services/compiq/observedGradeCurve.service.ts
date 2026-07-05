@@ -400,16 +400,30 @@ const FRESH_COMP_THRESHOLD_DAYS = 14;
  *
  * Signal preference (per project memory
  * "project_matched_cohort_supersedes_raw"):
- *   1. matchedCohort.medianRatio — mix-bias-free per-card ratio,
- *      the SUPERIOR signal. Compares each card that sold in both the
- *      latest week AND the prior 4-week window, then medians the
- *      per-card ratios. A player like Adamczewski whose mix swings
+ *   1. matchedCohort.medianRatio (cached) — mix-bias-free per-card
+ *      ratio, the SUPERIOR signal. Compares each card that sold in
+ *      both the latest week AND the prior 4-week window, then medians
+ *      the per-card ratios. A player like Adamczewski whose mix swings
  *      wildly (base auto at $50, Superfractor at $1500) gets clean
  *      signal here — the Superfractor selling in one week doesn't
  *      distort the trajectory.
- *   2. momentum.momentumRatio — raw weekly-avg-sale ratio. Falls
- *      back to this only when matched-cohort isn't cached yet.
+ *   2. matchedCohort computed on-demand + cached — same math, run
+ *      inline for players the overnight job missed.
  *   3. null — skip trajectory; observed value is honest.
+ *
+ * NOTE (2026-07-05, CF-KILL-RAW-WEEKLY): the raw-weekly fallback
+ * (momentum.momentumRatio) was REMOVED as a trajectory source.
+ * Raw weekly avg-sale is fatally mix-biased for prospects — the same
+ * class of bug that produced Adamczewski $40 (fixed 2026-07-04 by
+ * matched-cohort swap) came back on Roldy Brito Blue X-Fractor: the
+ * cap fired at -10%/week, stamping a false -43%/30d Predicted on a
+ * thin-sample card. When matched-cohort is unavailable we now emit
+ * NO trajectory — Market Value falls back to `value`, Predicted stays
+ * null, and iOS hides the projection. Honest over speculative.
+ *
+ * The "raw-weekly" signalSource literal is preserved in the union
+ * type for corpus-doc backward compatibility (historical persisted
+ * entries), but is no longer emitted.
  *
  * Bounded to ±10%/week regardless of source.
  */
@@ -444,7 +458,7 @@ async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | nu
     // Cache miss — compute matched-cohort on-demand. Cost is ~30 CH
     // calls (one prices-by-card per card); result cached 24h so the
     // next request skips the compute. Silently fails on any error —
-    // trajectory falls further through to raw signal below.
+    // no raw-weekly fallback (see CF-KILL-RAW-WEEKLY note above).
     const onDemand = await tryMatchedCohortOnDemand(playerName);
     if (
       onDemand &&
@@ -454,15 +468,20 @@ async function deriveWeeklyRate(playerName: string): Promise<RateDerivation | nu
       rawRate = (onDemand.medianRatio as number) - 1;
       signalSource = "matched-cohort-on-demand";
       cohortSize = onDemand.cohort.length;
-    } else if (
-      snapshot.momentum.momentumRatio !== null &&
-      Number.isFinite(snapshot.momentum.momentumRatio)
-    ) {
-      rawRate = snapshot.momentum.momentumRatio - 1;
-      signalSource = "raw-weekly";
     }
+    // Intentionally no `else if raw-weekly` — Brito Blue X-Fractor bug.
   }
-  if (rawRate === null || signalSource === null) return null;
+  if (rawRate === null || signalSource === null) {
+    // Observability: log the miss so ops can see coverage gaps in
+    // matched-cohort and prioritize which players to backfill.
+    console.log(JSON.stringify({
+      event: "trajectory_rate_no_signal",
+      source: "observedGradeCurve",
+      player: playerName,
+      reason: "no matched-cohort (cached or on-demand)",
+    }));
+    return null;
+  }
 
   const capped = Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
 
