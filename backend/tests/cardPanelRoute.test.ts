@@ -50,6 +50,11 @@ vi.mock("../src/services/compiq/cardhedge.client.js", async (importActual) => {
       { card_id: "c1", grade: "PSA 10", grader: "PSA", price: 900, display_order: 1 },
     ]),
     getCardSales: vi.fn(async () => []),
+    // CF-TREND-ADJUSTED-GRADE-VALUE (2026-07-04): stub trend momentum
+    // fetch so the /card-panel path doesn't try to hit CH's live
+    // sales-stats endpoint. Returns null → applyTrendAdjustment
+    // silently skips (no adjustment, no throw).
+    getSalesStatsByPlayer: vi.fn(async () => null),
   };
 });
 

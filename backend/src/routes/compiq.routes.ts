@@ -2668,17 +2668,31 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       "../services/compiq/observedGradeCurve.service.js"
     );
 
-    const [identity, gradeCurve, referenceRows] = await Promise.all([
-      // Card metadata — meta cache miss triggers a direct CH lookup so the
-      // panel works for any pinned cardId, not just previously-searched ones.
-      (async () => {
-        const meta = await getCardMetaById(id);
-        if (meta) return meta;
-        const detail = await getCardDetailsById(id);
-        return detail;
-      })(),
-      buildObservedGradeCurve(id),
-      getAllPricesByCard(id),
+    // Identity first — its `player` field feeds trend adjustment on the
+    // grade curve (CF-TREND-ADJUSTED-GRADE-VALUE 2026-07-04). If identity
+    // arrives fast we get trend-adjusted values; if it's a cache-miss +
+    // slow CH lookup we still get the raw curve without trend enrichment.
+    const identityPromise = (async () => {
+      const meta = await getCardMetaById(id);
+      if (meta) return meta;
+      const detail = await getCardDetailsById(id);
+      return detail;
+    })();
+    const referencePromise = getAllPricesByCard(id);
+
+    // Kick off the grade curve AFTER identity resolves so we can thread
+    // the player name in. The cost is a single sequenced fetch (~50-200ms
+    // on a cache hit for identity), which is small compared to the
+    // 6-10 CH calls the grade curve itself will fire in parallel.
+    const identity = await identityPromise;
+    const identityPlayer =
+      identity && typeof (identity as any).player === "string"
+        ? (identity as any).player
+        : null;
+
+    const [gradeCurve, referenceRows] = await Promise.all([
+      buildObservedGradeCurve(id, { playerName: identityPlayer }),
+      referencePromise,
     ]);
 
     void (async () => {
@@ -2855,7 +2869,16 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       return res.status(400).json({ success: false, error: 'Missing or invalid "cardId"' });
     }
     const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
-    const curve = await buildObservedGradeCurve(cardId.trim());
+    // Look up identity for trend-adjustment enrichment (CF-TREND-ADJUSTED-
+    // GRADE-VALUE 2026-07-04). Falls through to raw curve when identity
+    // isn't in the meta cache — no additional CH lookup on this thin
+    // sibling route (kept lighter than /card-panel by design).
+    const meta = await getCardMetaById(cardId.trim());
+    const playerName =
+      meta && typeof (meta as any).player === "string"
+        ? (meta as any).player
+        : null;
+    const curve = await buildObservedGradeCurve(cardId.trim(), { playerName });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally
     // as engine-derived. Joins against reference_prices_captured (CH's

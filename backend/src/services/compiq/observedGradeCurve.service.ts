@@ -21,7 +21,8 @@
 // bounded (10 grades × 12h cache = 10 CH calls per unique card per 12h)
 // so per-card fetch cost stays predictable.
 
-import { getCardSales } from "./cardhedge.client.js";
+import { getCardSales, getSalesStatsByPlayer } from "./cardhedge.client.js";
+import type { SalesStatsBucket } from "./cardhedge.client.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
@@ -87,6 +88,24 @@ export interface ObservedGradeEntry {
    *  Raw observed median. Null otherwise. Surfaced so iOS can render
    *  "est. $600 (Raw × 4.0)" if desired. */
   estimatedMultiplier: number | null;
+  /** CF-TREND-ADJUSTED-GRADE-VALUE (2026-07-04): number of days between
+   *  the newest observed sale and now. Nullable when the entry has no
+   *  observed sales at all. Nine months of staleness on a $320 PSA 10
+   *  sale is very different from a fresh $320 PSA 10 sale — iOS uses
+   *  this to render "last sold X days ago" so the user has context. */
+  daysSinceNewestSale: number | null;
+  /** Trend-adjusted current-market estimate for this grade. When the
+   *  entry has an observed sale but it's stale, we multiply the observed
+   *  median by the ratio of (current player weekly avg-sale) / (weekly
+   *  avg-sale at the time of the last sale) — bounded to [0.5, 3.0].
+   *  Gives iOS "trending toward $X today" alongside "last sold $Y a
+   *  while ago." Null when we lack the momentum signal or the sale is
+   *  fresh (<14d — no meaningful adjustment). */
+  trendAdjustedValue: number | null;
+  /** Percentage difference between `trendAdjustedValue` and `value`.
+   *  Positive = player trending up since the last comp; negative =
+   *  trending down. Null when trendAdjustedValue is null. */
+  trendAdjustmentPct: number | null;
 }
 
 export interface ObservedGradeCurve {
@@ -152,6 +171,53 @@ function computeConfidence(sampleCount: number, newestDate: string | null): numb
   return Math.round(base * 100) / 100;
 }
 
+/**
+ * CF-TREND-ADJUSTED-GRADE-VALUE (2026-07-04): given a set of player
+ * weekly buckets from CH and a reference date, compute the ratio
+ * (current-week avg-sale) / (bucket-containing-refDate avg-sale). This
+ * is the player's overall momentum between when the comp sold and now.
+ *
+ * Applied to a comp value → "trend-adjusted current-market" estimate.
+ * The ratio is clamped to [0.5, 3.0] to prevent runaway extrapolation
+ * on thin momentum data (a single crazy week shouldn't 10x a comp).
+ *
+ * Returns null when:
+ *   - `buckets` is empty / null
+ *   - refDate is unparseable
+ *   - the ref-date bucket has zero avg_sale (undefined ratio)
+ *   - refDate is < 14 days old (no meaningful adjustment yet — noise)
+ */
+function computeTrendAdjustmentRatio(
+  buckets: ReadonlyArray<SalesStatsBucket> | null,
+  refDate: string | null,
+): number | null {
+  if (!buckets || buckets.length === 0 || !refDate) return null;
+  const refTs = Date.parse(refDate);
+  if (!Number.isFinite(refTs)) return null;
+  const daysAgo = (Date.now() - refTs) / (24 * 3600 * 1000);
+  if (daysAgo < 14) return null;
+
+  const complete = buckets.filter((b) => !b.partial);
+  if (complete.length === 0) return null;
+  const latest = complete[complete.length - 1];
+  if (!latest || !Number.isFinite(latest.average_sale) || latest.average_sale <= 0) {
+    return null;
+  }
+
+  // Find the complete bucket whose window contains refDate.
+  const refBucket = complete.find((b) => {
+    const s = Date.parse(b.start);
+    const e = Date.parse(b.end);
+    return Number.isFinite(s) && Number.isFinite(e) && refTs >= s && refTs <= e;
+  });
+  if (!refBucket || !Number.isFinite(refBucket.average_sale) || refBucket.average_sale <= 0) {
+    return null;
+  }
+
+  const raw = latest.average_sale / refBucket.average_sale;
+  return Math.max(0.5, Math.min(3.0, raw));
+}
+
 async function aggregateGrade(
   cardId: string,
   cfg: (typeof CANONICAL_GRADES)[number],
@@ -189,7 +255,44 @@ async function aggregateGrade(
     value: weighted, // finalized in fillEstimatedFallback
     valueSource: weighted !== null ? "observed" : "unavailable",
     estimatedMultiplier: null,
+    daysSinceNewestSale:
+      newest !== null
+        ? Math.floor((Date.now() - Date.parse(newest)) / (24 * 3600 * 1000))
+        : null,
+    trendAdjustedValue: null,   // filled by applyTrendAdjustment below
+    trendAdjustmentPct: null,   // filled by applyTrendAdjustment below
   };
+}
+
+/**
+ * Post-process: for every observed entry with a stale newestSaleDate,
+ * apply the player-momentum ratio so iOS can render "trending toward $X
+ * today" alongside the observed comp. Fires only when playerName is
+ * provided AND CH has buckets for that player.
+ */
+async function applyTrendAdjustment(
+  entries: ObservedGradeEntry[],
+  playerName: string | null,
+): Promise<void> {
+  if (!playerName) return;
+  let buckets: SalesStatsBucket[] | null = null;
+  try {
+    const stats = await getSalesStatsByPlayer([playerName], "week");
+    const result = stats?.results?.find((r) => r.player === playerName);
+    buckets = result?.buckets ?? null;
+  } catch {
+    return;
+  }
+  if (!buckets || buckets.length === 0) return;
+
+  for (const entry of entries) {
+    if (entry.valueSource !== "observed") continue;
+    if (entry.value === null || entry.value <= 0) continue;
+    const ratio = computeTrendAdjustmentRatio(buckets, entry.newestSaleDate);
+    if (ratio === null) continue;
+    entry.trendAdjustedValue = Math.round(entry.value * ratio * 100) / 100;
+    entry.trendAdjustmentPct = Math.round((ratio - 1) * 10000) / 100;
+  }
 }
 
 /**
@@ -259,13 +362,20 @@ function fillEstimatedFallback(entries: ObservedGradeEntry[]): void {
  * Every input grade produces a row (even empty ones) so consumers can
  * render a stable UI without extra null-coalescing.
  */
-export async function buildObservedGradeCurve(cardId: string): Promise<ObservedGradeCurve> {
+export async function buildObservedGradeCurve(
+  cardId: string,
+  opts: { playerName?: string | null } = {},
+): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
     CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg)),
   );
   // Second pass — fills value/valueSource on non-observed grades by
   // projecting from Raw × multiplier. Mutates entries in place.
   fillEstimatedFallback(entries);
+  // Third pass — for observed entries with a stale newestSaleDate, apply
+  // the player-momentum ratio so iOS can render "trending toward $X
+  // today" alongside "last sold $Y a while ago."
+  await applyTrendAdjustment(entries, opts.playerName ?? null);
   return {
     cardId,
     entries,
@@ -333,6 +443,9 @@ export async function buildObservedGradeCurvesBulk(
             value: null,
             valueSource: "unavailable",
             estimatedMultiplier: null,
+            daysSinceNewestSale: null,
+            trendAdjustedValue: null,
+            trendAdjustmentPct: null,
           })),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),
