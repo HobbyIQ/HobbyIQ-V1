@@ -1157,6 +1157,64 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
   });
 
+  describe("CF-USE-ACTUALS-NO-CAP — trajectory rate is NOT clipped", () => {
+    it("passes through +20%/wk matched-cohort rate without clamping", async () => {
+      // Pre-CF: rate would have been clipped to +10%/wk (RATE_CAP_PER_WEEK).
+      // Post-CF: hot prospect rate flows through, so Predicted reflects
+      // the actual matched-cohort signal.
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(28) },
+            { price: 100, date: daysAgo(25) },
+            { price: 100, date: daysAgo(22) },
+          ] as any;
+        }
+        return [];
+      });
+      // Matched-cohort medianRatio = 1.20 → rate = +20%/wk
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.20, "HotProspect", /* useMatchedCohort */ true) as any,
+      );
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "HotProspect" });
+      expect(curve.ratePerWeek).toBeCloseTo(0.20, 2);
+      // Predicted multiplier at 30d = 1 + 0.20 × 30/7 = 1.857
+      // Applied to the market-value anchor (which is > $100 from trend)
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // If cap were still in place, ratePerWeek would be 0.10 (rate cap)
+      // and Predicted would be materially lower.
+      expect(raw.predictedPriceAt30d!).toBeGreaterThan(raw.value! * 1.5);
+    });
+
+    it("passes through -30%/wk matched-cohort rate without clamping (bearish)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 200, date: daysAgo(28) },
+            { price: 200, date: daysAgo(25) },
+            { price: 200, date: daysAgo(22) },
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(-0.30, "Cooling", /* useMatchedCohort */ true) as any,
+      );
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Cooling" });
+      expect(curve.ratePerWeek).toBeCloseTo(-0.30, 2);
+    });
+  });
+
   it("multi-grade aggregation covers every canonical grade in one build call", async () => {
     const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
     vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
