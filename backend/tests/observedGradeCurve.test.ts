@@ -17,6 +17,15 @@ vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
 vi.mock("../src/services/playerTrend/index.js", () => ({
   getPlayerTrendSnapshot: vi.fn(async () => null),
 }));
+// CF-MATCHED-COHORT-ON-DEMAND (2026-07-05): mock the on-demand compute
+// + cache path so tests don't hit CH live. Individual tests override.
+vi.mock("../src/services/playerTrend/cardHedgeMatchedCohortProvider.js", () => ({
+  fetchCardHedgeMatchedCohort: vi.fn(async () => null),
+}));
+vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
+  readMatchedCohortFromCache: vi.fn(async () => null),
+  writeMatchedCohortToCache: vi.fn(async () => undefined),
+}));
 
 // Deterministic "now" so recency-based confidence tests are stable.
 const FAKE_NOW = new Date("2026-07-04T12:00:00.000Z");
@@ -638,6 +647,82 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       expect(raw.trendAdjustmentPct).toBeGreaterThan(30);
       expect(raw.trendAdjustmentPct).toBeLessThan(40);
+    });
+
+    it("CF-MATCHED-COHORT-ON-DEMAND: computes matched-cohort inline when pre-populated cache is cold", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { fetchCardHedgeMatchedCohort } = await import(
+        "../src/services/playerTrend/cardHedgeMatchedCohortProvider.js"
+      );
+      const { writeMatchedCohortToCache } = await import(
+        "../src/services/playerTrend/matchedCohortCache.js"
+      );
+
+      // Sale $100 30d ago
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(29) },
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+          ] as any;
+        }
+        return [];
+      });
+
+      // Cache is COLD — snapshot returns matchedCohort=null but raw is bad
+      // (would produce buggy Market Value if used)
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce({
+        player: "Adamczewski",
+        momentum: {
+          latestCompleteWeek: { weekStart: "2026-06-29", weekEnd: "2026-07-05",
+            count: 10, totalDollars: 800, avgSale: 80 },
+          priorMeanAvgSale: 200, priorMeanCount: 20, priorWeeksCount: 4,
+          momentumRatio: 0.40, // -60% raw — buggy signal
+          volumeRatio: 0.5,
+        },
+        supplyTrend: "flat",
+        totalSales30d: 30,
+        matchedCohort: null, // ← cache miss
+        providerName: "cardhedge",
+        capturedAtMs: Date.now(),
+      } as any);
+
+      // On-demand compute returns a proper cohort with +8% median ratio
+      vi.mocked(fetchCardHedgeMatchedCohort).mockResolvedValueOnce({
+        latestWeekStart: "2026-06-29",
+        latestWeekEnd: "2026-07-05",
+        priorWindowWeeksCount: 4,
+        cohort: [
+          { cardId: "c1", latestWeekMedianPrice: 80, latestWeekSaleCount: 3, priorWindowMedianPrice: 75, priorWindowSaleCount: 8, ratio: 1.07 },
+          { cardId: "c2", latestWeekMedianPrice: 160, latestWeekSaleCount: 2, priorWindowMedianPrice: 148, priorWindowSaleCount: 5, ratio: 1.08 },
+          { cardId: "c3", latestWeekMedianPrice: 220, latestWeekSaleCount: 1, priorWindowMedianPrice: 200, priorWindowSaleCount: 4, ratio: 1.10 },
+        ],
+        medianRatio: 1.08, // +8% mix-bias-free
+        meanRatio: 1.083,
+        latestWeekActiveCards: 3,
+        totalCardsEvaluated: 5,
+        droppedNewOrLongTail: 2,
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Adamczewski" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Rate = +8% weekly (from on-demand matched-cohort, NOT raw -60%)
+      // Over ~29d ≈ 4.14 weeks → +33% → Market Value ≈ $133
+      expect(raw.trendAdjustedValue).toBeGreaterThan(125);
+      expect(raw.trendAdjustedValue).toBeLessThan(140);
+      expect(raw.trendAdjustmentPct).toBeGreaterThan(0);
+
+      // Verify write-back so future requests hit cache
+      expect(writeMatchedCohortToCache).toHaveBeenCalledWith(
+        "Adamczewski",
+        expect.objectContaining({ medianRatio: 1.08 }),
+        "cardhedge",
+      );
     });
 
     it("no playerName — trajectory is skipped, no adjustment fields populated", async () => {

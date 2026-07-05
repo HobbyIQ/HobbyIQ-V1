@@ -36,6 +36,18 @@ import { computeWeightedMedian } from "./compiqEstimate.service.js";
 // matched-cohort isn't available. We consume the resulting snapshot
 // and pick whichever signal it exposes.
 import { getPlayerTrendSnapshot } from "../playerTrend/index.js";
+// CF-MATCHED-COHORT-ON-DEMAND (2026-07-05): on-demand computation +
+// write-back when the pre-populated cache misses. The overnight job
+// only covers Bowman-universe + portfolio-holdings players, so a
+// long-tail player like Adamczewski (thin cohort, not on any
+// portfolio) never gets matched-cohort → downstream falls back to
+// raw signal → mix bias returns. This closes that gap by computing
+// on-demand and caching the result so the next 24h hits the cache.
+import { fetchCardHedgeMatchedCohort } from "../playerTrend/cardHedgeMatchedCohortProvider.js";
+import {
+  readMatchedCohortFromCache,
+  writeMatchedCohortToCache,
+} from "../playerTrend/matchedCohortCache.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -316,31 +328,49 @@ async function deriveWeeklyRate(playerName: string): Promise<number | null> {
   }
   if (!snapshot) return null;
 
-  // Prefer matched-cohort medianRatio when populated.
   let rawRate: number | null = null;
-  let signalSource: "matched-cohort" | "raw-weekly" | null = null;
+  let signalSource: "matched-cohort-cached" | "matched-cohort-on-demand" | "raw-weekly" | null = null;
+  let cohortSize: number | null = null;
 
+  // Prefer matched-cohort medianRatio when the pre-computed cache has it.
   if (
     snapshot.matchedCohort &&
     Number.isFinite(snapshot.matchedCohort.medianRatio) &&
     snapshot.matchedCohort.cohortSize >= 2
   ) {
     rawRate = snapshot.matchedCohort.medianRatio - 1;
-    signalSource = "matched-cohort";
-  } else if (
-    snapshot.momentum.momentumRatio !== null &&
-    Number.isFinite(snapshot.momentum.momentumRatio)
-  ) {
-    rawRate = snapshot.momentum.momentumRatio - 1;
-    signalSource = "raw-weekly";
+    signalSource = "matched-cohort-cached";
+    cohortSize = snapshot.matchedCohort.cohortSize;
+  } else {
+    // Cache miss — compute matched-cohort on-demand. Cost is ~30 CH
+    // calls (one prices-by-card per card); result cached 24h so the
+    // next request skips the compute. Silently fails on any error —
+    // trajectory falls further through to raw signal below.
+    const onDemand = await tryMatchedCohortOnDemand(playerName);
+    if (
+      onDemand &&
+      Number.isFinite(onDemand.medianRatio ?? NaN) &&
+      onDemand.cohort.length >= 2
+    ) {
+      rawRate = (onDemand.medianRatio as number) - 1;
+      signalSource = "matched-cohort-on-demand";
+      cohortSize = onDemand.cohort.length;
+    } else if (
+      snapshot.momentum.momentumRatio !== null &&
+      Number.isFinite(snapshot.momentum.momentumRatio)
+    ) {
+      rawRate = snapshot.momentum.momentumRatio - 1;
+      signalSource = "raw-weekly";
+    }
   }
   if (rawRate === null) return null;
 
   const capped = Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
 
-  // Observability: log which signal drove the trajectory. Ops can KQL
-  // for `signal:matched-cohort` vs `signal:raw-weekly` to measure
-  // coverage as the background job's rolling player list expands.
+  // Observability: log which signal drove the trajectory.
+  //   matched-cohort-cached   → the overnight job covered this player
+  //   matched-cohort-on-demand → we computed inline (cache was cold)
+  //   raw-weekly              → both matched-cohort paths failed
   console.log(JSON.stringify({
     event: "trajectory_rate_derived",
     source: "observedGradeCurve",
@@ -348,10 +378,43 @@ async function deriveWeeklyRate(playerName: string): Promise<number | null> {
     signal: signalSource,
     rawRate: Math.round(rawRate * 10000) / 100,
     cappedRate: Math.round(capped * 10000) / 100,
-    cohortSize: snapshot.matchedCohort?.cohortSize ?? null,
+    cohortSize,
   }));
 
   return capped;
+}
+
+/**
+ * On-demand matched-cohort compute + write-back to cache. Fires only
+ * when the pre-populated cache misses. Silent no-throw — returns null
+ * on any error, caller falls through to raw signal.
+ *
+ * The write-back means the next 24h of requests for this player hit
+ * the cache. Amortized cost per player per day: one ~30-call fanout,
+ * spread across whichever user first opens a card for that player.
+ */
+async function tryMatchedCohortOnDemand(playerName: string): Promise<
+  { medianRatio: number | null; cohort: { cardId: string }[] } | null
+> {
+  try {
+    // Guard: if the SAME request already computed matched-cohort earlier
+    // in this process, use it. cardHedgePlayerTrendProvider does the same
+    // cache read; when it returned null we know the cache is truly empty.
+    const guardCheck = await readMatchedCohortFromCache(playerName);
+    if (guardCheck) return guardCheck.result;
+
+    const result = await fetchCardHedgeMatchedCohort(playerName);
+    if (!result) return null;
+
+    // Write-back so subsequent requests skip the compute.
+    void writeMatchedCohortToCache(playerName, result, "cardhedge").catch(() => {});
+    return result;
+  } catch (err) {
+    console.warn(
+      `[observedGradeCurve.matched-cohort-on-demand] ${playerName}: ${(err as Error)?.message ?? err}`,
+    );
+    return null;
+  }
 }
 
 /**
