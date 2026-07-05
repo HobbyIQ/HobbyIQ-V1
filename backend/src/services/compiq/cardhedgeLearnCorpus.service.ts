@@ -139,17 +139,19 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
     observedMedian: number | null;
     valueSource: "observed" | "estimated" | "unavailable";
     estimatedMultiplier: number | null;
+    /** CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): which fallback
+     *  produced the value when valueSource === "estimated". Enables
+     *  corpus queries like "does reference-price beat raw-multiplier
+     *  for prediction accuracy?" */
+    estimatedFrom: "reference-price" | "raw-multiplier" | null;
     confidenceScore: number;
     newestSaleDate: string | null;
-    /** CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): the trajectory
-     *  predictions we ISSUED at capture time. Later joined against
-     *  actual observed sales to measure calibration error. */
     daysSinceNewestSale: number | null;
-    trendAdjustedValue: number | null;      // Market Value TODAY
+    trendAdjustedValue: number | null;
     trendAdjustmentPct: number | null;
-    predictedPriceAt30d: number | null;     // Predicted 30d forward
+    predictedPriceAt30d: number | null;
     predictedPricePct: number | null;
-    predictedPriceRangeLow: number | null;  // ±15% confidence band
+    predictedPriceRangeLow: number | null;
     predictedPriceRangeHigh: number | null;
   }>;
 }
@@ -251,6 +253,7 @@ export function persistObservedGradeCurve(input: {
     observedMedian: number | null;
     valueSource: "observed" | "estimated" | "unavailable";
     estimatedMultiplier: number | null;
+    estimatedFrom?: "reference-price" | "raw-multiplier" | null;
     confidenceScore: number;
     newestSaleDate: string | null;
     daysSinceNewestSale?: number | null;
@@ -282,6 +285,7 @@ export function persistObservedGradeCurve(input: {
       observedMedian: g.observedMedian,
       valueSource: g.valueSource,
       estimatedMultiplier: g.estimatedMultiplier,
+      estimatedFrom: g.estimatedFrom ?? null,
       confidenceScore: g.confidenceScore,
       newestSaleDate: g.newestSaleDate,
       daysSinceNewestSale: g.daysSinceNewestSale ?? null,

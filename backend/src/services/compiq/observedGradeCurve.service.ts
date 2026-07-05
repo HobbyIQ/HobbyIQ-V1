@@ -109,9 +109,22 @@ export interface ObservedGradeEntry {
    *  `unavailable` = no data path yielded a number. */
   valueSource: "observed" | "estimated" | "unavailable";
   /** When valueSource === "estimated", the multiplier applied to the
-   *  Raw observed median. Null otherwise. Surfaced so iOS can render
-   *  "est. $600 (Raw × 4.0)" if desired. */
+   *  Raw observed median. Null when the estimate came from a reference
+   *  price rather than a Raw × multiplier calculation. */
   estimatedMultiplier: number | null;
+  /** CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): when valueSource
+   *  === "estimated", identifies WHICH fallback source produced the
+   *  number. Enables (a) iOS to render more informative "est." labels
+   *  and (b) the corpus to measure which estimation method is most
+   *  accurate over time.
+   *    "reference-price"  — third-party model estimate at this grade
+   *                          (preferred; usually a real observation of
+   *                           broader eBay data than our filter sees)
+   *    "raw-multiplier"   — Raw observed × hand-tuned tier constant
+   *                          (last-resort fallback when reference
+   *                           price is also unavailable)
+   *  Null for observed / unavailable entries. */
+  estimatedFrom: "reference-price" | "raw-multiplier" | null;
   /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
    *  Value, and Predicted on ONE trend line — the SAME per-week rate
    *  derives all three. Prevents the "$100 Market Value but $205
@@ -258,6 +271,7 @@ async function aggregateGrade(
     value: weighted, // finalized in fillEstimatedFallback
     valueSource: weighted !== null ? "observed" : "unavailable",
     estimatedMultiplier: null,
+    estimatedFrom: null,
     daysSinceNewestSale:
       newest !== null
         ? Math.floor((Date.now() - Date.parse(newest)) / (24 * 3600 * 1000))
@@ -305,8 +319,13 @@ const MAX_WEEKS_LOOKBACK = 6;
 /** Predicted horizon — 30 days forward from today. Fixed at 30 for now;
  *  callers can override once we add a `horizon` param. */
 const PREDICTED_HORIZON_DAYS = 30;
-/** Confidence band on Predicted — ±15% around the point estimate. */
+/** Confidence band on Predicted — ±15% around the point estimate
+ *  when the underlying value comes from observed sales. */
 const PREDICTED_RANGE_PCT = 0.15;
+/** Wider band when the underlying value is ESTIMATED (reference-price
+ *  or raw-multiplier). Predicting an estimate forward compounds
+ *  uncertainty; a wider range signals that honesty visually. */
+const ESTIMATED_PREDICTED_RANGE_PCT = 0.25;
 /** Minimum days since sale before we apply trajectory — a fresh comp
  *  doesn't need adjustment (would just add noise from partial weeks). */
 const FRESH_COMP_THRESHOLD_DAYS = 14;
@@ -458,13 +477,20 @@ async function applyTrajectory(
   const rate = derivation.cappedRate;
 
   for (const entry of entries) {
-    if (entry.valueSource !== "observed") continue;
     if (entry.value === null || entry.value <= 0) continue;
-    if (entry.daysSinceNewestSale === null) continue;
+    // Skip "unavailable" — no anchor to project from.
+    if (entry.valueSource === "unavailable") continue;
 
-    // ── Market Value branch — only for stale comps ──────────────────
+    // ── Market Value adjustment — only for OBSERVED entries with a
+    //    stale sale. Estimated entries stay at their point estimate;
+    //    layering a trend on top of an already-projected value would
+    //    compound uncertainty in an untrustworthy way. ────────────────
     let marketValueForForwardAnchor: number = entry.value;
-    if (entry.daysSinceNewestSale >= FRESH_COMP_THRESHOLD_DAYS) {
+    if (
+      entry.valueSource === "observed" &&
+      entry.daysSinceNewestSale !== null &&
+      entry.daysSinceNewestSale >= FRESH_COMP_THRESHOLD_DAYS
+    ) {
       const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
       const marketMultiplier = 1 + rate * weeksSinceSale;
       const trendAdjusted = Math.round(entry.value * marketMultiplier * 100) / 100;
@@ -472,17 +498,27 @@ async function applyTrajectory(
       entry.trendAdjustmentPct = Math.round((marketMultiplier - 1) * 10000) / 100;
       marketValueForForwardAnchor = trendAdjusted;
     }
-    // Fresh sale → trendAdjustedValue stays null; iOS uses entry.value
-    // as the Market Value. Forward projection below still fires.
+    // For observed-fresh AND estimated: trendAdjustedValue stays null;
+    // iOS renders entry.value as the Market Value. Forward projection
+    // below still fires so seller gets a defensible next-price signal.
 
-    // ── Predicted branch — ALWAYS fires when we have a rate ─────────
+    // ── Predicted branch — fires for observed AND estimated grades ──
+    // Drew's rationale (2026-07-05): "if someone comes back with a 10
+    // with no sales, they want us to help them with an accurate number
+    // to sell for." Estimated grades still get a Predicted so the seller
+    // has actionable guidance; the wider confidence band signals
+    // uncertainty visually.
     const predictedMultiplier = 1 + rate * (PREDICTED_HORIZON_DAYS / 7);
     const predicted =
       Math.round(marketValueForForwardAnchor * predictedMultiplier * 100) / 100;
+    const rangePct =
+      entry.valueSource === "estimated"
+        ? ESTIMATED_PREDICTED_RANGE_PCT
+        : PREDICTED_RANGE_PCT;
     entry.predictedPriceAt30d = predicted;
     entry.predictedPricePct = Math.round((predictedMultiplier - 1) * 10000) / 100;
-    entry.predictedPriceRangeLow = Math.round(predicted * (1 - PREDICTED_RANGE_PCT) * 100) / 100;
-    entry.predictedPriceRangeHigh = Math.round(predicted * (1 + PREDICTED_RANGE_PCT) * 100) / 100;
+    entry.predictedPriceRangeLow = Math.round(predicted * (1 - rangePct) * 100) / 100;
+    entry.predictedPriceRangeHigh = Math.round(predicted * (1 + rangePct) * 100) / 100;
   }
 
   return derivation;
@@ -519,29 +555,60 @@ const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = {
 };
 
 /**
- * Second-pass fill: for grades where observed sampleCount === 0, project
- * an estimated value from the Raw observed median × the grade multiplier.
- * When Raw itself has no observed data, valueSource stays "unavailable".
- * Confidence stays at the observed-computed value (near-zero when no
- * observed data) — iOS uses valueSource to render the "estimated" badge,
- * not the confidence number.
+ * CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05):
+ * Second-pass fill for grades where observed sampleCount === 0. Priority:
+ *
+ *   1. Reference-price at this grade (third-party model, when caller
+ *      passes referencePriceByGrade). Preferred because it typically
+ *      reflects a broader eBay observation than our own filter sees.
+ *   2. Raw observed × hand-tuned tier multiplier. Last-resort fallback
+ *      when reference-price is also missing.
+ *   3. Leave valueSource "unavailable" when neither path yields a number.
+ *
+ * Drew's rationale (2026-07-05): "if someone comes back with a 10 with
+ * no sales, they want us to help them with an accurate number to sell
+ * for." A flat Raw × 8 multiplier isn't accurate enough — a card's
+ * PSA 10 grade premium varies with release, print run, and market
+ * demand. The reference price captures more of that variance because
+ * it's derived from broader data.
+ *
+ * When corpus grows enough, we can also add a tier-3 layer using
+ * computeReleaseGradeCurve for release-specific ratios.
  */
-function fillEstimatedFallback(entries: ObservedGradeEntry[]): void {
+function fillEstimatedFallback(
+  entries: ObservedGradeEntry[],
+  referencePriceByGrade?: ReadonlyMap<string, number>,
+): void {
   const raw = entries.find((e) => e.grade === "Raw");
   const rawObserved =
     raw && raw.valueSource === "observed" && raw.weightedMedianPrice !== null
       ? raw.weightedMedianPrice
       : null;
-  if (rawObserved === null) return;
 
   for (const entry of entries) {
     if (entry.grade === "Raw") continue;
     if (entry.valueSource === "observed") continue;
-    const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
-    if (typeof multiplier !== "number" || multiplier <= 0) continue;
-    entry.value = Math.round(rawObserved * multiplier * 100) / 100;
-    entry.valueSource = "estimated";
-    entry.estimatedMultiplier = multiplier;
+
+    // Priority 1: reference price at this grade (third-party model).
+    const refPrice = referencePriceByGrade?.get(entry.grade);
+    if (typeof refPrice === "number" && Number.isFinite(refPrice) && refPrice > 0) {
+      entry.value = Math.round(refPrice * 100) / 100;
+      entry.valueSource = "estimated";
+      entry.estimatedFrom = "reference-price";
+      entry.estimatedMultiplier = null; // no multiplier used
+      continue;
+    }
+
+    // Priority 2: Raw observed × hand-tuned tier multiplier.
+    if (rawObserved !== null) {
+      const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+      if (typeof multiplier === "number" && multiplier > 0) {
+        entry.value = Math.round(rawObserved * multiplier * 100) / 100;
+        entry.valueSource = "estimated";
+        entry.estimatedFrom = "raw-multiplier";
+        entry.estimatedMultiplier = multiplier;
+      }
+    }
   }
 }
 
@@ -557,14 +624,23 @@ function fillEstimatedFallback(entries: ObservedGradeEntry[]): void {
  */
 export async function buildObservedGradeCurve(
   cardId: string,
-  opts: { playerName?: string | null } = {},
+  opts: {
+    playerName?: string | null;
+    /** CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): when provided,
+     *  fillEstimatedFallback prefers this over the hand-tuned Raw ×
+     *  multiplier. Callers with reference-price data on hand (e.g.
+     *  /card-panel already fetches getAllPricesByCard) pass the
+     *  grade→price map here. Callers without it can omit — falls
+     *  through to the multiplier as before. */
+    referencePriceByGrade?: ReadonlyMap<string, number>;
+  } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
     CANONICAL_GRADES.map((cfg) => aggregateGrade(cardId, cfg)),
   );
-  // Second pass — fills value/valueSource on non-observed grades by
-  // projecting from Raw × multiplier. Mutates entries in place.
-  fillEstimatedFallback(entries);
+  // Second pass — fills value/valueSource on non-observed grades,
+  // preferring reference-price over Raw × multiplier when provided.
+  fillEstimatedFallback(entries, opts.referencePriceByGrade);
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
   // player weekly buckets, then compute Market Value (today) + Predicted
   // (30d) for every observed entry so all three numbers sit on one line.
@@ -640,6 +716,7 @@ export async function buildObservedGradeCurvesBulk(
             value: null,
             valueSource: "unavailable",
             estimatedMultiplier: null,
+            estimatedFrom: null,
             daysSinceNewestSale: null,
             trendAdjustedValue: null,
             trendAdjustmentPct: null,
