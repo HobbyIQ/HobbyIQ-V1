@@ -149,6 +149,13 @@ export interface ObservedGradeEntry {
    *  an old comp.
    */
   daysSinceNewestSale: number | null;
+  /** CF-RECENCY-LIFT (2026-07-05): price of the single newest closed sale
+   *  (by date). Distinct from `weightedMedianPrice` which smooths across
+   *  the pool. When the newest sale is meaningfully above the smoothed
+   *  median AND still fresh, trajectory anchors on a blend of the two so
+   *  Predicted catches upswings faster instead of lagging behind the
+   *  freshest datapoint. Null when no dated sales exist for this grade. */
+  newestSalePrice: number | null;
   /** Market Value TODAY. Value observed at the last sale × trend since.
    *  Null when the sale is fresh (<14d) or no momentum signal is
    *  available — iOS should render `value` as-is in those cases. */
@@ -329,6 +336,18 @@ async function aggregateGrade(
   const high = computePercentile(prices, 0.90);
   const newest = dates.length ? dates[dates.length - 1] : null;
   const oldest = dates.length ? dates[0] : null;
+  // CF-RECENCY-LIFT (2026-07-05): find the price of the single newest
+  // sale (by date). Sort a lightweight { price, date } view of sales,
+  // then take the tail. Kept separate from `weighted` because the two
+  // answer different questions — weighted median is the pool's smoothed
+  // center; newestSalePrice is the freshest datapoint.
+  const salesWithDates = sales.filter(
+    (s): s is { price: number; date: string } =>
+      typeof s.date === "string" && s.date.length > 0,
+  );
+  salesWithDates.sort((a, b) => a.date.localeCompare(b.date));
+  const newestSalePrice =
+    salesWithDates.length > 0 ? salesWithDates[salesWithDates.length - 1].price : null;
 
   // Initial pass: observed-only. value + valueSource + estimatedMultiplier
   // are filled by fillEstimatedFallback below once every grade has been
@@ -352,6 +371,7 @@ async function aggregateGrade(
       newest !== null
         ? Math.floor((Date.now() - Date.parse(newest)) / (24 * 3600 * 1000))
         : null,
+    newestSalePrice,
     trendAdjustedValue: null,       // filled by applyTrajectory below
     trendAdjustmentPct: null,
     predictedPriceAt30d: null,
@@ -413,6 +433,74 @@ const FRESH_COMP_THRESHOLD_DAYS = 14;
  *  "if like parallels sell very recently that's fine, but if it is
  *  over 4 weeks ago, they become stale". */
 const PARALLEL_TIER_MAX_STALENESS_DAYS = 28;
+
+// ─── CF-RECENCY-LIFT (2026-07-05) — same-card recent comp anchor ─────────────
+// The problem: `weightedMedianPrice` smooths across the sale pool. If the
+// single newest closed sale is meaningfully ABOVE the smoothed median, the
+// smoothing lags the true recent direction — Predicted comes in below
+// active-listing bids because our anchor is stuck in the smoothed past.
+//
+// Solution: when the newest closed sale is above the smoothed median by
+// more than MIN_LIFT_GAP AND is still within LIFT_MAX_STALENESS_DAYS, lift
+// the trajectory anchor toward the newest datapoint. Age-weighted so a
+// 3-day-old sale lifts more than a 20-day-old one.
+//
+// This is a SAME-CARD signal (Drew's "direct comp trends") — it captures
+// recent direction of the card itself, not the player or tier. Complements
+// matched-cohort (Drew's "player market direction via cardId-matched"),
+// which stays the primary rate source.
+/** Minimum gap between newest sale and weighted median before lift fires.
+ *  Below 15% we treat the difference as pool noise, not a signal. */
+const RECENCY_LIFT_MIN_GAP = 0.15;
+/** Newest-sale age (days) beyond which lift stops firing. Age-linear decay
+ *  from 0d (full lift weight) to LIFT_MAX_STALENESS_DAYS (zero weight). */
+const RECENCY_LIFT_MAX_STALENESS_DAYS = 21;
+/** Damping factor: the anchor meets the newest at this fraction of the
+ *  age-weighted gap. 0.6 = "move 60% of the age-weighted distance from
+ *  smoothed median toward newest sale". Prevents over-anchoring on a
+ *  single potentially-outlier datapoint. */
+const RECENCY_LIFT_DAMPEN = 0.6;
+
+/**
+ * CF-RECENCY-LIFT (2026-07-05, Drew): compute the trajectory anchor that
+ * should feed Market Value + Predicted, given the smoothed median and the
+ * single newest closed sale. Returns the SAME value as `observedValue`
+ * when no lift is warranted — so callers can use the result unconditionally.
+ */
+interface RecencyLiftResult {
+  anchor: number;
+  lifted: boolean;
+  liftPct: number;
+}
+function computeRecencyLiftedAnchor(
+  observedValue: number,
+  newestSalePrice: number | null,
+  daysSinceNewestSale: number | null,
+): RecencyLiftResult {
+  if (
+    !newestSalePrice ||
+    newestSalePrice <= 0 ||
+    observedValue <= 0 ||
+    daysSinceNewestSale === null ||
+    daysSinceNewestSale < 0 ||
+    daysSinceNewestSale >= RECENCY_LIFT_MAX_STALENESS_DAYS
+  ) {
+    return { anchor: observedValue, lifted: false, liftPct: 0 };
+  }
+  const gap = newestSalePrice / observedValue - 1;
+  if (gap < RECENCY_LIFT_MIN_GAP) {
+    return { anchor: observedValue, lifted: false, liftPct: 0 };
+  }
+  const recencyWeight = Math.max(
+    0,
+    1 - daysSinceNewestSale / RECENCY_LIFT_MAX_STALENESS_DAYS,
+  );
+  const alpha = RECENCY_LIFT_DAMPEN * recencyWeight;
+  const anchor = observedValue * (1 - alpha) + newestSalePrice * alpha;
+  const rounded = Math.round(anchor * 100) / 100;
+  const liftPct = Math.round(((rounded / observedValue) - 1) * 10000) / 100;
+  return { anchor: rounded, lifted: true, liftPct };
+}
 
 /**
  * Derive a bounded per-week rate from the player trend snapshot.
@@ -637,11 +725,37 @@ async function applyTrajectory(
     // Skip "unavailable" — no anchor to project from.
     if (entry.valueSource === "unavailable") continue;
 
-    // ── Market Value adjustment — only for OBSERVED entries with a
-    //    stale sale. Estimated entries stay at their point estimate;
-    //    layering a trend on top of an already-projected value would
-    //    compound uncertainty in an untrustworthy way. ────────────────
-    let marketValueForForwardAnchor: number = entry.value;
+    // ── CF-RECENCY-LIFT (2026-07-05, Drew): compute lifted anchor first.
+    //    For OBSERVED entries only — an estimated grade has no per-grade
+    //    "newest sale" (its value came from Raw × multiplier or reference
+    //    price), so there's nothing to lift toward. ────────────────────
+    const liftResult: RecencyLiftResult =
+      entry.valueSource === "observed"
+        ? computeRecencyLiftedAnchor(
+            entry.value,
+            entry.newestSalePrice,
+            entry.daysSinceNewestSale,
+          )
+        : { anchor: entry.value, lifted: false, liftPct: 0 };
+    const anchorForTrajectory = liftResult.anchor;
+    if (liftResult.lifted) {
+      console.log(JSON.stringify({
+        event: "predicted_anchor_lifted",
+        source: "observedGradeCurve",
+        grade: entry.grade,
+        observedValue: entry.value,
+        newestSalePrice: entry.newestSalePrice,
+        daysSinceNewestSale: entry.daysSinceNewestSale,
+        liftedAnchor: anchorForTrajectory,
+        liftPct: liftResult.liftPct,
+      }));
+    }
+
+    // ── Market Value adjustment — for OBSERVED entries with a stale
+    //    sale (trend layered on top of lifted anchor). Estimated entries
+    //    stay at their point estimate; layering a trend on an already-
+    //    projected value would compound uncertainty. ──────────────────
+    let marketValueForForwardAnchor: number = anchorForTrajectory;
     if (
       entry.valueSource === "observed" &&
       entry.daysSinceNewestSale !== null &&
@@ -649,14 +763,22 @@ async function applyTrajectory(
     ) {
       const weeksSinceSale = Math.min(entry.daysSinceNewestSale / 7, MAX_WEEKS_LOOKBACK);
       const marketMultiplier = 1 + rate * weeksSinceSale;
-      const trendAdjusted = Math.round(entry.value * marketMultiplier * 100) / 100;
+      const trendAdjusted = Math.round(anchorForTrajectory * marketMultiplier * 100) / 100;
       entry.trendAdjustedValue = trendAdjusted;
-      entry.trendAdjustmentPct = Math.round((marketMultiplier - 1) * 10000) / 100;
+      // trendAdjustmentPct is now measured against ORIGINAL value (pill),
+      // not the lifted anchor — iOS shows Δ from the user-visible pill.
+      entry.trendAdjustmentPct = Math.round(((trendAdjusted / entry.value) - 1) * 10000) / 100;
       marketValueForForwardAnchor = trendAdjusted;
+    } else if (liftResult.lifted && entry.valueSource === "observed") {
+      // Fresh-comp OR estimated-observed but with a lift: still emit
+      // trendAdjustedValue so iOS renders the lifted number as Market
+      // Value. Otherwise iOS would show the raw pill and hide the lift.
+      entry.trendAdjustedValue = anchorForTrajectory;
+      entry.trendAdjustmentPct = liftResult.liftPct;
     }
-    // For observed-fresh AND estimated: trendAdjustedValue stays null;
-    // iOS renders entry.value as the Market Value. Forward projection
-    // below still fires so seller gets a defensible next-price signal.
+    // For observed-fresh-with-no-lift AND estimated: trendAdjustedValue
+    // stays null; iOS renders entry.value as Market Value. Forward
+    // projection below still fires when a rate exists.
 
     // ── Predicted branch — fires for observed AND estimated grades ──
     // Drew's rationale (2026-07-05): "if someone comes back with a 10
@@ -886,6 +1008,7 @@ export async function buildObservedGradeCurvesBulk(
             estimatedMultiplier: null,
             estimatedFrom: null,
             daysSinceNewestSale: null,
+            newestSalePrice: null,
             trendAdjustedValue: null,
             trendAdjustmentPct: null,
             predictedPriceAt30d: null,
