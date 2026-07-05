@@ -21,9 +21,21 @@
 // bounded (10 grades × 12h cache = 10 CH calls per unique card per 12h)
 // so per-card fetch cost stays predictable.
 
-import { getCardSales, getSalesStatsByPlayer } from "./cardhedge.client.js";
-import type { SalesStatsBucket } from "./cardhedge.client.js";
+import { getCardSales } from "./cardhedge.client.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
+// CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): swap the noisy raw
+// sales-stats-by-player signal for the mix-bias-free matched-cohort
+// medianRatio when available. Per project memory
+// (project_matched_cohort_supersedes_raw): "matched-cohort medianRatio
+// is the SUPERIOR player-momentum signal vs raw sales-stats-by-player
+// avgSale; downstream must prefer matched-cohort when available (Eric
+// Hartman 2026-07-01: raw -8% wrong, matched +36% correct)."
+//
+// getPlayerTrendSnapshot handles both: it prefers matched-cohort from
+// the pre-computed cache, falls back to raw sales-stats-by-player when
+// matched-cohort isn't available. We consume the resulting snapshot
+// and pick whichever signal it exposes.
+import { getPlayerTrendSnapshot } from "../playerTrend/index.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -278,21 +290,68 @@ const PREDICTED_RANGE_PCT = 0.15;
 const FRESH_COMP_THRESHOLD_DAYS = 14;
 
 /**
- * Derive a bounded per-week rate from the player's weekly buckets.
- * Returns null when we lack sufficient signal (< 5 complete weeks).
+ * Derive a bounded per-week rate from the player trend snapshot.
+ *
+ * Signal preference (per project memory
+ * "project_matched_cohort_supersedes_raw"):
+ *   1. matchedCohort.medianRatio — mix-bias-free per-card ratio,
+ *      the SUPERIOR signal. Compares each card that sold in both the
+ *      latest week AND the prior 4-week window, then medians the
+ *      per-card ratios. A player like Adamczewski whose mix swings
+ *      wildly (base auto at $50, Superfractor at $1500) gets clean
+ *      signal here — the Superfractor selling in one week doesn't
+ *      distort the trajectory.
+ *   2. momentum.momentumRatio — raw weekly-avg-sale ratio. Falls
+ *      back to this only when matched-cohort isn't cached yet.
+ *   3. null — skip trajectory; observed value is honest.
+ *
+ * Bounded to ±10%/week regardless of source.
  */
-function deriveWeeklyRate(buckets: ReadonlyArray<SalesStatsBucket>): number | null {
-  const complete = buckets.filter((b) => !b.partial);
-  if (complete.length < 5) return null;
-  const latest = complete[complete.length - 1];
-  if (!latest || !Number.isFinite(latest.average_sale) || latest.average_sale <= 0) return null;
-  const priorWindow = complete.slice(-5, -1);
-  const priorMean =
-    priorWindow.reduce((s, b) => s + (Number.isFinite(b.average_sale) ? b.average_sale : 0), 0) /
-    priorWindow.length;
-  if (priorMean <= 0) return null;
-  const rawRate = latest.average_sale / priorMean - 1;
-  return Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
+async function deriveWeeklyRate(playerName: string): Promise<number | null> {
+  let snapshot;
+  try {
+    snapshot = await getPlayerTrendSnapshot(playerName, 5);
+  } catch {
+    return null;
+  }
+  if (!snapshot) return null;
+
+  // Prefer matched-cohort medianRatio when populated.
+  let rawRate: number | null = null;
+  let signalSource: "matched-cohort" | "raw-weekly" | null = null;
+
+  if (
+    snapshot.matchedCohort &&
+    Number.isFinite(snapshot.matchedCohort.medianRatio) &&
+    snapshot.matchedCohort.cohortSize >= 2
+  ) {
+    rawRate = snapshot.matchedCohort.medianRatio - 1;
+    signalSource = "matched-cohort";
+  } else if (
+    snapshot.momentum.momentumRatio !== null &&
+    Number.isFinite(snapshot.momentum.momentumRatio)
+  ) {
+    rawRate = snapshot.momentum.momentumRatio - 1;
+    signalSource = "raw-weekly";
+  }
+  if (rawRate === null) return null;
+
+  const capped = Math.max(-RATE_CAP_PER_WEEK, Math.min(RATE_CAP_PER_WEEK, rawRate));
+
+  // Observability: log which signal drove the trajectory. Ops can KQL
+  // for `signal:matched-cohort` vs `signal:raw-weekly` to measure
+  // coverage as the background job's rolling player list expands.
+  console.log(JSON.stringify({
+    event: "trajectory_rate_derived",
+    source: "observedGradeCurve",
+    player: playerName,
+    signal: signalSource,
+    rawRate: Math.round(rawRate * 10000) / 100,
+    cappedRate: Math.round(capped * 10000) / 100,
+    cohortSize: snapshot.matchedCohort?.cohortSize ?? null,
+  }));
+
+  return capped;
 }
 
 /**
@@ -306,16 +365,7 @@ async function applyTrajectory(
   playerName: string | null,
 ): Promise<void> {
   if (!playerName) return;
-  let buckets: SalesStatsBucket[] | null = null;
-  try {
-    const stats = await getSalesStatsByPlayer([playerName], "week");
-    const result = stats?.results?.find((r) => r.player === playerName);
-    buckets = result?.buckets ?? null;
-  } catch {
-    return;
-  }
-  if (!buckets) return;
-  const rate = deriveWeeklyRate(buckets);
+  const rate = await deriveWeeklyRate(playerName);
   if (rate === null) return;
 
   for (const entry of entries) {

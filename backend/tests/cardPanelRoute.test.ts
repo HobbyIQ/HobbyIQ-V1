@@ -57,6 +57,12 @@ vi.mock("../src/services/compiq/cardhedge.client.js", async (importActual) => {
   };
 });
 
+// CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): trajectory now reads from
+// getPlayerTrendSnapshot. Stub returns null → trajectory silently skips.
+vi.mock("../src/services/playerTrend/index.js", () => ({
+  getPlayerTrendSnapshot: vi.fn(async () => null),
+}));
+
 import app from "../src/app";
 
 describe("CF-CARD-PANEL — GET /api/compiq/card-panel/:cardId", () => {
