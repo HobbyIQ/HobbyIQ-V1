@@ -7,11 +7,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the CH client's getCardSales — the ONE swap point. Everything
 // else in observedGradeCurve.service is vendor-neutral math.
-// getSalesStatsByPlayer is mocked so the trajectory pass has a signal
-// source; defaults to null → trajectory skips silently.
 vi.mock("../src/services/compiq/cardhedge.client.js", () => ({
   getCardSales: vi.fn(),
-  getSalesStatsByPlayer: vi.fn(async () => null),
+}));
+// CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): trajectory now consumes
+// getPlayerTrendSnapshot which prefers matched-cohort medianRatio and
+// falls back to raw weekly-avg-sale. Mock returns null → trajectory
+// skips silently by default; individual tests override per-scenario.
+vi.mock("../src/services/playerTrend/index.js", () => ({
+  getPlayerTrendSnapshot: vi.fn(async () => null),
 }));
 
 // Deterministic "now" so recency-based confidence tests are stable.
@@ -399,30 +403,46 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
   });
 
   describe("CF-ONE-TRAJECTORY — Market Value + Predicted from one rate", () => {
-    // Helper: 6 complete weekly buckets ending 0-7d ago, with a given
-    // rate profile. Rate is applied so latest = prior_4wk_mean × (1+rate).
-    function makeBuckets(rate: number) {
-      const priorAvg = 100;
-      const latestAvg = 100 * (1 + rate);
-      const b = (endDaysAgo: number, avg: number) => ({
-        start: new Date(FAKE_NOW.getTime() - (endDaysAgo + 7) * 24 * 3600 * 1000).toISOString(),
-        end:   new Date(FAKE_NOW.getTime() - endDaysAgo * 24 * 3600 * 1000).toISOString(),
-        count: 10, total_amount: avg * 10, average_sale: avg, partial: false,
-      });
-      return [
-        b(35, priorAvg),
-        b(28, priorAvg),
-        b(21, priorAvg),
-        b(14, priorAvg),
-        b(7, priorAvg),  // 4-week prior window ends here
-        b(0, latestAvg), // latest complete week
-      ];
+    // Helper: build a fake PlayerTrendSnapshot with a given weekly rate.
+    // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): tests inject via the
+    // matchedCohort.medianRatio path — the SUPERIOR signal. Rate is
+    // (medianRatio - 1), so rate=0.08 → medianRatio=1.08.
+    function makeSnapshot(rate: number, player: string, useMatchedCohort = true) {
+      const ratio = 1 + rate;
+      return {
+        player,
+        momentum: {
+          latestCompleteWeek: {
+            weekStart: "2026-06-29", weekEnd: "2026-07-05",
+            count: 10, totalDollars: 1000, avgSale: 100 * ratio,
+          },
+          priorMeanAvgSale: 100,
+          priorMeanCount: 10,
+          priorWeeksCount: 4,
+          momentumRatio: ratio,
+          volumeRatio: 1.0,
+        },
+        supplyTrend: "flat",
+        totalSales30d: 40,
+        matchedCohort: useMatchedCohort
+          ? {
+              medianRatio: ratio,
+              meanRatio: ratio,
+              cohortSize: 5,
+              latestWeekActiveCards: 8,
+              latestWeekStart: "2026-06-29",
+              priorWindowWeeksCount: 4,
+              computedAtMs: Date.now(),
+            }
+          : null,
+        providerName: "cardhedge",
+        capturedAtMs: Date.now(),
+      };
     }
 
     it("hot player: Market Value > value, Predicted > Market Value, all on one curve", async () => {
-      const { getCardSales, getSalesStatsByPlayer } = await import(
-        "../src/services/compiq/cardhedge.client.js"
-      );
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       // 30-day-old comp at $100
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -434,11 +454,8 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         }
         return [];
       });
-      // Rate = +8% weekly (capped at ±10%)
-      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
-        interval: "week", periods: 6,
-        results: [{ player: "Josh", buckets: makeBuckets(0.08) }],
-      } as any);
+      // Rate = +8% weekly via matched-cohort (capped at ±10%)
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(makeSnapshot(0.08, "Josh") as any);
 
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
@@ -463,9 +480,8 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
 
     it("cooling player: Market Value < value, Predicted < Market Value", async () => {
-      const { getCardSales, getSalesStatsByPlayer } = await import(
-        "../src/services/compiq/cardhedge.client.js"
-      );
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
           return [
@@ -477,10 +493,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         return [];
       });
       // Rate = -5% weekly (cooling)
-      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
-        interval: "week", periods: 6,
-        results: [{ player: "Cold", buckets: makeBuckets(-0.05) }],
-      } as any);
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(makeSnapshot(-0.05, "Cold") as any);
 
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
@@ -496,9 +509,8 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
 
     it("weeks-since-sale is capped at 6 (no runaway on 6-month-old comps)", async () => {
-      const { getCardSales, getSalesStatsByPlayer } = await import(
-        "../src/services/compiq/cardhedge.client.js"
-      );
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       // Sale is 180d old — would normally be 25.7 weeks
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
@@ -511,10 +523,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         return [];
       });
       // Max rate = +10% weekly
-      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
-        interval: "week", periods: 6,
-        results: [{ player: "Hot", buckets: makeBuckets(0.10) }],
-      } as any);
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(makeSnapshot(0.10, "Hot") as any);
 
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
@@ -527,9 +536,8 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
 
     it("fresh comp (<14d) skips trajectory — value is honest, no adjustment", async () => {
-      const { getCardSales, getSalesStatsByPlayer } = await import(
-        "../src/services/compiq/cardhedge.client.js"
-      );
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
       vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
         if (grade === "Raw") {
           return [
@@ -540,10 +548,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
         }
         return [];
       });
-      vi.mocked(getSalesStatsByPlayer).mockResolvedValueOnce({
-        interval: "week", periods: 6,
-        results: [{ player: "Fresh", buckets: makeBuckets(0.10) }],
-      } as any);
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(makeSnapshot(0.10, "Fresh") as any);
 
       const { buildObservedGradeCurve } = await import(
         "../src/services/compiq/observedGradeCurve.service.js"
@@ -554,6 +559,85 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.value).toBe(100);
       expect(raw.trendAdjustedValue).toBeNull();
       expect(raw.predictedPriceAt30d).toBeNull();
+    });
+
+    it("CF-MATCHED-COHORT: prefers matched-cohort medianRatio over raw momentumRatio when both present", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+            { price: 100, date: daysAgo(32) },
+          ] as any;
+        }
+        return [];
+      });
+      // Provider returns BOTH signals — matched-cohort says +5%,
+      // raw momentum says -20% (dramatically different). Trajectory
+      // should track matched-cohort's +5%, not raw's -20%.
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce({
+        player: "MixBias",
+        momentum: {
+          latestCompleteWeek: { weekStart: "2026-06-29", weekEnd: "2026-07-05",
+            count: 10, totalDollars: 800, avgSale: 80 },
+          priorMeanAvgSale: 100, priorMeanCount: 10, priorWeeksCount: 4,
+          momentumRatio: 0.80, // -20% raw
+          volumeRatio: 1.0,
+        },
+        supplyTrend: "flat",
+        totalSales30d: 40,
+        matchedCohort: {
+          medianRatio: 1.05, // +5% matched-cohort
+          meanRatio: 1.05,
+          cohortSize: 5,
+          latestWeekActiveCards: 8,
+          latestWeekStart: "2026-06-29",
+          priorWindowWeeksCount: 4,
+          computedAtMs: Date.now(),
+        },
+        providerName: "cardhedge",
+        capturedAtMs: Date.now(),
+      } as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "MixBias" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // With matched-cohort rate +5% over ~30d (~4.3 weeks): +21.4% adjustment.
+      // If it had used raw rate -20% capped to -10%, we'd see -43% instead.
+      expect(raw.trendAdjustedValue).toBeGreaterThan(115);
+      expect(raw.trendAdjustedValue).toBeLessThan(130);
+      expect(raw.trendAdjustmentPct).toBeGreaterThan(0);
+    });
+
+    it("CF-MATCHED-COHORT: falls back to raw momentumRatio when matched-cohort is null", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(31) },
+            { price: 100, date: daysAgo(32) },
+          ] as any;
+        }
+        return [];
+      });
+      // No matched-cohort cached; raw momentum says +8%
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.08, "NoCohort", /* useMatchedCohort */ false) as any,
+      );
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "NoCohort" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.trendAdjustmentPct).toBeGreaterThan(30);
+      expect(raw.trendAdjustmentPct).toBeLessThan(40);
     });
 
     it("no playerName — trajectory is skipped, no adjustment fields populated", async () => {
