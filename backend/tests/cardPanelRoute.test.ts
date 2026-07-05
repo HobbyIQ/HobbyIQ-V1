@@ -62,6 +62,14 @@ vi.mock("../src/services/compiq/cardhedge.client.js", async (importActual) => {
 vi.mock("../src/services/playerTrend/index.js", () => ({
   getPlayerTrendSnapshot: vi.fn(async () => null),
 }));
+// CF-MATCHED-COHORT-ON-DEMAND (2026-07-05): stub the fallback path.
+vi.mock("../src/services/playerTrend/cardHedgeMatchedCohortProvider.js", () => ({
+  fetchCardHedgeMatchedCohort: vi.fn(async () => null),
+}));
+vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
+  readMatchedCohortFromCache: vi.fn(async () => null),
+  writeMatchedCohortToCache: vi.fn(async () => undefined),
+}));
 
 import app from "../src/app";
 
