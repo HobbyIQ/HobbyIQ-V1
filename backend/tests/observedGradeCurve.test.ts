@@ -43,6 +43,41 @@ function daysAgo(n: number): string {
   return new Date(FAKE_NOW.getTime() - n * 24 * 3600 * 1000).toISOString();
 }
 
+// Hoisted so both the "Market Value + Predicted" nested block AND the
+// CF-RECENCY-LIFT top-level block can share the same snapshot shape.
+function makeSnapshot(rate: number, player: string, useMatchedCohort = true) {
+  const ratio = 1 + rate;
+  return {
+    player,
+    momentum: {
+      latestCompleteWeek: {
+        weekStart: "2026-06-29", weekEnd: "2026-07-05",
+        count: 10, totalDollars: 1000, avgSale: 100 * ratio,
+      },
+      priorMeanAvgSale: 100,
+      priorMeanCount: 10,
+      priorWeeksCount: 4,
+      momentumRatio: ratio,
+      volumeRatio: 1.0,
+    },
+    supplyTrend: "flat",
+    totalSales30d: 40,
+    matchedCohort: useMatchedCohort
+      ? {
+          medianRatio: ratio,
+          meanRatio: ratio,
+          cohortSize: 5,
+          latestWeekActiveCards: 8,
+          latestWeekStart: "2026-06-29",
+          priorWindowWeeksCount: 4,
+          computedAtMs: Date.now(),
+        }
+      : null,
+    providerName: "cardhedge",
+    capturedAtMs: Date.now(),
+  };
+}
+
 describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
   describe("CF-FILTER-IP-TTM-AUTOS — reject unauthenticated autos from the median", () => {
     it("drops sales whose title flags them as In Person / TTM / hand-signed", async () => {
@@ -549,38 +584,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     // CF-MATCHED-COHORT-TRAJECTORY (2026-07-05): tests inject via the
     // matchedCohort.medianRatio path — the SUPERIOR signal. Rate is
     // (medianRatio - 1), so rate=0.08 → medianRatio=1.08.
-    function makeSnapshot(rate: number, player: string, useMatchedCohort = true) {
-      const ratio = 1 + rate;
-      return {
-        player,
-        momentum: {
-          latestCompleteWeek: {
-            weekStart: "2026-06-29", weekEnd: "2026-07-05",
-            count: 10, totalDollars: 1000, avgSale: 100 * ratio,
-          },
-          priorMeanAvgSale: 100,
-          priorMeanCount: 10,
-          priorWeeksCount: 4,
-          momentumRatio: ratio,
-          volumeRatio: 1.0,
-        },
-        supplyTrend: "flat",
-        totalSales30d: 40,
-        matchedCohort: useMatchedCohort
-          ? {
-              medianRatio: ratio,
-              meanRatio: ratio,
-              cohortSize: 5,
-              latestWeekActiveCards: 8,
-              latestWeekStart: "2026-06-29",
-              priorWindowWeeksCount: 4,
-              computedAtMs: Date.now(),
-            }
-          : null,
-        providerName: "cardhedge",
-        capturedAtMs: Date.now(),
-      };
-    }
+    // makeSnapshot is hoisted to module scope (top of file).
 
     it("hot player: Market Value > value, Predicted > Market Value, all on one curve", async () => {
       const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
@@ -1053,6 +1057,103 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.predictedPriceAt30d).toBeNull();
       // But daysSinceNewestSale IS always populated
       expect(raw.daysSinceNewestSale).toBeCloseTo(30, 0);
+    });
+  });
+
+  describe("CF-RECENCY-LIFT — anchor lifts toward newest closed sale when it's above smoothed median", () => {
+    // Common scenario: Brito-style. Weighted median is around $164 from
+    // three older sales, but a single recent sale went for $260 — market
+    // is heating up, but the smoothed median lags. Recency-lift blends
+    // the anchor toward the newest so Predicted catches the upswing
+    // instead of projecting from a stale median.
+
+    it("lifts anchor when newest sale is >15% above weighted median AND is fresh (<21d)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      // Five standard-weight ($1.0 each) sales at $100 in the 8-15d
+      // window dominate the single fresh ($260 at 2d) sale's weight
+      // (5.0). Weighted median lands at $100; newest is $260; gap = +160%.
+      // Lift fires — trend-adjusted anchor lands between pill and newest.
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(15) },
+            { price: 100, date: daysAgo(14) },
+            { price: 100, date: daysAgo(12) },
+            { price: 100, date: daysAgo(10) },
+            { price: 100, date: daysAgo(9) },
+            { price: 260, date: daysAgo(2) }, // fresh, way above the pool
+          ] as any;
+        }
+        return [];
+      });
+      // Matched-cohort says +5%/week
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.05, "HotProspect", /* useMatchedCohort */ true) as any,
+      );
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "HotProspect" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.newestSalePrice).toBe(260);
+      // Pill (weighted median) sits near $100 despite the $260 outlier
+      expect(raw.value!).toBeLessThan(150);
+      // Trend-adjusted value should be lifted materially above pill
+      expect(raw.trendAdjustedValue).not.toBeNull();
+      expect(raw.trendAdjustedValue!).toBeGreaterThan(raw.value! * 1.5);
+      // Predicted should sit above trendAdjustedValue (positive rate)
+      expect(raw.predictedPriceAt30d!).toBeGreaterThan(raw.trendAdjustedValue!);
+    });
+
+    it("does NOT lift when newest sale is within 15% of weighted median (pool noise)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(20) },
+            { price: 100, date: daysAgo(15) },
+            { price: 100, date: daysAgo(10) },
+            { price: 108, date: daysAgo(2) }, // newest, only +8% — noise
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "NoCohort" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.newestSalePrice).toBe(108);
+      // No lift → trendAdjustedValue null (no signal + no lift path)
+      // (rate is null; lift alone doesn't trigger MV emit in the fresh
+      // observed no-signal case)
+      expect(raw.trendAdjustedValue).toBeNull();
+    });
+
+    it("does NOT lift when newest sale is >21 days old (stale)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(60) },
+            { price: 100, date: daysAgo(45) },
+            { price: 260, date: daysAgo(25) }, // 2.6× but 25d old — stale
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked((await import("../src/services/playerTrend/index.js")).getPlayerTrendSnapshot)
+        .mockResolvedValueOnce(makeSnapshot(0.05, "P", true) as any);
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "P" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.newestSalePrice).toBe(260);
+      // Trend-adjusted value should be modest (rate × weeksSinceSale on
+      // the raw pill), NOT lifted toward $260.
+      expect(raw.trendAdjustedValue!).toBeLessThan(raw.value! * 1.25);
     });
   });
 
