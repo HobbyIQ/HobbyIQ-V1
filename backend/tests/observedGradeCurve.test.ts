@@ -1362,6 +1362,106 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
   });
 
+  describe("CF-SALES-HISTORY-CHART — raw comp pool exposed for scatter render", () => {
+    it("emits salesHistory ordered newest → oldest for iOS scatter", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30), sale_type: "auction" },
+            { price: 150, date: daysAgo(2),  sale_type: "buy it now" },
+            { price: 120, date: daysAgo(15), sale_type: "auction" },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Newest first: 2d ago → 15d ago → 30d ago
+      expect(raw.salesHistory.map((s) => s.price)).toEqual([150, 120, 100]);
+      // saleType passes through
+      expect(raw.salesHistory[0].saleType).toBe("buy it now");
+      expect(raw.salesHistory[2].saleType).toBe("auction");
+    });
+
+    it("emits empty salesHistory for grades with no sales", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockResolvedValue([]);
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      for (const e of curve.entries) {
+        expect(e.salesHistory).toEqual([]);
+      }
+    });
+  });
+
+  describe("CF-REFERENCE-PRICE-CROSS-CHECK — divergence between our value and CH reference", () => {
+    it("fires referenceAnomaly when our value diverges from reference by >25%", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      // Raw pool at $100 median; reference-price says $200 for Raw → +100% divergence
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+            { price: 100, date: daysAgo(4) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const referencePriceByGrade = new Map([["Raw", 200]]);
+      const curve = await buildObservedGradeCurve("c1", { referencePriceByGrade });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.referencePrice).toBe(200);
+      expect(raw.referenceDivergencePct).toBeCloseTo(-50, 1); // our $100 is 50% below reference $200
+      expect(raw.referenceAnomaly).toBe(true);
+    });
+
+    it("does NOT fire anomaly when divergence is within 25%", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      // Raw at $100; reference $110 → +10% divergence (below anomaly threshold)
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [{ price: 100, date: daysAgo(2) }] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const referencePriceByGrade = new Map([["Raw", 110]]);
+      const curve = await buildObservedGradeCurve("c1", { referencePriceByGrade });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.referencePrice).toBe(110);
+      expect(raw.referenceDivergencePct).toBeCloseTo(-9.09, 1);
+      expect(raw.referenceAnomaly).toBe(false);
+    });
+
+    it("emits nulls when no reference price is provided", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") return [{ price: 100, date: daysAgo(2) }] as any;
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1"); // no referencePriceByGrade
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      expect(raw.referencePrice).toBeNull();
+      expect(raw.referenceDivergencePct).toBeNull();
+      expect(raw.referenceAnomaly).toBe(false);
+    });
+  });
+
   it("multi-grade aggregation covers every canonical grade in one build call", async () => {
     const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
     vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {

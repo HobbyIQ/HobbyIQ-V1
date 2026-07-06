@@ -199,6 +199,34 @@ export interface ObservedGradeEntry {
    *  each grade pill. Null when valueSource === "unavailable" (no
    *  point recommending on a nonexistent value). */
   recommendation: ActionRecommendation | null;
+  /** CF-SALES-HISTORY-CHART (2026-07-05): raw sales pool for this grade.
+   *  Each entry is one closed sale — { price, date, saleType }. iOS
+   *  renders these as a scatter (price vs date) so users can see the
+   *  data behind the weighted median. Capped at 50 entries per grade
+   *  (matches the CH fetch limit). Ordered newest → oldest. Empty
+   *  array when the pool is empty; iOS renders nothing in that case. */
+  salesHistory: Array<{
+    price: number;
+    date: string | null;
+    saleType: string | null;
+  }>;
+  /** CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): third-party model
+   *  estimate for this grade (from CH's all-prices-by-card). Null when
+   *  the caller didn't provide a reference price map OR this grade has
+   *  no reference. iOS can display this as "external estimate" beside
+   *  our own number, and use `referenceDivergencePct` to badge a
+   *  visible mismatch. */
+  referencePrice: number | null;
+  /** Percentage divergence between OUR `value` and the third-party
+   *  `referencePrice`. Positive = our number is higher than reference.
+   *  Null when either input is missing. `referenceAnomaly` fires when
+   *  |divergence| > REFERENCE_ANOMALY_THRESHOLD_PCT. */
+  referenceDivergencePct: number | null;
+  /** True when |referenceDivergencePct| > 25% — big mismatch worth
+   *  flagging to the seller ("your comp pool disagrees with the
+   *  external model — one of them is stale or thin"). Never fires when
+   *  referenceDivergencePct is null. */
+  referenceAnomaly: boolean;
 }
 
 export interface ObservedGradeCurve {
@@ -422,6 +450,21 @@ async function aggregateGrade(
     predictedPriceRangeLow: null,
     predictedPriceRangeHigh: null,
     recommendation: null,           // filled by applyTrajectory below
+    // CF-SALES-HISTORY-CHART (2026-07-05): raw pool for iOS scatter render.
+    // Newest → oldest so the chart's rightmost point is the freshest.
+    salesHistory: sales
+      .slice()
+      .sort((a, b) => {
+        const at = a.date ? Date.parse(a.date) : 0;
+        const bt = b.date ? Date.parse(b.date) : 0;
+        return bt - at;
+      })
+      .map((s) => ({ price: s.price, date: s.date, saleType: s.saleType })),
+    // CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): filled in
+    // fillEstimatedFallback where the reference price map is in scope.
+    referencePrice: null,
+    referenceDivergencePct: null,
+    referenceAnomaly: false,
   };
 }
 
@@ -1019,6 +1062,12 @@ const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = {
  * When corpus grows enough, we can also add a tier-3 layer using
  * computeReleaseGradeCurve for release-specific ratios.
  */
+/** CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): threshold for the
+ *  `referenceAnomaly` flag. When our engine's value differs from the
+ *  external reference by more than this fraction, iOS can badge the
+ *  divergence so the seller knows to look closer. */
+const REFERENCE_ANOMALY_THRESHOLD_PCT = 25;
+
 function fillEstimatedFallback(
   entries: ObservedGradeEntry[],
   referencePriceByGrade?: ReadonlyMap<string, number>,
@@ -1030,27 +1079,45 @@ function fillEstimatedFallback(
       : null;
 
   for (const entry of entries) {
-    if (entry.grade === "Raw") continue;
-    if (entry.valueSource === "observed") continue;
-
-    // Priority 1: reference price at this grade (third-party model).
-    const refPrice = referencePriceByGrade?.get(entry.grade);
-    if (typeof refPrice === "number" && Number.isFinite(refPrice) && refPrice > 0) {
-      entry.value = Math.round(refPrice * 100) / 100;
-      entry.valueSource = "estimated";
-      entry.estimatedFrom = "reference-price";
-      entry.estimatedMultiplier = null; // no multiplier used
-      continue;
+    if (entry.grade !== "Raw" && entry.valueSource !== "observed") {
+      // Priority 1: reference price at this grade (third-party model).
+      const refPrice = referencePriceByGrade?.get(entry.grade);
+      if (typeof refPrice === "number" && Number.isFinite(refPrice) && refPrice > 0) {
+        entry.value = Math.round(refPrice * 100) / 100;
+        entry.valueSource = "estimated";
+        entry.estimatedFrom = "reference-price";
+        entry.estimatedMultiplier = null; // no multiplier used
+      } else if (rawObserved !== null) {
+        // Priority 2: Raw observed × hand-tuned tier multiplier.
+        const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+        if (typeof multiplier === "number" && multiplier > 0) {
+          entry.value = Math.round(rawObserved * multiplier * 100) / 100;
+          entry.valueSource = "estimated";
+          entry.estimatedFrom = "raw-multiplier";
+          entry.estimatedMultiplier = multiplier;
+        }
+      }
     }
 
-    // Priority 2: Raw observed × hand-tuned tier multiplier.
-    if (rawObserved !== null) {
-      const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
-      if (typeof multiplier === "number" && multiplier > 0) {
-        entry.value = Math.round(rawObserved * multiplier * 100) / 100;
-        entry.valueSource = "estimated";
-        entry.estimatedFrom = "raw-multiplier";
-        entry.estimatedMultiplier = multiplier;
+    // CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): compute divergence
+    // between OUR value and the external reference for EVERY entry
+    // (observed AND estimated). For observed entries this is the
+    // primary signal — the reference is the sanity check on our
+    // comp-pool math. For reference-price-estimated entries the
+    // divergence is 0 by construction (we used the reference AS the
+    // value). Emit for both so iOS can render consistently.
+    const refPriceForCheck = referencePriceByGrade?.get(entry.grade);
+    if (
+      typeof refPriceForCheck === "number" &&
+      Number.isFinite(refPriceForCheck) &&
+      refPriceForCheck > 0
+    ) {
+      entry.referencePrice = Math.round(refPriceForCheck * 100) / 100;
+      if (entry.value !== null && entry.value > 0) {
+        const divergence = (entry.value / refPriceForCheck - 1) * 100;
+        entry.referenceDivergencePct = Math.round(divergence * 100) / 100;
+        entry.referenceAnomaly =
+          Math.abs(divergence) > REFERENCE_ANOMALY_THRESHOLD_PCT;
       }
     }
   }
@@ -1182,6 +1249,10 @@ export async function buildObservedGradeCurvesBulk(
             predictedPriceRangeLow: null,
             predictedPriceRangeHigh: null,
             recommendation: null,
+            salesHistory: [],
+            referencePrice: null,
+            referenceDivergencePct: null,
+            referenceAnomaly: false,
           })),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),
