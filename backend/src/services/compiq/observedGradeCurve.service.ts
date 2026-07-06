@@ -202,8 +202,7 @@ export interface ObservedGradeEntry {
   /** CF-SALES-HISTORY-CHART (2026-07-05): raw sales pool for this grade.
    *  Each entry is one closed sale — { price, date, saleType }. iOS
    *  renders these as a scatter (price vs date) so users can see the
-   *  data behind the weighted median. Capped at 50 entries per grade
-   *  (matches the CH fetch limit). Ordered newest → oldest. Empty
+   *  data behind the weighted median. Ordered newest → oldest. Empty
    *  array when the pool is empty; iOS renders nothing in that case. */
   salesHistory: Array<{
     price: number;
@@ -213,19 +212,14 @@ export interface ObservedGradeEntry {
   /** CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): third-party model
    *  estimate for this grade (from CH's all-prices-by-card). Null when
    *  the caller didn't provide a reference price map OR this grade has
-   *  no reference. iOS can display this as "external estimate" beside
-   *  our own number, and use `referenceDivergencePct` to badge a
-   *  visible mismatch. */
+   *  no reference. */
   referencePrice: number | null;
   /** Percentage divergence between OUR `value` and the third-party
    *  `referencePrice`. Positive = our number is higher than reference.
-   *  Null when either input is missing. `referenceAnomaly` fires when
-   *  |divergence| > REFERENCE_ANOMALY_THRESHOLD_PCT. */
+   *  Null when either input is missing. */
   referenceDivergencePct: number | null;
   /** True when |referenceDivergencePct| > 25% — big mismatch worth
-   *  flagging to the seller ("your comp pool disagrees with the
-   *  external model — one of them is stale or thin"). Never fires when
-   *  referenceDivergencePct is null. */
+   *  flagging to the seller. */
   referenceAnomaly: boolean;
 }
 
@@ -451,7 +445,6 @@ async function aggregateGrade(
     predictedPriceRangeHigh: null,
     recommendation: null,           // filled by applyTrajectory below
     // CF-SALES-HISTORY-CHART (2026-07-05): raw pool for iOS scatter render.
-    // Newest → oldest so the chart's rightmost point is the freshest.
     salesHistory: sales
       .slice()
       .sort((a, b) => {
@@ -460,8 +453,7 @@ async function aggregateGrade(
         return bt - at;
       })
       .map((s) => ({ price: s.price, date: s.date, saleType: s.saleType })),
-    // CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): filled in
-    // fillEstimatedFallback where the reference price map is in scope.
+    // CF-REFERENCE-PRICE-CROSS-CHECK (2026-07-05): filled below.
     referencePrice: null,
     referenceDivergencePct: null,
     referenceAnomaly: false,
