@@ -54,6 +54,13 @@ export interface HoldingListingInput {
   bestOfferMinPrice?: number;
   imageFrontUrl?: string;
   imageBackUrl?: string;
+  /** CF-INVENTORY-PHOTOS-TO-LISTING (2026-07-05, Drew): the full photo
+   *  array from the holding. When present, buildImages() merges these
+   *  with imageFrontUrl/imageBackUrl (dedup + preserved order:
+   *  front → back → remaining photos), respects the eBay
+   *  MAX_LISTING_PHOTOS cap, and produces the multi-image gallery.
+   *  Optional — the two-URL wire shape stays fully backward-compatible. */
+  photos?: string[];
   description?: string;
   // Seller-side overrides (optional; if any one is provided, all three
   // must be provided — partial overrides are rejected by
@@ -408,11 +415,42 @@ function buildDescription(i: HoldingListingInput): string {
 // Image list
 // ---------------------------------------------------------------------------
 
-function buildImages(i: HoldingListingInput): Array<{ imageUrl: string }> {
-  const imgs: Array<{ imageUrl: string }> = [];
-  if (i.imageFrontUrl) imgs.push({ imageUrl: i.imageFrontUrl });
-  if (i.imageBackUrl)  imgs.push({ imageUrl: i.imageBackUrl });
-  return imgs;
+/** eBay's per-listing image cap. eBay Business accounts get 24; the safe
+ *  floor across all account tiers is 12. We cap here (server-side)
+ *  regardless of what iOS sends. */
+const MAX_LISTING_PHOTOS = 12;
+
+/**
+ * CF-INVENTORY-PHOTOS-TO-LISTING (2026-07-05, Drew): build the eBay
+ * image list from a mix of explicit front/back URLs and the holding's
+ * photos[] array. Order matters — eBay uses the first image as the
+ * gallery thumbnail. Precedence:
+ *
+ *   1. imageFrontUrl  (explicit front — always first when provided)
+ *   2. imageBackUrl   (explicit back — always second when provided)
+ *   3. photos[]       (remaining holding photos, dedup'd against 1-2)
+ *
+ * Capped to MAX_LISTING_PHOTOS. Filters out non-HTTPS / empty entries.
+ * Preserves the pre-CF two-URL behavior exactly when photos[] is absent.
+ */
+export function buildImages(i: HoldingListingInput): Array<{ imageUrl: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ imageUrl: string }> = [];
+  const push = (url: string | undefined | null) => {
+    if (!url || typeof url !== "string") return;
+    const trimmed = url.trim();
+    if (!/^https:\/\//i.test(trimmed)) return; // eBay requires HTTPS
+    if (seen.has(trimmed)) return;
+    if (out.length >= MAX_LISTING_PHOTOS) return;
+    seen.add(trimmed);
+    out.push({ imageUrl: trimmed });
+  };
+  push(i.imageFrontUrl);
+  push(i.imageBackUrl);
+  if (Array.isArray(i.photos)) {
+    for (const p of i.photos) push(p);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
