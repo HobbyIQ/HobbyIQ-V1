@@ -159,7 +159,12 @@ export interface ReleaseDecayResult {
 
 function normalizeSetKey(year: number | string, setName: string): string {
   const y = String(year).trim();
-  const s = setName.trim().toLowerCase().replace(/\s+/g, " ");
+  let s = setName.trim().toLowerCase().replace(/\s+/g, " ");
+  // CH sometimes returns set names with the year prefixed
+  // ("2026 bowman chrome"), sometimes without ("bowman chrome").
+  // Strip a leading `<year> ` to normalize both shapes.
+  const yearPrefix = new RegExp(`^${y}\\s+`);
+  s = s.replace(yearPrefix, "");
   return `${y}:${s}`;
 }
 
@@ -172,6 +177,38 @@ function normalizeSetKey(year: number | string, setName: string): string {
  *
  * Silent no-throw. Returns null on any parse error.
  */
+/**
+ * Extracted pure computation: given a resolved release ISO date and
+ * a "now", return the decay bucket that applies. Callers use this
+ * from BOTH the sync hard-coded-table lookup AND the async auto-
+ * detect fallback, so the decay curve stays canonical across both
+ * discovery paths.
+ */
+function computeDecayFromReleaseDate(
+  releaseIsoDate: string,
+  matchedKey: string,
+  now: Date,
+): ReleaseDecayResult | null {
+  const releaseMs = Date.parse(releaseIsoDate);
+  if (!Number.isFinite(releaseMs)) return null;
+  const nowMs = now.getTime();
+  const daysSinceRelease = (nowMs - releaseMs) / (24 * 3600 * 1000);
+  if (daysSinceRelease < 0) return null;
+  const weeksSinceRelease = daysSinceRelease / 7;
+  if (weeksSinceRelease >= MAX_WEEKS_FOR_DECAY) return null;
+  for (const bucket of DECAY_SCHEDULE) {
+    if (weeksSinceRelease < bucket.maxWeeks) {
+      return {
+        decayRatePerWeek: bucket.decayRatePerWeek,
+        blend: bucket.blend,
+        weeksSinceRelease: Math.round(weeksSinceRelease * 10) / 10,
+        matchedKey,
+      };
+    }
+  }
+  return null;
+}
+
 export function getReleaseDecayForCard(
   year: number | string | null | undefined,
   setName: string | null | undefined,
@@ -179,36 +216,53 @@ export function getReleaseDecayForCard(
 ): ReleaseDecayResult | null {
   if (!year || !setName) return null;
   if (typeof setName !== "string" || setName.trim().length === 0) return null;
-
   const key = normalizeSetKey(year, setName);
   const releaseIsoDate = RELEASE_DATES[key];
   if (!releaseIsoDate) return null;
+  return computeDecayFromReleaseDate(releaseIsoDate, key, now);
+}
 
-  const releaseMs = Date.parse(releaseIsoDate);
-  if (!Number.isFinite(releaseMs)) return null;
+/**
+ * CF-RELEASE-AUTO-DETECT (2026-07-05, Drew): async variant that falls
+ * back to the auto-detector when the set isn't in the hard-coded
+ * RELEASE_DATES table. Extends decay coverage to long-tail products
+ * automatically, without me having to maintain the table for every
+ * regional / one-off release CH tracks.
+ *
+ * Order-of-operations:
+ *   1. Sync hard-coded lookup (fast, deterministic, curated)
+ *   2. Auto-detect via additions-summary (adds one CH call — cached
+ *      30 days per set once the release date is found)
+ *
+ * Returns null when neither path yields a release date, or when the
+ * card is > 8 weeks post-release. Silent no-throw.
+ */
+export async function getReleaseDecayForCardAsync(
+  year: number | string | null | undefined,
+  setName: string | null | undefined,
+  now: Date = new Date(),
+): Promise<ReleaseDecayResult | null> {
+  const hardCoded = getReleaseDecayForCard(year, setName, now);
+  if (hardCoded) return hardCoded;
 
-  const nowMs = now.getTime();
-  const daysSinceRelease = (nowMs - releaseMs) / (24 * 3600 * 1000);
-  // Pre-release: no signal.
-  if (daysSinceRelease < 0) return null;
-
-  const weeksSinceRelease = daysSinceRelease / 7;
-  if (weeksSinceRelease >= MAX_WEEKS_FOR_DECAY) return null;
-
-  // Piecewise lookup: find the bucket whose maxWeeks first exceeds
-  // weeksSinceRelease.
-  for (const bucket of DECAY_SCHEDULE) {
-    if (weeksSinceRelease < bucket.maxWeeks) {
-      return {
-        decayRatePerWeek: bucket.decayRatePerWeek,
-        blend: bucket.blend,
-        weeksSinceRelease: Math.round(weeksSinceRelease * 10) / 10,
-        matchedKey: key,
-      };
-    }
+  // Only try auto-detect when the sync lookup produced NO date. If it
+  // produced a date but the card is >8wk post-release, respect that —
+  // the auto-detect can't "unmature" a card just because we're missing
+  // the set's key. Guard on year+set being provided (auto-detect
+  // requires both).
+  if (!year || !setName || typeof setName !== "string" || setName.trim().length === 0) {
+    return null;
   }
-  // Should not reach here — final bucket's maxWeeks equals MAX_WEEKS_FOR_DECAY.
-  return null;
+  const key = normalizeSetKey(year, setName);
+  // Was the key found in RELEASE_DATES? If yes, hard-coded returned
+  // null for a reason (pre-release or past 8wk) — don't override.
+  if (RELEASE_DATES[key]) return null;
+
+  // Lazy-import to avoid circular dep — releaseAutoDetect ↔ releaseDecayPrior.
+  const { detectReleaseDateForSet } = await import("./releaseAutoDetect.service.js");
+  const detected = await detectReleaseDateForSet(year, setName, now).catch(() => null);
+  if (!detected) return null;
+  return computeDecayFromReleaseDate(detected, `${key}:auto`, now);
 }
 
 /** Test hook — exposes the table + schedule for calibration tooling

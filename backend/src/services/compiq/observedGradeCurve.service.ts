@@ -62,7 +62,18 @@ export type { ParallelTierKey } from "../playerTrend/parallelTierTrend.service.j
 // for cards <8 weeks post-release. Bends the rate toward baseline
 // decay so a launch-week hype spike doesn't get projected forward as
 // continued upside. Blends to matched-cohort by week 8.
-import { getReleaseDecayForCard } from "./releaseDecayPrior.service.js";
+import {
+  getReleaseDecayForCard,
+  getReleaseDecayForCardAsync,
+} from "./releaseDecayPrior.service.js";
+// CF-ACTION-RECOMMENDATION (2026-07-05, Drew): the product surface.
+// Consumes trajectory outputs + confidence + release-age context and
+// emits a SELL_NOW / HOLD / LIST verdict per grade entry. iOS reads
+// this to render the actionable badge next to each grade pill.
+import {
+  computeAction,
+  type ActionRecommendation,
+} from "./actionRecommendation.service.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -181,6 +192,13 @@ export interface ObservedGradeEntry {
    *  predictedPriceAt30d. Null when predictedPriceAt30d is null. */
   predictedPriceRangeLow: number | null;
   predictedPriceRangeHigh: number | null;
+  /** CF-ACTION-RECOMMENDATION (2026-07-05): the seller-facing verdict
+   *  for this grade. Always emitted (INSUFFICIENT_DATA when the
+   *  trajectory pipeline couldn't derive a directional signal). iOS
+   *  reads this to render the actionable badge and price hint next to
+   *  each grade pill. Null when valueSource === "unavailable" (no
+   *  point recommending on a nonexistent value). */
+  recommendation: ActionRecommendation | null;
 }
 
 export interface ObservedGradeCurve {
@@ -403,6 +421,7 @@ async function aggregateGrade(
     predictedPricePct: null,
     predictedPriceRangeLow: null,
     predictedPriceRangeHigh: null,
+    recommendation: null,           // filled by applyTrajectory below
   };
 }
 
@@ -581,6 +600,10 @@ async function deriveWeeklyRate(
    *  post-release window and apply a decay-rate prior. Both derivable
    *  from parallelTierKey when present, or supplied independently. */
   releaseCardKey: { year: number | string; set: string } | null,
+  /** CF-RELEASE-AUTO-DETECT (2026-07-05): pre-computed release-decay
+   *  context passed down from applyTrajectory so we don't do the same
+   *  (possibly async, additions-summary-backed) lookup twice. */
+  releaseDecayPrecomputed: ReturnType<typeof getReleaseDecayForCard>,
 ): Promise<RateDerivation | null> {
   let snapshot;
   try {
@@ -668,9 +691,7 @@ async function deriveWeeklyRate(
   // whichever trend signal was available (or falls back to pure decay
   // when neither exists — this is a real coverage improvement for
   // brand-new-release long-tail players).
-  const releaseDecay = releaseCardKey
-    ? getReleaseDecayForCard(releaseCardKey.year, releaseCardKey.set)
-    : null;
+  const releaseDecay = releaseDecayPrecomputed;
   if (releaseDecay) {
     if (rawRate !== null && signalSource !== null) {
       // Blend: finalRate = decay × blend + trend × (1 - blend)
@@ -835,11 +856,19 @@ async function applyTrajectory(
     parallelTierKey && parallelTierKey.year && parallelTierKey.set
       ? { year: parallelTierKey.year, set: parallelTierKey.set }
       : null;
+  // Look up release-decay context ONCE (idempotent) so both deriveWeeklyRate
+  // (for the rate blend) AND computeAction below (for LIST-ahead-of-decay
+  // verdict) share the same weeksSince. Use the async variant so long-tail
+  // sets not in the hard-coded table get auto-detected via additions-summary.
+  const releaseDecayContext = releaseCardKey
+    ? await getReleaseDecayForCardAsync(releaseCardKey.year, releaseCardKey.set)
+    : null;
   if (!playerName && !parallelTierKey && !releaseCardKey) return null;
   const derivation = await deriveWeeklyRate(
     playerName ?? "",
     parallelTierKey,
     releaseCardKey,
+    releaseDecayContext,
   );
   if (derivation === null) return null;
   const rate = derivation.cappedRate;
@@ -921,6 +950,19 @@ async function applyTrajectory(
     entry.predictedPricePct = Math.round((predictedMultiplier - 1) * 10000) / 100;
     entry.predictedPriceRangeLow = Math.round(predicted * (1 - rangePct) * 100) / 100;
     entry.predictedPriceRangeHigh = Math.round(predicted * (1 + rangePct) * 100) / 100;
+
+    // ── CF-ACTION-RECOMMENDATION (2026-07-05, Drew): compute the
+    //    per-grade seller verdict. Market Value = trendAdjustedValue if
+    //    populated, else entry.value (the same fallback iOS uses on
+    //    the wire). Confidence signal comes straight from the entry. ─
+    const marketValueForRec = entry.trendAdjustedValue ?? entry.value ?? 0;
+    entry.recommendation = computeAction({
+      currentValue: marketValueForRec,
+      predictedValue: entry.predictedPriceAt30d,
+      confidenceScore: entry.confidenceScore,
+      signalSource: derivation.signalSource,
+      weeksSinceRelease: releaseDecayContext?.weeksSinceRelease ?? null,
+    });
   }
 
   return derivation;
@@ -1139,6 +1181,7 @@ export async function buildObservedGradeCurvesBulk(
             predictedPricePct: null,
             predictedPriceRangeLow: null,
             predictedPriceRangeHigh: null,
+            recommendation: null,
           })),
           totalSampleCount: 0,
           computedAt: new Date().toISOString(),
