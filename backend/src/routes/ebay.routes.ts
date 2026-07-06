@@ -44,9 +44,50 @@ import {
 import {
   linkEbayListing,
   unlinkEbayListingByOfferId,
+  readUserDoc,
 } from "../services/portfolioiq/portfolioStore.service.js";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
+
+/**
+ * CF-INVENTORY-PHOTOS-TO-LISTING (2026-07-05, Drew): when iOS calls
+ * /listings/preview or /listings/publish with a `holdingId` but no
+ * explicit `photos[]`, auto-hydrate photos from the holding doc.
+ * User expectation: photos taken during inventory should be available
+ * to the eBay listing composer without iOS having to plumb them
+ * through explicitly.
+ *
+ * If iOS DID pass photos (or a partial override like just
+ * imageFrontUrl), we don't overwrite — respect the explicit choice.
+ * Only fires when photos is undefined AND both imageFrontUrl and
+ * imageBackUrl are also undefined.
+ */
+async function hydratePhotosFromHolding(
+  userId: string,
+  input: Partial<HoldingListingInput>,
+): Promise<Partial<HoldingListingInput>> {
+  const hasExplicitPhotos =
+    Array.isArray(input.photos) ||
+    typeof input.imageFrontUrl === "string" ||
+    typeof input.imageBackUrl === "string";
+  if (hasExplicitPhotos) return input;
+  if (typeof input.holdingId !== "string" || !input.holdingId.trim()) return input;
+
+  try {
+    const doc = await readUserDoc(userId);
+    const holding = doc.holdings[input.holdingId];
+    if (holding && Array.isArray(holding.photos) && holding.photos.length > 0) {
+      return { ...input, photos: [...holding.photos] };
+    }
+  } catch (err) {
+    console.warn(
+      `[ebay.hydratePhotos] readUserDoc failed for ${userId}/${input.holdingId}: ${
+        err instanceof Error ? err.message : err
+      }`,
+    );
+  }
+  return input;
+}
 
 const router = Router();
 
@@ -139,11 +180,12 @@ router.get("/policies", async (req: Request, res: Response) => {
 router.post("/listings/preview", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
 
-  const input = req.body as Partial<HoldingListingInput>;
-  if (!input.holdingId || !input.playerName || !input.listingPrice) {
+  const raw = req.body as Partial<HoldingListingInput>;
+  if (!raw.holdingId || !raw.playerName || !raw.listingPrice) {
     res.status(400).json({ success: false, error: "holdingId, playerName, and listingPrice are required" });
     return;
   }
+  const input = await hydratePhotosFromHolding(userId, raw);
 
   const preview = await buildListingPreview(userId, input as HoldingListingInput);
   res.json({ success: true, preview });
@@ -162,11 +204,12 @@ router.post("/listings/publish", async (req: Request, res: Response) => {
     return;
   }
 
-  const input = req.body as Partial<HoldingListingInput>;
-  if (!input.holdingId || !input.playerName || !input.listingPrice) {
+  const raw = req.body as Partial<HoldingListingInput>;
+  if (!raw.holdingId || !raw.playerName || !raw.listingPrice) {
     res.status(400).json({ success: false, error: "holdingId, playerName, and listingPrice are required" });
     return;
   }
+  const input = await hydratePhotosFromHolding(userId, raw);
 
   const result = await createListing(userId, input as HoldingListingInput);
   if (!result.success) {
