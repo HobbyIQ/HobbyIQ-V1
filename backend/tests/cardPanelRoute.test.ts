@@ -75,6 +75,12 @@ vi.mock("../src/services/playerTrend/matchedCohortCache.js", () => ({
 vi.mock("../src/services/playerTrend/parallelTierTrend.service.js", () => ({
   getParallelTierTrend: vi.fn(async () => null),
 }));
+// CF-RELEASE-AUTO-DETECT (2026-07-05): stub so tests don't hang on the
+// additions-summary fallback when the set string doesn't match the
+// hard-coded RELEASE_DATES table.
+vi.mock("../src/services/compiq/releaseAutoDetect.service.js", () => ({
+  detectReleaseDateForSet: vi.fn(async () => null),
+}));
 
 import app from "../src/app";
 

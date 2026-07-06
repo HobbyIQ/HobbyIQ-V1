@@ -68,6 +68,39 @@ import {
   computeDisplayValue,
   computeDisplayablePerUnitValue,
 } from "./portfolioStore.service.js";
+// CF-ACTION-RECOMMENDATION (2026-07-05, Drew): per-holding SELL/HOLD/LIST
+// verdict. Consumes the holding's own FMV + Predicted + confidence +
+// cost basis and emits a shape iOS can render directly.
+import { computeAction } from "../compiq/actionRecommendation.service.js";
+
+/**
+ * Map the portfolio holding's categorical `estimateConfidence` tier
+ * (which was calibrated for a different UI) to the 0-1 numeric scale
+ * `computeAction` expects. Conservative approximations — a holding
+ * priced from a robust comp pool sits at "estimate" (0.85); a holding
+ * on the graded-rail ladder fallback sits at "ballpark" (0.35).
+ * Anything null / "no-data" / "insufficient" falls below the
+ * recommendation confidence floor → INSUFFICIENT_DATA verdict.
+ */
+function confidenceScoreFromHolding(holding: PortfolioHolding): number {
+  const tier = (holding as any).estimateConfidence as
+    | "estimate" | "rough" | "ballpark" | "no-data" | "insufficient" | null
+    | undefined;
+  switch (tier) {
+    case "estimate":
+      return 0.85;
+    case "rough":
+      return 0.60;
+    case "ballpark":
+      return 0.35;
+    case "no-data":
+    case "insufficient":
+    case null:
+    case undefined:
+    default:
+      return 0.15;
+  }
+}
 
 function applyMultiplierOrNull(value: number | null, multiplier: number): number | null {
   return value === null ? null : value * multiplier;
@@ -196,6 +229,21 @@ export interface PortfolioHoldingWire {
   // estimated-aware row treatment.
   displayableValue: number | null;
   displayableValueSource: "observed" | "estimated" | null;
+  /** CF-ACTION-RECOMMENDATION (2026-07-05): the seller-facing verdict
+   *  for this holding — SELL_NOW / HOLD / LIST / INSUFFICIENT_DATA plus
+   *  a suggested list price and short reasoning. Computed from the
+   *  holding's own FMV, Predicted, confidence, and cost basis. iOS
+   *  reads this to render an actionable badge on each inventory row
+   *  and portfolio Top Movers card. Named `actionRecommendation` to
+   *  avoid collision with the legacy string `recommendation` field
+   *  used by an earlier iOS decoder (kept for backward-compat). */
+  actionRecommendation: {
+    verdict: "SELL_NOW" | "HOLD" | "LIST" | "INSUFFICIENT_DATA";
+    targetPrice: number | null;
+    reasoning: string;
+    urgency: "high" | "medium" | "low" | null;
+    expectedDeltaPct: number | null;
+  } | null;
   // CF-CH-THIN-COMP-PRIMARY (2026-06-26): persisted single trusted CardHedge
   // sale for holdings whose engine returned estimateSource ===
   // "cardhedge-last-sale". Surfaced as optional + nullable so the existing
@@ -419,6 +467,23 @@ export function composeHoldingWireShape(
     ...(holding.nearestGradedAnchor
       ? { nearestGradedAnchor: holding.nearestGradedAnchor }
       : {}),
+    // CF-ACTION-RECOMMENDATION (2026-07-05, Drew): per-holding verdict.
+    // Uses fmvPerUnit as currentValue and holding.predictedPrice as
+    // predictedValue. signalSource is unavailable on the portfolio-
+    // pipeline path (it's a card-panel-side field) — passing null gives
+    // us fair-value LIST logic, not the early-decay override. Cost basis
+    // (per-unit) enables the "projected below your cost" callout on
+    // SELL_NOW verdicts.
+    actionRecommendation: computeAction({
+      currentValue: fmvPerUnit,
+      predictedValue: (holding as any).predictedPrice ?? null,
+      confidenceScore: confidenceScoreFromHolding(holding),
+      signalSource: null,
+      costBasis:
+        typeof holding.purchasePrice === "number" && holding.purchasePrice > 0
+          ? holding.purchasePrice
+          : null,
+    }),
   };
 }
 
