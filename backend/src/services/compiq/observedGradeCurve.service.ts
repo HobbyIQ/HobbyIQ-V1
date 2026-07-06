@@ -261,7 +261,7 @@ function shouldRejectSaleTitle(title: string | null): boolean {
 async function fetchRawSalesForGrade(
   cardId: string,
   grade: string,
-): Promise<Array<{ price: number; date: string | null }>> {
+): Promise<Array<{ price: number; date: string | null; saleType: string | null }>> {
   const sales = await getCardSales(cardId, grade, 50);
   const rejected: string[] = [];
   const kept = sales.filter((s) => {
@@ -289,6 +289,9 @@ async function fetchRawSalesForGrade(
     .map((s) => ({
       price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
       date: s.date ?? null,
+      // CF-BIN-VS-AUCTION-WEIGHT (2026-07-05): thread sale_type through
+      // so computeWeightedMedian can boost BIN samples' weight.
+      saleType: s.sale_type ?? null,
     }))
     .filter((s) => Number.isFinite(s.price) && s.price > 0);
 }
@@ -306,13 +309,28 @@ function computePercentile(prices: number[], p: number): number | null {
   return sorted[Math.min(idx, sorted.length - 1)];
 }
 
+// CF-CONFIDENCE-RECALIBRATION (2026-07-05, Drew): tighter curve for
+// thin samples. Pre-CF, 3 sales landed at 0.50 (renders as 3 out of 5
+// filled dots on iOS) — same as 4 sales, and same visual weight as
+// something with 5-9 sales. That overstates certainty on cards with
+// tiny comp pools. New curve pushes each sample-count into its own
+// dot bucket (5-dot iOS display) so users can distinguish "3 sales
+// worth of confidence" from "10 sales worth of confidence."
+//
+// iOS 5-dot mapping (threshold-based):
+//    ≤ 0.20 → 1 dot   ("very thin — treat as directional signal")
+//    ≤ 0.40 → 2 dots  ("thin — pool needs more data")
+//    ≤ 0.60 → 3 dots  ("moderate — actionable but expect variance")
+//    ≤ 0.80 → 4 dots  ("solid — pool is representative")
+//    ≤ 1.00 → 5 dots  ("dense — high confidence")
 function computeConfidence(sampleCount: number, newestDate: string | null): number {
   let base: number;
   if (sampleCount === 0) return 0;
-  if (sampleCount === 1) base = 0.20;
-  else if (sampleCount === 2) base = 0.35;
-  else if (sampleCount <= 4) base = 0.50;
-  else if (sampleCount <= 9) base = 0.70;
+  if (sampleCount === 1) base = 0.15;
+  else if (sampleCount === 2) base = 0.25;
+  else if (sampleCount === 3) base = 0.35;
+  else if (sampleCount === 4) base = 0.45;
+  else if (sampleCount <= 9) base = 0.65;
   else if (sampleCount <= 19) base = 0.85;
   else base = 1.00;
 
@@ -336,7 +354,7 @@ async function aggregateGrade(
     .sort();
 
   const weighted = computeWeightedMedian(
-    sales.map((s) => ({ price: s.price, date: s.date })),
+    sales.map((s) => ({ price: s.price, date: s.date, saleType: s.saleType })),
   );
   const plain = computePlainMedian(prices);
   const low = computePercentile(prices, 0.10);
@@ -349,7 +367,7 @@ async function aggregateGrade(
   // answer different questions — weighted median is the pool's smoothed
   // center; newestSalePrice is the freshest datapoint.
   const salesWithDates = sales.filter(
-    (s): s is { price: number; date: string } =>
+    (s): s is { price: number; date: string; saleType: string | null } =>
       typeof s.date === "string" && s.date.length > 0,
   );
   salesWithDates.sort((a, b) => a.date.localeCompare(b.date));

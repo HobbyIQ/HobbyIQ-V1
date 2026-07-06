@@ -463,18 +463,62 @@ export function getSaleVelocityWeight(saleDate: string | number | Date | null | 
   return 0.1;                        // older than 30d — very stale
 }
 
+// CF-BIN-VS-AUCTION-WEIGHT (2026-07-05, Drew): closed BIN sales encode
+// a stronger forward-looking signal than closed auction sales. A BIN
+// close means the buyer voluntarily paid the seller's fixed price
+// without a bidding war forcing them upward; the seller's ask reflects
+// deliberate current-market judgment. Auction closes reflect the
+// second-highest bidder's ceiling. On the same card, BIN and auction
+// prices systematically diverge — BIN typically 15-30% above matching
+// auction. Weighting BIN heavier in the median catches the "market
+// is running hot" signal earlier by letting deliberate-price data
+// carry more of the aggregation.
+const BIN_WEIGHT_MULTIPLIER = 1.5;
+const AUCTION_WEIGHT_MULTIPLIER = 1.0;
+
+/**
+ * Classify a CH `sale_type` string into a weight multiplier. Case-
+ * insensitive substring match. Unknown / null defaults to auction
+ * weight so the change is monotonically upward-only (BIN samples
+ * lift; nothing gets penalized below current behavior).
+ */
+export function getSaleTypeWeightMultiplier(saleType: string | null | undefined): number {
+  if (!saleType || typeof saleType !== "string") return AUCTION_WEIGHT_MULTIPLIER;
+  const s = saleType.toLowerCase();
+  // Match common eBay listing type vocab. "auction with buy it now"
+  // takes precedence over "auction" so that "AUCTION_WITH_BIN" doesn't
+  // fall to the auction path — it still allowed a fixed-price close.
+  if (s.includes("buy it now") || s.includes("fixed") || s.includes("bin") ||
+      s.includes("buy_it_now") || s.includes("fixed_price")) {
+    return BIN_WEIGHT_MULTIPLIER;
+  }
+  return AUCTION_WEIGHT_MULTIPLIER;
+}
+
 /**
  * Continuous weighted-median: returns the price at which cumulative weight
  * first crosses half of the total. Falls back to the highest-priced sample
  * when weights are degenerate.
+ *
+ * CF-BIN-VS-AUCTION-WEIGHT (2026-07-05): `saleType` is optional on each
+ * sample. When present and identifies as BIN, that sample's weight is
+ * multiplied by BIN_WEIGHT_MULTIPLIER on top of the recency weight.
+ * Callers without sale_type context see identical behavior to pre-CF.
  */
 export function computeWeightedMedian(
-  samples: ReadonlyArray<{ price: number; date: string | number | Date | null | undefined }>
+  samples: ReadonlyArray<{
+    price: number;
+    date: string | number | Date | null | undefined;
+    saleType?: string | null;
+  }>
 ): number | null {
   if (samples.length === 0) return null;
   const weighted = samples
     .filter((s) => Number.isFinite(s.price) && s.price > 0)
-    .map((s) => ({ price: s.price, weight: getSaleVelocityWeight(s.date) }))
+    .map((s) => ({
+      price: s.price,
+      weight: getSaleVelocityWeight(s.date) * getSaleTypeWeightMultiplier(s.saleType),
+    }))
     .sort((a, b) => a.price - b.price);
   if (weighted.length === 0) return null;
   const totalWeight = weighted.reduce((sum, s) => sum + s.weight, 0);

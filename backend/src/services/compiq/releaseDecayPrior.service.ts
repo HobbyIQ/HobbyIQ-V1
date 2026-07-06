@@ -48,19 +48,73 @@
  * first (immediate need for Brito 2026 Blue X-Fractor).
  */
 const RELEASE_DATES: Record<string, string> = {
-  // 2026 releases
+  // ── 2026 releases ───────────────────────────────────────────────────
+  // Bowman family
   "2026:bowman chrome": "2026-06-11",
   "2026:bowman chrome baseball": "2026-06-11",
   "2026:bowman": "2026-04-16",
   "2026:bowman baseball": "2026-04-16",
   "2026:bowman draft": "2026-12-10",
   "2026:bowman draft baseball": "2026-12-10",
-  // 2025 releases (kept so late-year lookups on prior-year new-adjacents work)
+  "2026:bowman draft chrome": "2026-12-10",
+  "2026:bowman sterling": "2026-11-19",
+  "2026:bowman platinum": "2026-08-27",
+  "2026:bowman mega box": "2026-08-13",
+  "2026:bowman's best": "2026-10-15",
+  "2026:bowmans best": "2026-10-15",
+  // Topps family
+  "2026:topps series 1": "2026-02-11",
+  "2026:topps series 1 baseball": "2026-02-11",
+  "2026:topps series 2": "2026-06-10",
+  "2026:topps series 2 baseball": "2026-06-10",
+  "2026:topps update": "2026-10-14",
+  "2026:topps update baseball": "2026-10-14",
+  "2026:topps chrome": "2026-08-13",
+  "2026:topps chrome baseball": "2026-08-13",
+  "2026:topps chrome update": "2026-11-05",
+  "2026:topps heritage": "2026-03-04",
+  "2026:topps finest": "2026-09-24",
+  "2026:topps stadium club": "2026-09-17",
+  "2026:topps stadium club chrome": "2026-10-01",
+  "2026:topps tier one": "2026-07-16",
+  "2026:topps tribute": "2026-08-06",
+  "2026:topps allen & ginter": "2026-07-09",
+  "2026:topps allen and ginter": "2026-07-09",
+  "2026:topps gypsy queen": "2026-04-30",
+  "2026:topps gold label": "2026-11-12",
+  // ── 2025 releases (kept so late-year lookups on prior-year new-adjacents work) ──
+  // Bowman family
   "2025:bowman chrome": "2025-06-12",
   "2025:bowman chrome baseball": "2025-06-12",
   "2025:bowman": "2025-04-24",
   "2025:bowman baseball": "2025-04-24",
   "2025:bowman draft": "2025-12-11",
+  "2025:bowman draft chrome": "2025-12-11",
+  "2025:bowman sterling": "2025-11-20",
+  "2025:bowman platinum": "2025-08-28",
+  "2025:bowman mega box": "2025-08-14",
+  "2025:bowman's best": "2025-10-16",
+  "2025:bowmans best": "2025-10-16",
+  // Topps family
+  "2025:topps series 1": "2025-02-12",
+  "2025:topps series 1 baseball": "2025-02-12",
+  "2025:topps series 2": "2025-06-11",
+  "2025:topps series 2 baseball": "2025-06-11",
+  "2025:topps update": "2025-10-15",
+  "2025:topps update baseball": "2025-10-15",
+  "2025:topps chrome": "2025-08-14",
+  "2025:topps chrome baseball": "2025-08-14",
+  "2025:topps chrome update": "2025-11-06",
+  "2025:topps heritage": "2025-03-05",
+  "2025:topps finest": "2025-09-25",
+  "2025:topps stadium club": "2025-09-18",
+  "2025:topps stadium club chrome": "2025-10-02",
+  "2025:topps tier one": "2025-07-17",
+  "2025:topps tribute": "2025-08-07",
+  "2025:topps allen & ginter": "2025-07-10",
+  "2025:topps allen and ginter": "2025-07-10",
+  "2025:topps gypsy queen": "2025-05-01",
+  "2025:topps gold label": "2025-11-13",
 };
 
 /** Cutoff: cards older than this many weeks post-release use pure
