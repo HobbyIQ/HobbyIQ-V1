@@ -115,6 +115,25 @@ describe("CF-RELEASE-DECAY-PRIOR — getReleaseDecayForCard", () => {
     expect(r2?.decayRatePerWeek).toBe(r3?.decayRatePerWeek);
   });
 
+  it("recognizes the expanded Topps + Bowman product families", () => {
+    // CF-RELEASE-DECAY-EXPAND-TABLE (2026-07-05): verify entries added
+    // in the expansion PR. Any of these should return a decay result
+    // when queried near their release date.
+    const productChecks = [
+      { year: 2026, set: "Topps Series 1", nearRelease: new Date("2026-02-25T00:00:00Z") },
+      { year: 2026, set: "Topps Chrome", nearRelease: new Date("2026-08-27T00:00:00Z") },
+      { year: 2026, set: "Topps Update", nearRelease: new Date("2026-10-28T00:00:00Z") },
+      { year: 2026, set: "Topps Heritage", nearRelease: new Date("2026-03-18T00:00:00Z") },
+      { year: 2026, set: "Bowman Sterling", nearRelease: new Date("2026-12-03T00:00:00Z") },
+      { year: 2026, set: "Bowman Platinum", nearRelease: new Date("2026-09-10T00:00:00Z") },
+      { year: 2026, set: "Topps Allen & Ginter", nearRelease: new Date("2026-07-23T00:00:00Z") },
+    ];
+    for (const { year, set, nearRelease } of productChecks) {
+      const result = getReleaseDecayForCard(year, set, nearRelease);
+      expect(result, `${year} ${set} should have a decay result near release`).not.toBeNull();
+    }
+  });
+
   it("piecewise schedule monotonically decreases decay magnitude and blend weight", () => {
     // Documents the curve shape — as weeks progress, decay weakens
     // (rate moves toward zero) and blend transfers to matched-cohort.

@@ -272,10 +272,14 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       return c.entries.find((e) => e.grade === "Raw")!.confidenceScore;
     }
 
-    // Bins: 1→0.20, 2→0.35, 4→0.50, 9→0.70, 19→0.85, 20→1.00
-    expect(await confidenceForN(1)).toBeCloseTo(0.20, 2);
-    expect(await confidenceForN(3)).toBeCloseTo(0.50, 2);
-    expect(await confidenceForN(5)).toBeCloseTo(0.70, 2);
+    // CF-CONFIDENCE-RECALIBRATION (2026-07-05): tighter curve for thin
+    // samples. Each sample-count below 5 has its own bucket, so the
+    // 5-dot iOS display distinguishes "3 sales worth" from "4 sales
+    // worth" instead of both rendering as 3 dots.
+    // Bins: 1→0.15, 2→0.25, 3→0.35, 4→0.45, 5-9→0.65, 10-19→0.85, 20+→1.00
+    expect(await confidenceForN(1)).toBeCloseTo(0.15, 2);
+    expect(await confidenceForN(3)).toBeCloseTo(0.35, 2);
+    expect(await confidenceForN(5)).toBeCloseTo(0.65, 2);
     expect(await confidenceForN(10)).toBeCloseTo(0.85, 2);
     expect(await confidenceForN(25)).toBeCloseTo(1.00, 2);
   });
@@ -295,8 +299,9 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     );
     const curve = await buildObservedGradeCurve("c1");
     const raw = curve.entries.find((e) => e.grade === "Raw")!;
-    // Base for n=5 is 0.70; dampened by 0.7 → 0.49
-    expect(raw.confidenceScore).toBeCloseTo(0.49, 2);
+    // Base for n=5 (post-recalibration) is 0.65; dampened by 0.7 → 0.455
+    // (floating-point rounding via Math.round × 100 / 100 lands at 0.45)
+    expect(raw.confidenceScore).toBeCloseTo(0.45, 2);
   });
 
   it("newest and oldest sale dates are ordered correctly", async () => {
@@ -1247,6 +1252,55 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       // Pure matched-cohort — decay never fires
       expect(curve.signalSource).toBe("matched-cohort-cached");
       expect(curve.ratePerWeek).toBeCloseTo(0.05, 3);
+    });
+  });
+
+  describe("CF-BIN-VS-AUCTION-WEIGHT — BIN sales lift the weighted median", () => {
+    it("weighted median tilts UP when the BIN sales are the higher-priced ones", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      // Two auction sales at $100, two BIN sales at $200, all same age.
+      // Recency alone would median around $150.
+      // BIN weighting (×1.5) tips cumulative weight so median lands at $200.
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(2), sale_type: "auction" },
+            { price: 100, date: daysAgo(2), sale_type: "auction" },
+            { price: 200, date: daysAgo(2), sale_type: "buy it now" },
+            { price: 200, date: daysAgo(2), sale_type: "buy it now" },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // BIN samples carry more weight → weighted median tips to the BIN price
+      expect(raw.weightedMedianPrice).toBe(200);
+    });
+
+    it("null sale_type samples default to auction weight (no penalty)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      // All samples null sale_type → identical behavior to pre-CF
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(2), sale_type: null },
+            { price: 150, date: daysAgo(2), sale_type: null },
+            { price: 200, date: daysAgo(2), sale_type: null },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1");
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Equal weights → median is the middle sample
+      expect(raw.weightedMedianPrice).toBe(150);
     });
   });
 
