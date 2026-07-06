@@ -239,6 +239,11 @@ router.put("/holdings/:id", portfolio.updateHolding);
 router.patch("/holdings/:id", portfolio.updateHolding);
 router.delete("/holdings/:id", portfolio.deleteHolding);
 router.post("/holdings/:id/sell", portfolio.sellHolding);
+// CF-REGRADE-COST-ROLLIN (2026-07-06, iOS ask): atomic grade
+// conversion — updates gradeCompany/gradeValue/certNumber and rolls
+// grading cost into totalCostBasis in one commit. iOS "Mark as
+// Graded" flow POSTs here after the user finishes the sheet.
+router.post("/holdings/:id/regrade", portfolio.regradeHolding);
 // CF-PAYMENTS-B1: per-holding price refresh is a user-initiated FMV check
 // (consumes 1 priceChecksPerDay slot; free=5/day, paid tiers unlimited).
 router.post("/holdings/:id/refresh", requireRateLimited("priceChecksPerDay"), portfolio.refreshHolding);

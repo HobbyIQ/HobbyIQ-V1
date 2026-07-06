@@ -3336,6 +3336,159 @@ export async function updateHolding(req: Request, res: Response) {
   res.json({ message: "Holding updated", id });
 }
 
+/**
+ * CF-REGRADE-COST-ROLLIN (2026-07-06, Drew via iOS Claude ask):
+ * POST /api/portfolio/holdings/:id/regrade
+ *
+ * Atomic grade conversion. Combines four field updates on a single
+ * holding into ONE commit + one audit event so the user's "Mark as
+ * Graded" flow doesn't spread across two/three PATCH round-trips:
+ *
+ *   1. gradeCompany + gradeValue → the new grade
+ *   2. certNumber                 → optional slab cert
+ *   3. gradingCost                → rolled INTO totalCostBasis so
+ *                                    P&L reflects true all-in cost
+ *
+ * Body:
+ *   {
+ *     gradeCompany: "PSA" | "BGS" | "SGC" | "CGC" | string,   // required
+ *     gradeValue:   number,                                    // required
+ *     certNumber?:  string | null,                             // optional
+ *     gradingCost?: number,                                    // optional, default 0
+ *   }
+ *
+ * Response: { message: string, id: string, updatedHolding: {...wire shape...} }
+ *
+ * Audit trail:
+ *   - priceHistoryByHolding gets a `{ at, value, source: "regrade" }`
+ *     point so history charts show the conversion moment
+ *   - `holding_regraded` telemetry event captures gradingCost, old
+ *     grade → new grade, cost basis before/after
+ *
+ * Cost roll-in math:
+ *   old totalCostBasis = computeCostBasisTotal(holding)
+ *   new totalCostBasis = old + gradingCost
+ *   `purchasePrice` is NOT touched — it stays the per-unit acquisition
+ *   price. Downstream cost consumers read totalCostBasis via
+ *   computeCostBasisTotal which prefers totalCostBasis when set.
+ */
+export async function regradeHolding(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const rawId = String(req.params.id ?? "").trim();
+  const doc = await readUserDoc(auth.userId);
+  const id = findHoldingKey(doc, rawId);
+  if (!id) return res.status(404).json({ error: { message: "Not found", code: "NOT_FOUND" } });
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const gradeCompany = typeof body.gradeCompany === "string" ? body.gradeCompany.trim() : "";
+  const gradeValueRaw = body.gradeValue;
+  const gradeValue =
+    typeof gradeValueRaw === "number"
+      ? gradeValueRaw
+      : typeof gradeValueRaw === "string"
+        ? parseFloat(gradeValueRaw)
+        : NaN;
+  if (gradeCompany.length === 0 || !Number.isFinite(gradeValue)) {
+    return res.status(400).json({
+      error: {
+        code: "INVALID_PAYLOAD",
+        message: "gradeCompany (non-empty string) and gradeValue (number) are required.",
+      },
+    });
+  }
+
+  const certNumber =
+    typeof body.certNumber === "string"
+      ? body.certNumber.trim() || null
+      : body.certNumber === null
+        ? null
+        : undefined; // undefined = don't touch; null = explicit clear
+
+  const gradingCostRaw = body.gradingCost;
+  const gradingCost =
+    typeof gradingCostRaw === "number" && Number.isFinite(gradingCostRaw) && gradingCostRaw >= 0
+      ? gradingCostRaw
+      : 0;
+
+  const previous = doc.holdings[id];
+  const oldCostBasis = computeCostBasisTotal(previous);
+  const newCostBasis = Math.round((oldCostBasis + gradingCost) * 100) / 100;
+
+  const next: PortfolioHolding = {
+    ...previous,
+    gradeCompany,
+    gradeValue,
+    // Only overwrite certNumber when the caller supplied a value or
+    // explicit null. Otherwise leave whatever was there.
+    ...(certNumber !== undefined ? { certNumber } : {}),
+    totalCostBasis: newCostBasis,
+    lastUpdated: new Date().toISOString(),
+    id,
+  };
+
+  // Cardsight taxonomy — re-resolve gradeId now that grade changed.
+  const nextWithGradeId = await populateCardsightGradeId(next);
+  doc.holdings[id] = nextWithGradeId;
+
+  // Audit trail: append a "regrade" point so history charts render
+  // the conversion moment as a break-line even when FMV doesn't move.
+  const now = new Date().toISOString();
+  const nextValue = computePerUnitValue(nextWithGradeId) ?? 0;
+  if (nextValue > 0) {
+    appendPriceHistory(doc, id, {
+      at: now,
+      value: nextValue,
+      source: "regrade" as const,
+    });
+  }
+
+  // Best-effort auto-repricing on the new grade — a Raw→PSA 9 conversion
+  // should surface a new FMV immediately, not wait for the next daily job.
+  try {
+    await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
+  } catch {
+    // Persist anyway; the FMV refresh can happen on the next cycle.
+  }
+
+  await writeUserDoc(auth.userId, doc);
+
+  // Telemetry — one event carrying the whole conversion so ops can KQL
+  // grading-cost trends without cross-referencing multiple events.
+  console.log(JSON.stringify({
+    event: "holding_regraded",
+    source: "portfolioStore.regradeHolding",
+    userId: auth.userId,
+    holdingId: id,
+    oldGrade: {
+      company: previous.gradeCompany ?? null,
+      value: previous.gradeValue ?? null,
+    },
+    newGrade: {
+      company: gradeCompany,
+      value: gradeValue,
+    },
+    certNumberChanged: certNumber !== undefined,
+    gradingCost,
+    oldTotalCostBasis: Math.round(oldCostBasis * 100) / 100,
+    newTotalCostBasis: newCostBasis,
+    timestamp: now,
+  }));
+
+  // Re-subscribe delta polls when grade/cardId identity changed (grade
+  // change always changes the tracked (cardId, grade) tuple).
+  if (holdingSubscriptionChanged(previous, doc.holdings[id]!)) {
+    void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
+  }
+
+  return res.json({
+    message: "Holding regraded",
+    id,
+    updatedHolding: doc.holdings[id],
+  });
+}
+
 export async function deleteHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;

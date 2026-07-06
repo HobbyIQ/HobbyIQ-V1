@@ -82,6 +82,113 @@ describe("Portfolio routes", () => {
   });
 });
 
+describe("CF-REGRADE-COST-ROLLIN — POST /api/portfolio/holdings/:id/regrade", () => {
+  it("atomically updates grade + cert AND rolls gradingCost into totalCostBasis", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+
+    // Start with a raw holding at $200 cost basis (100 × 2)
+    const add = await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "regrade-test-1",
+        playerName: "Roldy Brito",
+        cardYear: 2026,
+        product: "Bowman Chrome",
+        cardTitle: "2026 Bowman Chrome Blue X-Fractor Auto",
+        quantity: 2,
+        purchasePrice: 100,
+        totalCostBasis: 200,
+      });
+    expect(add.status).toBe(201);
+
+    const regrade = await request(app)
+      .post("/api/portfolio/holdings/regrade-test-1/regrade")
+      .set("x-session-id", session)
+      .send({
+        gradeCompany: "PSA",
+        gradeValue: 9,
+        certNumber: "12345678",
+        gradingCost: 25,
+      });
+    expect(regrade.status).toBe(200);
+    expect(regrade.body.updatedHolding.gradeCompany).toBe("PSA");
+    expect(regrade.body.updatedHolding.gradeValue).toBe(9);
+    expect(regrade.body.updatedHolding.certNumber).toBe("12345678");
+    // Cost basis rolled: 200 + 25 = 225
+    expect(regrade.body.updatedHolding.totalCostBasis).toBe(225);
+    // Per-unit purchase price is NOT touched — stays at 100
+    expect(regrade.body.updatedHolding.purchasePrice).toBe(100);
+
+    // Re-fetching via GET /api/portfolio also reflects the change
+    const listing = await request(app)
+      .get("/api/portfolio")
+      .set("x-session-id", session);
+    expect(listing.status).toBe(200);
+    const found = listing.body.items.find((h: any) => h.id === "regrade-test-1");
+    expect(found).toBeTruthy();
+    expect(found.gradeCompany).toBe("PSA");
+    expect(found.gradeValue).toBe(9);
+    expect(found.certNumber).toBe("12345678");
+    expect(found.totalCostBasis).toBe(225);
+  });
+
+  it("400s when gradeCompany or gradeValue are missing", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "regrade-invalid-1",
+        playerName: "Missing Fields Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Test",
+        quantity: 1,
+        purchasePrice: 50,
+      });
+    const bad = await request(app)
+      .post("/api/portfolio/holdings/regrade-invalid-1/regrade")
+      .set("x-session-id", session)
+      .send({ gradeCompany: "PSA" }); // missing gradeValue
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.code).toBe("INVALID_PAYLOAD");
+  });
+
+  it("404s when the holding doesn't exist", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    const notFound = await request(app)
+      .post("/api/portfolio/holdings/regrade-nonexistent/regrade")
+      .set("x-session-id", session)
+      .send({ gradeCompany: "PSA", gradeValue: 9, gradingCost: 25 });
+    expect(notFound.status).toBe(404);
+  });
+
+  it("defaults gradingCost to 0 when omitted (grade update only, no cost roll)", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "regrade-no-cost-1",
+        playerName: "No Cost Roll",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Test",
+        quantity: 1,
+        purchasePrice: 300,
+        totalCostBasis: 300,
+      });
+    const regrade = await request(app)
+      .post("/api/portfolio/holdings/regrade-no-cost-1/regrade")
+      .set("x-session-id", session)
+      .send({ gradeCompany: "PSA", gradeValue: 10 });
+    expect(regrade.status).toBe(200);
+    // Cost basis unchanged when gradingCost is omitted
+    expect(regrade.body.updatedHolding.totalCostBasis).toBe(300);
+  });
+});
+
 describe("Portfolio routes — playerId resolution (PR #68)", () => {
   beforeEach(() => {
     _clearPlayerResolverCache();
