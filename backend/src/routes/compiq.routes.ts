@@ -1645,8 +1645,26 @@ router.get("/suggest", async (req, res, next) => {
         : SUGGEST_DEFAULT_TAKE;
 
     if (normalizedQ.length < SUGGEST_MIN_CHARS) {
-      return res.status(200).json({ query: normalizedQ, suggestions: [] });
+      return res.status(200).json({ query: normalizedQ, suggestions: [], rawFallback: null });
     }
+
+    // CF-TYPEAHEAD-RAW-FALLBACK (2026-07-05, Drew): every suggest response
+    // above the min-chars threshold ships a `rawFallback` object iOS can
+    // render as a permanent "Search catalog for '<query>'" option. This
+    // closes the "dropdown swallows Return key → user's real query is
+    // never dispatched" trap (the Cardsight autocomplete for q="trout"
+    // returns "Trout & Flies" not Mike Trout, and if iOS auto-picks the
+    // top suggestion the user's actual intent is lost).
+    //
+    // iOS renders `rawFallback` as an always-present row + wires Return
+    // key to fire `dispatchEndpoint` with `text` as the input — even when
+    // the dropdown has focus. Additive: pre-CF decoders that only read
+    // `suggestions` continue to work byte-identically.
+    const rawFallback = {
+      text: normalizedQ,
+      label: `Search catalog for "${rawQ.trim()}"`,
+      dispatchEndpoint: "/api/search/cards",
+    };
 
     const cacheKey = `${normalizedQ}:${take}`;
     const now = Date.now();
@@ -1662,7 +1680,7 @@ router.get("/suggest", async (req, res, next) => {
           n: cached.suggestions.length,
         }),
       );
-      return res.status(200).json({ query: normalizedQ, suggestions: cached.suggestions });
+      return res.status(200).json({ query: normalizedQ, suggestions: cached.suggestions, rawFallback });
     }
 
     console.log(
@@ -1687,7 +1705,7 @@ router.get("/suggest", async (req, res, next) => {
       expiresAt: now + SUGGEST_CACHE_TTL_MS,
     });
 
-    return res.status(200).json({ query: normalizedQ, suggestions });
+    return res.status(200).json({ query: normalizedQ, suggestions, rawFallback });
   } catch (err) {
     next(err);
   }
