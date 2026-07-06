@@ -861,7 +861,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", {
         playerName: "NoCohort",
-        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+        parallelTierKey: { year: 2020, set: "Bowman Chrome", variant: "Blue X-Fractor" },
       });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
       // Rate = 0.06/wk, weeksSinceSale ~4.3, so ~+26% market value
@@ -919,7 +919,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", {
         playerName: "NoCohort",
-        parallelTierKey: { year: 2025, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+        parallelTierKey: { year: 2020, set: "Bowman Chrome", variant: "Blue X-Fractor" },
       });
       // Signal discarded → no trajectory anywhere
       expect(curve.signalSource).toBeNull();
@@ -953,7 +953,7 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", {
         playerName: "HotPlayer",
-        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+        parallelTierKey: { year: 2020, set: "Bowman Chrome", variant: "Blue X-Fractor" },
       });
       expect(curve.signalSource).toBe("matched-cohort-cached");
       expect(tierMock).not.toHaveBeenCalled();
@@ -1154,6 +1154,99 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       // Trend-adjusted value should be modest (rate × weeksSinceSale on
       // the raw pill), NOT lifted toward $260.
       expect(raw.trendAdjustedValue!).toBeLessThan(raw.value! * 1.25);
+    });
+  });
+
+  describe("CF-RELEASE-DECAY-PRIOR — bend rate toward baseline decay for cards <8wk post-release", () => {
+    // Brito 2026 Bowman Chrome Blue X-Fractor is ~3 weeks post-release
+    // at FAKE_NOW (2026-07-04, release was 2026-06-11). Bucket says
+    // decay = -8%/wk with 75% weight vs matched-cohort trend.
+
+    it("blends decay prior with matched-cohort trend for a new-release card", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 200, date: daysAgo(20) },
+            { price: 200, date: daysAgo(18) },
+            { price: 200, date: daysAgo(15) },
+          ] as any;
+        }
+        return [];
+      });
+      // Matched-cohort says +10%/wk (hype spike propagates from other cards)
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.10, "Brito", /* useMatchedCohort */ true) as any,
+      );
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "Brito",
+        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+      });
+      // Blended: -0.08 × 0.75 + 0.10 × 0.25 = -0.06 + 0.025 = -0.035/wk
+      expect(curve.signalSource).toBe("release-decay-blend");
+      expect(curve.ratePerWeek).toBeCloseTo(-0.035, 3);
+    });
+
+    it("uses pure decay when no matched-cohort AND no parallel-tier signal exists (long-tail new-release player)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      const { fetchCardHedgeMatchedCohort } = await import(
+        "../src/services/playerTrend/cardHedgeMatchedCohortProvider.js"
+      );
+      const { getParallelTierTrend } = await import(
+        "../src/services/playerTrend/parallelTierTrend.service.js"
+      );
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [{ price: 200, date: daysAgo(15) }] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.00, "LongTail", /* useMatchedCohort */ false) as any,
+      );
+      vi.mocked(fetchCardHedgeMatchedCohort).mockResolvedValueOnce(null as any);
+      vi.mocked(getParallelTierTrend).mockResolvedValueOnce(null as any);
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "LongTail",
+        parallelTierKey: { year: 2026, set: "Bowman Chrome", variant: "Blue X-Fractor" },
+      });
+      // Pure decay: -0.08/wk (week-3 bucket)
+      expect(curve.signalSource).toBe("release-decay-only");
+      expect(curve.ratePerWeek).toBeCloseTo(-0.08, 3);
+    });
+
+    it("does NOT apply decay when the set isn't in the release-date table (unknown product)", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [{ price: 200, date: daysAgo(20) }] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.05, "P", /* useMatchedCohort */ true) as any,
+      );
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "P",
+        // Unknown set — not in RELEASE_DATES
+        parallelTierKey: { year: 2026, set: "Some Custom Set", variant: "Refractor" },
+      });
+      // Pure matched-cohort — decay never fires
+      expect(curve.signalSource).toBe("matched-cohort-cached");
+      expect(curve.ratePerWeek).toBeCloseTo(0.05, 3);
     });
   });
 
