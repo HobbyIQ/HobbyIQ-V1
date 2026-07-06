@@ -58,6 +58,11 @@ import {
   type ParallelTierKey,
 } from "../playerTrend/parallelTierTrend.service.js";
 export type { ParallelTierKey } from "../playerTrend/parallelTierTrend.service.js";
+// CF-RELEASE-DECAY-PRIOR (2026-07-05, Drew): product-lifecycle prior
+// for cards <8 weeks post-release. Bends the rate toward baseline
+// decay so a launch-week hype spike doesn't get projected forward as
+// continued upside. Blends to matched-cohort by week 8.
+import { getReleaseDecayForCard } from "./releaseDecayPrior.service.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -197,6 +202,8 @@ export interface ObservedGradeCurve {
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
     | "parallel-tier"
+    | "release-decay-blend"
+    | "release-decay-only"
     | "raw-weekly"
     | null;
 }
@@ -543,12 +550,19 @@ interface RateDerivation {
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
     | "parallel-tier"
+    | "release-decay-blend"
+    | "release-decay-only"
     | "raw-weekly";
 }
 
 async function deriveWeeklyRate(
   playerName: string,
   parallelTierKey: ParallelTierKey | null,
+  /** CF-RELEASE-DECAY-PRIOR (2026-07-05, Drew): year + set for the
+   *  target card so we can check whether it's inside the 8-week
+   *  post-release window and apply a decay-rate prior. Both derivable
+   *  from parallelTierKey when present, or supplied independently. */
+  releaseCardKey: { year: number | string; set: string } | null,
 ): Promise<RateDerivation | null> {
   let snapshot;
   try {
@@ -629,15 +643,69 @@ async function deriveWeeklyRate(
     }
   }
 
+  // CF-RELEASE-DECAY-PRIOR (2026-07-05, Drew): for cards <8 weeks
+  // post-release, blend a decay prior into the rate. The prior encodes
+  // "new releases drop from launch premium to baseline over ~8 weeks."
+  // Applied AFTER matched-cohort / parallel-tier so the blend uses
+  // whichever trend signal was available (or falls back to pure decay
+  // when neither exists — this is a real coverage improvement for
+  // brand-new-release long-tail players).
+  const releaseDecay = releaseCardKey
+    ? getReleaseDecayForCard(releaseCardKey.year, releaseCardKey.set)
+    : null;
+  if (releaseDecay) {
+    if (rawRate !== null && signalSource !== null) {
+      // Blend: finalRate = decay × blend + trend × (1 - blend)
+      const blended =
+        releaseDecay.decayRatePerWeek * releaseDecay.blend +
+        rawRate * (1 - releaseDecay.blend);
+      console.log(JSON.stringify({
+        event: "release_decay_applied",
+        source: "observedGradeCurve",
+        player: playerName,
+        matchedKey: releaseDecay.matchedKey,
+        weeksSinceRelease: releaseDecay.weeksSinceRelease,
+        decayRatePerWeek: releaseDecay.decayRatePerWeek,
+        blend: releaseDecay.blend,
+        preBlendTrendRate: Math.round(rawRate * 10000) / 100,
+        preBlendTrendSignal: signalSource,
+        blendedRate: Math.round(blended * 10000) / 100,
+      }));
+      rawRate = blended;
+      signalSource = "release-decay-blend";
+    } else {
+      // No matched-cohort AND no parallel-tier — use pure decay signal.
+      // This is coverage we didn't have before: a brand-new-release
+      // long-tail player (no matched-cohort, tier not yet fresh enough)
+      // now gets a defensible baseline-decay Predicted instead of null.
+      console.log(JSON.stringify({
+        event: "release_decay_applied",
+        source: "observedGradeCurve",
+        player: playerName,
+        matchedKey: releaseDecay.matchedKey,
+        weeksSinceRelease: releaseDecay.weeksSinceRelease,
+        decayRatePerWeek: releaseDecay.decayRatePerWeek,
+        blend: 1.0,
+        preBlendTrendRate: null,
+        preBlendTrendSignal: null,
+        blendedRate: Math.round(releaseDecay.decayRatePerWeek * 10000) / 100,
+      }));
+      rawRate = releaseDecay.decayRatePerWeek;
+      signalSource = "release-decay-only";
+    }
+  }
+
   if (rawRate === null || signalSource === null) {
     // Observability: log the miss so ops can see coverage gaps in
-    // matched-cohort AND parallel-tier and prioritize backfill.
+    // matched-cohort AND parallel-tier AND release-decay and prioritize
+    // backfill (release-date table entries, matched-cohort coverage).
     console.log(JSON.stringify({
       event: "trajectory_rate_no_signal",
       source: "observedGradeCurve",
       player: playerName,
       hadParallelTierKey: !!parallelTierKey,
-      reason: "no matched-cohort AND no parallel-tier trend",
+      hadReleaseCardKey: !!releaseCardKey,
+      reason: "no matched-cohort AND no parallel-tier AND no release-decay",
     }));
     return null;
   }
@@ -742,11 +810,19 @@ async function applyTrajectory(
   playerName: string | null,
   parallelTierKey: ParallelTierKey | null,
 ): Promise<RateDerivation | null> {
-  // Both a playerName AND a parallelTierKey can independently unlock
-  // trajectory now — even a cardId with no playerName can get a rate
-  // via parallel-tier alone. So only bail when BOTH are missing.
-  if (!playerName && !parallelTierKey) return null;
-  const derivation = await deriveWeeklyRate(playerName ?? "", parallelTierKey);
+  // A playerName OR a parallelTierKey OR a release-decay-eligible card
+  // can independently unlock trajectory now. Only bail when ALL three
+  // signals are unavailable.
+  const releaseCardKey =
+    parallelTierKey && parallelTierKey.year && parallelTierKey.set
+      ? { year: parallelTierKey.year, set: parallelTierKey.set }
+      : null;
+  if (!playerName && !parallelTierKey && !releaseCardKey) return null;
+  const derivation = await deriveWeeklyRate(
+    playerName ?? "",
+    parallelTierKey,
+    releaseCardKey,
+  );
   if (derivation === null) return null;
   const rate = derivation.cappedRate;
 

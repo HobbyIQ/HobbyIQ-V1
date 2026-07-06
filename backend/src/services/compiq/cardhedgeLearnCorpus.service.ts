@@ -131,6 +131,8 @@ interface ObservedGradeCurveDoc extends BaseCorpusDoc {
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
     | "parallel-tier"
+    | "release-decay-blend"
+    | "release-decay-only"
     | "raw-weekly"
     | null;
   grades: Array<{
@@ -246,6 +248,8 @@ export function persistObservedGradeCurve(input: {
     | "matched-cohort-cached"
     | "matched-cohort-on-demand"
     | "parallel-tier"
+    | "release-decay-blend"
+    | "release-decay-only"
     | "raw-weekly"
     | null;
   grades: Array<{
