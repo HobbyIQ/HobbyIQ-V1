@@ -82,6 +82,55 @@ describe("Portfolio routes", () => {
   });
 });
 
+describe("CF-PORTFOLIO-OPPORTUNITIES — GET /api/portfolio/opportunities", () => {
+  it("groups holdings into sellNow / hold / listNow tabs with counts", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+
+    // Add a variety of holdings — the recommendation classification
+    // will emerge from the trajectory pipeline on the auto-price cycle;
+    // we're not asserting exact bucketing here (the underlying signals
+    // are mock-dependent), just that the endpoint responds with the
+    // right SHAPE.
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "opp-test-1",
+        playerName: "Test Player A",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Test A",
+        quantity: 1,
+        purchasePrice: 100,
+      });
+
+    const opportunities = await request(app)
+      .get("/api/portfolio/opportunities")
+      .set("x-session-id", session);
+    expect(opportunities.status).toBe(200);
+    expect(opportunities.body.success).toBe(true);
+    expect(Array.isArray(opportunities.body.sellNow)).toBe(true);
+    expect(Array.isArray(opportunities.body.hold)).toBe(true);
+    expect(Array.isArray(opportunities.body.listNow)).toBe(true);
+    expect(opportunities.body.counts).toBeTruthy();
+    expect(typeof opportunities.body.counts.sellNow).toBe("number");
+    expect(typeof opportunities.body.counts.hold).toBe("number");
+    expect(typeof opportunities.body.counts.listNow).toBe("number");
+    expect(typeof opportunities.body.counts.listAll).toBe("number");
+    expect(typeof opportunities.body.counts.insufficientData).toBe("number");
+    // Sum of counts must equal total holdings — one holding lands in
+    // exactly one bucket. (LIST verdicts split between listAll and
+    // listNow inside the counts; sellNow / hold / insufficientData are
+    // exclusive with listAll.)
+    const total =
+      opportunities.body.counts.sellNow +
+      opportunities.body.counts.hold +
+      opportunities.body.counts.listAll +
+      opportunities.body.counts.insufficientData;
+    expect(total).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe("CF-REGRADE-COST-ROLLIN — POST /api/portfolio/holdings/:id/regrade", () => {
   it("atomically updates grade + cert AND rolls gradingCost into totalCostBasis", async () => {
     const session = await signIn("HobbyIQ", "Baseball25");

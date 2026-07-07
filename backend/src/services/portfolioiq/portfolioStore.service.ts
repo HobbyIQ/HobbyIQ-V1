@@ -2850,6 +2850,141 @@ export async function getPortfolioWithSummary(req: Request, res: Response) {
   res.json({ success: true, userId: auth.userId, items, summary });
 }
 
+/**
+ * CF-PORTFOLIO-OPPORTUNITIES (2026-07-06, Drew):
+ * GET /api/portfolio/opportunities
+ *
+ * The pull-side counterpart to the recommendation-flip alert push
+ * surface (PR #296). Filters the user's holdings by action verdict
+ * and returns three tab-ready groups iOS renders as the "what should
+ * I do TODAY" screen:
+ *
+ *   {
+ *     sellNow: [...],   // verdict === "SELL_NOW", sorted by urgency+delta magnitude
+ *     hold:    [...],   // verdict === "HOLD",     sorted by delta magnitude (biggest gain first)
+ *     listNow: [...],   // verdict === "LIST",     urgency==="high" only, sorted by delta
+ *     counts:  { sellNow, hold, listNow, listAll, insufficientData }
+ *   }
+ *
+ * Uses composeHoldingWireShape (which already runs computeAction on
+ * every holding) so the shape of each row is identical to what /portfolio
+ * emits — iOS can reuse the same row renderer.
+ *
+ * `listAll` in the counts includes MEDIUM-urgency LIST verdicts too;
+ * they're excluded from the `listNow` array because they aren't
+ * time-sensitive enough to be a "today" surface (they're just the
+ * normal fair-value listing tier). iOS can render a "listAll" tab if
+ * you want the full firehose.
+ */
+export async function getPortfolioOpportunities(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const doc = await readUserDoc(auth.userId);
+  const rawItems = Object.values(doc.holdings);
+  // Reuse the compose helper — same wire shape as /portfolio, so
+  // recommendation is populated on every row via the same computeAction.
+  const uniqueCardIds = Array.from(
+    new Set(
+      rawItems
+        .map((h) => h.cardId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  );
+  const catalogImageByCardId = new Map<string, string>();
+  if (uniqueCardIds.length > 0) {
+    const CONCURRENCY = 8;
+    const queue = [...uniqueCardIds];
+    const worker = async (): Promise<void> => {
+      while (queue.length > 0) {
+        const cardId = queue.shift();
+        if (!cardId) return;
+        try {
+          const { resolveCatalogImageUrl } = await import(
+            "../compiq/cardImageResolver.js"
+          );
+          const url = await resolveCatalogImageUrl(req, cardId);
+          if (url) catalogImageByCardId.set(cardId, url);
+        } catch {
+          /* silent — falls back to iOS placeholder */
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+  }
+  const wires = composePortfolioListResponse(rawItems, catalogImageByCardId);
+
+  const sellNow: typeof wires = [];
+  const hold: typeof wires = [];
+  const listNowHigh: typeof wires = [];
+  let listAll = 0;
+  let insufficientData = 0;
+
+  for (const wire of wires) {
+    const rec = (wire as { actionRecommendation?: {
+      verdict?: string;
+      urgency?: string | null;
+    } | null }).actionRecommendation;
+    if (!rec) {
+      insufficientData++;
+      continue;
+    }
+    switch (rec.verdict) {
+      case "SELL_NOW":
+        sellNow.push(wire);
+        break;
+      case "HOLD":
+        hold.push(wire);
+        break;
+      case "LIST":
+        listAll++;
+        if (rec.urgency === "high") {
+          listNowHigh.push(wire);
+        }
+        break;
+      case "INSUFFICIENT_DATA":
+      default:
+        insufficientData++;
+        break;
+    }
+  }
+
+  // Sort each group by (urgency rank descending, expectedDeltaPct
+  // magnitude descending). Higher urgency + bigger predicted move
+  // rises to the top of the list.
+  const urgencyRank = (u: string | null | undefined): number => {
+    if (u === "high") return 3;
+    if (u === "medium") return 2;
+    if (u === "low") return 1;
+    return 0;
+  };
+  const sortByUrgencyThenDelta = (a: (typeof wires)[number], b: (typeof wires)[number]) => {
+    const ar = (a as { actionRecommendation?: { urgency?: string | null; expectedDeltaPct?: number | null } | null }).actionRecommendation;
+    const br = (b as { actionRecommendation?: { urgency?: string | null; expectedDeltaPct?: number | null } | null }).actionRecommendation;
+    const urgencyDiff = urgencyRank(br?.urgency) - urgencyRank(ar?.urgency);
+    if (urgencyDiff !== 0) return urgencyDiff;
+    return Math.abs(br?.expectedDeltaPct ?? 0) - Math.abs(ar?.expectedDeltaPct ?? 0);
+  };
+  sellNow.sort(sortByUrgencyThenDelta);
+  hold.sort(sortByUrgencyThenDelta);
+  listNowHigh.sort(sortByUrgencyThenDelta);
+
+  res.json({
+    success: true,
+    userId: auth.userId,
+    sellNow,
+    hold,
+    listNow: listNowHigh,
+    counts: {
+      sellNow: sellNow.length,
+      hold: hold.length,
+      listNow: listNowHigh.length,
+      listAll,
+      insufficientData,
+    },
+  });
+}
+
 export async function getHoldingPriceHistory(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
