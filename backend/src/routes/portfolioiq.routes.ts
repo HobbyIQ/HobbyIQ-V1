@@ -51,6 +51,11 @@ router.use(requireSession);
 
 // GET /api/portfolio — combined holdings + summary for the iOS dashboard.
 router.get("/", portfolio.getPortfolioWithSummary);
+// CF-PORTFOLIO-OPPORTUNITIES (2026-07-06, Drew): pull-side surface for
+// action recommendations. Filters user's holdings by verdict, sorts
+// each group by urgency + expected-delta magnitude, returns three
+// tabs iOS can render as the "what should I do TODAY" screen.
+router.get("/opportunities", portfolio.getPortfolioOpportunities);
 
 router.get("/holdings", portfolio.getHoldings);
 
