@@ -41,7 +41,7 @@ describe("CF-ACTION-RECOMMENDATION — computeAction", () => {
   });
 
   describe("HOLD (rising with confidence)", () => {
-    it("returns HOLD when Predicted is >15% above current AND confidence ≥ 0.60", () => {
+    it("returns HOLD when Predicted is >5% above current AND confidence ≥ 0.60", () => {
       const r = computeAction({
         currentValue: 100,
         predictedValue: 130,   // +30% projected
@@ -66,7 +66,7 @@ describe("CF-ACTION-RECOMMENDATION — computeAction", () => {
   });
 
   describe("SELL_NOW (falling with confidence)", () => {
-    it("returns SELL_NOW when Predicted is >15% below current AND confidence ≥ 0.40", () => {
+    it("returns SELL_NOW when Predicted is >5% below current AND confidence ≥ 0.40", () => {
       const r = computeAction({
         currentValue: 200,
         predictedValue: 150,   // -25% projected
@@ -136,9 +136,12 @@ describe("CF-ACTION-RECOMMENDATION — computeAction", () => {
 
   describe("LIST fair-value fallback", () => {
     it("returns LIST at max(predicted × 1.02, current × 1.03) for flat/moderate signals", () => {
+      // CF-7D-HORIZON (2026-07-06): after horizon scaling, HOLD fires
+      // at +5% and above. Use +2% here to stay in the fair-value LIST
+      // band (neutral-to-slightly-rising, not enough for HOLD).
       const r = computeAction({
         currentValue: 200,
-        predictedValue: 210,     // +5% projected — moderate rise
+        predictedValue: 204,     // +2% projected — mild rise, below HOLD threshold
         confidenceScore: 0.85,
         signalSource: "matched-cohort-cached",
       });
@@ -148,14 +151,17 @@ describe("CF-ACTION-RECOMMENDATION — computeAction", () => {
     });
 
     it("never lists BELOW current value even when Predicted is below", () => {
+      // CF-7D-HORIZON: SELL_NOW fires at -5% under the shorter horizon.
+      // Use -2% to stay in the fair-value LIST band (small decline,
+      // not enough to trigger a cut-now signal).
       const r = computeAction({
         currentValue: 200,
-        predictedValue: 190,     // small decline, not enough for SELL_NOW
+        predictedValue: 196,     // -2% projected — small decline, not SELL_NOW
         confidenceScore: 0.85,
         signalSource: "matched-cohort-cached",
       });
       expect(r.verdict).toBe("LIST");
-      // max(190 × 1.02, 200 × 1.03) = max(193.80, 206) = 206
+      // max(196 × 1.02, 200 × 1.03) = max(199.92, 206) = 206
       expect(r.targetPrice).toBe(206);
     });
   });

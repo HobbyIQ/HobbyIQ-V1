@@ -30,7 +30,9 @@ export type ActionUrgency = "high" | "medium" | "low" | null;
 export interface ActionInputs {
   /** Market Value TODAY. Null → INSUFFICIENT_DATA. */
   currentValue: number | null;
-  /** Predicted at 30d. Null → INSUFFICIENT_DATA. */
+  /** Predicted at the forecast horizon (7d as of 2026-07-06; the
+   *  wire field is `predictedPriceAt30d` for backward-compat but the
+   *  actual value now covers 7 days forward). Null → INSUFFICIENT_DATA. */
   predictedValue: number | null;
   /** 0–1 confidence. <0.20 → INSUFFICIENT_DATA regardless of gap. */
   confidenceScore: number;
@@ -72,9 +74,15 @@ const HOLD_CONFIDENCE_THRESHOLD = 0.60;
  *  wrong (missed sale beats holding a bag). */
 const SELL_CONFIDENCE_THRESHOLD = 0.40;
 /** Gap thresholds — how big does Predicted need to be vs current
- *  to warrant a verdict? */
-const HOLD_GAP_UP = 0.15;    // Predicted > current × 1.15 → HOLD
-const SELL_GAP_DOWN = -0.15; // Predicted < current × 0.85 → SELL_NOW
+ *  to warrant a verdict? Scaled down 2026-07-06 from ±15% → ±5% to
+ *  match the horizon shortening from 30 → 7 days. Same underlying
+ *  rate that fired HOLD/SELL_NOW at 30d would never fire at 7d
+ *  without this rescale — a +10%/wk rate projects as +42% over 30
+ *  days (well above the old 15% threshold) but only +10% over 7 days.
+ *  ±5% catches ~22%/wk annualized moves, which is still a meaningful
+ *  hot/cold signal worth acting on. */
+const HOLD_GAP_UP = 0.05;    // Predicted > current × 1.05 → HOLD
+const SELL_GAP_DOWN = -0.05; // Predicted < current × 0.95 → SELL_NOW
 /** Early-decay list-ahead window. If the card is inside its first
  *  DECAY_URGENCY_WEEKS post-release AND on the decay-blend signal,
  *  we recommend LIST NOW at a slight discount (LIST-under-market) to
@@ -139,7 +147,7 @@ export function computeAction(inputs: ActionInputs): ActionRecommendation {
     return {
       verdict: "HOLD",
       targetPrice: null,
-      reasoning: `Trend points up ~${roundedDeltaPct}% over 30d. Hold for a better window.`,
+      reasoning: `Trend points up ~${roundedDeltaPct}% over 7d. Hold for a better window.`,
       urgency: "low",
       expectedDeltaPct: roundedDeltaPct,
     };
@@ -154,7 +162,7 @@ export function computeAction(inputs: ActionInputs): ActionRecommendation {
     return {
       verdict: "SELL_NOW",
       targetPrice: null,
-      reasoning: `Trend points down ~${Math.abs(roundedDeltaPct)}% over 30d${lossVsCost}. Cut before further decline.`,
+      reasoning: `Trend points down ~${Math.abs(roundedDeltaPct)}% over 7d${lossVsCost}. Cut before further decline.`,
       urgency: "high",
       expectedDeltaPct: roundedDeltaPct,
     };
@@ -193,7 +201,7 @@ export function computeAction(inputs: ActionInputs): ActionRecommendation {
   return {
     verdict: "LIST",
     targetPrice: target,
-    reasoning: `Trend ${directionCopy} over 30d. List at $${target} for headroom.`,
+    reasoning: `Trend ${directionCopy} over 7d. List at $${target} for headroom.`,
     urgency: "medium",
     expectedDeltaPct: roundedDeltaPct,
   };
