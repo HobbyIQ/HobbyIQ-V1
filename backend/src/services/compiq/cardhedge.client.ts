@@ -43,6 +43,46 @@ function toFloat(value: unknown): number {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 }
 
+/**
+ * CF-CH-COST-TRACKING (2026-07-06, Drew): every outbound CH request
+ * emits a `ch_call` telemetry event with path + status + took_ms +
+ * ok. Aggregated in App Insights this gives us a per-day CH cost
+ * dashboard (queries in docs/observability/ch-cost-tracking.md).
+ *
+ * Wraps the native fetch — behavior is byte-identical to the direct
+ * call. Errors are logged AND rethrown so callers see the same
+ * failure surface as before.
+ */
+async function chFetch(url: string, init: RequestInit): Promise<Response> {
+  const t0 = Date.now();
+  // Extract the path (everything after v1/) for stable grouping.
+  const pathMatch = url.match(/https:\/\/api\.cardhedger\.com\/v1(\/[^?]*)(\?|$)/);
+  const path = pathMatch ? pathMatch[1] : url;
+  try {
+    const res = await fetch(url, init);
+    console.log(JSON.stringify({
+      event: "ch_call",
+      source: "cardhedge.client",
+      path,
+      status: res.status,
+      took_ms: Date.now() - t0,
+      ok: res.ok,
+    }));
+    return res;
+  } catch (err) {
+    console.log(JSON.stringify({
+      event: "ch_call",
+      source: "cardhedge.client",
+      path,
+      status: 0,
+      took_ms: Date.now() - t0,
+      ok: false,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    throw err;
+  }
+}
+
 export interface CardHedgeCard {
   card_id: string;
   player?: string;
@@ -188,7 +228,7 @@ async function _searchCards(
     if (filters?.set && filters.set.length > 0) body.set = filters.set;
     if (filters?.rookie && filters.rookie.length > 0) body.rookie = filters.rookie;
 
-    const res = await fetch(`${BASE_URL}/cards/card-search`, {
+    const res = await chFetch(`${BASE_URL}/cards/card-search`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -237,7 +277,7 @@ export async function getCardDetailsById(cardId: string): Promise<CardHedgeCard 
 
 async function _getCardDetailsById(cardId: string, h: Record<string, string>): Promise<CardHedgeCard | null> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/card-details`, {
+    const res = await chFetch(`${BASE_URL}/cards/card-details`, {
       method: "POST",
       headers: h,
       body: JSON.stringify({ card_id: cardId }),
@@ -380,7 +420,7 @@ async function _getAllPricesByCard(
   h: Record<string, string>,
 ): Promise<CardHedgeGradePriceRow[]> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/all-prices-by-card`, {
+    const res = await chFetch(`${BASE_URL}/cards/all-prices-by-card`, {
       method: "POST",
       headers: h,
       body: JSON.stringify({ card_id: cardId }),
@@ -579,7 +619,7 @@ async function _postBatchChunks<TItem, TResult, TResp extends { results: TResult
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize);
     try {
-      const res = await fetch(`${BASE_URL}${path}`, {
+      const res = await chFetch(`${BASE_URL}${path}`, {
         method: "POST",
         headers: h,
         body: JSON.stringify(buildBody(chunk)),
@@ -682,7 +722,7 @@ export async function getPriceUpdates(
     if (Array.isArray(opts.ignoreGrades) && opts.ignoreGrades.length > 0) {
       body.ignore_grades = opts.ignoreGrades;
     }
-    const res = await fetch(`${BASE_URL}/cards/price-updates`, {
+    const res = await chFetch(`${BASE_URL}/cards/price-updates`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -733,7 +773,7 @@ export async function subscribePriceUpdates(
   for (let i = 0; i < valid.length; i += 100) {
     const chunk = valid.slice(i, i + 100);
     try {
-      const res = await fetch(`${BASE_URL}/cards/subscribe-price-updates`, {
+      const res = await chFetch(`${BASE_URL}/cards/subscribe-price-updates`, {
         method: "POST",
         headers: h,
         body: JSON.stringify({
@@ -768,7 +808,7 @@ async function _postFmvShape<T extends { price: number }>(
   h: Record<string, string>,
 ): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await chFetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -1029,7 +1069,7 @@ export async function getTopMovers(
         const params = new URLSearchParams();
         params.set("count", String(count));
         if (category) params.set("category", category);
-        const res = await fetch(`${BASE_URL}/cards/top-movers?${params.toString()}`, {
+        const res = await chFetch(`${BASE_URL}/cards/top-movers?${params.toString()}`, {
           method: "GET",
           headers: h,
           signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
@@ -1056,7 +1096,7 @@ async function _postTyped<T>(
   h: Record<string, string>,
 ): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await chFetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -1202,7 +1242,7 @@ async function _postImageEndpoint<T>(
   h: Record<string, string>,
 ): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await chFetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -1398,7 +1438,7 @@ async function _postAdditionsSummary(
   h: Record<string, string>,
 ): Promise<CardHedgeAdditionsResponse | null> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/additions-summary`, {
+    const res = await chFetch(`${BASE_URL}/cards/additions-summary`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -1522,7 +1562,7 @@ async function _postCertEndpoint<T>(
   h: Record<string, string>,
 ): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await chFetch(`${BASE_URL}${path}`, {
       method: "POST",
       headers: h,
       body: JSON.stringify(body),
@@ -1562,7 +1602,7 @@ export async function identifyCard(query: string): Promise<{ card_id: string; co
 
 async function _identifyCard(query: string, h: Record<string, string>): Promise<{ card_id: string; confidence: number; [k: string]: any } | null> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/card-match`, {
+    const res = await chFetch(`${BASE_URL}/cards/card-match`, {
       method: "POST",
       headers: h,
       // No category hint — CH's AI ignores it anyway (case-15 probe: with
@@ -1621,7 +1661,7 @@ async function _getCardSales(
   h: Record<string, string>,
 ): Promise<CardHedgeSale[]> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/comps`, {
+    const res = await chFetch(`${BASE_URL}/cards/comps`, {
       method: "POST",
       headers: h,
       body: JSON.stringify({
@@ -1701,7 +1741,7 @@ async function _getPricesByCard(
   h: Record<string, string>,
 ): Promise<CardHedgeDailyPrice[]> {
   try {
-    const res = await fetch(`${BASE_URL}/cards/prices-by-card`, {
+    const res = await chFetch(`${BASE_URL}/cards/prices-by-card`, {
       method: "POST",
       headers: h,
       body: JSON.stringify({ card_id: cardId, grade, days }),
