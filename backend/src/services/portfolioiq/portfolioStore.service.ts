@@ -8,6 +8,9 @@ import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 // array /price-by-id surfaces, so a graded holding's stored valuation
 // can mirror the rail's grounded/insufficient verdict at write time.
 import { compileGradedEstimatesForCard } from "../compiq/compileGradedEstimatesForCard.js";
+// CF-RECOMMENDATION-FLIP-ALERT (2026-07-06): action recommendation
+// compute for the alert engine — verdict changes drive push notifs.
+import { computeAction } from "../compiq/actionRecommendation.service.js";
 import { getPricing as getPricingForMarketRead } from "../compiq/catalogSource.js";
 import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
@@ -213,7 +216,17 @@ interface PortfolioPricePoint {
 interface PortfolioAlert {
   id: string;
   level: "info" | "warning" | "critical";
-  type: "value-move" | "cost-basis-cross" | "stale-data" | "liquidity-risk";
+  type:
+    | "value-move"
+    | "cost-basis-cross"
+    | "stale-data"
+    | "liquidity-risk"
+    // CF-RECOMMENDATION-FLIP-ALERT (2026-07-06): "our SELL_NOW / HOLD
+    // / LIST verdict on this holding just changed" — the notification
+    // driver that turns action-recommendations into a push-notification
+    // product. Fires only on meaningful flips (SELL_NOW / HOLD entry),
+    // never on LIST↔LIST or transitions in/out of INSUFFICIENT_DATA.
+    | "recommendation-flip";
   createdAt: string;
   holdingId: string;
   playerName: string;
@@ -2359,6 +2372,99 @@ function evaluateHoldingAlerts(doc: UserDoc, previous: PortfolioHolding | undefi
   // (liquidityRisk component) are removed together. Sell-now alerts return
   // in W2 with their own reshape. PortfolioAlert.type union still includes
   // "liquidity-risk" for backward-compat reads of existing alerts in Cosmos.
+
+  // CF-RECOMMENDATION-FLIP-ALERT (2026-07-06, Drew): fire when the
+  // seller verdict changes to SELL_NOW or HOLD. Silent on LIST↔LIST
+  // and transitions in/out of INSUFFICIENT_DATA (too noisy — a fresh
+  // comp arriving shouldn't fire a notification).
+  //
+  // Persists `next.lastRecommendationVerdict` on every eval so the
+  // NEXT eval has a stable prior state to compare against — without
+  // this the alert fires every cycle where verdict isn't LIST.
+  try {
+    const currentRec = computeActionSyncSafe(next);
+    if (currentRec) {
+      const priorVerdict =
+        (previous as { lastRecommendationVerdict?: string } | undefined)
+          ?.lastRecommendationVerdict ?? null;
+      const flipped =
+        currentRec.verdict !== priorVerdict &&
+        (currentRec.verdict === "SELL_NOW" || currentRec.verdict === "HOLD");
+      if (flipped) {
+        const level: PortfolioAlert["level"] =
+          currentRec.verdict === "SELL_NOW" ? "critical" : "info";
+        const verb =
+          currentRec.verdict === "SELL_NOW"
+            ? "flipped to SELL_NOW"
+            : "flipped to HOLD";
+        addAlert(doc, {
+          level,
+          type: "recommendation-flip",
+          holdingId: String(next.id),
+          playerName,
+          cardTitle,
+          message: `${playerName} recommendation ${verb}. ${currentRec.reasoning}`,
+          context: {
+            priorVerdict: priorVerdict ?? "none",
+            newVerdict: currentRec.verdict,
+            expectedDeltaPct: currentRec.expectedDeltaPct,
+            targetPrice: currentRec.targetPrice,
+          },
+        });
+      }
+      // Persist current verdict so the next eval's flip comparison is stable.
+      (next as { lastRecommendationVerdict?: string | null }).lastRecommendationVerdict =
+        currentRec.verdict;
+    }
+  } catch {
+    // Recommendation compute must never block alert eval.
+  }
+}
+
+/**
+ * CF-RECOMMENDATION-FLIP-ALERT (2026-07-06): compute the current
+ * recommendation for a holding using the same inputs as the
+ * responseAssembly path. Extracted to a helper so the alert engine can
+ * call it inline without pulling in the whole wire-shape composer.
+ * Returns null when required inputs are missing.
+ */
+function computeActionSyncSafe(
+  holding: PortfolioHolding,
+): { verdict: string; reasoning: string; expectedDeltaPct: number | null; targetPrice: number | null } | null {
+  const fmv = computePerUnitValue(holding);
+  const predicted =
+    typeof (holding as { predictedPrice?: number | null }).predictedPrice === "number"
+      ? ((holding as { predictedPrice?: number | null }).predictedPrice as number)
+      : null;
+  if (fmv === null || predicted === null) return null;
+
+  // Map confidence tier to numeric — mirrors confidenceScoreFromHolding
+  // in responseAssembly (keep in sync). Any drift produces a real bug
+  // (alerts fire when the wire doesn't render the same verdict).
+  const tier = (holding as { estimateConfidence?: string | null }).estimateConfidence;
+  const confidenceScore =
+    tier === "estimate" ? 0.85 :
+    tier === "rough"    ? 0.60 :
+    tier === "ballpark" ? 0.35 :
+    0.15;
+  const costBasis =
+    typeof holding.purchasePrice === "number" && holding.purchasePrice > 0
+      ? holding.purchasePrice
+      : null;
+
+  const rec = computeAction({
+    currentValue: fmv,
+    predictedValue: predicted,
+    confidenceScore,
+    signalSource: null,
+    costBasis,
+  });
+  return {
+    verdict: rec.verdict,
+    reasoning: rec.reasoning,
+    expectedDeltaPct: rec.expectedDeltaPct,
+    targetPrice: rec.targetPrice,
+  };
 }
 
 function computePortfolioHealth(holdings: PortfolioHolding[]): {

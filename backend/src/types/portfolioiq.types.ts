@@ -118,6 +118,13 @@ export interface PortfolioHolding {
   // ship with new ids (e.g. "HGA").
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
+  // CF-RECOMMENDATION-FLIP-ALERT (2026-07-06): the LAST-COMPUTED
+  // recommendation verdict, persisted so the alert engine can detect
+  // flips at reprice time. Written by evaluateHoldingAlerts after
+  // each compute; read by the same function on the next cycle.
+  // Backward-compat: legacy holdings have this undefined → treated
+  // as "no prior state, no flip possible" on first compare.
+  lastRecommendationVerdict?: "SELL_NOW" | "HOLD" | "LIST" | "INSUFFICIENT_DATA" | null;
   // CF-INVENTORYIQ-R1 — Cardsight catalog UUID persisted onto the
   // holding at write time so identity-based re-pricing / catalog
   // enrichment lookups don't pay the text-canonicalization tax that
