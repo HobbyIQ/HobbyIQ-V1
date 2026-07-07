@@ -11,6 +11,9 @@ import { compileGradedEstimatesForCard } from "../compiq/compileGradedEstimatesF
 // CF-RECOMMENDATION-FLIP-ALERT (2026-07-06): action recommendation
 // compute for the alert engine — verdict changes drive push notifs.
 import { computeAction } from "../compiq/actionRecommendation.service.js";
+// CF-GRADING-TIER-CATALOG (2026-07-06): PSA/BGS/SGC/CGC tier lookup
+// for the iOS Mark-as-Graded dropdown + server-side cost resolution.
+import { GRADING_TIERS, getGradingTierById } from "./gradingTiers.js";
 import { getPricing as getPricingForMarketRead } from "../compiq/catalogSource.js";
 import { buildGradeBreakdown } from "../compiq/marketRead.service.js";
 import { resolvePlayer } from "../mlb/playerResolver.service.js";
@@ -2985,6 +2988,25 @@ export async function getPortfolioOpportunities(req: Request, res: Response) {
   });
 }
 
+/**
+ * CF-GRADING-TIER-CATALOG (2026-07-06):
+ * GET /api/portfolio/grading-tiers
+ *
+ * Returns the current catalog of grader service tiers + prices. iOS
+ * renders as a dropdown on the Mark-as-Graded sheet. Response is
+ * cacheable client-side for the session — the catalog only changes
+ * when we deploy a pricing update.
+ */
+export async function getGradingTiers(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  res.json({
+    success: true,
+    tiers: GRADING_TIERS,
+    cachedUntil: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+  });
+}
+
 export async function getHoldingPriceHistory(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
@@ -3669,11 +3691,45 @@ export async function regradeHolding(req: Request, res: Response) {
         ? null
         : undefined; // undefined = don't touch; null = explicit clear
 
+  // CF-GRADING-TIER-CATALOG (2026-07-06): resolve gradingCost from a
+  // gradingTierId when provided. Explicit gradingCost in the body wins
+  // (user may have paid a promo/bulk rate that differs from the tier's
+  // sticker price). When BOTH gradingCost and gradingTierId are absent,
+  // gradingCost defaults to 0 (grade-only update).
   const gradingCostRaw = body.gradingCost;
-  const gradingCost =
+  const explicitGradingCost =
     typeof gradingCostRaw === "number" && Number.isFinite(gradingCostRaw) && gradingCostRaw >= 0
       ? gradingCostRaw
-      : 0;
+      : null;
+  const gradingTierId =
+    typeof body.gradingTierId === "string" ? body.gradingTierId.trim() : "";
+  let gradingCost = explicitGradingCost ?? 0;
+  let resolvedTier: ReturnType<typeof getGradingTierById> | null = null;
+  if (gradingTierId) {
+    resolvedTier = getGradingTierById(gradingTierId);
+    if (!resolvedTier) {
+      return res.status(400).json({
+        error: {
+          code: "UNKNOWN_GRADING_TIER",
+          message: `Unknown gradingTierId "${gradingTierId}". Fetch /api/portfolio/grading-tiers for the current catalog.`,
+        },
+      });
+    }
+    // If no explicit cost, use the tier's sticker price. For Premium 2+
+    // (pricePerCard === null) we require an explicit gradingCost since
+    // the tier itself doesn't specify one.
+    if (explicitGradingCost === null) {
+      if (resolvedTier.pricePerCard === null) {
+        return res.status(400).json({
+          error: {
+            code: "TIER_REQUIRES_EXPLICIT_COST",
+            message: `Tier "${resolvedTier.name}" quotes per-card; include gradingCost in the request.`,
+          },
+        });
+      }
+      gradingCost = resolvedTier.pricePerCard;
+    }
+  }
 
   const previous = doc.holdings[id];
   const oldCostBasis = computeCostBasisTotal(previous);
@@ -3768,6 +3824,8 @@ export async function regradeHolding(req: Request, res: Response) {
     },
     certNumberChanged: certNumber !== undefined,
     gradingCost,
+    gradingTierId: resolvedTier?.id ?? null,
+    gradingTierName: resolvedTier?.name ?? null,
     oldTotalCostBasis: Math.round(oldCostBasis * 100) / 100,
     newTotalCostBasis: newCostBasis,
     timestamp: now,
@@ -3854,6 +3912,7 @@ export async function regradeHoldingsBatch(req: Request, res: Response) {
     gradeValue: number;
     certNumber?: string | null;
     gradingCost: number;
+    gradingTierId?: string | null;
   }
   const validated: ValidEntry[] = [];
   for (const raw of body.entries as unknown[]) {
@@ -3889,12 +3948,47 @@ export async function regradeHoldingsBatch(req: Request, res: Response) {
         : e.certNumber === null
           ? null
           : undefined;
+    // CF-GRADING-TIER-CATALOG (2026-07-06): same tier-resolution as
+    // single /regrade — explicit gradingCost wins, tier's sticker
+    // price fills when absent, unknown tier ID fails the whole batch.
     const gradingCostRaw = e.gradingCost;
-    const gradingCost =
+    const explicitGradingCost =
       typeof gradingCostRaw === "number" && Number.isFinite(gradingCostRaw) && gradingCostRaw >= 0
         ? gradingCostRaw
-        : 0;
-    validated.push({ holdingId, gradeCompany, gradeValue, certNumber, gradingCost });
+        : null;
+    const gradingTierId =
+      typeof e.gradingTierId === "string" ? e.gradingTierId.trim() : "";
+    let gradingCost = explicitGradingCost ?? 0;
+    if (gradingTierId) {
+      const resolvedTier = getGradingTierById(gradingTierId);
+      if (!resolvedTier) {
+        return res.status(400).json({
+          error: {
+            code: "UNKNOWN_GRADING_TIER",
+            message: `Unknown gradingTierId "${gradingTierId}" in batch entry ${holdingId}.`,
+          },
+        });
+      }
+      if (explicitGradingCost === null) {
+        if (resolvedTier.pricePerCard === null) {
+          return res.status(400).json({
+            error: {
+              code: "TIER_REQUIRES_EXPLICIT_COST",
+              message: `Tier "${resolvedTier.name}" on entry ${holdingId} quotes per-card; include gradingCost.`,
+            },
+          });
+        }
+        gradingCost = resolvedTier.pricePerCard;
+      }
+    }
+    validated.push({
+      holdingId,
+      gradeCompany,
+      gradeValue,
+      certNumber,
+      gradingCost,
+      gradingTierId: gradingTierId || null,
+    });
   }
 
   const doc = await readUserDoc(auth.userId);
