@@ -56,6 +56,13 @@ router.get("/", portfolio.getPortfolioWithSummary);
 // each group by urgency + expected-delta magnitude, returns three
 // tabs iOS can render as the "what should I do TODAY" screen.
 router.get("/opportunities", portfolio.getPortfolioOpportunities);
+// CF-GRADING-TIER-CATALOG (2026-07-06, Drew): server-hosted PSA/BGS/
+// SGC/CGC grading service tiers + costs. iOS reads this to populate
+// the "Mark as Graded" tier dropdown; user picks a tier and iOS pre-
+// fills gradingCost. Also accepted on /regrade + /regrade-batch as
+// gradingTierId — server resolves cost from the catalog when the
+// caller sends the id instead of the raw dollar amount.
+router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 

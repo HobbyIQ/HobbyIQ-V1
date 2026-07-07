@@ -238,6 +238,140 @@ describe("CF-REGRADE-COST-ROLLIN — POST /api/portfolio/holdings/:id/regrade", 
   });
 });
 
+describe("CF-GRADING-TIER-CATALOG — GET /api/portfolio/grading-tiers", () => {
+  it("returns the tier catalog with PSA entries and cache hint", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    const res = await request(app)
+      .get("/api/portfolio/grading-tiers")
+      .set("x-session-id", session);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.tiers)).toBe(true);
+    expect(res.body.tiers.length).toBeGreaterThan(5);
+    // PSA Regular is a known active tier — should exist and be marked active
+    const psaRegular = res.body.tiers.find((t: any) => t.id === "psa-regular");
+    expect(psaRegular).toBeTruthy();
+    expect(psaRegular.pricePerCard).toBe(79.99);
+    expect(psaRegular.active).toBe(true);
+    // Paused Value tiers stay in the catalog with active: false
+    const psaValue = res.body.tiers.find((t: any) => t.id === "psa-value");
+    expect(psaValue).toBeTruthy();
+    expect(psaValue.active).toBe(false);
+    expect(res.body.cachedUntil).toBeTruthy();
+  });
+});
+
+describe("CF-GRADING-TIER-CATALOG — /regrade resolves gradingTierId to sticker price", () => {
+  it("resolves gradingTierId to the tier's pricePerCard when explicit gradingCost is absent", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "tier-test-1",
+        playerName: "Tier Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Tier",
+        quantity: 1,
+        purchasePrice: 100,
+        totalCostBasis: 100,
+      });
+    const res = await request(app)
+      .post("/api/portfolio/holdings/tier-test-1/regrade")
+      .set("x-session-id", session)
+      .send({
+        gradeCompany: "PSA",
+        gradeValue: 9,
+        gradingTierId: "psa-regular",   // resolves to $79.99
+      });
+    expect(res.status).toBe(200);
+    // 100 + 79.99 = 179.99
+    expect(res.body.updatedHolding.totalCostBasis).toBe(179.99);
+  });
+
+  it("explicit gradingCost overrides the tier's sticker price (bulk / promo case)", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "tier-override-1",
+        playerName: "Override Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Override",
+        quantity: 1,
+        purchasePrice: 100,
+        totalCostBasis: 100,
+      });
+    const res = await request(app)
+      .post("/api/portfolio/holdings/tier-override-1/regrade")
+      .set("x-session-id", session)
+      .send({
+        gradeCompany: "PSA",
+        gradeValue: 9,
+        gradingTierId: "psa-regular",   // $79.99 sticker
+        gradingCost: 60,                  // user paid a bulk rate
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.updatedHolding.totalCostBasis).toBe(160);  // 100 + 60
+  });
+
+  it("400s when gradingTierId is unknown", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "tier-bad-1",
+        playerName: "Bad Tier Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Bad",
+        quantity: 1,
+        purchasePrice: 100,
+      });
+    const res = await request(app)
+      .post("/api/portfolio/holdings/tier-bad-1/regrade")
+      .set("x-session-id", session)
+      .send({
+        gradeCompany: "PSA",
+        gradeValue: 9,
+        gradingTierId: "psa-nonexistent-tier",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("UNKNOWN_GRADING_TIER");
+  });
+
+  it("400s when tier is Premium 2+ (variable-price) and no explicit gradingCost provided", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "tier-premium-1",
+        playerName: "Premium Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Premium",
+        quantity: 1,
+        purchasePrice: 100,
+      });
+    const res = await request(app)
+      .post("/api/portfolio/holdings/tier-premium-1/regrade")
+      .set("x-session-id", session)
+      .send({
+        gradeCompany: "PSA",
+        gradeValue: 10,
+        gradingTierId: "psa-premium-2",   // pricePerCard is null
+        // no explicit gradingCost — should 400
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("TIER_REQUIRES_EXPLICIT_COST");
+  });
+});
+
 describe("CF-REGRADE-BATCH — POST /api/portfolio/holdings/regrade-batch", () => {
   it("processes multiple holdings in one write, reports per-entry status", async () => {
     const session = await signIn("HobbyIQ", "Baseball25");
