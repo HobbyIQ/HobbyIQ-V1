@@ -4033,6 +4033,41 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       );
     }
 
+    // CF-PRICE-BY-ID-RECOMMENDATION (2026-07-06, Drew): parity with
+    // /card-panel. The recommendation surface should render on BOTH
+    // paths so search-then-price emits the same seller verdict as
+    // holding-detail. Compute inline from the response's existing
+    // fields — currentValue = marketValue ?? fairMarketValueLive,
+    // predictedValue = predictedPrice, confidence = confidence
+    // (already 0-1 on this response). signalSource is null here (the
+    // /price-by-id path doesn't expose the trajectory signal source;
+    // that's card-panel's world) — passes through to fair-value LIST
+    // logic when no release-decay context applies.
+    try {
+      const { computeAction } = await import(
+        "../services/compiq/actionRecommendation.service.js"
+      );
+      const r = result as Record<string, unknown>;
+      const currentValue =
+        typeof r.marketValue === "number"
+          ? r.marketValue
+          : typeof r.fairMarketValueLive === "number"
+            ? r.fairMarketValueLive
+            : null;
+      const predictedValue = typeof r.predictedPrice === "number" ? r.predictedPrice : null;
+      const confidenceScore = typeof r.confidence === "number" ? r.confidence : 0;
+      r.recommendation = computeAction({
+        currentValue,
+        predictedValue,
+        confidenceScore,
+        signalSource: null,
+      });
+    } catch (err) {
+      console.warn(
+        `[compiq.price-by-id] recommendation compute failed (non-fatal): ${(err as Error)?.message ?? err}`,
+      );
+    }
+
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request

@@ -529,6 +529,28 @@ interface PortfolioLedgerEntry {
   // each carrying the parent TradeTransaction.id. paymentMethod is forced
   // to "trade" so 1099-K rail joins correctly EXCLUDE the card legs.
   tradeId?: string;
+
+  // ----- CF-REGRADE-LEDGER-LINE-ITEM (2026-07-06) ----------------------------
+  // Discriminates SALE ledger entries from REGRADE audit entries so the
+  // iOS ledger UI can render grade conversions as their own line item.
+  //   action absent OR "sale" → sale entry (legacy + new sale writes)
+  //   action === "regrade"    → grade conversion event; sell-side
+  //                              financials (grossProceeds, netProceeds,
+  //                              realizedProfitLoss) are all 0 and MUST
+  //                              be excluded from P&L / tax rollups.
+  // erpAnalytics.buildGroup already skips entries with action !== "sale"
+  // when accumulating totals so historical entries (no action field) still
+  // aggregate correctly.
+  action?: "sale" | "regrade";
+  // Grading cost rolled into totalCostBasis on the holding at the moment
+  // of this regrade. Populated only when action === "regrade". iOS renders
+  // this as the line-item amount ("$25 grading — cost basis $200 → $225").
+  gradingCostAmount?: number;
+  // The grade transition ("Raw" → "PSA 9"). Populated only when
+  // action === "regrade". Purely presentational — iOS renders as the
+  // ledger entry title.
+  regradeFromGrade?: string;
+  regradeToGrade?: string;
 }
 
 // ── CF-ERP-EXPANSION-#1 enums + structured location ─────────────────────────
@@ -3450,6 +3472,40 @@ export async function regradeHolding(req: Request, res: Response) {
     await autoPriceHolding(doc, doc.holdings[id], previous, "update", auth.userId);
   } catch {
     // Persist anyway; the FMV refresh can happen on the next cycle.
+  }
+
+  // CF-REGRADE-LEDGER-LINE-ITEM (2026-07-06): append a regrade audit
+  // entry so the user's ledger UI can render the conversion as its own
+  // line item. Sell-side financial fields are all 0 so P&L / tax
+  // rollups skipping non-"sale" actions produce identical totals.
+  if (gradingCost > 0) {
+    const priorGrade =
+      previous.gradeCompany && typeof previous.gradeValue === "number"
+        ? `${previous.gradeCompany} ${previous.gradeValue}`
+        : "Raw";
+    const newGrade = `${gradeCompany} ${gradeValue}`;
+    doc.ledger.push({
+      id: randomUUID(),
+      userId: auth.userId,
+      holdingId: id,
+      playerName: previous.playerName ?? "",
+      cardTitle: previous.cardTitle ?? "",
+      quantitySold: 0,
+      unitSalePrice: 0,
+      grossProceeds: 0,
+      fees: 0,
+      tax: 0,
+      shipping: 0,
+      netProceeds: 0,
+      costBasisSold: 0,
+      realizedProfitLoss: 0,
+      realizedProfitLossPct: 0,
+      soldAt: now,
+      action: "regrade",
+      gradingCostAmount: gradingCost,
+      regradeFromGrade: priorGrade,
+      regradeToGrade: newGrade,
+    });
   }
 
   await writeUserDoc(auth.userId, doc);

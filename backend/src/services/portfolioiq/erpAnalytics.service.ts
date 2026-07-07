@@ -198,7 +198,13 @@ export function aggregateAnalytics(
 ): AnalyticsResponse {
   const fromIso = parseDateInput(options.from);
   const toIso = parseDateInput(options.to);
-  const windowed = entries.filter((e) => inWindow(e.soldAt, fromIso, toIso));
+  // CF-REGRADE-LEDGER-LINE-ITEM (2026-07-06): analytics is sale-only.
+  // Regrade entries carry zeroed financials + action="regrade" so
+  // downstream P&L / tax rollups would produce identical totals even
+  // if they didn't filter; belt-and-braces the exclusion here to
+  // avoid entryCount inflation on the sales-mix dashboards.
+  const salesOnly = entries.filter((e) => (e as any).action !== "regrade");
+  const windowed = salesOnly.filter((e) => inWindow(e.soldAt, fromIso, toIso));
   const reconciled = windowed.filter((e) => isReconciled(e));
   const unreconciled = windowed.filter((e) => !isReconciled(e));
 
@@ -300,7 +306,13 @@ export function aggregateTimeseries(
 ): TimeseriesResponse {
   const fromIso = parseDateInput(options.from);
   const toIso = parseDateInput(options.to);
-  const windowed = entries.filter((e) => inWindow(e.soldAt, fromIso, toIso));
+  // CF-REGRADE-LEDGER-LINE-ITEM (2026-07-06): analytics is sale-only.
+  // Regrade entries carry zeroed financials + action="regrade" so
+  // downstream P&L / tax rollups would produce identical totals even
+  // if they didn't filter; belt-and-braces the exclusion here to
+  // avoid entryCount inflation on the sales-mix dashboards.
+  const salesOnly = entries.filter((e) => (e as any).action !== "regrade");
+  const windowed = salesOnly.filter((e) => inWindow(e.soldAt, fromIso, toIso));
   const reconciled = windowed.filter((e) => isReconciled(e));
   const unreconciled = windowed.filter((e) => !isReconciled(e));
 
