@@ -621,13 +621,17 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(raw.trendAdjustedValue).toBeLessThan(140);
       expect(raw.trendAdjustmentPct).toBeGreaterThan(30);
       expect(raw.trendAdjustmentPct).toBeLessThan(40);
-      // Predicted 30d = Market Value × (1 + 0.08 × 30/7) — same rate applied
-      // for +34.29% more, so Predicted > Market Value
+      // CF-7D-HORIZON (2026-07-06): Predicted 7d = Market Value × (1 + 0.08 × 7/7)
+      // = Market Value × 1.08. Same rate applied for +8% more, so
+      // Predicted > Market Value but not by nearly as much as at 30d.
       expect(raw.predictedPriceAt30d).toBeGreaterThan(raw.trendAdjustedValue!);
-      expect(raw.predictedPricePct).toBeCloseTo(34.29, 0);
-      // Ranges are ±15% around predictedPriceAt30d
-      expect(raw.predictedPriceRangeLow).toBeCloseTo(raw.predictedPriceAt30d! * 0.85, 1);
-      expect(raw.predictedPriceRangeHigh).toBeCloseTo(raw.predictedPriceAt30d! * 1.15, 1);
+      expect(raw.predictedPricePct).toBeCloseTo(8, 0);
+      // Confidence bands are now ±8% around Predicted (scaled from ±15%
+      // to match the shorter horizon).
+      expect(raw.predictedPriceRangeLow).toBeCloseTo(raw.predictedPriceAt30d! * 0.92, 1);
+      expect(raw.predictedPriceRangeHigh).toBeCloseTo(raw.predictedPriceAt30d! * 1.08, 1);
+      // predictedHorizonDays is the new field iOS reads for the label
+      expect(raw.predictedHorizonDays).toBe(7);
     });
 
     it("cooling player: Market Value < value, Predicted < Market Value", async () => {
@@ -706,17 +710,18 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       );
       const curve = await buildObservedGradeCurve("c1", { playerName: "Fresh" });
       const raw = curve.entries.find((e) => e.grade === "Raw")!;
-      // Fresh — Market Value stays observed (trendAdjustedValue null),
-      // but Predicted STILL projects forward 30d off the observed value.
+      // CF-7D-HORIZON (2026-07-06): Fresh — Market Value stays observed
+      // (trendAdjustedValue null), but Predicted STILL projects forward
+      // 7d off the observed value.
       expect(raw.value).toBe(100);
       expect(raw.trendAdjustedValue).toBeNull();
       expect(raw.trendAdjustmentPct).toBeNull();
-      // Predicted = 100 × (1 + 0.10 × 30/7) = 100 × 1.428 = 142.86
-      expect(raw.predictedPriceAt30d).toBeCloseTo(142.86, 1);
-      expect(raw.predictedPricePct).toBeCloseTo(42.86, 1);
-      // Range is ±15% around Predicted
-      expect(raw.predictedPriceRangeLow).toBeCloseTo(142.86 * 0.85, 1);
-      expect(raw.predictedPriceRangeHigh).toBeCloseTo(142.86 * 1.15, 1);
+      // Predicted = 100 × (1 + 0.10 × 7/7) = 100 × 1.10 = 110
+      expect(raw.predictedPriceAt30d).toBeCloseTo(110, 1);
+      expect(raw.predictedPricePct).toBeCloseTo(10, 1);
+      // Range is ±8% around Predicted (post-horizon scaling)
+      expect(raw.predictedPriceRangeLow).toBeCloseTo(110 * 0.92, 1);
+      expect(raw.predictedPriceRangeHigh).toBeCloseTo(110 * 1.08, 1);
     });
 
     it("CF-MATCHED-COHORT: prefers matched-cohort medianRatio over raw momentumRatio when both present", async () => {

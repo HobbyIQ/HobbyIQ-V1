@@ -192,6 +192,13 @@ export interface ObservedGradeEntry {
    *  predictedPriceAt30d. Null when predictedPriceAt30d is null. */
   predictedPriceRangeLow: number | null;
   predictedPriceRangeHigh: number | null;
+  /** CF-7D-HORIZON (2026-07-06): the actual horizon this projection
+   *  covers, in days. Shortened from 30 → 7 so the projected numbers
+   *  read as digestible short-term signals rather than compounded
+   *  long-term forecasts. iOS reads this to render the correct label
+   *  ("Predicted (7d)"). Legacy field `predictedPriceAt30d` still
+   *  carries the projected price for wire backward-compat. */
+  predictedHorizonDays: number;
   /** CF-ACTION-RECOMMENDATION (2026-07-05): the seller-facing verdict
    *  for this grade. Always emitted (INSUFFICIENT_DATA when the
    *  trajectory pipeline couldn't derive a directional signal). iOS
@@ -443,6 +450,7 @@ async function aggregateGrade(
     predictedPricePct: null,
     predictedPriceRangeLow: null,
     predictedPriceRangeHigh: null,
+    predictedHorizonDays: PREDICTED_HORIZON_DAYS,
     recommendation: null,           // filled by applyTrajectory below
     // CF-SALES-HISTORY-CHART (2026-07-05): raw pool for iOS scatter render.
     salesHistory: sales
@@ -494,16 +502,30 @@ async function aggregateGrade(
  *  to linearly extrapolate. A 6-month-old comp on a hot player gets treated
  *  as-if 6 weeks old for trajectory purposes. */
 const MAX_WEEKS_LOOKBACK = 6;
-/** Predicted horizon — 30 days forward from today. Fixed at 30 for now;
- *  callers can override once we add a `horizon` param. */
-const PREDICTED_HORIZON_DAYS = 30;
-/** Confidence band on Predicted — ±15% around the point estimate
- *  when the underlying value comes from observed sales. */
-const PREDICTED_RANGE_PCT = 0.15;
+/** Predicted horizon — 7 days forward from today. Shortened 2026-07-06
+ *  from 30 → 7 (Drew: "the numbers are too big"). Over 30 days the
+ *  compounded rate produced projections that were psychologically
+ *  intimidating to sellers — a +10%/wk rate showed as +43% projected,
+ *  which looked like model overreach even when statistically sound.
+ *  A 7-day horizon shows the SAME +10%/wk rate as a much more
+ *  digestible +10% projection. Same underlying math, more usable
+ *  surface.
+ *
+ *  The wire field is still named `predictedPriceAt30d` for backward
+ *  compatibility — iOS reads that key. A new `predictedHorizonDays`
+ *  field carries the actual horizon so iOS can render the correct
+ *  label ("Predicted (7d)" instead of "Predicted (30d)"). */
+const PREDICTED_HORIZON_DAYS = 7;
+/** Confidence band on Predicted — ±8% around the point estimate for
+ *  observed values. Scaled down from ±15% (pre-2026-07-06) because a
+ *  7-day horizon has ~4× less compounded uncertainty than a 30-day
+ *  horizon. Bands too wide undermine the point-estimate's usefulness. */
+const PREDICTED_RANGE_PCT = 0.08;
 /** Wider band when the underlying value is ESTIMATED (reference-price
  *  or raw-multiplier). Predicting an estimate forward compounds
- *  uncertainty; a wider range signals that honesty visually. */
-const ESTIMATED_PREDICTED_RANGE_PCT = 0.25;
+ *  uncertainty; a wider range signals that honesty visually. Scaled
+ *  from ±25% → ±15% for the 7-day horizon. */
+const ESTIMATED_PREDICTED_RANGE_PCT = 0.15;
 /** Minimum days since sale before we apply trajectory — a fresh comp
  *  doesn't need adjustment (would just add noise from partial weeks). */
 const FRESH_COMP_THRESHOLD_DAYS = 14;
@@ -1240,6 +1262,7 @@ export async function buildObservedGradeCurvesBulk(
             predictedPricePct: null,
             predictedPriceRangeLow: null,
             predictedPriceRangeHigh: null,
+            predictedHorizonDays: PREDICTED_HORIZON_DAYS,
             recommendation: null,
             salesHistory: [],
             referencePrice: null,
