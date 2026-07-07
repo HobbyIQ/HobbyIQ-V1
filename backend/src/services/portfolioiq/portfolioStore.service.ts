@@ -2996,9 +2996,6 @@ export async function getPortfolioOpportunities(req: Request, res: Response) {
  * renders as a dropdown on the Mark-as-Graded sheet. Response is
  * cacheable client-side for the session — the catalog only changes
  * when we deploy a pricing update.
- *
- * No pagination, no filtering — the catalog is small (< 20 entries)
- * and iOS wants the whole list so it can group by grader tab.
  */
 export async function getGradingTiers(req: Request, res: Response) {
   const auth = await requireUser(req, res);
@@ -3006,8 +3003,6 @@ export async function getGradingTiers(req: Request, res: Response) {
   res.json({
     success: true,
     tiers: GRADING_TIERS,
-    // Client-side cache hint — safe to cache for a session; server
-    // deploys carry the authoritative version on next fetch.
     cachedUntil: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
   });
 }
