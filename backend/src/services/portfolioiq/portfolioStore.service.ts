@@ -3786,6 +3786,223 @@ export async function regradeHolding(req: Request, res: Response) {
   });
 }
 
+/**
+ * CF-REGRADE-BATCH (2026-07-06, Drew): batch companion to /regrade.
+ * POST /api/portfolio/holdings/regrade-batch
+ *
+ * Body:
+ *   {
+ *     entries: Array<{
+ *       holdingId:    string,   // required
+ *       gradeCompany: string,   // required
+ *       gradeValue:   number,   // required
+ *       certNumber?:  string | null,
+ *       gradingCost?: number,   // optional, default 0
+ *     }>
+ *   }
+ *
+ * Response:
+ *   {
+ *     success: boolean,
+ *     totalRequested: N,
+ *     succeeded: [{ holdingId, updatedHolding }, ...],
+ *     failed:    [{ holdingId, error: { code, message } }, ...],
+ *   }
+ *
+ * Semantics:
+ *   - Each entry is processed sequentially against a SINGLE Cosmos
+ *     write at the end. This is intentional — 30 slabs coming back
+ *     from PSA is one commit, not 30. Partial failures inside the
+ *     batch are reported per-entry, but the doc still writes with
+ *     the succeeded mutations applied.
+ *   - Missing required fields on ANY entry → 400, no writes at all
+ *     (bad-payload guard runs before we touch the doc). Individual
+ *     "holding not found" errors go into `failed[]` at row level.
+ *   - autoPriceHolding fires per-entry AFTER the write for a batch
+ *     background reprice — same pattern as single /regrade.
+ *   - One `holdings_regraded_batch` telemetry event captures the
+ *     rollup: total, succeeded, failed, aggregate grading cost.
+ */
+export async function regradeHoldingsBatch(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+
+  const body = (req.body ?? {}) as { entries?: unknown };
+  if (!Array.isArray(body.entries) || body.entries.length === 0) {
+    return res.status(400).json({
+      error: {
+        code: "INVALID_PAYLOAD",
+        message: "entries must be a non-empty array",
+      },
+    });
+  }
+  const MAX_BATCH = 100;
+  if (body.entries.length > MAX_BATCH) {
+    return res.status(400).json({
+      error: {
+        code: "BATCH_TOO_LARGE",
+        message: `entries exceeds maximum batch size of ${MAX_BATCH}`,
+      },
+    });
+  }
+
+  // Validate every entry upfront — bad-payload guard runs before we
+  // touch the doc, so a caller sending garbage never partial-commits.
+  interface ValidEntry {
+    holdingId: string;
+    gradeCompany: string;
+    gradeValue: number;
+    certNumber?: string | null;
+    gradingCost: number;
+  }
+  const validated: ValidEntry[] = [];
+  for (const raw of body.entries as unknown[]) {
+    if (!raw || typeof raw !== "object") {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_PAYLOAD",
+          message: "each entry must be an object",
+        },
+      });
+    }
+    const e = raw as Record<string, unknown>;
+    const holdingId = typeof e.holdingId === "string" ? e.holdingId.trim() : "";
+    const gradeCompany = typeof e.gradeCompany === "string" ? e.gradeCompany.trim() : "";
+    const gradeValueRaw = e.gradeValue;
+    const gradeValue =
+      typeof gradeValueRaw === "number"
+        ? gradeValueRaw
+        : typeof gradeValueRaw === "string"
+          ? parseFloat(gradeValueRaw)
+          : NaN;
+    if (!holdingId || !gradeCompany || !Number.isFinite(gradeValue)) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_PAYLOAD",
+          message: `entry missing required fields (holdingId, gradeCompany, gradeValue) — got ${JSON.stringify(e)}`,
+        },
+      });
+    }
+    const certNumber =
+      typeof e.certNumber === "string"
+        ? e.certNumber.trim() || null
+        : e.certNumber === null
+          ? null
+          : undefined;
+    const gradingCostRaw = e.gradingCost;
+    const gradingCost =
+      typeof gradingCostRaw === "number" && Number.isFinite(gradingCostRaw) && gradingCostRaw >= 0
+        ? gradingCostRaw
+        : 0;
+    validated.push({ holdingId, gradeCompany, gradeValue, certNumber, gradingCost });
+  }
+
+  const doc = await readUserDoc(auth.userId);
+  const now = new Date().toISOString();
+  const succeeded: Array<{ holdingId: string; updatedHolding: PortfolioHolding }> = [];
+  const failed: Array<{ holdingId: string; error: { code: string; message: string } }> = [];
+  let aggregateGradingCost = 0;
+
+  for (const entry of validated) {
+    const id = findHoldingKey(doc, entry.holdingId);
+    if (!id) {
+      failed.push({
+        holdingId: entry.holdingId,
+        error: { code: "NOT_FOUND", message: "Holding does not exist" },
+      });
+      continue;
+    }
+    const previous = doc.holdings[id];
+    const oldCostBasis = computeCostBasisTotal(previous);
+    const newCostBasis = Math.round((oldCostBasis + entry.gradingCost) * 100) / 100;
+
+    const next: PortfolioHolding = {
+      ...previous,
+      gradeCompany: entry.gradeCompany,
+      gradeValue: entry.gradeValue,
+      ...(entry.certNumber !== undefined ? { certNumber: entry.certNumber } : {}),
+      totalCostBasis: newCostBasis,
+      lastUpdated: now,
+      id,
+    };
+
+    const nextWithGradeId = await populateCardsightGradeId(next);
+    doc.holdings[id] = nextWithGradeId;
+    aggregateGradingCost += entry.gradingCost;
+
+    const nextValue = computePerUnitValue(nextWithGradeId) ?? 0;
+    if (nextValue > 0) {
+      appendPriceHistory(doc, id, {
+        at: now,
+        value: nextValue,
+        source: "regrade" as const,
+      });
+    }
+
+    if (entry.gradingCost > 0) {
+      const priorGrade =
+        previous.gradeCompany && typeof previous.gradeValue === "number"
+          ? `${previous.gradeCompany} ${previous.gradeValue}`
+          : "Raw";
+      const newGrade = `${entry.gradeCompany} ${entry.gradeValue}`;
+      doc.ledger.push({
+        id: randomUUID(),
+        userId: auth.userId,
+        holdingId: id,
+        playerName: previous.playerName ?? "",
+        cardTitle: previous.cardTitle ?? "",
+        quantitySold: 0,
+        unitSalePrice: 0,
+        grossProceeds: 0,
+        fees: 0,
+        tax: 0,
+        shipping: 0,
+        netProceeds: 0,
+        costBasisSold: 0,
+        realizedProfitLoss: 0,
+        realizedProfitLossPct: 0,
+        soldAt: now,
+        action: "regrade",
+        gradingCostAmount: entry.gradingCost,
+        regradeFromGrade: priorGrade,
+        regradeToGrade: newGrade,
+      });
+    }
+
+    succeeded.push({ holdingId: id, updatedHolding: nextWithGradeId });
+  }
+
+  await writeUserDoc(auth.userId, doc);
+
+  // Fire post-commit auto-repricing for each success — parallel is fine
+  // here; each holding is independent. Best-effort silent failures.
+  void Promise.all(
+    succeeded.map(async (s) => {
+      try {
+        await autoPriceHolding(doc, doc.holdings[s.holdingId], undefined, "update", auth.userId);
+      } catch { /* refresh on next cycle */ }
+    }),
+  );
+
+  console.log(JSON.stringify({
+    event: "holdings_regraded_batch",
+    source: "portfolioStore.regradeHoldingsBatch",
+    userId: auth.userId,
+    totalRequested: validated.length,
+    succeededCount: succeeded.length,
+    failedCount: failed.length,
+    aggregateGradingCost: Math.round(aggregateGradingCost * 100) / 100,
+    timestamp: now,
+  }));
+
+  return res.json({
+    success: failed.length === 0,
+    totalRequested: validated.length,
+    succeeded,
+    failed,
+  });
+}
+
 export async function deleteHolding(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;

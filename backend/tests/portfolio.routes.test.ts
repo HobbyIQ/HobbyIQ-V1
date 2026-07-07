@@ -238,6 +238,115 @@ describe("CF-REGRADE-COST-ROLLIN — POST /api/portfolio/holdings/:id/regrade", 
   });
 });
 
+describe("CF-REGRADE-BATCH — POST /api/portfolio/holdings/regrade-batch", () => {
+  it("processes multiple holdings in one write, reports per-entry status", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+
+    // Seed 3 raw holdings
+    for (let i = 1; i <= 3; i++) {
+      await request(app)
+        .post("/api/portfolio/holdings")
+        .set("x-session-id", session)
+        .send({
+          id: `batch-test-${i}`,
+          playerName: `Batch Player ${i}`,
+          cardYear: 2024,
+          product: "Bowman Chrome",
+          cardTitle: `2024 Batch ${i}`,
+          quantity: 1,
+          purchasePrice: 100,
+          totalCostBasis: 100,
+        });
+    }
+
+    const batch = await request(app)
+      .post("/api/portfolio/holdings/regrade-batch")
+      .set("x-session-id", session)
+      .send({
+        entries: [
+          { holdingId: "batch-test-1", gradeCompany: "PSA", gradeValue: 9, gradingCost: 25 },
+          { holdingId: "batch-test-2", gradeCompany: "BGS", gradeValue: 9.5, certNumber: "88888888", gradingCost: 30 },
+          { holdingId: "batch-test-3", gradeCompany: "SGC", gradeValue: 10, gradingCost: 20 },
+          { holdingId: "batch-nonexistent", gradeCompany: "PSA", gradeValue: 8 },  // will fail
+        ],
+      });
+
+    expect(batch.status).toBe(200);
+    expect(batch.body.totalRequested).toBe(4);
+    expect(batch.body.succeeded).toHaveLength(3);
+    expect(batch.body.failed).toHaveLength(1);
+    expect(batch.body.success).toBe(false);  // failures cause overall failure signal
+
+    // Missing holding lands in failed[]
+    expect(batch.body.failed[0].holdingId).toBe("batch-nonexistent");
+    expect(batch.body.failed[0].error.code).toBe("NOT_FOUND");
+
+    // The 3 successful holdings each rolled their grading cost
+    const listing = await request(app).get("/api/portfolio").set("x-session-id", session);
+    const h1 = listing.body.items.find((h: any) => h.id === "batch-test-1");
+    const h2 = listing.body.items.find((h: any) => h.id === "batch-test-2");
+    const h3 = listing.body.items.find((h: any) => h.id === "batch-test-3");
+    expect(h1.gradeCompany).toBe("PSA");
+    expect(h1.gradeValue).toBe(9);
+    expect(h1.totalCostBasis).toBe(125);
+    expect(h2.gradeCompany).toBe("BGS");
+    expect(h2.gradeValue).toBe(9.5);
+    expect(h2.certNumber).toBe("88888888");
+    expect(h2.totalCostBasis).toBe(130);
+    expect(h3.gradeCompany).toBe("SGC");
+    expect(h3.gradeValue).toBe(10);
+    expect(h3.totalCostBasis).toBe(120);
+  });
+
+  it("400s with no partial writes when any entry is malformed", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    await request(app)
+      .post("/api/portfolio/holdings")
+      .set("x-session-id", session)
+      .send({
+        id: "batch-guard-1",
+        playerName: "Guard Test",
+        cardYear: 2024,
+        product: "Bowman Chrome",
+        cardTitle: "2024 Guard",
+        quantity: 1,
+        purchasePrice: 50,
+        totalCostBasis: 50,
+      });
+
+    const bad = await request(app)
+      .post("/api/portfolio/holdings/regrade-batch")
+      .set("x-session-id", session)
+      .send({
+        entries: [
+          { holdingId: "batch-guard-1", gradeCompany: "PSA", gradeValue: 9, gradingCost: 25 },
+          { holdingId: "batch-guard-1", gradeCompany: "PSA" },  // missing gradeValue
+        ],
+      });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error.code).toBe("INVALID_PAYLOAD");
+
+    // Guard holding is UNCHANGED — no partial write
+    const listing = await request(app).get("/api/portfolio").set("x-session-id", session);
+    const guard = listing.body.items.find((h: any) => h.id === "batch-guard-1");
+    expect(guard.gradeCompany).toBeFalsy();  // still raw
+  });
+
+  it("400s when entries is empty or missing", async () => {
+    const session = await signIn("HobbyIQ", "Baseball25");
+    const empty = await request(app)
+      .post("/api/portfolio/holdings/regrade-batch")
+      .set("x-session-id", session)
+      .send({ entries: [] });
+    expect(empty.status).toBe(400);
+    const missing = await request(app)
+      .post("/api/portfolio/holdings/regrade-batch")
+      .set("x-session-id", session)
+      .send({});
+    expect(missing.status).toBe(400);
+  });
+});
+
 describe("Portfolio routes — playerId resolution (PR #68)", () => {
   beforeEach(() => {
     _clearPlayerResolverCache();
