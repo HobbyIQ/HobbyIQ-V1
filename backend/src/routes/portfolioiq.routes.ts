@@ -249,6 +249,10 @@ router.post("/holdings/:id/sell", portfolio.sellHolding);
 // grading cost into totalCostBasis in one commit. iOS "Mark as
 // Graded" flow POSTs here after the user finishes the sheet.
 router.post("/holdings/:id/regrade", portfolio.regradeHolding);
+// CF-REGRADE-BATCH (2026-07-06): companion to single-holding /regrade.
+// PSA bag-of-slabs use case — user gets 30 slabs back and marks them
+// all in one request instead of 30 round trips.
+router.post("/holdings/regrade-batch", portfolio.regradeHoldingsBatch);
 // CF-PAYMENTS-B1: per-holding price refresh is a user-initiated FMV check
 // (consumes 1 priceChecksPerDay slot; free=5/day, paid tiers unlimited).
 router.post("/holdings/:id/refresh", requireRateLimited("priceChecksPerDay"), portfolio.refreshHolding);
