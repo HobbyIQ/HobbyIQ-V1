@@ -115,6 +115,44 @@ const RELEASE_DATES: Record<string, string> = {
   "2025:topps allen and ginter": "2025-07-10",
   "2025:topps gypsy queen": "2025-05-01",
   "2025:topps gold label": "2025-11-13",
+  // ── Basketball (Panini) ─────────────────────────────────────────────
+  // Panini is currently the primary NBA licensee — the license was
+  // extended through 2025-26 season products, but Fanatics may take
+  // over 2026-27+. Keep 2024-25 + 2025-26 season products only for now.
+  "2024:panini prizm basketball": "2025-03-19",   // 2024-25 season, dropped Mar 2025
+  "2025:panini prizm basketball": "2026-03-18",   // 2025-26 season, dropping Mar 2026
+  "2024:panini select basketball": "2025-02-05",
+  "2025:panini select basketball": "2026-02-04",
+  "2024:panini donruss basketball": "2024-11-06", // 2024-25 season, dropped Nov 2024
+  "2025:panini donruss basketball": "2025-11-05",
+  "2024:panini national treasures basketball": "2025-04-30",
+  "2025:panini national treasures basketball": "2026-04-29",
+  "2024:panini mosaic basketball": "2025-01-22",
+  "2025:panini mosaic basketball": "2026-01-21",
+  "2024:panini optic basketball": "2025-01-08",
+  "2025:panini optic basketball": "2026-01-07",
+  // ── Football (Panini) ───────────────────────────────────────────────
+  "2024:panini prizm football": "2024-11-27",
+  "2025:panini prizm football": "2025-11-26",
+  "2024:panini donruss football": "2024-08-21",
+  "2025:panini donruss football": "2025-08-20",
+  "2024:panini select football": "2024-12-11",
+  "2025:panini select football": "2025-12-10",
+  "2024:panini contenders football": "2025-05-14",
+  "2025:panini contenders football": "2026-05-13",
+  "2024:panini national treasures football": "2025-05-28",
+  "2025:panini national treasures football": "2026-05-27",
+  "2024:panini phoenix football": "2024-09-04",
+  "2025:panini phoenix football": "2025-09-03",
+  // ── Hockey (Upper Deck) ─────────────────────────────────────────────
+  "2024:upper deck series 1 hockey": "2024-10-16",
+  "2025:upper deck series 1 hockey": "2025-10-15",
+  "2024:upper deck series 2 hockey": "2025-02-19",
+  "2025:upper deck series 2 hockey": "2026-02-18",
+  "2024:upper deck spx hockey": "2024-12-04",
+  "2025:upper deck spx hockey": "2025-12-03",
+  "2024:upper deck the cup hockey": "2025-08-06",
+  "2025:upper deck the cup hockey": "2026-08-05",
 };
 
 /** Cutoff: cards older than this many weeks post-release use pure
