@@ -1143,22 +1143,32 @@ type CardClass = "auto" | "base";
 const GRADE_MULTIPLIER_MATRIX: Record<CardClass, Record<string, number>> = {
   auto: {
     "Raw": 1,
-    // 10-tier: autos have tighter distributions; PSA 10 typically 6-8×
-    "PSA 10": 7,
-    "BGS 10": 15,   // Pristine still commands a premium but less than base
-    "BGS 9.5": 4,
-    "SGC 10": 4,
-    "CGC 10": 4,
-    // 9-tier: PSA 9 auto ≈ 2.5-3× Raw
-    "PSA 9": 2.8,
-    "BGS 9": 2.8,
-    "SGC 9": 2.8,
-    "CGC 9": 2.8,
-    // 8-tier: PSA 8 auto ≈ 1.5-2× Raw (55-65% of PSA 9)
-    "PSA 8": 1.75,
-    "BGS 8": 1.75,
-    "SGC 8": 1.75,
-    "CGC 8": 1.75,
+    // CF-AUTO-MULTIPLIER-EMPIRICAL-RECAL (2026-07-08, Drew): recalibrated
+    // against 83 live 2024-2026 Bowman prospect auto PSA 10 / Raw pairs
+    // probed via CH on 2026-07-08. Empirical distribution:
+    //   p25 = 3.03×  p50 = 4.41×  p75 = 5.87×
+    // Prior 7× sat between p75 and p90 — Hartman $550 Raw × 7 = $3,850
+    // but real market ~$2,000-2,400. Drew's spec: PSA 10 ~2-3.25×,
+    // PSA 9 ~1.25-1.75×, PSA 8 = Raw. Middle of Drew's PSA 10 range
+    // (2.75) sits at empirical p20, which correctly reflects that this
+    // matrix is a LAST-RESORT fallback and should skew conservative;
+    // hot-prospect autos where PSA 10 > 4× rely on real observed comps.
+    "PSA 10": 2.75,
+    "BGS 10": 4.5,    // Pristine — rare, still a premium over PSA 10
+    "BGS 9.5": 2.5,   // ≈ PSA 10 with a small non-PSA slab discount
+    "SGC 10": 2.0,    // ≈ PSA 10 with a bigger non-PSA discount
+    "CGC 10": 2.0,
+    // 9-tier: PSA 9 auto ≈ 1.5× Raw (middle of Drew's 1.25-1.75 range)
+    "PSA 9": 1.5,
+    "BGS 9": 1.4,
+    "SGC 9": 1.3,
+    "CGC 9": 1.3,
+    // 8-tier: Drew's spec — PSA 8 auto ≈ Raw (grading doesn't add value
+    // at this tier for autos; can even lose money after fees)
+    "PSA 8": 1.0,
+    "BGS 8": 1.0,
+    "SGC 8": 1.0,
+    "CGC 8": 1.0,
   },
   base: {
     "Raw": 1,

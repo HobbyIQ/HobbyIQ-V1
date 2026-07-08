@@ -455,14 +455,20 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(basePSA10.value).toBe(800);
       expect(basePSA10.estimatedMultiplier).toBe(8);
 
-      // Auto class → PSA 10 = Raw × 7 = 700, PSA 8 = Raw × 1.75 = 175
+      // CF-AUTO-MULTIPLIER-EMPIRICAL-RECAL (2026-07-08, Drew): auto column
+      // recalibrated against 83 live 2024-2026 Bowman prospect auto PSA 10 /
+      // Raw pairs (empirical p50 = 4.41×). New Drew-spec'd values:
+      //   PSA 10: 2.75  (mid of Drew's 2-3.25 spec)
+      //   PSA 9:  1.5   (mid of Drew's 1.25-1.75 spec)
+      //   PSA 8:  1.0   (Drew: "PSA 8 should equal raw")
+      // Auto class → PSA 10 = Raw × 2.75 = 275, PSA 8 = Raw × 1.0 = 100
       const autoCurve = await buildObservedGradeCurve("c1", { cardClass: "auto" });
       const autoPSA10 = autoCurve.entries.find((e) => e.grade === "PSA 10")!;
-      expect(autoPSA10.value).toBe(700);
-      expect(autoPSA10.estimatedMultiplier).toBe(7);
+      expect(autoPSA10.value).toBe(275);
+      expect(autoPSA10.estimatedMultiplier).toBe(2.75);
       const autoPSA8 = autoCurve.entries.find((e) => e.grade === "PSA 8")!;
-      expect(autoPSA8.value).toBe(175);
-      expect(autoPSA8.estimatedMultiplier).toBe(1.75);
+      expect(autoPSA8.value).toBe(100);
+      expect(autoPSA8.estimatedMultiplier).toBe(1.0);
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
