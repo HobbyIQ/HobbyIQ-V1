@@ -86,15 +86,24 @@ const CANONICAL_GRADES: ReadonlyArray<{
   { label: "Raw", grader: "Raw", psaEquivalent: 0 },
   { label: "PSA 10", grader: "PSA", psaEquivalent: 10 },
   { label: "PSA 9", grader: "PSA", psaEquivalent: 9 },
+  // CF-EIGHT-TIER-GRADES (2026-07-06, Drew): PSA 8 (and BGS/SGC/CGC 8)
+  // are meaningful grades on autographs — many autos land as 8s due to
+  // centering / auto-quality issues. Users need pricing at this tier
+  // for cards they own. Multiplier ≈ 1.75× Raw for autos (55-65% of
+  // PSA 9). Adds 4 CH fetches per card × 12h cache — bounded.
+  { label: "PSA 8", grader: "PSA", psaEquivalent: 8 },
   // BGS 10 is the "Pristine 10" — a rarer tier above PSA 10 in most markets.
   // BGS 9.5 is the workhorse gem-mint BGS grade.
   { label: "BGS 10", grader: "BGS", psaEquivalent: 10 },
   { label: "BGS 9.5", grader: "BGS", psaEquivalent: 9.5 },
   { label: "BGS 9", grader: "BGS", psaEquivalent: 9 },
+  { label: "BGS 8", grader: "BGS", psaEquivalent: 8 },
   { label: "SGC 10", grader: "SGC", psaEquivalent: 10 },
   { label: "SGC 9", grader: "SGC", psaEquivalent: 9 },
+  { label: "SGC 8", grader: "SGC", psaEquivalent: 8 },
   { label: "CGC 10", grader: "CGC", psaEquivalent: 10 },
   { label: "CGC 9", grader: "CGC", psaEquivalent: 9 },
+  { label: "CGC 8", grader: "CGC", psaEquivalent: 8 },
 ];
 
 /** One aggregated grade row. Every number is HobbyIQ's own — computed
@@ -1040,20 +1049,84 @@ async function applyTrajectory(
  * multipliers reliably, swap this for computeReleaseGradeCurve()
  * (gradedPriceProjection.ts:2797). Same swap-point discipline.
  */
-const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = {
-  "Raw": 1,
-  // 10-tier
-  "PSA 10": 8,
-  "BGS 10": 20, // Pristine — rare, big premium over PSA 10 in most markets
-  "BGS 9.5": 5,
-  "SGC 10": 5,
-  "CGC 10": 5,
-  // 9-tier — all four graders similar; PSA 9 is the reference
-  "PSA 9": 3,
-  "BGS 9": 3,
-  "SGC 9": 3,
-  "CGC 9": 3,
+/**
+ * CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06, Drew): "we need to
+ * formalize the multipliers for premium cards like this and figure
+ * out a better pricing."
+ *
+ * Autographs and base cards have structurally different grade
+ * multipliers because the price DISTRIBUTIONS are different:
+ *   - Base cards start cheap ($0.50-$5 Raw) → PSA 10 is often
+ *     10-20× because the top grade is genuinely scarce vs the raw
+ *     supply.
+ *   - Autos start higher ($20-$100 Raw for prospects) → PSA 10 is
+ *     usually only 6-8× because the raw price already prices in
+ *     rarity, and PSA 8 remains a meaningful market instead of
+ *     collapsing to Raw.
+ *
+ * Callers pass `cardClass: "auto" | "base"` to
+ * `fillEstimatedFallback` (defaults to "base" for backward compat).
+ * The old single-column table is now a wrapper around the "base"
+ * column for any legacy consumer.
+ *
+ * Values are hobby-consensus starting points. As we accumulate
+ * corpus data via #290's calibration script, these become the
+ * BACKSTOP; the empirical per-(year, set, class) numbers become the
+ * primary source when available.
+ */
+type CardClass = "auto" | "base";
+const GRADE_MULTIPLIER_MATRIX: Record<CardClass, Record<string, number>> = {
+  auto: {
+    "Raw": 1,
+    // 10-tier: autos have tighter distributions; PSA 10 typically 6-8×
+    "PSA 10": 7,
+    "BGS 10": 15,   // Pristine still commands a premium but less than base
+    "BGS 9.5": 4,
+    "SGC 10": 4,
+    "CGC 10": 4,
+    // 9-tier: PSA 9 auto ≈ 2.5-3× Raw
+    "PSA 9": 2.8,
+    "BGS 9": 2.8,
+    "SGC 9": 2.8,
+    "CGC 9": 2.8,
+    // 8-tier: PSA 8 auto ≈ 1.5-2× Raw (55-65% of PSA 9)
+    "PSA 8": 1.75,
+    "BGS 8": 1.75,
+    "SGC 8": 1.75,
+    "CGC 8": 1.75,
+  },
+  base: {
+    "Raw": 1,
+    // 10-tier: base cards have wider distributions; PSA 10 super scarce
+    "PSA 10": 8,
+    "BGS 10": 20,   // Pristine — rare, big premium over PSA 10
+    "BGS 9.5": 5,
+    "SGC 10": 5,
+    "CGC 10": 5,
+    // 9-tier: all four graders similar; PSA 9 is the reference
+    "PSA 9": 3,
+    "BGS 9": 3,
+    "SGC 9": 3,
+    "CGC 9": 3,
+    // 8-tier: base card PSA 8 ≈ 1.5-2× Raw
+    "PSA 8": 1.75,
+    "BGS 8": 1.75,
+    "SGC 8": 1.75,
+    "CGC 8": 1.75,
+  },
 };
+
+/** Legacy alias — code that hasn't been updated to pass cardClass
+ *  reads from the "base" column. New callers should use
+ *  `gradeMultiplierFor(cardClass, gradeLabel)`. */
+const RAW_TO_GRADE_FALLBACK_MULTIPLIER: Record<string, number> = GRADE_MULTIPLIER_MATRIX.base;
+
+/** Preferred lookup — reads the matrix by (cardClass, gradeLabel).
+ *  Returns undefined when the grade isn't in the matrix (unknown
+ *  variant grader). */
+function gradeMultiplierFor(cardClass: CardClass, gradeLabel: string): number | undefined {
+  return GRADE_MULTIPLIER_MATRIX[cardClass][gradeLabel];
+}
 
 /**
  * CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05):
@@ -1085,6 +1158,13 @@ const REFERENCE_ANOMALY_THRESHOLD_PCT = 25;
 function fillEstimatedFallback(
   entries: ObservedGradeEntry[],
   referencePriceByGrade?: ReadonlyMap<string, number>,
+  /** CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06, Drew): identifies
+   *  whether the card is an auto or base — autos have tighter grade
+   *  distributions, so PSA 10 / PSA 8 multipliers differ from base
+   *  cards. Optional; defaults to "base" for backward compat. Callers
+   *  with card meta on hand (routes fetching getCardMetaById) should
+   *  pass the resolved class. */
+  cardClass: CardClass = "base",
 ): void {
   const raw = entries.find((e) => e.grade === "Raw");
   const rawObserved =
@@ -1102,8 +1182,8 @@ function fillEstimatedFallback(
         entry.estimatedFrom = "reference-price";
         entry.estimatedMultiplier = null; // no multiplier used
       } else if (rawObserved !== null) {
-        // Priority 2: Raw observed × hand-tuned tier multiplier.
-        const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+        // Priority 2: Raw observed × class-aware tier multiplier.
+        const multiplier = gradeMultiplierFor(cardClass, entry.grade);
         if (typeof multiplier === "number" && multiplier > 0) {
           entry.value = Math.round(rawObserved * multiplier * 100) / 100;
           entry.valueSource = "estimated";
@@ -1175,6 +1255,14 @@ export async function buildObservedGradeCurve(
      *  interactive user-facing routes (/card-panel, /price-by-id);
      *  bulk reprice paths should leave it off. */
     enableSiblingFallback?: boolean;
+    /** CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06, Drew): "auto" |
+     *  "base". Autos have tighter grade distributions (PSA 10 ≈ 7×
+     *  Raw for autos vs ≈ 8-10× for base cards); passing the right
+     *  class produces materially better estimates when observed comps
+     *  are absent. Defaults to "base" for backward compat. Routes with
+     *  card meta should resolve from identity.subset (contains
+     *  "auto"/"signature" → "auto"). */
+    cardClass?: CardClass;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
@@ -1182,7 +1270,7 @@ export async function buildObservedGradeCurve(
   );
   // Second pass — fills value/valueSource on non-observed grades,
   // preferring reference-price over Raw × multiplier when provided.
-  fillEstimatedFallback(entries, opts.referencePriceByGrade);
+  fillEstimatedFallback(entries, opts.referencePriceByGrade, opts.cardClass ?? "base");
 
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
   // player weekly buckets, then compute Market Value (today) + Predicted
@@ -1249,11 +1337,13 @@ export async function buildObservedGradeCurve(
               Math.round(((fallback.estimatedRawPredicted7d / fallback.estimatedRawPrice) - 1) * 10000) / 100;
           }
         }
-        // Cascade sibling-derived Raw to slab grades via existing tier
-        // multipliers so PSA 10 etc. show something rather than gray.
+        // Cascade sibling-derived Raw to slab grades via class-aware
+        // tier multipliers. Sibling fallback fires only on autos (MVP)
+        // so we use the auto column directly here — not the caller's
+        // opts.cardClass (defaults to "base").
         for (const entry of entries) {
           if (entry.grade === "Raw" || entry.valueSource !== "unavailable") continue;
-          const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+          const multiplier = gradeMultiplierFor("auto", entry.grade);
           if (typeof multiplier === "number" && multiplier > 0) {
             entry.value = Math.round(fallback.estimatedRawPrice * multiplier * 100) / 100;
             entry.valueSource = "estimated";
