@@ -122,23 +122,65 @@ function lookupPremium(
   );
   if (exact) return { entry: exact, matchedSet: exact.set };
 
-  // Fallback: same year + Bowman Chrome Prospects (well-covered
-  // premiums for the Bowman family). CF-SIBLING-NON-AUTO-COVERAGE
-  // (2026-07-06): widened to base cards too — the print-run floor
-  // still applies universally, and even a mismatched base multiplier
-  // is materially better than a gray pill.
-  const proxy = table.find(
-    (e) =>
-      e.year === year &&
-      normalizeToken(e.set) === "bowman chrome prospects" &&
-      normalizeToken(e.parallel) === parallelNorm &&
-      !!e.isAuto === isAuto &&
-      typeof e.baseRelativePremium === "number" &&
-      e.baseRelativePremium > 0 &&
-      e.sampleSize >= 5,
-  );
-  if (proxy) return { entry: proxy, matchedSet: proxy.set };
+  // CF-SIBLING-PROXY-BRAND-FAMILY (2026-07-07, Drew): the calibration
+  // table indexes each product under whichever set name the discovery
+  // script produced from CH's search (e.g. 2025 Orange auto premiums
+  // live in set="Bowman Draft", NOT set="Bowman Chrome Prospects" — CH
+  // returned that string). The pre-fix proxy required set exactly ==
+  // "bowman chrome prospects" — silently bailed for every target whose
+  // same-year Bowman family entry happened to sit under any other set
+  // name.
+  //
+  // Concrete miss discovered via probe 2026-07-07: Willits 2025 Bowman
+  // Draft Chrome Orange Auto — reached this branch, but the 2025
+  // Orange isAuto=true entry lives under set="Bowman Draft" (n=30,
+  // premium=4.364). No match → null → fallback bailed → the very card
+  // that PR #303 (print-run floor) was supposed to price stayed
+  // "unavailable" on prod.
+  //
+  // Fix: match by BRAND FAMILY substring. Bowman/Topps/Panini variants
+  // trade close enough that any same-year same-parallel same-isAuto
+  // hit inside the target's brand family is materially better than
+  // gray-pill "unavailable". Prefer highest-sample-size entry so the
+  // richest calibration wins when multiple candidates exist.
+  const targetBrand = inferBrand(setNorm);
+  if (targetBrand) {
+    const candidates = table.filter(
+      (e) =>
+        e.year === year &&
+        normalizeToken(e.parallel) === parallelNorm &&
+        !!e.isAuto === isAuto &&
+        typeof e.baseRelativePremium === "number" &&
+        e.baseRelativePremium > 0 &&
+        e.sampleSize >= 5 &&
+        inferBrand(normalizeToken(e.set)) === targetBrand &&
+        normalizeToken(e.set) !== setNorm,  // exact already tried above
+    );
+    if (candidates.length > 0) {
+      // Prefer highest sample-size within the family
+      candidates.sort((a, b) => b.sampleSize - a.sampleSize);
+      const best = candidates[0];
+      return { entry: best, matchedSet: best.set };
+    }
+  }
 
+  return null;
+}
+
+/**
+ * Infer the brand family for a set name. Returns the canonical family
+ * token (bowman/topps/panini) or null when no known family matches.
+ * Used by lookupPremium to constrain the proxy fallback to the target's
+ * own brand family — Bowman auto premiums track well across Bowman
+ * Chrome Prospects / Bowman Draft Chrome / Bowman Draft / Bowman's
+ * Best, but poorly across Bowman → Panini Prizm.
+ */
+function inferBrand(normalizedSet: string): string | null {
+  if (normalizedSet.includes("bowman")) return "bowman";
+  if (normalizedSet.includes("topps")) return "topps";
+  if (normalizedSet.includes("panini") || normalizedSet.includes("prizm") ||
+      normalizedSet.includes("select") || normalizedSet.includes("mosaic") ||
+      normalizedSet.includes("optic")) return "panini";
   return null;
 }
 

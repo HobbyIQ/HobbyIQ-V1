@@ -147,6 +147,89 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
     expect(result!.estimatedRawPredicted7d).toBeNull();
   });
 
+  it("CF-SIBLING-PROXY-SET-BREADTH: falls through to Bowman Draft when Bowman Chrome Prospects has no entry (real Willits case)", async () => {
+    // Empirical Willits scenario found via prod-data probe 2026-07-07:
+    // - Target: 2025 Bowman Draft Chrome Orange Auto
+    // - No exact-set entry (Orange has isAuto=false only for Bowman Draft Chrome)
+    // - No Bowman Chrome Prospects Orange auto for 2025
+    // - "Bowman Draft" DOES have 2025 Orange isAuto=true (n=30, 4.364×)
+    // The pre-fix proxy only tried "bowman chrome prospects" — silently
+    // bailed → sibling fallback returned null → Willits Orange Auto
+    // showed "unavailable" on prod despite PR #303 shipping the floor.
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          // Same-year Bowman Draft Chrome Orange BASE (not the auto)
+          {
+            year: 2025,
+            set: "Bowman Draft Chrome",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: false,
+            baseRelativePremium: 23.181,
+            sampleSize: 26,
+            provenance: "empirical",
+          },
+          // The critical entry that the proxy MUST reach
+          {
+            year: 2025,
+            set: "Bowman Draft",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 4.364,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "willits-base-auto",
+        player: "Eli Willits",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 173, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 173, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 173, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-willits-orange",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: true,
+      playerName: "Eli Willits",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.premiumUsedProxy).toBe(true);
+    expect(result!.premiumMatchedSet).toBe("Bowman Draft");   // ← the fix
+    expect(result!.parallelPremium).toBe(15);                  // /25 floor lifts 4.364 → 15
+    expect(result!.floorApplied).toBe(true);
+    expect(result!.empiricalPremium).toBeCloseTo(4.364, 2);
+    expect(result!.inferredPrintRun).toBe(25);
+    // Sibling median = $173 × 15 = $2,595
+    expect(result!.estimatedRawPrice).toBeCloseTo(2595, 0);
+  });
+
   it("returns null when the sibling has no comps at Raw OR PSA 10", async () => {
     vi.spyOn(fs, "existsSync").mockReturnValue(true);
     vi.spyOn(fs, "readFileSync").mockReturnValue(
