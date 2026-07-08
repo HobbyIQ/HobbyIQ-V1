@@ -21,7 +21,12 @@ beforeEach(() => {
 });
 
 describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
-  it("returns null when the parallel-premiums table is missing / not loadable", async () => {
+  it("returns null when the parallel-premiums table is missing AND the parallel has no floor tier", async () => {
+    // CF-FLOOR-ONLY-WHEN-EMPIRICAL-MISSING (2026-07-08): the fallback now
+    // uses the print-run floor when the empirical table is missing but the
+    // parallel matches a known tier (Orange /25, Blue /150, etc.). To
+    // still hit the null-return branch, use a parallel with no known
+    // tier (e.g. "Base").
     vi.spyOn(fs, "existsSync").mockReturnValue(false);
     const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
       "../src/services/compiq/siblingCardPriceFallback.service.js"
@@ -31,19 +36,18 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
       targetCardId: "target",
       year: 2025,
       set: "Bowman Draft Chrome",
-      parallel: "Orange",
+      parallel: "Base",   // ← no print-run floor for "Base"
       isAuto: true,
       playerName: "Eli Willits",
     });
     expect(result).toBeNull();
   });
 
-  it("returns null when no premium entry matches", async () => {
+  it("returns null when no premium entry matches AND parallel has no floor tier", async () => {
     vi.spyOn(fs, "existsSync").mockReturnValue(true);
     vi.spyOn(fs, "readFileSync").mockReturnValue(
       JSON.stringify({
         entries: [
-          // A different year / set / parallel — no match
           {
             year: 2020,
             set: "Bowman Chrome",
@@ -65,11 +69,82 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
       targetCardId: "target",
       year: 2025,
       set: "Bowman Draft Chrome",
-      parallel: "Orange",
+      parallel: "Some Unknown Parallel",   // ← no empirical, no floor
       isAuto: true,
       playerName: "Eli Willits",
     });
     expect(result).toBeNull();
+  });
+
+  it("CF-FLOOR-ONLY-WHEN-EMPIRICAL-MISSING: uses print-run floor when no empirical premium exists", async () => {
+    // Real prod finding (2026-07-08): 2024 Bowman Chrome Blue Refractor
+    // auto had ZERO entries in parallel-premiums-latest.json. Brand-family
+    // proxy had nothing to fall back to. Pre-fix: bail with
+    // sibling_fallback_no_premium → gray pill. Post-fix: Blue Refractor
+    // matches /150 tier → 3× floor → produces an estimate anyway.
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          // Only entries for a totally different (year, parallel) combo
+          {
+            year: 2019,
+            set: "Some Other Set",
+            parallel: "Refractor",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 2.5,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "prospect-base-auto",
+        player: "Some Prospect",
+        set: "2024 Bowman Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+        title: "Some Prospect 2024 Bowman Chrome Prospect Autographs Baseball",
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 100, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 100, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 100, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-blue-refractor-auto",
+      year: 2024,
+      set: "Bowman Chrome",
+      parallel: "Blue Refractor",   // /150 tier → 3× floor
+      isAuto: true,
+      playerName: "Some Prospect",
+    });
+    expect(result).not.toBeNull();
+    // No empirical → empiricalPremium set to 1 (documented), floor of 3× applies
+    expect(result!.empiricalPremium).toBe(1);
+    expect(result!.parallelPremium).toBe(3);
+    expect(result!.floorApplied).toBe(true);
+    expect(result!.inferredPrintRun).toBe(150);
+    expect(result!.premiumMatchedSet).toBe("floor-only (/150)");
+    // $100 sibling median × 3× = $300
+    expect(result!.estimatedRawPrice).toBeCloseTo(300, 0);
   });
 
   it("uses Bowman Chrome Prospects as a proxy when the exact set has no auto entry", async () => {

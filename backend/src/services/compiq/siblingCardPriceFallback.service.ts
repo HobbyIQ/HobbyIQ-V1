@@ -293,26 +293,64 @@ export async function attemptSiblingPriceFallback(
     input.parallel,
     input.isAuto,
   );
-  if (!premiumMatch) {
-    console.log(JSON.stringify({
-      event: "sibling_fallback_no_premium",
-      source: "siblingCardPriceFallback",
-      year: input.year,
-      set: input.set,
-      parallel: input.parallel,
-      isAuto: input.isAuto,
-    }));
-    return null;
-  }
-  const empiricalPremium = premiumMatch.entry.baseRelativePremium as number;
-  const premiumUsedProxy = normalizeToken(premiumMatch.matchedSet) !== normalizeToken(input.set);
+
   // CF-PARALLEL-PREMIUM-FLOOR (2026-07-06, Drew): apply the print-run
   // floor. For known-rare parallels (Orange /25, Red /5, etc.), the
   // empirical median tends to under-represent hot-prospect market —
   // the median is dragged down by cool-player sales at the same
   // parallel. The floor represents the hobby-consensus "hot prospect"
   // baseline. When it lifts the value, telemetry captures the flip.
-  const floored = applyPrintRunFloor(empiricalPremium, input.parallel);
+  //
+  // CF-FLOOR-ONLY-WHEN-EMPIRICAL-MISSING (2026-07-08, Drew): production
+  // KQL showed `sibling_fallback_no_premium` firing on cards like 2024
+  // Bowman Chrome Blue Refractor auto — brand-family proxy had nothing
+  // to fall back to (no 2024 Bowman-family auto Blue Refractor entries
+  // in the calibration table). Previously we bailed → user got a gray
+  // pill. But Blue Refractor IS a known /150 parallel with a defined
+  // hobby-consensus floor of 3×. Now: when empirical is missing entirely
+  // AND the parallel matches a known print-run tier, use the floor as
+  // the anchor. When both are missing, still bail.
+  let empiricalPremium: number;
+  let premiumUsedProxy: boolean;
+  let premiumMatchedSet: string;
+  let floored: ReturnType<typeof applyPrintRunFloor>;
+  if (premiumMatch) {
+    empiricalPremium = premiumMatch.entry.baseRelativePremium as number;
+    premiumUsedProxy = normalizeToken(premiumMatch.matchedSet) !== normalizeToken(input.set);
+    premiumMatchedSet = premiumMatch.matchedSet;
+    floored = applyPrintRunFloor(empiricalPremium, input.parallel);
+  } else {
+    // No empirical — try the floor only.
+    const floorOnly = applyPrintRunFloor(1, input.parallel);
+    if (floorOnly.effective === 1 || floorOnly.inferredPrintRun === null) {
+      // Parallel doesn't match any tier either — genuinely can't price.
+      console.log(JSON.stringify({
+        event: "sibling_fallback_no_premium",
+        source: "siblingCardPriceFallback",
+        year: input.year,
+        set: input.set,
+        parallel: input.parallel,
+        isAuto: input.isAuto,
+      }));
+      return null;
+    }
+    // Floor-only path: empirical stays as 1 (documented in telemetry),
+    // premium comes purely from the floor.
+    empiricalPremium = 1;
+    premiumUsedProxy = false;
+    premiumMatchedSet = `floor-only (/${floorOnly.inferredPrintRun})`;
+    floored = floorOnly;
+    console.log(JSON.stringify({
+      event: "sibling_fallback_floor_only",
+      source: "siblingCardPriceFallback",
+      year: input.year,
+      set: input.set,
+      parallel: input.parallel,
+      isAuto: input.isAuto,
+      inferredPrintRun: floorOnly.inferredPrintRun,
+      floorMultiplier: floorOnly.effective,
+    }));
+  }
   const parallelPremium = floored.effective;
 
   // Step 2 — sibling card search. For autos, seek the same player's
@@ -543,7 +581,7 @@ export async function attemptSiblingPriceFallback(
     empiricalPremium,
     floorApplied: floored.flooredFrom !== null,
     inferredPrintRun: floored.inferredPrintRun,
-    premiumMatchedSet: premiumMatch.matchedSet,
+    premiumMatchedSet,
     premiumUsedProxy,
     siblingIsCrossClass,
     crossClassAutoPremium,
@@ -565,7 +603,7 @@ export async function attemptSiblingPriceFallback(
     empiricalPremium,
     floorApplied: floored.flooredFrom !== null,
     inferredPrintRun: floored.inferredPrintRun,
-    premiumMatchedSet: premiumMatch.matchedSet,
+    premiumMatchedSet,
     premiumUsedProxy,
     siblingIsCrossClass,
     crossClassAutoPremium,
