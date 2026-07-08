@@ -40,6 +40,11 @@ import {
   type CardHedgeCard,
 } from "./cardhedge.client.js";
 import { computeWeightedMedian } from "./compiqEstimate.service.js";
+// CF-PARALLEL-PREMIUM-FLOOR (2026-07-06, Drew): hobby-consensus minimum
+// multipliers by print-run tier. Overrides the empirical calibration
+// median when it's demonstrably too low for a rare parallel (e.g.
+// Orange /25 auto median = 4.4× but hobby-consensus is 15×).
+import { applyPrintRunFloor } from "./parallelPremiumFloors.js";
 
 interface EmpiricalParallelEntry {
   year: number;
@@ -144,17 +149,35 @@ export interface SiblingFallbackInput {
   parallel: string;
   isAuto: boolean;
   playerName: string;
+  /** CF-SIBLING-TREND-ANCHOR (2026-07-06, Drew): weekly rate from the
+   *  target player's trajectory chain (matched-cohort / parallel-tier /
+   *  release-decay). Used to project the sibling's historical median
+   *  FORWARD to today before applying the parallel premium — Drew:
+   *  "median is a weighted average" but stale; we want accurate
+   *  prediction, not backward-looking snapshots. Null = no trajectory
+   *  available; sibling fallback still fires but uses raw median. */
+  trajectoryRateWeekly?: number | null;
 }
 
 export interface SiblingFallbackResult {
-  /** Estimated Raw price derived from the sibling × parallel premium. */
+  /** Estimated Raw price for TODAY — sibling's trend-projected median × parallel premium. */
   estimatedRawPrice: number | null;
   /** Estimated PSA 10 price (Raw × PSA 10 tier multiplier of 8). */
   estimatedPSA10Price: number | null;
+  /** Predicted Raw price at the trajectory horizon (7d) = today's
+   *  estimate projected another week forward at the same rate.
+   *  Null when no rate was provided. */
+  estimatedRawPredicted7d: number | null;
   /** The sibling card we anchored on. */
   siblingCardId: string;
   siblingParallel: string;
-  siblingBasePrice: number;
+  /** Sibling's raw historical weighted median (BEFORE trend-projection). */
+  siblingBaseMedianRaw: number;
+  /** Sibling's trend-projected value TODAY (median × (1 + rate × weeksSinceNewest)).
+   *  Same as siblingBaseMedianRaw when no rate provided. */
+  siblingBaseProjectedToday: number;
+  /** Weeks since the sibling's newest closed sale — used for projection. */
+  siblingWeeksSinceNewestSale: number | null;
   /** Multiplier applied. */
   parallelPremium: number;
   /** Which parallel-premium table entry we matched (helps ops debug). */
@@ -194,8 +217,16 @@ export async function attemptSiblingPriceFallback(
     }));
     return null;
   }
-  const parallelPremium = premiumMatch.entry.baseRelativePremium as number;
+  const empiricalPremium = premiumMatch.entry.baseRelativePremium as number;
   const premiumUsedProxy = normalizeToken(premiumMatch.matchedSet) !== normalizeToken(input.set);
+  // CF-PARALLEL-PREMIUM-FLOOR (2026-07-06, Drew): apply the print-run
+  // floor. For known-rare parallels (Orange /25, Red /5, etc.), the
+  // empirical median tends to under-represent hot-prospect market —
+  // the median is dragged down by cool-player sales at the same
+  // parallel. The floor represents the hobby-consensus "hot prospect"
+  // baseline. When it lifts the value, telemetry captures the flip.
+  const floored = applyPrintRunFloor(empiricalPremium, input.parallel);
+  const parallelPremium = floored.effective;
 
   // Step 2 — sibling card search. For autos, seek the same player's
   // Base Auto in the same set. For non-autos, seek the Base card.
@@ -244,44 +275,57 @@ export async function attemptSiblingPriceFallback(
     return null;
   }
 
-  // Step 3 — sibling's comps at Raw. PSA 10 as secondary.
-  let siblingBasePrice: number | null = null;
+  // Step 3 — sibling's comps at Raw. PSA 10 as secondary. Capture
+  // dates too so we can trend-project the median forward (Drew's
+  // "predict accurately, median is a weighted average [snapshot]"
+  // point 2026-07-06).
+  let siblingBaseMedianRaw: number | null = null;
+  let siblingNewestSaleDate: string | null = null;
   try {
     const rawSales = await getCardSales(sibling.card_id, "Raw", 50);
-    if (rawSales.length > 0) {
-      siblingBasePrice = computeWeightedMedian(
-        rawSales
-          .map((s) => ({
-            price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
-            date: s.date,
-            saleType: s.sale_type ?? null,
-          }))
-          .filter((s) => Number.isFinite(s.price) && s.price > 0),
-      );
+    const rawSalesUsable = rawSales
+      .map((s) => ({
+        price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
+        date: s.date,
+        saleType: s.sale_type ?? null,
+      }))
+      .filter((s) => Number.isFinite(s.price) && s.price > 0);
+    if (rawSalesUsable.length > 0) {
+      siblingBaseMedianRaw = computeWeightedMedian(rawSalesUsable);
+      // Find the newest closed sale date to time the trend projection
+      const dates = rawSalesUsable
+        .map((s) => s.date)
+        .filter((d): d is string => typeof d === "string" && d.length > 0)
+        .sort();
+      siblingNewestSaleDate = dates.length > 0 ? dates[dates.length - 1] : null;
     }
     // If no Raw sales on the sibling either, try PSA 10 and adjust
     // downward via the standard Raw × 8 multiplier.
-    if (siblingBasePrice === null) {
+    if (siblingBaseMedianRaw === null) {
       const psaSales = await getCardSales(sibling.card_id, "PSA 10", 50);
-      if (psaSales.length > 0) {
-        const psaMedian = computeWeightedMedian(
-          psaSales
-            .map((s) => ({
-              price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
-              date: s.date,
-              saleType: s.sale_type ?? null,
-            }))
-            .filter((s) => Number.isFinite(s.price) && s.price > 0),
-        );
+      const psaUsable = psaSales
+        .map((s) => ({
+          price: typeof s.price === "number" ? s.price : parseFloat(String(s.price)),
+          date: s.date,
+          saleType: s.sale_type ?? null,
+        }))
+        .filter((s) => Number.isFinite(s.price) && s.price > 0);
+      if (psaUsable.length > 0) {
+        const psaMedian = computeWeightedMedian(psaUsable);
         if (psaMedian !== null && psaMedian > 0) {
-          siblingBasePrice = Math.round((psaMedian / 8) * 100) / 100;
+          siblingBaseMedianRaw = Math.round((psaMedian / 8) * 100) / 100;
+          const dates = psaUsable
+            .map((s) => s.date)
+            .filter((d): d is string => typeof d === "string" && d.length > 0)
+            .sort();
+          siblingNewestSaleDate = dates.length > 0 ? dates[dates.length - 1] : null;
         }
       }
     }
   } catch {
     return null;
   }
-  if (siblingBasePrice === null || siblingBasePrice <= 0) {
+  if (siblingBaseMedianRaw === null || siblingBaseMedianRaw <= 0) {
     console.log(JSON.stringify({
       event: "sibling_fallback_sibling_no_comps",
       source: "siblingCardPriceFallback",
@@ -291,8 +335,47 @@ export async function attemptSiblingPriceFallback(
     return null;
   }
 
-  const estimatedRawPrice = Math.round(siblingBasePrice * parallelPremium * 100) / 100;
+  // Step 4 — trend-project sibling's median forward to TODAY. Same
+  // trajectory math as the target's own entries (weeks-since-newest ×
+  // rate, capped at 6 weeks lookback for stability). Player is the
+  // SAME between target and sibling, so the trajectory rate applies
+  // one-for-one.
+  const MAX_WEEKS = 6;
+  let siblingWeeksSinceNewestSale: number | null = null;
+  if (siblingNewestSaleDate) {
+    const ms = Date.parse(siblingNewestSaleDate);
+    if (Number.isFinite(ms)) {
+      siblingWeeksSinceNewestSale = Math.min(
+        (Date.now() - ms) / (7 * 24 * 3600 * 1000),
+        MAX_WEEKS,
+      );
+    }
+  }
+  let siblingBaseProjectedToday = siblingBaseMedianRaw;
+  if (
+    typeof input.trajectoryRateWeekly === "number" &&
+    Number.isFinite(input.trajectoryRateWeekly) &&
+    siblingWeeksSinceNewestSale !== null
+  ) {
+    const marketMultiplier = 1 + input.trajectoryRateWeekly * siblingWeeksSinceNewestSale;
+    siblingBaseProjectedToday =
+      Math.round(siblingBaseMedianRaw * marketMultiplier * 100) / 100;
+  }
+
+  const estimatedRawPrice =
+    Math.round(siblingBaseProjectedToday * parallelPremium * 100) / 100;
   const estimatedPSA10Price = Math.round(estimatedRawPrice * 8 * 100) / 100;
+  // Predicted at 7d = today's estimate projected another week forward
+  // at the same rate. Null when no rate is available.
+  let estimatedRawPredicted7d: number | null = null;
+  if (
+    typeof input.trajectoryRateWeekly === "number" &&
+    Number.isFinite(input.trajectoryRateWeekly)
+  ) {
+    const predictedMultiplier = 1 + input.trajectoryRateWeekly * 1; // 7d = 1 week
+    estimatedRawPredicted7d =
+      Math.round(estimatedRawPrice * predictedMultiplier * 100) / 100;
+  }
 
   console.log(JSON.stringify({
     event: "sibling_fallback_success",
@@ -304,20 +387,30 @@ export async function attemptSiblingPriceFallback(
     parallel: input.parallel,
     isAuto: input.isAuto,
     siblingCardId: sibling.card_id,
-    siblingBasePrice,
+    siblingBaseMedianRaw,
+    siblingBaseProjectedToday,
+    siblingWeeksSinceNewestSale,
+    trajectoryRateWeekly: input.trajectoryRateWeekly ?? null,
     parallelPremium,
+    empiricalPremium,
+    floorApplied: floored.flooredFrom !== null,
+    inferredPrintRun: floored.inferredPrintRun,
     premiumMatchedSet: premiumMatch.matchedSet,
     premiumUsedProxy,
     estimatedRawPrice,
     estimatedPSA10Price,
+    estimatedRawPredicted7d,
   }));
 
   return {
     estimatedRawPrice,
     estimatedPSA10Price,
+    estimatedRawPredicted7d,
     siblingCardId: sibling.card_id,
     siblingParallel: sibling.variant ?? "Base",
-    siblingBasePrice,
+    siblingBaseMedianRaw,
+    siblingBaseProjectedToday,
+    siblingWeeksSinceNewestSale,
     parallelPremium,
     premiumMatchedSet: premiumMatch.matchedSet,
     premiumUsedProxy,

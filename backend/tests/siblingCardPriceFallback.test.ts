@@ -132,12 +132,19 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
     expect(result).not.toBeNull();
     expect(result!.premiumUsedProxy).toBe(true);
     expect(result!.premiumMatchedSet).toBe("Bowman Chrome Prospects");
-    expect(result!.parallelPremium).toBe(4.364);
+    // CF-PARALLEL-PREMIUM-FLOOR (2026-07-06): Orange = /25 tier → 15×
+    // floor. Empirical 4.364 is below the floor, so effective is 15.
+    expect(result!.parallelPremium).toBe(15);
     expect(result!.siblingCardId).toBe("sibling-base-auto");
-    // ~$100 base × 4.364 = ~$436.40
-    expect(result!.estimatedRawPrice).toBeCloseTo(436.4, 0);
+    // Sibling median = $100 (from 3 sales at $95/$100/$105). No trajectory
+    // rate provided → siblingBaseProjectedToday = $100. $100 × 15 = $1,500
+    expect(result!.siblingBaseMedianRaw).toBeCloseTo(100, 0);
+    expect(result!.siblingBaseProjectedToday).toBeCloseTo(100, 0);
+    expect(result!.estimatedRawPrice).toBeCloseTo(1500, 0);
     // PSA 10 = Raw × 8
-    expect(result!.estimatedPSA10Price).toBeCloseTo(3491.2, 0);
+    expect(result!.estimatedPSA10Price).toBeCloseTo(12000, 0);
+    // No rate → no Predicted 7d
+    expect(result!.estimatedRawPredicted7d).toBeNull();
   });
 
   it("returns null when the sibling has no comps at Raw OR PSA 10", async () => {
@@ -242,8 +249,80 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
       playerName: "Eli Willits",
     });
     expect(result).not.toBeNull();
-    // Implied sibling base: PSA 10 × 1 / 8 ≈ $100 → × 4.0 premium = $400
-    expect(result!.siblingBasePrice).toBeCloseTo(100, 0);
-    expect(result!.estimatedRawPrice).toBeCloseTo(400, 0);
+    // Implied sibling base: PSA 10 × 1 / 8 ≈ $100. Empirical premium 4.0
+    // is below the /25 tier floor of 15 → effective premium 15.
+    // Estimated Raw = $100 × 15 = $1,500
+    expect(result!.siblingBaseMedianRaw).toBeCloseTo(100, 0);
+    expect(result!.estimatedRawPrice).toBeCloseTo(1500, 0);
+  });
+
+  it("trend-anchors: projects sibling median forward to today using rate before multiplying", async () => {
+    // Willits Base Auto median $75, newest sale 21 days ago (3 weeks).
+    // Matched-cohort +10%/wk → sibling projected today = $75 × (1 + 0.10 × 3)
+    // = $75 × 1.30 = $97.50. Orange /25 floor 15× → estimated Raw = $1,462.50.
+    // Predicted 7d = $1,462.50 × (1 + 0.10 × 1) = $1,608.75
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          {
+            year: 2025,
+            set: "Bowman Chrome Prospects",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 4.364,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "sibling",
+        player: "Eli Willits",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+      } as any,
+    ]);
+    const twentyOneDaysAgo = new Date(Date.now() - 21 * 24 * 3600 * 1000).toISOString();
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 75, date: twentyOneDaysAgo, sale_type: "auction" },
+          { price: 75, date: twentyOneDaysAgo, sale_type: "buy it now" },
+          { price: 75, date: twentyOneDaysAgo, sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: true,
+      playerName: "Eli Willits",
+      trajectoryRateWeekly: 0.10,   // matched-cohort says +10%/wk
+    });
+    expect(result).not.toBeNull();
+    expect(result!.siblingBaseMedianRaw).toBeCloseTo(75, 0);
+    // Projected today = 75 × (1 + 0.10 × 3) = 97.5
+    expect(result!.siblingBaseProjectedToday).toBeCloseTo(97.5, 1);
+    expect(result!.siblingWeeksSinceNewestSale).toBeCloseTo(3, 1);
+    // × 15 (floor) = 1462.50
+    expect(result!.estimatedRawPrice).toBeCloseTo(1462.5, 0);
+    // × (1 + 0.10 × 1) = 1608.75
+    expect(result!.estimatedRawPredicted7d).toBeCloseTo(1608.75, 0);
   });
 });
