@@ -1154,6 +1154,32 @@ function extractParallelTierKey(
   return { year: year as string | number, set, variant };
 }
 
+/**
+ * CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): resolve "auto" vs
+ * "base" from CH's identity metadata. The `subset` field carries
+ * autograph indicators ("Prospect Autographs", "Signatures", etc.);
+ * `isAuto` might also be surfaced on the routed identity. Falls back
+ * to "base" when we can't confidently detect.
+ */
+function extractCardClass(identity: unknown): "auto" | "base" {
+  if (!identity || typeof identity !== "object") return "base";
+  const rec = identity as Record<string, unknown>;
+  if (rec.isAuto === true) return "auto";
+  const subset = typeof rec.subset === "string" ? rec.subset.toLowerCase() : "";
+  if (subset.includes("auto") || subset.includes("signat")) return "auto";
+  const title = typeof rec.title === "string" ? rec.title.toLowerCase() : "";
+  const desc = typeof rec.description === "string" ? rec.description.toLowerCase() : "";
+  if (
+    title.includes(" auto") ||
+    title.includes("autograph") ||
+    desc.includes(" auto") ||
+    desc.includes("autograph")
+  ) {
+    return "auto";
+  }
+  return "base";
+}
+
 const router = Router();
 
 router.get("/health", (req, res) => {
@@ -2748,6 +2774,9 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
       // in so thin-market cards get an estimate rather than a gray pill.
       enableSiblingFallback: true,
+      // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): route the auto
+      // vs base classification so raw × multiplier picks the right column.
+      cardClass: extractCardClass(identity),
     });
 
     void (async () => {
@@ -2972,6 +3001,8 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       parallelTierKey,
       // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route.
       enableSiblingFallback: true,
+      // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06)
+      cardClass: extractCardClass(meta),
     });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally

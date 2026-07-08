@@ -161,21 +161,25 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
 
     expect(curve.cardId).toBe("card-1");
     expect(curve.totalSampleCount).toBe(0);
-    // Canonical grades: Raw + top-tier (PSA 10, BGS 10 Pristine, BGS 9.5,
-    // SGC 10, CGC 10) + 9-tier (PSA 9, BGS 9, SGC 9, CGC 9) = 10 grades.
-    expect(curve.entries).toHaveLength(10);
+    // CF-EIGHT-TIER-GRADES (2026-07-06): 14 canonical grades =
+    // Raw + PSA 10/9/8 + BGS 10/9.5/9/8 + SGC 10/9/8 + CGC 10/9/8
+    expect(curve.entries).toHaveLength(14);
     const grades = curve.entries.map((e) => e.grade);
     expect(grades).toEqual([
       "Raw",
       "PSA 10",
       "PSA 9",
+      "PSA 8",
       "BGS 10",
       "BGS 9.5",
       "BGS 9",
+      "BGS 8",
       "SGC 10",
       "SGC 9",
+      "SGC 8",
       "CGC 10",
       "CGC 9",
+      "CGC 8",
     ]);
     for (const e of curve.entries) {
       expect(e.sampleCount).toBe(0);
@@ -427,6 +431,38 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
       expect(psa10.valueSource).toBe("estimated");
       expect(psa10.estimatedFrom).toBe("raw-multiplier");
       expect(psa10.value).toBe(800); // 100 × 8
+    });
+
+    it("CF-CLASS-AWARE-GRADE-MULTIPLIERS: auto column produces different PSA 10 estimate than base column", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(1) },
+            { price: 100, date: daysAgo(2) },
+            { price: 100, date: daysAgo(3) },
+          ] as any;
+        }
+        return [];
+      });
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+
+      // Base card default → PSA 10 = Raw × 8 = 800
+      const baseCurve = await buildObservedGradeCurve("c1");
+      const basePSA10 = baseCurve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(basePSA10.value).toBe(800);
+      expect(basePSA10.estimatedMultiplier).toBe(8);
+
+      // Auto class → PSA 10 = Raw × 7 = 700, PSA 8 = Raw × 1.75 = 175
+      const autoCurve = await buildObservedGradeCurve("c1", { cardClass: "auto" });
+      const autoPSA10 = autoCurve.entries.find((e) => e.grade === "PSA 10")!;
+      expect(autoPSA10.value).toBe(700);
+      expect(autoPSA10.estimatedMultiplier).toBe(7);
+      const autoPSA8 = autoCurve.entries.find((e) => e.grade === "PSA 8")!;
+      expect(autoPSA8.value).toBe(175);
+      expect(autoPSA8.estimatedMultiplier).toBe(1.75);
     });
 
     it("observed grade WINS over estimation even when fallback is available", async () => {
