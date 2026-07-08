@@ -50,6 +50,34 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // ── 1-of-1s ────────────────────────────────────────────────────────
   { match: (n) => n.includes("superfractor"), printRun: 1 },
   { match: (n) => n.includes("printing plate") || n.includes("printing-plate"), printRun: 1 },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Panini Prizm family (NBA / NFL) — CF-PANINI-PRIZM-COVERAGE
+  // (2026-07-06). Print runs per Panini's published spec. Some
+  // parallels are unnumbered but visibly rarer than base — assigned a
+  // print-run proxy for the floor tier.
+  //
+  // NOTE: These are listed BEFORE the generic Bowman/Topps color rules
+  // below so "Gold Prizm" / "Red Prizm" / etc. match the Panini tier
+  // instead of the Bowman color-only fallback.
+  // ═══════════════════════════════════════════════════════════════════
+  { match: (n) => n === "nebula prizm" || n === "nebula",         printRun: 1 },
+  { match: (n) => n.includes("black finite") || n === "black prizm", printRun: 1 },
+  { match: (n) => n === "gold vinyl" || n.includes("gold vinyl"), printRun: 5 },
+  { match: (n) => n === "gold prizm" || (n.startsWith("gold ") && n.includes("prizm")), printRun: 10 },
+  { match: (n) => n === "camo prizm" || n === "camo",             printRun: 25 },
+  { match: (n) => n === "mojo prizm" || n === "mojo",             printRun: 25 },
+  { match: (n) => n === "blue ice"   || n.includes("blue ice"),   printRun: 75 },
+  { match: (n) => n === "purple prizm" || (n.startsWith("purple ") && n.includes("prizm")), printRun: 75 },
+  { match: (n) => n === "hyper prizm" || n === "hyper",           printRun: 275 },
+  { match: (n) => n === "red prizm"  || (n.startsWith("red ") && n.includes("prizm")),  printRun: 299 },
+  { match: (n) => n === "silver prizm" || n === "silver",         printRun: 500 },   // unnumbered but scarce; floor tier proxy
+  { match: (n) => n === "green prizm" || n === "green",           printRun: 500 },   // unnumbered but scarce
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Bowman / Topps refractor family (baseball). Kept AFTER Panini so
+  // "Gold Prizm" doesn't hit the generic "gold" rule.
+  // ═══════════════════════════════════════════════════════════════════
   // ── /5 or less (Red family) ────────────────────────────────────────
   { match: (n) => n === "red" || n.startsWith("red "), printRun: 5 },
   { match: (n) => n.includes("red refractor") || n.includes("red x-fractor"), printRun: 5 },

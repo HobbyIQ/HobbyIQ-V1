@@ -256,6 +256,126 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
     expect(result!.estimatedRawPrice).toBeCloseTo(1500, 0);
   });
 
+  it("CF-SIBLING-BASE-CARD-FALLBACK: uses Base card + auto-premium when Base Auto is missing", async () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          {
+            year: 2025,
+            set: "Bowman Chrome Prospects",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 4.364,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    // Only Base card returned — no Base Auto SKU exists for this player
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "star-base-card",
+        player: "Mike Trout",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "",
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 5, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 5, date: new Date().toISOString(), sale_type: "buy it now" },
+          { price: 5, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-orange-auto",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: true,
+      playerName: "Mike Trout",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.siblingIsCrossClass).toBe(true);
+    expect(result!.crossClassAutoPremium).toBe(10);
+    // Base card $5 × 10 auto premium = $50 base-auto anchor
+    // × 15 Orange /25 floor = $750 Raw estimate
+    expect(result!.estimatedRawPrice).toBeCloseTo(750, 0);
+  });
+
+  it("CF-SIBLING-NON-AUTO-COVERAGE: fires for non-auto rare parallels (Orange /25 base card)", async () => {
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          {
+            year: 2025,
+            set: "Bowman Draft Chrome",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: false,
+            baseRelativePremium: 23.181,   // empirical base-card Orange premium
+            sampleSize: 26,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "base-card-sibling",
+        player: "Some Prospect",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "",
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 1, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 1, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-orange-base",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: false,   // ← non-auto target
+      playerName: "Some Prospect",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.siblingIsCrossClass).toBe(false);
+    // Empirical 23.181 IS above the /25 floor of 15 → uses empirical
+    expect(result!.parallelPremium).toBeCloseTo(23.181, 2);
+    // $1 base × 23.181 = ~$23.18
+    expect(result!.estimatedRawPrice).toBeCloseTo(23.18, 1);
+  });
+
   it("trend-anchors: projects sibling median forward to today using rate before multiplying", async () => {
     // Willits Base Auto median $75, newest sale 21 days ago (3 weeks).
     // Matched-cohort +10%/wk → sibling projected today = $75 × (1 + 0.10 × 3)

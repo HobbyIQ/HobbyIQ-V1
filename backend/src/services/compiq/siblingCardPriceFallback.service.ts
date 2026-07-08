@@ -122,22 +122,22 @@ function lookupPremium(
   );
   if (exact) return { entry: exact, matchedSet: exact.set };
 
-  // Fallback: same year + Bowman Chrome Prospects (well-covered auto
-  // premiums). Only fire for autos — for base cards the set differences
-  // are too material.
-  if (isAuto) {
-    const proxy = table.find(
-      (e) =>
-        e.year === year &&
-        normalizeToken(e.set) === "bowman chrome prospects" &&
-        normalizeToken(e.parallel) === parallelNorm &&
-        !!e.isAuto === true &&
-        typeof e.baseRelativePremium === "number" &&
-        e.baseRelativePremium > 0 &&
-        e.sampleSize >= 5,
-    );
-    if (proxy) return { entry: proxy, matchedSet: proxy.set };
-  }
+  // Fallback: same year + Bowman Chrome Prospects (well-covered
+  // premiums for the Bowman family). CF-SIBLING-NON-AUTO-COVERAGE
+  // (2026-07-06): widened to base cards too — the print-run floor
+  // still applies universally, and even a mismatched base multiplier
+  // is materially better than a gray pill.
+  const proxy = table.find(
+    (e) =>
+      e.year === year &&
+      normalizeToken(e.set) === "bowman chrome prospects" &&
+      normalizeToken(e.parallel) === parallelNorm &&
+      !!e.isAuto === isAuto &&
+      typeof e.baseRelativePremium === "number" &&
+      e.baseRelativePremium > 0 &&
+      e.sampleSize >= 5,
+  );
+  if (proxy) return { entry: proxy, matchedSet: proxy.set };
 
   return null;
 }
@@ -184,6 +184,14 @@ export interface SiblingFallbackResult {
   premiumMatchedSet: string;
   /** True when we had to fall through to Bowman Chrome Prospects. */
   premiumUsedProxy: boolean;
+  /** CF-SIBLING-BASE-CARD-FALLBACK (2026-07-06): true when the target
+   *  is an auto but we anchored on the player's Base CARD (non-auto)
+   *  because no Base Auto SKU exists — hobby-consensus auto-over-base
+   *  premium was applied in addition to the parallel premium. */
+  siblingIsCrossClass: boolean;
+  /** Multiplier applied to bridge Base card → Base Auto anchor when
+   *  siblingIsCrossClass is true. Null otherwise. */
+  crossClassAutoPremium: number | null;
 }
 
 /**
@@ -260,9 +268,42 @@ export async function attemptSiblingPriceFallback(
     );
   };
 
-  const sibling = cards.find(
+  // CF-SIBLING-BASE-CARD-FALLBACK (2026-07-06, Drew): when target is an
+  // AUTO and the player has no Base Auto SKU in CH's catalog (e.g.
+  // Trout / Judge whose only autos are inserts), fall through to the
+  // Base card + a hobby-consensus auto premium. Detects the missing-
+  // Base-Auto case by finding no result matching `targetIsBase` and
+  // then searching for a Base (non-auto) card.
+  let sibling = cards.find(
     (c) => c.card_id !== input.targetCardId && targetIsBase(c),
   );
+  // Additional signal — if we used Base Auto (or Base) as the sibling
+  // but had to promote up from the alternative anchor. Tracked for
+  // telemetry so ops can KQL how often this fires.
+  let siblingIsCrossClass = false;
+  let crossClassAutoPremium: number | null = null;
+  if (!sibling && input.isAuto) {
+    // Try Base card (non-auto). Same player, same set.
+    const baseCard = cards.find((c) => {
+      const variant = (c.variant ?? "").toLowerCase();
+      const subset = (c.subset ?? "").toLowerCase();
+      return (
+        c.card_id !== input.targetCardId &&
+        (variant === "base" || variant === "") &&
+        !subset.includes("auto") &&
+        !subset.includes("signat")
+      );
+    });
+    if (baseCard) {
+      sibling = baseCard;
+      siblingIsCrossClass = true;
+      // Hobby-consensus auto-over-base premium for prospects. Ranges
+      // from 5× (cool player) to 50-100× (top prospect at peak hype).
+      // Middle-ground 10× as a defensible starting point; refined via
+      // corpus calibration later.
+      crossClassAutoPremium = 10;
+    }
+  }
   if (!sibling) {
     console.log(JSON.stringify({
       event: "sibling_fallback_no_base_found",
@@ -362,8 +403,16 @@ export async function attemptSiblingPriceFallback(
       Math.round(siblingBaseMedianRaw * marketMultiplier * 100) / 100;
   }
 
+  // When we cross-class-fell-back (Base card → Auto target), apply the
+  // auto-premium multiplier FIRST to get the projected Base Auto anchor,
+  // THEN apply the parallel premium to reach the target parallel. Both
+  // multipliers stack — 1 Base card × 10 (auto premium) × 15 (Orange /25 floor)
+  // = 150× vs a plain Base card. Represents the compounded scarcity.
+  const preParallelAnchor = siblingIsCrossClass && crossClassAutoPremium
+    ? siblingBaseProjectedToday * crossClassAutoPremium
+    : siblingBaseProjectedToday;
   const estimatedRawPrice =
-    Math.round(siblingBaseProjectedToday * parallelPremium * 100) / 100;
+    Math.round(preParallelAnchor * parallelPremium * 100) / 100;
   const estimatedPSA10Price = Math.round(estimatedRawPrice * 8 * 100) / 100;
   // Predicted at 7d = today's estimate projected another week forward
   // at the same rate. Null when no rate is available.
@@ -397,6 +446,8 @@ export async function attemptSiblingPriceFallback(
     inferredPrintRun: floored.inferredPrintRun,
     premiumMatchedSet: premiumMatch.matchedSet,
     premiumUsedProxy,
+    siblingIsCrossClass,
+    crossClassAutoPremium,
     estimatedRawPrice,
     estimatedPSA10Price,
     estimatedRawPredicted7d,
@@ -414,5 +465,7 @@ export async function attemptSiblingPriceFallback(
     parallelPremium,
     premiumMatchedSet: premiumMatch.matchedSet,
     premiumUsedProxy,
+    siblingIsCrossClass,
+    crossClassAutoPremium,
   };
 }
