@@ -2942,6 +2942,7 @@ export function emitPredictionToCorpus(params: {
     | "live-market-last-sale"
     | "trend-extrapolated"
     | "last-sale"
+    | "sibling-fallback"
     | null;
   estimatedValue?: number | null;
 }): void {
@@ -4942,6 +4943,106 @@ export async function computeEstimate(
     const modelExpectation: ModelExpectation = null;
     const modelSignal: ModelSignal = null;
 
+    // CF-COMPIQ-SIBLING-BACKPORT (2026-07-07, Drew): fire the new-path
+    // sibling fallback (PR #302/#307/#309) when the old path would
+    // otherwise return null for estimatedValue. iOS is currently
+    // hitting /api/compiq/search + /price-by-id (both route through
+    // computeEstimate), NOT the new /card-panel — so without this
+    // backport the ~280/day of production requests never see any of
+    // the recent engine improvements (sibling anchor, print-run
+    // floors, brand-family proxy, cross-class base fallback).
+    //
+    // Wire: attempt sibling fallback iff we have enough identity to
+    // resolve a target (year, set, parallel, isAuto, playerName).
+    // If sibling produces an estimate AND the existing trend-
+    // extrapolated mechanism produced nothing, upgrade the response.
+    // We PREFER trend-extrapolated when both fire — sibling is the
+    // last-resort backstop.
+    let backportedSiblingLineage:
+      | Awaited<
+          ReturnType<
+            typeof import("./siblingCardPriceFallback.service.js")["attemptSiblingPriceFallback"]
+          >
+        >
+      | null = null;
+    let backportedEstimateValue: number | null = null;
+    let backportedEstimateRange: { low: number; high: number } | null = null;
+    if (
+      resolvedEstimatedValue === null &&
+      body.playerName &&
+      body.playerName.trim().length > 0 &&
+      body.cardYear &&
+      body.product &&
+      (normalizedParallel || body.parallel)
+    ) {
+      try {
+        const parallelForFallback =
+          normalizedParallel ?? (body.parallel as string | undefined);
+        if (parallelForFallback) {
+          const { attemptSiblingPriceFallback } = await import(
+            "./siblingCardPriceFallback.service.js"
+          );
+          const year =
+            typeof body.cardYear === "number"
+              ? body.cardYear
+              : parseInt(String(body.cardYear), 10);
+          const fb = await attemptSiblingPriceFallback({
+            targetCardId: `compiq-backport:${cardIdentity?.card_id ?? "no-id"}`,
+            year,
+            set: body.product as string,
+            parallel: parallelForFallback,
+            isAuto: effectiveIsAuto,
+            playerName: body.playerName,
+            trajectoryRateWeekly: null,   // no cheap rate on this path yet
+          });
+          if (fb && typeof fb.estimatedRawPrice === "number" && fb.estimatedRawPrice > 0) {
+            backportedSiblingLineage = fb;
+            backportedEstimateValue = fb.estimatedRawPrice;
+            backportedEstimateRange = {
+              low: Math.round(fb.estimatedRawPrice * 0.85 * 100) / 100,
+              high: Math.round(fb.estimatedRawPrice * 1.15 * 100) / 100,
+            };
+            console.log(JSON.stringify({
+              event: "compiq_sibling_backport_fired",
+              source: "compiqEstimate",
+              player: body.playerName,
+              year,
+              set: body.product,
+              parallel: parallelForFallback,
+              isAuto: effectiveIsAuto,
+              estimatedRawPrice: fb.estimatedRawPrice,
+              parallelPremium: fb.parallelPremium,
+              floorApplied: fb.floorApplied,
+              inferredPrintRun: fb.inferredPrintRun,
+              siblingIsCrossClass: fb.siblingIsCrossClass,
+              premiumMatchedSet: fb.premiumMatchedSet,
+              premiumUsedProxy: fb.premiumUsedProxy,
+            }));
+          }
+        }
+      } catch (err) {
+        console.warn(
+          `[compiqEstimate] sibling backport threw — falling through: ${(err as Error)?.message ?? err}`,
+        );
+      }
+    }
+    // Effective values that flow into the response. Sibling backport
+    // wins ONLY when trend-extrapolation produced nothing.
+    const finalEstimatedValue = resolvedEstimatedValue ?? backportedEstimateValue;
+    const finalEstimateRange =
+      resolvedEstimateRange ??
+      (backportedEstimateRange
+        ? [backportedEstimateRange.low, backportedEstimateRange.high]
+        : null);
+    const finalEstimateSource =
+      resolvedEstimateSource ??
+      (backportedEstimateValue !== null ? "sibling-fallback" : null);
+    const finalEstimateBasis =
+      resolvedEstimateBasis ??
+      (backportedEstimateValue !== null
+        ? `Sibling anchor via ${backportedSiblingLineage?.siblingIsCrossClass ? "Base card × cross-class × " : "Base Auto × "}${backportedSiblingLineage?.parallelPremium}× ${backportedSiblingLineage?.floorApplied ? "(floor)" : "(empirical)"}`
+        : null);
+
     emitPredictionToCorpus({
       cardIdentity: cardIdentity ? { card_id: cardIdentity.card_id ?? null } : null,
       body,
@@ -4958,8 +5059,8 @@ export async function computeEstimate(
       // CF-TREND-EXTRAPOLATED (2026-06-10): audit fields. fairMarketValue
       // stays null (structural training-exclusion); estimateSource +
       // estimatedValue are descriptive only.
-      estimateSource: resolvedEstimateSource,
-      estimatedValue: resolvedEstimatedValue,
+      estimateSource: finalEstimateSource,
+      estimatedValue: finalEstimatedValue,
     });
 
     return {
@@ -4977,9 +5078,9 @@ export async function computeEstimate(
       fairMarketValueLow: null,
       fairMarketValueHigh: null,
       marketValue: null,
-      estimatedValue: resolvedEstimatedValue,
-      estimateRange: resolvedEstimateRange,
-      estimateBasis: resolvedEstimateBasis,
+      estimatedValue: finalEstimatedValue,
+      estimateRange: finalEstimateRange,
+      estimateBasis: finalEstimateBasis,
       predictedPrice: mechanism1.predictedPrice,
       predictedPriceRange: mechanism1.predictedPriceRange,
       predictedPriceAttribution: mechanism1.predictedPriceAttribution,
@@ -5044,7 +5145,30 @@ export async function computeEstimate(
       // "last-sale" when an anchor exists but trend is unusable; null
       // when no anchor at all.
       lastSale,
-      estimateSource: resolvedEstimateSource,
+      estimateSource: finalEstimateSource,
+      // CF-COMPIQ-SIBLING-BACKPORT (2026-07-07): expose the sibling
+      // lineage on the response so iOS can render a "Est via similar
+      // card" badge. Null when trend-extrapolation already produced
+      // an estimate or when sibling didn't fire.
+      siblingFallback: backportedSiblingLineage
+        ? {
+            siblingCardId: backportedSiblingLineage.siblingCardId,
+            siblingParallel: backportedSiblingLineage.siblingParallel,
+            siblingBaseMedianRaw: backportedSiblingLineage.siblingBaseMedianRaw,
+            siblingBaseProjectedToday:
+              backportedSiblingLineage.siblingBaseProjectedToday,
+            siblingWeeksSinceNewestSale:
+              backportedSiblingLineage.siblingWeeksSinceNewestSale,
+            parallelPremium: backportedSiblingLineage.parallelPremium,
+            empiricalPremium: backportedSiblingLineage.empiricalPremium,
+            floorApplied: backportedSiblingLineage.floorApplied,
+            inferredPrintRun: backportedSiblingLineage.inferredPrintRun,
+            premiumMatchedSet: backportedSiblingLineage.premiumMatchedSet,
+            premiumUsedProxy: backportedSiblingLineage.premiumUsedProxy,
+            siblingIsCrossClass: backportedSiblingLineage.siblingIsCrossClass,
+            crossClassAutoPremium: backportedSiblingLineage.crossClassAutoPremium,
+          }
+        : null,
       // CF-CH-P8-TESTS: provenance also on the thin-comp/trend-extrapolated
       // branch when fetched.vendor === "cardhedge". Omitted otherwise so
       // CS-sourced trend-extrap rows stay byte-identical pre/post P8.
