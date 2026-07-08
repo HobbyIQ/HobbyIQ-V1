@@ -91,6 +91,31 @@ function normalizeToken(s: string): string {
 }
 
 /**
+ * Extract the last-name token from a "First Last" or "First Middle Last"
+ * player name. Used by the sibling picker to text-check candidate cards
+ * against the target player — CH sometimes emits `player: "X"` while
+ * `title/name/subset` describes a DIFFERENT player. Surname match on
+ * text fields breaks that tie.
+ *
+ * Returns lowercase last-name, or null when input is empty. Handles
+ * suffixes like "Jr." / "III" by using the token before the suffix.
+ * When surname is < 4 chars, returns null so we don't accidentally
+ * match on common substrings ("Kim", "Wu", "Yi").
+ */
+function extractSurname(fullName: string | null | undefined): string | null {
+  if (!fullName || typeof fullName !== "string") return null;
+  const parts = fullName.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  const suffixes = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);
+  let last = parts[parts.length - 1];
+  if (suffixes.has(last) && parts.length >= 2) {
+    last = parts[parts.length - 2];
+  }
+  if (last.length < 4) return null;
+  return last;
+}
+
+/**
  * Find the parallel-premium entry matching (year, set, parallel, isAuto).
  * Falls through to Bowman Chrome Prospects as a same-year proxy when
  * the exact set has no entry for the auto tier (common: Bowman Draft
@@ -322,15 +347,32 @@ export async function attemptSiblingPriceFallback(
     );
   };
 
-  // CF-SIBLING-BASE-CARD-FALLBACK (2026-07-06, Drew): when target is an
-  // AUTO and the player has no Base Auto SKU in CH's catalog (e.g.
-  // Trout / Judge whose only autos are inserts), fall through to the
-  // Base card + a hobby-consensus auto premium. Detects the missing-
-  // Base-Auto case by finding no result matching `targetIsBase` and
-  // then searching for a Base (non-auto) card.
-  let sibling = cards.find(
+  // CF-SIBLING-PICKER-SURNAME-GUARD (2026-07-07, Drew): CH's catalog has
+  // known player-attribution glitches — some cards emit player="Ethan
+  // Conrad" but description/title="Gavin Fien 2025 Bowman Draft Chrome
+  // Prospect Autographs Baseball ..." (observed in ~4 SKUs during the
+  // Conrad probe today; same pattern seen with Willits/Ike Irish
+  // yesterday). Filtering solely on the CH-reported `player` field will
+  // silently pick THE WRONG PLAYER's card as our sibling — and then
+  // multiply THAT card's median × 15× floor as the target's price.
+  //
+  // Guard: prefer siblings whose text fields (title / name / subset)
+  // contain the target player's surname. If NONE match, fall back to
+  // the CH player field (better than nothing when text fields are
+  // empty), but never over-rule an explicit different name.
+  const surnaneToken = extractSurname(input.playerName);
+  const textContainsSurname = (c: CardHedgeCard): boolean => {
+    if (!surnaneToken) return true;   // no surname to check → don't filter
+    const blob = `${c.title ?? ""} ${c.name ?? ""} ${c.subset ?? ""}`.toLowerCase();
+    return blob.includes(surnaneToken);
+  };
+
+  const candidateSiblings = cards.filter(
     (c) => c.card_id !== input.targetCardId && targetIsBase(c),
   );
+  // Prefer candidates whose description clearly matches the player.
+  const surnameMatches = candidateSiblings.filter(textContainsSurname);
+  let sibling = surnameMatches[0] ?? candidateSiblings[0];
   // Additional signal — if we used Base Auto (or Base) as the sibling
   // but had to promote up from the alternative anchor. Tracked for
   // telemetry so ops can KQL how often this fires.
@@ -338,7 +380,7 @@ export async function attemptSiblingPriceFallback(
   let crossClassAutoPremium: number | null = null;
   if (!sibling && input.isAuto) {
     // Try Base card (non-auto). Same player, same set.
-    const baseCard = cards.find((c) => {
+    const baseCandidates = cards.filter((c) => {
       const variant = (c.variant ?? "").toLowerCase();
       const subset = (c.subset ?? "").toLowerCase();
       return (
@@ -348,6 +390,9 @@ export async function attemptSiblingPriceFallback(
         !subset.includes("signat")
       );
     });
+    // Same surname guard as above — prefer clearly-named candidates.
+    const baseSurnameMatches = baseCandidates.filter(textContainsSurname);
+    const baseCard = baseSurnameMatches[0] ?? baseCandidates[0];
     if (baseCard) {
       sibling = baseCard;
       siblingIsCrossClass = true;

@@ -147,6 +147,149 @@ describe("CF-SIBLING-CARD-FALLBACK — attemptSiblingPriceFallback", () => {
     expect(result!.estimatedRawPredicted7d).toBeNull();
   });
 
+  it("CF-SIBLING-PICKER-SURNAME-GUARD: skips a CH-mislabeled sibling (player field says X but title says Y)", async () => {
+    // Discovered via prod-data probe 2026-07-07: CH has ~4 rows for
+    // Ethan Conrad where player="Ethan Conrad" but title="Gavin Fien
+    // 2025 Bowman Draft Chrome Prospect Autographs Baseball ...". If
+    // the picker takes the first `targetIsBase` match it grabs the
+    // mislabel and multiplies Fien's median × 15× — wrong player,
+    // wrong price. Guard: prefer candidates whose title/name/subset
+    // contains the target's surname.
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          {
+            year: 2025,
+            set: "Bowman Chrome Prospects",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 4.364,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    // Two candidates: [0] mislabeled (Fien in title), [1] correct (Conrad in title)
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "mislabeled-fien-as-conrad",
+        player: "Ethan Conrad",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+        title: "Gavin Fien 2025 Bowman Draft Chrome Prospect Autographs Baseball",
+      } as any,
+      {
+        card_id: "actual-conrad",
+        player: "Ethan Conrad",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+        title: "Ethan Conrad 2025 Bowman Draft Chrome Prospect Autographs Baseball",
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (cardId, grade) => {
+      if (grade === "Raw" && cardId === "actual-conrad") {
+        return [
+          { price: 200, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 200, date: new Date().toISOString(), sale_type: "auction" },
+          { price: 200, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      if (grade === "Raw" && cardId === "mislabeled-fien-as-conrad") {
+        // Would be Fien's actual market — much cheaper — a completely
+        // wrong anchor if we picked this by mistake
+        return [
+          { price: 50, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-conrad-orange",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: true,
+      playerName: "Ethan Conrad",
+    });
+    expect(result).not.toBeNull();
+    // Must pick the correctly-labeled Conrad card, NOT the mislabeled one
+    expect(result!.siblingCardId).toBe("actual-conrad");
+    expect(result!.siblingBaseMedianRaw).toBeCloseTo(200, 0);
+    // $200 median × 15× Orange /25 floor = $3,000
+    expect(result!.estimatedRawPrice).toBeCloseTo(3000, 0);
+  });
+
+  it("CF-SIBLING-PICKER-SURNAME-GUARD: falls back gracefully when no candidate has surname in title (short surnames or empty text fields)", async () => {
+    // When the guard produces zero candidates (e.g. all title fields
+    // empty, or the surname is < 4 chars), fall back to first-match
+    // rather than returning null. Better than gray-pill.
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({
+        entries: [
+          {
+            year: 2025,
+            set: "Bowman Chrome Prospects",
+            parallel: "Orange",
+            printRun: "(unspecified)",
+            isAuto: true,
+            baseRelativePremium: 4.364,
+            sampleSize: 30,
+            provenance: "empirical",
+          },
+        ],
+      }),
+    );
+    const { searchCards, getCardSales } = await import(
+      "../src/services/compiq/cardhedge.client.js"
+    );
+    // All title/name/subset fields empty — surname guard produces no match
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "conrad-no-text-fields",
+        player: "Ethan Conrad",
+        set: "2025 Bowman Draft Chrome",
+        variant: "Base",
+        subset: "Prospect Autographs",
+        // title/name intentionally missing
+      } as any,
+    ]);
+    vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+      if (grade === "Raw") {
+        return [
+          { price: 100, date: new Date().toISOString(), sale_type: "auction" },
+        ] as any;
+      }
+      return [];
+    });
+    const { _resetTableCacheForTesting, attemptSiblingPriceFallback } = await import(
+      "../src/services/compiq/siblingCardPriceFallback.service.js"
+    );
+    _resetTableCacheForTesting();
+    const result = await attemptSiblingPriceFallback({
+      targetCardId: "target-conrad-orange",
+      year: 2025,
+      set: "Bowman Draft Chrome",
+      parallel: "Orange",
+      isAuto: true,
+      playerName: "Ethan Conrad",
+    });
+    expect(result).not.toBeNull();
+    expect(result!.siblingCardId).toBe("conrad-no-text-fields");
+  });
+
   it("CF-SIBLING-PROXY-SET-BREADTH: falls through to Bowman Draft when Bowman Chrome Prospects has no entry (real Willits case)", async () => {
     // Empirical Willits scenario found via prod-data probe 2026-07-07:
     // - Target: 2025 Bowman Draft Chrome Orange Auto
