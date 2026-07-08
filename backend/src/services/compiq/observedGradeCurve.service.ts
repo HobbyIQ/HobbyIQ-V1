@@ -1311,7 +1311,11 @@ export async function buildObservedGradeCurve(
             : parseInt(String(opts.parallelTierKey.year), 10),
         set: opts.parallelTierKey.set,
         parallel: opts.parallelTierKey.variant,
-        isAuto: true, // MVP: only fires for autos where parallel premiums are strongest
+        // CF-SIBLING-NON-AUTO-COVERAGE (2026-07-06, Drew): route the
+        // actual card class through so Orange /25 BASE cards, Gold /50
+        // base parallels, etc. also get sibling fallback coverage.
+        // Previously hardcoded true (autos-only) as MVP.
+        isAuto: (opts.cardClass ?? "base") === "auto",
         playerName: opts.playerName,
         trajectoryRateWeekly: derivation?.cappedRate ?? null,
       });
@@ -1343,7 +1347,7 @@ export async function buildObservedGradeCurve(
         // opts.cardClass (defaults to "base").
         for (const entry of entries) {
           if (entry.grade === "Raw" || entry.valueSource !== "unavailable") continue;
-          const multiplier = gradeMultiplierFor("auto", entry.grade);
+          const multiplier = gradeMultiplierFor(opts.cardClass ?? "base", entry.grade);
           if (typeof multiplier === "number" && multiplier > 0) {
             entry.value = Math.round(fallback.estimatedRawPrice * multiplier * 100) / 100;
             entry.valueSource = "estimated";

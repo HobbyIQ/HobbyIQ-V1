@@ -50,6 +50,33 @@ describe("CF-PARALLEL-PREMIUM-FLOOR — floorForPrintRun", () => {
   });
 });
 
+describe("CF-PANINI-PRIZM-COVERAGE — Panini parallel names map to print runs", () => {
+  it("recognizes Panini Prizm's numbered rare parallels", () => {
+    expect(inferPrintRun("Nebula Prizm")).toBe(1);
+    expect(inferPrintRun("Black Finite")).toBe(1);
+    expect(inferPrintRun("Gold Prizm")).toBe(10);
+    expect(inferPrintRun("Camo Prizm")).toBe(25);
+    expect(inferPrintRun("Mojo Prizm")).toBe(25);
+    expect(inferPrintRun("Blue Ice")).toBe(75);
+    expect(inferPrintRun("Purple Prizm")).toBe(75);
+    expect(inferPrintRun("Red Prizm")).toBe(299);
+    expect(inferPrintRun("Silver Prizm")).toBe(500);
+    expect(inferPrintRun("Hyper Prizm")).toBe(275);
+  });
+
+  it("Gold Prizm /10 gets the /10 floor (30×)", () => {
+    const result = applyPrintRunFloor(3, "Gold Prizm");
+    expect(result.effective).toBe(30);
+    expect(result.inferredPrintRun).toBe(10);
+  });
+
+  it("Silver Prizm gets the /500 floor (1.5×) — modest but non-zero", () => {
+    const result = applyPrintRunFloor(1, "Silver Prizm");
+    expect(result.effective).toBe(1.5);
+    expect(result.inferredPrintRun).toBe(500);
+  });
+});
+
 describe("CF-PARALLEL-PREMIUM-FLOOR — applyPrintRunFloor", () => {
   it("lifts to floor when empirical is below (Willits Orange Auto case)", () => {
     // Empirical median 4.364 (from 2025 Bowman Chrome Prospects Orange
