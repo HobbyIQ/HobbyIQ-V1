@@ -1156,11 +1156,36 @@ function extractParallelTierKey(
 
 /**
  * CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): resolve "auto" vs
- * "base" from CH's identity metadata. The `subset` field carries
- * autograph indicators ("Prospect Autographs", "Signatures", etc.);
- * `isAuto` might also be surfaced on the routed identity. Falls back
- * to "base" when we can't confidently detect.
+ * "base" from CH's identity metadata.
+ *
+ * CF-CARD-CLASS-NUMBER-PREFIX (2026-07-08, Drew): `RoutedCard` (the
+ * shape returned by getCardMetaById on /card-panel) does NOT include
+ * `subset`, `isAuto`, or `description` — only `number`, `player`,
+ * `set`, `variant`, `title`, `year`. For cards resolved via that
+ * cache path, EVERY auto was falling through to "base" here, which
+ * meant PSA 10 = Raw × 8 (base column) instead of × 7 (auto column).
+ *
+ * Concrete case that surfaced this: Eric Hartman Blue X-Fractor Auto
+ * (card_id 1778542140951x283396404010038530). identity.number is
+ * "CPA-EHA" (canonical Chrome Prospect Autograph prefix), but the
+ * `subset` / `isAuto` / `description` checks all failed because those
+ * fields are stripped by RoutedCard. Result: $550 Raw × 8 = $4,400
+ * PSA 10, when the empirical median for Bowman prospect autos is 4.4×
+ * → ~$2,400 is closer to reality.
+ *
+ * Fix: also check `number` against the CH auto-number-prefix regex
+ * (same list used in cardhedge.client.ts:AUTO_NUMBER_PREFIXES). This
+ * catches every SKU whose numbering scheme signals autograph even
+ * when the description/subset fields aren't populated.
  */
+const CARD_CLASS_AUTO_NUMBER_PREFIX_RE = new RegExp(
+  // Mirror of cardhedge.client.ts AUTO_NUMBER_PREFIXES (kept in sync
+  // manually — small enough that duplication beats a cross-module
+  // export coupling in this leaf route file).
+  "(?:^|\\b)(?:cpa|bcp-a|bcpa|bpa|pa|cra|ra|bcra|bsa|bca|tca|usa|au|bba|bspa|fa|roa)[- ]",
+  "i",
+);
+
 function extractCardClass(identity: unknown): "auto" | "base" {
   if (!identity || typeof identity !== "object") return "base";
   const rec = identity as Record<string, unknown>;
@@ -1177,6 +1202,11 @@ function extractCardClass(identity: unknown): "auto" | "base" {
   ) {
     return "auto";
   }
+  // CF-CARD-CLASS-NUMBER-PREFIX (2026-07-08): last-resort check on the
+  // card number. Covers RoutedCard-shaped identities that don't carry
+  // description / subset. See doc comment above for the Hartman case.
+  const number = typeof rec.number === "string" ? rec.number.trim() : "";
+  if (number && CARD_CLASS_AUTO_NUMBER_PREFIX_RE.test(number)) return "auto";
   return "base";
 }
 
