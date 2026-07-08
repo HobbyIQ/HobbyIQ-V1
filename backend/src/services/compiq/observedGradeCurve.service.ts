@@ -699,7 +699,7 @@ function computeRecencyLiftedAnchor(
  *
  * Bounded to ±10%/week regardless of source.
  */
-interface RateDerivation {
+export interface RateDerivation {
   cappedRate: number;
   signalSource:
     | "matched-cohort-cached"
@@ -710,7 +710,15 @@ interface RateDerivation {
     | "raw-weekly";
 }
 
-async function deriveWeeklyRate(
+/**
+ * CF-MANUAL-IDENTITY-PRICING (2026-07-07, Drew): exported so the
+ * synthetic-identity route (POST /price-manual-identity) can drive the
+ * SAME trajectory-rate derivation as the CH-cardId path. Signature is
+ * intentionally identical to the internal callsite; new callers should
+ * pass releaseDecayPrecomputed = null unless they've already looked it
+ * up (releaseCardKey lookup is idempotent per year+set within 24h).
+ */
+export async function deriveWeeklyRate(
   playerName: string,
   parallelTierKey: ParallelTierKey | null,
   /** CF-RELEASE-DECAY-PRIOR (2026-07-05, Drew): year + set for the

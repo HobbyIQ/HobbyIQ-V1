@@ -3296,6 +3296,81 @@ router.post("/card-grades", requireSession, requireRateLimited("priceChecksPerDa
   }
 });
 
+// CF-MANUAL-IDENTITY-PRICING (2026-07-07, Drew): POST /price-manual-identity
+// Prices a card by MANUAL identity — bypasses CH's card catalog.
+// Serves the "CH doesn't index this SKU" case (Conrad CPA-EC Blue
+// Refractor Auto, Hartman CPA-EHA Blue Refractor Auto, all Ethan
+// Salas parallels, etc). iOS falls back to a manual-entry sheet when
+// /api/search/cards returns no match; the sheet POSTs the tuple here.
+//
+// Body: { year, set, playerName, parallel, isAuto }
+// Returns: { estimatedRawPrice, estimatedPSA10Price,
+//            estimatedRawPredicted7d, trajectoryRateWeekly,
+//            signalSource, siblingFallback: {...lineage...} }
+router.post(
+  "/price-manual-identity",
+  requireSession,
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const { year, set, playerName, parallel, isAuto } = req.body || {};
+
+      // Validate required fields.
+      if (typeof year !== "number" || !Number.isFinite(year) || year < 1900 || year > 2100) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing or invalid "year" — must be a 4-digit number',
+        });
+      }
+      if (typeof set !== "string" || !set.trim()) {
+        return res.status(400).json({ success: false, error: 'Missing or invalid "set" field' });
+      }
+      if (typeof playerName !== "string" || !playerName.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing or invalid "playerName" field',
+        });
+      }
+      if (typeof parallel !== "string" || !parallel.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing or invalid "parallel" field',
+        });
+      }
+      if (typeof isAuto !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing or invalid "isAuto" field — must be boolean',
+        });
+      }
+
+      const { priceByManualIdentity } = await import(
+        "../services/compiq/manualIdentityPricing.service.js"
+      );
+      const result = await priceByManualIdentity({
+        year,
+        set: set.trim(),
+        playerName: playerName.trim(),
+        parallel: parallel.trim(),
+        isAuto,
+      });
+
+      if (result === null) {
+        return res.json({
+          success: false,
+          error: "no_sibling_estimate_available",
+          message:
+            "No sibling anchor available for this tuple. Common causes: (a) player has no Base Auto or Base card in this set, or (b) parallel has no calibration entry and doesn't match a known print-run tier.",
+        });
+      }
+
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
 router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   const handlerStart = Date.now();
   try {
