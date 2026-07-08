@@ -262,6 +262,58 @@ export interface ObservedGradeCurve {
     | "release-decay-only"
     | "raw-weekly"
     | null;
+  /** CF-SIBLING-LINEAGE-SURFACE (2026-07-07, Drew): when the sibling
+   *  fallback drove any entry's `value`, this block surfaces the
+   *  lineage so iOS can render a "Est via Base Auto × 15× Orange floor"
+   *  provenance badge, and so ops can eyeball the price derivation
+   *  without KQL round-tripping. Null when no sibling fallback fired
+   *  (either the target had real comps, fallback was disabled, or
+   *  fallback bailed out at any step). */
+  siblingFallback: {
+    /** Sibling card ID we anchored on. */
+    siblingCardId: string;
+    /** Sibling's variant label (usually "Base"; "Base" for cross-class
+     *  fallback since the sibling IS a Base card in that case). */
+    siblingParallel: string;
+    /** Sibling's weighted median at Raw BEFORE trend-projection. */
+    siblingBaseMedianRaw: number;
+    /** Sibling's median projected forward to today via the target's
+     *  trajectory rate (matched-cohort / parallel-tier / release-decay).
+     *  Same as siblingBaseMedianRaw when no trajectory rate was
+     *  available. */
+    siblingBaseProjectedToday: number;
+    /** Weeks between the sibling's newest closed sale and today. */
+    siblingWeeksSinceNewestSale: number | null;
+    /** Effective parallel-premium multiplier applied at the target's
+     *  print-run tier. This is `max(empiricalPremium, printRunFloor)`
+     *  when the parallel matches a hobby-consensus floor. */
+    parallelPremium: number;
+    /** The empirical (median-of-medians) premium from the calibration
+     *  table BEFORE floor lift. Same as parallelPremium when no floor
+     *  applied. Useful for KQL: `parallelPremium != empiricalPremium`
+     *  = floor overrode the empirical value. */
+    empiricalPremium: number;
+    /** True when the print-run floor lifted the empirical value. */
+    floorApplied: boolean;
+    /** Inferred print run for the target parallel (25 for Orange, 50
+     *  for Gold, etc.). Null when the parallel doesn't match any
+     *  known hobby-consensus tier. */
+    inferredPrintRun: number | null;
+    /** Set from the parallel-premiums table row that matched (may be
+     *  the same-set exact hit OR the Bowman Chrome Prospects proxy). */
+    premiumMatchedSet: string;
+    /** True when we fell through to the Bowman Chrome Prospects proxy
+     *  because no same-set entry existed. */
+    premiumUsedProxy: boolean;
+    /** CF-SIBLING-BASE-CARD-FALLBACK (PR #305): true when the target
+     *  is an auto but we anchored on a Base card (non-auto) because no
+     *  Base Auto SKU existed for the player in this set. In that case
+     *  `crossClassAutoPremium` was applied at the pre-parallel anchor. */
+    siblingIsCrossClass: boolean;
+    /** Bridge multiplier from Base card → Base Auto anchor (10× hobby-
+     *  consensus). Null when siblingIsCrossClass is false. */
+    crossClassAutoPremium: number | null;
+  } | null;
 }
 
 /**
@@ -1297,6 +1349,10 @@ export async function buildObservedGradeCurve(
   //
   // Populates the target's trendAdjustedValue + predictedPriceAt30d
   // fields directly — no second trajectory pass needed.
+  // Lineage captured across the sibling-fallback branch so we can
+  // surface it on the return value (CF-SIBLING-LINEAGE-SURFACE
+  // 2026-07-07). Null when no sibling fallback fired.
+  let siblingFallbackLineage: ObservedGradeCurve["siblingFallback"] = null;
   const allUnavailable = entries.every((e) => e.valueSource === "unavailable");
   if (allUnavailable && opts.enableSiblingFallback && opts.playerName && opts.parallelTierKey) {
     try {
@@ -1320,6 +1376,21 @@ export async function buildObservedGradeCurve(
         trajectoryRateWeekly: derivation?.cappedRate ?? null,
       });
       if (fallback && fallback.estimatedRawPrice !== null) {
+        siblingFallbackLineage = {
+          siblingCardId: fallback.siblingCardId,
+          siblingParallel: fallback.siblingParallel,
+          siblingBaseMedianRaw: fallback.siblingBaseMedianRaw,
+          siblingBaseProjectedToday: fallback.siblingBaseProjectedToday,
+          siblingWeeksSinceNewestSale: fallback.siblingWeeksSinceNewestSale,
+          parallelPremium: fallback.parallelPremium,
+          empiricalPremium: fallback.empiricalPremium,
+          floorApplied: fallback.floorApplied,
+          inferredPrintRun: fallback.inferredPrintRun,
+          premiumMatchedSet: fallback.premiumMatchedSet,
+          premiumUsedProxy: fallback.premiumUsedProxy,
+          siblingIsCrossClass: fallback.siblingIsCrossClass,
+          crossClassAutoPremium: fallback.crossClassAutoPremium,
+        };
         const rawEntry = entries.find((e) => e.grade === "Raw");
         if (rawEntry) {
           rawEntry.value = fallback.estimatedRawPrice;
@@ -1342,9 +1413,9 @@ export async function buildObservedGradeCurve(
           }
         }
         // Cascade sibling-derived Raw to slab grades via class-aware
-        // tier multipliers. Sibling fallback fires only on autos (MVP)
-        // so we use the auto column directly here — not the caller's
-        // opts.cardClass (defaults to "base").
+        // tier multipliers. CF-SIBLING-NON-AUTO-COVERAGE (PR #305)
+        // lifted the autos-only restriction, so we now use the
+        // caller's opts.cardClass (auto vs base) directly.
         for (const entry of entries) {
           if (entry.grade === "Raw" || entry.valueSource !== "unavailable") continue;
           const multiplier = gradeMultiplierFor(opts.cardClass ?? "base", entry.grade);
@@ -1380,6 +1451,7 @@ export async function buildObservedGradeCurve(
     computedAt: new Date().toISOString(),
     ratePerWeek: derivation?.cappedRate ?? null,
     signalSource: derivation?.signalSource ?? null,
+    siblingFallback: siblingFallbackLineage,
   };
 }
 
@@ -1462,6 +1534,7 @@ export async function buildObservedGradeCurvesBulk(
           computedAt: new Date().toISOString(),
           ratePerWeek: null,
           signalSource: null,
+          siblingFallback: null,
         });
       }
     }

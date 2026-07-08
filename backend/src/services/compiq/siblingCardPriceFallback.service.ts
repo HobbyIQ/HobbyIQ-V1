@@ -178,8 +178,20 @@ export interface SiblingFallbackResult {
   siblingBaseProjectedToday: number;
   /** Weeks since the sibling's newest closed sale — used for projection. */
   siblingWeeksSinceNewestSale: number | null;
-  /** Multiplier applied. */
+  /** Effective multiplier applied: max(empiricalPremium, printRunFloor). */
   parallelPremium: number;
+  /** CF-SIBLING-LINEAGE-SURFACE (2026-07-07): the empirical (median-of-
+   *  medians) premium from the calibration table BEFORE floor lift.
+   *  Same as parallelPremium when no floor applied. Enables downstream
+   *  callers + KQL to see when the hobby-consensus floor overrode the
+   *  empirical value. */
+  empiricalPremium: number;
+  /** True when the print-run floor lifted the empirical value. */
+  floorApplied: boolean;
+  /** Inferred print run for the target parallel (25 for Orange, 50
+   *  for Gold, etc.). Null when the parallel didn't match any known
+   *  hobby-consensus tier. */
+  inferredPrintRun: number | null;
   /** Which parallel-premium table entry we matched (helps ops debug). */
   premiumMatchedSet: string;
   /** True when we had to fall through to Bowman Chrome Prospects. */
@@ -463,6 +475,9 @@ export async function attemptSiblingPriceFallback(
     siblingBaseProjectedToday,
     siblingWeeksSinceNewestSale,
     parallelPremium,
+    empiricalPremium,
+    floorApplied: floored.flooredFrom !== null,
+    inferredPrintRun: floored.inferredPrintRun,
     premiumMatchedSet: premiumMatch.matchedSet,
     premiumUsedProxy,
     siblingIsCrossClass,
