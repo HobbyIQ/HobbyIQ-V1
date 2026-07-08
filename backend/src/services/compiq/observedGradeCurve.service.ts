@@ -74,6 +74,11 @@ import {
   computeAction,
   type ActionRecommendation,
 } from "./actionRecommendation.service.js";
+// CF-SIBLING-WIDER-TRIGGER (2026-07-07, Drew): shared print-run
+// inference so the sibling-fallback trigger can gate on
+// "is this a rare parallel?" without duplicating the parallel-name
+// mapping.
+import { inferPrintRun as inferPrintRunForParallel } from "./parallelPremiumFloors.js";
 
 /** Grade lookup. `label` matches the CH grade param; `grader` is the
  *  parent grading company for UI grouping; `psaEquivalent` is used to
@@ -1361,20 +1366,44 @@ export async function buildObservedGradeCurve(
   // surface it on the return value (CF-SIBLING-LINEAGE-SURFACE
   // 2026-07-07). Null when no sibling fallback fired.
   let siblingFallbackLineage: ObservedGradeCurve["siblingFallback"] = null;
+
+  // CF-SIBLING-WIDER-TRIGGER (2026-07-07, Drew): sibling fallback fires
+  // when the target has NO Raw comps AND the parallel is a known-rare
+  // tier (has a print-run floor entry). The old trigger required
+  // EVERY grade to be "unavailable" — which rarely held because if
+  // reference-prices were provided, they'd fill slab entries and
+  // sibling silently skipped. Result: Raw pill stayed "unavailable"
+  // for rare-parallel cards where CH's model DID have slab reference
+  // prices but no Raw sales pool. Widened trigger fires sibling for
+  // Raw specifically; the cascade at line 1428 already respects
+  // reference-price slabs (only overrides entries still unavailable).
+  const rawEntry = entries.find((e) => e.grade === "Raw");
+  const rawIsUnavailable = !rawEntry || rawEntry.valueSource === "unavailable";
+  const isRareParallel =
+    opts.parallelTierKey?.variant
+      ? inferPrintRunForParallel(opts.parallelTierKey.variant) !== null
+      : false;
   const allUnavailable = entries.every((e) => e.valueSource === "unavailable");
-  if (allUnavailable && opts.enableSiblingFallback && opts.playerName && opts.parallelTierKey) {
+  const shouldFireSibling =
+    (allUnavailable || (isRareParallel && rawIsUnavailable)) &&
+    opts.enableSiblingFallback &&
+    opts.playerName &&
+    opts.parallelTierKey;
+
+  if (shouldFireSibling && opts.parallelTierKey && opts.playerName) {
     try {
+      const parallelTierKey = opts.parallelTierKey;
       const { attemptSiblingPriceFallback } = await import(
         "./siblingCardPriceFallback.service.js"
       );
       const fallback = await attemptSiblingPriceFallback({
         targetCardId: cardId,
         year:
-          typeof opts.parallelTierKey.year === "number"
-            ? opts.parallelTierKey.year
-            : parseInt(String(opts.parallelTierKey.year), 10),
-        set: opts.parallelTierKey.set,
-        parallel: opts.parallelTierKey.variant,
+          typeof parallelTierKey.year === "number"
+            ? parallelTierKey.year
+            : parseInt(String(parallelTierKey.year), 10),
+        set: parallelTierKey.set,
+        parallel: parallelTierKey.variant,
         // CF-SIBLING-NON-AUTO-COVERAGE (2026-07-06, Drew): route the
         // actual card class through so Orange /25 BASE cards, Gold /50
         // base parallels, etc. also get sibling fallback coverage.
