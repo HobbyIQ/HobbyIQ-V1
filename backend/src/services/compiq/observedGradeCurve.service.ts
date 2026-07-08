@@ -150,7 +150,7 @@ export interface ObservedGradeEntry {
    *                          (last-resort fallback when reference
    *                           price is also unavailable)
    *  Null for observed / unavailable entries. */
-  estimatedFrom: "reference-price" | "raw-multiplier" | null;
+  estimatedFrom: "reference-price" | "raw-multiplier" | "sibling-card" | null;
   /** CF-ONE-TRAJECTORY (2026-07-04): fields that put Last Sale, Market
    *  Value, and Predicted on ONE trend line — the SAME per-week rate
    *  derives all three. Prevents the "$100 Market Value but $205
@@ -1166,6 +1166,15 @@ export async function buildObservedGradeCurve(
      *  getCardMetaById) should pass this; callers without it can omit
      *  and trajectory will still fire when matched-cohort works. */
     parallelTierKey?: ParallelTierKey | null;
+    /** CF-SIBLING-CARD-FALLBACK (2026-07-06, Drew): opt-in for the
+     *  last-resort sibling-card price fallback. When ALL grades come
+     *  back valueSource: "unavailable" AND this flag is true AND
+     *  playerName + parallelTierKey are present, try to seed Raw from
+     *  a same-player Base Auto sibling in the same set × parallel
+     *  premium. Adds ~2-3 CH calls when it fires, so ONLY enable on
+     *  interactive user-facing routes (/card-panel, /price-by-id);
+     *  bulk reprice paths should leave it off. */
+    enableSiblingFallback?: boolean;
   } = {},
 ): Promise<ObservedGradeCurve> {
   const entries = await Promise.all(
@@ -1174,6 +1183,58 @@ export async function buildObservedGradeCurve(
   // Second pass — fills value/valueSource on non-observed grades,
   // preferring reference-price over Raw × multiplier when provided.
   fillEstimatedFallback(entries, opts.referencePriceByGrade);
+
+  // CF-SIBLING-CARD-FALLBACK (2026-07-06, Drew): if EVERY grade is
+  // still "unavailable" after the reference-price + raw-multiplier
+  // passes, try the sibling-card fallback. Concrete case: Eli Willits
+  // 2025 Bowman Draft Chrome Orange Auto — cardId resolves but zero
+  // comps at any grade. This fallback derives an estimate from the
+  // player's Base Auto in the same set × parallel premium. Opt-in
+  // (routes carrying user display enable; bulk reprice doesn't).
+  const allUnavailable = entries.every((e) => e.valueSource === "unavailable");
+  if (allUnavailable && opts.enableSiblingFallback && opts.playerName && opts.parallelTierKey) {
+    try {
+      const { attemptSiblingPriceFallback } = await import(
+        "./siblingCardPriceFallback.service.js"
+      );
+      const fallback = await attemptSiblingPriceFallback({
+        targetCardId: cardId,
+        year:
+          typeof opts.parallelTierKey.year === "number"
+            ? opts.parallelTierKey.year
+            : parseInt(String(opts.parallelTierKey.year), 10),
+        set: opts.parallelTierKey.set,
+        parallel: opts.parallelTierKey.variant,
+        isAuto: true, // MVP: only fires for autos where parallel premiums are strongest
+        playerName: opts.playerName,
+      });
+      if (fallback && fallback.estimatedRawPrice !== null) {
+        // Seed the Raw entry with the sibling-derived estimate.
+        const rawEntry = entries.find((e) => e.grade === "Raw");
+        if (rawEntry) {
+          rawEntry.value = fallback.estimatedRawPrice;
+          rawEntry.valueSource = "estimated";
+          rawEntry.estimatedFrom = "sibling-card";
+        }
+        // Also cascade to other grades via Raw × multiplier so PSA 10
+        // etc. show something rather than staying gray.
+        for (const entry of entries) {
+          if (entry.grade === "Raw" || entry.valueSource !== "unavailable") continue;
+          const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
+          if (typeof multiplier === "number" && multiplier > 0) {
+            entry.value = Math.round(fallback.estimatedRawPrice * multiplier * 100) / 100;
+            entry.valueSource = "estimated";
+            entry.estimatedFrom = "sibling-card";
+            entry.estimatedMultiplier = multiplier;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `[observedGradeCurve.siblingFallback] failed for ${cardId}: ${(err as Error)?.message ?? err}`,
+      );
+    }
+  }
   // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
   // player weekly buckets, then compute Market Value (today) + Predicted
   // (30d) for every observed entry so all three numbers sit on one line.

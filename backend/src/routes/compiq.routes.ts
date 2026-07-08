@@ -2745,6 +2745,9 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       playerName: identityPlayer,
       referencePriceByGrade,
       parallelTierKey,
+      // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
+      // in so thin-market cards get an estimate rather than a gray pill.
+      enableSiblingFallback: true,
     });
 
     void (async () => {
@@ -2967,6 +2970,8 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       playerName,
       referencePriceByGrade,
       parallelTierKey,
+      // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route.
+      enableSiblingFallback: true,
     });
 
     // Fire-and-forget corpus capture — our own signal, tagged internally
