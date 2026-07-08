@@ -1184,13 +1184,31 @@ export async function buildObservedGradeCurve(
   // preferring reference-price over Raw × multiplier when provided.
   fillEstimatedFallback(entries, opts.referencePriceByGrade);
 
-  // CF-SIBLING-CARD-FALLBACK (2026-07-06, Drew): if EVERY grade is
-  // still "unavailable" after the reference-price + raw-multiplier
-  // passes, try the sibling-card fallback. Concrete case: Eli Willits
-  // 2025 Bowman Draft Chrome Orange Auto — cardId resolves but zero
-  // comps at any grade. This fallback derives an estimate from the
-  // player's Base Auto in the same set × parallel premium. Opt-in
-  // (routes carrying user display enable; bulk reprice doesn't).
+  // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
+  // player weekly buckets, then compute Market Value (today) + Predicted
+  // (30d) for every observed entry so all three numbers sit on one line.
+  // Returns the derivation so it can be persisted to the corpus for
+  // later calibration analysis (CF-CORPUS-TRAJECTORY-FIELDS 2026-07-05).
+  const derivation = await applyTrajectory(
+    entries,
+    opts.playerName ?? null,
+    opts.parallelTierKey ?? null,
+  );
+
+  // CF-SIBLING-CARD-FALLBACK (2026-07-06, Drew) + CF-SIBLING-TREND-ANCHOR:
+  // Runs AFTER applyTrajectory so we have the derived rate to project
+  // the sibling's median forward. Drew: "we want this to predict
+  // accurately, median is a weighted average [snapshot]" — the sibling
+  // fallback now:
+  //   1. Takes the target's trajectory rate (matched-cohort / parallel-
+  //      tier / release-decay chain)
+  //   2. Fetches the sibling's Base Auto median + newest sale date
+  //   3. Projects the sibling FORWARD to today at that rate
+  //   4. Multiplies by the print-run-floored parallel premium
+  //   5. Returns estimated Raw TODAY + estimated Raw at 7d
+  //
+  // Populates the target's trendAdjustedValue + predictedPriceAt30d
+  // fields directly — no second trajectory pass needed.
   const allUnavailable = entries.every((e) => e.valueSource === "unavailable");
   if (allUnavailable && opts.enableSiblingFallback && opts.playerName && opts.parallelTierKey) {
     try {
@@ -1207,17 +1225,32 @@ export async function buildObservedGradeCurve(
         parallel: opts.parallelTierKey.variant,
         isAuto: true, // MVP: only fires for autos where parallel premiums are strongest
         playerName: opts.playerName,
+        trajectoryRateWeekly: derivation?.cappedRate ?? null,
       });
       if (fallback && fallback.estimatedRawPrice !== null) {
-        // Seed the Raw entry with the sibling-derived estimate.
         const rawEntry = entries.find((e) => e.grade === "Raw");
         if (rawEntry) {
           rawEntry.value = fallback.estimatedRawPrice;
           rawEntry.valueSource = "estimated";
           rawEntry.estimatedFrom = "sibling-card";
+          // trendAdjustedValue = the same value (already trend-projected
+          // to today via sibling projection). iOS falls back to `value`
+          // when trendAdjustedValue is null anyway; explicit populate for
+          // clarity + downstream trajectory-aware consumers.
+          rawEntry.trendAdjustedValue = fallback.estimatedRawPrice;
+          if (fallback.estimatedRawPredicted7d !== null) {
+            rawEntry.predictedPriceAt30d = fallback.estimatedRawPredicted7d;
+            // Bands: ±15% since this is an estimate not observed
+            rawEntry.predictedPriceRangeLow =
+              Math.round(fallback.estimatedRawPredicted7d * 0.85 * 100) / 100;
+            rawEntry.predictedPriceRangeHigh =
+              Math.round(fallback.estimatedRawPredicted7d * 1.15 * 100) / 100;
+            rawEntry.predictedPricePct =
+              Math.round(((fallback.estimatedRawPredicted7d / fallback.estimatedRawPrice) - 1) * 10000) / 100;
+          }
         }
-        // Also cascade to other grades via Raw × multiplier so PSA 10
-        // etc. show something rather than staying gray.
+        // Cascade sibling-derived Raw to slab grades via existing tier
+        // multipliers so PSA 10 etc. show something rather than gray.
         for (const entry of entries) {
           if (entry.grade === "Raw" || entry.valueSource !== "unavailable") continue;
           const multiplier = RAW_TO_GRADE_FALLBACK_MULTIPLIER[entry.grade];
@@ -1226,6 +1259,16 @@ export async function buildObservedGradeCurve(
             entry.valueSource = "estimated";
             entry.estimatedFrom = "sibling-card";
             entry.estimatedMultiplier = multiplier;
+            entry.trendAdjustedValue = entry.value;
+            if (fallback.estimatedRawPredicted7d !== null) {
+              const predictedAtGrade =
+                Math.round(fallback.estimatedRawPredicted7d * multiplier * 100) / 100;
+              entry.predictedPriceAt30d = predictedAtGrade;
+              entry.predictedPriceRangeLow = Math.round(predictedAtGrade * 0.85 * 100) / 100;
+              entry.predictedPriceRangeHigh = Math.round(predictedAtGrade * 1.15 * 100) / 100;
+              entry.predictedPricePct =
+                Math.round(((predictedAtGrade / entry.value) - 1) * 10000) / 100;
+            }
           }
         }
       }
@@ -1235,16 +1278,7 @@ export async function buildObservedGradeCurve(
       );
     }
   }
-  // Third pass — CF-ONE-TRAJECTORY: derive a bounded per-week rate from
-  // player weekly buckets, then compute Market Value (today) + Predicted
-  // (30d) for every observed entry so all three numbers sit on one line.
-  // Returns the derivation so it can be persisted to the corpus for
-  // later calibration analysis (CF-CORPUS-TRAJECTORY-FIELDS 2026-07-05).
-  const derivation = await applyTrajectory(
-    entries,
-    opts.playerName ?? null,
-    opts.parallelTierKey ?? null,
-  );
+
   return {
     cardId,
     entries,
