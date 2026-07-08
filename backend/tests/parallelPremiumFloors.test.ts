@@ -77,6 +77,24 @@ describe("CF-PANINI-PRIZM-COVERAGE — Panini parallel names map to print runs",
   });
 });
 
+describe("CF-GUM-BALL-BUBBLEGUM — snackpack /5 parallel + hobby aliases", () => {
+  it("recognizes all four common spellings and maps them to /5 tier", () => {
+    expect(inferPrintRun("Gum Ball")).toBe(5);
+    expect(inferPrintRun("Gum Ball Refractor")).toBe(5);
+    expect(inferPrintRun("Bubblegum")).toBe(5);
+    expect(inferPrintRun("Bubble Gum")).toBe(5);
+    expect(inferPrintRun("Snackpack")).toBe(5);
+  });
+
+  it("applies the /5 tier floor of 40× regardless of spelling", () => {
+    for (const spelling of ["Gum Ball Refractor", "Bubblegum", "Bubble Gum", "Snackpack"]) {
+      const result = applyPrintRunFloor(1, spelling);
+      expect(result.effective).toBe(40);
+      expect(result.inferredPrintRun).toBe(5);
+    }
+  });
+});
+
 describe("CF-PARALLEL-PREMIUM-FLOOR — applyPrintRunFloor", () => {
   it("lifts to floor when empirical is below (Willits Orange Auto case)", () => {
     // Empirical median 4.364 (from 2025 Bowman Chrome Prospects Orange
