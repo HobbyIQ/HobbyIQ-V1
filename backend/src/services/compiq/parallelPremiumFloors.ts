@@ -78,6 +78,14 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // Bowman / Topps refractor family (baseball). Kept AFTER Panini so
   // "Gold Prizm" doesn't hit the generic "gold" rule.
   // ═══════════════════════════════════════════════════════════════════
+  // ── Bowman Draft Chrome retail-exclusive /5 parallels ──────────────
+  // CF-GUM-BALL-BUBBLEGUM (2026-07-08, Drew): "Gum Ball Refractor" is
+  // the CH catalog name for the Bowman Draft Chrome retail "snackpack"
+  // parallel. Users search for it as "Bubblegum" or "Bubble Gum" (the
+  // hobby vernacular). Print run /5, same tier as Red Refractor →
+  // 40× floor. Aliases handled here so any of the four spellings maps
+  // to the /5 tier.
+  { match: (n) => n.includes("gum ball") || n.includes("bubblegum") || n.includes("bubble gum") || n.includes("snackpack"), printRun: 5 },
   // ── /5 or less (Red family) ────────────────────────────────────────
   { match: (n) => n === "red" || n.startsWith("red "), printRun: 5 },
   { match: (n) => n.includes("red refractor") || n.includes("red x-fractor"), printRun: 5 },

@@ -8,6 +8,14 @@ const PARALLEL_SYNONYMS: Record<string, string[]> = {
   orange: ["orange", "orange refractor", "orange /25"],
   red: ["red", "red refractor", "red /5"],
   superfractor: ["superfractor", "super", "1/1", "one of one"],
+  // CF-GUM-BALL-BUBBLEGUM (2026-07-08, Drew): CH catalogs the Bowman
+  // Draft Chrome retail-exclusive "snackpack" parallel as "Gum Ball
+  // Refractor" (or just "Gum Ball" on the auto version). Users search
+  // for it as "bubblegum" or "bubble gum" (hobby vernacular). Canonical
+  // key is "gum ball" (space, no underscore) so the returned token is
+  // CH-friendly downstream — the cardTitle constructor uses this
+  // string directly against CH's fuzzy search.
+  "gum ball": ["gum ball", "bubblegum", "bubble gum", "snackpack", "snack pack"],
 };
 
 const GRADE_COMPANY_SYNONYMS: Record<string, string[]> = {
