@@ -308,6 +308,41 @@ describe("parseCardQuery — CF-CARDQUERY-PARSER-PARALLEL-EXPANSION", () => {
     expect(p.playerName).toBe("Ethan Conrad");
   });
 
+  // CF-CARDNUMBER-CASE-INSENSITIVE (2026-07-09, Drew — Owen Carey BCP-69):
+  // hyphenated / unhyphenated card-number patterns were case-sensitive, so
+  // lowercase user queries mangled playerName. Pre-fix "owen carey bcp-69"
+  // parsed as { cardNumber: null, playerName: "Owen Carey Bcp-" } — the
+  // "69" got eaten as a print run and "bcp-" leaked into the name.
+  it("captures lowercase 'bcp-69' as cardNumber; player name clean", () => {
+    const p = parseCardQuery("2026 bowman owen carey bcp-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("captures lowercase 'cpa-oc' as cardNumber (auto-prefix); player name clean", () => {
+    const p = parseCardQuery("2026 bowman owen carey cpa-oc auto");
+    expect(p.cardNumber).toBe("CPA-OC");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("captures lowercase unhyphenated 'us175' as cardNumber; player name clean", () => {
+    const p = parseCardQuery("2011 topps update mike trout us175");
+    expect(p.cardNumber).toBe("US175");
+    expect(p.playerName).toBe("Mike Trout");
+  });
+
+  it("captures BCP-69 with parallel and other tokens all in lowercase", () => {
+    const p = parseCardQuery("2026 bowman black owen carey bcp-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("uppercase card numbers still parse (no regression)", () => {
+    const p = parseCardQuery("2026 Bowman Owen Carey BCP-69");
+    expect(p.cardNumber).toBe("BCP-69");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
   // Regression pins — make sure the new patterns don't cannibalize existing
   // parallel matches. Blue/Red/etc. bare colors must still work when no
   // Raywave/Lava keyword follows.
