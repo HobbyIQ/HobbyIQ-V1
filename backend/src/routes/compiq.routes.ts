@@ -3248,6 +3248,74 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
 // designed to slot in a direct GemRate/PSA/BGS integration later without
 // touching consumers.
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CF-PARSE-PREVIEW (2026-07-09, Drew): POST /parse-preview
+//
+// Returns the structured breakdown parseCardQuery produces for a query
+// string WITHOUT running the pricing engine. Powers two iOS surfaces:
+//
+//   1. Live parse chip row — as the user types, render "Player:
+//      Owen Carey · Set: Bowman · Parallel: Black · # BCP-69" so
+//      mis-parses surface in-band before the search fires.
+//
+//   2. Structured search form — the parser is the canonical mapping
+//      from free-text to structured fields; the form uses it as the
+//      backing model. When the user edits a field, iOS re-serializes
+//      to a canonical query string and hits /search.
+//
+// No pricing-engine load, no CH calls — this is pure local math on the
+// parser. Sessioned but not rate-limited (per-user throttle already
+// covers /log-selection style abuse; the parse endpoint is orders of
+// magnitude cheaper and safe to hammer during typeahead).
+// ─────────────────────────────────────────────────────────────────────────────
+router.post(
+  "/parse-preview",
+  requireSession,
+  async (req, res, _next) => {
+    try {
+      const q = typeof req.body?.query === "string" ? req.body.query : "";
+      if (!q.trim()) {
+        return res.json({
+          success: true,
+          query: "",
+          parsed: null,
+          confidence: 0,
+        });
+      }
+      const parsed = parseCardQuery(q);
+      return res.json({
+        success: true,
+        query: q,
+        parsed,
+        // Convenience shorthand iOS renders directly as a chip row.
+        // Presentation-ready field pairs — iOS filters out nulls so the
+        // chip row only shows populated fields.
+        chips: [
+          parsed.playerName ? { label: "Player", value: parsed.playerName } : null,
+          parsed.year ? { label: "Year", value: String(parsed.year) } : null,
+          parsed.brand ? { label: "Brand", value: parsed.brand } : null,
+          parsed.set && parsed.set !== parsed.brand
+            ? { label: "Set", value: parsed.set }
+            : null,
+          parsed.parallel ? { label: "Parallel", value: parsed.parallel } : null,
+          parsed.cardNumber ? { label: "#", value: parsed.cardNumber } : null,
+          parsed.isAuto ? { label: "Auto", value: "yes" } : null,
+          parsed.gradingCompany && parsed.grade
+            ? { label: "Grade", value: `${parsed.gradingCompany} ${parsed.grade}` }
+            : null,
+        ].filter((c) => c !== null),
+        confidence: parsed.confidence,
+      });
+    } catch (err) {
+      console.warn(
+        "[compiq.parse-preview] threw:",
+        (err as Error)?.message ?? err,
+      );
+      return res.json({ success: true, query: "", parsed: null, confidence: 0 });
+    }
+  },
+);
+
 // CF-SEARCH-SELECTION-LOG (2026-07-08, Drew): POST /log-selection
 // iOS calls this fire-and-forget after a user selects a card from
 // any search-generated list (suggest-corrections chip, search-results
