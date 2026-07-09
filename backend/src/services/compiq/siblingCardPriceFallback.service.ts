@@ -355,13 +355,20 @@ export async function attemptSiblingPriceFallback(
 
   // Step 2 — sibling card search. For autos, seek the same player's
   // Base Auto in the same set. For non-autos, seek the Base card.
+  // CF-SIBLING-SEARCH-NO-SET-FILTER (2026-07-08, Drew): CH's search
+  // treats the `set` filter as strict-match. Our canonical set string
+  // is "Bowman Draft Chrome" (year + sport stripped) but CH's set
+  // field is "2025 Bowman Draft Chrome Baseball" — filter mismatch,
+  // 0 results. Drop the set filter and rely on the SEARCH TEXT
+  // "<year> <set> <player> auto" which CH's tokenizer matches loosely.
+  // Manual probes confirm this returns full results for the same
+  // targets that fail with the strict set filter.
   const searchSetName = `${input.year} ${input.set}`;
-  const searchQuery = `${input.playerName} ${input.isAuto ? "auto" : "base"}`;
+  const searchQuery = `${searchSetName} ${input.playerName} ${input.isAuto ? "auto" : "base"}`;
   let cards: CardHedgeCard[] = [];
   try {
     cards = await chSearchCards(searchQuery, 20, {
       player: input.playerName,
-      set: searchSetName,
     });
   } catch {
     return null;
