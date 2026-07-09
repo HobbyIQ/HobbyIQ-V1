@@ -72,7 +72,11 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   { match: (n) => n === "hyper prizm" || n === "hyper",           printRun: 275 },
   { match: (n) => n === "red prizm"  || (n.startsWith("red ") && n.includes("prizm")),  printRun: 299 },
   { match: (n) => n === "silver prizm" || n === "silver",         printRun: 500 },   // unnumbered but scarce; floor tier proxy
-  { match: (n) => n === "green prizm" || n === "green",           printRun: 500 },   // unnumbered but scarce
+  // CF-PANINI-GREEN-DISAMBIG (2026-07-08, Drew batch 3): Panini rule
+  // tightened to require "prizm" so bare "green" flows to Bowman's
+  // /99 auto rule below. Prior version returned 500 for any lone
+  // "green" which collided with Bowman Draft Chrome Green auto /99.
+  { match: (n) => n === "green prizm", printRun: 500 },
 
   // ═══════════════════════════════════════════════════════════════════
   // Bowman / Topps refractor family (baseball). Kept AFTER Panini so
@@ -102,6 +106,22 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // X-Fractor" doesn't get swallowed by a generic Black rule.
   { match: (n) => n.includes("black x-fractor") || n.includes("black xfractor"), printRun: 10 },
   { match: (n) => n === "black" || (n.startsWith("black ") && n.includes("refractor")), printRun: 10 },
+  // CF-BOWMAN-COLOR-AUTOS-BATCH-3 (2026-07-08, Drew batch 3): Bowman
+  // Draft Chrome single-color autograph print runs. These must come
+  // BEFORE the generic Bowman color rules below so bare "Green" (auto
+  // /99) doesn't get swallowed by "Green Refractor" (/499) matching.
+  //
+  // Print runs per Drew's hobby knowledge:
+  //   Green auto      /99
+  //   Purple auto     /250
+  //   Mini-Diamond   /100 (retail parallel)
+  //   Sparkle        /299 (retail)
+  //   Speckle        /299 (retail)
+  { match: (n) => n === "green", printRun: 99 },
+  { match: (n) => n === "purple", printRun: 250 },
+  { match: (n) => n === "mini-diamond" || n === "mini diamond" || n.includes("mini-diamond refractor") || n.includes("mini diamond refractor"), printRun: 100 },
+  { match: (n) => n === "sparkle" || n.includes("sparkle refractor"), printRun: 299 },
+  { match: (n) => n === "speckle" || n.includes("speckle refractor"), printRun: 299 },
   // ── /5 or less (Red family) ────────────────────────────────────────
   { match: (n) => n === "red" || n.startsWith("red "), printRun: 5 },
   { match: (n) => n.includes("red refractor") || n.includes("red x-fractor"), printRun: 5 },
@@ -135,14 +155,19 @@ const PRINT_RUN_TO_FLOOR: Array<{ maxPrintRun: number; floor: number }> = [
   { maxPrintRun: 10,  floor: 30  },  // Orange Shimmer /10, Black X-Fractor /10
   { maxPrintRun: 25,  floor: 15  },  // Orange /25
   // CF-PR-35-TIER (2026-07-08, Drew): Bowman Logofractor sits at /35 —
-  // a print run tier we didn't previously have. 12× floor is the
-  // midpoint between /25 (15×) and /50 (8×) — logofractor tends to
-  // trade closer to the /25 tier for hot prospects.
+  // 12× floor is the midpoint between /25 (15×) and /50 (8×).
   { maxPrintRun: 35,  floor: 12  },  // Bowman Logofractor /35
   { maxPrintRun: 50,  floor: 8   },  // Gold /50
   { maxPrintRun: 75,  floor: 5   },  // Aqua /75
+  // CF-PR-99-100-TIER (2026-07-08, Drew batch 3): Green /99 (auto),
+  // Mini-Diamond /100. Both treated as the same tier — 4× floor
+  // (midpoint between /75's 5× and /150's 3×).
+  { maxPrintRun: 100, floor: 4   },  // Green auto /99, Mini-Diamond /100
   { maxPrintRun: 150, floor: 3   },  // Blue /150
   { maxPrintRun: 250, floor: 2   },  // Purple /250
+  // CF-PR-299-TIER (2026-07-08, Drew batch 3): Sparkle /299, Speckle /299.
+  // 1.8× floor sits between /250's 2× and /500's 1.5×.
+  { maxPrintRun: 299, floor: 1.8 },  // Sparkle /299, Speckle /299
   { maxPrintRun: 500, floor: 1.5 },  // Green /499
 ];
 

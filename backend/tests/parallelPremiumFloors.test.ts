@@ -126,6 +126,64 @@ describe("CF-BOWMAN-LOGOFRACTOR — /35 new tier", () => {
   });
 });
 
+describe("CF-BOWMAN-COLOR-AUTOS-BATCH-3 — single-color Bowman auto print runs", () => {
+  it("Green auto → /99 tier → 4× floor", () => {
+    expect(inferPrintRun("Green")).toBe(99);
+    const r = applyPrintRunFloor(1, "Green");
+    expect(r.effective).toBe(4);
+    expect(r.inferredPrintRun).toBe(99);
+  });
+
+  it("Purple auto → /250 tier → 2× floor", () => {
+    expect(inferPrintRun("Purple")).toBe(250);
+    const r = applyPrintRunFloor(1, "Purple");
+    expect(r.effective).toBe(2);
+    expect(r.inferredPrintRun).toBe(250);
+  });
+
+  it("Green Prizm still returns Panini /500 (no cross-brand collision)", () => {
+    expect(inferPrintRun("Green Prizm")).toBe(500);
+  });
+
+  it("Green Refractor still returns Bowman /499 (no self-collision)", () => {
+    expect(inferPrintRun("Green Refractor")).toBe(499);
+    expect(inferPrintRun("Green X-Fractor")).toBe(499);
+  });
+});
+
+describe("CF-MINI-DIAMOND — /100 tier", () => {
+  it("recognizes Mini Diamond and Mini-Diamond spellings", () => {
+    expect(inferPrintRun("Mini Diamond")).toBe(100);
+    expect(inferPrintRun("Mini-Diamond")).toBe(100);
+    expect(inferPrintRun("Mini Diamond Refractor")).toBe(100);
+    expect(inferPrintRun("Mini-Diamond Refractor")).toBe(100);
+  });
+
+  it("applies 4× floor for /100 tier", () => {
+    const r = applyPrintRunFloor(1, "Mini-Diamond Refractor");
+    expect(r.effective).toBe(4);
+    expect(r.inferredPrintRun).toBe(100);
+  });
+});
+
+describe("CF-SPARKLE-SPECKLE — /299 tier retail parallels", () => {
+  it("Sparkle → /299 tier → 1.8× floor", () => {
+    expect(inferPrintRun("Sparkle")).toBe(299);
+    expect(inferPrintRun("Sparkle Refractor")).toBe(299);
+    const r = applyPrintRunFloor(1, "Sparkle Refractor");
+    expect(r.effective).toBe(1.8);
+    expect(r.inferredPrintRun).toBe(299);
+  });
+
+  it("Speckle → /299 tier → 1.8× floor", () => {
+    expect(inferPrintRun("Speckle")).toBe(299);
+    expect(inferPrintRun("Speckle Refractor")).toBe(299);
+    const r = applyPrintRunFloor(1, "Speckle Refractor");
+    expect(r.effective).toBe(1.8);
+    expect(r.inferredPrintRun).toBe(299);
+  });
+});
+
 describe("CF-BLACK-XFRACTOR — /10 tier via 30× floor", () => {
   it("recognizes Black X-Fractor and Black Refractor as /10", () => {
     expect(inferPrintRun("Black X-Fractor")).toBe(10);
