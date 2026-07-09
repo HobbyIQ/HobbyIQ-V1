@@ -2797,17 +2797,43 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     const referencePriceByGrade = new Map<string, number>(
       referenceRows.map((r) => [r.grade, r.price]),
     );
-    const gradeCurve = await buildObservedGradeCurve(id, {
-      playerName: identityPlayer,
-      referencePriceByGrade,
-      parallelTierKey,
-      // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
-      // in so thin-market cards get an estimate rather than a gray pill.
-      enableSiblingFallback: true,
-      // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): route the auto
-      // vs base classification so raw × multiplier picks the right column.
-      cardClass: extractCardClass(identity),
-    });
+    // CF-SAME-PLAYER-SIBLINGS (2026-07-08, Drew): also fetch the same
+    // player's other variants in the same set so iOS can render a
+    // "similar cards" surface. Runs concurrently with grade curve —
+    // adds one CH call (~200ms warm-cache); the samePlayerSiblings
+    // service has its own 12h cache so repeat card-panel hits are free.
+    const [gradeCurve, samePlayerSiblings] = await Promise.all([
+      buildObservedGradeCurve(id, {
+        playerName: identityPlayer,
+        referencePriceByGrade,
+        parallelTierKey,
+        // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
+        // in so thin-market cards get an estimate rather than a gray pill.
+        enableSiblingFallback: true,
+        // CF-CLASS-AWARE-GRADE-MULTIPLIERS (2026-07-06): route the auto
+        // vs base classification so raw × multiplier picks the right column.
+        cardClass: extractCardClass(identity),
+      }),
+      (async () => {
+        const identYear =
+          (identity as { year?: number | string })?.year;
+        const identSet =
+          (identity as { set?: string })?.set;
+        if (!identityPlayer || !identYear || !identSet) return [];
+        const yearNum =
+          typeof identYear === "number" ? identYear : parseInt(String(identYear), 10);
+        if (!Number.isFinite(yearNum)) return [];
+        const { getSamePlayerSiblings } = await import(
+          "../services/compiq/samePlayerSiblings.service.js"
+        );
+        return getSamePlayerSiblings({
+          selfCardId: id,
+          year: yearNum,
+          set: identSet,
+          playerName: identityPlayer,
+        });
+      })(),
+    ]);
 
     void (async () => {
       try {
@@ -2903,6 +2929,11 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         referencePrice: r.price,
         displayOrder: r.display_order,
       })),
+      // CF-SAME-PLAYER-SIBLINGS (2026-07-08, Drew): "similar cards"
+      // carousel — the same player's other variants in the same set.
+      // Empty array when identity was thin or the CH search failed;
+      // never null so iOS decoders can rely on the shape.
+      samePlayerSiblings,
     });
   } catch (err) {
     return next(err);
@@ -3117,6 +3148,122 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
 // designed to slot in a direct GemRate/PSA/BGS integration later without
 // touching consumers.
 // ─────────────────────────────────────────────────────────────────────────────
+// CF-SUGGEST-CORRECTIONS (2026-07-08, Drew): POST /suggest-corrections
+// iOS calls this when the primary search returns zero (or thin) results.
+// Given a raw query, suggests close-match player names via Levenshtein
+// distance so users typing "Willets" or "Ohtony" can be nudged to
+// "Willits" / "Ohtani" without having to correct the typo themselves.
+//
+// Body: { query: string }
+// Response: {
+//   query: string,
+//   suggestions: Array<{ playerName, distance, sampleCardId, sampleCardVariant }>
+// }
+//
+// The suggestion pool comes from CH's autocomplete on the first token
+// of the query (broad candidate set), then ranks by Levenshtein
+// against the raw candidate. Never fails hard — returns an empty
+// suggestions array on any error.
+router.post(
+  "/suggest-corrections",
+  requireSession,
+  requireRateLimited("priceChecksPerDay"),
+  async (req, res, next) => {
+    try {
+      const { query } = req.body || {};
+      if (typeof query !== "string" || !query.trim()) {
+        return res.status(400).json({ success: false, error: 'Missing or invalid "query" field' });
+      }
+      const rawQuery = query.trim();
+      // Extract player-name candidate: keep only alpha tokens with
+      // length >= 3, drop known non-player tokens (year, set-family
+      // words, parallel colors).
+      const NON_PLAYER_STOP_TOKENS = new Set([
+        "auto", "autograph", "psa", "bgs", "sgc", "cgc", "raw",
+        "chrome", "bowman", "topps", "panini", "prizm", "select",
+        "the", "and", "refractor",
+      ]);
+      const tokens = rawQuery
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((t) => t.length >= 3 && !NON_PLAYER_STOP_TOKENS.has(t) && !/^\d+$/.test(t));
+
+      if (tokens.length === 0) {
+        return res.json({ success: true, query: rawQuery, suggestions: [] });
+      }
+
+      // Use the FIRST plausible player-name token as the fuzzy anchor.
+      // If the query is "Josia Hartsorn 2025 Bowman auto", tokens[0]
+      // = "josia" is the fuzzy search anchor.
+      const candidateFirst = tokens[0];
+      const { searchCards } = await import(
+        "../services/compiq/cardhedge.client.js"
+      );
+      // Query CH's card-search with just the candidate — retrieves a
+      // pool of players whose names start with (or contain) the token.
+      const chHits = await searchCards(candidateFirst, 40, {}).catch(() => []);
+      // Extract unique player names from the returned cards.
+      const uniquePlayers = new Map<string, { cardId: string; variant: string }>();
+      for (const c of chHits) {
+        const player = (c.player ?? "").trim();
+        if (!player) continue;
+        if (!uniquePlayers.has(player.toLowerCase())) {
+          uniquePlayers.set(player.toLowerCase(), {
+            cardId: c.card_id ?? "",
+            variant: c.variant ?? "",
+          });
+        }
+      }
+
+      const { closestMatch, levenshtein, proportionalMaxDistance } = await import(
+        "../services/compiq/fuzzyPlayerSearch.service.js"
+      );
+      const pool = Array.from(uniquePlayers.keys()).map((k) => {
+        // Restore the case-preserved original spelling for display.
+        const original = Array.from(uniquePlayers.entries()).find(
+          ([lower]) => lower === k,
+        );
+        return { display: original ? Array.from(uniquePlayers.keys()).find((x) => x === k) ?? k : k };
+      });
+      const displayPool = Array.from(uniquePlayers.keys());
+      const maxDist = proportionalMaxDistance(candidateFirst);
+      // Match against the FULL query first (so 'Josia Hartsorn' matches
+      // 'Josiah Hartshorn' cleanly), then against the first token.
+      const fullQueryLower = rawQuery.toLowerCase();
+      const scored: Array<{ playerName: string; distance: number }> = [];
+      for (const name of displayPool) {
+        const dFull = levenshtein(fullQueryLower, name);
+        const dFirst = levenshtein(candidateFirst, name.split(/\s+/)[0] ?? "");
+        const distance = Math.min(dFull, dFirst);
+        if (distance <= Math.max(maxDist, 3)) {
+          scored.push({ playerName: name, distance });
+        }
+      }
+      scored.sort((a, b) => a.distance - b.distance);
+      const top = scored.slice(0, 6);
+
+      const suggestions = top.map((s) => {
+        const info = uniquePlayers.get(s.playerName.toLowerCase());
+        return {
+          playerName: s.playerName,
+          distance: s.distance,
+          sampleCardId: info?.cardId ?? null,
+          sampleCardVariant: info?.variant ?? null,
+        };
+      });
+
+      return res.json({
+        success: true,
+        query: rawQuery,
+        candidateFirstToken: candidateFirst,
+        suggestions,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
 router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPerDay"), async (req, res, next) => {
   try {
     const { cert, grader, days } = req.body || {};

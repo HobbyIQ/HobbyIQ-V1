@@ -26,6 +26,62 @@ const GRADE_COMPANY_SYNONYMS: Record<string, string[]> = {
   RAW: ["raw", "ungraded"],
 };
 
+/**
+ * CF-SET-NAME-SYNONYMS (2026-07-08, Drew): hobby shorthand → canonical
+ * CH set names. Users type "BDC" for Bowman Draft Chrome, "BCP" for
+ * Bowman Chrome Prospects, etc. Without normalization, CH's fuzzy
+ * search picks up the token literally and returns junk. Canonical
+ * value here is the CH-friendly product name so downstream cardTitle
+ * construction hits CH's actual index. Alias matching is
+ * case-insensitive; whole-token, so "BDC" matches but "BDCs" doesn't.
+ */
+const SET_NAME_SYNONYMS: Record<string, string[]> = {
+  "bowman draft chrome": ["bdc", "bowman draft chrome", "bowman draft chr"],
+  "bowman draft": ["bd", "bowman draft"],
+  "bowman draft sapphire": ["bds", "bowman draft sapphire", "bowman draft saph"],
+  "bowman chrome prospects": ["bcp", "bowman chrome prospects", "bowman chr prospects"],
+  "bowman chrome": ["bc", "bowman chrome", "bow chrome"],
+  "bowman sterling": ["bstg", "bowman sterling"],
+  "bowman sapphire": ["bsapph", "bowman sapphire"],
+  "bowmans best": ["bb", "bowman's best", "bowmans best", "bowman best"],
+  "topps chrome": ["tc", "topps chrome"],
+  "topps chrome update": ["tcu", "topps chrome update", "topps update chrome"],
+  "topps update": ["tu", "topps update"],
+  "topps chrome sapphire": ["tcs", "topps chrome sapphire"],
+  "topps finest": ["tf", "topps finest"],
+  "topps tribute": ["tt", "topps tribute"],
+  "topps heritage": ["th", "topps heritage"],
+  "topps stadium club": ["tsc", "topps stadium club", "stadium club"],
+  "panini prizm": ["pp", "panini prizm", "prizm"],
+  "panini select": ["ps", "panini select", "select"],
+  "panini mosaic": ["pm", "panini mosaic", "mosaic"],
+  "donruss optic": ["do", "donruss optic", "optic"],
+};
+
+/**
+ * Normalize a set/product token. Preserves original when no synonym
+ * matches so downstream layers can still handle unusual set names.
+ * Only expands SHORT tokens (<=8 chars, no spaces) as the shorthand
+ * ambiguity risk grows with token length — "TC" is TopsChrome, "topps
+ * chrome sapphire" needs no shortening.
+ */
+export function normalizeSetName(set?: string): string | undefined {
+  if (!set) return undefined;
+  const key = normalizeToken(set);
+  if (!key) return undefined;
+
+  // Exact match first (canonical returned as-is).
+  for (const [canonical, aliases] of Object.entries(SET_NAME_SYNONYMS)) {
+    if (aliases.some((alias) => normalizeToken(alias) === key)) {
+      return canonical;
+    }
+  }
+
+  // No match → return the trimmed lowercase input verbatim so
+  // downstream CH search still runs on the raw string. Never null.
+  return set.trim();
+}
+
 function normalizeToken(value: string): string {
   return value
     .trim()
@@ -88,5 +144,6 @@ export function getNormalizationDictionary() {
   return {
     parallel: PARALLEL_SYNONYMS,
     gradeCompanies: GRADE_COMPANY_SYNONYMS,
+    setNames: SET_NAME_SYNONYMS,
   };
 }

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { CompIQEstimateRequest, type PredictionCallContext } from "../../types/compiq.types.js";
 import { DynamicPricingOrchestrator } from "../../modules/compiq/services/pricing/core/DynamicPricingOrchestrator.js";
-import { normalizeGradeCompany, normalizeParallel } from "./normalizationDictionary.service.js";
+import { normalizeGradeCompany, normalizeParallel, normalizeSetName } from "./normalizationDictionary.service.js";
 import { normalizePlayerName } from "./parallelTokenizer.js";
 import { findCompsRouted, searchCardsRouted, getCardSalesRouted, getCardSalesRoutedWithProvenance, getCardMetaById, type QueryContext, type RoutedCard, type CardIdentityHint } from "./cardsight.router.js";
 import {
@@ -3400,11 +3400,15 @@ export async function computeEstimate(
 
   const normalizedParallel = normalizeParallel(parallelForNorm);
   const normalizedGradeCompany = normalizeGradeCompany(body.gradeCompany);
+  // CF-SET-NAME-SYNONYMS (2026-07-08, Drew): expand hobby shorthand
+  // (BDC → Bowman Draft Chrome, BCP → Bowman Chrome Prospects, etc.)
+  // before the search query is built so CH matches the canonical set.
+  const normalizedProduct = normalizeSetName(body.product);
 
   const cardTitle = [
     body.playerName,
     body.cardYear,
-    body.product,
+    normalizedProduct ?? body.product,
     normalizedParallel ?? parallelForNorm ?? body.parallel,
     normalizedGradeCompany ? `${normalizedGradeCompany} ${body.gradeValue}` : undefined,
     effectiveIsAuto ? "Auto" : undefined,
