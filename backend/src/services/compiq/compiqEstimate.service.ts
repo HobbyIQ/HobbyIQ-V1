@@ -3622,8 +3622,13 @@ export async function computeEstimate(
         ? fetched.card.variant.trim().toLowerCase()
         : "";
     const requestedPrintRun = inferPrintRun(requestedParallelLower);
+    // Threshold tightened to ≤ 10: very rare parallels (Black /10, Red /5,
+    // /1s) are where CH's resolver most aggressively falls back to the base
+    // card. Rarer-than-that (Gold /50, Blue /150) tend to either self-
+    // resolve or trip the existing tier-ladder variant-mismatch guard —
+    // widening the threshold false-positives on the existing tests.
     const isRareRequested =
-      requestedPrintRun !== null && requestedPrintRun <= 50;
+      requestedPrintRun !== null && requestedPrintRun <= 10;
     // Narrow demote: ONLY when the resolver returned an explicit "Base"
     // (or empty variant that CH sometimes emits on unindexed SKUs). Any
     // other non-matching variant (Refractor / X-Fractor / colored parallels
@@ -3633,13 +3638,42 @@ export async function computeEstimate(
     // pathological "Black BCP-69 request → resolver returned the plain
     // Base BCP-69 card" case where the existing guard would over-price
     // with base-card comps.
-    // Only literal "base" — null/empty variant means "resolver didn't tell
-    // us" and the tier ladder downstream is designed to handle it. Literal
-    // "base" is CH's explicit "this is the base card" signal, which is
-    // exactly the pathological case (base BCP-69 returned for a Black
-    // BCP-69 request).
+    // CF-VARIANT-ECHO-BUG (2026-07-09): cardsight.router populates
+    // fetched.card.variant from identity.parallel (the REQUESTED parallel,
+    // not the actual CH card's variant). So checking variant==='base'
+    // never fires here — variant is always the requested string. Instead,
+    // check the COMP TITLES: if none of the top comps mention the
+    // requested parallel token, the resolver returned a mismatched pool
+    // (base card comps for a Black request). This is a content-based
+    // detection that doesn't depend on the router's variant-echo bug.
     const resolvedIsExplicitBase = resolvedVariantLower === "base";
-    if (isRareRequested && resolvedIsExplicitBase) {
+    const requestedFirstToken = requestedParallelLower.split(/\s+/)[0] ?? "";
+    const commonNoiseTokens = new Set([
+      "refractor",
+      "base",
+      "rc",
+      "auto",
+      "sp",
+    ]);
+    const shouldCheckTitles =
+      isRareRequested &&
+      requestedFirstToken.length >= 3 && // avoid short false-positive tokens
+      !commonNoiseTokens.has(requestedFirstToken) &&
+      fetched.comps.length >= 3;
+    let compTitleMismatch = false;
+    if (shouldCheckTitles) {
+      const topTitles = fetched.comps
+        .slice(0, Math.min(20, fetched.comps.length))
+        .map((c) => (typeof c.title === "string" ? c.title.toLowerCase() : ""))
+        .filter((t) => t.length > 0);
+      const hitCount = topTitles.filter((t) =>
+        new RegExp(`\\b${requestedFirstToken}\\b`).test(t),
+      ).length;
+      // If ZERO of the top-20 comp titles mention the requested rare-
+      // parallel token, the resolver returned the wrong pool.
+      compTitleMismatch = topTitles.length > 0 && hitCount === 0;
+    }
+    if (isRareRequested && (resolvedIsExplicitBase || compTitleMismatch)) {
       console.log(
         JSON.stringify({
           event: "rare_parallel_variant_mismatch_demote",
@@ -3650,6 +3684,9 @@ export async function computeEstimate(
           resolvedCardId: fetched.card.card_id,
           requestedPrintRun,
           compsCount: fetched.comps.length,
+          demoteReason: resolvedIsExplicitBase
+            ? "explicit_base_variant"
+            : "no_title_hits_for_requested_token",
         }),
       );
       fetched = { ...fetched, card: null, comps: [] };
