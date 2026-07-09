@@ -31,6 +31,37 @@ describe("CF-PARALLEL-PREMIUM-FLOOR — inferPrintRun", () => {
     expect(inferPrintRun("orange")).toBe(25);
     expect(inferPrintRun("Orange")).toBe(25);
   });
+
+  // CF-PADPARADSCHA-SHIMMER-FANIMATION (2026-07-09, Drew): add print-run
+  // mappings for the exotic parallels that previously fell through with
+  // no floor (parallelMultiplier=1 in production traces).
+  it("recognizes Padparadscha (Sapphire /75 tier)", () => {
+    expect(inferPrintRun("Padparadscha")).toBe(75);
+    expect(inferPrintRun("Padparadscha Sapphire")).toBe(75);
+  });
+
+  it("recognizes Fanimation as /5 tier", () => {
+    expect(inferPrintRun("Fanimation")).toBe(5);
+    expect(inferPrintRun("Bowman Fanimation")).toBe(5);
+  });
+
+  it("recognizes color-specific Shimmer Refractor tiers", () => {
+    expect(inferPrintRun("Red Shimmer Refractor")).toBe(5);
+    expect(inferPrintRun("Gold Shimmer Refractor")).toBe(50);
+    expect(inferPrintRun("Green Shimmer Refractor")).toBe(99);
+    expect(inferPrintRun("Blue Shimmer Refractor")).toBe(75);
+    expect(inferPrintRun("Aqua Shimmer Refractor")).toBe(75);
+    expect(inferPrintRun("Sky Blue Shimmer Refractor")).toBe(75);
+  });
+
+  it("bare 'Shimmer Refractor' falls to the /50 middle-ground tier", () => {
+    expect(inferPrintRun("Shimmer Refractor")).toBe(50);
+    expect(inferPrintRun("Shimmer")).toBe(50);
+  });
+
+  it("Orange Shimmer stays at /10 (non-regression on the pre-existing rule)", () => {
+    expect(inferPrintRun("Orange Shimmer")).toBe(10);
+  });
 });
 
 describe("CF-PARALLEL-PREMIUM-FLOOR — floorForPrintRun", () => {
