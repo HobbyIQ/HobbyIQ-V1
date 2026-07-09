@@ -71,6 +71,13 @@ import { fetchPlayerInSetMomentum } from "./playerInSetMomentum.service.js";
 // fetchSiblingSales wraps fetchCompsByPlayer + exact-card-id exclusion.
 // See docs/phase0/cardsight_sibling_discovery_investigation.md.
 import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
+// CF-PRODUCT-FAMILY-PROJECTION (2026-07-09, Drew — Owen Carey 2026 Bowman
+// Black Sapphire): pure-math fallback for entire product-line catalog
+// gaps (e.g. 2026 Bowman Sapphire not yet indexed by CH). Anchors off
+// the equivalent parent product's live comps × hobby-consensus family
+// multiplier × existing parallel floor multipliers.
+import { detectProductFamily } from "./productFamilyProjection.js";
+import { inferPrintRun, floorForPrintRun } from "./parallelPremiumFloors.js";
 import {
   computeCardTrajectory,
   computeSegmentTrajectory,
@@ -2914,10 +2921,10 @@ export function emitPredictionToCorpus(params: {
     cardId?: string;
   };
   fairMarketValue: number | null;
-  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "unavailable";
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "unavailable";
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
-  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "unavailable";
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "unavailable";
   forwardProjectionFactor?: number;
   trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
   compsUsed?: number;
@@ -3582,6 +3589,139 @@ export async function computeEstimate(
   // a catalog entry by id; if no comps, it's definitionally no-recent-comps
   // not a catalog miss.
   if (!body.cardId && fetched.card === null && fetched.comps.length === 0) {
+    // CF-PRODUCT-FAMILY-PROJECTION (2026-07-09, Drew): before returning
+    // catalog-miss, try to project pricing from an equivalent parent
+    // product when the query targets a known catalog-gap product family
+    // (2026 Bowman Sapphire is the launch case — released but not yet
+    // indexed by CH). Pure-math formula:
+    //   projectedFmv = parentBaseMedian × familyMultiplier × parallelFloor
+    // Runs off the parent product's live comps via fetchCompsByPlayer;
+    // no new CH endpoints. Response tags source="product-family-projection"
+    // and carries the family attribution so iOS renders honest disclosure.
+    const familyGap = detectProductFamily(queryContext.product ?? null);
+    if (
+      familyGap &&
+      typeof queryContext.playerName === "string" &&
+      queryContext.playerName.trim().length > 0
+    ) {
+      try {
+        const parentPool = await fetchCompsByPlayer({
+          playerName: queryContext.playerName,
+          product: familyGap.parentProduct,
+          cardYear:
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : undefined,
+        });
+        const parentRawPrices = (parentPool.comps ?? [])
+          .map((c) => c.price)
+          .filter((p): p is number => Number.isFinite(p) && p > 0)
+          .sort((a, b) => a - b);
+        if (parentRawPrices.length > 0) {
+          const parentBaseMedian =
+            parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+          const parallelName =
+            typeof queryContext.parallel === "string" ? queryContext.parallel : "";
+          const printRun = parallelName ? inferPrintRun(parallelName) : null;
+          const parallelFloor =
+            printRun !== null ? floorForPrintRun(printRun) : null;
+          const parallelMultiplier = parallelFloor ?? 1;
+          const projectedFmv =
+            Math.round(
+              parentBaseMedian *
+                familyGap.familyMultiplier *
+                parallelMultiplier *
+                100,
+            ) / 100;
+
+          console.log(
+            JSON.stringify({
+              event: "product_family_projection_applied",
+              source: "compiq.computeEstimate",
+              query: cardTitle,
+              player: queryContext.playerName,
+              targetProduct: queryContext.product ?? null,
+              parentProduct: familyGap.parentProduct,
+              familyName: familyGap.familyName,
+              familyMultiplier: familyGap.familyMultiplier,
+              parallel: parallelName || null,
+              inferredPrintRun: printRun,
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+              projectedFmv,
+            }),
+          );
+
+          emitPredictionToCorpus({
+            cardIdentity: null,
+            body,
+            fairMarketValue: projectedFmv,
+            fmvMechanism: "product-family-projection",
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceMechanism: "product-family-projection",
+            callContext,
+          });
+
+          return {
+            source: "product-family-projection",
+            cardIdentity: {
+              card_id: "",
+              title: null,
+              player: queryContext.playerName,
+              set: queryContext.product ?? null,
+              release: queryContext.product ?? null,
+              year:
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+              number: queryContext.cardNumber ?? null,
+              variant: parallelName || null,
+            },
+            fairMarketValue: projectedFmv,
+            fairMarketValueLow: Math.round(projectedFmv * 0.75 * 100) / 100,
+            fairMarketValueHigh: Math.round(projectedFmv * 1.25 * 100) / 100,
+            marketValue: projectedFmv,
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceAttribution: {
+              mechanism: "product-family-projection",
+              familyName: familyGap.familyName,
+              parentProduct: familyGap.parentProduct,
+              familyMultiplier: familyGap.familyMultiplier,
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+            },
+            quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
+            premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
+            compsUsed: 0,
+            compsAvailable: 0,
+            recentComps: [],
+            variantWarning: [],
+            // ±25% band matches the sibling-fallback confidence tier —
+            // both are "estimated from adjacent data, variant unverified".
+            confidence: { pricingConfidence: 55 },
+            verdict: familyGap.attribution,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] product-family projection threw: ${(err as Error)?.message ?? err}`,
+        );
+        // Fall through to normal catalog-miss below.
+      }
+    }
+
     console.log(
       `[compiq.computeEstimate] catalog-miss short-circuit: query="${cardTitle}"`,
     );
