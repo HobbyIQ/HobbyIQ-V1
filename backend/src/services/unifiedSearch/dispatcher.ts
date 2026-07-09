@@ -773,8 +773,13 @@ function routedCardToIdentity(
     attributionOverride === "ai-matched" ? "ai-matched" : "ranked";
 
   return {
+    // CF-SOURCE-VENDOR-NEUTRAL (2026-07-08, Drew): candidateId prefix
+    // stays "cardsight:" — iOS strips it before calling /price-by-id
+    // and the wire contract is load-bearing. The `source` field IS
+    // display-facing though; emit vendor-neutral "catalog" so iOS
+    // doesn't leak the decommissioned Cardsight name to users.
     candidateId: `cardsight:${card.card_id}`,
-    source: "cardsight-catalog",
+    source: "catalog",
     attribution,
     confidence: Math.round(confidence * 100) / 100,
     player: card.player ?? null,
