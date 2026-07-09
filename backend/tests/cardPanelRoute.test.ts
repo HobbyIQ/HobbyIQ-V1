@@ -54,6 +54,10 @@ vi.mock("../src/services/compiq/cardhedge.client.js", async (importActual) => {
     // from CH's sales-stats-by-player. Stub returns null → trajectory
     // silently skips (no adjustment, no throw).
     getSalesStatsByPlayer: vi.fn(async () => null),
+    // CF-SAME-PLAYER-SIBLINGS (2026-07-08): the /card-panel route now
+    // also runs a same-player siblings search. Stub returns [] so the
+    // sibling carousel is empty in tests (route still returns cleanly).
+    searchCards: vi.fn(async () => []),
   };
 });
 
