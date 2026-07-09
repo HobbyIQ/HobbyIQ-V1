@@ -665,6 +665,12 @@ const THIN_SOURCES: ReadonlySet<string> = new Set([
 const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
   "sibling-pool",
   "variant-mismatch",
+  // CF-PRODUCT-FAMILY-PROJECTION (2026-07-09, Drew — Owen Carey Black
+  // Sapphire): projection is derived from a parent product's live comps
+  // plus a family multiplier. It's a real, defensible number, but
+  // structurally APPROXIMATE — no direct sales on the target SKU. iOS
+  // should render it with the same "estimated" disclosure as sibling-pool.
+  "product-family-projection",
 ]);
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 

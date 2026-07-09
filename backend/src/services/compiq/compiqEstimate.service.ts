@@ -3708,8 +3708,14 @@ export async function computeEstimate(
             },
             quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
             premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
-            compsUsed: 0,
-            compsAvailable: 0,
+            // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY (2026-07-09, Drew):
+            // route-layer cannotPriceFromEst nulls marketValue when
+            // compsUsed<3. The projection IS derived from the parent
+            // product's comps (parentRawPrices.length); reporting that
+            // count keeps the route from stripping the price. Honest
+            // reporting — the number is anchored on real sales.
+            compsUsed: parentRawPrices.length,
+            compsAvailable: parentRawPrices.length,
             recentComps: [],
             variantWarning: [],
             confidence: { pricingConfidence: 55 },
