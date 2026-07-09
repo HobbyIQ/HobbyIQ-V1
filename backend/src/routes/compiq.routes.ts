@@ -3340,11 +3340,41 @@ router.post(
         };
       });
 
+      // CF-LIVE-LLM-FALLBACK (2026-07-08, Drew): when the fuzzy layer
+      // produced no suggestions AND the feature flag is on, ask Claude
+      // for candidate query rewrites. Never blocks the response — a
+      // single try, no retry, 3s timeout, and errors return empty. iOS
+      // renders these as separate "Try instead" chips beside the fuzzy
+      // suggestions.
+      let llmSuggestions: string[] = [];
+      const liveLLMEnabled = process.env.LIVE_LLM_ALIAS_FALLBACK_ENABLED === "true";
+      if (liveLLMEnabled && suggestions.length === 0) {
+        try {
+          const { suggestSimilarQueries } = await import(
+            "../services/search/aliasGeneration.service.js"
+          );
+          llmSuggestions = await Promise.race([
+            suggestSimilarQueries(rawQuery),
+            new Promise<string[]>((resolve) => setTimeout(() => resolve([]), 3000)),
+          ]);
+        } catch (llmErr) {
+          console.warn(
+            "[compiq.suggest-corrections] LLM fallback failed:",
+            (llmErr as Error)?.message ?? llmErr,
+          );
+        }
+      }
+
       return res.json({
         success: true,
         query: rawQuery,
         candidateFirstToken: candidateFirst,
         suggestions,
+        // CF-LIVE-LLM-FALLBACK (2026-07-08): only present when the
+        // feature flag is on AND the fuzzy layer returned nothing.
+        // Empty array when no LLM candidates or flag off — iOS can
+        // safely render whichever list is non-empty.
+        llmSuggestions,
       });
     } catch (err) {
       return next(err);
