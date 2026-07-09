@@ -356,6 +356,15 @@ struct APIService {
     /// /api/compiq/card-grades endpoint.
     func fetchCardPanel(cardId: String) async throws -> CardPanelResponse {
         let trimmed = cardId.trimmingCharacters(in: .whitespacesAndNewlines)
+        // CF-EMPTY-CARDID-GUARD (2026-07-09): sibling-fallback +
+        // product-family-projection responses set `cardIdentity.card_id`
+        // to "" (real card_id only exists once CH indexes the SKU).
+        // GET /api/compiq/card-panel/ (empty path segment) 400s on the
+        // backend, so refuse to make the call in the first place.
+        // Callers already wrap this in `try?` for defensive rendering.
+        guard trimmed.isEmpty == false else {
+            throw APIServiceError.invalidURL
+        }
         let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmed
         // CF-CARD-PANEL-DECODE (2026-07-04): the shared JSONDecoder has no
         // key-decoding strategy, so a backend that emits snake_case
@@ -2224,9 +2233,27 @@ struct CompIQPredictedPriceAttribution: Codable, Hashable {
     // Direction icons app-wide MUST read `regime` for the arrow (up /
     // down / flat) rather than diffing marketValue vs lastSale — the
     // regime is the reconciled authority now.
+    //
+    // NOTE: `regime` / `regimeReconciled` / `regimeReconcileReason` are
+    // also nil on the product-family-projection path (see below) —
+    // that path bypasses the live pricing engine that produces regime.
     let regime: String?
     let regimeReconciled: Bool?
     let regimeReconcileReason: String?
+    // CF-PRODUCT-FAMILY-PROJECTION (2026-07-09): fires when a card's
+    // product line isn't yet indexed by CardHedge (launch case: 2026
+    // Bowman Sapphire before CH ingests it). Engine anchors off the
+    // equivalent parent product's live comps × family multiplier ×
+    // parallel floor. Populated ONLY when
+    // `mechanism == "product-family-projection"`. `forwardProjectionFactor`,
+    // `trendIQ*` fields are all nil on this path — never force-unwrap
+    // them assuming a specific mechanism.
+    let familyName: String?
+    let parentProduct: String?
+    let familyMultiplier: Double?
+    let parallelMultiplier: Double?
+    let parentBaseMedian: Double?
+    let parentComps: Int?
 }
 
 // Note: TrendIQ structs (TrendIQResponse + components + weights) already

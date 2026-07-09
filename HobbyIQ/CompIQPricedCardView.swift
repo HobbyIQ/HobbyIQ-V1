@@ -930,20 +930,37 @@ struct CompIQPricedCardView: View {
         // CF-REMOVE-DIRECTION-ROW (2026-07-04): Direction row dropped —
         // the trend read is already covered by the regime label
         // (`Holding steady`, `Trending up`, etc.) under the FMV
-        // headline. Section now shows Change + Liquidity only.
-        let trend = response.trendAnalysis
-        let change = trend?.changeFromOlderToRecent?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let liquidity = trend?.liquidity?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasContent = (change?.isEmpty == false) || (liquidity?.isEmpty == false)
+        // headline. Section shows Change + Liquidity only.
+        //
+        // CF-CHANGE-SOURCE-ALIGN (2026-07-09 rev): "Change" row now
+        // sources from `predictedPricePct` — the same scalar the
+        // PREDICTED (7d) headline surfaces. Previously used
+        // `trendAdjustmentPct` (a shorter-window stale-sale
+        // correction), which could disagree with PREDICTED for the
+        // same card (e.g. Hartman: predictedPricePct=+30% but
+        // trendAdjustmentPct=-25%, so the top of the page read
+        // "up 30%" while Market Trend read "-25%"). Aligning to the
+        // signal users actually see rendered up top.
+        // Falls back to the legacy `trendAnalysis.changeFromOlderToRecent`
+        // string only when the panel entry has no scalar.
+        let liquidity = response.trendAnalysis?.liquidity?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pct = panelEntryForSelectedGrade()?.predictedPricePct
+        let legacyChange = response.trendAnalysis?.changeFromOlderToRecent?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let changeValueText: String? = {
+            if let pct { return Self.signedPctString(pct) }
+            if let legacyChange, legacyChange.isEmpty == false { return legacyChange }
+            return nil
+        }()
+        let hasContent = changeValueText != nil || (liquidity?.isEmpty == false)
 
         if hasContent {
             cardGroup(title: "Market Trend", icon: "chart.line.uptrend.xyaxis") {
                 VStack(alignment: .leading, spacing: 10) {
-                    if let change, change.isEmpty == false {
+                    if let text = changeValueText {
                         MetricRow(
                             title: "Change",
-                            value: change,
-                            valueColor: marketChangeColor(change)
+                            value: text,
+                            valueColor: changeColor(pct: pct, fallbackString: legacyChange)
                         )
                     }
                     if let liquidity, liquidity.isEmpty == false {
@@ -952,6 +969,28 @@ struct CompIQPricedCardView: View {
                 }
             }
         }
+    }
+
+    /// CF-CHANGE-SOURCE-ALIGN (2026-07-09): signed % formatter used
+    /// by the Market Trend "Change" row so the copy reads e.g. "+5%".
+    private static func signedPctString(_ pct: Double) -> String {
+        let magnitude = pctString(abs(pct))
+        return pct >= 0 ? "+\(magnitude)" : "-\(magnitude)"
+    }
+
+    /// Consistent color rule: prefer the panel entry's numeric % for
+    /// coloring; only fall back to the legacy string parser when we
+    /// don't have the scalar.
+    private func changeColor(pct: Double?, fallbackString: String?) -> Color {
+        if let pct {
+            if pct > 3 { return HobbyIQTheme.Colors.successGreen }
+            if pct < -3 { return HobbyIQTheme.Colors.danger }
+            return HobbyIQTheme.Colors.mutedText
+        }
+        if let fallbackString {
+            return marketChangeColor(fallbackString)
+        }
+        return HobbyIQTheme.Colors.mutedText
     }
 
     @ViewBuilder
@@ -1470,12 +1509,16 @@ struct CompIQPricedCardView: View {
         // CF-REGIME-RECONCILED (2026-07-09, backend PR #333): direction
         // reads from `response.regime` first when it's decisive
         // (rising / falling variants) — that's the reconciled
-        // authority per the backend brief. Falls back to
-        // `trendAdjustmentPct` when regime is nil, ambiguous, or
-        // insufficient-data. No client-side price-diff logic —
-        // marketValue-vs-lastSale is explicitly forbidden.
+        // authority per the backend brief. Falls back to the panel
+        // entry's `predictedPricePct` — the SAME scalar the PREDICTED
+        // (7d) headline surfaces — so trend line, PREDICTED, and
+        // Market Trend > Change all read from one source. Never
+        // consults `trendAdjustmentPct` here (that's a shorter-window
+        // stale-sale correction that can disagree with the forward
+        // projection). No client-side price-diff logic — marketValue-
+        // vs-lastSale is explicitly forbidden.
         let entry = panelEntryForSelectedGrade()
-        let pct = entry?.trendAdjustmentPct
+        let pct = entry?.predictedPricePct
         let regimeDirection = trendDirection(fromRegime: priceResponse?.regime)
         let direction: TrendLineDirection = regimeDirection ?? trendDirection(fromPct: pct)
 
@@ -1907,6 +1950,16 @@ struct CompIQPricedCardView: View {
                  "cardhedge-last-sale":                       lastSalePriceSlot(response)
             case "cardhedge", "live-market":                  liveMarketPriceSlot(response)
             case "no-sales", "no_sales", "none":              noSalesYetPriceSlot()
+            // CF-PRODUCT-FAMILY-PROJECTION (2026-07-09): backend derives
+            // marketValue from the equivalent parent product × family
+            // multiplier × parallel floor when CH hasn't indexed the
+            // SKU yet (launch window). Real number, treat as estimated.
+            //
+            // CF-SIBLING-FALLBACK (2026-07-08, PR #311): same visual
+            // class — the price is anchored on a same-player sibling
+            // parallel × premium × print-run floor.
+            case "product-family-projection",
+                 "sibling-fallback":                          trendExtrapolatedPriceSlot(response)
             case .some, nil:                                  fallbackPriceSlot(response)
             }
         } else {
