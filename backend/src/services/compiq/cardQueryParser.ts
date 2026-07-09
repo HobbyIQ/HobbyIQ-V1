@@ -135,9 +135,25 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     // X-Fractor — Bowman Chrome specialty. Hyphen / no-hyphen / space all
     // observed in the wild.
     [/x[-\s]?fractor/i, "X-Fractor"],
+    // CF-SAPPHIRE-COLOR-PARALLELS (2026-07-09, Drew — Owen Carey Black
+    // Sapphire): color-modified Sapphire parallels MUST come BEFORE the
+    // bare `/sapphire/i` fallback below, otherwise "black sapphire"
+    // matches `/sapphire/i` first, sets parallel="Sapphire", and the
+    // color word leaks into playerName ("Owen Carey Black"). Downstream
+    // family-projection then uses the wrong player and finds no comps.
+    // Same shape as the multi-color Refractor patterns above.
+    [/padparadscha\s+sapphire/i, "Padparadscha Sapphire"],
+    [/black\s+sapphire/i, "Black Sapphire"],
+    [/red\s+sapphire/i, "Red Sapphire"],
+    [/gold\s+sapphire/i, "Gold Sapphire"],
+    [/blue\s+sapphire/i, "Blue Sapphire"],
+    [/green\s+sapphire/i, "Green Sapphire"],
+    [/orange\s+sapphire/i, "Orange Sapphire"],
+    [/yellow\s+sapphire/i, "Yellow Sapphire"],
     // Bowman Sapphire — product tier, not strictly a parallel, but treated
     // as one for query-disambiguation purposes (CH catalog indexes it by
-    // "Sapphire" as an attribute).
+    // "Sapphire" as an attribute). Bare fallback — only fires when none
+    // of the color-modified patterns above matched.
     [/sapphire/i, "Sapphire"],
     // Topps Transcendent — product tier, same reasoning as Sapphire.
     [/transcendent/i, "Transcendent"],

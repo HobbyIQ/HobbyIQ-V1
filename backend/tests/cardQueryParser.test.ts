@@ -272,6 +272,42 @@ describe("parseCardQuery — CF-CARDQUERY-PARSER-PARALLEL-EXPANSION", () => {
     expect(p.playerName).toBe("Josiah Hartshorn");
   });
 
+  // CF-SAPPHIRE-COLOR-PARALLELS (2026-07-09, Drew — Owen Carey Black
+  // Sapphire): color-modified Sapphire parallels must capture the full
+  // color+Sapphire string, not just "Sapphire", so the color word doesn't
+  // leak into playerName. Pre-fix "owen carey black sapphire" parsed as
+  // { parallel: "Sapphire", playerName: "Owen Carey Black" } → downstream
+  // family-projection couldn't find a real player to anchor on.
+  it("captures Black Sapphire; player name clean (was 'Owen Carey Black' pre-fix)", () => {
+    const p = parseCardQuery("2026 Bowman Owen Carey Black Sapphire");
+    expect(p.parallel).toBe("Black Sapphire");
+    expect(p.playerName).toBe("Owen Carey");
+  });
+
+  it("captures Red Sapphire; player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Draft Ethan Conrad Red Sapphire");
+    expect(p.parallel).toBe("Red Sapphire");
+    expect(p.playerName).toBe("Ethan Conrad");
+  });
+
+  it("captures Gold Sapphire; player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Ethan Salas Gold Sapphire");
+    expect(p.parallel).toBe("Gold Sapphire");
+    expect(p.playerName).toBe("Ethan Salas");
+  });
+
+  it("captures Padparadscha Sapphire; player name clean", () => {
+    const p = parseCardQuery("2025 Bowman Jesus Made Padparadscha Sapphire");
+    expect(p.parallel).toBe("Padparadscha Sapphire");
+    expect(p.playerName).toBe("Jesus Made");
+  });
+
+  it("bare Sapphire still parses as Sapphire (no color prefix, no leak)", () => {
+    const p = parseCardQuery("2025 Bowman Sapphire Ethan Conrad");
+    expect(p.parallel).toBe("Sapphire");
+    expect(p.playerName).toBe("Ethan Conrad");
+  });
+
   // Regression pins — make sure the new patterns don't cannibalize existing
   // parallel matches. Blue/Red/etc. bare colors must still work when no
   // Raywave/Lava keyword follows.
