@@ -217,10 +217,18 @@ export function parseCardQuery(input: string): ParsedCardQuery {
   //   3. Unhyphenated last: "US175", "USC35", "HMT9" — letters followed by
   //      digits, no hyphen. Must run last so it doesn't swallow "BD" from
   //      "BD-31".
+  //
+  // CF-CARDNUMBER-CASE-INSENSITIVE (2026-07-09, Drew — Owen Carey BCP-69):
+  // regexes 2 and 3 must be case-insensitive. User queries commonly come in
+  // as lowercase ("owen carey bcp-69"); without /i the hyphenated pattern
+  // missed "bcp-69", the printRun regex then stripped "69" as if it were a
+  // print run, and "bcp-" leaked into playerName ("Owen Carey Bcp-"). iOS
+  // then rendered the mangled name in the header and downstream lookups
+  // couldn't find a real player.
   const cardNumMatch =
     text.match(/#([A-Z0-9]{1,5}-?[A-Z0-9]+)\b/i) ||
-    text.match(/\b([A-Z][A-Z0-9]{0,3}-[A-Z0-9]+)\b/) ||
-    text.match(/\b([A-Z]{1,4}\d+)\b/);
+    text.match(/\b([A-Z][A-Z0-9]{0,3}-[A-Z0-9]+)\b/i) ||
+    text.match(/\b([A-Z]{1,4}\d+)\b/i);
   const cardNumber = cardNumMatch ? cardNumMatch[1].toUpperCase() : null;
 
   // --- GRADE + GRADING COMPANY ---
