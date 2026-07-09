@@ -1127,6 +1127,98 @@ async function applyTrajectory(
     });
   }
 
+  // ── CF-GRADE-MONOTONICITY-CAP (2026-07-09, Drew — Devin Taylor gold
+  //    auto): trend adjustment lifts raw's trendAdjustedValue above its
+  //    static point estimate, but estimated graded entries stay at their
+  //    Raw × multiplier value by design (line 1064 comment: layering
+  //    trend on an already-projected estimate compounds uncertainty).
+  //    Result: hot-market raw can visibly exceed graded on iOS ($1908
+  //    trendAdjusted raw vs $1182 static PSA 10) — a clear inversion.
+  //
+  //    Invariant: raw's shown value must not exceed the smallest graded
+  //    value whose multiplier > 1.0 (i.e. any grade that's structurally
+  //    supposed to exceed raw). Cap raw's trendAdjustedValue and
+  //    predictedPriceAt30d to that floor. Preserves the trend signal for
+  //    raw when it's within-band; only bites when it would breach grade
+  //    monotonicity.
+  //
+  //    Applies to BOTH the market value AND the 30d predicted (same
+  //    inversion mechanism affects predicted-vs-predicted comparisons).
+  //    The predicted is recomputed from the capped market value using
+  //    entry.predictedPricePct (which encodes the rate over the horizon).
+  const rawEntry = entries.find((e) => e.grader === "Raw");
+  if (rawEntry && rawEntry.value !== null && rawEntry.value > 0) {
+    const rawShownValue = rawEntry.trendAdjustedValue ?? rawEntry.value;
+    // Floor = the smallest graded value where multiplier > 1 (i.e. the
+    // grade is supposed to be worth strictly more than raw). Grades with
+    // multiplier === 1 (e.g. PSA 8) are semantically equivalent to raw
+    // per Drew's spec so they can equal raw without an inversion.
+    const nonRawStrictFloor = entries.reduce<number | null>((min, e) => {
+      if (e.grader === "Raw") return min;
+      if (e.value === null || e.value <= 0) return min;
+      const mult = e.estimatedMultiplier;
+      // Only cards with a "strictly-above-raw" multiplier count as a floor.
+      if (typeof mult !== "number" || mult <= 1.0) return min;
+      return min === null || e.value < min ? e.value : min;
+    }, null);
+
+    if (
+      nonRawStrictFloor !== null &&
+      rawShownValue > nonRawStrictFloor + 0.005
+    ) {
+      const originalTrendAdjusted = rawEntry.trendAdjustedValue;
+      const originalPredicted = rawEntry.predictedPriceAt30d;
+      const cappedMarket = Math.round(nonRawStrictFloor * 100) / 100;
+      // Recompute predicted from the capped market value using the same
+      // forward-rate factor already applied to this entry. predictedPricePct
+      // is (predictedMultiplier - 1) * 100, so this reproduces the loop's math.
+      const predictedFactor =
+        1 + (rawEntry.predictedPricePct ?? 0) / 100;
+      const cappedPredicted =
+        Math.round(cappedMarket * predictedFactor * 100) / 100;
+      const rangePct = pickBandWidthPct(rawEntry);
+      const cappedRangeLow =
+        Math.round(cappedPredicted * (1 - rangePct) * 100) / 100;
+      const cappedRangeHigh =
+        Math.round(cappedPredicted * (1 + rangePct) * 100) / 100;
+
+      rawEntry.trendAdjustedValue = cappedMarket;
+      rawEntry.trendAdjustmentPct =
+        Math.round(((cappedMarket / rawEntry.value) - 1) * 10000) / 100;
+      rawEntry.predictedPriceAt30d = cappedPredicted;
+      rawEntry.predictedPriceRangeLow = cappedRangeLow;
+      rawEntry.predictedPriceRangeHigh = cappedRangeHigh;
+      // predictedPricePct is a percent-of-market, not-of-original —
+      // preserved: cappedMarket * (1 + pct/100) = cappedPredicted, so pct
+      // stays as it was. Keep the loop's value on the entry.
+
+      console.log(
+        JSON.stringify({
+          event: "raw_trend_capped_by_grade_monotonicity",
+          source: "observedGradeCurve",
+          rawBaseValue: rawEntry.value,
+          rawTrendAdjustedBeforeCap: originalTrendAdjusted,
+          rawPredictedBeforeCap: originalPredicted,
+          nonRawStrictFloor,
+          cappedMarketValue: cappedMarket,
+          cappedPredictedValue: cappedPredicted,
+          ratePerWeek: derivation.cappedRate,
+        }),
+      );
+
+      // Recompute the raw entry's action recommendation off the capped
+      // pair so the seller verdict reflects the actually-shown numbers.
+      const cappedMarketForRec = rawEntry.trendAdjustedValue ?? rawEntry.value;
+      rawEntry.recommendation = computeAction({
+        currentValue: cappedMarketForRec,
+        predictedValue: rawEntry.predictedPriceAt30d,
+        confidenceScore: rawEntry.confidenceScore,
+        signalSource: derivation.signalSource,
+        weeksSinceRelease: releaseDecayContext?.weeksSinceRelease ?? null,
+      });
+    }
+  }
+
   return derivation;
 }
 

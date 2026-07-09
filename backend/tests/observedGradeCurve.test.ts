@@ -1112,6 +1112,169 @@ describe("CF-OBSERVED-GRADE-CURVE — buildObservedGradeCurve", () => {
     });
   });
 
+  // ────────────────────────────────────────────────────────────────────────
+  // CF-GRADE-MONOTONICITY-CAP (2026-07-09, Drew — Devin Taylor gold auto).
+  //
+  // Trend adjustment lifts raw's trendAdjustedValue above its base value,
+  // but estimated graded entries stay at their Raw × multiplier value by
+  // design (layering trend on an already-projected estimate compounds
+  // uncertainty). That creates a visible inversion on iOS: hot-market raw
+  // ($430 → $1908 trend-adjusted) exceeds PSA 10's static estimate ($1182).
+  //
+  // The invariant: raw's shown market/predicted must not exceed the
+  // smallest graded value whose multiplier > 1.0 (any grade that's
+  // structurally supposed to exceed raw). When it would, cap raw at that
+  // floor and recompute predicted from the capped anchor.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("CF-GRADE-MONOTONICITY-CAP — raw trend adjustment capped by graded floor", () => {
+    it("caps raw trendAdjustedValue at the smallest graded value with multiplier > 1", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      // Old raw comp (60d ago) + hot rate → raw's trendAdjustedValue would
+      // shoot above the graded floor without the cap. 60d → weeksSinceSale
+      // caps at MAX_WEEKS_LOOKBACK (6). Rate 0.30/week → marketMultiplier
+      // = 1 + 0.30 × 6 = 2.8. Raw base $100 → uncapped trendAdjusted $280.
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(60) },
+            { price: 100, date: daysAgo(62) },
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.30, "HotPlayer") as any,
+      );
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "HotPlayer",
+      });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Smallest graded value with multiplier > 1. In the default class
+      // multiplier matrix, the smallest > 1 is SGC 9 / CGC 9 (1.3×) →
+      // $100 × 1.3 = $130. The exact floor depends on class defaults, but
+      // it MUST be strictly less than the uncapped $280.
+      const nonRawStrictFloor = curve.entries
+        .filter(
+          (e) =>
+            e.grader !== "Raw" &&
+            typeof e.estimatedMultiplier === "number" &&
+            (e.estimatedMultiplier as number) > 1.0 &&
+            typeof e.value === "number" &&
+            (e.value as number) > 0,
+        )
+        .reduce<number>((min, e) => ((e.value as number) < min ? (e.value as number) : min), Number.POSITIVE_INFINITY);
+      expect(nonRawStrictFloor).toBeLessThan(280);
+      // Raw's shown trendAdjustedValue is capped at that floor (within
+      // rounding tolerance).
+      expect(raw.trendAdjustedValue).toBeLessThanOrEqual(nonRawStrictFloor + 0.01);
+    });
+
+    it("guarantees Raw ≤ every graded value with multiplier > 1 after cap fires", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 500, date: daysAgo(90) },
+            { price: 500, date: daysAgo(95) },
+          ] as any;
+        }
+        return [];
+      });
+      // Extreme rate to make the cap definitely fire.
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.50, "VeryHot") as any,
+      );
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "VeryHot",
+      });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      const rawShown = raw.trendAdjustedValue ?? raw.value;
+
+      for (const entry of curve.entries) {
+        if (entry.grader === "Raw") continue;
+        if (typeof entry.estimatedMultiplier !== "number") continue;
+        if ((entry.estimatedMultiplier as number) <= 1.0) continue;
+        if (entry.value === null || (entry.value as number) <= 0) continue;
+        // Monotonicity: raw shown value must not exceed any grade that's
+        // structurally supposed to be worth more than raw.
+        expect(rawShown).toBeLessThanOrEqual((entry.value as number) + 0.01);
+      }
+    });
+
+    it("recomputes raw's predictedPriceAt30d from the capped market value", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(60) },
+            { price: 100, date: daysAgo(62) },
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.30, "HotPlayer2") as any,
+      );
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", {
+        playerName: "HotPlayer2",
+      });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // Predicted = cappedMarket × (1 + predictedPricePct/100). Both fields
+      // are populated. Because predictedPricePct here comes from the same
+      // rate that drove the pre-cap trend, the ratio predicted/market
+      // matches the loop's formula.
+      const predictedFactor = 1 + (raw.predictedPricePct ?? 0) / 100;
+      expect(raw.predictedPriceAt30d).toBeCloseTo(
+        (raw.trendAdjustedValue as number) * predictedFactor,
+        1,
+      );
+    });
+
+    it("does NOT cap when raw's trendAdjustedValue is already below the graded floor", async () => {
+      const { getCardSales } = await import("../src/services/compiq/cardhedge.client.js");
+      const { getPlayerTrendSnapshot } = await import("../src/services/playerTrend/index.js");
+      // Modest rate + moderate age → raw stays under the graded floor.
+      vi.mocked(getCardSales).mockImplementation(async (_cardId, grade) => {
+        if (grade === "Raw") {
+          return [
+            { price: 100, date: daysAgo(30) },
+            { price: 100, date: daysAgo(32) },
+          ] as any;
+        }
+        return [];
+      });
+      vi.mocked(getPlayerTrendSnapshot).mockResolvedValueOnce(
+        makeSnapshot(0.05, "Warm") as any,
+      );
+
+      const { buildObservedGradeCurve } = await import(
+        "../src/services/compiq/observedGradeCurve.service.js"
+      );
+      const curve = await buildObservedGradeCurve("c1", { playerName: "Warm" });
+      const raw = curve.entries.find((e) => e.grade === "Raw")!;
+      // 30d × 0.05/week ≈ +21% → $121. Well below the smallest graded
+      // floor (SGC 9 ≈ $130 baseline). Cap should NOT fire → raw's
+      // trendAdjustedValue stays at ~$121, not pinned to floor.
+      expect(raw.trendAdjustedValue).toBeGreaterThan(115);
+      expect(raw.trendAdjustedValue).toBeLessThan(135);
+    });
+  });
+
   describe("CF-RECENCY-LIFT — anchor lifts toward newest closed sale when it's above smoothed median", () => {
     // Common scenario: Brito-style. Weighted median is around $164 from
     // three older sales, but a single recent sale went for $260 — market
