@@ -174,3 +174,176 @@ describe("computePredictedPrice — predictedPrice + range + attribution", () =>
     expect(result.predictedPriceRange).toEqual({ low: 13.04, high: 15.3 });
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────
+// CF-REGIME-RECONCILE (2026-07-08)
+//
+// Covers the failure surfaced 2026-07-08: Ohtani 2021 Topps Chrome (n=43)
+// carries regime "sharply_breaking_out" (14d mean +18% above older mean)
+// but trendIQ composite reads 1.014 (flat) because median-of-window math
+// dead-zones on high sample counts. Result: iOS shows a UP arrow (from
+// regime) next to a flat number (from trendIQ) — same data, opposite reads.
+//
+// Reconciliation applies directional floors/ceilings to the trendIQ factor
+// when regime is decisive AND confidence is medium/high. Non-directional
+// regimes (stable, volatile, insufficient_data), low confidence, and
+// missing regime all pass through unchanged.
+// ────────────────────────────────────────────────────────────────────────
+import { computeForwardProjectionFactorReconciled } from "../src/services/compiq/forwardProjection.js";
+
+describe("computeForwardProjectionFactorReconciled — regime floors/ceilings", () => {
+  it("no regime supplied → identical to plain trendIQ factor, reconciled=false", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.014, coverage: "full" }),
+    );
+    expect(r.reconciled).toBe(false);
+    expect(r.reconcileReason).toBeNull();
+    expect(r.factor).toBeCloseTo(r.trendIQFactor, 6);
+  });
+
+  it("sharply_breaking_out floors factor at 1.05 even when trendIQ is flat (the Ohtani case)", () => {
+    // trendIQ composite 1.014 → trendIQFactor = 1 + 0.014*0.6 = 1.0084
+    // sharply_breaking_out floor = 1.05 → reconciled up to 1.05
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.014, direction: "flat", coverage: "full" }),
+      "sharply_breaking_out",
+      "high",
+    );
+    expect(r.trendIQFactor).toBeCloseTo(1.0084, 4);
+    expect(r.factor).toBe(1.05);
+    expect(r.reconciled).toBe(true);
+    expect(r.reconcileReason).toBe("regime_sharply_breaking_out_floor");
+  });
+
+  it("sharply_breaking_out does not lower a factor already above the floor", () => {
+    // trendIQ composite 1.30 → trendIQFactor = clamp(0.8, 1.30, 1.18) = 1.18
+    // Above the 1.05 floor → no change
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.30, direction: "up", coverage: "full" }),
+      "sharply_breaking_out",
+      "high",
+    );
+    expect(r.factor).toBeCloseTo(1.18, 4);
+    expect(r.reconciled).toBe(false);
+    expect(r.reconcileReason).toBeNull();
+  });
+
+  it("sharply_crashing caps factor at 0.95 even when trendIQ is flat", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.0, coverage: "full" }),
+      "sharply_crashing",
+      "high",
+    );
+    expect(r.trendIQFactor).toBe(1.0);
+    expect(r.factor).toBe(0.95);
+    expect(r.reconciled).toBe(true);
+    expect(r.reconcileReason).toBe("regime_sharply_crashing_ceiling");
+  });
+
+  it("gradually_rising floor is 1.01 (mild bias)", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.0, coverage: "full" }),
+      "gradually_rising",
+      "medium",
+    );
+    expect(r.factor).toBe(1.01);
+    expect(r.reconciled).toBe(true);
+    expect(r.reconcileReason).toBe("regime_gradually_rising_floor");
+  });
+
+  it("declining ceiling is 0.99 (mild bias)", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.0, coverage: "full" }),
+      "declining",
+      "medium",
+    );
+    expect(r.factor).toBe(0.99);
+    expect(r.reconciled).toBe(true);
+    expect(r.reconcileReason).toBe("regime_declining_ceiling");
+  });
+
+  it("stable regime → pass-through even at high confidence", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 0.85, coverage: "full" }),
+      "stable",
+      "high",
+    );
+    expect(r.reconciled).toBe(false);
+    expect(r.factor).toBeCloseTo(0.91, 4);
+  });
+
+  it("volatile regime → pass-through (direction not asserted)", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.2, coverage: "full" }),
+      "volatile",
+      "high",
+    );
+    expect(r.reconciled).toBe(false);
+    expect(r.factor).toBeCloseTo(1.12, 4);
+  });
+
+  it("insufficient_data regime → pass-through (direction not asserted)", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.014, coverage: "full" }),
+      "insufficient_data",
+      "low",
+    );
+    expect(r.reconciled).toBe(false);
+    expect(r.factor).toBeCloseTo(1.0084, 4);
+  });
+
+  it("low confidence → pass-through even when regime is decisive (n<10 = noisy classifier)", () => {
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.0, coverage: "full" }),
+      "sharply_breaking_out",
+      "low",
+    );
+    expect(r.reconciled).toBe(false);
+    expect(r.factor).toBe(1.0);
+  });
+
+  it("insufficient trendIQ coverage + decisive regime → regime still floors it", () => {
+    // Coverage-insufficient trendIQ gives factor 1.0. If regime says
+    // sharply_breaking_out at high confidence, we still floor at 1.05 so
+    // that direction agreement doesn't hinge on trendIQ having full data.
+    const r = computeForwardProjectionFactorReconciled(
+      makeTrendIQ({ composite: 1.4, coverage: "insufficient" }),
+      "sharply_breaking_out",
+      "high",
+    );
+    expect(r.trendIQFactor).toBe(1.0);
+    expect(r.factor).toBe(1.05);
+    expect(r.reconciled).toBe(true);
+  });
+});
+
+describe("computePredictedPrice — regime reconciliation wiring", () => {
+  it("legacy attribution shape preserved when regime is undefined", () => {
+    // Guards CF-REGIME-RECONCILE from ripping the pre-existing attribution
+    // toEqual assertion in the earlier suite.
+    const tiq = makeTrendIQ({ composite: 1.15, direction: "up", coverage: "full" });
+    const result = computePredictedPrice(50, tiq);
+    expect(result.predictedPriceAttribution).not.toHaveProperty("regime");
+    expect(result.predictedPriceAttribution).not.toHaveProperty("regimeReconciled");
+  });
+
+  it("regime + confidence supplied → attribution carries regime + reconcile fields", () => {
+    const tiq = makeTrendIQ({ composite: 1.014, direction: "flat", coverage: "full" });
+    const result = computePredictedPrice(100, tiq, "sharply_breaking_out", "high");
+    expect(result.predictedPrice).toBe(105); // FMV 100 × factor 1.05
+    expect(result.predictedPriceAttribution.regime).toBe("sharply_breaking_out");
+    expect(result.predictedPriceAttribution.regimeReconciled).toBe(true);
+    expect(result.predictedPriceAttribution.regimeReconcileReason).toBe(
+      "regime_sharply_breaking_out_floor",
+    );
+  });
+
+  it("regime + confidence supplied but reconciliation didn't fire → reconciled=false, reason=null", () => {
+    // trendIQ already reads up → sharply_breaking_out floor doesn't move it.
+    const tiq = makeTrendIQ({ composite: 1.3, direction: "up", coverage: "full" });
+    const result = computePredictedPrice(100, tiq, "sharply_breaking_out", "high");
+    expect(result.predictedPriceAttribution.regime).toBe("sharply_breaking_out");
+    expect(result.predictedPriceAttribution.regimeReconciled).toBe(false);
+    expect(result.predictedPriceAttribution.regimeReconcileReason).toBeNull();
+  });
+});

@@ -81,7 +81,10 @@ import {
 import type { TrendIQResult } from "./trendIQ.types.js";
 // CF-NEXT-SALE-PREDICTION-LAYER (design d531939, Option B locked) —
 // TrendIQ-driven forward projection layer on top of fairMarketValue.
-import { computePredictedPrice } from "./forwardProjection.js";
+import {
+  computeForwardProjectionFactor,
+  computePredictedPrice,
+} from "./forwardProjection.js";
 import { writePredictionLog } from "./predictionCorpus.service.js";
 
 // CF-DECOUPLE (2026-06-21): classify a free-text `body.product` string into
@@ -5702,7 +5705,69 @@ export async function computeEstimate(
   const __predicted = computePredictedPrice(
     typeof fairMarketValue === "number" ? fairMarketValue : null,
     trendIQ,
+    regimeClassificationResult.regime,
+    regimeClassificationResult.confidence,
   );
+
+  // CF-REGIME-RECONCILE (2026-07-08) — telemetry for the trend-vs-regime
+  // disagreement calibration. Emit whenever regime is decisive (asserts
+  // direction with ≥ medium confidence) AND trendIQ either disagrees on
+  // direction OR the reconciled factor moved the projection away from the
+  // trendIQ-only read. Structured JSON so the calibration KQL can join
+  // against future actual-next-sale outcomes without a schema retrofit.
+  {
+    const decisiveRegimes = new Set([
+      "sharply_breaking_out",
+      "gradually_rising",
+      "declining",
+      "sharply_crashing",
+    ]);
+    const regime = regimeClassificationResult.regime;
+    const regimeConf = regimeClassificationResult.confidence;
+    const trendIQDir = trendIQ.direction;
+    const trendIQDirSign =
+      trendIQDir === "up" ? 1 : trendIQDir === "down" ? -1 : 0;
+    const regimeDirSign =
+      regime === "sharply_breaking_out" || regime === "gradually_rising"
+        ? 1
+        : regime === "declining" || regime === "sharply_crashing"
+          ? -1
+          : 0;
+    const directionalDisagreement =
+      trendIQDirSign !== 0 && regimeDirSign !== 0 && trendIQDirSign !== regimeDirSign;
+    if (
+      decisiveRegimes.has(regime) &&
+      regimeConf !== "low" &&
+      (directionalDisagreement || __predicted.predictedPriceAttribution.regimeReconciled)
+    ) {
+      console.log(
+        JSON.stringify({
+          event: "trend_regime_disagreement",
+          source: "compiq.computeEstimate",
+          cardId: fetched?.card?.card_id ?? null,
+          playerName: body?.playerName ?? null,
+          regime,
+          regimeConfidence: regimeConf,
+          slopePctPerMonth: regimeClassificationResult.diagnostics.slopePctPerMonth,
+          pctChangeRecentVsOlder:
+            regimeClassificationResult.diagnostics.pctChangeRecentVsOlder,
+          trendIQDirection: trendIQDir,
+          trendIQComposite: trendIQ.composite,
+          trendIQCoverage: trendIQ.coverage,
+          trendIQOnlyFactor: computeForwardProjectionFactor(trendIQ),
+          forwardProjectionFactor: __predicted.forwardProjectionFactor,
+          regimeReconciled:
+            __predicted.predictedPriceAttribution.regimeReconciled ?? false,
+          regimeReconcileReason:
+            __predicted.predictedPriceAttribution.regimeReconcileReason ?? null,
+          fairMarketValue: typeof fairMarketValue === "number" ? fairMarketValue : null,
+          predictedPrice: __predicted.predictedPrice,
+          lastSalePrice: comps[0]?.originalPrice ?? null,
+          compsUsed: comps.length,
+        }),
+      );
+    }
+  }
 
   // Structured event log for the ML training corpus.
   // CF-PREDICTION-CORPUS STEP 1 (cardId emission, prior commit) added
