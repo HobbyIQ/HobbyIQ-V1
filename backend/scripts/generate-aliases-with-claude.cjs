@@ -39,6 +39,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -50,9 +51,9 @@ async function main() {
 
   let generateAliasesForCanonical, upsertAlias, staticSeedAliases;
   try {
-    ({ generateAliasesForCanonical } = await import(distGen));
-    ({ upsertAlias } = await import(distRepo));
-    ({ staticSeedAliases } = await import(distStore));
+    ({ generateAliasesForCanonical } = await import(pathToFileURL(distGen).href));
+    ({ upsertAlias } = await import(pathToFileURL(distRepo).href));
+    ({ staticSeedAliases } = await import(pathToFileURL(distStore).href));
   } catch (err) {
     console.error(
       "Cannot find dist output. Build with `npm run build` or invoke via tsx.",

@@ -161,6 +161,17 @@ import {
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import { requireRateLimited } from "../middleware/requireRateLimited.js";
+import { perUserThrottle } from "../middleware/perUserThrottle.js";
+
+// Anti-abuse throttle for the fire-and-forget selection log. A real user
+// making manual selections tops out around 1/sec; this leaves 3-4× headroom
+// for legit rapid picking (autocomplete cycling, list scrolling) while
+// bounding a compromised session to ~10k writes/day instead of unlimited.
+const LOG_SELECTION_THROTTLE = perUserThrottle({
+  label: "log-selection",
+  limit: 60,
+  windowMs: 60 * 1000, // 60 requests per 60 seconds per user
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CF-PRICE-AUTO-PROJECTION-HELPERS (2026-07-02)
@@ -3206,6 +3217,7 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
 router.post(
   "/log-selection",
   requireSession,
+  LOG_SELECTION_THROTTLE,
   async (req, res, _next) => {
     try {
       const { query, selectedCardId, resolvedPlayer, resolvedVariant, resolvedSet, resolvedYear, source } =
