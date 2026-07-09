@@ -28,7 +28,8 @@ export type CardsightParallel = CardParallel;
 
 export type CardIdentitySource =
   | "psa-cert"
-  | "cardsight-catalog"
+  | "catalog"
+  | "cardsight-catalog"   // DEPRECATED — retained for wire back-compat with older iOS clients
   | "bgs-cert"
   | "sgc-cert"
   | "cgc-cert";
