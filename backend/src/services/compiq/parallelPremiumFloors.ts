@@ -198,6 +198,39 @@ export function floorForPrintRun(printRun: number): number | null {
 }
 
 /**
+ * CF-PARALLEL-FLOOR-NON-AUTO-MULTIPLIER (2026-07-09, Drew — Owen Carey
+ * Black BCP-69): the PRINT_RUN_TO_FLOOR table is calibrated to AUTO
+ * cards, where the base auto ($50-100 range for a fringe prospect) ×
+ * /10 floor 30× → $1,500-3,000 hits hobby-consensus. Applied verbatim
+ * to non-auto base cards ($1-3 range) the same 30× floor yields $30-90
+ * — well below hobby reality for rare non-auto parallels. Empirical
+ * checks: non-auto Black /10, Red /5, Superfractor /1 all price ~1.8×
+ * higher than the auto-calibrated floor implies.
+ *
+ * Applies a class-aware bump (currently a flat 1.8× on the auto floor
+ * for non-auto callers). Tuned to Drew's calibration point that Owen
+ * Carey non-auto Black /10 should project ~$100 vs the $55 the auto
+ * floor produces on his $1.85 base median. Extract to per-tier values
+ * once we accumulate more empirical anchors.
+ *
+ * `cardClass` defaults to "auto" for backward compatibility — every
+ * existing caller of `floorForPrintRun` (mechanism1, sibling rescue)
+ * was implicitly assuming auto anyway.
+ */
+const NON_AUTO_FLOOR_MULTIPLIER = 1.8;
+
+export function floorForPrintRunByClass(
+  printRun: number,
+  cardClass: "auto" | "base",
+): number | null {
+  const base = floorForPrintRun(printRun);
+  if (base === null) return null;
+  return cardClass === "base"
+    ? Math.round(base * NON_AUTO_FLOOR_MULTIPLIER * 100) / 100
+    : base;
+}
+
+/**
  * Compute the effective multiplier = max(empiricalCalibration, floor).
  * Returns the empirical value unchanged when the parallel doesn't
  * match a known-rare tier OR the empirical value already exceeds

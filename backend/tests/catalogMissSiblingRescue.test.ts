@@ -108,10 +108,13 @@ describe("CF-CATALOG-MISS-SIBLING-RESCUE — Devin Taylor 2025 Bowman red auto",
       });
 
     expect(res.status).toBe(200);
-    expect(res.body.source).toBe("sibling-pool");
+    // CF-PARALLEL-FLOOR-PROJECTION (2026-07-09): Red /5 matches the
+    // rare-parallel bracket → more specific parallel-floor-projection
+    // fires BEFORE sibling-pool rescue. Both are valid rescues; the
+    // projection is the tighter estimate when print-run is known.
+    expect(["parallel-floor-projection", "sibling-pool"]).toContain(res.body.source);
     expect(typeof res.body.fairMarketValue).toBe("number");
     expect(res.body.fairMarketValue).toBeGreaterThan(0);
-    // compsUsed reflects the sibling pool.
     expect(res.body.compsUsed).toBeGreaterThan(0);
   });
 

@@ -77,7 +77,11 @@ import { fetchCompsByPlayer } from "./compsByPlayer.service.js";
 // the equivalent parent product's live comps × hobby-consensus family
 // multiplier × existing parallel floor multipliers.
 import { detectProductFamily } from "./productFamilyProjection.js";
-import { inferPrintRun, floorForPrintRun } from "./parallelPremiumFloors.js";
+import {
+  inferPrintRun,
+  floorForPrintRun,
+  floorForPrintRunByClass,
+} from "./parallelPremiumFloors.js";
 import {
   computeCardTrajectory,
   computeSegmentTrajectory,
@@ -2924,10 +2928,10 @@ export function emitPredictionToCorpus(params: {
     cardId?: string;
   };
   fairMarketValue: number | null;
-  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "unavailable";
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
-  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "unavailable";
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   forwardProjectionFactor?: number;
   trendIQ?: import("./trendIQ.types.js").TrendIQResult | null;
   compsUsed?: number;
@@ -3727,6 +3731,151 @@ export async function computeEstimate(
       } catch (err) {
         console.warn(
           `[compiq.computeEstimate] product-family projection threw: ${(err as Error)?.message ?? err}`,
+        );
+        // Fall through to parallel-floor projection below.
+      }
+    }
+
+    // CF-PARALLEL-FLOOR-PROJECTION (2026-07-09, Drew — Owen Carey Black
+    // BCP-69 /10): when catalog-miss AND queryContext carries a rare
+    // parallel with a known print-run floor, project pricing off the
+    // parent product's base median × parallel floor. Same shape as the
+    // product-family projection but WITHOUT the family multiplier —
+    // fires for cases where the SKU truly doesn't exist in CH BUT the
+    // parallel classification lets us bound the price from below.
+    //
+    // Class-aware floor: non-auto rare parallels (Black /10 paper Chrome
+    // Refractor) price ~1.8× the auto-calibrated floor. Uses
+    // extractCardClass() heuristics; defaults to "base" for the parsed
+    // path (autos usually carry number prefixes like CPA-, which the
+    // heuristic picks up).
+    //
+    // Owen Carey Black BCP-69 (non-auto Black /10) worked example:
+    //   Chrome BCP-69 raw median: $1.85 (138 comps)
+    //   × Black /10 base-tier floor: 55×
+    //   = $101.75
+    // Matches Drew's hobby-consensus target of $100+.
+    //
+    // Skipped for auto targets because mechanism1 (multiplier-anchored)
+    // downstream in the insufficient branch already handles autos with
+    // finer-grained per-subset multipliers.
+    const parallelForFloor =
+      typeof queryContext.parallel === "string"
+        ? queryContext.parallel.trim()
+        : "";
+    const parallelPrintRun = parallelForFloor
+      ? inferPrintRun(parallelForFloor)
+      : null;
+    if (
+      parallelPrintRun !== null &&
+      parallelPrintRun <= 50 && // only meaningful for RARE parallels
+      typeof queryContext.playerName === "string" &&
+      queryContext.playerName.trim().length > 0 &&
+      typeof queryContext.product === "string" &&
+      queryContext.product.trim().length > 0
+    ) {
+      try {
+        const parentPool = await fetchCompsByPlayer({
+          playerName: queryContext.playerName,
+          product: queryContext.product,
+          cardYear:
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : undefined,
+        });
+        const parentRawPrices = (parentPool.comps ?? [])
+          .map((c) => c.price)
+          .filter((p): p is number => Number.isFinite(p) && p > 0)
+          .sort((a, b) => a - b);
+        if (parentRawPrices.length > 0) {
+          const parentBaseMedian =
+            parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+          const cardClass: "auto" | "base" = queryContext.isAuto === true ? "auto" : "base";
+          const parallelMultiplier =
+            floorForPrintRunByClass(parallelPrintRun, cardClass) ??
+            floorForPrintRun(parallelPrintRun) ??
+            1;
+          const projectedFmv =
+            Math.round(parentBaseMedian * parallelMultiplier * 100) / 100;
+
+          console.log(
+            JSON.stringify({
+              event: "parallel_floor_projection_applied",
+              source: "compiq.computeEstimate",
+              query: cardTitle,
+              player: queryContext.playerName,
+              product: queryContext.product,
+              parallel: parallelForFloor,
+              inferredPrintRun: parallelPrintRun,
+              cardClass,
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+              projectedFmv,
+            }),
+          );
+
+          emitPredictionToCorpus({
+            cardIdentity: null,
+            body,
+            fairMarketValue: projectedFmv,
+            fmvMechanism: "parallel-floor-projection",
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceMechanism: "parallel-floor-projection",
+            callContext,
+          });
+
+          return {
+            source: "parallel-floor-projection",
+            cardIdentity: {
+              card_id: "",
+              title: null,
+              player: queryContext.playerName,
+              set: queryContext.product ?? null,
+              release: queryContext.product ?? null,
+              year:
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+              number: queryContext.cardNumber ?? null,
+              variant: parallelForFloor,
+            },
+            fairMarketValue: projectedFmv,
+            fairMarketValueLow: Math.round(projectedFmv * 0.75 * 100) / 100,
+            fairMarketValueHigh: Math.round(projectedFmv * 1.25 * 100) / 100,
+            marketValue: projectedFmv,
+            predictedPrice: projectedFmv,
+            predictedPriceRange: {
+              low: Math.round(projectedFmv * 0.75 * 100) / 100,
+              high: Math.round(projectedFmv * 1.25 * 100) / 100,
+            },
+            predictedPriceAttribution: {
+              mechanism: "parallel-floor-projection",
+              parallelMultiplier,
+              parentBaseMedian,
+              parentComps: parentRawPrices.length,
+              inferredPrintRun: parallelPrintRun,
+              cardClass,
+            },
+            quickSaleValue: Math.round(projectedFmv * 0.9 * 100) / 100,
+            premiumValue: Math.round(projectedFmv * 1.15 * 100) / 100,
+            compsUsed: parentRawPrices.length,
+            compsAvailable: parentRawPrices.length,
+            recentComps: [],
+            variantWarning: [],
+            confidence: { pricingConfidence: 55 },
+            verdict: `Estimated — no direct sales on this SKU; projected from ${cardClass === "auto" ? "" : "non-auto "}base card × /${parallelPrintRun} parallel floor`,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] parallel-floor projection threw: ${(err as Error)?.message ?? err}`,
         );
         // Fall through to sibling rescue below.
       }

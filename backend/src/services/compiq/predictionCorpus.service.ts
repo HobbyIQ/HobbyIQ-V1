@@ -173,7 +173,7 @@ export interface PredictionEmitInput {
   // Stratifies MAPE / accuracy queries by which fallback path served the
   // row, so the corpus can answer "is sibling-pool MAPE worse than
   // main-pipeline MAPE?" Required.
-  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "unavailable";
+  fmvMechanism: "main-pipeline" | "sibling-pool-weighted-median" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   // CF-PREDICTION-CORPUS-EMISSION-COVERAGE: the headline price the user
   // actually saw on the wire. predictedPrice ?? fairMarketValue ?? null —
   // names the MAPE target unambiguously regardless of path. Paired with
@@ -182,7 +182,7 @@ export interface PredictionEmitInput {
   surfacedPriceSource: "predictedPrice" | "fairMarketValue" | "none";
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
-  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "unavailable";
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   forwardProjectionFactor: number;
   trendIQ: {
     composite: number;
@@ -265,7 +265,7 @@ interface PredictionLogDocument {
   surfacedPriceSource: PredictionEmitInput["surfacedPriceSource"];
   predictedPrice: number | null;
   predictedPriceRange: { low: number; high: number } | null;
-  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "unavailable";
+  predictedPriceMechanism: "trendiq-projection" | "multiplier-anchored" | "product-family-projection" | "parallel-floor-projection" | "unavailable";
   forwardProjectionFactor: number;
   trendIQ: PredictionEmitInput["trendIQ"];
   compsUsed: number;

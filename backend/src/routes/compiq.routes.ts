@@ -671,6 +671,11 @@ const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
   // structurally APPROXIMATE — no direct sales on the target SKU. iOS
   // should render it with the same "estimated" disclosure as sibling-pool.
   "product-family-projection",
+  // CF-PARALLEL-FLOOR-PROJECTION (2026-07-09, Drew — Owen Carey Black
+  // BCP-69): pure-math projection for rare-parallel non-auto SKUs with
+  // no direct comps. Same "approximate" disclosure semantics as
+  // sibling-pool + family projection.
+  "parallel-floor-projection",
 ]);
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
