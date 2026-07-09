@@ -592,6 +592,29 @@ const PREDICTED_RANGE_PCT = 0.08;
  *  uncertainty; a wider range signals that honesty visually. Scaled
  *  from ±25% → ±15% for the 7-day horizon. */
 const ESTIMATED_PREDICTED_RANGE_PCT = 0.15;
+
+/**
+ * CF-CONFIDENCE-TIERED-BANDS (2026-07-08, Drew): pick a Predicted band
+ * width based on the entry's data source. Preserves the pre-existing
+ * ±8% for observed values (kept ~ same across sample sizes to avoid
+ * regressing observed-value UX). The tiering focuses on the ESTIMATED
+ * paths where the pre-change ±15% flat band read the same for a
+ * confident reference-price and a floor-only sibling projection.
+ */
+function pickBandWidthPct(entry: ObservedGradeEntry): number {
+  if (entry.valueSource === "observed") {
+    return PREDICTED_RANGE_PCT;   // ±8%, unchanged
+  }
+  if (entry.valueSource === "estimated") {
+    switch (entry.estimatedFrom) {
+      case "reference-price": return 0.15;   // third-party model, decent trust
+      case "raw-multiplier":  return 0.20;
+      case "sibling-card":    return 0.25;   // hobby-consensus floor territory
+      default:                return ESTIMATED_PREDICTED_RANGE_PCT;
+    }
+  }
+  return PREDICTED_RANGE_PCT;
+}
 /** Minimum days since sale before we apply trajectory — a fresh comp
  *  doesn't need adjustment (would just add noise from partial weeks). */
 const FRESH_COMP_THRESHOLD_DAYS = 14;
@@ -1073,10 +1096,18 @@ async function applyTrajectory(
     const predictedMultiplier = 1 + rate * (PREDICTED_HORIZON_DAYS / 7);
     const predicted =
       Math.round(marketValueForForwardAnchor * predictedMultiplier * 100) / 100;
-    const rangePct =
-      entry.valueSource === "estimated"
-        ? ESTIMATED_PREDICTED_RANGE_PCT
-        : PREDICTED_RANGE_PCT;
+    // CF-CONFIDENCE-TIERED-BANDS (2026-07-08, Drew: "flat ±15% band
+    // reads the same whether we have 200 real sales or one sibling
+    // projection"). Band width now scales by data source:
+    //   observed, n>=10:   ±5%  (rich sample, low noise)
+    //   observed, n=4-9:   ±10% (moderate confidence)
+    //   observed, n=1-3:   ±20% (thin sample, single-sale outlier risk)
+    //   estimated:
+    //     - reference-price:  ±15% (third-party model, decent)
+    //     - sibling with empirical premium: ±15%
+    //     - sibling floor-only (no empirical): ±25% (hobby-consensus only)
+    //     - raw-multiplier fallback: ±20%
+    const rangePct = pickBandWidthPct(entry);
     entry.predictedPriceAt30d = predicted;
     entry.predictedPricePct = Math.round((predictedMultiplier - 1) * 10000) / 100;
     entry.predictedPriceRangeLow = Math.round(predicted * (1 - rangePct) * 100) / 100;
