@@ -3582,41 +3582,120 @@ export async function computeEstimate(
   // a catalog entry by id; if no comps, it's definitionally no-recent-comps
   // not a catalog miss.
   if (!body.cardId && fetched.card === null && fetched.comps.length === 0) {
-    console.log(
-      `[compiq.computeEstimate] catalog-miss short-circuit: query="${cardTitle}"`,
-    );
-    emitPredictionToCorpus({
-      cardIdentity: null,
-      body,
-      fairMarketValue: null,
-      fmvMechanism: "unavailable",
-      predictedPrice: null,
-      predictedPriceRange: null,
-      predictedPriceMechanism: "unavailable",
-      callContext,
-    });
-    return {
-      source: "catalog-miss",
-      cardIdentity: null,
-      fairMarketValue: null,
-      fairMarketValueLow: null,
-      fairMarketValueHigh: null,
-      marketValue: null,
-      predictedPrice: null,
-      predictedPriceRange: null,
-      predictedPriceAttribution: null,
-      quickSaleValue: null,
-      premiumValue: null,
-      compsUsed: 0,
-      compsAvailable: 0,
-      recentComps: [],
-      variantWarning: [],
-      confidence: { pricingConfidence: 0 },
-      verdict:
-        "We couldn't find this card in our catalog. Try simplifying the query (drop set parallel or grade) or check the spelling.",
-      gradeUsed: cardHedgeGrade,
-      marketDNA: { trend: "flat", speed: "Normal" },
-    } as Record<string, unknown>;
+    // CF-CATALOG-MISS-SIBLING-RESCUE (2026-07-09, Drew — Devin Taylor red
+    // auto): the exact SKU (e.g. "2025 Bowman Draft Chrome Prospect
+    // Autographs Red /5 CPA-DT") exists in CH's catalog but has zero recent
+    // sales, so getTrustedComps returns no_real_data → findCompsRouted
+    // returns card=null → we collapse to catalog-miss WITHOUT ever trying
+    // the sibling-pool rescue path (that path lives further down and is
+    // gated on cardIdentity being non-null). Result: 0 comps, no pricing.
+    //
+    // Fix: before returning catalog-miss, probe the sibling pool with a
+    // synthetic identity built from the parsed queryContext. If siblings
+    // have sales, prime fetched.card so the existing insufficient-branch
+    // sibling-pool rescue at ~L4516 fires normally. Both this probe and
+    // the downstream rescue call fetchSiblingSales → fetchCompsByPlayer
+    // which is aggregate-cached (6h), so the second call is effectively a
+    // cache hit; no extra CH cost.
+    //
+    // Synthetic card_id = "" — the downstream rescue path doesn't require
+    // a real card_id for pricing (fetchCompsByPlayer resolves siblings by
+    // player+product), and iOS treats empty card_id as "not navigable"
+    // which is exactly the correct behavior for an estimated-from-siblings
+    // result.
+    const canSyntheticRescue =
+      typeof queryContext.playerName === "string" &&
+      queryContext.playerName.trim().length > 0 &&
+      typeof queryContext.product === "string" &&
+      queryContext.product.trim().length > 0;
+
+    if (canSyntheticRescue) {
+      const syntheticIdentity: NonNullable<FetchedComps["card"]> = {
+        card_id: "",
+        title: cardTitle,
+        player: queryContext.playerName!,
+        set: queryContext.product!,
+        release: queryContext.product!,
+        year:
+          queryContext.cardYear !== undefined && queryContext.cardYear !== null
+            ? queryContext.cardYear
+            : null,
+        number: queryContext.cardNumber ?? null,
+        variant: queryContext.parallel ?? null,
+      };
+
+      let probePool: SiblingSalesPool = { siblingCardIds: [], sales: [] };
+      try {
+        probePool = await fetchSiblingSales(syntheticIdentity, cardHedgeGrade);
+      } catch (err) {
+        console.warn(
+          `[compiq.computeEstimate] catalog-miss sibling probe threw: ${(err as Error)?.message ?? err}`,
+        );
+      }
+
+      if (probePool.sales.length > 0) {
+        console.log(
+          JSON.stringify({
+            event: "catalog_miss_sibling_rescue",
+            source: "compiq.computeEstimate",
+            query: cardTitle,
+            player: queryContext.playerName,
+            product: queryContext.product,
+            year: queryContext.cardYear ?? null,
+            parallel: queryContext.parallel ?? null,
+            siblingSales: probePool.sales.length,
+            siblingCardIds: probePool.siblingCardIds.length,
+          }),
+        );
+        // Prime fetched.card so downstream cardIdentity is non-null. The
+        // insufficient branch fires (comps.length === 0) and the sibling-
+        // pool rescue at ~L4516 anchors pricing off the probe pool.
+        fetched = { ...fetched, card: syntheticIdentity };
+        // FALL THROUGH — do NOT short-circuit.
+      } else {
+        // Sibling probe also empty → real catalog-miss; short-circuit below.
+        console.log(
+          `[compiq.computeEstimate] catalog-miss short-circuit: query="${cardTitle}" (sibling probe also empty)`,
+        );
+      }
+    }
+
+    // If we still have no card (either canSyntheticRescue was false or the
+    // probe returned empty), fall back to the original catalog-miss return.
+    if (fetched.card === null) {
+      emitPredictionToCorpus({
+        cardIdentity: null,
+        body,
+        fairMarketValue: null,
+        fmvMechanism: "unavailable",
+        predictedPrice: null,
+        predictedPriceRange: null,
+        predictedPriceMechanism: "unavailable",
+        callContext,
+      });
+      return {
+        source: "catalog-miss",
+        cardIdentity: null,
+        fairMarketValue: null,
+        fairMarketValueLow: null,
+        fairMarketValueHigh: null,
+        marketValue: null,
+        predictedPrice: null,
+        predictedPriceRange: null,
+        predictedPriceAttribution: null,
+        quickSaleValue: null,
+        premiumValue: null,
+        compsUsed: 0,
+        compsAvailable: 0,
+        recentComps: [],
+        variantWarning: [],
+        confidence: { pricingConfidence: 0 },
+        verdict:
+          "We couldn't find this card in our catalog. Try simplifying the query (drop set parallel or grade) or check the spelling.",
+        gradeUsed: cardHedgeGrade,
+        marketDNA: { trend: "flat", speed: "Normal" },
+      } as Record<string, unknown>;
+    }
   }
 
   // ── Sport-scope guard ────────────────────────────────────────────────────
