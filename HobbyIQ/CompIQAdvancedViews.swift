@@ -20,36 +20,28 @@ struct GradePremiumView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if let error {
-                        advancedErrorBanner(error)
-                    }
-
-                    if isLoading {
-                        advancedLoadingRow("Analyzing grade premium...")
-                    }
-
-                    if let r = response {
-                        resultCard(r)
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if let error {
+                    advancedErrorBanner(error)
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("Grade Premium")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                if isLoading {
+                    advancedLoadingRow("Analyzing grade premium...")
+                }
+
+                if let r = response {
+                    resultCard(r)
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Grade Premium")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -84,13 +76,13 @@ struct GradePremiumView: View {
             }
 
             if let raw = r.rawFmv {
-                advancedDataRow(label: "Raw FMV", value: raw.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Raw FMV", value: raw.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let psa10 = r.psa10Fmv {
-                advancedDataRow(label: "PSA 10 FMV", value: psa10.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "PSA 10 FMV", value: psa10.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let dollars = r.premiumDollars {
-                advancedDataRow(label: "Premium ($)", value: dollars.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Premium ($)", value: dollars.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let pct = r.premiumPct {
                 advancedDataRow(label: "Premium (%)", value: String(format: "%.1f%%", pct))
@@ -143,36 +135,28 @@ struct SellWindowView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if let error {
-                        advancedErrorBanner(error)
-                    }
-
-                    if isLoading {
-                        advancedLoadingRow("Analyzing sell windows...")
-                    }
-
-                    if let r = response {
-                        resultCard(r)
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if let error {
+                    advancedErrorBanner(error)
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("Sell Window")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                if isLoading {
+                    advancedLoadingRow("Analyzing sell windows...")
+                }
+
+                if let r = response {
+                    resultCard(r)
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Sell Window")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -300,36 +284,28 @@ struct CompsByPlayerView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if let error {
-                        advancedErrorBanner(error)
-                    }
-
-                    if isLoading {
-                        advancedLoadingRow("Fetching comps...")
-                    }
-
-                    if let r = response {
-                        resultCard(r)
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if let error {
+                    advancedErrorBanner(error)
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("Comps By Player")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                if isLoading {
+                    advancedLoadingRow("Fetching comps...")
+                }
+
+                if let r = response {
+                    resultCard(r)
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Comps By Player")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task { await load() }
     }
 
@@ -416,7 +392,7 @@ struct CompsByPlayerView: View {
             }
             Spacer(minLength: 8)
             if let price = comp.price {
-                Text(price.formatted(.currency(code: "USD")))
+                Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.successGreen)
             }
@@ -477,36 +453,28 @@ struct WhatIfView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if let error {
-                        advancedErrorBanner(error)
-                    }
-
-                    if isLoading {
-                        advancedLoadingRow("Running what-if scenario...")
-                    }
-
-                    if let r = response {
-                        resultCard(r)
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if let error {
+                    advancedErrorBanner(error)
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("What-If")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                if isLoading {
+                    advancedLoadingRow("Running what-if scenario...")
+                }
+
+                if let r = response {
+                    resultCard(r)
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("What-If")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task { await load() }
     }
 
@@ -523,19 +491,19 @@ struct WhatIfView: View {
                     .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
             }
             if let fmv = r.fairMarketValue {
-                advancedDataRow(label: Labels.fairValue, value: fmv.formatted(.currency(code: "USD")))
+                advancedDataRow(label: Labels.fairValue, value: fmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let market = r.marketValue {
-                advancedDataRow(label: "Market Value", value: market.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Market Value", value: market.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let predicted = r.predictedPrice {
-                advancedDataRow(label: "Predicted Price", value: predicted.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Predicted Price", value: predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let quick = r.quickSaleValue {
-                advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let premium = r.premiumValue {
-                advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD")))
+                advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD").precision(.fractionLength(0))))
             }
             if let grade = r.gradeUsed {
                 advancedDataRow(label: "Grade Used", value: grade)
@@ -612,44 +580,36 @@ struct BulkEstimateView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    inputCard
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                inputCard
 
-                    if let error {
-                        advancedErrorBanner(error)
-                    }
+                if let error {
+                    advancedErrorBanner(error)
+                }
 
-                    if isLoading {
-                        advancedLoadingRow("Running bulk estimate...")
-                    }
+                if isLoading {
+                    advancedLoadingRow("Running bulk estimate...")
+                }
 
-                    if let r = response {
-                        summaryCard(r)
+                if let r = response {
+                    summaryCard(r)
 
-                        if let results = r.results {
-                            ForEach(results) { item in
-                                bulkItemCard(item)
-                            }
+                    if let results = r.results {
+                        ForEach(results) { item in
+                            bulkItemCard(item)
                         }
                     }
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
             }
-            .background(HobbyIQBackground())
-            .navigationTitle("Bulk Estimate")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Bulk Estimate")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -751,16 +711,16 @@ struct BulkEstimateView: View {
 
             if let data = item.data {
                 if let fmv = data.fairMarketValue {
-                    advancedDataRow(label: "FMV", value: fmv.formatted(.currency(code: "USD")))
+                    advancedDataRow(label: "FMV", value: fmv.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 }
                 if let market = data.marketValue {
-                    advancedDataRow(label: "Market", value: market.formatted(.currency(code: "USD")))
+                    advancedDataRow(label: "Market", value: market.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 }
                 if let quick = data.quickSaleValue {
-                    advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD")))
+                    advancedDataRow(label: "Quick Sale", value: quick.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 }
                 if let premium = data.premiumValue {
-                    advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD")))
+                    advancedDataRow(label: "Premium", value: premium.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 }
                 if let verdict = data.verdict {
                     advancedDataRow(label: "Verdict", value: verdict)

@@ -249,24 +249,23 @@ struct CalibrationView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if isLoading {
-                        HStack(spacing: 10) {
-                            ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
-                            Text("Loading calibration...")
-                                .font(.subheadline)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            Spacer()
-                        }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if isLoading {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                        Text("Loading calibration...")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Spacer()
                     }
+                }
 
-                    if let error {
-                        portfolioErrorBanner(error)
-                    }
+                if let error {
+                    portfolioErrorBanner(error)
+                }
 
-                    if let r = report {
+                if let r = report {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(spacing: 8) {
                                 Image(systemName: "scope")
@@ -300,18 +299,11 @@ struct CalibrationView: View {
                 .padding(HobbyIQTheme.Spacing.screenPadding)
                 .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
             }
-            .background(HobbyIQBackground())
-            .navigationTitle("Calibration")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-        }
+        .background(HobbyIQBackground())
+        .navigationTitle("Calibration")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -352,54 +344,46 @@ struct WeeklyBriefView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    if isLoading {
-                        HStack(spacing: 10) {
-                            ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
-                            Text("Loading weekly brief...")
-                                .font(.subheadline)
-                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                            Spacer()
-                        }
-                    }
-
-                    if let error {
-                        portfolioErrorBanner(error)
-                    }
-
-                    if let b = brief {
-                        headlineCard(b)
-                        summaryCard(b)
-
-                        if let winners = b.topWinners, !winners.isEmpty {
-                            moverSection(title: "Top Winners", icon: "arrow.up.circle.fill", tint: HobbyIQTheme.Colors.successGreen, movers: winners)
-                        }
-                        if let losers = b.topLosers, !losers.isEmpty {
-                            moverSection(title: "Top Losers", icon: "arrow.down.circle.fill", tint: HobbyIQTheme.Colors.danger, movers: losers)
-                        }
-
-                        if let recs = b.recommendations, !recs.isEmpty {
-                            recommendationsSection(recs)
-                        }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                if isLoading {
+                    HStack(spacing: 10) {
+                        ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
+                        Text("Loading weekly brief...")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Spacer()
                     }
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("Weekly Brief")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+
+                if let error {
+                    portfolioErrorBanner(error)
+                }
+
+                if let b = brief {
+                    headlineCard(b)
+                    summaryCard(b)
+
+                    if let winners = b.topWinners, !winners.isEmpty {
+                        moverSection(title: "Top Winners", icon: "arrow.up.circle.fill", tint: HobbyIQTheme.Colors.successGreen, movers: winners)
+                    }
+                    if let losers = b.topLosers, !losers.isEmpty {
+                        moverSection(title: "Top Losers", icon: "arrow.down.circle.fill", tint: HobbyIQTheme.Colors.danger, movers: losers)
+                    }
+
+                    if let recs = b.recommendations, !recs.isEmpty {
+                        recommendationsSection(recs)
+                    }
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Weekly Brief")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager
@@ -524,7 +508,7 @@ struct WeeklyBriefView: View {
                                 .foregroundStyle(tint)
                         }
                         if let value = mover.latestValue {
-                            Text(value.formatted(.currency(code: "USD")))
+                            Text(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                                 .font(.caption.weight(.medium).monospacedDigit())
                                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         }
@@ -651,54 +635,46 @@ struct BatchRepriceView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: HobbyIQTheme.Spacing.large) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Batch Reprice")
-                            .font(HobbyIQTheme.Typography.title)
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        Text("Refresh pricing for all holdings in your portfolio.")
-                            .font(HobbyIQTheme.Typography.body)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(HobbyIQTheme.Spacing.medium)
-                    .background(HobbyIQTheme.Colors.cardNavy)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                            .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
-
-                    HIQPrimaryButton(title: isLoading ? "Repricing..." : "Reprice All", systemImage: "arrow.triangle.2.circlepath") {
-                        Task { await runReprice() }
-                    }
-                    .disabled(isLoading)
-
-                    if let error {
-                        portfolioErrorBanner(error)
-                    }
-
-                    if let r = result {
-                        repriceResultCard(r)
-                    }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: HobbyIQTheme.Spacing.large) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Batch Reprice")
+                        .font(HobbyIQTheme.Typography.title)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text("Refresh pricing for all holdings in your portfolio.")
+                        .font(HobbyIQTheme.Typography.body)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
-                .padding(HobbyIQTheme.Spacing.screenPadding)
-                .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
-            }
-            .background(HobbyIQBackground())
-            .navigationTitle("Batch Reprice")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(HobbyIQTheme.Spacing.medium)
+                .background(HobbyIQTheme.Colors.cardNavy)
+                .overlay(
+                    RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                        .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 2.0)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+
+                HIQPrimaryButton(title: isLoading ? "Repricing..." : "Reprice All", systemImage: "arrow.triangle.2.circlepath") {
+                    Task { await runReprice() }
+                }
+                .disabled(isLoading)
+
+                if let error {
+                    portfolioErrorBanner(error)
+                }
+
+                if let r = result {
+                    repriceResultCard(r)
                 }
             }
-            .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .padding(HobbyIQTheme.Spacing.screenPadding)
+            .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Batch Reprice")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .lockedOverlay(
             feature: GatedFeature.predictions,
             subscriptionManager: sessionViewModel.subscriptionManager

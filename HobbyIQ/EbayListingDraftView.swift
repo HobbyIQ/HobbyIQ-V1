@@ -109,75 +109,67 @@ struct EbayListingDraftView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Card header
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(card.playerName)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(.white)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Card header
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(card.playerName)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.white)
 
-                        Text(card.cardName)
-                            .font(.subheadline)
-                            .foregroundStyle(HobbyIQTheme.textSecondary)
-                    }
-
-                    // Listing format selector
-                    listingFormatSection
-
-                    // Photos
-                    photoSection
-
-                    // Input fields
-                    inputSection
-
-                    // Seller policies
-                    if policies != nil {
-                        policiesSection
-                    }
-
-                    // Auction scheduling
-                    if listingFormat == .auction {
-                        auctionScheduleSection
-                    }
-
-                    // Preview
-                    previewSection
-
-                    // Results
-                    if let previewResponse {
-                        resultCard(title: "Latest Preview", response: previewResponse)
-                    }
-
-                    if let publishResponse {
-                        resultCard(title: "Publish Result", response: publishResponse)
-                    }
-
-                    // Error
-                    if let localError {
-                        Text(localError)
-                            .font(.footnote)
-                            .foregroundStyle(HobbyIQTheme.Colors.danger)
-                            .padding(.horizontal, 4)
-                    }
-
-                    // Action buttons
-                    actionButtons
+                    Text(card.cardName)
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.textSecondary)
                 }
-                .padding(16)
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle("eBay Listing")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(AppColors.textSecondary)
+
+                // Listing format selector
+                listingFormatSection
+
+                // Photos
+                photoSection
+
+                // Input fields
+                inputSection
+
+                // Seller policies
+                if policies != nil {
+                    policiesSection
                 }
+
+                // Auction scheduling
+                if listingFormat == .auction {
+                    auctionScheduleSection
+                }
+
+                // Preview
+                previewSection
+
+                // Results
+                if let previewResponse {
+                    resultCard(title: "Latest Preview", response: previewResponse)
+                }
+
+                if let publishResponse {
+                    resultCard(title: "Publish Result", response: publishResponse)
+                }
+
+                // Error
+                if let localError {
+                    Text(localError)
+                        .font(.footnote)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                        .padding(.horizontal, 4)
+                }
+
+                // Action buttons
+                actionButtons
             }
+            .padding(16)
         }
+        .background { HobbyIQBackground() }
+        .navigationTitle("eBay Listing")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
         .task {
             await ebayStore.refreshConnectionStatus()
             await loadPolicies()

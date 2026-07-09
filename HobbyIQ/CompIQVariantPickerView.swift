@@ -58,11 +58,6 @@ struct CompIQVariantPickerView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: HobbyIQTheme.Spacing.large) {
-                // Inline Back row replaces the navigation bar so the
-                // content can sit closer to the top edge. Keeps the same
-                // dismiss affordance the toolbar Back button provided.
-                inlineBackBar
-
                 // Show full search card only before the first search;
                 // once results load, collapse to a compact field.
                 if hasSearched {
@@ -79,8 +74,12 @@ struct CompIQVariantPickerView: View {
             .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
         }
         .background(HobbyIQBackground())
-        .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
+        // CF-NATIVE-NAV (2026-07-04): iOS native nav bar so back
+        // button + edge-swipe-to-pop just work.
+        .navigationTitle("Find a card")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task {
             // Skip auto-load when initialHits were injected (cert resolve bridge).
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false && hits.isEmpty {
@@ -95,33 +94,6 @@ struct CompIQVariantPickerView: View {
             // chewing on a slow request that the user has already moved past.
             searchTask?.cancel()
             suggestTask?.cancel()
-        }
-    }
-
-    // MARK: - Inline Back Bar (replaces the navigation bar)
-
-    /// Lightweight Back affordance rendered inside the scroll content so
-    /// the system navigation bar can be hidden entirely. Keeps the dismiss
-    /// behavior the toolbar Back button used to provide.
-    private var inlineBackBar: some View {
-        HStack(spacing: 4) {
-            Button {
-                dismiss()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Back")
-                        .font(.subheadline.weight(.medium))
-                }
-                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                .padding(.vertical, 8)
-                .padding(.trailing, 12)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Back")
-            Spacer()
         }
     }
 
@@ -251,6 +223,14 @@ struct CompIQVariantPickerView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
                         }
                         .buttonStyle(.plain)
+                        // CF-ALIAS-LEARNING (2026-07-09): fire-and-forget
+                        // telemetry. Runs alongside the NavigationLink
+                        // tap so navigation is never blocked. `simultaneous`
+                        // (not `.onTapGesture`) preserves the link's
+                        // default behavior.
+                        .simultaneousGesture(TapGesture().onEnded {
+                            logSelection(hit: row.hit, source: "search-results")
+                        })
                     }
                 }
 
@@ -336,6 +316,25 @@ struct CompIQVariantPickerView: View {
         return names.count == 1 ? names.first : nil
     }
 
+    /// CF-ALIAS-LEARNING (2026-07-09): fire-and-forget telemetry.
+    /// Called from the search-result tap on the variant picker.
+    /// Never awaited, never surfaces errors — the response is dropped.
+    private func logSelection(hit: CompIQVariantHit, source: String) {
+        let normalized = query
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard normalized.isEmpty == false else { return }
+        let body = CompIQLogSelectionRequest(
+            queryNormalized: normalized,
+            cardId: hit.cardId,
+            playerName: hit.player,
+            source: source
+        )
+        Task {
+            _ = try? await APIService.shared.logCompIQSelection(body)
+        }
+    }
+
     /// "Base Set" denylist for the subset line. Matches the engineered list
     /// + the empty/whitespace fallthrough so a row whose set never made it
     /// onto the wire doesn't render a blank line.
@@ -391,7 +390,7 @@ struct CompIQVariantPickerView: View {
     /// pick grade later on the comp page.
     private func enrichedPills(for hit: CompIQVariantHit) -> [VariantPill] {
         var pills: [VariantPill] = []
-        // CF-IOS-AI-MATCHED-PILL (2026-06-28): CardHedge's AI semantic
+        // CF-IOS-AI-MATCHED-PILL (2026-06-28): LiveMarket's AI semantic
         // matcher (CF-CH-MATCH-CARD-BOOST) flags the best-fit candidate
         // with `attribution: "ai-matched"`. Surface a "Best Match" pill
         // so the user can trust the system picked the right card rather
@@ -460,43 +459,17 @@ struct CompIQVariantPickerView: View {
         return rows
     }
 
-    /// Token-coverage relevance sort. Rows whose identity matches MORE
-    /// query tokens float to the top; backend order breaks ties so the
-    /// dispatcher's own ranking is preserved within each tier.
+    /// CF-PICKER-TRUST-BACKEND-RANK (2026-07-01): trust the backend's
+    /// ranking verbatim. The previous token-coverage sort was actively
+    /// demoting correct candidates whose variant name is a hyphenated
+    /// or reworded form of the user's query — e.g. query "Blue
+    /// Refractor" vs LiveMarket title "Blue X-Fractor". Backend already
+    /// re-ranks by parsed intent (`CF-CH-RERANK-BY-INTENT`, PR #157)
+    /// and boosts AI-matched candidates to position 1
+    /// (`CF-CH-MATCH-CARD-BOOST`, PR #158); iOS re-sorting fought
+    /// those signals. Kept as a passthrough so callsites don't churn.
     private var sortedPickerRows: [PickerRow] {
-        let rows = pickerRows
-        let tokens = query
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .split(separator: " ", omittingEmptySubsequences: true)
-            .map(String.init)
-        guard tokens.isEmpty == false else { return rows }
-
-        return rows.enumerated()
-            .map { (idx, row) -> (Int, Int, PickerRow) in
-                (relevanceScore(row.hit, tokens: tokens), idx, row)
-            }
-            .sorted { lhs, rhs in
-                if lhs.0 != rhs.0 { return lhs.0 > rhs.0 }
-                return lhs.1 < rhs.1
-            }
-            .map { $0.2 }
-    }
-
-    private func relevanceScore(_ hit: CompIQVariantHit, tokens: [String]) -> Int {
-        let parts = [
-            hit.player,
-            hit.year.map(String.init),
-            hit.brand,
-            hit.set,
-            hit.title,
-            hit.variant,
-            hit.number,
-        ].compactMap { $0?.lowercased() }
-        let haystack = parts.joined(separator: " ")
-        return tokens.reduce(into: 0) { acc, token in
-            if haystack.contains(token) { acc += 1 }
-        }
+        pickerRows
     }
 
     // MARK: - Row (Phase A v2 — muted identity + ≤2 pills + inline-chevron CTA)
@@ -550,28 +523,34 @@ struct CompIQVariantPickerView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - Thumbnail (with initials fallback) — 54×75 per v2
+    // MARK: - Thumbnail (with initials fallback)
 
+    /// CF-PICKER-THUMB-CARD-ASPECT (2026-07-05): mirror the comp card
+    /// hero fix — fixed card-aspect container (45x63, ~0.72) with
+    /// `.scaledToFit()` inside so a non-cropped raw image letterboxes
+    /// instead of stretching to a landscape-ish bounding box.
+    /// `.scaleEffect(0.85)` adds the same 15% inner breathing margin
+    /// the comp-card hero uses so the two surfaces feel consistent.
     @ViewBuilder
     private func variantThumbnail(_ hit: CompIQVariantHit) -> some View {
-        if let urlString = hit.imageUrl, urlString.isEmpty == false, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFill()
-                case .empty, .failure:
-                    initialsTile(hit)
-                @unknown default:
-                    initialsTile(hit)
+        Group {
+            if let urlString = hit.imageUrl, urlString.isEmpty == false, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFit().scaleEffect(0.85)
+                    case .empty, .failure:
+                        initialsTile(hit)
+                    @unknown default:
+                        initialsTile(hit)
+                    }
                 }
+            } else {
+                initialsTile(hit)
             }
-            .frame(width: 54, height: 75)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        } else {
-            initialsTile(hit)
-                .frame(width: 54, height: 75)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
+        .frame(width: 45, height: 63)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
     private func initialsTile(_ hit: CompIQVariantHit) -> some View {

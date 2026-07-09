@@ -41,11 +41,9 @@ struct HobbyIQView: View {
             }
         }
         .accountToolbar()
-        .sheet(isPresented: $showMLBDailyBrief) {
-            NavigationStack {
-                MLBDailyBriefView()
-            }
-            .preferredColorScheme(.dark)
+        // CF-PAGES-NOT-SHEETS (2026-07-04): MLB brief now pushes.
+        .navigationDestination(isPresented: $showMLBDailyBrief) {
+            MLBDailyBriefView()
         }
         .onChange(of: speechRecognizer.transcript) { _, newValue in
             guard newValue.isEmpty == false else { return }

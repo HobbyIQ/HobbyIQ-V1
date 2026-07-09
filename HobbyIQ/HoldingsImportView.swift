@@ -222,32 +222,24 @@ struct HoldingsImportView: View {
     @State private var showPaywall = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                HobbyIQBackground()
-                content
-                    .padding(.horizontal, HobbyIQTheme.Spacing.medium)
-                    .padding(.vertical, HobbyIQTheme.Spacing.medium)
-            }
-            .navigationTitle("Import holdings")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
-            .fileImporter(
-                isPresented: $showFilePicker,
-                allowedContentTypes: Self.allowedTypes,
-                allowsMultipleSelection: false
-            ) { result in
-                handleFilePick(result: result)
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView(sessionViewModel: sessionViewModel)
-            }
+        ZStack {
+            HobbyIQBackground()
+            content
+                .padding(.horizontal, HobbyIQTheme.Spacing.medium)
+                .padding(.vertical, HobbyIQTheme.Spacing.medium)
+        }
+        .navigationTitle("Import holdings")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: Self.allowedTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            handleFilePick(result: result)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(sessionViewModel: sessionViewModel)
         }
     }
 

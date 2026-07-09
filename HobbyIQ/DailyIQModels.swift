@@ -1051,6 +1051,14 @@ struct DailyIQMarketSignalsResponse: Codable {
     let fading: [DailyIQMarketPlayerEntry]?
     let topVolume30d: [DailyIQMarketVolumeEntry]?
     let supplyDryLeadingUp: [DailyIQMarketSupplyEntry]?
+
+    /// CF-BOWMAN-2YR-LISTS (2026-07-02, PR #247): Bowman-set subset of
+    /// the matched-cohort universe restricted to the last two years.
+    /// Fills after the matched-cohort widening cycle (PR #248) warms.
+    /// Nil/empty before the first populated cycle — treat like the
+    /// other list fields (empty → "Populating on next cycle").
+    let bowman2yrTopVolume30d: [DailyIQMarketVolumeEntry]?
+    let bowman2yrTopMomentum: [DailyIQMarketPlayerEntry]?
 }
 
 /// Shared shape for `trending` + `fading`. `medianRatio` is a raw ratio

@@ -5,13 +5,22 @@
 
 import SwiftUI
 
+/// CF-PAGES-NOT-SHEETS (2026-07-04): enum-routed destinations for the
+/// two secondary flows on the ProfitIQ card detail page.
+enum ProfitIQCardDetailRoute: Hashable, Identifiable {
+    case setAlert
+    case markSold
+    var id: Self { self }
+}
+
 struct ProfitIQCardDetailView: View {
     @ObservedObject var viewModel: ProfitIQViewModel
     let card: ProfitIQCardResult
 
     @Environment(\.dismiss) private var dismiss
-    @State private var showingMarkSoldSheet = false
-    @State private var showingAlertSheet = false
+    // CF-PAGES-NOT-SHEETS (2026-07-04): both sheet triggers absorbed
+    // into a single enum-routed navigationDestination.
+    @State private var profitRoute: ProfitIQCardDetailRoute?
     @State private var priceHistory: HoldingPriceHistoryResponse?
     @State private var isLoadingHistory = false
     @State private var isRefreshing = false
@@ -25,7 +34,7 @@ struct ProfitIQCardDetailView: View {
 
                 HStack(spacing: 12) {
                     Button("Mark Sold") {
-                        showingMarkSoldSheet = true
+                        profitRoute = .markSold
                     }
                     .buttonStyle(PrimaryButtonStyle())
 
@@ -82,23 +91,27 @@ struct ProfitIQCardDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingAlertSheet = true
+                    profitRoute = .setAlert
                 } label: {
                     Image(systemName: "bell")
                         .foregroundStyle(Theme.Colors.accent)
                 }
             }
         }
-        .sheet(isPresented: $showingAlertSheet) {
-            SetPriceAlertSheet(
-                playerName: card.playerName,
-                cardName: card.cardName,
-                suggestedPrice: card.currentValue
-            )
-        }
-        .sheet(isPresented: $showingMarkSoldSheet) {
-            ProfitIQMarkSoldSheet(viewModel: viewModel, card: card) {
-                dismiss()
+        // CF-PAGES-NOT-SHEETS (2026-07-04): alert + mark-sold now push
+        // as pages via an enum-routed navigationDestination.
+        .navigationDestination(item: $profitRoute) { route in
+            switch route {
+            case .setAlert:
+                SetPriceAlertSheet(
+                    playerName: card.playerName,
+                    cardName: card.cardName,
+                    suggestedPrice: card.currentValue
+                )
+            case .markSold:
+                ProfitIQMarkSoldSheet(viewModel: viewModel, card: card) {
+                    dismiss()
+                }
             }
         }
         .task { await loadHistory() }
@@ -244,7 +257,7 @@ struct ProfitIQCardDetailView: View {
                         }
                         Spacer()
                         if let value = point.value {
-                            Text(value.formatted(.currency(code: "USD")))
+                            Text(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                                 .font(.subheadline.weight(.bold).monospacedDigit())
                                 .foregroundStyle(AppColors.textPrimary)
                         }

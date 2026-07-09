@@ -1253,7 +1253,7 @@ struct CompIQEstimateResult: Codable, Hashable, Identifiable {
 
     /// Returns "—" when fairValue is zero (i.e. nil from backend)
     var formattedFairValue: String {
-        fairValue > 0 ? fairValue.formatted(.currency(code: "USD")) : "—"
+        fairValue > 0 ? fairValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—"
     }
 
     var id: String { "\(method)|\(summary)|\(fairValue)" }
@@ -1583,7 +1583,7 @@ extension InventoryCard {
         case id, playerName, cardName, cost, currentValue, status
         case year, setName, parallel, grade, gradeCompany, gradeValue
         case purchaseDate, purchasePlatform, quantity, notes
-        case imageFrontUrl, imageBackUrl
+        case imageFrontUrl, imageBackUrl, catalogImageUrl, actionRecommendation, certNumber
         case lowValue, highValue, confidence, method, summary, isAuto
         case graderStatus
         case photos, clientId
@@ -1615,6 +1615,9 @@ extension InventoryCard {
         case quantity, notes
         case imageFrontUrl = "image_front_url"
         case imageBackUrl = "image_back_url"
+        case catalogImageUrl = "catalog_image_url"
+        case actionRecommendation = "action_recommendation"
+        case certNumber = "cert_number"
         case lowValue = "low_value"
         case highValue = "high_value"
         case confidence, method, summary
@@ -1651,6 +1654,12 @@ extension InventoryCard {
     private enum WireKeys: String, CodingKey {
         case cardTitle, cardYear, product
         case purchaseSource, purchasePrice, totalCostBasis
+        // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): backend may ship the
+        // catalog card image under any of these keys depending on which
+        // responseAssembly path built the holdings list. Decode
+        // permissively and pick whichever is populated.
+        case cardImageUrl, card_image_url
+        case imageUrl, image_url
     }
 
     init(from decoder: Decoder) throws {
@@ -1757,6 +1766,35 @@ extension InventoryCard {
         self.imageBackUrl = (try? c.decode(String.self, forKey: .imageBackUrl))
             ?? (try? s.decode(String.self, forKey: .imageBackUrl))
             ?? decodedPhotos?.dropFirst().first
+        // CF-INVENTORY-CATALOG-IMAGE (2026-07-05): catalog image URL —
+        // the backend-served CDN image for the resolved Cardsight card.
+        // Try every plausible wire key so the field lights up whichever
+        // path the backend takes. Rendered as the inventory thumbnail
+        // fallback when the user hasn't uploaded a personal photo.
+        let catalogFromCamel = try? c.decode(String.self, forKey: .catalogImageUrl)
+        let catalogFromSnake = try? s.decode(String.self, forKey: .catalogImageUrl)
+        let catalogFromCardImage = try? w.decode(String.self, forKey: .cardImageUrl)
+        let catalogFromCardImageSnake = try? w.decode(String.self, forKey: .card_image_url)
+        let catalogFromImage = try? w.decode(String.self, forKey: .imageUrl)
+        let catalogFromImageSnake = try? w.decode(String.self, forKey: .image_url)
+        self.catalogImageUrl = catalogFromCamel
+            ?? catalogFromSnake
+            ?? catalogFromCardImage
+            ?? catalogFromCardImageSnake
+            ?? catalogFromImage
+            ?? catalogFromImageSnake
+        // CF-ACTION-BADGES (2026-07-06, backend §1): per-holding
+        // seller verdict. Named `actionRecommendation`, NOT
+        // `recommendation` — a legacy string field with that name
+        // still exists on the wire and would clobber the decode.
+        self.actionRecommendation = (try? c.decode(CardPanelGradeEntry.ActionRecommendation.self, forKey: .actionRecommendation))
+            ?? (try? s.decode(CardPanelGradeEntry.ActionRecommendation.self, forKey: .actionRecommendation))
+        // CF-HOLDING-REGRADE (2026-07-06): backend confirmed
+        // `certNumber` has always been on the holdings wire.
+        // Decoder was silently dropping it. Round-trips through
+        // /regrade now.
+        self.certNumber = (try? c.decode(String.self, forKey: .certNumber))
+            ?? (try? s.decode(String.self, forKey: .certNumber))
         self.lowValue = (try? c.decode(Double.self, forKey: .lowValue))
             ?? (try? s.decode(Double.self, forKey: .lowValue))
             ?? (try? b.decode(Double.self, forKey: .quickSaleValue))
@@ -1809,13 +1847,13 @@ extension InventoryCard {
             ?? nil
         self.cardId = (try? c.decode(String.self, forKey: .cardId))
             ?? (try? s.decode(String.self, forKey: .cardId))
-        // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
+        // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline +
         // model + lean badge wire envelope. All three independently
         // optional; defensive `try?` so any absent/null/malformed entry
         // collapses to nil without breaking the row.
-        self.lastSaleSurface = try? c.decodeIfPresent(CardHedgeLastSaleSurface.self, forKey: .lastSaleSurface)
-        self.modelExpectation = try? c.decodeIfPresent(CardHedgeModelExpectation.self, forKey: .modelExpectation)
-        self.modelSignal = try? c.decodeIfPresent(CardHedgeModelSignal.self, forKey: .modelSignal)
+        self.lastSaleSurface = try? c.decodeIfPresent(LiveMarketLastSaleSurface.self, forKey: .lastSaleSurface)
+        self.modelExpectation = try? c.decodeIfPresent(LiveMarketModelExpectation.self, forKey: .modelExpectation)
+        self.modelSignal = try? c.decodeIfPresent(LiveMarketModelSignal.self, forKey: .modelSignal)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -1838,6 +1876,10 @@ extension InventoryCard {
         try container.encodeIfPresent(notes, forKey: .notes)
         try container.encodeIfPresent(imageFrontUrl, forKey: .imageFrontUrl)
         try container.encodeIfPresent(imageBackUrl, forKey: .imageBackUrl)
+        try container.encodeIfPresent(catalogImageUrl, forKey: .catalogImageUrl)
+        try container.encodeIfPresent(certNumber, forKey: .certNumber)
+        // actionRecommendation is Decodable-only (backend → iOS one-way).
+        // Skip encoding — iOS never writes this field back.
         try container.encodeIfPresent(lowValue, forKey: .lowValue)
         try container.encodeIfPresent(highValue, forKey: .highValue)
         try container.encodeIfPresent(confidence, forKey: .confidence)
@@ -2105,7 +2147,17 @@ final class AddPortfolioCardViewModel: ObservableObject {
             editingCardID = existingCard.id
             playerName = existingCard.playerName
             cardTitle = existingCard.cardName
-            searchText = [existingCard.year, existingCard.setName, existingCard.parallel, existingCard.playerName]
+            // CF-EDIT-CARD-YEAR-DEDUPE (2026-07-06): the backend's setName
+            // often already carries the year prefix ("2006 Bowman Draft
+            // Picks & Prospects"), so prepending existingCard.year again
+            // rendered the year twice in the description field. Drop the
+            // year token when the setName already begins with it.
+            let trimmedYear = existingCard.year.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedSet = existingCard.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let yearAlreadyInSet = trimmedYear.isEmpty == false
+                && trimmedSet.lowercased().hasPrefix(trimmedYear.lowercased())
+            let yearToken = yearAlreadyInSet ? "" : existingCard.year
+            searchText = [yearToken, existingCard.setName, existingCard.parallel, existingCard.playerName]
                 .filter { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
                 .joined(separator: " ")
             purchasePrice = String(format: "%.2f", existingCard.cost)

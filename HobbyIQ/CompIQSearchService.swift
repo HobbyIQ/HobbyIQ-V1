@@ -31,6 +31,20 @@ final class CompIQSearchService {
 
         let hits = response.results ?? []
         logger.info("Found \(hits.count) variants")
+
+        // CF-PICKER-TRUST-BACKEND-RANK diagnostic (2026-07-01): log the
+        // top-3 candidates as the backend ranks them so a mismatch
+        // between "backend #1" and "iOS shows #N" can be traced from
+        // Console.app. Prefix `[picker-order]` for grep. Safe in
+        // production — no image or session content, just candidate
+        // metadata that already surfaces in the UI. Remove in a
+        // follow-up once the re-rank bug is confirmed fixed on device.
+        let preview = hits.prefix(3).enumerated().map { idx, hit in
+            "\(idx + 1)=\(hit.cardId)|\(hit.player ?? "-")|\(hit.variant ?? "-")|attr=\(hit.attribution ?? "-")|conf=\(hit.confidence.map { String(format: "%.2f", $0) } ?? "-")"
+        }.joined(separator: " ‖ ")
+        logger.notice("[picker-order] q=\"\(trimmed, privacy: .public)\" top=\(preview, privacy: .public)")
+        print("[picker-order] q=\"\(trimmed)\" top=\(preview)")
+
         return hits
     }
 

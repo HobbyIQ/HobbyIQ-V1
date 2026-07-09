@@ -19,6 +19,10 @@ struct PortfolioIQView: View {
     @State private var showCardIdentify = false
     @State private var topMoversExpanded = false
     @State private var priorityActionsExpanded = false
+    /// CF-PRIORITY-DRILLDOWN (2026-07-06): tapping a priority action
+    /// pushes a dedicated `PriorityActionListView` for that action's
+    /// filtered card subset instead of switching to the Inventory tab.
+    @State private var selectedPriorityAction: PortfolioPriorityAction?
 
     // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): scoped to this view because
     // the card's loading/error/refresh story is independent of the hot
@@ -42,8 +46,14 @@ struct PortfolioIQView: View {
     @State private var showHoldingsImport = false
 
     var body: some View {
-        NavigationView {
-            ZStack {
+        // CF-BACK-NAV-FIX (2026-07-06): removed a nested NavigationView here.
+        // MainAppView already wraps PortfolioIQView in a NavigationStack, so
+        // the inner NavigationView double-nested the navigation containers —
+        // pushing into `.navigationDestination(item:)` and then tapping back
+        // was popping past the tab root (perceived as jumping to Dashboard).
+        // Matches the pattern InventoryIQView already follows for the same
+        // reason (see its CF-TABBAR-PERSISTENT comment).
+        ZStack {
                 background
 
                 if vm.summary == nil && vm.isLoading {
@@ -58,8 +68,6 @@ struct PortfolioIQView: View {
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
                             }
-
-                            PortfolioHealthCard()
 
                             portfolioToolsRow
 
@@ -88,27 +96,47 @@ struct PortfolioIQView: View {
             .task {
                 await collectionValueViewModel.load()
             }
-            .sheet(isPresented: $showingLedger) {
+            .navigationDestination(isPresented: $showingLedger) {
                 PortfolioLedgerSheet(viewModel: vm)
             }
-            .sheet(item: $selectedCard) { card in
+            // CF-ENV-OBJECT-FIX (2026-07-04): `.navigationDestination`
+            // doesn't propagate `@EnvironmentObject` to the pushed view.
+            .navigationDestination(item: $selectedCard) { card in
                 PortfolioHoldingDetailSheet(
                     viewModel: vm,
                     card: card,
                     onUpdated: {
                         Task { await vm.refresh() }
-                    }
+                    },
+                    onBack: { selectedCard = nil }
                 )
+                .environmentObject(sessionViewModel)
             }
-            .sheet(isPresented: $showCalibration) {
+            // CF-PRIORITY-DRILLDOWN (2026-07-06): push a dedicated page
+            // for the tapped priority action instead of jumping tabs.
+            // Uses `isPresented:` (not `item:`) because SwiftUI misbehaves
+            // when multiple `.navigationDestination(item:)` modifiers are
+            // stacked with different item types on the same NavigationStack.
+            .navigationDestination(
+                isPresented: Binding(
+                    get: { selectedPriorityAction != nil },
+                    set: { if !$0 { selectedPriorityAction = nil } }
+                )
+            ) {
+                if let action = selectedPriorityAction {
+                    PriorityActionListView(vm: vm, action: action)
+                        .environmentObject(sessionViewModel)
+                }
+            }
+            .navigationDestination(isPresented: $showCalibration) {
                 CalibrationView()
                     .environmentObject(sessionViewModel)
             }
-            .sheet(isPresented: $showWeeklyBrief) {
+            .navigationDestination(isPresented: $showWeeklyBrief) {
                 WeeklyBriefView()
                     .environmentObject(sessionViewModel)
             }
-            .sheet(isPresented: $showBatchReprice) {
+            .navigationDestination(isPresented: $showBatchReprice) {
                 BatchRepriceView()
                     .environmentObject(sessionViewModel)
             }
@@ -138,7 +166,7 @@ struct PortfolioIQView: View {
                 Text(message)
             }
             // CF-IOS-IMPORT-BUILD (2026-06-21): import sheet.
-            .sheet(isPresented: $showHoldingsImport) {
+            .navigationDestination(isPresented: $showHoldingsImport) {
                 HoldingsImportView()
                     .environmentObject(sessionViewModel)
             }
@@ -148,8 +176,6 @@ struct PortfolioIQView: View {
                     Task { await vm.load() }
                 }
             }
-        }
-        .navigationViewStyle(.stack)
     }
 
     private var portfolioToolsRow: some View {
@@ -281,8 +307,12 @@ struct PortfolioIQView: View {
         // on `summary` are left untouched for non-hero consumers (P/L logic
         // stays stable across the seven sum sites — this is display-only).
         let agg = InventoryDisplayAggregate(holdings: vm.inventoryCards)
-        let pnlColor: Color = agg.displayPL >= 0 ? .green : .red
-        let hasCostBasis = agg.displayCost > 0
+        let heroValue = agg.displayValueIncludingEstimated
+        let heroCost = agg.displayCostIncludingEstimated
+        let heroPL = agg.displayPLIncludingEstimated
+        let heroROI = agg.displayROIIncludingEstimated
+        let pnlColor: Color = heroPL >= 0 ? .green : .red
+        let hasCostBasis = heroCost > 0
         // CF-PHASE-5-COLLECTION-VALUE (2026-06-18): split unpriced into
         // "N estimated · M pending" via the aggregate helper.
         let unpricedSuffix = agg.unpricedSubtitleSuffix
@@ -325,22 +355,23 @@ struct PortfolioIQView: View {
                 .accessibilityLabel("Open ledger")
             }
 
-            // Hero value
+            // Hero value — estimated-inclusive so cards without a live comp
+            // still contribute their `estimatedValue` to the top-line FMV.
             VStack(spacing: 6) {
-                Text(agg.displayValue.portfolioCurrencyText)
+                Text(heroValue.portfolioCurrencyText)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     .minimumScaleFactor(0.7)
 
                 if hasCostBasis {
                     HStack(spacing: 4) {
-                        Image(systemName: agg.displayPL >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        Image(systemName: heroPL >= 0 ? "arrow.up.right" : "arrow.down.right")
                             .font(.caption2.weight(.bold))
-                        Text(agg.displayPL.portfolioSignedCurrencyText)
+                        Text(heroPL.portfolioSignedCurrencyText)
                             .font(.subheadline.weight(.semibold))
                         Text("•")
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                        Text(agg.displayROI.portfolioSignedPercentText + " " + Labels.roi)
+                        Text(heroROI.portfolioSignedPercentText + " " + Labels.roi)
                             .font(.subheadline.weight(.semibold))
                     }
                     .foregroundStyle(pnlColor)
@@ -354,7 +385,7 @@ struct PortfolioIQView: View {
             // Inventory so they can edit each card's cost from the row
             // detail sheet.
             if hasCostBasis {
-                Text("Cost basis \(portfolioCurrencyString(agg.displayCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
+                Text("Cost basis \(portfolioCurrencyString(heroCost))\(pricedQualifier) · \(agg.totalCards) cards\(unpricedSuffix)")
                     .font(.caption)
                     .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             } else {
@@ -428,16 +459,7 @@ struct PortfolioIQView: View {
             VStack(spacing: 0) {
                 ForEach(Array(visibleActions.enumerated()), id: \.element.id) { index, action in
                     Button {
-                        let filter: PortfolioInventoryFilter
-                        switch action.kind {
-                        case .sellWatch:
-                            filter = .sellWatch
-                        case .highRisk:
-                            filter = .losers
-                        case .stalePricing:
-                            filter = .stale
-                        }
-                        onSwitchToInventory(filter)
+                        selectedPriorityAction = action
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: actionIconName(for: action.kind))
@@ -633,7 +655,14 @@ struct PortfolioIQView: View {
         let arrowIcon = isUp ? "arrow.up.right" : "arrow.down.right"
 
         return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 10) {
+                // CF-PORTFOLIO-MOVER-THUMB (2026-07-05): mover rows on
+                // the portfolio page now show the same card-art
+                // thumbnail the inventory rows use (same helper, same
+                // comp-card structure — .scaledToFit + .scaleEffect(0.85)
+                // inside a fixed card-aspect frame).
+                inventoryRowThumbnail(urlString: mover.imageUrl, playerName: mover.playerName)
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(mover.playerName)
                         .font(.subheadline.weight(.semibold))
@@ -642,6 +671,10 @@ struct PortfolioIQView: View {
                         .font(.caption)
                         .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                         .lineLimit(1)
+                    if let rec = mover.actionRecommendation,
+                       rec.verdict != .insufficientData {
+                        moverActionBadge(rec: rec)
+                    }
                 }
 
                 Spacer(minLength: 12)
@@ -660,6 +693,34 @@ struct PortfolioIQView: View {
         }
         .padding(.horizontal, 12)
         .frame(minHeight: 44)
+    }
+
+    /// CF-ACTION-BADGES (2026-07-06, backend §1): compact verdict pill
+    /// for the mover row. Uses `ActionBadgeStyle` so it matches the
+    /// comp-card action block visually.
+    @ViewBuilder
+    private func moverActionBadge(rec: CardPanelGradeEntry.ActionRecommendation) -> some View {
+        let style = ActionBadgeStyle(verdict: rec.verdict, urgency: rec.urgency)
+        HStack(spacing: 4) {
+            Image(systemName: style.icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(style.label)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.5)
+            if rec.verdict == .list, let t = rec.targetPrice, t > 0 {
+                Text("· \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .foregroundStyle(style.foreground)
+        .background(style.background)
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(style.tint, lineWidth: style.strokeWidth)
+        )
+        .clipShape(Capsule(style: .continuous))
     }
 
     /// CF-IOS-PORTFOLIO-ROW-SECONDARY (2026-06-27): compact ROI% +
@@ -801,7 +862,6 @@ private enum LedgerPnLGrouping: String, CaseIterable {
 
 private struct PortfolioLedgerSheet: View {
     @ObservedObject var viewModel: PortfolioIQViewModel
-    @State private var selectedEntry: PortfolioLedgerEntry?
     @State private var showExportOptions = false
     @State private var includeUnreconciled = false
     @State private var exportFileURL: URL?
@@ -817,80 +877,78 @@ private struct PortfolioLedgerSheet: View {
     private var totals: PortfolioLedgerTotals? { viewModel.ledgerTotals }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
+            if !entries.isEmpty {
+                Picker("View", selection: $selectedTab) {
+                    ForEach(LedgerTab.allCases, id: \.self) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if entries.isEmpty {
+                        PortfolioLedgerEmptyState()
+                    } else if selectedTab == .entries {
+                        if let totals {
+                            ledgerTotalsCard(totals)
+                        }
+
+                        let reconciliation = entries.filter { $0.needsReconciliation == true && $0.dismissedAt == nil }
+                        if !reconciliation.isEmpty {
+                            ledgerAttentionSection(reconciliation)
+                        }
+
+                        ForEach(entries) { entry in
+                            NavigationLink(value: entry) {
+                                ledgerRow(entry)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } else {
+                        pnlView
+                    }
+                }
+                .padding(16)
+            }
+        }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Ledger")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
                 if !entries.isEmpty {
-                    Picker("View", selection: $selectedTab) {
-                        ForEach(LedgerTab.allCases, id: \.self) { tab in
-                            Text(tab.rawValue).tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-                }
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if entries.isEmpty {
-                            PortfolioLedgerEmptyState()
-                        } else if selectedTab == .entries {
-                            if let totals {
-                                ledgerTotalsCard(totals)
-                            }
-
-                            let reconciliation = entries.filter { $0.needsReconciliation == true && $0.dismissedAt == nil }
-                            if !reconciliation.isEmpty {
-                                ledgerAttentionSection(reconciliation)
-                            }
-
-                            ForEach(entries) { entry in
-                                Button { selectedEntry = entry } label: {
-                                    ledgerRow(entry)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        } else {
-                            pnlView
-                        }
-                    }
-                    .padding(16)
-                }
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Ledger")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if !entries.isEmpty {
-                        Button { showExportOptions = true } label: {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        }
+                    Button { showExportOptions = true } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
                     }
                 }
             }
-            .sheet(item: $selectedEntry) { entry in
-                LedgerEntryDetailSheet(entry: entry, viewModel: viewModel)
+        }
+        .navigationDestination(for: PortfolioLedgerEntry.self) { entry in
+            LedgerEntryDetailSheet(entry: entry, viewModel: viewModel)
+        }
+        .confirmationDialog("Export Tax CSV", isPresented: $showExportOptions) {
+            Button("Export (exclude unreconciled)") {
+                exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: false)
+                if exportFileURL != nil { showShareSheet = true }
             }
-            .confirmationDialog("Export Tax CSV", isPresented: $showExportOptions) {
-                Button("Export (exclude unreconciled)") {
-                    exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: false)
-                    if exportFileURL != nil { showShareSheet = true }
-                }
-                Button("Export (include unreconciled, flagged)") {
-                    exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: true)
-                    if exportFileURL != nil { showShareSheet = true }
-                }
-                Button("Cancel", role: .cancel) {}
+            Button("Export (include unreconciled, flagged)") {
+                exportFileURL = viewModel.exportLedgerCSV(includeUnreconciled: true)
+                if exportFileURL != nil { showShareSheet = true }
             }
-            .sheet(isPresented: $showShareSheet) {
-                if let url = exportFileURL {
-                    LedgerShareSheet(url: url)
-                }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportFileURL {
+                LedgerShareSheet(url: url)
             }
         }
     }
@@ -1088,7 +1146,7 @@ private struct PortfolioLedgerSheet: View {
 
             ForEach(entries) { entry in
                 HStack(spacing: 8) {
-                    Button { selectedEntry = entry } label: {
+                    NavigationLink(value: entry) {
                         HStack(spacing: 8) {
                             Image(systemName: "cart.badge.questionmark")
                                 .font(.caption)
@@ -1221,34 +1279,26 @@ private struct LedgerEntryDetailSheet: View {
     @State private var undismissError: String?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    headerSection
-                    transactionSection
-                    if entry.isEbaySource {
-                        ebayFeeBreakdownSection
-                    }
-                    costBasisEditSection
-                    profitSection
-                    if entry.dismissedAt != nil {
-                        undismissSection
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                headerSection
+                transactionSection
+                if entry.isEbaySource {
+                    ebayFeeBreakdownSection
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 20)
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Sale Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                costBasisEditSection
+                profitSection
+                if entry.dismissedAt != nil {
+                    undismissSection
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
         }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Sale Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
         .onAppear {
             gradingCostText = entry.gradingCost.map { String(format: "%.2f", $0) } ?? ""
             suppliesCostText = entry.suppliesCost.map { String(format: "%.2f", $0) } ?? ""
@@ -1696,4 +1746,167 @@ private extension PortfolioSummaryResponse {
         onSwitchToInventory: { _ in }
     )
     .environmentObject(AppState())
+}
+
+// MARK: - Priority Action List (CF-PRIORITY-DRILLDOWN, 2026-07-06)
+
+/// Dedicated push destination for a single Priority Action tap.
+/// Shows the subset of `vm.inventoryCards` that matches the action's
+/// kind, in the same row style as InventoryIQ. Tapping a card pushes
+/// the standard `PortfolioHoldingDetailSheet`.
+struct PriorityActionListView: View {
+    @ObservedObject var vm: PortfolioIQViewModel
+    let action: PortfolioPriorityAction
+    @EnvironmentObject private var sessionViewModel: AppSessionViewModel
+    @State private var selectedCard: InventoryCard?
+
+    var body: some View {
+        ZStack {
+            HobbyIQBackground()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 12) {
+                    header
+                    if matchingCards.isEmpty {
+                        emptyState
+                    } else {
+                        cardList
+                    }
+                }
+                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            }
+        }
+        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 88) }
+        .navigationTitle(action.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .navigationDestination(item: $selectedCard) { card in
+            PortfolioHoldingDetailSheet(
+                viewModel: vm,
+                card: card,
+                onUpdated: { Task { await vm.refresh() } },
+                onBack: { selectedCard = nil }
+            )
+            .environmentObject(sessionViewModel)
+        }
+    }
+
+    // MARK: - Sections
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: iconName)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 40, height: 40)
+                .background(tint.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(action.title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(action.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Text("\(matchingCards.count)")
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(tint.opacity(0.2))
+                .clipShape(Capsule())
+        }
+        .padding(HobbyIQTheme.Spacing.medium)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private var cardList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(matchingCards.enumerated()), id: \.element.id) { index, card in
+                Button {
+                    selectedCard = card
+                } label: {
+                    PortfolioCardRow(card: card)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if index < matchingCards.count - 1 {
+                    Divider().overlay(Color.white.opacity(0.08))
+                }
+            }
+        }
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "checkmark.seal")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Text("Nothing to action here")
+                .font(.headline.bold())
+                .foregroundStyle(.white)
+            Text("No holdings currently match this priority.")
+                .font(.caption)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(20)
+        .background(HobbyIQTheme.Colors.cardNavy)
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(HobbyIQTheme.Gradients.dashboardStroke, lineWidth: 1.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    // MARK: - Derived
+
+    private var matchingCards: [InventoryCard] {
+        vm.inventoryCards.filter { card in
+            switch action.kind {
+            case .sellWatch:
+                return card.profitLoss < 0 || card.status.lowercased().contains("sell")
+            case .highRisk:
+                return card.profitLoss < 0
+            case .stalePricing:
+                return card.freshnessChipText == "Stale"
+            }
+        }
+    }
+
+    private var iconName: String {
+        switch action.kind {
+        case .sellWatch: return "exclamationmark.circle.fill"
+        case .highRisk: return "flame.fill"
+        case .stalePricing: return "clock.arrow.circlepath"
+        }
+    }
+
+    private var tint: Color {
+        switch action.kind {
+        case .sellWatch: return .orange
+        case .highRisk: return .red
+        case .stalePricing: return Color(hex: 0x3B82F6)
+        }
+    }
 }

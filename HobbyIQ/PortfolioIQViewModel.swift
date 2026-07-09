@@ -91,48 +91,59 @@ final class PortfolioIQViewModel: ObservableObject {
     // predictedPrice and fed the now-removed Movement Pulse card.
 
     private func recomputeCachedProperties() {
-        // Priority actions
-        let sellWatch = bestCardsToSellNow.prefix(3).map { $0.playerName }
-        let negativeCards = inventoryCards.filter { $0.profitLoss < 0 }.prefix(3)
-        let staleCards = inventoryCards.filter { $0.freshnessChipText == "Stale" }.prefix(3)
+        // CF-PRIORITY-COUNT-FIX (2026-07-06): the row's `cardCount`
+        // MUST match the size of the list `PriorityActionListView`
+        // renders, otherwise the pill on PortfolioIQ ("12") disagrees
+        // with the count in the pushed page. Compute the full match
+        // set using the same predicates InventoryIQView uses for
+        // `.sellWatch` / `.losers` / `.stale`, then use `.prefix(3)`
+        // ONLY for the subtitle preview names.
+        let sellWatchAll = inventoryCards.filter {
+            $0.profitLoss < 0 || $0.status.lowercased().contains("sell")
+        }
+        let highRiskAll = inventoryCards.filter { $0.profitLoss < 0 }
+        let staleAll = inventoryCards.filter { $0.freshnessChipText == "Stale" }
 
         var actions: [PortfolioPriorityAction] = []
 
-        if sellWatch.isEmpty == false {
+        if sellWatchAll.isEmpty == false {
+            let preview = sellWatchAll.prefix(3).map(\.playerName)
             actions.append(
                 PortfolioPriorityAction(
                     id: "sell-watch",
                     kind: .sellWatch,
                     title: "Sell-watch cards",
-                    subtitle: sellWatch.joined(separator: ", "),
-                    detail: "\(bestCardsToSellNow.count) cards are already flagged in the sell queue.",
-                    cardCount: bestCardsToSellNow.count
+                    subtitle: preview.joined(separator: ", "),
+                    detail: "\(sellWatchAll.count) cards are flagged for the sell queue.",
+                    cardCount: sellWatchAll.count
                 )
             )
         }
 
-        if negativeCards.isEmpty == false {
+        if highRiskAll.isEmpty == false {
+            let preview = highRiskAll.prefix(3).map(\.playerName)
             actions.append(
                 PortfolioPriorityAction(
                     id: "high-risk",
                     kind: .highRisk,
                     title: "High risk cards",
-                    subtitle: negativeCards.map(\.playerName).joined(separator: ", "),
-                    detail: "\(negativeCards.count) cards are currently underwater.",
-                    cardCount: negativeCards.count
+                    subtitle: preview.joined(separator: ", "),
+                    detail: "\(highRiskAll.count) cards are currently underwater.",
+                    cardCount: highRiskAll.count
                 )
             )
         }
 
-        if staleCards.isEmpty == false {
+        if staleAll.isEmpty == false {
+            let preview = staleAll.prefix(3).map(\.playerName)
             actions.append(
                 PortfolioPriorityAction(
                     id: "stale-pricing",
                     kind: .stalePricing,
                     title: "Stale pricing cards",
-                    subtitle: staleCards.map(\.playerName).joined(separator: ", "),
-                    detail: "\(staleCards.count) cards need a fresh comp check.",
-                    cardCount: staleCards.count
+                    subtitle: preview.joined(separator: ", "),
+                    detail: "\(staleAll.count) cards need a fresh comp check.",
+                    cardCount: staleAll.count
                 )
             )
         }
@@ -158,7 +169,9 @@ final class PortfolioIQViewModel: ObservableObject {
                     currentValue: card.currentValue,
                     profitLoss: card.profitLoss,
                     trendLabel: "Gainer",
-                    trendDetail: card.trendChipText
+                    trendDetail: card.trendChipText,
+                    imageUrl: card.imageFrontUrl ?? card.catalogImageUrl,
+                    actionRecommendation: card.actionRecommendation
                 )
             }
 
@@ -173,7 +186,9 @@ final class PortfolioIQViewModel: ObservableObject {
                     currentValue: card.currentValue,
                     profitLoss: card.profitLoss,
                     trendLabel: "Loser",
-                    trendDetail: card.trendChipText
+                    trendDetail: card.trendChipText,
+                    imageUrl: card.imageFrontUrl ?? card.catalogImageUrl,
+                    actionRecommendation: card.actionRecommendation
                 )
             }
 

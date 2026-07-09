@@ -3,6 +3,7 @@
 //  HobbyIQ
 //
 
+import Combine
 import Foundation
 import SwiftUI
 
@@ -119,20 +120,38 @@ struct InventoryDisplayAggregate {
     // transparent rather than reframing the aggregate.
     let estimatedCount: Int
     let pendingCount: Int
+    // Estimated-inclusive totals: observed FMV × qty for priced cards plus
+    // `estimatedValue` × qty for cards flagged `valuationStatus ==
+    // "estimated"`. Powers the PortfolioIQ hero so users see the FMV of
+    // their whole collection (observed + model-estimated), not just the
+    // subset with a live comp. Observed-only `displayValue` is preserved
+    // above so Story B callers keep their invariant.
+    let displayValueIncludingEstimated: Double
+    let displayCostIncludingEstimated: Double
+    let displayPLIncludingEstimated: Double
+    let displayROIIncludingEstimated: Double
 
     init(holdings: [InventoryCard]) {
         var value = 0.0
         var cost = 0.0
+        var valueIncEst = 0.0
+        var costIncEst = 0.0
         var priced = 0
         var estimated = 0
         var pending = 0
         for card in holdings {
+            let qty = max(1.0, card.quantity ?? 1.0)
             if let fmv = card.fairMarketValue {
-                let qty = max(1.0, card.quantity ?? 1.0)
                 value += fmv * qty
                 cost += card.cost
+                valueIncEst += fmv * qty
+                costIncEst += card.cost
                 priced += 1
             } else if card.valuationStatus == "estimated" {
+                if let est = card.estimatedValue, est > 0 {
+                    valueIncEst += est * qty
+                    costIncEst += card.cost
+                }
                 estimated += 1
             } else {
                 // "pending", "observed" with nil fmv (backend reclassifies
@@ -147,6 +166,12 @@ struct InventoryDisplayAggregate {
         self.displayCost = cost
         self.displayPL = value - cost
         self.displayROI = cost > 0 ? ((value - cost) / cost) * 100 : 0
+        self.displayValueIncludingEstimated = valueIncEst
+        self.displayCostIncludingEstimated = costIncEst
+        self.displayPLIncludingEstimated = valueIncEst - costIncEst
+        self.displayROIIncludingEstimated = costIncEst > 0
+            ? ((valueIncEst - costIncEst) / costIncEst) * 100
+            : 0
         self.totalCards = holdings.count
         self.pricedCount = priced
         self.estimatedCount = estimated
@@ -199,6 +224,14 @@ struct PortfolioMover: Identifiable, Hashable {
     let profitLoss: Double
     let trendLabel: String
     let trendDetail: String
+    /// CF-PORTFOLIO-MOVER-THUMB (2026-07-05): resolved image URL for the
+    /// mover row's thumbnail. Populated from the source holding's
+    /// `imageFrontUrl ?? catalogImageUrl` so the portfolio Top Movers
+    /// list finally shows card art alongside player/name/PL.
+    let imageUrl: String?
+    /// CF-ACTION-BADGES (2026-07-06, backend §1): per-holding seller
+    /// verdict passed through from the source InventoryCard.
+    let actionRecommendation: CardPanelGradeEntry.ActionRecommendation?
 
     init(
         id: String,
@@ -207,7 +240,9 @@ struct PortfolioMover: Identifiable, Hashable {
         currentValue: Double,
         profitLoss: Double,
         trendLabel: String,
-        trendDetail: String
+        trendDetail: String,
+        imageUrl: String? = nil,
+        actionRecommendation: CardPanelGradeEntry.ActionRecommendation? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -216,6 +251,8 @@ struct PortfolioMover: Identifiable, Hashable {
         self.profitLoss = profitLoss
         self.trendLabel = trendLabel
         self.trendDetail = trendDetail
+        self.imageUrl = imageUrl
+        self.actionRecommendation = actionRecommendation
     }
 }
 
@@ -932,6 +969,14 @@ struct PortfolioHoldingDetailSheet: View {
     @ObservedObject var viewModel: PortfolioIQViewModel
     let card: InventoryCard
     let onUpdated: () -> Void
+    /// CF-BACK-NAV-FIX (2026-07-06): the floating back chevron previously
+    /// called `@Environment(\.dismiss)`. Under `.navigationDestination(item:)`
+    /// on a tab-root NavigationStack, `dismiss()` was popping past the tab
+    /// root — user landed on Dashboard instead of the inventory list. When
+    /// the parent supplies `onBack`, we call it (parent clears the
+    /// `item` binding, which pops one level cleanly). Optional to keep
+    /// previews / older callers working via `dismiss()` fallback.
+    let onBack: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
@@ -953,11 +998,41 @@ struct PortfolioHoldingDetailSheet: View {
     /// PATCH commits update it (and the row stays correct because the
     /// inventory list refreshes on `onUpdated`).
     @State private var selectedStatus: GraderStatus
+    /// CF-HOLDING-REFERENCE-DATA (2026-07-06): collapsed by default so
+    /// the primary read (hero → recommendation → pricing → actionability)
+    /// stays clean. Users who need year/set/parallel/grade/purchase/etc.
+    /// tap to expand.
+    @State private var referenceDataExpanded = false
+    /// CF-HOLDING-DETAIL-V2 (2026-07-06): panel entries fetched from
+    /// /api/compiq/card-panel/:cardId on task. Feeds the PREDICTED
+    /// (30d) block AND the Grading Scenario section — all scenario
+    /// projections read from the SAME payload, no extra API call
+    /// per scenario grade. Empty when the fetch failed, cardId is
+    /// nil, or the holding hasn't been resolved to a catalog card
+    /// yet.
+    @State private var panelEntries: [CardPanelGradeEntry] = []
+    /// CF-HOLDING-DETAIL-V2 (2026-07-06): Grading Scenario is
+    /// collapsed by default. Section only renders for raw holdings
+    /// with a successful panel fetch.
+    @State private var gradingScenarioExpanded = false
+    /// Local scenario state — MUST NOT leak into the canonical
+    /// surfaces. Tapping a scenario grade updates ONLY the
+    /// scenario result rows.
+    @State private var scenarioGradeKey: String = "psa|10"
+    @State private var gradingCostText: String = "25"
+    /// CF-HOLDING-DETAIL-V2 (2026-07-06): Mark-as-Graded sheet gate.
+    @State private var showingMarkAsGradedSheet = false
 
-    init(viewModel: PortfolioIQViewModel, card: InventoryCard, onUpdated: @escaping () -> Void) {
+    init(
+        viewModel: PortfolioIQViewModel,
+        card: InventoryCard,
+        onUpdated: @escaping () -> Void,
+        onBack: (() -> Void)? = nil
+    ) {
         self.viewModel = viewModel
         self.card = card
         self.onUpdated = onUpdated
+        self.onBack = onBack
         _selectedStatus = State(initialValue: card.graderStatus)
     }
 
@@ -996,6 +1071,474 @@ struct PortfolioHoldingDetailSheet: View {
         .padding(.vertical, 6)
     }
 
+    /// CF-HOLDING-DETAIL-REFRESH (2026-07-06): action recommendation
+    /// tile — a dedicated card between the hero and the pricing/detail
+    /// grids so a seller opens the holding and sees "SELL NOW · reasoning"
+    /// / "LIST · $target · reasoning" front-and-center. Same
+    /// ActionBadgeStyle used everywhere else, so the tint/icon/fill
+    /// treatment is uniform across the app.
+    @ViewBuilder
+    private func holdingActionRecommendationCard(rec: CardPanelGradeEntry.ActionRecommendation) -> some View {
+        let style = ActionBadgeStyle(verdict: rec.verdict, urgency: rec.urgency)
+        let headline: String = {
+            switch rec.verdict {
+            case .sellNow:
+                if let d = rec.expectedDeltaPct {
+                    let absStr = d >= 10 ? String(format: "%.0f%%", abs(d)) : String(format: "%.1f%%", abs(d))
+                    return "Sell now — trend points down \(absStr)"
+                }
+                return "Sell now"
+            case .hold:
+                if let d = rec.expectedDeltaPct {
+                    let absStr = d >= 10 ? String(format: "%.0f%%", abs(d)) : String(format: "%.1f%%", abs(d))
+                    return "Hold — trend points up \(absStr)"
+                }
+                return "Hold"
+            case .list:
+                if let t = rec.targetPrice, t > 0 {
+                    return "List at \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))"
+                }
+                return "List"
+            case .insufficientData:
+                return "Not enough data"
+            }
+        }()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: style.icon)
+                        .font(.caption.weight(.bold))
+                    Text(style.label)
+                        .font(.caption.weight(.bold))
+                        .tracking(0.5)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .foregroundStyle(style.foreground)
+                .background(style.background)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(style.tint, lineWidth: style.strokeWidth)
+                )
+                .clipShape(Capsule(style: .continuous))
+                Text(headline)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(style.tint)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            if let reasoning = rec.reasoning?.trimmingCharacters(in: .whitespacesAndNewlines),
+               reasoning.isEmpty == false {
+                Text(reasoning)
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: 0x141821), Color(hex: 0x1A1F2E)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                .stroke(style.tint.opacity(0.25), lineWidth: 1.2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+    }
+
+    /// CF-HOLDING-DETAIL-V2 (2026-07-06): reuses the SAME normalized
+    /// grade-key mapping the comp card uses
+    /// (`GradePillPanel.normalizedKey`), so "PSA 9" on a holding
+    /// resolves to the exact same panel entry the comp card would
+    /// resolve for PSA 9. No forked mapping.
+    private var holdingGradeKey: String {
+        if let company = card.gradeCompany?.trimmingCharacters(in: .whitespaces),
+           let value = card.gradeValue,
+           company.isEmpty == false {
+            let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return GradePillPanel.normalizedKey(grade: valueStr, grader: company)
+        }
+        return "raw"
+    }
+
+    private var isRawHolding: Bool { holdingGradeKey == "raw" }
+
+    /// Panel entry that matches the holding's locked grade. Nil when
+    /// the panel hasn't loaded, the fetch failed, or the panel returned
+    /// no entry for this grade (thin data).
+    private func lockedGradeEntry() -> CardPanelGradeEntry? {
+        guard panelEntries.isEmpty == false else { return nil }
+        return panelEntries.first { entry in
+            GradePillPanel.normalizedKey(grade: entry.grade, grader: entry.grader) == holdingGradeKey
+        }
+    }
+
+    private func entryForKey(_ key: String) -> CardPanelGradeEntry? {
+        panelEntries.first { entry in
+            GradePillPanel.normalizedKey(grade: entry.grade, grader: entry.grader) == key
+        }
+    }
+
+    /// Fires on `.task { }` and again on holding change. Silent
+    /// degradation on failure — no error banner, no spinner. The
+    /// PREDICTED block + Grading Scenario section simply don't render.
+    private func fetchPanelIfPossible() async {
+        guard let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              cardId.isEmpty == false else {
+            panelEntries = []
+            return
+        }
+        do {
+            let response = try await APIService.shared.fetchCardPanel(cardId: cardId)
+            panelEntries = response.gradeCurve?.entries ?? []
+        } catch {
+            panelEntries = []
+        }
+    }
+
+    // MARK: - PREDICTED block (CF-HOLDING-DETAIL-V2; horizon per entry, see CF-PREDICTION-HORIZON-7D)
+
+    /// Same composition as the comp card's predictedBlock — panel
+    /// entry is the ONLY source. `predictedPriceAt30d`,
+    /// `predictedPricePct`, `predictedPriceRangeLow/High`,
+    /// `confidenceScore` all read as-shipped; nothing predictive is
+    /// computed on device. Adds a holding-specific "vs your cost"
+    /// row underneath. Label horizon is driven by
+    /// `entry.predictedHorizonDays` (7 today, per backend PR #301).
+    @ViewBuilder
+    private func holdingPredictedBlock(entry: CardPanelGradeEntry, predicted: Double) -> some View {
+        let confidence = entry.confidenceScore ?? 0
+        let isEstimated = entry.valueSource == .estimated
+        let dampen = confidence < 0.4 || isEstimated
+        let primaryColor: Color = dampen ? HobbyIQTheme.Colors.mutedText : HobbyIQTheme.Colors.pureWhite
+        let deltaPct = entry.predictedPricePct
+        let horizon = entry.predictedHorizonDays ?? 7
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("PREDICTED (\(horizon)d)")
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.6)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                Spacer()
+                HStack(spacing: 6) {
+                    Text(predicted.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(primaryColor)
+                    if let delta = deltaPct {
+                        let up = delta >= 0
+                        Image(systemName: up ? "arrow.up" : "arrow.down")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(up ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                        Text(Self.pctString(abs(delta)))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(up ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                    }
+                }
+            }
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 6) {
+                    Text("Confidence:")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    confidenceDots(score: confidence, cappedByEstimated: isEstimated)
+                }
+                Spacer()
+                if let low = entry.predictedPriceRangeLow, low > 0,
+                   let high = entry.predictedPriceRangeHigh, high > 0 {
+                    Text("\(low.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(high.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            // "vs your cost" — subtraction of two backend numbers,
+            // which is the ONE permitted piece of client-side
+            // arithmetic per the v2 spec.
+            if card.cost > 0 {
+                let netDollars = predicted - card.cost
+                let netPct = (netDollars / card.cost) * 100
+                let up = netDollars >= 0
+                HStack(alignment: .firstTextBaseline) {
+                    Text("vs your cost")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    Spacer()
+                    Text(portfolioCurrencyString(netDollars))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(up ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                    Text("· \(Self.pctString(abs(netPct)))")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(up ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(hex: 0x141821))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+
+    private static func pctString(_ pct: Double) -> String {
+        if abs(pct) >= 10 { return String(format: "%.0f%%", pct) }
+        return String(format: "%.1f%%", pct)
+    }
+
+    /// 5-dot confidence rail — same thresholds + cap-at-2-on-estimated
+    /// rule as the comp card's version.
+    private func confidenceDots(score: Double, cappedByEstimated: Bool) -> some View {
+        let base: Int
+        switch score {
+        case 0.85...:      base = 5
+        case 0.65..<0.85:  base = 4
+        case 0.45..<0.65:  base = 3
+        case 0.25..<0.45:  base = 2
+        default:           base = 1
+        }
+        let filled = cappedByEstimated ? min(base, 2) : base
+        return HStack(spacing: 2) {
+            ForEach(0..<5, id: \.self) { i in
+                Circle()
+                    .fill(i < filled ? HobbyIQTheme.Colors.electricBlue : HobbyIQTheme.Colors.steelGray.opacity(0.4))
+                    .frame(width: 7, height: 7)
+            }
+        }
+    }
+
+    // MARK: - Grading Scenario (CF-HOLDING-DETAIL-V2)
+
+    /// Canonical set of scenario target grades. Raw is intentionally
+    /// omitted (a raw holding is already raw — the scenario is "what
+    /// if I grade this"). Order matches the comp card's canonical pill
+    /// order for visual continuity.
+    private static let scenarioGrades: [(label: String, key: String)] = [
+        ("PSA 10",  "psa|10"),
+        ("PSA 9",   "psa|9"),
+        ("BGS 10",  "bgs|10"),
+        ("BGS 9.5", "bgs|9.5"),
+        ("BGS 9",   "bgs|9"),
+        ("SGC 10",  "sgc|10"),
+        ("SGC 9",   "sgc|9"),
+        ("CGC 10",  "cgc|10"),
+        ("CGC 9",   "cgc|9")
+    ]
+
+    private var scenarioCostValue: Double {
+        Double(gradingCostText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    private var gradingScenarioCard: some View {
+        CollapsiblePortfolioContextCard(
+            title: "Grading Scenario",
+            icon: "checkmark.seal",
+            isExpanded: $gradingScenarioExpanded
+        ) {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("What if you graded this? Pick a target grade, add the grading cost, and see the projected net — from today's comps for that grade. Doesn't affect your holding.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Target-grade selector — visual reuse of GradePillPanel
+                // pill styling, bound to LOCAL scenarioGradeKey. Taps
+                // never touch the page's canonical grade.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Self.scenarioGrades, id: \.key) { pair in
+                            scenarioPill(label: pair.label, key: pair.key)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+
+                HStack {
+                    Text("Grading cost")
+                        .font(.subheadline)
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Spacer()
+                    HStack(spacing: 2) {
+                        Text("$")
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        TextField("25", text: $gradingCostText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
+                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(HobbyIQTheme.Colors.steelGray.opacity(0.2))
+                    .clipShape(Capsule(style: .continuous))
+                }
+
+                scenarioResultRows
+
+                Text("Scenario only — based on current comps for the selected grade. Doesn't affect your holding.")
+                    .font(.caption2)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func scenarioPill(label: String, key: String) -> some View {
+        let entry = entryForKey(key)
+        let hasData = entry?.resolvedMarketValue != nil
+        let isSelected = scenarioGradeKey == key
+        Button {
+            scenarioGradeKey = key
+        } label: {
+            Text(label)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(hasData ? HobbyIQTheme.Colors.pureWhite : HobbyIQTheme.Colors.mutedText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? HobbyIQTheme.Colors.electricBlue.opacity(0.22) : HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(
+                            isSelected
+                                ? AnyShapeStyle(HobbyIQTheme.Colors.electricBlue)
+                                : AnyShapeStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            HobbyIQTheme.Colors.electricBlue.opacity(hasData ? 0.6 : 0.25),
+                                            HobbyIQTheme.Colors.hobbyGreen.opacity(hasData ? 0.6 : 0.25)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                ),
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
+                )
+                .opacity(hasData ? 1 : 0.55)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var scenarioResultRows: some View {
+        let entry = entryForKey(scenarioGradeKey)
+        let projected: Double? = entry?.resolvedMarketValue
+        let gradingCost = scenarioCostValue
+        let marketValueToday: Double? = {
+            if let v = card.fairMarketValue, v > 0 { return v }
+            if card.currentValue > 0 { return card.currentValue }
+            return nil
+        }()
+        VStack(alignment: .leading, spacing: 8) {
+            scenarioRow(
+                label: "Projected value",
+                trailing: projected.map { portfolioCurrencyString($0) } ?? "No data"
+            )
+            scenarioRow(
+                label: "Grading cost",
+                trailing: gradingCost > 0 ? "− \(portfolioCurrencyString(gradingCost))" : "—"
+            )
+            Rectangle()
+                .fill(HobbyIQTheme.Colors.steelGray.opacity(0.35))
+                .frame(height: 1)
+            if let projected {
+                let net = projected - gradingCost
+                scenarioRow(label: "Net if graded", trailing: portfolioCurrencyString(net), tint: net >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger)
+                if card.cost > 0 {
+                    let netVsCost = projected - gradingCost - card.cost
+                    scenarioRow(
+                        label: "Net P/L vs your cost",
+                        trailing: portfolioCurrencyString(netVsCost),
+                        tint: netVsCost >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+                    )
+                }
+                if let mv = marketValueToday {
+                    let delta = projected - mv
+                    scenarioRow(
+                        label: "vs raw today",
+                        trailing: portfolioCurrencyString(delta),
+                        tint: delta >= 0 ? HobbyIQTheme.Colors.successGreen : HobbyIQTheme.Colors.danger
+                    )
+                }
+            }
+        }
+    }
+
+    private func scenarioRow(label: String, trailing: String, tint: Color = .white) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            Spacer()
+            Text(trailing)
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundStyle(tint)
+        }
+    }
+
+    // MARK: - Mark as Graded (CF-HOLDING-REGRADE, backend PR #294)
+
+    /// Fires the atomic POST /api/portfolio/holdings/:id/regrade
+    /// endpoint. Backend rolls `gradingCost` into totalCostBasis,
+    /// updates grade + cert, re-runs autoPriceHolding for the new
+    /// grade, and returns the fresh holding wire shape (with the
+    /// recomputed actionRecommendation). iOS surfaces the local
+    /// error banner on 400/404; the parent view's `onUpdated`
+    /// callback triggers an inventory refresh so the detail view
+    /// rebinds against the returned holding.
+    private func markAsGraded(
+        gradeCompany: String,
+        gradeValue: Double,
+        certNumber: String?,
+        gradingCost: Double?,
+        gradingTierId: String?
+    ) async {
+        do {
+            _ = try await APIService.shared.regradeHolding(
+                holdingId: card.id,
+                gradeCompany: gradeCompany,
+                gradeValue: gradeValue,
+                certNumber: certNumber,
+                gradingCost: gradingCost,
+                gradingTierId: gradingTierId
+            )
+            localError = nil
+            onUpdated()
+        } catch let error as APIServiceError {
+            switch error {
+            case .httpError(let status, let body) where status == 400:
+                // CF-GRADING-TIERS (2026-07-06): backend returns
+                // typed error codes for the two tier-specific 400s.
+                // Sniff the body for the code so we can surface the
+                // right hint. Everything else falls back to the
+                // generic grade-required copy.
+                if body.contains("TIER_REQUIRES_EXPLICIT_COST") {
+                    localError = "Enter the amount you paid — Premium 2+ pricing varies by card value."
+                } else if body.contains("UNKNOWN_GRADING_TIER") {
+                    localError = "That grading tier is no longer available. Pick another or use \"Other → Enter custom cost\"."
+                } else {
+                    localError = "Grade and grade value are required."
+                }
+            case .httpError(let status, _) where status == 404:
+                localError = "Holding not found — refresh your inventory."
+            default:
+                localError = "Couldn't save the grade change: \(APIService.errorMessage(from: error))"
+            }
+        } catch {
+            localError = "Couldn't save the grade change: \(APIService.errorMessage(from: error))"
+        }
+    }
+
     private func commitStatusChange(_ newStatus: GraderStatus, previous: GraderStatus) async {
         do {
             _ = try await APIService.shared.updateHoldingGraderStatus(holdingId: card.id, status: newStatus)
@@ -1011,17 +1554,48 @@ struct PortfolioHoldingDetailSheet: View {
     var body: some View {
         // CF-TABBAR-PERSISTENT (2026-06-27): pushed onto the InventoryIQ
         // NavigationStack instead of presented as a sheet so the bottom
-        // tab bar stays visible. The wrapping `NavigationStack` was
-        // removed to avoid nesting stacks — the parent (InventoryIQView)
-        // owns the stack.
-        ZStack {
+        // tab bar stays visible.
+        // CF-FLOATING-BACK (2026-07-04): dropped the native nav title
+        // bar (redundant with the hero card below) and use a floating
+        // back chevron overlay so content stays flush against the top.
+        ZStack(alignment: .topLeading) {
+            HobbyIQBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        PortfolioHoldingHeroCard(card: card) {
+                        PortfolioHoldingHeroCard(
+                            card: card,
+                            livePanelValue: lockedGradeEntry()?.resolvedMarketValue
+                        ) {
                             showingEditSheet = true
                         }
 
-                        PortfolioDetailPhotosCard(viewModel: viewModel, card: card, onUpdated: onUpdated)
+                        // CF-HOLDING-DETAIL-REFRESH (2026-07-06): surface
+                        // the action badge + reasoning right under the
+                        // hero when the backend has emitted one.
+                        // Reuses the same style used across the comp
+                        // card + inventory row + portfolio movers so
+                        // the verdict reads identically everywhere.
+                        if let rec = card.actionRecommendation,
+                           rec.verdict != .insufficientData {
+                            holdingActionRecommendationCard(rec: rec)
+                        }
+
+                        // CF-HOLDING-DETAIL-V2 (2026-07-06): PREDICTED
+                        // (30d) block — same visual as comp card,
+                        // panel-only source, gated on locked-grade
+                        // entry existing.
+                        if let entry = lockedGradeEntry(),
+                           let predicted = entry.predictedPriceAt30d, predicted > 0 {
+                            holdingPredictedBlock(entry: entry, predicted: predicted)
+                        }
+
+                        // CF-HOLDING-DETAIL-V2 (2026-07-06): Grading
+                        // Scenario — raw holdings only, collapsed by
+                        // default. Reads projections from the SAME
+                        // panel payload already fetched above.
+                        if isRawHolding, panelEntries.isEmpty == false {
+                            gradingScenarioCard
+                        }
 
                         // CF-IOS-DIRECTION-CLEANUP (2026-06-18): direction
                         // sites pruned. Removed Predicted Price, Predicted
@@ -1142,7 +1716,11 @@ struct PortfolioHoldingDetailSheet: View {
                             }
                         }
 
-                        PortfolioContextCard(title: "Card Details") {
+                        CollapsiblePortfolioContextCard(
+                            title: "Reference Data",
+                            icon: "doc.text.magnifyingglass",
+                            isExpanded: $referenceDataExpanded
+                        ) {
                             detailRow(title: "Purchase Price", value: card.costFormatted)
                             detailRow(title: "Profit / Loss", value: card.profitFormatted, valueColor: card.profitLoss >= 0 ? .green : .red)
                             detailRow(title: Labels.roi, value: card.roiFormatted, valueColor: card.profitLoss >= 0 ? .green : .red)
@@ -1152,6 +1730,10 @@ struct PortfolioHoldingDetailSheet: View {
                             detailRow(title: "Set", value: card.displaySet.isEmpty ? "—" : card.displaySet)
                             detailRow(title: "Parallel", value: card.parallel.isEmpty ? "—" : card.parallel)
                             detailRow(title: "Grade", value: card.grade.isEmpty ? "—" : card.grade)
+                            detailRow(
+                                title: "Cert #",
+                                value: (card.certNumber?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 } ?? "—"
+                            )
                             detailRow(title: "Auto", value: card.isAuto ? "Yes" : "No")
                             graderStatusRow
                             detailRow(title: "Quantity", value: card.quantity.map { String(format: "%.0f", $0) } ?? "—")
@@ -1169,6 +1751,17 @@ struct PortfolioHoldingDetailSheet: View {
                                 detailRow(title: "Message", value: lastEbayListingResponse.message ?? "—")
                             }
                         }
+
+                        // CF-HOLDING-DETAIL-REFRESH (2026-07-06): Photos
+                        // section moved out of the primary read path.
+                        // The old placement (right under the hero)
+                        // made the view feel like an edit form; users
+                        // scrolling for pricing/context saw a big
+                        // add-a-photo panel first. Now it lives near
+                        // the bottom next to the destructive actions,
+                        // where a user going into "edit mode" would
+                        // naturally look.
+                        PortfolioDetailPhotosCard(viewModel: viewModel, card: card, onUpdated: onUpdated)
 
                         if let localError {
                             Text(localError)
@@ -1204,6 +1797,24 @@ struct PortfolioHoldingDetailSheet: View {
                             .buttonStyle(PrimaryButtonStyle())
                             .disabled(ebayStore.isConnecting)
 
+                            // CF-HOLDING-DETAIL-V2 (2026-07-06): Mark as
+                            // Graded — raw holdings only. Backend
+                            // asks: `certNumber` on holdings wire +
+                            // grading-cost roll-in to cost basis
+                            // (see backend prompt for details).
+                            if isRawHolding {
+                                Button {
+                                    showingMarkAsGradedSheet = true
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "checkmark.seal")
+                                        Text("Mark as Graded")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                            }
+
                             Button("Mark Sold") {
                                 showingSoldSheet = true
                             }
@@ -1220,41 +1831,46 @@ struct PortfolioHoldingDetailSheet: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 20)
                 }
-                .background { HobbyIQBackground() }
-                .navigationTitle(card.fullDisplayName)
-                .navigationBarTitleDisplayMode(.inline)
-                .themedNavigationSurface()
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") { dismiss() }
-                            .foregroundStyle(AppColors.textSecondary)
+                .navigationBarBackButtonHidden(true)
+                .toolbar(.hidden, for: .navigationBar)
+                .task { await fetchPanelIfPossible() }
+                .navigationDestination(isPresented: $showingMarkAsGradedSheet) {
+                    MarkAsGradedSheet(card: card) { gradeCompany, gradeValue, certNumber, gradingCost, gradingTierId in
+                        Task {
+                            await markAsGraded(
+                                gradeCompany: gradeCompany,
+                                gradeValue: gradeValue,
+                                certNumber: certNumber,
+                                gradingCost: gradingCost,
+                                gradingTierId: gradingTierId
+                            )
+                        }
                     }
                 }
-                .sheet(isPresented: $showingSoldSheet) {
+                .navigationDestination(isPresented: $showingSoldSheet) {
                     PortfolioHoldingSoldSheet(viewModel: viewModel, card: card) {
                         onUpdated()
                         dismiss()
                     }
                 }
-                .sheet(isPresented: $showingEditSheet) {
+                .navigationDestination(isPresented: $showingEditSheet) {
                     AddPortfolioCardView(viewModel: AddPortfolioCardViewModel(existingCard: card)) {
                         onUpdated()
                         dismiss()
                     }
                 }
-                .sheet(isPresented: $showingEbayListingSheet) {
+                .navigationDestination(isPresented: $showingEbayListingSheet) {
                     EbayListingDraftView(viewModel: viewModel, card: card) {
                         lastEbayListingResponse = $0
                         onUpdated()
                     }
                 }
-                .sheet(isPresented: $showingCompIQAnalysis) {
-                    NavigationStack {
-                        PortfolioCompIQBridgeView(holding: card, sessionViewModel: sessionViewModel)
-                            .environmentObject(sessionViewModel)
-                    }
+                .navigationDestination(isPresented: $showingCompIQAnalysis) {
+                    PortfolioCompIQBridgeView(holding: card, sessionViewModel: sessionViewModel)
+                        .environmentObject(sessionViewModel)
                 }
 
                 if showingRemoveModal {
@@ -1282,6 +1898,28 @@ struct PortfolioHoldingDetailSheet: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .zIndex(10)
                 }
+
+                // CF-FLOATING-BACK (2026-07-04): persistent back chevron.
+                Button {
+                    if let onBack {
+                        onBack()
+                    } else {
+                        dismiss()
+                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(HobbyIQTheme.Colors.cardNavy.opacity(0.9)))
+                        .overlay(Circle().stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+                .padding(.leading, 12)
+                .accessibilityLabel("Back")
+                .zIndex(11)
             }
         .task {
             await ebayStore.refreshConnectionStatus()
@@ -1294,8 +1932,19 @@ struct PortfolioHoldingDetailSheet: View {
     }
 }
 
+/// CF-HOLDING-HERO-REDESIGN (2026-07-06): mirror the CompIQ comp-card
+/// hero on the holding detail view. Centered player name, flat single-
+/// line identity, centered card hero image, big MARKET VALUE headline,
+/// compact PP/PL chip row. Edit lives as a floating pill top-right
+/// instead of taking a corner of the top row.
 struct PortfolioHoldingHeroCard: View {
     let card: InventoryCard
+    /// CF-INVENTORY-COMPCARD-MATCH (2026-07-08): optional override for
+    /// the MARKET VALUE headline. Callers that have a live panel-entry
+    /// value (same source the comp card uses) pass it here so the
+    /// two surfaces render the same number. Nil = fall back to the
+    /// holding's cached `fairMarketValue` chain.
+    var livePanelValue: Double? = nil
     let onEdit: () -> Void
 
     private var plColor: Color {
@@ -1304,96 +1953,303 @@ struct PortfolioHoldingHeroCard: View {
         return .white
     }
 
-    private var cardSubtitle: String {
+    /// Flat identity line: "{year} {set-no-year-no-category} [variant] [Auto] {number}"
+    /// (same rule the comp-card header uses). Strips a leading year
+    /// from the set name when it duplicates `card.year` (backend often
+    /// ships setName as "2006 Bowman Draft Picks & Prospects Baseball",
+    /// which would otherwise render as "2006 2006 Bowman Draft…").
+    /// Strips " Baseball" / " Basketball" / " Football" / " Pokemon"
+    /// off the set, drops literal "Base" variant, appends " Auto" when
+    /// the holding is auto.
+    private var flatIdentityLine: String? {
+        let year = card.year.trimmingCharacters(in: .whitespaces)
         var parts: [String] = []
-        if !card.year.isEmpty { parts.append(card.year) }
-        if !card.setName.isEmpty { parts.append(card.setName) }
-        if !card.parallel.isEmpty { parts.append(card.parallel) }
+        if year.isEmpty == false { parts.append(year) }
+        let cleanedSet = Self.stripCategorySuffix(
+            Self.stripLeadingYear(from: card.setName.trimmingCharacters(in: .whitespaces), year: year)
+        )
+        if cleanedSet.isEmpty == false { parts.append(cleanedSet) }
+        let variant = card.parallel.trimmingCharacters(in: .whitespaces)
+        if variant.isEmpty == false, variant.lowercased() != "base" {
+            parts.append(variant)
+        }
         if card.isAuto { parts.append("Auto") }
-        return parts.joined(separator: " ")
+        let joined = parts.joined(separator: " ")
+        return joined.isEmpty ? nil : joined
+    }
+
+    private static let categorySuffixes: [String] = [
+        " Baseball", " Basketball", " Football", " Pokemon", " Hockey", " Soccer"
+    ]
+
+    private static func stripCategorySuffix(_ raw: String) -> String {
+        for s in categorySuffixes where raw.lowercased().hasSuffix(s.lowercased()) {
+            return String(raw.dropLast(s.count)).trimmingCharacters(in: .whitespaces)
+        }
+        return raw
+    }
+
+    /// Drop a leading 4-digit year token from `setName` when it matches
+    /// `year` — prevents "2006 2006 Bowman…" duplication. Only strips
+    /// when the token is followed by whitespace or the set is exactly
+    /// the year itself.
+    static func stripLeadingYear(from setName: String, year: String) -> String {
+        guard year.isEmpty == false else { return setName }
+        let trimmed = setName.trimmingCharacters(in: .whitespaces)
+        if trimmed == year { return "" }
+        let prefix = "\(year) "
+        if trimmed.hasPrefix(prefix) {
+            return String(trimmed.dropFirst(prefix.count))
+        }
+        return trimmed
+    }
+
+    /// Holding hero image priority — user's photo wins over the
+    /// backend catalog image. Inverse of the comp card (which never
+    /// shows a personal photo). Rationale: on a holding, the user's
+    /// own scan is a proof-of-condition asset the seller cares about;
+    /// the catalog image is just a fallback when they haven't
+    /// uploaded one.
+    private var heroImageUrlString: String? {
+        if let url = card.imageFrontUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+           url.isEmpty == false { return url }
+        if let url = card.catalogImageUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+           url.isEmpty == false { return url }
+        return nil
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Top row: name + edit
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(card.fullDisplayName)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(3)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 14) {
+                VStack(alignment: .center, spacing: 4) {
+                    Text(card.playerName.isEmpty ? card.fullDisplayName : card.playerName)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if !card.playerName.isEmpty, card.fullDisplayName != card.playerName {
-                        Text(card.playerName)
-                            .font(.subheadline)
+                    if let details = flatIdentityLine {
+                        Text(details)
+                            .font(.system(size: 14))
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .padding(.horizontal, 36) // clear the Edit pill overlay
+                .frame(maxWidth: .infinity)
 
-                Spacer(minLength: 8)
+                heroImage
+                    .frame(maxWidth: 193)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                Button(action: onEdit) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "pencil")
-                            .font(.caption2.weight(.bold))
-                        Text("Edit")
-                            .font(.caption.weight(.semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.2))
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.4), lineWidth: 1)
-                    )
-                    .clipShape(Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
+                // CF-HOLDING-GRADE-CHIP (2026-07-06, v2): static
+                // grade chip locks the page to the holding's grade.
+                // Raw shows "Raw"; graded shows "PSA 9" / "BGS 9.5"
+                // / etc. Non-interactive — the whole detail view
+                // (MARKET VALUE, PREDICTED, action badge, scenario)
+                // is scoped to this one grade.
+                gradeChip
+
+                marketValueBlock
+
+                pricingChipRow
             }
-
-            // Price stats row: Purchase Price | Current Value | P/L
-            HStack(spacing: 0) {
-                heroStat(label: "Purchase Price", value: card.costFormatted, color: .white)
-                Spacer()
-                heroStat(label: "Current Value", value: card.displayValueFormatted, color: .white)
-                Spacer()
-                heroStat(label: "P/L", value: portfolioCurrencyString(card.profitLoss), color: plColor)
-            }
-        }
-        .padding(18)
-        .background(
-            LinearGradient(
-                colors: [Color(hex: 0x141821), Color(hex: 0x1A1F2E)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [HobbyIQTheme.Colors.electricBlue.opacity(0.25), Color.white.opacity(0.06)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.2
+            .padding(18)
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0x141821), Color(hex: 0x1A1F2E)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [HobbyIQTheme.Colors.electricBlue.opacity(0.25), Color.white.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.2
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
+
+            editPill
+                .padding(.top, 10)
+                .padding(.trailing, 10)
+        }
     }
 
-    private func heroStat(label: String, value: String, color: Color) -> some View {
+    /// Card hero — same treatment as the comp-card hero (scaledToFit +
+    /// scaleEffect(0.85) inside a maxWidth-constrained frame). Falls
+    /// through to a neutral card-shape placeholder when no URL is on
+    /// hand.
+    @ViewBuilder
+    private var heroImage: some View {
+        if let urlString = heroImageUrlString, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().scaledToFit().scaleEffect(0.85)
+                case .empty, .failure:
+                    heroImagePlaceholder
+                @unknown default:
+                    heroImagePlaceholder
+                }
+            }
+        } else {
+            heroImagePlaceholder
+        }
+    }
+
+    private var heroImagePlaceholder: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(HobbyIQTheme.Colors.steelGray.opacity(0.25))
+            Image(systemName: "rectangle.portrait")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.5))
+        }
+        .aspectRatio(0.72, contentMode: .fit)
+    }
+
+    /// MARKET VALUE headline — canonical comp-card "Market value $X" +
+    /// gradient text + electric-blue glow.
+    /// CF-INVENTORY-COMPCARD-MATCH (2026-07-08): source order aligns
+    /// with the comp card. First try the live panel entry for this
+    /// holding's grade — `resolvedMarketValue` is the exact same
+    /// fallback chain the comp card uses (`trendAdjustedValue →
+    /// value → weightedMedianPrice → plainMedianPrice`), so the
+    /// inventory detail and the comp card render the same number.
+    /// Only if the panel hasn't loaded yet (or has no entry for this
+    /// grade) do we degrade to the holding's cached
+    /// `fairMarketValue` → `currentValue` → `estimatedValue`.
+    private var marketValueBlock: some View {
+        let value: Double? = {
+            if let live = livePanelValue, live > 0 { return live }
+            if let v = card.fairMarketValue, v > 0 { return v }
+            if card.currentValue > 0 { return card.currentValue }
+            if let v = card.estimatedValue, v > 0 { return v }
+            return nil
+        }()
+        return VStack(spacing: 4) {
+            Text("MARKET VALUE")
+                .font(.caption.weight(.semibold))
+                .tracking(1.0)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            if let value {
+                Text(wholeUSDString(value))
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [HobbyIQTheme.Colors.pureWhite, HobbyIQTheme.Colors.electricBlue.opacity(0.85)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.4), radius: 14, x: 0, y: 0)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            } else {
+                Text("Not enough data yet")
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+            }
+        }
+    }
+
+    /// Compact two-cell chip row for PURCHASE PRICE + P/L (removed
+    /// CURRENT VALUE — the MARKET VALUE headline above carries that
+    /// number already, so the row wouldn't add anything).
+    private var pricingChipRow: some View {
+        HStack(spacing: 10) {
+            chip(label: "PURCHASE", value: card.costFormatted, tint: HobbyIQTheme.Colors.mutedText)
+            chip(label: "P/L", value: portfolioCurrencyString(card.profitLoss), tint: plColor)
+        }
+    }
+
+    private func chip(label: String, value: String, tint: Color) -> some View {
         VStack(spacing: 3) {
+            Text(label)
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.5)
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
             Text(value)
                 .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(color)
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                .tracking(0.5)
+                .foregroundStyle(tint)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(HobbyIQTheme.Colors.steelGray.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    /// The holding's locked grade as a display label — "Raw" for
+    /// ungraded holdings, "PSA 10" / "BGS 9.5" / etc. for graded.
+    /// Composed from `(gradeCompany, gradeValue)` when both present,
+    /// falls back to the wire's `grade` string when they're not.
+    private var gradeChipLabel: String {
+        if let company = card.gradeCompany?.trimmingCharacters(in: .whitespaces),
+           let value = card.gradeValue,
+           company.isEmpty == false {
+            let valueStr = value.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f", value)
+                : String(format: "%.1f", value)
+            return "\(company) \(valueStr)"
+        }
+        let trimmed = card.grade.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? "Raw" : trimmed
+    }
+
+    /// Same visual as a GradePillPanel pill in the selected state —
+    /// electric-blue accent, gradient stroke, filled background — but
+    /// non-interactive.
+    private var gradeChip: some View {
+        Text(gradeChipLabel)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.22))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                HobbyIQTheme.Colors.electricBlue,
+                                HobbyIQTheme.Colors.hobbyGreen.opacity(0.7)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            )
+            .clipShape(Capsule(style: .continuous))
+    }
+
+    private var editPill: some View {
+        Button(action: onEdit) {
+            HStack(spacing: 4) {
+                Image(systemName: "pencil")
+                    .font(.caption2.weight(.bold))
+                Text("Edit")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.85))
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -1420,6 +2276,515 @@ struct PortfolioContextCard<Content: View>: View {
     }
 }
 
+/// CF-HOLDING-REFERENCE-DATA (2026-07-06): collapsible variant of
+/// PortfolioContextCard for the "Reference Data" block on the holding
+/// detail view. Header is a tappable row with a chevron; the row body
+/// stays mounted (SwiftUI animates height) but content only renders
+/// when expanded so the initial paint isn't dominated by field lists.
+struct CollapsiblePortfolioContextCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @Binding var isExpanded: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    Text(title.uppercased())
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .tracking(1.2)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 10, content: content)
+            }
+        }
+        .padding(16)
+        .background(Color(hex: 0x141821))
+        .overlay(
+            RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+    }
+}
+
+/// CF-GRADING-TIERS (2026-07-06, backend PR #300): session-scoped
+/// cache for the /api/portfolio/grading-tiers catalog. The list only
+/// changes on backend redeploys, so we fetch once per cold start and
+/// hold it in memory. `load()` is a no-op if we already have data.
+@MainActor
+final class GradingTierCatalog: ObservableObject {
+    static let shared = GradingTierCatalog()
+
+    @Published private(set) var tiers: [GradingTier] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var lastErrorMessage: String?
+
+    private var hasLoaded = false
+
+    private init() {}
+
+    /// Fetches the catalog on first call. Subsequent calls are no-ops
+    /// unless `force` is true (used for pull-to-refresh in future).
+    func load(force: Bool = false) async {
+        if hasLoaded && !force && !tiers.isEmpty { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let response = try await APIService.shared.fetchGradingTiers()
+            tiers = response.tiers
+            hasLoaded = true
+            lastErrorMessage = nil
+        } catch {
+            lastErrorMessage = APIService.errorMessage(from: error)
+        }
+    }
+
+    /// Local lookup — returns the cached tier for a given id, or nil.
+    func tier(withId id: String) -> GradingTier? {
+        tiers.first(where: { $0.id == id })
+    }
+}
+
+/// CF-HOLDING-DETAIL-V2 (2026-07-06): Mark as Graded conversion sheet.
+/// CF-GRADING-TIERS (2026-07-06, backend PR #300): tier dropdown.
+/// Collects grading company, grade value, cert number, and grading
+/// cost — cost is either pre-filled from a selected tier's
+/// `pricePerCard` or typed manually via the "Other" escape hatch.
+/// On save, invokes onCommit with the parsed values (including the
+/// selected tier id, if any).
+struct MarkAsGradedSheet: View {
+    let card: InventoryCard
+    /// (gradeCompany, gradeValue, certNumber, gradingCost, gradingTierId).
+    /// certNumber is trimmed non-empty or nil. gradingCost is positive-only
+    /// or nil. gradingTierId is the id from the tier catalog when the user
+    /// picked a tier, or nil when they used the "Other → Enter custom cost"
+    /// path.
+    let onCommit: (
+        _ gradeCompany: String,
+        _ gradeValue: Double,
+        _ certNumber: String?,
+        _ gradingCost: Double?,
+        _ gradingTierId: String?
+    ) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var tierCatalog = GradingTierCatalog.shared
+
+    @State private var selectedCompany: String = "PSA"
+    @State private var selectedValue: Double = 10
+    @State private var certNumberText: String = ""
+    @State private var gradingCostText: String = ""
+    /// CF-GRADING-TIERS (2026-07-06): the selected catalog tier, or nil
+    /// for the "Other → Enter custom cost" path.
+    @State private var selectedTier: GradingTier?
+    /// The user manually typed something into the cost field after a
+    /// tier was pre-selected. Kept so we know to send both `gradingTierId`
+    /// AND `gradingCost` (mixed case — backend logs the tier but uses the
+    /// override).
+    @State private var costManuallyOverridden = false
+    @State private var showingTierPicker = false
+    @State private var inlineError: String?
+    @FocusState private var costFieldFocused: Bool
+
+    private static let companies = ["PSA", "SGC", "BGS", "CGC"]
+    private static let values: [Double] = [10, 9.5, 9, 8.5, 8, 7]
+
+    var body: some View {
+        Form {
+            Section("Grading company") {
+                Picker("Company", selection: $selectedCompany) {
+                    ForEach(Self.companies, id: \.self) { c in
+                        Text(c).tag(c)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Section("Grade") {
+                Picker("Grade", selection: $selectedValue) {
+                    ForEach(Self.values, id: \.self) { v in
+                        Text(v.truncatingRemainder(dividingBy: 1) == 0
+                             ? String(format: "%.0f", v)
+                             : String(format: "%.1f", v))
+                            .tag(v)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            Section("Cert number") {
+                TextField("Optional — e.g. 12345678", text: $certNumberText)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+            }
+
+            Section("Grading cost") {
+                // CF-GRADING-TIERS chip: appears above the input when a
+                // tier is selected. Tap to reopen the picker.
+                if let tier = selectedTier {
+                    Button {
+                        showingTierPicker = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.caption.weight(.semibold))
+                            Text(tierChipText(tier))
+                                .font(.caption.weight(.semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                HStack {
+                    Text("$")
+                    TextField(costFieldPlaceholder, text: $gradingCostText)
+                        .keyboardType(.decimalPad)
+                        .focused($costFieldFocused)
+                        .onChange(of: gradingCostText) { _, newValue in
+                            // If a tier is selected and the user edits
+                            // the cost away from the tier's pricePerCard,
+                            // we're in the override case.
+                            if let tier = selectedTier,
+                               let tierPrice = tier.pricePerCard {
+                                let entered = Double(newValue.trimmingCharacters(in: .whitespaces)) ?? 0
+                                costManuallyOverridden = entered > 0 && entered != tierPrice
+                            } else if selectedTier?.pricePerCard == nil && newValue.isEmpty == false {
+                                // Quote-tier: any value is an override.
+                                costManuallyOverridden = true
+                            }
+                        }
+                }
+
+                Button {
+                    costFieldFocused = false
+                    showingTierPicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.caption.weight(.semibold))
+                        Text(selectedTier == nil ? "Choose grading tier" : "Change grading tier")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                    }
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+                .buttonStyle(.plain)
+
+                if let inlineError {
+                    Text(inlineError)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.warning)
+                }
+            }
+
+            Section {
+                Text("Grading cost rolls into your total cost basis. Per-unit purchase price is unchanged.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Mark as Graded")
+        .task {
+            await tierCatalog.load()
+        }
+        .navigationDestination(isPresented: $showingTierPicker) {
+            GradingTierPickerView(
+                tiers: tierCatalog.tiers,
+                isLoading: tierCatalog.isLoading,
+                errorMessage: tierCatalog.lastErrorMessage,
+                selectedTierId: selectedTier?.id,
+                onSelect: { tier in
+                    applyTierSelection(tier)
+                    showingTierPicker = false
+                },
+                onOtherSelected: {
+                    applyOtherSelection()
+                    showingTierPicker = false
+                },
+                onRetry: {
+                    Task { await tierCatalog.load(force: true) }
+                }
+            )
+        }
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    handleSaveTap()
+                }
+            }
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
+    }
+
+    // MARK: - Save flow
+
+    private func handleSaveTap() {
+        let trimmedCert = certNumberText.trimmingCharacters(in: .whitespaces)
+        let cert: String? = trimmedCert.isEmpty ? nil : trimmedCert
+        let parsedCost = Double(gradingCostText.trimmingCharacters(in: .whitespaces)) ?? 0
+
+        // Quote-based tier (Premium 2+): explicit cost required.
+        if let tier = selectedTier, tier.pricePerCard == nil, parsedCost <= 0 {
+            inlineError = "Enter the amount you paid"
+            costFieldFocused = true
+            return
+        }
+        inlineError = nil
+
+        // Wire-shape decision: match backend contract.
+        //  - tier selected, cost matches tier price → send tierId only
+        //  - tier selected, cost overridden → send BOTH (backend uses cost, logs tier)
+        //  - no tier ("Other" path) → send cost only
+        let sendTierId: String?
+        let sendCost: Double?
+        if let tier = selectedTier {
+            sendTierId = tier.id
+            if costManuallyOverridden {
+                sendCost = parsedCost > 0 ? parsedCost : nil
+            } else if tier.pricePerCard == nil {
+                // Quote tier — must send cost.
+                sendCost = parsedCost > 0 ? parsedCost : nil
+            } else {
+                sendCost = nil
+            }
+        } else {
+            sendTierId = nil
+            sendCost = parsedCost > 0 ? parsedCost : nil
+        }
+
+        onCommit(selectedCompany, selectedValue, cert, sendCost, sendTierId)
+        dismiss()
+    }
+
+    // MARK: - Tier picker callbacks
+
+    private func applyTierSelection(_ tier: GradingTier) {
+        selectedTier = tier
+        costManuallyOverridden = false
+        if let price = tier.pricePerCard {
+            gradingCostText = formatCost(price)
+        } else {
+            // Quote-based tier — clear the field and focus it so the
+            // user knows to type an amount.
+            gradingCostText = ""
+            DispatchQueue.main.async {
+                costFieldFocused = true
+            }
+        }
+        inlineError = nil
+    }
+
+    private func applyOtherSelection() {
+        selectedTier = nil
+        costManuallyOverridden = false
+        gradingCostText = ""
+        inlineError = nil
+        DispatchQueue.main.async {
+            costFieldFocused = true
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var costFieldPlaceholder: String {
+        if let tier = selectedTier, tier.pricePerCard == nil {
+            return "Enter amount"
+        }
+        return "0.00"
+    }
+
+    private func tierChipText(_ tier: GradingTier) -> String {
+        let priceFragment: String
+        if let price = tier.pricePerCard {
+            priceFragment = "$\(formatCost(price))"
+        } else {
+            priceFragment = "Quote"
+        }
+        return "\(tier.grader) \(tier.name) · \(priceFragment) · \(tier.turnaround)"
+    }
+
+    private func formatCost(_ value: Double) -> String {
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%.2f", value)
+    }
+}
+
+/// CF-GRADING-TIERS (2026-07-06, backend PR #300): picker for the
+/// grading-tier dropdown pushed by MarkAsGradedSheet. Renders the
+/// catalog partitioned into "Currently accepting" (active tiers),
+/// "Paused (for historical entries)" (inactive tiers, muted), and a
+/// final "Other → Enter custom cost" escape hatch.
+struct GradingTierPickerView: View {
+    let tiers: [GradingTier]
+    let isLoading: Bool
+    let errorMessage: String?
+    let selectedTierId: String?
+    let onSelect: (GradingTier) -> Void
+    let onOtherSelected: () -> Void
+    let onRetry: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var activeTiers: [GradingTier] {
+        tiers.filter { $0.active }
+    }
+
+    private var pausedTiers: [GradingTier] {
+        tiers.filter { !$0.active }
+    }
+
+    var body: some View {
+        List {
+            if isLoading && tiers.isEmpty {
+                Section {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .tint(HobbyIQTheme.Colors.electricBlue)
+                        Text("Loading grading tiers…")
+                            .font(.subheadline)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else if let errorMessage, tiers.isEmpty {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Couldn't load grading tiers.")
+                            .font(.subheadline.weight(.semibold))
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        Button("Retry", action: onRetry)
+                            .font(.caption.weight(.semibold))
+                    }
+                }
+            }
+
+            if !activeTiers.isEmpty {
+                Section("Currently accepting") {
+                    ForEach(activeTiers) { tier in
+                        tierRow(tier)
+                    }
+                }
+            }
+
+            if !pausedTiers.isEmpty {
+                Section("Paused (for historical entries)") {
+                    ForEach(pausedTiers) { tier in
+                        tierRow(tier)
+                    }
+                }
+            }
+
+            Section("Other") {
+                Button {
+                    onOtherSelected()
+                } label: {
+                    HStack {
+                        Image(systemName: "pencil.circle")
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Enter custom cost")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text("Bulk / promo rate, or a tier not listed here")
+                                .font(.caption)
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        Spacer()
+                        if selectedTierId == nil {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationTitle("Grading Tier")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
+    }
+
+    // MARK: - Row rendering
+
+    @ViewBuilder
+    private func tierRow(_ tier: GradingTier) -> some View {
+        Button {
+            onSelect(tier)
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(tier.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if let note = tier.note, note.isEmpty == false {
+                        Text(note)
+                            .font(.caption2)
+                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(priceString(for: tier))
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(.primary)
+                    Text(tier.turnaround)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+                if selectedTierId == tier.id {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                }
+            }
+            .opacity(tier.active ? 1.0 : 0.6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func priceString(for tier: GradingTier) -> String {
+        guard let price = tier.pricePerCard else { return "Quote" }
+        if price.truncatingRemainder(dividingBy: 1) == 0 {
+            return "$\(Int(price))"
+        }
+        return String(format: "$%.2f", price)
+    }
+}
+
 struct PortfolioHoldingSoldSheet: View {
     @ObservedObject var viewModel: PortfolioIQViewModel
     let card: InventoryCard
@@ -1439,73 +2804,65 @@ struct PortfolioHoldingSoldSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Mark Sold")
-                        .font(.title2.weight(.bold))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Mark Sold")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+
+                Text("\(card.playerName) - \(card.cardName)")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+
+                soldField(title: "Sold For", text: $salePriceText, keyboard: .decimalPad)
+                soldField(title: "Fees", text: $feesText, keyboard: .decimalPad)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sale Date")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
 
-                    Text("\(card.playerName) - \(card.cardName)")
-                        .font(.subheadline)
-                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                    DatePicker("", selection: $saleDate, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .tint(Color(hex: 0x3B82F6))
+                        .padding(12)
+                        .background(Color(hex: 0x1A1D24))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
 
-                    soldField(title: "Sold For", text: $salePriceText, keyboard: .decimalPad)
-                    soldField(title: "Fees", text: $feesText, keyboard: .decimalPad)
+                soldPreview
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Sale Date")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                if let localError {
+                    Text(localError)
+                        .font(.footnote)
+                        .foregroundStyle(Color.red)
+                }
 
-                        DatePicker("", selection: $saleDate, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .tint(Color(hex: 0x3B82F6))
-                            .padding(12)
-                            .background(Color(hex: 0x1A1D24))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
+                Button("Save Sold") {
+                    Task {
+                        guard let salePrice = Double(salePriceText.trimmingCharacters(in: .whitespacesAndNewlines)), salePrice > 0 else {
+                            localError = "Add a sale price."
+                            return
+                        }
 
-                    soldPreview
-
-                    if let localError {
-                        Text(localError)
-                            .font(.footnote)
-                            .foregroundStyle(Color.red)
-                    }
-
-                    Button("Save Sold") {
-                        Task {
-                            guard let salePrice = Double(salePriceText.trimmingCharacters(in: .whitespacesAndNewlines)), salePrice > 0 else {
-                                localError = "Add a sale price."
-                                return
-                            }
-
-                            let fees = Double(feesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-                            let didSave = await viewModel.markHoldingSold(card, salePrice: salePrice, fees: fees, date: saleDate)
-                            if didSave {
-                                onSaved()
-                                dismiss()
-                            } else {
-                                localError = viewModel.errorMessage ?? "Could not save sale. Try again."
-                            }
+                        let fees = Double(feesText.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+                        let didSave = await viewModel.markHoldingSold(card, salePrice: salePrice, fees: fees, date: saleDate)
+                        if didSave {
+                            onSaved()
+                            dismiss()
+                        } else {
+                            localError = viewModel.errorMessage ?? "Could not save sale. Try again."
                         }
                     }
-                    .buttonStyle(PrimaryButtonStyle())
                 }
-                .padding(16)
+                .buttonStyle(PrimaryButtonStyle())
             }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Mark Sold")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-            }
+            .padding(16)
         }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Mark Sold")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
     }
 
     private func soldField(title: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
@@ -1640,7 +2997,10 @@ struct PortfolioCardRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
-                inventoryRowThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
+                inventoryRowThumbnail(
+                    urlString: card.imageFrontUrl ?? card.catalogImageUrl,
+                    playerName: card.playerName
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(card.playerName)
@@ -1681,6 +3041,11 @@ struct PortfolioCardRow: View {
                     }
 
                     inventoryGradePill(text: card.gradeChipText)
+
+                    if let rec = card.actionRecommendation,
+                       rec.verdict != .insufficientData {
+                        inventoryActionBadge(rec: rec)
+                    }
                 }
 
                 Spacer(minLength: 8)
@@ -1688,10 +3053,10 @@ struct PortfolioCardRow: View {
                 inventoryRightColumn(card: card)
             }
 
-            // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline
+            // CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline
             // + model line + lean badge. Self-suppresses when all three
-            // blocks are absent (legacy holdings, or non-CardHedge cards).
-            CardHedgeModelSignalView(
+            // blocks are absent (legacy holdings, or non-LiveMarket cards).
+            LiveMarketModelSignalView(
                 lastSalePrice: card.lastSaleSurface?.price,
                 lastSaleCompCount: card.lastSaleSurface?.compCount,
                 modelExpectation: card.modelExpectation,
@@ -1709,7 +3074,10 @@ struct PortfolioCardGridCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            inventoryGridThumbnail(urlString: card.imageFrontUrl, playerName: card.playerName)
+            inventoryGridThumbnail(
+                urlString: card.imageFrontUrl ?? card.catalogImageUrl,
+                playerName: card.playerName
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.playerName)
@@ -1815,12 +3183,12 @@ struct PortfolioCardGridCard: View {
         parallel: "Green Shimmer Refractor",
         grade: "",
         isAuto: true,
-        lastSaleSurface: CardHedgeLastSaleSurface(price: 450, date: "2026-06-20T12:00:00Z", compCount: 1),
-        modelExpectation: CardHedgeModelExpectation(
+        lastSaleSurface: LiveMarketLastSaleSurface(price: 450, date: "2026-06-20T12:00:00Z", compCount: 1),
+        modelExpectation: LiveMarketModelExpectation(
             value: 262, range: [250, 273], multiplier: 3.20, multiplierRange: [3.05, 3.33],
             basis: "prices_by_card_honest", n: 11, baseAutoMedian: 82, baseAutoCount: 69
         ),
-        modelSignal: CardHedgeModelSignal(
+        modelSignal: LiveMarketModelSignal(
             lean: "sell", deltaPct: 72, expectation: 262, effectiveMultiplier: 3.20
         )
     )
@@ -1846,7 +3214,12 @@ private func inventoryCardSubtitle(for card: InventoryCard) -> String? {
     var parts: [String] = []
     let year = card.year.trimmingCharacters(in: .whitespacesAndNewlines)
     if !year.isEmpty { parts.append(year) }
-    let setName = card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Strip a leading year from setName when it duplicates `card.year`
+    // — backend often ships setName as "2006 Bowman Draft Picks &
+    // Prospects", which combined with the year prefix would render as
+    // "2006 · 2006 Bowman Draft…".
+    let rawSet = card.setName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let setName = PortfolioHoldingHeroCard.stripLeadingYear(from: rawSet, year: year)
     if !setName.isEmpty { parts.append(setName) }
     let parallel = card.parallel.trimmingCharacters(in: .whitespacesAndNewlines)
     if !parallel.isEmpty { parts.append(parallel) }
@@ -1884,6 +3257,35 @@ private func inventoryGradePill(text: String) -> some View {
         .padding(.vertical, 3)
         .background(HobbyIQTheme.Colors.steelGray.opacity(0.4))
         .clipShape(Capsule(style: .continuous))
+}
+
+/// CF-ACTION-BADGES (2026-07-06, backend §1): per-holding verdict badge
+/// rendered under the grade pill in the inventory row. Uses the shared
+/// `ActionBadgeStyle` so the color / icon / fill treatment matches the
+/// comp-card action block and the portfolio movers badge.
+@ViewBuilder
+func inventoryActionBadge(rec: CardPanelGradeEntry.ActionRecommendation) -> some View {
+    let style = ActionBadgeStyle(verdict: rec.verdict, urgency: rec.urgency)
+    HStack(spacing: 4) {
+        Image(systemName: style.icon)
+            .font(.system(size: 9, weight: .bold))
+        Text(style.label)
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.5)
+        if rec.verdict == .list, let t = rec.targetPrice, t > 0 {
+            Text("· \(t.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+        }
+    }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .foregroundStyle(style.foreground)
+    .background(style.background)
+    .overlay(
+        Capsule(style: .continuous)
+            .stroke(style.tint, lineWidth: style.strokeWidth)
+    )
+    .clipShape(Capsule(style: .continuous))
 }
 
 /// Row right column — value (no cents) + single movement indicator, OR the
@@ -2000,16 +3402,28 @@ private let inventoryWholeDollarFormatter: NumberFormatter = {
     return formatter
 }()
 
-/// Row thumbnail: 42×56 rounded tile. Shows the player's initials on a
-/// slate-gray tile when there is no image OR the AsyncImage fails — never
-/// the legacy "broken photo" SF Symbol.
-private func inventoryRowThumbnail(urlString: String?, playerName: String) -> some View {
+/// Row thumbnail: 42pt-wide rounded tile. Shows the player's initials on
+/// a slate-gray tile when there is no image OR the AsyncImage fails —
+/// never the legacy "broken photo" SF Symbol.
+///
+/// CF-CARD-IMAGE-NO-DISTORT (2026-07-03): scaledToFit + maxWidth-only so
+/// the LiveMarket CDN's 754×1028 (aspect 0.733) renders at its natural
+/// aspect. The old 42×56 fixed frame forced 0.75, stretching cards.
+func inventoryRowThumbnail(urlString: String?, playerName: String) -> some View {
+    // CF-INVENTORY-THUMB-COMP-CARD-PARITY (2026-07-05): mirrors the
+    // comp-card hero exactly —
+    //   `image.resizable().scaledToFit().scaleEffect(0.85)`
+    // for the 15% inner breathing margin, `.frame(width:height:)` at
+    // the outer Group for row-height stability, and a single
+    // `.clipShape` applied to the container so every branch (image,
+    // AsyncImage placeholder, initials tile) picks up the same
+    // rounded-rect crop.
     Group {
         if let urlString, let url = URL(string: urlString) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFill()
+                    image.resizable().scaledToFit().scaleEffect(0.85)
                 case .empty, .failure:
                     inventoryInitialsTile(playerName: playerName, fontSize: 14)
                 @unknown default:
@@ -2025,13 +3439,21 @@ private func inventoryRowThumbnail(urlString: String?, playerName: String) -> so
 }
 
 /// Grid thumbnail: full-width × 90pt tile with the same initials fallback.
+/// CF-CARD-IMAGE-NO-DISTORT (2026-07-03): scaledToFit inside the tile so
+/// non-standard aspects letterbox instead of stretching. Container size
+/// preserved for LazyVGrid uniformity.
 private func inventoryGridThumbnail(urlString: String?, playerName: String) -> some View {
+    // CF-INVENTORY-THUMB-COMP-CARD-PARITY (2026-07-05): mirrors the
+    // comp-card hero — `.scaledToFit().scaleEffect(0.85)` inside the
+    // 90pt-tall tile so non-standard aspects letterbox with the same
+    // 15% breathing margin the hero uses. `.clipShape` at the
+    // container level matches the hero's rounded-rect crop.
     Group {
         if let urlString, let url = URL(string: urlString) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFill()
+                    image.resizable().scaledToFit().scaleEffect(0.85)
                 case .empty, .failure:
                     inventoryInitialsTile(playerName: playerName, fontSize: 22)
                 @unknown default:
@@ -2044,17 +3466,22 @@ private func inventoryGridThumbnail(urlString: String?, playerName: String) -> s
     }
     .frame(maxWidth: .infinity)
     .frame(height: 90)
-    .clipped()
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 }
 
+/// CF-PLACEHOLDER-CARD (2026-07-04): generic card-shape placeholder for
+/// inventory rows without an uploaded photo. Renders a subtle rounded
+/// rectangle with a photo glyph, matching how the CDN-thumbnail placeholder
+/// looks — no more colored initials tiles.
 private func inventoryInitialsTile(playerName: String, fontSize: CGFloat) -> some View {
     ZStack {
-        Rectangle()
-            .fill(HobbyIQTheme.Colors.slateGray)
-        Text(inventoryInitials(from: playerName))
-            .font(.system(size: fontSize, weight: .medium, design: .rounded))
-            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-            .monospacedDigit()
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .fill(HobbyIQTheme.Colors.slateGray.opacity(0.6))
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1)
+        Image(systemName: "photo")
+            .font(.system(size: fontSize * 0.6, weight: .regular))
+            .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.7))
     }
 }
 
@@ -2071,13 +3498,20 @@ private func inventoryInitials(from name: String) -> String {
 
 // MARK: - Card Thumbnails
 
+// CF-CARD-IMAGE-NO-DISTORT (2026-07-03): scaledToFit + maxWidth-only so
+// LiveMarket CDN images (754×1028, aspect 0.733) render at their natural
+// aspect. The old 40×56 fixed frame forced 0.714, stretching cards.
 func cardThumbnail(urlString: String?) -> some View {
+    // CF-CARD-THUMB-COMP-CARD-PARITY (2026-07-05): same structure as
+    // the comp-card hero — `.scaledToFit().scaleEffect(0.85)` inside
+    // a fixed 40×56 card-aspect container, single `.clipShape` at
+    // the outer Group so every branch shares the rounded crop.
     Group {
         if let urlString, let url = URL(string: urlString) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFill()
+                    image.resizable().scaledToFit().scaleEffect(0.85)
                 case .empty:
                     thumbnailPlaceholder
                 case .failure:
@@ -2094,13 +3528,22 @@ func cardThumbnail(urlString: String?) -> some View {
     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 }
 
+// CF-CARD-IMAGE-NO-DISTORT (2026-07-03): scaledToFit inside the tile so
+// non-standard aspects letterbox instead of stretching. Container size
+// preserved for LazyVGrid uniformity.
 func gridThumbnail(urlString: String?) -> some View {
+    // CF-GRID-THUMB-COMP-CARD-PARITY (2026-07-05): mirrors the
+    // comp-card hero — `.scaledToFit().scaleEffect(0.85)` inside the
+    // 80pt-tall tile so non-standard aspects letterbox with the same
+    // 15% breathing margin. `.clipShape` at the container level
+    // matches the hero's rounded-rect crop instead of the raw
+    // `.clipped()` rectangle.
     Group {
         if let urlString, let url = URL(string: urlString) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let image):
-                    image.resizable().scaledToFill()
+                    image.resizable().scaledToFit().scaleEffect(0.85)
                 case .empty:
                     gridThumbnailPlaceholder
                 case .failure:
@@ -2115,7 +3558,7 @@ func gridThumbnail(urlString: String?) -> some View {
     }
     .frame(maxWidth: .infinity)
     .frame(height: 80)
-    .clipped()
+    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 }
 
 private var thumbnailPlaceholder: some View {

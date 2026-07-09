@@ -17,8 +17,16 @@ struct InventoryIQView: View {
     @State private var isAddingCard = false
     @State private var selectedCard: InventoryCard?
 
-    // Cached filtered list to avoid recomputing on every render.
-    @State private var cachedFilteredCards: [InventoryCard] = []
+    // CF-BACK-NAV-FIX (2026-07-06): filter/sort is derived inline from
+    // `vm.inventoryCards` on each render. Previously the result was
+    // cached in a separate `@State` and updated via `.onAppear` +
+    // `.onChange` observers. The cache was fragile: if a background
+    // refresh briefly cleared `vm.inventoryCards`, the cache emptied
+    // and no `.onChange` fired to refill it on the way back — the
+    // user landed on the tab root after a push/pop and saw only the
+    // header + filters (no cards), which read as "wrong screen /
+    // hero card". Deriving inline removes the whole failure mode
+    // and cheaply re-filters on each body eval.
 
     var body: some View {
         // CF-TABBAR-PERSISTENT (2026-06-27): MainAppView already wraps
@@ -57,22 +65,34 @@ struct InventoryIQView: View {
                     .refreshable {
                         await vm.refresh()
                     }
-                    .navigationDestination(item: $selectedCard) { card in
-                        PortfolioHoldingDetailSheet(
-                            viewModel: vm,
-                            card: card,
-                            onUpdated: {
-                                Task { await vm.refresh() }
-                            }
-                        )
-                    }
                 }
             }
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 88)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $isAddingCard) {
+            // CF-BACK-NAV-FIX (2026-07-06): `.navigationDestination(item:)`
+            // MUST be attached to a view that stays in the hierarchy for
+            // the entire lifetime of the push. Previously it was inside
+            // the `else` branch of the loading/error/content conditional —
+            // if `vm.summary` momentarily flipped to nil during a
+            // background refresh, the ScrollView unmounted, unregistering
+            // the destination and evicting the pushed detail sheet. User
+            // would land back at the tab root (perceived as "dashboard").
+            // Attaching to the outer ZStack (which never unmounts) keeps
+            // the destination registered regardless of vm state.
+            .navigationDestination(item: $selectedCard) { card in
+                PortfolioHoldingDetailSheet(
+                    viewModel: vm,
+                    card: card,
+                    onUpdated: {
+                        Task { await vm.refresh() }
+                    },
+                    onBack: { selectedCard = nil }
+                )
+                .environmentObject(sessionViewModel)
+            }
+            .navigationDestination(isPresented: $isAddingCard) {
                 AddPortfolioCardView(viewModel: AddPortfolioCardViewModel()) {
                     Task { await vm.refresh() }
                 }
@@ -87,7 +107,6 @@ struct InventoryIQView: View {
                 if vm.summary == nil {
                     Task { await vm.load() }
                 }
-                recomputeFilteredCards()
             }
             .onChange(of: vm.pendingInventoryFilter) { _, newFilter in
                 if let newFilter {
@@ -95,10 +114,6 @@ struct InventoryIQView: View {
                     vm.pendingInventoryFilter = nil
                 }
             }
-            .onChange(of: vm.inventoryCards) { _, _ in recomputeFilteredCards() }
-            .onChange(of: inventoryQuery) { _, _ in recomputeFilteredCards() }
-            .onChange(of: inventoryFilter) { _, _ in recomputeFilteredCards() }
-            .onChange(of: inventorySort) { _, _ in recomputeFilteredCards() }
     }
 
     // MARK: - Background & States
@@ -164,6 +179,22 @@ struct InventoryIQView: View {
 
             Spacer(minLength: 8)
 
+            // CF-INVENTORY-HEADER-REFRESH (2026-07-04): explicit refresh
+            // affordance next to Add so users can pull fresh
+            // valuation/count data without pull-to-refresh.
+            Button {
+                Task { await vm.refresh() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .frame(width: 40, height: 40)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.12))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Refresh inventory")
+
             Button {
                 if canAdd {
                     isAddingCard = true
@@ -201,7 +232,7 @@ struct InventoryIQView: View {
     // MARK: - Collection Section
 
     private var collectionSection: some View {
-        let visibleCards = cachedFilteredCards
+        let visibleCards = filteredAndSortedCards
 
         return VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 8) {
@@ -395,7 +426,7 @@ struct InventoryIQView: View {
         .clipShape(Capsule(style: .continuous))
     }
 
-    private func recomputeFilteredCards() {
+    private var filteredAndSortedCards: [InventoryCard] {
         let query = inventoryQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         var cards = vm.inventoryCards.filter { card in
             guard query.isEmpty == false else { return true }
@@ -449,7 +480,7 @@ struct InventoryIQView: View {
             cards.sort { $0.playerName.localizedCaseInsensitiveCompare($1.playerName) == .orderedAscending }
         }
 
-        cachedFilteredCards = cards
+        return cards
     }
 }
 

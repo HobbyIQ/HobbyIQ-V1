@@ -369,30 +369,28 @@ struct CompIQAddToInventorySheet: View {
     private var gradeChoices: [GradeChoice] { viewModel.gradeChoices }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    pinnedHeader
-                    gradeSection
-                    graderStatusSection
-                    previewSection
-                    costSection
-                    quantitySection
-                    saveSection
-                }
-                .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
-                .padding(.vertical, HobbyIQTheme.Spacing.large)
+        // CF-PAGES-NOT-SHEETS (2026-07-04): no inner NavigationStack —
+        // this view is now pushed onto the parent's stack. Cancel is
+        // replaced by the native back button; the internal `dismiss()`
+        // called after save still pops correctly.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                pinnedHeader
+                gradeSection
+                graderStatusSection
+                previewSection
+                costSection
+                quantitySection
+                saveSection
             }
-            .background(HobbyIQBackground())
-            .navigationTitle("Add to inventory")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
+            .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
+            .padding(.vertical, HobbyIQTheme.Spacing.large)
         }
+        .background(HobbyIQBackground())
+        .navigationTitle("Add to inventory")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     // MARK: - Sections
@@ -504,7 +502,7 @@ struct CompIQAddToInventorySheet: View {
             switch viewModel.valuationPreview {
             case .observed(let value):
                 HStack(spacing: 8) {
-                    Text("Will value at \(value.formatted(.currency(code: "USD")))")
+                    Text("Will value at \(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                     Text("Observed")
@@ -517,7 +515,7 @@ struct CompIQAddToInventorySheet: View {
             case .estimated(let value, let tier, let low, let high):
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
-                        Text("Will value at ~\(value.formatted(.currency(code: "USD")))")
+                        Text("Will value at ~\(value.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
                         Text(tierPillLabel(tier))
@@ -528,7 +526,7 @@ struct CompIQAddToInventorySheet: View {
                             .clipShape(Capsule())
                     }
                     if let l = low, let h = high {
-                        Text("range \(l.formatted(.currency(code: "USD"))) – \(h.formatted(.currency(code: "USD")))")
+                        Text("range \(l.formatted(.currency(code: "USD").precision(.fractionLength(0)))) – \(h.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
                             .font(.caption)
                             .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                     }

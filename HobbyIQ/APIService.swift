@@ -105,6 +105,22 @@ struct APIService {
         return try await post(path: "/api/compiq/search", body: body, responseType: CompIQSearchResponse.self)
     }
 
+    /// CF-ALIAS-LEARNING (2026-07-09): fire-and-forget telemetry. Every
+    /// time a user picks a specific result from search / typeahead /
+    /// dropdown, POST the (query, cardId, source) triple so the nightly
+    /// alias-learning job can grow the 722-entry alias corpus. Callers
+    /// wrap in `Task { _ = try? await ... }` — never awaited on the
+    /// navigation path, no UI on failure, no retries. The response
+    /// shape is intentionally minimal; we don't consult it.
+    @discardableResult
+    func logCompIQSelection(_ body: CompIQLogSelectionRequest) async throws -> CompIQLogSelectionResponse {
+        try await post(
+            path: "/api/compiq/log-selection",
+            body: body,
+            responseType: CompIQLogSelectionResponse.self
+        )
+    }
+
     /// CF-COMPIQ-SCAN-ROUTE (2026-06-30 / PR #215+#217): POST /api/compiq/scan.
     /// Two paths in one endpoint — cert-OCR on graded slabs and image-match
     /// on raw cards. `hint` steers routing: `"graded"` cert-OCR only,
@@ -145,17 +161,17 @@ struct APIService {
         return response.suggestions ?? []
     }
 
-    func searchVariantList(query: String) async throws -> CompIQVariantListResponse {
-        let body = CompIQVariantSearchRequest(query: query)
-        // CF-FIND-CARDS-REGROUND: cardsearch needs headroom. Dispatcher's
-        // Cardsight enrichment is several seconds on a cold cache for broad
-        // queries ("Mike Trout", "Bowman Chrome"); the default 10s URLRequest
-        // timeout fired before the dispatcher could finish, surfacing as a
-        // false "search timed out" to the user. 30s covers cold-cache broad
-        // queries while still letting the user Cancel via the picker's
-        // shimmer state.
+    func searchVariantList(query: String, hint: String = "freetext") async throws -> CompIQVariantListResponse {
+        let body = CompIQVariantSearchRequest(input: query, hint: hint)
+        // CF-UNIFIED-SEARCH-ENDPOINT (2026-07-01): switched from the legacy
+        // `/api/compiq/cardsearch` to the canonical unified-search route
+        // `/api/search/cards`. Per compiq.routes.ts:784, "Drew's operational
+        // picker use during the gap routes through /api/search/cards directly."
+        // Same internal dispatcher, but the wire field is `input` (not `query`).
+        // 30s timeout kept for cold-cache broad queries; picker shimmer still
+        // lets the user cancel.
         return try await post(
-            path: "/api/compiq/cardsearch",
+            path: "/api/search/cards",
             body: body,
             responseType: CompIQVariantListResponse.self,
             timeoutSeconds: 30
@@ -220,6 +236,157 @@ struct APIService {
             responseType: CompIQPriceByIdResponse.self,
             timeoutSeconds: 30
         )
+    }
+
+    // MARK: - CompIQ Bulk Grade Curves (backend batch 2026-07-04)
+
+    /// POST /api/compiq/observed-grade-curves-bulk — batched observed
+    /// grade curves for portfolio-scale flows (grade-breakdown column,
+    /// portfolio reprice preview, watchlist refresh). Server bounds:
+    /// max 500 cardIds per HTTP request. This wrapper chunks larger
+    /// sets and merges the responses into a single result.
+    ///
+    /// Server-side: gated behind `requireEntitlement("predictions")`
+    /// (compute-heavy). Server also dedups cardIds and caches 12h,
+    /// so re-firing with the same set is cheap.
+    func fetchBulkGradeCurves(cardIds: [String]) async throws -> BulkGradeCurvesResponse {
+        let trimmed = cardIds
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+        guard trimmed.isEmpty == false else {
+            return BulkGradeCurvesResponse(success: true, count: 0, curves: [])
+        }
+        let chunkSize = 500
+        // Fast path: one chunk, one request.
+        if trimmed.count <= chunkSize {
+            return try await postBulkGradeCurvesChunk(trimmed)
+        }
+        // Slow path: parallel chunks, merged. Concurrency bounded by
+        // Swift structured concurrency's task group scheduler; server
+        // is already capped at 8 in-flight per session so this is safe.
+        var merged: [BulkGradeCurve] = []
+        try await withThrowingTaskGroup(of: BulkGradeCurvesResponse.self) { group in
+            for start in stride(from: 0, to: trimmed.count, by: chunkSize) {
+                let end = min(start + chunkSize, trimmed.count)
+                let chunk = Array(trimmed[start..<end])
+                group.addTask {
+                    try await self.postBulkGradeCurvesChunk(chunk)
+                }
+            }
+            for try await response in group {
+                if let curves = response.curves {
+                    merged.append(contentsOf: curves)
+                }
+            }
+        }
+        return BulkGradeCurvesResponse(success: true, count: merged.count, curves: merged)
+    }
+
+    private func postBulkGradeCurvesChunk(_ cardIds: [String]) async throws -> BulkGradeCurvesResponse {
+        let body = BulkGradeCurvesRequest(cardIds: cardIds)
+        return try await post(
+            path: "/api/compiq/observed-grade-curves-bulk",
+            body: body,
+            responseType: BulkGradeCurvesResponse.self,
+            timeoutSeconds: 60
+        )
+    }
+
+    // MARK: - CompIQ New Releases (backend batch 2026-07-04)
+
+    /// GET /api/compiq/new-releases — recently added catalog sets.
+    /// All params optional; backend defaults to a 30-day window,
+    /// page=1, pageSize=50. `category` omitted here means "All".
+    func fetchNewReleases(
+        startDate: String? = nil,
+        endDate: String? = nil,
+        category: String? = nil,
+        page: Int = 1,
+        pageSize: Int = 50
+    ) async throws -> NewReleasesResponse {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "page", value: String(page)),
+            URLQueryItem(name: "pageSize", value: String(pageSize))
+        ]
+        if let startDate, startDate.isEmpty == false {
+            items.append(URLQueryItem(name: "startDate", value: startDate))
+        }
+        if let endDate, endDate.isEmpty == false {
+            items.append(URLQueryItem(name: "endDate", value: endDate))
+        }
+        if let category, category.isEmpty == false {
+            items.append(URLQueryItem(name: "category", value: category))
+        }
+        return try await get(
+            path: "/api/compiq/new-releases",
+            queryItems: items,
+            responseType: NewReleasesResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    // MARK: - CompIQ Cert Lookup (backend batch 2026-07-04)
+
+    /// POST /api/compiq/lookup-by-cert — direct cert-number → card
+    /// resolution. Complements the image-scan /api/compiq/scan flow.
+    /// The response envelope carries `success: false` + `error` on the
+    /// not-found path; callers should branch on `response.success` and
+    /// treat this as a semantic, not a thrown, failure.
+    func fetchCertLookup(
+        cert: String,
+        grader: String,
+        days: Int? = 90
+    ) async throws -> LookupByCertResponse {
+        let body = LookupByCertRequest(cert: cert, grader: grader, days: days)
+        return try await post(
+            path: "/api/compiq/lookup-by-cert",
+            body: body,
+            responseType: LookupByCertResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    // MARK: - CompIQ Card Panel (backend batch 2026-07-04)
+
+    /// GET /api/compiq/card-panel/:cardId — single-round-trip payload
+    /// containing identity, the 10-canonical-grade curve, and the
+    /// reference-price array. Preferred over the split
+    /// /observed-grade-curve and /all-grade-prices routes when the
+    /// caller needs multiple pieces. Replaces the earlier
+    /// /api/compiq/card-grades endpoint.
+    func fetchCardPanel(cardId: String) async throws -> CardPanelResponse {
+        let trimmed = cardId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmed
+        // CF-CARD-PANEL-DECODE (2026-07-04): the shared JSONDecoder has no
+        // key-decoding strategy, so a backend that emits snake_case
+        // (grade_curve, sample_count, weighted_median_price,
+        // value_source, estimated_multiplier) would silently produce
+        // an all-nil-fields response, leaving every pill blank. Fetch
+        // raw bytes, try both key strategies, and pick the response
+        // that decoded the most entries so we don't silently return
+        // an empty panel.
+        let data = try await fetchData(path: "/api/compiq/card-panel/\(encoded)")
+
+        #if DEBUG
+        let sniff = String(data: data.prefix(600), encoding: .utf8) ?? "<binary>"
+        print("[card-panel-raw] cardId=\(cardId) first600=\(sniff)")
+        #endif
+
+        let snakeCase = JSONDecoder()
+        snakeCase.keyDecodingStrategy = .convertFromSnakeCase
+        let snakeResp = try? snakeCase.decode(CardPanelResponse.self, from: data)
+        let plainResp = try? JSONDecoder().decode(CardPanelResponse.self, from: data)
+
+        let snakeEntries = snakeResp?.gradeCurve?.entries?.count ?? 0
+        let plainEntries = plainResp?.gradeCurve?.entries?.count ?? 0
+        #if DEBUG
+        print("[card-panel-raw] decoded entries — snakeCase=\(snakeEntries) plain=\(plainEntries)")
+        #endif
+
+        if snakeEntries >= plainEntries, let r = snakeResp { return r }
+        if let r = plainResp { return r }
+        if let r = snakeResp { return r }
+        return try JSONDecoder().decode(CardPanelResponse.self, from: data)
     }
 
     // MARK: - CompIQ Advanced Endpoints
@@ -1074,6 +1241,88 @@ struct APIService {
         )
     }
 
+    /// CF-CERT-ADD-TO-INVENTORY (2026-07-06): compose the two
+    /// backend endpoints into a "user typed a cert → holding
+    /// created" flow. This method fires step 2 (the create) after
+    /// the caller has previewed step 1 (`/lookup-by-cert`).
+    /// Response = 201 Created with `{ message, id }` — decoded by
+    /// the existing `PortfolioIQActionResponse` shape.
+    func addHoldingByCert(_ request: AddHoldingByCertRequest) async throws -> PortfolioIQActionResponse {
+        try await post(
+            path: "/api/portfolio/holdings",
+            body: request,
+            responseType: PortfolioIQActionResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    /// CF-HOLDING-REGRADE (2026-07-06, backend PR #294): atomic
+    /// four-field commit for raw → graded conversion. Backend
+    /// atomically updates grade + cert + rolls `gradingCost` into
+    /// `totalCostBasis` and re-fires `autoPriceHolding` for the new
+    /// grade. Returns the fresh holding wire shape with a recomputed
+    /// `actionRecommendation`.
+    ///
+    /// Semantics per the backend spec:
+    ///   certNumber:
+    ///     - trimmed non-empty String → set / update
+    ///     - nil                       → leave existing cert alone
+    ///     - explicit JSON null        → clear (rare "wrong cert" flow;
+    ///                                    not exposed on iOS yet)
+    ///   gradingCost:
+    ///     - positive Double           → roll into cost basis
+    ///     - nil or 0                  → grade-only update, cost basis
+    ///                                    unchanged
+    func regradeHolding(
+        holdingId: UUID,
+        gradeCompany: String,
+        gradeValue: Double,
+        certNumber: String? = nil,
+        gradingCost: Double? = nil,
+        gradingTierId: String? = nil
+    ) async throws -> RegradeResponse {
+        let trimmedCert: String? = {
+            guard let raw = certNumber?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  raw.isEmpty == false else { return nil }
+            return raw
+        }()
+        let normalizedCost: Double? = {
+            guard let g = gradingCost, g > 0, g.isFinite else { return nil }
+            return g
+        }()
+        let normalizedTierId: String? = {
+            guard let raw = gradingTierId?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  raw.isEmpty == false else { return nil }
+            return raw
+        }()
+        let body = RegradeRequest(
+            gradeCompany: gradeCompany,
+            gradeValue: gradeValue,
+            certNumber: trimmedCert,
+            gradingCost: normalizedCost,
+            gradingTierId: normalizedTierId
+        )
+        return try await post(
+            path: "/api/portfolio/holdings/\(holdingId.uuidString)/regrade",
+            body: body,
+            responseType: RegradeResponse.self,
+            timeoutSeconds: 30
+        )
+    }
+
+    /// CF-GRADING-TIERS (2026-07-06, backend PR #300): reference-data
+    /// read for the Mark-as-Graded tier dropdown. No rate limit; catalog
+    /// changes only on backend redeploys. Cache in `GradingTierCatalog`
+    /// for the session and refresh on cold start.
+    func fetchGradingTiers() async throws -> GradingTierCatalogResponse {
+        return try await get(
+            path: "/api/portfolio/grading-tiers",
+            queryItems: [],
+            responseType: GradingTierCatalogResponse.self,
+            timeoutSeconds: 20
+        )
+    }
+
     /// CF-IOS-GRADER-STATUS-UI (2026-06-28): narrow PATCH that mutates only
     /// the grader-status bucket. Backend PATCH /api/portfolio/holdings/:id
     /// accepts arbitrary fields via `...rest` spread, so a single-field
@@ -1776,6 +2025,33 @@ struct CompIQAnalyzeRequest: Codable {
     let recentComps: [Int]
 }
 
+/// CF-ALIAS-LEARNING (2026-07-09): telemetry body for POST
+/// /api/compiq/log-selection. Feeds the nightly
+/// `promote-learned-aliases` job that grows the alias corpus from
+/// real user selections.
+struct CompIQLogSelectionRequest: Encodable {
+    /// Raw query the user typed, lowercased + trimmed. Send it
+    /// verbatim beyond that — the backend expects the raw shape so
+    /// alias matching survives punctuation quirks.
+    let queryNormalized: String
+    /// The cardId of whichever result the user picked (e.g.
+    /// `"cardsight:1778542173652x303328120692600800"`).
+    let cardId: String
+    /// Optional — populated when the surface has the player-name
+    /// separately (search dropdown items usually do).
+    let playerName: String?
+    /// Origin surface. Known values: `"search-dropdown"`,
+    /// `"search-results"`, `"typeahead"`. Free-form so new surfaces
+    /// can enrich the corpus without a backend deploy.
+    let source: String
+}
+
+/// Minimal response shape. iOS never consults the body; the endpoint
+/// is fire-and-forget.
+struct CompIQLogSelectionResponse: Decodable {
+    let success: Bool?
+}
+
 struct CardEstimateRequest: Encodable {
     let playerName: String
     let cardYear: Int?
@@ -1939,6 +2215,18 @@ struct CompIQPredictedPriceAttribution: Codable, Hashable {
     let trendIQComposite: Double?
     let trendIQDirection: String?
     let trendIQCoverage: String?
+    // CF-REGIME-RECONCILED (2026-07-09, backend PR #333): when a regime
+    // was passed into the projection call, the backend floors/ceilings
+    // the predicted price against the regime classifier's read. All
+    // three fields are optional — legacy responses (or responses where
+    // no regime was supplied) omit them entirely.
+    //
+    // Direction icons app-wide MUST read `regime` for the arrow (up /
+    // down / flat) rather than diffing marketValue vs lastSale — the
+    // regime is the reconciled authority now.
+    let regime: String?
+    let regimeReconciled: Bool?
+    let regimeReconcileReason: String?
 }
 
 // Note: TrendIQ structs (TrendIQResponse + components + weights) already
@@ -2533,6 +2821,118 @@ struct AddHoldingRequest: Encodable {
 /// holding doc, so a one-field body mutates only `graderStatus`.
 struct GraderStatusUpdateRequest: Encodable {
     let graderStatus: String
+}
+
+/// CF-HOLDING-REGRADE (2026-07-06, backend PR #294 + #300).
+/// Only encodes non-nil fields — backend spec: absent `certNumber`
+/// means "don't touch"; absent `gradingCost` means "grade-only";
+/// absent `gradingTierId` means "manual cost / no tier".
+struct RegradeRequest: Encodable {
+    let gradeCompany: String
+    let gradeValue: Double
+    let certNumber: String?
+    let gradingCost: Double?
+    let gradingTierId: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case gradeCompany, gradeValue, certNumber, gradingCost, gradingTierId
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(gradeCompany, forKey: .gradeCompany)
+        try c.encode(gradeValue, forKey: .gradeValue)
+        try c.encodeIfPresent(certNumber, forKey: .certNumber)
+        try c.encodeIfPresent(gradingCost, forKey: .gradingCost)
+        try c.encodeIfPresent(gradingTierId, forKey: .gradingTierId)
+    }
+}
+
+struct RegradeResponse: Decodable {
+    let message: String?
+    let id: String?
+    let updatedHolding: InventoryCard?
+}
+
+// MARK: - Grading Tier Catalog (backend PR #300, 2026-07-06)
+
+/// CF-GRADING-TIERS: GET /api/portfolio/grading-tiers wire shape.
+/// `pricePerCard: nil` = variable-price tier (Premium 2+); user MUST
+/// enter a gradingCost manually. `active: false` = paused for new
+/// submissions, but kept in the catalog so historical entries can log
+/// accurately.
+struct GradingTier: Identifiable, Decodable, Equatable, Hashable {
+    let id: String
+    let grader: String
+    let name: String
+    let pricePerCard: Double?
+    let maxDeclaredValue: Int?
+    let turnaround: String
+    let active: Bool
+    let note: String?
+}
+
+struct GradingTierCatalogResponse: Decodable {
+    let success: Bool
+    let tiers: [GradingTier]
+    let cachedUntil: String
+}
+
+/// CF-CERT-ADD-TO-INVENTORY (2026-07-06): body shape for
+/// POST /api/portfolio/holdings when the caller composed the holding
+/// from a `/lookup-by-cert` response. Uses the canonical wire field
+/// names the backend expects (`cardTitle`, `cardYear`, `product`,
+/// `purchaseSource`, `totalCostBasis`, `certGrader`, `certNumber`)
+/// so the field-spread ingest path lands them without going through
+/// InventoryCard's local aliases.
+struct AddHoldingByCertRequest: Encodable {
+    let id: String
+    let cardId: String
+    let playerName: String
+    let cardYear: Int?
+    let product: String
+    let cardTitle: String
+    let cardNumber: String?
+    let parallel: String?
+    let gradeCompany: String
+    let gradeValue: Double
+    let certNumber: String
+    let certGrader: String
+    let quantity: Double
+    let purchasePrice: Double
+    let totalCostBasis: Double
+    let purchaseDate: String
+    let purchaseSource: String?
+    let notes: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, cardId, playerName, cardYear, product, cardTitle, cardNumber
+        case parallel, gradeCompany, gradeValue, certNumber, certGrader
+        case quantity, purchasePrice, totalCostBasis, purchaseDate
+        case purchaseSource, notes
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(cardId, forKey: .cardId)
+        try c.encode(playerName, forKey: .playerName)
+        try c.encodeIfPresent(cardYear, forKey: .cardYear)
+        try c.encode(product, forKey: .product)
+        try c.encode(cardTitle, forKey: .cardTitle)
+        try c.encodeIfPresent(cardNumber, forKey: .cardNumber)
+        try c.encodeIfPresent(parallel, forKey: .parallel)
+        try c.encode(gradeCompany, forKey: .gradeCompany)
+        try c.encode(gradeValue, forKey: .gradeValue)
+        try c.encode(certNumber, forKey: .certNumber)
+        try c.encode(certGrader, forKey: .certGrader)
+        try c.encode(quantity, forKey: .quantity)
+        try c.encode(purchasePrice, forKey: .purchasePrice)
+        try c.encode(totalCostBasis, forKey: .totalCostBasis)
+        try c.encode(purchaseDate, forKey: .purchaseDate)
+        try c.encodeIfPresent(purchaseSource, forKey: .purchaseSource)
+        try c.encodeIfPresent(notes, forKey: .notes)
+    }
 }
 
 /// CF-ADD-TO-INVENTORY (2026-06-12): backend returns 201 with the

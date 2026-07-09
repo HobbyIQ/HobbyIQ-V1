@@ -337,13 +337,13 @@ struct MarketTrendView: View {
                     deltaRow(delta)
 
                     if let avg1d = delta.avg1d {
-                        trendDataRow(label: "Avg 1d", value: avg1d.formatted(.currency(code: "USD")))
+                        trendDataRow(label: "Avg 1d", value: avg1d.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                     }
                     if let avg7d = delta.avg7d {
-                        trendDataRow(label: "Avg 7d", value: avg7d.formatted(.currency(code: "USD")))
+                        trendDataRow(label: "Avg 7d", value: avg7d.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                     }
                     if let avg30d = delta.avg30d {
-                        trendDataRow(label: "Avg 30d", value: avg30d.formatted(.currency(code: "USD")))
+                        trendDataRow(label: "Avg 30d", value: avg30d.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                     }
                     if let vol1d = delta.volume1d {
                         trendDataRow(label: "Volume 1d", value: "\(vol1d)")

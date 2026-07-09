@@ -27,7 +27,12 @@ struct DailyIQView: View {
     @State private var myPlayers: DailyIQMyPlayersResponse?
     @State private var isLoadingMyPlayers = false
     @State private var dailySegment: DailyIQSegment = .myPlayers
+    @State private var marketTab: DailyIQMarketTab = .allMarket
     @State private var drillPlayer: DailyIQMyPlayerEntry?
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): active explainer popover
+    /// key. Non-nil = sheet is up. Populated by section-header info
+    /// buttons.
+    @State private var explainerPopoverKey: String?
     @EnvironmentObject private var sessionViewModel: AppSessionViewModel
 
     @MainActor
@@ -83,19 +88,42 @@ struct DailyIQView: View {
         .background(HobbyIQBackground())
         .toolbar(.hidden, for: .navigationBar)
         .task {
-            await refreshDailyIQ(for: nil)
-            await loadFullBrief()
-            await loadMarketSignals()
-            await loadMyPlayers()
+            // CF-DAILYIQ-PARALLEL-LOAD (2026-07-02): fan out the four
+            // independent DailyIQ fetches in parallel via `async let`.
+            // Previously they ran sequentially, so cold load = sum of
+            // all four endpoint latencies. Now = max(endpoint).
+            async let refresh: Void = refreshDailyIQ(for: nil)
+            async let brief: Void = loadFullBrief()
+            async let signals: Void = loadMarketSignals()
+            async let mine: Void = loadMyPlayers()
+            _ = await (refresh, brief, signals, mine)
         }
         .onChange(of: selectedDate) { _, newValue in
             Task { await refreshDailyIQ(for: newValue) }
         }
+        // CF-MARKET-TRENDS-REFRESH (2026-07-04): pull-to-refresh now
+        // clears the session-scoped caches for the Market Trends +
+        // My Players sections and refetches them alongside the brief.
         .refreshable {
-            await refreshDailyIQ(for: selectedDate)
+            marketSignals = nil
+            myPlayers = nil
+            async let refresh: Void = refreshDailyIQ(for: selectedDate)
+            async let signals: Void = loadMarketSignals()
+            async let mine: Void = loadMyPlayers()
+            _ = await (refresh, signals, mine)
         }
         .sheet(isPresented: $showUpgradePaywall) {
             PaywallView(sessionViewModel: sessionViewModel)
+        }
+        // CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): explainer sheet
+        // shows the copy previously repeated inline under every
+        // section header. Bound to `explainerPopoverKey` — a section's
+        // `info.circle` tap sets the key, which drives the sheet.
+        .sheet(isPresented: Binding(
+            get: { explainerPopoverKey != nil },
+            set: { if !$0 { explainerPopoverKey = nil } }
+        )) {
+            explainerSheet
         }
         .fullScreenCover(isPresented: Binding(
             get: { playerIQName != nil },
@@ -106,7 +134,9 @@ struct DailyIQView: View {
                     .preferredColorScheme(.dark)
             }
         }
-        .sheet(item: $drillPlayer) { entry in
+        // CF-PAGES-NOT-SHEETS (2026-07-04): drill-into-cohort now pushes
+        // as a page (tab bar persistent, swipe-back, native back).
+        .navigationDestination(item: $drillPlayer) { entry in
             OwnedCardsInCohortSheet(entry: entry)
         }
     }
@@ -453,28 +483,64 @@ private var watchlistCard: some View {
                 if signals.generatedAt == nil {
                     marketSignalsEmptyState(note: signals.note)
                 } else {
-                    marketPlayerSection(
-                        title: "Trending Up",
-                        subtitle: marketSectionSubtitle(from: signals.trending?.first?.latestWeekStart),
-                        entries: signals.trending ?? [],
-                        color: HobbyIQTheme.Colors.hobbyGreen,
-                        icon: "arrow.up.right"
-                    )
-                    marketPlayerSection(
-                        title: "Cooling Off",
-                        subtitle: marketSectionSubtitle(from: signals.fading?.first?.latestWeekStart),
-                        entries: signals.fading ?? [],
-                        color: HobbyIQTheme.Colors.danger,
-                        icon: "arrow.down.right"
-                    )
-                    marketVolumeSection(
-                        title: "Most Traded (30d)",
-                        entries: signals.topVolume30d ?? []
-                    )
-                    marketSupplySection(
-                        title: "Supply Squeeze",
-                        entries: signals.supplyDryLeadingUp ?? []
-                    )
+                    // CF-BOWMAN-2YR-LISTS (2026-07-02, PR #247): sub-tab
+                    // between the full matched-cohort universe and the
+                    // Bowman-set 2yr subset. Segment styled subtly so
+                    // it reads as a filter on the Market Signals card,
+                    // not a peer of the top-level "Your Players /
+                    // Market Trends" segment.
+                    Picker("", selection: $marketTab) {
+                        ForEach(DailyIQMarketTab.allCases) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.top, 2)
+
+                    switch marketTab {
+                    case .allMarket:
+                        marketPlayerSection(
+                            title: "Trending Up",
+                            subtitle: marketSectionSubtitle(from: signals.trending?.first?.latestWeekStart),
+                            entries: signals.trending ?? [],
+                            color: HobbyIQTheme.Colors.hobbyGreen,
+                            icon: "arrow.up.right",
+                            signal: .positive
+                        )
+                        marketPlayerSection(
+                            title: "Cooling Off",
+                            subtitle: marketSectionSubtitle(from: signals.fading?.first?.latestWeekStart),
+                            entries: signals.fading ?? [],
+                            color: HobbyIQTheme.Colors.danger,
+                            icon: "arrow.down.right",
+                            signal: .negative
+                        )
+                        marketVolumeSection(
+                            title: "Most Traded (30d)",
+                            entries: signals.topVolume30d ?? []
+                        )
+                        marketSupplySection(
+                            title: "Supply Squeeze",
+                            entries: signals.supplyDryLeadingUp ?? []
+                        )
+                    case .bowman2y:
+                        marketVolumeSection(
+                            title: "Bowman 2Y — Top Volume (30d)",
+                            entries: signals.bowman2yrTopVolume30d ?? []
+                        )
+                        marketPlayerSection(
+                            title: "Bowman 2Y — Top Momentum",
+                            subtitle: marketSectionSubtitle(from: signals.bowman2yrTopMomentum?.first?.latestWeekStart),
+                            entries: signals.bowman2yrTopMomentum ?? [],
+                            color: HobbyIQTheme.Colors.electricBlue,
+                            icon: "sparkles",
+                            signal: .positive
+                        )
+                        if (signals.bowman2yrTopVolume30d?.isEmpty ?? true)
+                            && (signals.bowman2yrTopMomentum?.isEmpty ?? true) {
+                            marketSignalsEmptyState(note: "Bowman 2Y lists populating — check back after the next cohort cycle.")
+                        }
+                    }
 
                     if let updatedFooter = marketUpdatedFooter(from: signals.generatedAt) {
                         Text(updatedFooter)
@@ -510,38 +576,76 @@ private var watchlistCard: some View {
         subtitle: String?,
         entries: [DailyIQMarketPlayerEntry],
         color: Color,
-        icon: String
+        icon: String,
+        signal: HIQSignal
     ) -> some View {
         Group {
             if entries.isEmpty == false {
-                VStack(alignment: .leading, spacing: 8) {
-                    marketSubsectionHeader(title: title, subtitle: subtitle, icon: icon, color: color, count: entries.count, badge: nil)
-                    ForEach(entries.prefix(5)) { entry in
-                        Button {
-                            playerIQName = entry.player
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(entry.player)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                Spacer(minLength: 8)
-                                if let pct = signedPercent(from: entry.medianRatio) {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: entry.medianRatio ?? 1.0 >= 1.0 ? "arrow.up" : "arrow.down")
-                                            .font(.caption2.weight(.bold))
-                                        Text(pct)
-                                            .font(.caption.weight(.bold))
-                                            .monospacedDigit()
-                                    }
-                                    .foregroundStyle(color)
-                                }
+                dailyIQSectionCard {
+                    marketSubsectionHeader(
+                        title: title,
+                        subtitle: subtitle,
+                        icon: icon,
+                        color: color,
+                        count: entries.count,
+                        badge: nil,
+                        explainerKey: "market-players"
+                    )
+                    VStack(spacing: 8) {
+                        ForEach(entries.prefix(20)) { entry in
+                            Button {
+                                playerIQName = entry.player
+                            } label: {
+                                marketPlayerRow(entry: entry, signal: signal)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
         }
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): row is now its own faint
+    /// tinted card (via `hiqSignalTint(_:)`) with a leading monogram
+    /// avatar, trimmed metadata (dropped the redundant "this week" /
+    /// "week of X" — the section header carries the week), and an
+    /// `HIQBadge` trailing pill instead of a bare percent.
+    private func marketPlayerRow(
+        entry: DailyIQMarketPlayerEntry,
+        signal: HIQSignal
+    ) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            HIQAvatar(from: entry.player)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.player)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                let metaParts: [String] = {
+                    var parts: [String] = []
+                    if let size = entry.cohortSize, size > 0 { parts.append("\(size) cards") }
+                    if let active = entry.latestWeekActiveCards, active > 0 { parts.append("\(active) sold") }
+                    return parts
+                }()
+                if metaParts.isEmpty == false {
+                    Text(metaParts.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
+            }
+            Spacer(minLength: 8)
+            if let pct = signedPercent(from: entry.medianRatio) {
+                HIQBadge(text: pct, signal: signal)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .hiqSignalTint(signal)
     }
 
     private func marketVolumeSection(
@@ -550,30 +654,65 @@ private var watchlistCard: some View {
     ) -> some View {
         Group {
             if entries.isEmpty == false {
-                VStack(alignment: .leading, spacing: 8) {
-                    marketSubsectionHeader(title: title, subtitle: nil, icon: "chart.bar.fill", color: HobbyIQTheme.Colors.electricBlue, count: entries.count, badge: nil)
-                    ForEach(entries.prefix(5)) { entry in
-                        Button {
-                            playerIQName = entry.player
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(entry.player)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                Spacer(minLength: 8)
-                                if let sales = entry.totalSales30d {
-                                    Text("\(sales.formatted(.number)) sales")
-                                        .font(.caption.weight(.bold))
-                                        .monospacedDigit()
-                                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                dailyIQSectionCard {
+                    marketSubsectionHeader(
+                        title: title,
+                        subtitle: nil,
+                        icon: "chart.bar.fill",
+                        color: HobbyIQTheme.Colors.electricBlue,
+                        count: entries.count,
+                        badge: nil,
+                        explainerKey: "market-volume"
+                    )
+                    VStack(spacing: 8) {
+                        ForEach(entries.prefix(20)) { entry in
+                            Button {
+                                playerIQName = entry.player
+                            } label: {
+                                HStack(alignment: .center, spacing: 10) {
+                                    HIQAvatar(from: entry.player)
+                                    Text(entry.player)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    Spacer(minLength: 8)
+                                    if let sales = entry.totalSales30d {
+                                        HIQBadge(
+                                            text: compactSalesText(sales),
+                                            signal: .neutral,
+                                            systemImage: "cart"
+                                        )
+                                    }
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
                                 }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .contentShape(Rectangle())
+                                .hiqSignalTint(.neutral)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
         }
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): compact number formatting
+    /// so a badge shows "81.3K" instead of "81,340" — keeps large
+    /// numbers from blowing out the trailing pill on narrow rows. The
+    /// "sales" noun lives in the section header ("Most Traded"), so
+    /// the pill text stays terse.
+    private func compactSalesText(_ count: Int) -> String {
+        if count >= 1000 {
+            let thousands = Double(count) / 1000.0
+            if thousands >= 100 {
+                return String(format: "%.0fK", thousands)
+            }
+            return String(format: "%.1fK", thousands)
+        }
+        return count.formatted(.number)
     }
 
     private func marketSupplySection(
@@ -582,73 +721,205 @@ private var watchlistCard: some View {
     ) -> some View {
         Group {
             if entries.isEmpty == false {
-                VStack(alignment: .leading, spacing: 8) {
+                dailyIQSectionCard {
                     marketSubsectionHeader(
                         title: title,
                         subtitle: nil,
                         icon: "arrow.triangle.merge",
                         color: HobbyIQTheme.Colors.hobbyGreen,
                         count: entries.count,
-                        badge: "LEADING"
+                        badge: "LEADING",
+                        explainerKey: "market-supply"
                     )
-                    ForEach(entries.prefix(5)) { entry in
-                        Button {
-                            playerIQName = entry.player
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(entry.player)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                                Spacer(minLength: 8)
-                                if let supplyText = supplyChangeText(from: entry.volumeRatio) {
-                                    Text(supplyText)
-                                        .font(.caption.weight(.bold))
-                                        .monospacedDigit()
-                                        .foregroundStyle(HobbyIQTheme.Colors.hobbyGreen)
+                    VStack(spacing: 8) {
+                        ForEach(entries.prefix(20)) { entry in
+                            Button {
+                                playerIQName = entry.player
+                            } label: {
+                                HStack(alignment: .center, spacing: 10) {
+                                    HIQAvatar(from: entry.player)
+                                    Text(entry.player)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                                    Spacer(minLength: 8)
+                                    if let supplyText = supplyChangeText(from: entry.volumeRatio) {
+                                        HIQBadge(
+                                            text: supplyText,
+                                            signal: .positive,
+                                            systemImage: "arrow.down.right"
+                                        )
+                                    }
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
                                 }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .contentShape(Rectangle())
+                                .hiqSignalTint(.positive)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
         }
     }
 
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): elevated subsection header.
+    /// Icon in a colored rounded-square chip, title in bold subheadline,
+    /// count as a tinted pill on the trailing edge. `explainerKey` adds
+    /// an `info.circle` tap-target that shows a popover with the copy —
+    /// dedupes the inline explainer paragraphs we used to render under
+    /// every section header.
     private func marketSubsectionHeader(
         title: String,
         subtitle: String?,
         icon: String,
         color: Color,
         count: Int,
-        badge: String?
+        badge: String?,
+        explainerKey: String? = nil
     ) -> some View {
-        HStack(spacing: 6) {
+        HStack(alignment: .center, spacing: 10) {
             Image(systemName: icon)
-                .font(.caption.weight(.bold))
+                .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(color)
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            if let badge {
-                Text(badge)
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
-                    .clipShape(Capsule())
-            }
-            if let subtitle {
-                Text("· \(subtitle)")
-                    .font(.caption2)
-                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                .frame(width: 32, height: 32)
+                .background(color.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    if let badge {
+                        Text(badge)
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
+                    if let explainerKey, explainerCopy(for: explainerKey) != nil {
+                        Button {
+                            explainerPopoverKey = explainerKey
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                }
             }
             Spacer()
             Text("\(count)")
-                .font(.caption2.weight(.bold))
+                .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(color.opacity(0.14))
+                .clipShape(Capsule())
         }
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): sheet body for section
+    /// explainers. Reads the copy for the active `explainerPopoverKey`.
+    @ViewBuilder
+    private var explainerSheet: some View {
+        if let key = explainerPopoverKey, let copy = explainerCopy(for: key) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(copy.title)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Text(copy.body)
+                    .font(.subheadline)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            .background(HobbyIQBackground().ignoresSafeArea())
+            .presentationDetents([.fraction(0.28)])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): explainer copy keyed by
+    /// section id. Preserves the original inline captions we used to
+    /// render under every section — surfaced now on tap only.
+    private func explainerCopy(for key: String) -> (title: String, body: String)? {
+        switch key {
+        case "market-players":
+            return ("Cohort momentum",
+                    "Median week-over-window price change across each player's matched card cohort. Positive = prices trending up, negative = prices cooling.")
+        case "market-volume":
+            return ("Trailing 30-day volume",
+                    "Total cohort sales over the trailing 30 days — a raw liquidity signal. Higher volume = deeper market, more comparable data.")
+        case "market-supply":
+            return ("Leading indicator",
+                    "Rising price with fewer listings. Supply drying up before demand cools is a leading buy signal.")
+        case "your-players":
+            return ("Your holdings, ranked",
+                    "Each player you own, sorted by holding count. Trend arrow reads from the matched-cohort median (or momentum ratio when cohort match is still populating).")
+        default:
+            return nil
+        }
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): now delegates to the
+    /// shared `hiqGroupCard()` modifier in `DesignSystem/HIQCardStyles.swift`
+    /// so DailyIQ sections read with the exact same rounded-container
+    /// gradient border used by the card detail screen — same corner
+    /// radius (xLarge), stroke, shadow. Nothing invented locally.
+    @ViewBuilder
+    private func dailyIQSectionCard<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .hiqGroupCard()
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-06): compact circular rank
+    /// badge shown at the leading edge of each market row.
+    private func rankBadge(_ rank: Int, tint: Color) -> some View {
+        Text("\(rank)")
+            .font(.caption2.weight(.bold).monospacedDigit())
+            .foregroundStyle(tint)
+            .frame(width: 22, height: 22)
+            .background(tint.opacity(0.14))
+            .clipShape(Circle())
+    }
+
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-06): tabular-numeric pill used
+    /// for the trailing value on market rows (percent moves, sale counts,
+    /// supply drops). Tinted background matches the section's tint.
+    private func valuePill(_ text: String, tint: Color, systemImage: String? = nil) -> some View {
+        HStack(spacing: 3) {
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.caption2.weight(.bold))
+            }
+            Text(text)
+                .font(.caption.weight(.bold).monospacedDigit())
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(tint.opacity(0.14))
+        .clipShape(Capsule())
     }
 
     /// medianRatio (raw ratio centered on 1.0) → "+36%" / "-21%".
@@ -661,13 +932,14 @@ private var watchlistCard: some View {
         return "\(sign)\(Int(pct.rounded()))%"
     }
 
-    /// volumeRatio < 1.0 → supply drying up. Rendered as "supply -28%"
-    /// (negative percent of the shortfall). Values >= 1.0 suppress the
-    /// pill — Supply Squeeze rows are always drying supply.
+    /// volumeRatio < 1.0 → supply drying up. Rendered as "-28%" (the
+    /// pill lives inside the "Supply Squeeze" section, so the "supply"
+    /// noun is already implicit — keep the pill terse). Values >= 1.0
+    /// suppress the pill — Supply Squeeze rows are always drying supply.
     private func supplyChangeText(from ratio: Double?) -> String? {
         guard let ratio, ratio > 0, ratio < 1.0 else { return nil }
         let pct = Int(((1.0 - ratio) * 100).rounded())
-        return "supply -\(pct)%"
+        return "-\(pct)%"
     }
 
     /// "Week of Jun 22" subtitle parsed from latestWeekStart (ISO date).
@@ -929,16 +1201,15 @@ private var watchlistCard: some View {
                 if entries.isEmpty {
                     myPlayersEmptyState
                 } else {
-                    ForEach(entries) { entry in
-                        Button {
-                            if entry.ownedCardsInCohort?.isEmpty == false {
-                                drillPlayer = entry
-                            }
-                        } label: {
-                            myPlayerRow(entry)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    // CF-DAILYIQ-MY-PLAYERS-UP-DOWN (2026-07-02): split
+                    // CF-YOUR-PLAYERS-UNIFIED (2026-07-07): dropped the
+                    // Trending Up / Trending Down partition. Now renders
+                    // one card, sorted DESC by resolved trend ratio
+                    // (highest gain on top, biggest loss at the bottom).
+                    // Per-row direction still reads via the row's own
+                    // signal (positive/negative/neutral) — badge color
+                    // + subtle row tint.
+                    myPlayersUnifiedSection(entries: sortedMyPlayers(entries))
                     if let updatedFooter = marketUpdatedFooter(from: response.generatedAt) {
                         Text(updatedFooter)
                             .font(.caption2)
@@ -946,6 +1217,66 @@ private var watchlistCard: some View {
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .padding(.top, 4)
                     }
+                }
+            }
+        }
+    }
+
+    private func trendRatio(for entry: DailyIQMyPlayerEntry) -> Double? {
+        if let cohort = entry.matchedCohort, let r = cohort.medianRatio { return r }
+        return entry.momentumRatio
+    }
+
+    /// CF-YOUR-PLAYERS-UNIFIED (2026-07-07): single sorted list, high
+    /// to low by resolved trend ratio. Entries with no ratio drop to
+    /// the bottom so the user still sees every player they own.
+    private func sortedMyPlayers(_ entries: [DailyIQMyPlayerEntry]) -> [DailyIQMyPlayerEntry] {
+        entries.sorted { lhs, rhs in
+            switch (trendRatio(for: lhs), trendRatio(for: rhs)) {
+            case let (l?, r?):  return l > r
+            case (_?, nil):     return true
+            case (nil, _?):     return false
+            case (nil, nil):    return false
+            }
+        }
+    }
+
+    /// CF-YOUR-PLAYERS-UNIFIED (2026-07-07): pick a per-row signal
+    /// (used for tint + badge color) from the same resolved ratio the
+    /// sort consults. Nil ratio → neutral.
+    private func signalForMyPlayer(_ entry: DailyIQMyPlayerEntry) -> HIQSignal {
+        guard let r = trendRatio(for: entry) else { return .neutral }
+        return r >= 1.0 ? .positive : .negative
+    }
+
+    /// CF-YOUR-PLAYERS-UNIFIED (2026-07-07): one section listing every
+    /// player the user owns, sorted DESC by trend ratio (biggest gain
+    /// on top, biggest loss at the bottom). Per-row direction still
+    /// reads through the row's own signal (positive / negative /
+    /// neutral) — badge color + subtle row tint.
+    @ViewBuilder
+    private func myPlayersUnifiedSection(entries: [DailyIQMyPlayerEntry]) -> some View {
+        dailyIQSectionCard {
+            marketSubsectionHeader(
+                title: "Ranked",
+                subtitle: nil,
+                icon: "person.crop.rectangle.stack.fill",
+                color: HobbyIQTheme.Colors.electricBlue,
+                count: entries.count,
+                badge: nil,
+                explainerKey: "your-players"
+            )
+            VStack(spacing: 8) {
+                ForEach(entries) { entry in
+                    let signal = signalForMyPlayer(entry)
+                    Button {
+                        if entry.ownedCardsInCohort?.isEmpty == false {
+                            drillPlayer = entry
+                        }
+                    } label: {
+                        myPlayerRow(entry, signal: signal)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -966,59 +1297,77 @@ private var watchlistCard: some View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
-    private func myPlayerRow(_ entry: DailyIQMyPlayerEntry) -> some View {
+    private func myPlayerRow(_ entry: DailyIQMyPlayerEntry, signal: HIQSignal) -> some View {
         HStack(alignment: .center, spacing: 10) {
+            HIQAvatar(from: entry.player)
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.player)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
 
-                HStack(spacing: 4) {
+                let metaParts: [String] = {
+                    var parts: [String] = []
                     if let count = entry.holdingCount, count > 0 {
-                        Text(count == 1 ? "1 holding" : "\(count) holdings")
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        parts.append(count == 1 ? "1 holding" : "\(count) holdings")
                     }
                     if let cohort = entry.matchedCohort,
-                       let size = cohort.cohortSize, size > 0,
-                       let week = cohort.latestWeekStart,
-                       let weekPhrase = marketSectionSubtitle(from: week) {
-                        Text("· \(size) cards · \(weekPhrase.replacingOccurrences(of: "Week of ", with: "week of "))")
-                            .font(.caption2)
-                            .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                       let size = cohort.cohortSize, size > 0 {
+                        parts.append("\(size) cards")
                     }
+                    return parts
+                }()
+                if metaParts.isEmpty == false {
+                    Text(metaParts.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
                 }
             }
             Spacer(minLength: 8)
             myPlayerTrendBadge(entry)
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(HobbyIQTheme.Colors.mutedText.opacity(0.6))
         }
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
+        .hiqSignalTint(signal)
     }
 
+    /// CF-DAILYIQ-BADGE-CONSISTENCY (2026-07-06): badge must lock to the
+    /// SAME resolved ratio the partition uses (`trendRatio(for:)`) so a
+    /// player never lands in "Trending Down" while showing a green up
+    /// arrow. Previously the badge could fall back from a subthreshold
+    /// cohort ratio (e.g. -0.4%, hidden by `signedPercent`'s ±1% floor)
+    /// to `momentumRatio`, which is a different signal in a different
+    /// direction — that's the "leaking wrong players" symptom.
     @ViewBuilder
     private func myPlayerTrendBadge(_ entry: DailyIQMyPlayerEntry) -> some View {
-        if let cohort = entry.matchedCohort, let ratio = cohort.medianRatio,
-           let pct = signedPercent(from: ratio) {
+        let cohortRatioPresent = entry.matchedCohort?.medianRatio != nil
+        if let ratio = trendRatio(for: entry) {
             let isUp = ratio >= 1.0
-            HStack(spacing: 3) {
-                Image(systemName: isUp ? "arrow.up" : "arrow.down")
-                    .font(.caption2.weight(.bold))
-                Text(pct)
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
+            let tint = isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger
+            let opacity = cohortRatioPresent ? 1.0 : 0.75
+            if let pct = signedPercent(from: ratio) {
+                HStack(spacing: 3) {
+                    Image(systemName: isUp ? "arrow.up" : "arrow.down")
+                        .font(.caption2.weight(.bold))
+                    Text(pct)
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(tint.opacity(opacity))
+            } else {
+                // Ratio present but within ±1% — surface the direction
+                // (matching the partition) without a fake percent value.
+                HStack(spacing: 3) {
+                    Image(systemName: isUp ? "arrow.up" : "arrow.down")
+                        .font(.caption2.weight(.bold))
+                    Text("Flat")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(tint.opacity(opacity * 0.75))
             }
-            .foregroundStyle(isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger)
-        } else if let ratio = entry.momentumRatio, let pct = signedPercent(from: ratio) {
-            let isUp = ratio >= 1.0
-            HStack(spacing: 3) {
-                Image(systemName: isUp ? "arrow.up" : "arrow.down")
-                    .font(.caption2.weight(.bold))
-                Text(pct)
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
-            }
-            .foregroundStyle((isUp ? HobbyIQTheme.Colors.hobbyGreen : HobbyIQTheme.Colors.danger).opacity(0.75))
         } else {
             Text("Trend data updating…")
                 .font(.caption2)
@@ -1322,6 +1671,18 @@ enum DailyIQSegment: String, CaseIterable, Identifiable {
     var title: String { rawValue }
 }
 
+// CF-BOWMAN-2YR-LISTS (2026-07-02, PR #247): sub-tab for the Market
+// Signals card. `.allMarket` renders the full matched-cohort lists
+// (Trending / Fading / Most Traded / Supply Squeeze). `.bowman2y`
+// renders the Bowman-set 2yr subset (Top Volume + Top Momentum),
+// which populates after the matched-cohort widening cycle warms.
+enum DailyIQMarketTab: String, CaseIterable, Identifiable {
+    case allMarket = "All Market"
+    case bowman2y = "Bowman 2Y"
+
+    var id: String { rawValue }
+}
+
 // MARK: - Owned Cards In Cohort drill-down sheet
 // (CF-DAILYIQ-MY-PLAYERS, 2026-07-01)
 
@@ -1337,36 +1698,31 @@ private struct OwnedCardsInCohortSheet: View {
     @State private var localInventory: [InventoryCard] = []
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    header
+        // CF-PAGES-NOT-SHEETS (2026-07-04): pushed page, no inner
+        // NavigationStack. Native back replaces the Done toolbar.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                header
 
-                    let cards = entry.ownedCardsInCohort ?? []
-                    if cards.isEmpty {
-                        emptyState
-                    } else {
-                        ForEach(cards) { card in
-                            row(card)
-                        }
+                let cards = entry.ownedCardsInCohort ?? []
+                if cards.isEmpty {
+                    emptyState
+                } else {
+                    ForEach(cards) { card in
+                        row(card)
                     }
                 }
-                .padding(HobbyIQTheme.Spacing.medium)
             }
-            .background(HobbyIQBackground())
-            .navigationTitle(entry.player)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
-            .task {
-                localInventory = await LocalPortfolioProvider.shared.getInventory()
-            }
+            .padding(HobbyIQTheme.Spacing.medium)
         }
-        .preferredColorScheme(.dark)
+        .background(HobbyIQBackground())
+        .navigationTitle(entry.player)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(HobbyIQTheme.Colors.appBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .task {
+            localInventory = await LocalPortfolioProvider.shared.getInventory()
+        }
     }
 
     private var header: some View {
@@ -1454,7 +1810,7 @@ private struct OwnedCardsInCohortSheet: View {
                 .font(.caption2.weight(.bold))
                 .tracking(0.4)
                 .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-            Text(price.formatted(.currency(code: "USD")))
+            Text(price.formatted(.currency(code: "USD").precision(.fractionLength(0))))
                 .font(.caption.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(HobbyIQTheme.Colors.pureWhite)

@@ -53,6 +53,12 @@ struct DashboardView: View {
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.interactively)
+            // CF-DASHBOARD-KEYBOARD-GAP (2026-07-04): don't reserve
+            // safe-area space for the keyboard — iOS was leaving a
+            // visible gap between the search bar and the top of the
+            // keyboard. Letting the keyboard overlay the natural
+            // layout keeps things flush.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .onTapGesture {
                 isAskFocused = false
             }

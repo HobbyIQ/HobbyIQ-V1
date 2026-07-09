@@ -5,10 +5,20 @@
 
 import Foundation
 
-// MARK: - Card Search (POST /api/compiq/cardsearch)
+// MARK: - Card Search (POST /api/search/cards)
 
+/// CF-UNIFIED-SEARCH-ENDPOINT (2026-07-01): switched from the legacy
+/// `/api/compiq/cardsearch` to the canonical `/api/search/cards`
+/// unified-search route. Per the backend note at
+/// compiq.routes.ts:784 — "Drew's operational picker use during the
+/// gap routes through /api/search/cards directly." Same internal
+/// dispatcher, but the field is `input` (not `query`).
+///
+/// `hint`: "freetext" for user text submits, "cert" for cert-number
+/// resolves. Backend rejects any other value.
 struct CompIQVariantSearchRequest: Codable {
-    let query: String
+    let input: String
+    let hint: String
 }
 
 /// One element of the `parallels[]` array on a Cardsight-source candidate.
@@ -71,7 +81,7 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
 
     var confidenceLevel: ConfidenceLevel? {
         // CF-IOS-AI-MATCHED-CONFIDENCE (2026-06-28): `ai-matched` candidates
-        // come from CardHedge's AI semantic matcher (CF-CH-MATCH-CARD-BOOST,
+        // come from LiveMarket's AI semantic matcher (CF-CH-MATCH-CARD-BOOST,
         // backend confidence=1.0). Force-bucket to .high alongside
         // `authoritative` so the semantic intent survives unrelated numeric
         // tweaks to the confidence scale.
@@ -119,7 +129,22 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         // /api/compiq/price-by-id expects a bare Cardsight UUID, so strip
         // the "cardsight:" prefix here; preserve other prefixes (cert ids
         // pass through intact).
-        let rawCandidateId = try container.decode(String.self, forKey: .cardId)
+        //
+        // CF-CANDIDATEID-DECODE-FIX (2026-07-01): backend PR #216 renamed
+        // `cardsightCardId` → `cardId` on holdings + price-by-id, but did
+        // NOT touch `CardIdentity.candidateId` (still emitted by
+        // unifiedSearch.dispatcher). iOS was decoding under `.cardId`
+        // only — decode threw, the parent's `try?` swallowed the array,
+        // and every search silently rendered zero results. Prefer
+        // `candidateId` (canonical wire key), fall back to `cardId` for
+        // any future rename or legacy path.
+        let altContainer = try decoder.container(keyedBy: AlternateIdKeys.self)
+        let rawCandidateId: String
+        if let cid = try? altContainer.decode(String.self, forKey: .candidateId) {
+            rawCandidateId = cid
+        } else {
+            rawCandidateId = try container.decode(String.self, forKey: .cardId)
+        }
         let cardsightPrefix = "cardsight:"
         cardId = rawCandidateId.hasPrefix(cardsightPrefix)
             ? String(rawCandidateId.dropFirst(cardsightPrefix.count))
@@ -188,6 +213,14 @@ struct CompIQVariantHit: Codable, Identifiable, Hashable {
         case displayLabel
         case imageUrl
         case attributes, parallels
+    }
+
+    // CF-CANDIDATEID-DECODE-FIX (2026-07-01): separate coding key set so
+    // the primary CodingKeys drives synthesized Encodable while the
+    // decoder can still read the canonical `candidateId` field emitted
+    // by the unified-search dispatcher.
+    private enum AlternateIdKeys: String, CodingKey {
+        case candidateId
     }
 
     init(
@@ -568,18 +601,44 @@ struct CompIQLastSale: Codable, Hashable {
     }
 }
 
+/// CF-SIBLING-FALLBACK (2026-07-08, backend PR #311): lineage block
+/// backend ships alongside `estimatedValue` when it derived the
+/// estimate from a same-player Base Auto sibling × parallel-premium
+/// × print-run floor. Purely additive to the wire — legacy responses
+/// omit this block entirely and everything decodes as nil. Present
+/// iff `estimateSource == "sibling-fallback"` on the price response.
+///
+/// Every field is optional beyond the mandatory anchor so a
+/// mid-shape wire tweak from the backend degrades to "hide the
+/// lineage sheet, keep the price + Est. badge" instead of crashing.
+struct SiblingFallbackLineage: Codable, Hashable {
+    let siblingCardId: String?
+    let siblingParallel: String?
+    let siblingBaseMedianRaw: Double?
+    let siblingBaseProjectedToday: Double?
+    let siblingWeeksSinceNewestSale: Double?
+    let parallelPremium: Double?
+    let empiricalPremium: Double?
+    let floorApplied: Bool?
+    let inferredPrintRun: Int?
+    let premiumMatchedSet: String?
+    let premiumUsedProxy: Bool?
+    let siblingIsCrossClass: Bool?
+    let crossClassAutoPremium: Double?
+}
+
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): list-shape last-sale envelope
 /// that ships on holding wire (vs `CompIQLastSale` used by the comp page).
 /// `date` here is the field on the list; the comp page's `soldDate` field
 /// maps to the same display value via the view layer.
-struct CardHedgeLastSaleSurface: Codable, Hashable {
+struct LiveMarketLastSaleSurface: Codable, Hashable {
     let price: Double?
     let date: String?
     let compCount: Int?
 }
 
 /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): trend-anchor sub-block on
-/// `CardHedgeModelExpectation`. Renders the "Base market rising/falling"
+/// `LiveMarketModelExpectation`. Renders the "Base market rising/falling"
 /// chip when `direction` resolves to up/down (flat suppressed). View
 /// dims the chip opacity by `trendConfidence` so low-confidence trends
 /// fade.
@@ -588,7 +647,7 @@ struct CardHedgeLastSaleSurface: Codable, Hashable {
 /// wire shape expanded — `rSquared` removed in favor of
 /// `trendConfidence`, plus diagnostic fields the view doesn't render
 /// today but decodes for forward-compat.
-struct CardHedgeTrendAnchor: Codable, Hashable {
+struct LiveMarketTrendAnchor: Codable, Hashable {
     let direction: String?
     let slopePctPerDay: Double?
     let trendConfidence: Double?
@@ -607,7 +666,7 @@ struct CardHedgeTrendAnchor: Codable, Hashable {
 /// wire shape changed from `range: [low, high]` to discrete `low` /
 /// `high` fields. `basis` + `confidence` are decoded for forward-
 /// compat but not surfaced yet.
-struct CardHedgeForwardProjection: Codable, Hashable {
+struct LiveMarketForwardProjection: Codable, Hashable {
     let low: Double?
     let high: Double?
     let basis: String?
@@ -624,19 +683,19 @@ struct CardHedgeForwardProjection: Codable, Hashable {
 /// (gainVsLastSale + gainPct); the rendered "vs purchase" copy may
 /// read as semantically loose now — separate CF to relabel the line
 /// or compute vs-purchase client-side from `purchasePrice`.
-struct CardHedgePositionSignal: Codable, Hashable {
+struct LiveMarketPositionSignal: Codable, Hashable {
     let purchasePrice: Double?
     let gainVsLastSale: Double?
     let gainVsExpectation: Double?
     let gainPct: Double?
 }
 
-/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model expectation
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket model expectation
 /// envelope shared by the comp page (`CompIQPriceByIdResponse`) and the
 /// holding wire (`InventoryCard`). All fields optional/nullable per the
 /// contract — render only when `value` is present, range pair only when
 /// both `range[0]` and `range[1]` decode cleanly.
-struct CardHedgeModelExpectation: Codable, Hashable {
+struct LiveMarketModelExpectation: Codable, Hashable {
     let value: Double?
     let range: [Double]?
     let multiplier: Double?
@@ -648,9 +707,9 @@ struct CardHedgeModelExpectation: Codable, Hashable {
     /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): three new optional
     /// sub-blocks. Each renders independently; null AND absent → block
     /// suppressed without affecting the others.
-    let trendAnchor: CardHedgeTrendAnchor?
-    let forwardProjection: CardHedgeForwardProjection?
-    let positionSignal: CardHedgePositionSignal?
+    let trendAnchor: LiveMarketTrendAnchor?
+    let forwardProjection: LiveMarketForwardProjection?
+    let positionSignal: LiveMarketPositionSignal?
 
     /// Explicit init so existing call sites (previews, mock builders)
     /// that don't pass the new sub-block args keep compiling. Codable
@@ -665,9 +724,9 @@ struct CardHedgeModelExpectation: Codable, Hashable {
         n: Int? = nil,
         baseAutoMedian: Double? = nil,
         baseAutoCount: Int? = nil,
-        trendAnchor: CardHedgeTrendAnchor? = nil,
-        forwardProjection: CardHedgeForwardProjection? = nil,
-        positionSignal: CardHedgePositionSignal? = nil
+        trendAnchor: LiveMarketTrendAnchor? = nil,
+        forwardProjection: LiveMarketForwardProjection? = nil,
+        positionSignal: LiveMarketPositionSignal? = nil
     ) {
         self.value = value
         self.range = range
@@ -688,12 +747,12 @@ struct CardHedgeModelExpectation: Codable, Hashable {
     var multiplierHigh: Double? { (multiplierRange?.count ?? 0) > 1 ? multiplierRange?[1] : nil }
 }
 
-/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge "lean" badge driver.
+/// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket "lean" badge driver.
 /// `lean` is a CLOSED 3-value enum on the wire (`"buy" | "hold" | "sell"`);
 /// unknown literals decode as nil and suppress the badge — the view must
 /// never render the raw string. `deltaPct` carries a signed percent where
 /// positive = above model, negative = below.
-struct CardHedgeModelSignal: Codable, Hashable {
+struct LiveMarketModelSignal: Codable, Hashable {
     let lean: String?
     let deltaPct: Double?
     let expectation: Double?
@@ -702,7 +761,7 @@ struct CardHedgeModelSignal: Codable, Hashable {
 
 /// CLOSED enum mirroring the `lean` literals — `init?(rawValue:)` returns
 /// nil for any unknown string, which the view treats as "no badge."
-enum CardHedgeLean: String, Codable {
+enum LiveMarketLean: String, Codable {
     case buy
     case hold
     case sell
@@ -892,12 +951,12 @@ struct TrendIQWeights: Codable {
 }
 
 /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): one point in the
-/// CardHedge prices-by-card daily series. Wire shape per the backend
+/// LiveMarket prices-by-card daily series. Wire shape per the backend
 /// momentum-surface contract: `{ date: ISO8601 string, price: Double }`.
 /// Series is sorted ascending by date when backend ships it; iOS does
 /// not re-sort defensively — the trend computation reads `first` and
 /// `last` in order.
-struct CardHedgePricePoint: Codable, Hashable {
+struct LiveMarketPricePoint: Codable, Hashable {
     let date: String?
     let price: Double?
 }
@@ -909,17 +968,17 @@ struct CardHedgePricePoint: Codable, Hashable {
 /// falls back to deriving from `pricesByCard` when only the series
 /// shipped. `direction` carries the canonical "up" | "down" | "flat"
 /// vocabulary the cardhedge slot uses to pick the arrow glyph.
-struct CardHedgeMomentum: Codable, Hashable {
+struct LiveMarketMomentum: Codable, Hashable {
     let pctChange: Double?
     let direction: String?
     let window: String?
 }
 
 /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): provenance object
-/// the backend MAY ship to describe the CardHedge surface that drove
+/// the backend MAY ship to describe the LiveMarket surface that drove
 /// the estimate. Optional; surfaces in the attribution pill when
-/// `window` is present (e.g. "CardHedge · 30d").
-struct CardHedgeProvenance: Codable, Hashable {
+/// `window` is present (e.g. "LiveMarket · 30d").
+struct LiveMarketProvenance: Codable, Hashable {
     let window: String?
     let asOf: String?
     let source: String?
@@ -966,7 +1025,7 @@ struct CompIQPriceByIdResponse: Codable {
     /// Softer than a proxy scan but reliably available on cards with a
     /// recent comp, including parallels the proxy doesn't cover.
     let cardImageThumbUrl: String?
-    /// Backend e8743a6 (2026-06-27): back-of-card scan when CardHedge has
+    /// Backend e8743a6 (2026-06-27): back-of-card scan when LiveMarket has
     /// one. Nil/absent on most cards. View renders side-by-side with the
     /// front when present and falls back to the same neutral-card
     /// placeholder the front uses on AsyncImage failure.
@@ -1033,6 +1092,13 @@ struct CompIQPriceByIdResponse: Codable {
     /// derived (e.g. "From the last sale ($A, N days ago), adjusted for
     /// the set's recent trend.").
     let estimateBasis: String?
+    /// CF-SIBLING-FALLBACK (2026-07-08, backend PR #311): lineage block
+    /// present when the engine derived the estimate from a same-player
+    /// Base Auto sibling × parallel-premium × print-run floor. Nil on
+    /// every other estimate source. Renders an "Est. via similar card"
+    /// badge next to the market value; optional tap opens a lineage
+    /// trace sheet.
+    let siblingFallback: SiblingFallbackLineage?
     /// Last sale envelope for the "last-sale" branch and the basis line
     /// on extrapolated branches.
     let lastSale: CompIQLastSale?
@@ -1047,38 +1113,50 @@ struct CompIQPriceByIdResponse: Codable {
     /// with per-tier confidence styling.
     let gradedEstimates: [CompIQGradedEstimate]?
 
-    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): CardHedge
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): LiveMarket
     /// prices-by-card daily series. Present on `estimateSource ==
     /// "cardhedge"` responses once the backend momentum-surface CF
     /// deploys; nil on Cardsight-source responses. iOS derives the
     /// momentum half of the cardhedge slot from first/last when
     /// `momentum` is absent.
-    let pricesByCard: [CardHedgePricePoint]?
+    let pricesByCard: [LiveMarketPricePoint]?
     /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): pre-computed
     /// compact momentum. iOS prefers this over deriving from
     /// `pricesByCard` so a backend-authoritative number wins.
-    let momentum: CardHedgeMomentum?
-    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): CardHedge
+    let momentum: LiveMarketMomentum?
+    /// CF-IOS-CARDHEDGE-RAIL-AND-MOMENTUM (2026-06-25): LiveMarket
     /// provenance object. When `window` is present, the cardhedge
-    /// attribution pill upgrades from "CardHedge" to "CardHedge · 30d".
-    let chProvenance: CardHedgeProvenance?
+    /// attribution pill upgrades from "LiveMarket" to "LiveMarket · 30d".
+    let chProvenance: LiveMarketProvenance?
 
-    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge model
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket model
     /// expectation envelope. Renders the "Model expects $X (range
     /// $L–$H)" line beneath the last-sale headline on the comp page.
-    let modelExpectation: CardHedgeModelExpectation?
-    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge lean badge
+    let modelExpectation: LiveMarketModelExpectation?
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket lean badge
     /// driver. `lean` is closed-enum (`buy`/`hold`/`sell`); deltaPct is
     /// signed (+ above, − below model).
-    let modelSignal: CardHedgeModelSignal?
+    let modelSignal: LiveMarketModelSignal?
     /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): comp-page-side comp
-    /// count for the CardHedge last-sale headline ("via N comps"). The
+    /// count for the LiveMarket last-sale headline ("via N comps"). The
     /// holdings-list wire emits the same number on
     /// `lastSaleSurface.compCount` instead.
     let chCompCount: Int?
 
     var hasInsufficientComps: Bool {
         source == "no-recent-comps" || marketTier?.value == nil
+    }
+
+    /// CF-SIBLING-FALLBACK (2026-07-08): true when the engine priced
+    /// this card from a same-player Base Auto sibling instead of
+    /// direct comps. Drives the "Est. via similar card" badge next
+    /// to the market value. Reads the presence of the lineage block
+    /// (defensive) OR the explicit `estimateSource` enum value —
+    /// either signal is enough to render the badge, so a partial
+    /// wire shape still flags correctly.
+    var hasSiblingFallback: Bool {
+        if siblingFallback != nil { return true }
+        return estimateSource == "sibling-fallback"
     }
 
     var verdictText: String {
@@ -1101,7 +1179,7 @@ struct CompIQPriceByIdResponse: Codable {
     /// Formatted FMV that returns "—" when nil instead of "$0.00"
     var formattedFMV: String {
         guard let value = marketTier?.value else { return "—" }
-        return value.formatted(.currency(code: "USD"))
+        return value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
     }
 
     init(from decoder: Decoder) throws {
@@ -1179,14 +1257,15 @@ struct CompIQPriceByIdResponse: Codable {
         estimatedValue = try? container.decodeIfPresent(Double.self, forKey: .estimatedValue)
         estimateRange = try? container.decodeIfPresent(CompIQPriceRange.self, forKey: .estimateRange)
         estimateBasis = try? container.decodeIfPresent(String.self, forKey: .estimateBasis)
+        siblingFallback = try? container.decodeIfPresent(SiblingFallbackLineage.self, forKey: .siblingFallback)
         lastSale = try? container.decodeIfPresent(CompIQLastSale.self, forKey: .lastSale)
         gradeBreakdown = try? container.decodeIfPresent([CompIQGradeBreakdownEntry].self, forKey: .gradeBreakdown)
         gradedEstimates = try? container.decodeIfPresent([CompIQGradedEstimate].self, forKey: .gradedEstimates)
-        pricesByCard = try? container.decodeIfPresent([CardHedgePricePoint].self, forKey: .pricesByCard)
-        momentum = try? container.decodeIfPresent(CardHedgeMomentum.self, forKey: .momentum)
-        chProvenance = try? container.decodeIfPresent(CardHedgeProvenance.self, forKey: .chProvenance)
-        modelExpectation = try? container.decodeIfPresent(CardHedgeModelExpectation.self, forKey: .modelExpectation)
-        modelSignal = try? container.decodeIfPresent(CardHedgeModelSignal.self, forKey: .modelSignal)
+        pricesByCard = try? container.decodeIfPresent([LiveMarketPricePoint].self, forKey: .pricesByCard)
+        momentum = try? container.decodeIfPresent(LiveMarketMomentum.self, forKey: .momentum)
+        chProvenance = try? container.decodeIfPresent(LiveMarketProvenance.self, forKey: .chProvenance)
+        modelExpectation = try? container.decodeIfPresent(LiveMarketModelExpectation.self, forKey: .modelExpectation)
+        modelSignal = try? container.decodeIfPresent(LiveMarketModelSignal.self, forKey: .modelSignal)
         chCompCount = try? container.decodeIfPresent(Int.self, forKey: .chCompCount)
     }
 
@@ -1203,7 +1282,7 @@ struct CompIQPriceByIdResponse: Codable {
         case compQuality, dataSufficiency, trendIQ
         case regime, regimeConfidence, regimeDiagnostics
         case marketRead, marketReadDisclaimer, marketReadFactPack
-        case estimateSource, estimatedValue, estimateRange, estimateBasis, lastSale
+        case estimateSource, estimatedValue, estimateRange, estimateBasis, siblingFallback, lastSale
         case gradeBreakdown, gradedEstimates
         case pricesByCard, momentum, chProvenance
         case modelExpectation, modelSignal, chCompCount

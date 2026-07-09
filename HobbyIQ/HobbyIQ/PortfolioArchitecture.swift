@@ -127,6 +127,25 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     let notes: String?
     let imageFrontUrl: String?
     let imageBackUrl: String?
+    /// CF-INVENTORY-CATALOG-IMAGE (2026-07-05): backend-served card
+    /// image (same CDN URL the comp-card hero uses). Populated on
+    /// holdings the engine has resolved to a Cardsight catalog card.
+    /// Rendered as the inventory row/grid thumbnail whenever the
+    /// user hasn't uploaded their own `imageFrontUrl` photo. Nil on
+    /// legacy or unmatched holdings; view falls through to the
+    /// initials/photo-glyph placeholder.
+    let catalogImageUrl: String?
+    /// CF-ACTION-BADGES (2026-07-06, backend §1): per-holding
+    /// seller-facing verdict. Named `actionRecommendation` (NOT
+    /// `recommendation`) because a legacy `recommendation: String`
+    /// field is already on the wire for backward-compat. iOS must
+    /// read this new one; the old one is ignored.
+    let actionRecommendation: CardPanelGradeEntry.ActionRecommendation?
+    /// CF-HOLDING-REGRADE (2026-07-06, PR #294): PSA/BGS/SGC/CGC cert
+    /// number. Always on the wire per backend regression tests; iOS
+    /// was silently dropping it. Round-trips through the
+    /// `/regrade` endpoint. Nil for raw / legacy holdings.
+    let certNumber: String?
     let lowValue: Double?
     let highValue: Double?
     let confidence: Double?
@@ -198,15 +217,15 @@ struct InventoryCard: Identifiable, Hashable, Codable {
     /// with this as nil and continue to work via text-based matching.
     let cardId: String?
 
-    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): CardHedge headline +
+    /// CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26): LiveMarket headline +
     /// model-line + lean-badge wire fields surfaced on the holdings
     /// list. All three independently optional — render whichever blocks
     /// arrive populated. `lastSaleSurface` uses `date` (not `soldDate`)
     /// per the holding wire contract; the view layer maps it to a
     /// shared display value.
-    let lastSaleSurface: CardHedgeLastSaleSurface?
-    let modelExpectation: CardHedgeModelExpectation?
-    let modelSignal: CardHedgeModelSignal?
+    let lastSaleSurface: LiveMarketLastSaleSurface?
+    let modelExpectation: LiveMarketModelExpectation?
+    let modelSignal: LiveMarketModelSignal?
 
     // The Codable conformance + CodingKeys for InventoryCard live in the
     // extension at CompatibilityShims.swift:1584 — that extension defines
@@ -233,6 +252,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         notes: String? = nil,
         imageFrontUrl: String? = nil,
         imageBackUrl: String? = nil,
+        catalogImageUrl: String? = nil,
+        actionRecommendation: CardPanelGradeEntry.ActionRecommendation? = nil,
+        certNumber: String? = nil,
         lowValue: Double? = nil,
         highValue: Double? = nil,
         confidence: Double? = nil,
@@ -251,9 +273,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         estimateConfidence: String? = nil,
         nearestGradedAnchor: NearestGradedAnchor? = nil,
         cardId: String? = nil,
-        lastSaleSurface: CardHedgeLastSaleSurface? = nil,
-        modelExpectation: CardHedgeModelExpectation? = nil,
-        modelSignal: CardHedgeModelSignal? = nil
+        lastSaleSurface: LiveMarketLastSaleSurface? = nil,
+        modelExpectation: LiveMarketModelExpectation? = nil,
+        modelSignal: LiveMarketModelSignal? = nil
     ) {
         self.id = id
         self.playerName = playerName
@@ -273,6 +295,9 @@ struct InventoryCard: Identifiable, Hashable, Codable {
         self.notes = notes
         self.imageFrontUrl = imageFrontUrl
         self.imageBackUrl = imageBackUrl
+        self.catalogImageUrl = catalogImageUrl
+        self.actionRecommendation = actionRecommendation
+        self.certNumber = certNumber
         self.lowValue = lowValue
         self.highValue = highValue
         self.confidence = confidence

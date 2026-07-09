@@ -92,7 +92,7 @@ struct ERPHubView: View {
                 suggestedTier: GatedFeature.minimumTier(for: GatedFeature.erpReconciliation)
             )
         }
-        .fullScreenCover(item: $presentedDestination) { destination in
+        .navigationDestination(item: $presentedDestination) { destination in
             FinancialsDestinationView(destination: destination)
         }
     }
@@ -403,37 +403,17 @@ struct ERPHubView: View {
 
 // MARK: - Destination Wrapper
 
-/// Hosts a Financials sub-screen in its own NavigationStack inside a
-/// fullScreenCover. Keeps push/back behavior local to the cover so the
-/// shell's per-tab NavigationStack stack doesn't interfere.
+/// Hosts a Financials sub-screen as a pushed destination on the parent
+/// tab's NavigationStack, so the shell tab bar stays visible.
 private struct FinancialsDestinationView: View {
     let destination: FinancialsDestination
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            content
-                .background { HobbyIQBackground() }
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-                .themedNavigationSurface()
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.subheadline.weight(.semibold))
-                                Text("Financials")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                        }
-                        .accessibilityLabel("Back to Financials")
-                    }
-                }
-        }
+        content
+            .background { HobbyIQBackground() }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .themedNavigationSurface()
     }
 
     private var title: String {
@@ -1116,12 +1096,12 @@ struct ERPExpensesView: View {
             .padding(16)
         }
         .task { await loadExpenses() }
-        .sheet(isPresented: $showAddSheet) {
+        .navigationDestination(isPresented: $showAddSheet) {
             ERPExpenseFormSheet(existing: nil) {
                 Task { await loadExpenses() }
             }
         }
-        .sheet(item: $editingExpense) { exp in
+        .navigationDestination(item: $editingExpense) { exp in
             ERPExpenseFormSheet(existing: exp) {
                 Task { await loadExpenses() }
             }
@@ -1278,83 +1258,75 @@ private struct ERPExpenseFormSheet: View {
     private var isEditing: Bool { existing != nil }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(isEditing ? "Edit Expense" : "Add Expense")
-                        .font(.title2.weight(.bold))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(isEditing ? "Edit Expense" : "Add Expense")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Category")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Category")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        Picker("Category", selection: $selectedCategory) {
-                            ForEach(ERPExpenseCategory.allCases) { cat in
-                                Text(cat.displayName).tag(cat)
-                            }
+                    Picker("Category", selection: $selectedCategory) {
+                        ForEach(ERPExpenseCategory.allCases) { cat in
+                            Text(cat.displayName).tag(cat)
                         }
-                        .pickerStyle(.menu)
+                    }
+                    .pickerStyle(.menu)
+                    .tint(HobbyIQTheme.Colors.electricBlue)
+                }
+
+                if selectedCategory.requiresNote {
+                    erpTextField(title: "Category Note (required)", text: $categoryNote)
+                }
+
+                erpTextField(title: "Amount", text: $amountText, keyboard: .decimalPad)
+                erpTextField(title: "Description", text: $descriptionText)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Date")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    DatePicker("", selection: $expenseDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
                         .tint(HobbyIQTheme.Colors.electricBlue)
-                    }
+                }
 
-                    if selectedCategory.requiresNote {
-                        erpTextField(title: "Category Note (required)", text: $categoryNote)
-                    }
+                if let localError {
+                    Text(localError)
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                }
 
-                    erpTextField(title: "Amount", text: $amountText, keyboard: .decimalPad)
-                    erpTextField(title: "Description", text: $descriptionText)
+                Button(isEditing ? "Update" : "Save") {
+                    Task { await save() }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isSaving)
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Date")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        DatePicker("", selection: $expenseDate, displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .tint(HobbyIQTheme.Colors.electricBlue)
-                    }
-
-                    if let localError {
-                        Text(localError)
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.danger)
-                    }
-
-                    Button(isEditing ? "Update" : "Save") {
-                        Task { await save() }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isSaving)
-
-                    if isEditing {
-                        Button(role: .destructive) {
-                            Task { await deleteExpense() }
-                        } label: {
-                            HStack {
-                                if isDeleting { ProgressView().controlSize(.small) }
-                                Text("Delete Expense")
-                            }
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(HobbyIQTheme.Colors.danger)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                if isEditing {
+                    Button(role: .destructive) {
+                        Task { await deleteExpense() }
+                    } label: {
+                        HStack {
+                            if isDeleting { ProgressView().controlSize(.small) }
+                            Text("Delete Expense")
                         }
-                        .disabled(isDeleting)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                     }
-                }
-                .padding(16)
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle(isEditing ? "Edit Expense" : "New Expense")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                    .disabled(isDeleting)
                 }
             }
+            .padding(16)
         }
+        .background { HobbyIQBackground() }
+        .navigationTitle(isEditing ? "Edit Expense" : "New Expense")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
         .onAppear {
             if let exp = existing {
                 selectedCategory = exp.categoryEnum ?? .other
@@ -1484,12 +1456,12 @@ struct ERPTradesView: View {
             .padding(16)
         }
         .task { await loadTrades() }
-        .sheet(isPresented: $showRecordSheet) {
+        .navigationDestination(isPresented: $showRecordSheet) {
             ERPRecordTradeSheet {
                 Task { await loadTrades() }
             }
         }
-        .sheet(item: $selectedTrade) { trade in
+        .navigationDestination(item: $selectedTrade) { trade in
             ERPTradeDetailSheet(trade: trade)
         }
     }
@@ -1572,74 +1544,66 @@ private struct ERPRecordTradeSheet: View {
     @State private var localError: String?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Record Trade")
-                        .font(.title2.weight(.bold))
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Record Trade")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+
+                Text("cashToMe is signed: positive = you received cash, negative = you paid cash.")
+                    .font(.caption)
+                    .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                erpSectionHeader("OUTGOING (your card)")
+                erpTextField(title: "Holding ID", text: $outgoingHoldingId)
+                erpTextField(title: "FMV at Trade", text: $outgoingFmv, keyboard: .decimalPad)
+                Picker("FMV Source", selection: $outgoingFmvSource) {
+                    Text("CompIQ").tag("compiq")
+                    Text("Manual").tag("manual")
+                }
+                .pickerStyle(.segmented)
+
+                erpSectionHeader("INCOMING (their card)")
+                erpTextField(title: "Card Title", text: $incomingTitle)
+                erpTextField(title: "FMV at Trade", text: $incomingFmv, keyboard: .decimalPad)
+                Picker("FMV Source", selection: $incomingFmvSource) {
+                    Text("CompIQ").tag("compiq")
+                    Text("Manual").tag("manual")
+                }
+                .pickerStyle(.segmented)
+
+                erpSectionHeader("CASH")
+                erpTextField(title: "Cash To Me (signed)", text: $cashToMeText, keyboard: .numbersAndPunctuation)
+
+                erpTextField(title: "Notes", text: $notes)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Trade Date")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    DatePicker("", selection: $tradeDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .tint(HobbyIQTheme.Colors.electricBlue)
+                }
 
-                    Text("cashToMe is signed: positive = you received cash, negative = you paid cash.")
+                if let localError {
+                    Text(localError)
                         .font(.caption)
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-
-                    erpSectionHeader("OUTGOING (your card)")
-                    erpTextField(title: "Holding ID", text: $outgoingHoldingId)
-                    erpTextField(title: "FMV at Trade", text: $outgoingFmv, keyboard: .decimalPad)
-                    Picker("FMV Source", selection: $outgoingFmvSource) {
-                        Text("CompIQ").tag("compiq")
-                        Text("Manual").tag("manual")
-                    }
-                    .pickerStyle(.segmented)
-
-                    erpSectionHeader("INCOMING (their card)")
-                    erpTextField(title: "Card Title", text: $incomingTitle)
-                    erpTextField(title: "FMV at Trade", text: $incomingFmv, keyboard: .decimalPad)
-                    Picker("FMV Source", selection: $incomingFmvSource) {
-                        Text("CompIQ").tag("compiq")
-                        Text("Manual").tag("manual")
-                    }
-                    .pickerStyle(.segmented)
-
-                    erpSectionHeader("CASH")
-                    erpTextField(title: "Cash To Me (signed)", text: $cashToMeText, keyboard: .numbersAndPunctuation)
-
-                    erpTextField(title: "Notes", text: $notes)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Trade Date")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                        DatePicker("", selection: $tradeDate, displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .tint(HobbyIQTheme.Colors.electricBlue)
-                    }
-
-                    if let localError {
-                        Text(localError)
-                            .font(.caption)
-                            .foregroundStyle(HobbyIQTheme.Colors.danger)
-                    }
-
-                    Button("Submit Trade") {
-                        Task { await submitTrade() }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(isSaving)
+                        .foregroundStyle(HobbyIQTheme.Colors.danger)
                 }
-                .padding(16)
-            }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Record Trade")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+
+                Button("Submit Trade") {
+                    Task { await submitTrade() }
                 }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isSaving)
             }
+            .padding(16)
         }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Record Trade")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
     }
 
     private func submitTrade() async {
@@ -1687,7 +1651,6 @@ private struct ERPRecordTradeSheet: View {
 private struct ERPTradeDetailSheet: View {
     let trade: ERPTradeTransaction
 
-    @Environment(\.dismiss) private var dismiss
     @State private var detail: ERPTradeTransaction?
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -1695,8 +1658,7 @@ private struct ERPTradeDetailSheet: View {
     private var resolved: ERPTradeTransaction { detail ?? trade }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if isLoading {
                         ProgressView().tint(HobbyIQTheme.Colors.electricBlue)
@@ -1773,17 +1735,10 @@ private struct ERPTradeDetailSheet: View {
                 }
                 .padding(16)
             }
-            .background { HobbyIQBackground() }
-            .navigationTitle("Trade Detail")
-            .navigationBarTitleDisplayMode(.inline)
-            .themedNavigationSurface()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
-                }
-            }
-        }
+        .background { HobbyIQBackground() }
+        .navigationTitle("Trade Detail")
+        .navigationBarTitleDisplayMode(.inline)
+        .themedNavigationSurface()
         .task { await loadDetail() }
     }
 

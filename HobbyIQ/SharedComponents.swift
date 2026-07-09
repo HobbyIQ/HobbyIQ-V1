@@ -323,7 +323,7 @@ struct PortfolioInsightCardView: View {
 
 // MARK: - CF-IOS-MODEL-SIGNAL-RENDER (2026-06-26)
 
-/// CardHedge headline + model-line + lean-badge composite. Three blocks,
+/// LiveMarket headline + model-line + lean-badge composite. Three blocks,
 /// independently optional — caller hands in whichever fields the wire
 /// surfaced. Used on both the comp page (price-by-id response) and the
 /// portfolio list cell + detail view (holding wire).
@@ -336,11 +336,11 @@ struct PortfolioInsightCardView: View {
 ///     unresolvable subset / thin base pool)
 ///   - all three absent → renders nothing (caller can wrap in nil-check
 ///     for parent-layout suppression)
-struct CardHedgeModelSignalView: View {
+struct LiveMarketModelSignalView: View {
     let lastSalePrice: Double?
     let lastSaleCompCount: Int?
-    let modelExpectation: CardHedgeModelExpectation?
-    let modelSignal: CardHedgeModelSignal?
+    let modelExpectation: LiveMarketModelExpectation?
+    let modelSignal: LiveMarketModelSignal?
 
     var body: some View {
         let head = headlineString()
@@ -413,7 +413,7 @@ struct CardHedgeModelSignalView: View {
 
     private func headlineString() -> String? {
         guard let price = lastSalePrice else { return nil }
-        let dollar = price.formatted(.currency(code: "USD"))
+        let dollar = price.formatted(.currency(code: "USD").precision(.fractionLength(0)))
         if let n = lastSaleCompCount, n > 0 {
             return "Last sold \(dollar) via \(n) comp\(n == 1 ? "" : "s")"
         }
@@ -422,10 +422,10 @@ struct CardHedgeModelSignalView: View {
 
     private func modelLineString() -> String? {
         guard let exp = modelExpectation, let value = exp.value else { return nil }
-        let dollar = value.formatted(.currency(code: "USD"))
+        let dollar = value.formatted(.currency(code: "USD").precision(.fractionLength(0)))
         if let lo = exp.rangeLow, let hi = exp.rangeHigh {
-            let loStr = lo.formatted(.currency(code: "USD"))
-            let hiStr = hi.formatted(.currency(code: "USD"))
+            let loStr = lo.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+            let hiStr = hi.formatted(.currency(code: "USD").precision(.fractionLength(0)))
             return "Model expects \(dollar) (range \(loStr)–\(hiStr))"
         }
         return "Model expects \(dollar)"
@@ -433,7 +433,7 @@ struct CardHedgeModelSignalView: View {
 
     private func resolvedSignal() -> (label: String, tint: Color)? {
         guard let rawLean = modelSignal?.lean,
-              let lean = CardHedgeLean(rawValue: rawLean.lowercased()) else {
+              let lean = LiveMarketLean(rawValue: rawLean.lowercased()) else {
             return nil
         }
         switch lean {
@@ -478,8 +478,8 @@ struct CardHedgeModelSignalView: View {
     private func forwardProjectionString() -> String? {
         guard let proj = modelExpectation?.forwardProjection,
               let low = proj.low, let high = proj.high else { return nil }
-        let loStr = low.formatted(.currency(code: "USD"))
-        let hiStr = high.formatted(.currency(code: "USD"))
+        let loStr = low.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        let hiStr = high.formatted(.currency(code: "USD").precision(.fractionLength(0)))
         return "Next likely \(loStr)–\(hiStr) if trend holds"
     }
 
@@ -495,7 +495,7 @@ struct CardHedgeModelSignalView: View {
         guard let pos = modelExpectation?.positionSignal,
               let gainLoss = pos.gainVsLastSale else { return nil }
         let sign = gainLoss >= 0 ? "+" : "−"
-        let absDollar = abs(gainLoss).formatted(.currency(code: "USD"))
+        let absDollar = abs(gainLoss).formatted(.currency(code: "USD").precision(.fractionLength(0)))
         var text = "\(sign)\(absDollar) vs purchase"
         if let pct = pos.gainPct {
             let pctSign = pct >= 0 ? "+" : "−"
@@ -508,7 +508,7 @@ struct CardHedgeModelSignalView: View {
 
 // MARK: - CF-IOS-MODEL-SIGNAL-RENDER #Previews
 
-fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
+fileprivate struct LiveMarketSignalPreviewWrapper<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
     var body: some View {
@@ -532,12 +532,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     }
 }
 
-#Preview("CardHedge · Hartman sell ($450 · Lean Sell +72% · model $262)") {
-    CardHedgeSignalPreviewWrapper(title: "sell — full data") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · Hartman sell ($450 · Lean Sell +72% · model $262)") {
+    LiveMarketSignalPreviewWrapper(title: "sell — full data") {
+        LiveMarketModelSignalView(
             lastSalePrice: 450,
             lastSaleCompCount: 1,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 262,
                 range: [250, 273],
                 multiplier: 3.20,
@@ -547,7 +547,7 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 baseAutoMedian: 82,
                 baseAutoCount: 69
             ),
-            modelSignal: CardHedgeModelSignal(
+            modelSignal: LiveMarketModelSignal(
                 lean: "sell",
                 deltaPct: 72,
                 expectation: 262,
@@ -558,12 +558,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · hold ($310 · In Range −2% · model $315)") {
-    CardHedgeSignalPreviewWrapper(title: "hold — in-range case") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · hold ($310 · In Range −2% · model $315)") {
+    LiveMarketSignalPreviewWrapper(title: "hold — in-range case") {
+        LiveMarketModelSignalView(
             lastSalePrice: 310,
             lastSaleCompCount: 8,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 315,
                 range: [298, 332],
                 multiplier: 3.84,
@@ -573,7 +573,7 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 baseAutoMedian: 82,
                 baseAutoCount: 69
             ),
-            modelSignal: CardHedgeModelSignal(
+            modelSignal: LiveMarketModelSignal(
                 lean: "hold",
                 deltaPct: -2,
                 expectation: 315,
@@ -584,12 +584,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · buy ($200 · Lean Buy −32% · model $295)") {
-    CardHedgeSignalPreviewWrapper(title: "buy — below model") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · buy ($200 · Lean Buy −32% · model $295)") {
+    LiveMarketSignalPreviewWrapper(title: "buy — below model") {
+        LiveMarketModelSignalView(
             lastSalePrice: 200,
             lastSaleCompCount: 6,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 295,
                 range: [280, 310],
                 multiplier: 3.60,
@@ -599,7 +599,7 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 baseAutoMedian: 82,
                 baseAutoCount: 69
             ),
-            modelSignal: CardHedgeModelSignal(
+            modelSignal: LiveMarketModelSignal(
                 lean: "buy",
                 deltaPct: -32,
                 expectation: 295,
@@ -610,9 +610,9 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · no-modelSignal fallback (headline only)") {
-    CardHedgeSignalPreviewWrapper(title: "no-signal fallback — helper returned null") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · no-modelSignal fallback (headline only)") {
+    LiveMarketSignalPreviewWrapper(title: "no-signal fallback — helper returned null") {
+        LiveMarketModelSignalView(
             lastSalePrice: 450,
             lastSaleCompCount: 11,
             modelExpectation: nil,
@@ -622,17 +622,17 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · trendAnchor up chip (R²=0.74, +0.42%/day)") {
-    CardHedgeSignalPreviewWrapper(title: "trendAnchor rising — R² dims chip opacity") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · trendAnchor up chip (R²=0.74, +0.42%/day)") {
+    LiveMarketSignalPreviewWrapper(title: "trendAnchor rising — R² dims chip opacity") {
+        LiveMarketModelSignalView(
             lastSalePrice: 450,
             lastSaleCompCount: 1,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 262,
                 range: [250, 273],
                 basis: "prices_by_card_honest",
                 n: 11,
-                trendAnchor: CardHedgeTrendAnchor(
+                trendAnchor: LiveMarketTrendAnchor(
                     direction: "rising",
                     slopePctPerDay: 0.42,
                     trendConfidence: 0.74,
@@ -649,17 +649,17 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · forwardProjection range ($460–$490 if trend holds)") {
-    CardHedgeSignalPreviewWrapper(title: "forwardProjection — \"Next likely\" range line") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · forwardProjection range ($460–$490 if trend holds)") {
+    LiveMarketSignalPreviewWrapper(title: "forwardProjection — \"Next likely\" range line") {
+        LiveMarketModelSignalView(
             lastSalePrice: 450,
             lastSaleCompCount: 1,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 262,
                 range: [250, 273],
                 basis: "prices_by_card_honest",
                 n: 11,
-                forwardProjection: CardHedgeForwardProjection(
+                forwardProjection: LiveMarketForwardProjection(
                     low: 460,
                     high: 490,
                     basis: nil,
@@ -672,12 +672,12 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("CardHedge · all sub-blocks together (Hartman BXF full shape)") {
-    CardHedgeSignalPreviewWrapper(title: "headline + model + badge + trendAnchor + projection + position") {
-        CardHedgeModelSignalView(
+#Preview("LiveMarket · all sub-blocks together (Hartman BXF full shape)") {
+    LiveMarketSignalPreviewWrapper(title: "headline + model + badge + trendAnchor + projection + position") {
+        LiveMarketModelSignalView(
             lastSalePrice: 450,
             lastSaleCompCount: 1,
-            modelExpectation: CardHedgeModelExpectation(
+            modelExpectation: LiveMarketModelExpectation(
                 value: 262,
                 range: [250, 273],
                 multiplier: 3.20,
@@ -686,7 +686,7 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                 n: 11,
                 baseAutoMedian: 82,
                 baseAutoCount: 69,
-                trendAnchor: CardHedgeTrendAnchor(
+                trendAnchor: LiveMarketTrendAnchor(
                     direction: "rising",
                     slopePctPerDay: 0.42,
                     trendConfidence: 0.74,
@@ -696,20 +696,20 @@ fileprivate struct CardHedgeSignalPreviewWrapper<Content: View>: View {
                     projectedBaseToday: nil,
                     allTimeBaseMedian: nil
                 ),
-                forwardProjection: CardHedgeForwardProjection(
+                forwardProjection: LiveMarketForwardProjection(
                     low: 460,
                     high: 490,
                     basis: nil,
                     confidence: nil
                 ),
-                positionSignal: CardHedgePositionSignal(
+                positionSignal: LiveMarketPositionSignal(
                     purchasePrice: nil,
                     gainVsLastSale: 188,
                     gainVsExpectation: nil,
                     gainPct: 71.97
                 )
             ),
-            modelSignal: CardHedgeModelSignal(
+            modelSignal: LiveMarketModelSignal(
                 lean: "sell",
                 deltaPct: 72,
                 expectation: 262,

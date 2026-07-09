@@ -11,10 +11,20 @@ struct MainAppView: View {
     @StateObject private var dailyIQService = DailyIQService.shared
     @StateObject private var sessionViewModel = AppSessionViewModel()
     @EnvironmentObject private var appState: AppState
+    /// CF-BACK-NAV-FIX (2026-07-06): captures the most-recent valid
+    /// `AuthSession` seen. If `authService.session` briefly flips to
+    /// nil (transient re-init, notification bounce, etc.), we continue
+    /// rendering `AppTabShellView` against the last-known session so
+    /// SwiftUI doesn't swap the Group branch to `AuthView` and back —
+    /// which would recreate the whole tab shell, resetting
+    /// `selectedTab` to `.dashboard` and reading as "back went to
+    /// dashboard". Cleared only on explicit sign-out (i.e. when
+    /// `isLoggedIn` also flips false in `.onChange` below).
+    @State private var lastKnownSession: AuthSession?
 
     var body: some View {
         Group {
-            if authService.isLoggedIn, let session = authService.session {
+            if let session = authService.session ?? lastKnownSession, authService.isLoggedIn || lastKnownSession != nil {
                 AppTabShellView(
                     session: session,
                     dailyIQService: dailyIQService,
@@ -24,6 +34,22 @@ struct MainAppView: View {
             } else {
                 AuthView()
                     .preferredColorScheme(.dark)
+            }
+        }
+        .onChange(of: authService.session) { _, newValue in
+            if let newValue {
+                lastKnownSession = newValue
+            }
+        }
+        .onChange(of: authService.isLoggedIn) { _, newValue in
+            if !newValue {
+                // User explicitly signed out — release the latch.
+                lastKnownSession = nil
+            }
+        }
+        .onAppear {
+            if let session = authService.session {
+                lastKnownSession = session
             }
         }
     }
@@ -45,25 +71,58 @@ private struct AppTabShellView: View {
     @State private var isKeyboardVisible = false
     @State private var syncService: PortfolioSyncService?
 
+    /// Approximate height of `LegacyTabBar` including its inner padding
+    /// + the outer `.padding(.top, 8)` and `.padding(.bottom, 2)`. Used
+    /// as bottom padding on `tabContent` so pushed pages don't render
+    /// underneath the overlay tab bar.
+    private static let tabBarReserve: CGFloat = 76
+
     var body: some View {
-        ZStack {
+        // CF-PERSISTENT-TAB-BAR (2026-07-04): the tab bar was applied as
+        // a bottom safeAreaInset on `tabContent`, but iOS 17's
+        // NavigationStack sometimes shadows the injected safe area when
+        // it pushes a view with its own nav bar. Now rendered as an
+        // overlay in the outer ZStack. Tab content reserves space via
+        // bottom padding.
+        // CF-NAV-STACK-STABILITY (2026-07-04): keep LegacyTabBar ALWAYS
+        // in the ZStack (hide via opacity/offset instead of an `if`
+        // branch). Adding/removing a sibling was causing the ZStack to
+        // re-render `tabContent`, which reset every tab's
+        // NavigationStack push state — back button appeared to jump
+        // straight to the tab root (feeling like "goes to Home
+        // Screen"). Fixed bottom padding keeps layout stable too.
+        ZStack(alignment: .bottom) {
             HobbyIQBackground()
 
+            // CF-KEYBOARD-GAP-FIX (2026-07-04): drop the tab-bar
+            // reserve padding when the keyboard is up — otherwise a
+            // 76pt blank strip shows between the last content and the
+            // top of the keyboard's predictive-text bar. The tab bar
+            // itself is already hidden via opacity/offset, so the
+            // padding has no purpose while the keyboard covers the
+            // bottom. Padding change is a modifier tweak (not a
+            // sibling add/remove), so NavigationStack push state is
+            // preserved.
             tabContent
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !isKeyboardVisible {
-                        LegacyTabBar(selectedTab: $selectedTab)
-                            .padding(.top, 8)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
+                .padding(.bottom, isKeyboardVisible ? 0 : Self.tabBarReserve)
+
+            LegacyTabBar(selectedTab: $selectedTab)
+                .padding(.top, 8)
                 .padding(.bottom, 2)
-                .animation(.easeInOut(duration: 0.25), value: isKeyboardVisible)
+                .opacity(isKeyboardVisible ? 0 : 1)
+                .offset(y: isKeyboardVisible ? Self.tabBarReserve : 0)
+                .allowsHitTesting(!isKeyboardVisible)
         }
+        .animation(.easeInOut(duration: 0.25), value: isKeyboardVisible)
         .preferredColorScheme(.dark)
         .environmentObject(sessionViewModel)
         .task(id: session.id) {
-            selectedTab = .dashboard
+            // CF-BACK-NAV-FIX (2026-07-06): intentionally no
+            // `selectedTab = .dashboard` reset here — if session.id
+            // genuinely changes, `AppTabShellView` re-inits and
+            // `@State selectedTab` already defaults to `.dashboard`
+            // on the fresh instance. Resetting explicitly caused
+            // spurious tab flips when SwiftUI re-fired the task.
             applyPendingOAuthCallbackIfNeeded()
 
             // Initialize sync service and trigger initial sync
@@ -113,14 +172,28 @@ private struct AppTabShellView: View {
             .allowsHitTesting(selectedTab == .dashboard)
 
             if visitedTabs.contains(.daily) {
-                DailyIQView(userId: session.userId, service: dailyIQService)
-                    .opacity(selectedTab == .daily ? 1 : 0)
-                    .allowsHitTesting(selectedTab == .daily)
+                // CF-DAILYIQ-NAV-STACK (2026-07-02): wrap DailyIQ in its own
+                // NavigationStack so any pushed drill-down (e.g. owned-cards
+                // sheet routed as a push, future player detail) has a stack
+                // to push into. Every other tab already gets this treatment;
+                // DailyIQ was the lone exception and any push from it would
+                // silently drop the pushed screen + tab bar.
+                NavigationStack {
+                    DailyIQView(userId: session.userId, service: dailyIQService)
+                }
+                .opacity(selectedTab == .daily ? 1 : 0)
+                .allowsHitTesting(selectedTab == .daily)
             }
 
             if visitedTabs.contains(.comp) {
                 NavigationStack {
-                    CompIQView()
+                    // CF-COMPIQ-BACK-ROUTE (2026-07-02): CompIQ is a tab root
+                    // reached from Dashboard's quick-access card, not from a
+                    // push/modal. Wire the Back button to switch selectedTab
+                    // back to Dashboard so it matches "back = previous
+                    // screen" instead of no-op'ing dismiss() on the stack
+                    // root (which was the crash the user hit).
+                    CompIQView(onBack: { selectedTab = .dashboard })
                 }
                 .opacity(selectedTab == .comp ? 1 : 0)
                 .allowsHitTesting(selectedTab == .comp)

@@ -113,17 +113,23 @@ struct CardSearchView: View {
     private func candidateCard(_ c: SearchCandidate) -> some View {
         HStack(alignment: .top, spacing: 12) {
             if let imageUrl = c.imageUrl, let url = URL(string: imageUrl) {
+                // CF-CANDIDATE-THUMB-CARD-ASPECT (2026-07-05): fixed
+                // card-aspect (45x63) container with `.scaledToFit()`
+                // + `.scaleEffect(0.85)` inside — matches the comp
+                // card hero treatment so a non-cropped raw image
+                // letterboxes cleanly instead of squashing to a
+                // maxWidth-derived height.
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
-                        image.resizable().scaledToFill()
+                        image.resizable().scaledToFit().scaleEffect(0.85)
                     default:
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.white.opacity(0.05))
                     }
                 }
-                .frame(width: 56, height: 78)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 45, height: 63)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
 
             VStack(alignment: .leading, spacing: 4) {

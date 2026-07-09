@@ -305,7 +305,8 @@ struct PriceAlertsView: View {
             .padding(.bottom, Theme.Spacing.large)
         }
         .task { await loadAlerts() }
-        .sheet(isPresented: $showCreateSheet) {
+        // CF-PAGES-NOT-SHEETS (2026-07-04): create-alert now pushes.
+        .navigationDestination(isPresented: $showCreateSheet) {
             CreatePriceAlertSheet { await loadAlerts() }
         }
     }
@@ -351,7 +352,7 @@ private struct PriceAlertRow: View {
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
                 if let threshold = alert.threshold {
-                    Text("Target: \(threshold.formatted(.currency(code: "USD")))")
+                    Text("Target: \(threshold.formatted(.currency(code: "USD").precision(.fractionLength(0))))")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.Colors.accent)
                 }
@@ -554,7 +555,8 @@ struct AdvancedRulesView: View {
             PaywallView(sessionViewModel: sessionViewModel)
         }
         .task { await loadRules() }
-        .sheet(isPresented: $showCreateSheet) {
+        // CF-PAGES-NOT-SHEETS (2026-07-04): create-rule now pushes.
+        .navigationDestination(isPresented: $showCreateSheet) {
             CreateAdvancedRuleSheet { await loadRules() }
         }
     }

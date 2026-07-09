@@ -110,25 +110,26 @@ struct CardIdentifyView: View {
             hasUploadedInitialImage = true
             await uploadAndIdentify(initialImage)
         }
-        .sheet(item: $selectedDetection) { detection in
+        // CF-PAGES-NOT-SHEETS (2026-07-04): identified card now pushes
+        // as a page onto the parent's NavigationStack (bottom tab bar
+        // stays visible, swipe-back works, native back button).
+        .navigationDestination(item: $selectedDetection) { detection in
             if let card = detection.card {
-                NavigationStack {
-                    CompIQPricedCardView(
-                        hit: CompIQVariantHit(
-                            cardId: card.id,
-                            player: card.name,
-                            set: card.setName,
-                            year: card.year.flatMap { Int($0) },
-                            number: card.number,
-                            variant: card.parallel?.name,
-                            title: nil,
-                            displayLabel: [card.year, card.setName, card.name, card.number, card.parallel?.name]
-                                .compactMap { $0 }
-                                .joined(separator: " "),
-                            imageUrl: nil
-                        )
+                CompIQPricedCardView(
+                    hit: CompIQVariantHit(
+                        cardId: card.id,
+                        player: card.name,
+                        set: card.setName,
+                        year: card.year.flatMap { Int($0) },
+                        number: card.number,
+                        variant: card.parallel?.name,
+                        title: nil,
+                        displayLabel: [card.year, card.setName, card.name, card.number, card.parallel?.name]
+                            .compactMap { $0 }
+                            .joined(separator: " "),
+                        imageUrl: nil
                     )
-                }
+                )
                 .environmentObject(sessionViewModel)
             }
         }

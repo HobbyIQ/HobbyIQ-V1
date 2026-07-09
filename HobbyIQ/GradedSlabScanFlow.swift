@@ -54,7 +54,7 @@ struct GradedSlabReading: Identifiable, Equatable {
     /// and available to future flow-overhaul CFs that want to skip
     /// CertResolveView entirely.
     var rawLines: [String]
-    /// CF-COMPIQ-SCAN-ROUTE (2026-06-30): resolved CardHedge catalog id
+    /// CF-COMPIQ-SCAN-ROUTE (2026-06-30): resolved LiveMarket catalog id
     /// when `/scan` matched a card with confidence. Not consumed by the
     /// current downstream routing — reserved for a follow-up CF that
     /// short-circuits directly to `/price-by-id`.
@@ -310,6 +310,11 @@ private struct GradedSlabResultView: View {
                 VStack(spacing: HobbyIQTheme.Spacing.large) {
                     heroCard
 
+                    // CF-CERT-LOOKUP-ENTRY (2026-07-04, backend batch §2):
+                    // shortcut into the cert-number-only flow when the
+                    // user already knows the cert and doesn't need OCR.
+                    certLookupEntry
+
                     if cameraDenied {
                         cameraDeniedBanner
                     }
@@ -419,6 +424,32 @@ private struct GradedSlabResultView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.xLarge, style: .continuous))
         .shadow(color: HobbyIQTheme.Colors.electricBlue.opacity(0.18), radius: 18, x: 0, y: 10)
+    }
+
+    private var certLookupEntry: some View {
+        NavigationLink(destination: SlabCertLookupView().environmentObject(sessionViewModel)) {
+            HStack(spacing: 8) {
+                Image(systemName: "textformat.123")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                Text("Have a cert # instead?")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+            .background(HobbyIQTheme.Colors.cardNavy.opacity(0.6))
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.electricBlue.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.medium, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Camera-denied banner

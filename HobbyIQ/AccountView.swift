@@ -22,6 +22,12 @@ struct AccountView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     profileCard
+                    // CF-NEW-RELEASES-ENTRY (2026-07-04, backend batch §3):
+                    // "New Releases" catalog-additions feed placed directly
+                    // under the main profile/account tile so it reads as
+                    // the primary "browse" affordance from the account
+                    // screen.
+                    newReleasesRow
                     usernameRow
                     membershipCard
                     settingsSection
@@ -60,6 +66,45 @@ struct AccountView: View {
             .toolbarBackground(HobbyIQTheme.Colors.cardNavy, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
         }
+    }
+
+    // MARK: - New Releases entry
+
+    private var newReleasesRow: some View {
+        NavigationLink {
+            NewReleasesView()
+                .environmentObject(sessionViewModel)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue)
+                    .frame(width: 40, height: 40)
+                    .background(HobbyIQTheme.Colors.electricBlue.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("New Releases")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    Text("Latest catalog additions across every sport")
+                        .font(.caption)
+                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.electricBlue.opacity(0.7))
+            }
+            .padding(HobbyIQTheme.Spacing.medium)
+            .background(HobbyIQTheme.Colors.cardNavy)
+            .overlay(
+                RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous)
+                    .stroke(HobbyIQTheme.Colors.steelGray.opacity(0.4), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: HobbyIQTheme.Radius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Profile Card

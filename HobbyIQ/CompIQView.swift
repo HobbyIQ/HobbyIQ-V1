@@ -17,10 +17,24 @@ struct CompIQView: View {
     @State private var navigateToCardSearch = false
     @State private var showBulkEstimate = false
 
+    /// CF-COMPIQ-BACK-ROUTE (2026-07-02): CompIQ is a tab root (not a
+    /// pushed/modal view), so `dismiss()` from here has no presenter to
+    /// pop and previously crashed / no-op'd on tap. The shell now passes
+    /// an `onBack` closure that flips `selectedTab` back to Dashboard —
+    /// matching the user's mental model of "I opened CompIQ from
+    /// Dashboard, Back returns to Dashboard." Optional so preview /
+    /// standalone use falls back to `dismiss()`.
+    private let onBack: (() -> Void)?
+
     @MainActor
-    init(initialQuery: String? = nil, viewModel: CompIQViewModel? = nil) {
+    init(
+        initialQuery: String? = nil,
+        viewModel: CompIQViewModel? = nil,
+        onBack: (() -> Void)? = nil
+    ) {
         self.initialQuery = initialQuery
         self._viewModel = StateObject(wrappedValue: viewModel ?? CompIQViewModel.shared)
+        self.onBack = onBack
     }
 
     var body: some View {
@@ -40,7 +54,11 @@ struct CompIQView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
-                    dismiss()
+                    if let onBack {
+                        onBack()
+                    } else {
+                        dismiss()
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
@@ -66,7 +84,7 @@ struct CompIQView: View {
             CardSearchView()
                 .environmentObject(sessionViewModel)
         }
-        .sheet(isPresented: $showBulkEstimate) {
+        .navigationDestination(isPresented: $showBulkEstimate) {
             BulkEstimateView()
                 .environmentObject(sessionViewModel)
         }
@@ -429,8 +447,8 @@ struct CompIQView: View {
             }
 
             HStack(spacing: 12) {
-                statPill(title: "Low", value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.successGreen)
-                statPill(title: "High", value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.danger)
+                statPill(title: "Low", value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: "High", value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.danger)
             }
 
             Text(result.summary)
@@ -451,9 +469,9 @@ struct CompIQView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader(title: "HobbyIQ Zones", subtitle: "Quick buy / hold / sell guide rails.")
             HStack(spacing: 12) {
-                statPill(title: Labels.buyZone, value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.successGreen)
+                statPill(title: Labels.buyZone, value: result.lowValue > 0 ? result.lowValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.successGreen)
                 statPill(title: "Fair", value: result.formattedFairValue, tint: HobbyIQTheme.Colors.electricBlue)
-                statPill(title: Labels.sellZone, value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD")) : "—", tint: HobbyIQTheme.Colors.danger)
+                statPill(title: Labels.sellZone, value: result.highValue > 0 ? result.highValue.formatted(.currency(code: "USD").precision(.fractionLength(0))) : "—", tint: HobbyIQTheme.Colors.danger)
             }
         }
         .padding(HobbyIQTheme.Spacing.medium)

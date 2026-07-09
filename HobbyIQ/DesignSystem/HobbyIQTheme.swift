@@ -816,12 +816,20 @@ struct HIQAppContainer<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                HobbyIQBackground()
-                content()
-            }
-            .navigationBarTitleDisplayMode(.inline)
+        // CF-BACK-NAV-FIX (2026-07-06): removed the outer NavigationStack.
+        // Each tab in MainAppView.tabContent already wraps itself in its
+        // own NavigationStack, so this container was creating a
+        // *double-nested* stack. When a tab-inner view (e.g. InventoryIQ)
+        // pushed a detail via `.navigationDestination`, the push landed
+        // on the outer stack instead of the tab's inner stack — hitting
+        // "back" popped all the way to the outer root, which visually
+        // read as "back went to Dashboard" because the outer root
+        // re-showed the initial tab-shell state (Dashboard, no push
+        // history). Auth screens (LaunchView/LoginView/PaywallView)
+        // don't rely on this outer stack, so removing it is safe.
+        ZStack {
+            HobbyIQBackground()
+            content()
         }
         .hiqAppStyle()
     }

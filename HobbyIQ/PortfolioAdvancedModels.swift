@@ -147,14 +147,17 @@ struct CardIdentifyResponse: Codable {
     let error: String?
 }
 
-struct CardIdentifyDetection: Codable, Identifiable {
+// CF-PAGES-NOT-SHEETS (2026-07-04): Hashable added throughout so
+// `CardIdentifyDetection` can be a value passed to
+// `.navigationDestination(item:)`.
+struct CardIdentifyDetection: Codable, Identifiable, Hashable {
     let confidence: String?
     let card: CardIdentifyCard?
     let grading: CardIdentifyGrading?
     var id: String { card?.id ?? UUID().uuidString }
 }
 
-struct CardIdentifyCard: Codable {
+struct CardIdentifyCard: Codable, Hashable {
     let id: String
     let segmentId: String?
     let releaseId: String?
@@ -168,13 +171,13 @@ struct CardIdentifyCard: Codable {
     let parallel: CardIdentifyParallel?
 }
 
-struct CardIdentifyParallel: Codable {
+struct CardIdentifyParallel: Codable, Hashable {
     let id: String?
     let name: String?
     let numberedTo: Int?
 }
 
-struct CardIdentifyGrading: Codable {
+struct CardIdentifyGrading: Codable, Hashable {
     let confidence: String?
     let company: CardIdentifyGradeCompany?
     let grade: CardIdentifyGradeValue?
@@ -182,18 +185,18 @@ struct CardIdentifyGrading: Codable {
     let autoGrade: CardIdentifyGradeValue?
 }
 
-struct CardIdentifyGradeCompany: Codable {
+struct CardIdentifyGradeCompany: Codable, Hashable {
     let id: String?
     let name: String?
 }
 
-struct CardIdentifyGradeValue: Codable {
+struct CardIdentifyGradeValue: Codable, Hashable {
     let id: String?
     let value: String?
     let condition: String?
 }
 
-struct CardIdentifyQualifier: Codable {
+struct CardIdentifyQualifier: Codable, Hashable {
     let id: String?
     let code: String?
 }

@@ -27,7 +27,8 @@ struct AddPortfolioCardView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .topLeading) {
+            HobbyIQBackground()
             ScrollView(showsIndicators: false) {
                 VStack(spacing: HobbyIQTheme.Spacing.medium) {
                     headerCard
@@ -51,36 +52,40 @@ struct AddPortfolioCardView: View {
                     saveButton
                 }
                 .padding(.horizontal, HobbyIQTheme.Spacing.screenPadding)
-                .padding(.top, 8)
+                .padding(.top, 48)
                 .padding(.bottom, HobbyIQTheme.Spacing.xLarge)
             }
-            .background(HobbyIQBackground())
             .scrollDismissesKeyboard(.interactively)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Cancel")
-                                .font(.subheadline.weight(.medium))
-                        }
-                        .foregroundStyle(HobbyIQTheme.Colors.mutedText)
-                    }
-                    .buttonStyle(.plain)
-                }
 
-                ToolbarItem(placement: .principal) {
-                    Text(viewModel.mode.title)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
-                }
+            // CF-ADDCARD-FLOATING-BACK (2026-07-06): the parent
+            // InventoryIQView applies `.toolbar(.hidden, for:
+            // .navigationBar)` which in iOS 17 propagates down to
+            // pushed views in the same NavigationStack — the system
+            // back button never appeared on this view, so users
+            // trying to cancel had no reliable back control (tapping
+            // the Dashboard tab in the tab bar looked like the
+            // nearest escape hatch, which switched tabs instead).
+            // Floating chevron matches the pattern used on the comp
+            // card + holding detail views.
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(HobbyIQTheme.Colors.pureWhite)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(HobbyIQTheme.Colors.cardNavy.opacity(0.9)))
+                    .overlay(Circle().stroke(HobbyIQTheme.Colors.steelGray.opacity(0.5), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
             }
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .buttonStyle(.plain)
+            .padding(.top, 8)
+            .padding(.leading, 12)
+            .accessibilityLabel("Back")
+            .zIndex(11)
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Header Card
@@ -154,7 +159,7 @@ struct AddPortfolioCardView: View {
                 statusChip(icon: "exclamationmark.triangle.fill", text: msg, tint: HobbyIQTheme.Colors.warning)
             }
         }
-        .hiqCard()
+        .addCardTileCard()
     }
 
     // MARK: - Search Section
@@ -174,7 +179,7 @@ struct AddPortfolioCardView: View {
                 pricingRow(for: estimate)
             }
         }
-        .hiqCard()
+        .addCardTileCard()
     }
 
     // MARK: - Photos
@@ -211,7 +216,7 @@ struct AddPortfolioCardView: View {
                 successBanner(message: photoMessage)
             }
         }
-        .hiqCard()
+        .addCardTileCard()
         .alert(
             "Front Photo Source",
             isPresented: $showingFrontPhotoSources
@@ -347,7 +352,7 @@ struct AddPortfolioCardView: View {
             }
             .tint(HobbyIQTheme.Colors.electricBlue)
         }
-        .hiqCard()
+        .addCardTileCard()
     }
 
     // MARK: - Purchase
@@ -360,7 +365,7 @@ struct AddPortfolioCardView: View {
             themedFormField("Current Value", text: $viewModel.currentValue, keyboard: .decimalPad)
             themedFormField("Purchase Location", text: $viewModel.purchaseLocation)
         }
-        .hiqCard()
+        .addCardTileCard()
     }
 
     // MARK: - More Details
@@ -430,7 +435,7 @@ struct AddPortfolioCardView: View {
                 .padding(.top, 14)
             }
         }
-        .hiqCard()
+        .addCardTileCard()
     }
 
     // MARK: - Save Button
@@ -789,7 +794,14 @@ struct AddPortfolioCardView: View {
 // MARK: - Card Modifier
 
 private extension View {
-    func hiqCard() -> some View {
+    /// CF-DAILYIQ-VISUAL-REFRESH (2026-07-07): renamed from `hiqCard()`
+    /// to avoid colliding with the shared modifier now living in
+    /// `DesignSystem/HIQCardStyles.swift`. Kept as a file-private
+    /// variant because this page uses a lighter steelGray stroke
+    /// (1.2pt) instead of the dashboardStroke gradient (2.0pt) — the
+    /// Add Card flow was designed to read as calmer inputs, not
+    /// signature tiles.
+    func addCardTileCard() -> some View {
         self
             .padding(HobbyIQTheme.Spacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
