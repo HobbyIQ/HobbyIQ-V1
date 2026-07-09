@@ -3490,27 +3490,68 @@ router.post("/lookup-by-cert", requireSession, requireRateLimited("priceChecksPe
       });
     }
 
+    // CF-CERT-LOOKUP-DISPLAY-HYGIENE (2026-07-08, Drew: "cert search
+    // didn't resolve, looks broken"). Three fixes to what iOS renders:
+    //
+    // 1) Normalize grader to uppercase (CH returns lowercase in cert_info
+    //    even when we sent "PSA" — iOS decoders that switch on the exact
+    //    string were seeing "psa" and misrouting).
+    // 2) Sanitize description when it clearly names a DIFFERENT player than
+    //    the resolved player field. CH's cert-lookup response has a known
+    //    data-quality bug where description begins with a nearby-checklist
+    //    player's name (e.g. Conrad CPA-EC cert returned description
+    //    "Gavin Fien 2025 Bowman Draft Chrome Prospect Autographs Baseball"
+    //    even though player: "Ethan Conrad" was correct). Users saw the
+    //    wrong player in the app and concluded the lookup was broken.
+    // 3) Coerce price to number and safely emit date/saleType/title
+    //    (CH sometimes returns only `price` for older cert-linked sales).
+    const graderUC = (certInfo.grader ?? graderNorm).toUpperCase();
+    const playerName = card.player?.trim() ?? null;
+    const rawDescription = card.description?.trim() ?? null;
+    const descriptionMentionsPlayer =
+      !!playerName && !!rawDescription &&
+      rawDescription.toLowerCase().includes(playerName.toLowerCase());
+    const cardYear = (card as { year?: number | string | null | undefined }).year;
+    const safeDescription = descriptionMentionsPlayer
+      ? rawDescription
+      : [playerName, cardYear, card.set, card.number, card.variant]
+          .filter((p) => p != null && String(p).trim().length > 0)
+          .map((p) => String(p).trim())
+          .join(" ") || null;
+
     res.json({
       success: true,
       cert: certInfo.cert,
-      grader: certInfo.grader,
+      grader: graderUC,
       grade: certInfo.grade,
       card: {
         cardId: card.card_id,
-        description: card.description ?? null,
-        player: card.player ?? null,
+        description: safeDescription,
+        player: playerName,
         set: card.set ?? null,
         number: card.number ?? null,
         variant: card.variant ?? null,
         imageUrl: card.image ?? null,
+        // Explicit flag surfaces the sanitize path so iOS + ops can
+        // detect stripped CH descriptions in telemetry.
+        descriptionRebuilt: !descriptionMentionsPlayer,
       },
       referencePrice: fmvResult?.fmv?.price ?? null,
-      prices: (pricesResult?.prices ?? []).map((p) => ({
-        price: p.price,
-        date: p.date,
-        saleType: p.sale_type,
-        title: p.title,
-      })),
+      prices: (pricesResult?.prices ?? []).map((p) => {
+        const rawPrice = (p as { price?: string | number }).price;
+        const priceNum =
+          typeof rawPrice === "number"
+            ? rawPrice
+            : typeof rawPrice === "string" && Number.isFinite(parseFloat(rawPrice))
+              ? Math.round(parseFloat(rawPrice) * 100) / 100
+              : null;
+        return {
+          price: priceNum,
+          date: (p as { date?: string | null }).date ?? null,
+          saleType: (p as { sale_type?: string | null }).sale_type ?? null,
+          title: (p as { title?: string | null }).title ?? null,
+        };
+      }),
       matchConfidence,
       windowDays: daysNorm,
     });
