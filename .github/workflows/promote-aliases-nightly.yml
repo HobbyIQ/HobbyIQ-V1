@@ -1,0 +1,122 @@
+name: Nightly promote learned aliases
+
+# Runs the promote-learned-aliases aggregation job once per day around
+# 2:30-3:30 AM America/New_York — deliberately BEFORE the 5 AM Daily
+# Refresh & Deploy so any new alias entries are already in Cosmos when
+# the App Service restarts and warms its in-memory alias index.
+#
+# Two UTC crons + an ET gate so we hit the correct wall-clock hour in
+# both EDT and EST, matching the daily-refresh pattern.
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # 06:30 UTC = 02:30 EDT
+    - cron: '30 7 * * *'   # 07:30 UTC = 02:30 EST
+  workflow_dispatch:       # manual runs from the Actions tab
+
+jobs:
+  promote-aliases:
+    name: Promote learned aliases from search_selections → search_aliases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Run only at 02:00-04:00 America/New_York
+        id: et-gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — skipping ET-hour gate."
+            exit 0
+          fi
+          ET_HOUR=$(TZ=America/New_York date +%H)
+          # 10# strips leading zeros so bash treats "02" as decimal, not octal.
+          if [ "$((10#$ET_HOUR))" -ge 2 ] && [ "$((10#$ET_HOUR))" -le 4 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (within 02-04 window); continuing."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Current ET hour is $ET_HOUR (outside 02-04 window); skipping this UTC trigger."
+          fi
+
+      - name: Setup Node.js 24
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm ci
+
+      - name: Build backend
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm run build
+
+      # Same OIDC auth path as daily-refresh.yml so we can call `az` without
+      # a stored service-principal secret.
+      - name: Login to Azure
+        if: steps.et-gate.outputs.should_run == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      # Fetch the primary connection string directly from the Cosmos account
+      # rather than reading App Service settings — avoids a chicken-and-egg
+      # dependency where a bad App Service value would break the aggregation.
+      # Never echoed to logs.
+      - name: Fetch Cosmos connection string
+        if: steps.et-gate.outputs.should_run == 'true'
+        id: cosmos
+        shell: bash
+        run: |
+          CONN=$(az cosmosdb keys list \
+            --name hobbyiq-comps \
+            --resource-group rg-hobbyiq-dev \
+            --type connection-strings \
+            --query "connectionStrings[?description=='Primary SQL Connection String'].connectionString | [0]" \
+            -o tsv)
+          if [ -z "$CONN" ]; then
+            echo "FAILED to fetch Cosmos connection string" >&2
+            exit 1
+          fi
+          echo "COSMOS_CONNECTION_STRING=$CONN" >> "$GITHUB_ENV"
+          echo "conn_length=${#CONN}" >> "$GITHUB_OUTPUT"
+          # Confirm we got a plausible connection string without echoing it.
+          echo "Cosmos connection string fetched (length: ${#CONN})"
+
+      - name: Run promote-learned-aliases
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        env:
+          # Rate at which a (query, resolvedPlayer) pair must be observed
+          # across distinct users before it promotes. Conservative default;
+          # tightens over time as launch traffic grows.
+          MIN_DISTINCT_USERS: '10'
+          LOOKBACK_DAYS: '90'
+        run: node scripts/promote-learned-aliases.cjs
+
+      # Optional: log-only diagnostic re-run with a bigger lookback so the
+      # actions summary shows what WOULD have promoted at a lower bar. Never
+      # writes — --dry-run is safe. Skipped on non-scheduled dispatches to
+      # keep the manual UX fast.
+      - name: Dry-run diagnostic at lower threshold (schedule-only)
+        if: steps.et-gate.outputs.should_run == 'true' && github.event_name == 'schedule'
+        working-directory: backend
+        env:
+          MIN_DISTINCT_USERS: '3'
+          LOOKBACK_DAYS: '90'
+        run: node scripts/promote-learned-aliases.cjs --dry-run || true

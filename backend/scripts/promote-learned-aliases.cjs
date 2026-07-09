@@ -32,6 +32,7 @@
  */
 
 const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -41,8 +42,8 @@ async function main() {
 
   let findPromotableQueryPairs, upsertAlias;
   try {
-    ({ findPromotableQueryPairs } = await import(distSel));
-    ({ upsertAlias } = await import(distAliases));
+    ({ findPromotableQueryPairs } = await import(pathToFileURL(distSel).href));
+    ({ upsertAlias } = await import(pathToFileURL(distAliases).href));
   } catch (err) {
     console.error("Cannot find dist output. Build with `npm run build` or invoke via tsx.");
     console.error(err.message);
