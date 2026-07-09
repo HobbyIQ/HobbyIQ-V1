@@ -7,8 +7,15 @@
 // totalProfitLossPct fresh so the InventoryIQ dashboard always shows current
 // profit & loss without the user having to manually refresh.
 //
-// First run fires PORTFOLIO_REPRICE_FIRST_DELAY_MS after startup (default 5 min)
-// so the API can finish warming up before we hammer the pricing engine.
+// First run timing:
+//   - Default: PORTFOLIO_REPRICE_FIRST_DELAY_MS after startup (default 5 min)
+//     so the API can finish warming up before we hammer the pricing engine.
+//   - Wall-clock aligned: if PORTFOLIO_REPRICE_ALIGN_HOUR_UTC is set (0-23),
+//     the first run fires at the next occurrence of HH:00 UTC. With the
+//     default 6h interval and align=09 (5am ET), the cycle lands at
+//     5am / 11am / 5pm / 11pm ET — the 5am fire is the pre-market warm so
+//     users open the app to fresh currentValue / fairMarketValue without
+//     tapping refresh.
 //
 // Disable with PORTFOLIO_REPRICE_DISABLE_SCHEDULER=true.
 
@@ -284,6 +291,33 @@ export async function runPortfolioRepriceJob(): Promise<RepriceJobSummary> {
   return summary;
 }
 
+/**
+ * Compute the delay (ms) until the next occurrence of `alignHourUtc:00:00`
+ * from `nowMs`. If we're currently AT that hour with <60s of drift, we still
+ * schedule for the next occurrence (avoids a same-boot double-fire when
+ * startup happens to land on the target minute).
+ *
+ * Exported for tests.
+ */
+export function computeAlignedFirstDelayMs(nowMs: number, alignHourUtc: number): number {
+  const now = new Date(nowMs);
+  const target = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+    alignHourUtc,
+    0,
+    0,
+    0,
+  ));
+  let delta = target.getTime() - nowMs;
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  if (delta <= 60 * 1000) {
+    delta += ONE_DAY_MS;
+  }
+  return delta;
+}
+
 export function startPortfolioRepriceJob(): void {
   if (process.env.PORTFOLIO_REPRICE_DISABLE_SCHEDULER === "true") {
     console.log("[portfolio.reprice.job] scheduler disabled via PORTFOLIO_REPRICE_DISABLE_SCHEDULER");
@@ -296,13 +330,31 @@ export function startPortfolioRepriceJob(): void {
 
   const hours = Number(process.env.PORTFOLIO_REPRICE_INTERVAL_HOURS ?? DEFAULT_INTERVAL_HOURS);
   const intervalMs = Math.max(15 * 60 * 1000, hours * 60 * 60 * 1000); // floor at 15 min
-  const firstDelayMs = Math.max(
-    0,
-    Number(process.env.PORTFOLIO_REPRICE_FIRST_DELAY_MS ?? DEFAULT_FIRST_DELAY_MS),
-  );
+
+  const alignHourRaw = process.env.PORTFOLIO_REPRICE_ALIGN_HOUR_UTC;
+  const alignHour = alignHourRaw != null ? Number(alignHourRaw) : NaN;
+  const alignHourValid = Number.isInteger(alignHour) && alignHour >= 0 && alignHour <= 23;
+
+  let firstDelayMs: number;
+  let scheduleNote: string;
+  if (alignHourValid) {
+    firstDelayMs = computeAlignedFirstDelayMs(Date.now(), alignHour);
+    scheduleNote = `aligned to ${String(alignHour).padStart(2, "0")}:00 UTC`;
+  } else {
+    if (alignHourRaw != null) {
+      console.warn(
+        `[portfolio.reprice.job] ignoring invalid PORTFOLIO_REPRICE_ALIGN_HOUR_UTC=${alignHourRaw} (must be 0-23)`,
+      );
+    }
+    firstDelayMs = Math.max(
+      0,
+      Number(process.env.PORTFOLIO_REPRICE_FIRST_DELAY_MS ?? DEFAULT_FIRST_DELAY_MS),
+    );
+    scheduleNote = "startup-delay";
+  }
 
   console.log(
-    `[portfolio.reprice.job] scheduling first run in ${Math.round(firstDelayMs / 1000)}s, ` +
+    `[portfolio.reprice.job] scheduling first run in ${Math.round(firstDelayMs / 1000)}s (${scheduleNote}), ` +
       `then every ${(intervalMs / 1000 / 60 / 60).toFixed(2)}h`,
   );
 
