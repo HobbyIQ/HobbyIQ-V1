@@ -35,9 +35,9 @@ describe("CF-PARALLEL-PREMIUM-FLOOR — inferPrintRun", () => {
   // CF-PADPARADSCHA-SHIMMER-FANIMATION (2026-07-09, Drew): add print-run
   // mappings for the exotic parallels that previously fell through with
   // no floor (parallelMultiplier=1 in production traces).
-  it("recognizes Padparadscha (Sapphire /75 tier)", () => {
-    expect(inferPrintRun("Padparadscha")).toBe(75);
-    expect(inferPrintRun("Padparadscha Sapphire")).toBe(75);
+  it("recognizes Padparadscha as 1/1 (Drew correction 2026-07-09)", () => {
+    expect(inferPrintRun("Padparadscha")).toBe(1);
+    expect(inferPrintRun("Padparadscha Sapphire")).toBe(1);
   });
 
   it("recognizes Fanimation as /5 tier", () => {

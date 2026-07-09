@@ -111,7 +111,7 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // Padparadscha showed parallelMultiplier=1 pre-fix because
   // "padparadscha sapphire" didn't match any print-run rule and fell
   // through to no-floor). Print runs per hobby convention:
-  //   Padparadscha Sapphire     /75  (Sapphire product parallel tier)
+  //   Padparadscha Sapphire     /1   (1/1 — Drew correction 2026-07-09)
   //   Bowman Fanimation         /5   (retail-exclusive; matches Red family)
   //   Red Shimmer Refractor     /5
   //   Gold Shimmer Refractor    /50
@@ -123,7 +123,7 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // not the generic /50-ish Shimmer fallback), then bare "Shimmer
   // Refractor" catch-all at /50 (safe middle ground for uncalibrated
   // shimmer variants CH may index).
-  { match: (n) => n.includes("padparadscha"), printRun: 75 },
+  { match: (n) => n.includes("padparadscha"), printRun: 1 },
   { match: (n) => n.includes("fanimation"), printRun: 5 },
   { match: (n) => n.includes("red shimmer"), printRun: 5 },
   { match: (n) => n.includes("gold shimmer"), printRun: 50 },
