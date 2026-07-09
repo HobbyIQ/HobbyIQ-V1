@@ -3600,7 +3600,10 @@ export async function computeEstimate(
     // defensible number even when no siblings exist in the requested
     // product. Falls through to sibling rescue when the family doesn't
     // match or the parent-product comps come back empty.
-    const familyGap = detectProductFamily(queryContext.product ?? null);
+    const familyGap = detectProductFamily(
+      queryContext.product ?? null,
+      queryContext.parallel ?? null,
+    );
     if (
       familyGap &&
       typeof queryContext.playerName === "string" &&
@@ -3622,8 +3625,12 @@ export async function computeEstimate(
         if (parentRawPrices.length > 0) {
           const parentBaseMedian =
             parentRawPrices[Math.floor(parentRawPrices.length / 2)];
+          // When the family was detected via the parallel field ("Black
+          // Sapphire"), use effectiveParallel ("Black") for print-run
+          // inference so we get the /10 tier instead of a no-match.
           const parallelName =
-            typeof queryContext.parallel === "string" ? queryContext.parallel : "";
+            familyGap.effectiveParallel ??
+            (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
           const printRun = parallelName ? inferPrintRun(parallelName) : null;
           const parallelFloor =
             printRun !== null ? floorForPrintRun(printRun) : null;
