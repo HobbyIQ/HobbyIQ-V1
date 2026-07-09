@@ -171,6 +171,20 @@ export async function resolveCardsightGradeId(
   gradeValue: number | null | undefined,
   isAuto: boolean | null | undefined,
 ): Promise<string | null> {
+  // CF-CARDSIGHT-TAXONOMY-DISABLED-BY-DEFAULT (2026-07-08, Drew):
+  // Cardsight was decommissioned; the taxonomy API sits behind an
+  // IP-allowlisted key that may or may not still be provisioned. Every
+  // holding write was still calling this resolver — burning egress
+  // requests to an endpoint the app doesn't need. Gate behind an
+  // opt-in env flag so the default posture is "don't call at all".
+  //
+  // The existing null-return contract is preserved — callers already
+  // treat null as a valid state (see portfolioStore.service.ts:1360-63
+  // and CardsightGradesTaxonomy top-comment). Enabling the flag
+  // restores the prior behavior for anyone who still wants the FK.
+  if (process.env.CARDSIGHT_TAXONOMY_ENABLED !== "true") {
+    return null;
+  }
   if (typeof gradeCompany !== "string" || gradeCompany.trim().length === 0) {
     return null;
   }

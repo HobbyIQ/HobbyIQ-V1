@@ -70,6 +70,9 @@ function cardsightGradesRouter(url: string): Response | null {
 
 beforeEach(() => {
   process.env.CARDSIGHT_API_KEY = "test-key";
+  // CF-CARDSIGHT-TAXONOMY-DISABLED-BY-DEFAULT (2026-07-08): opt these
+  // round-trip tests in so the resolver actually fires.
+  process.env.CARDSIGHT_TAXONOMY_ENABLED = "true";
   __resetMemoryCacheForTest();
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();

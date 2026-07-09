@@ -117,6 +117,11 @@ function routeRequest(url: string): Response {
 
 beforeEach(() => {
   process.env.CARDSIGHT_API_KEY = "test-key";
+  // CF-CARDSIGHT-TAXONOMY-DISABLED-BY-DEFAULT (2026-07-08, Drew):
+  // resolver now short-circuits to null unless CARDSIGHT_TAXONOMY_ENABLED
+  // is "true". These tests exercise the RESOLVER'S internal logic and
+  // predate the default-off flag, so opt them in explicitly here.
+  process.env.CARDSIGHT_TAXONOMY_ENABLED = "true";
   // The taxonomy resolver wraps each fetch in cacheWrap with a 24h
   // TTL against shared/cache.service.ts's process-memory Map.
   // Without resetting, a successful resolution in test N caches the
