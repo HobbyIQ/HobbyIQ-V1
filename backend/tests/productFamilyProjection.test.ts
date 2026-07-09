@@ -59,3 +59,39 @@ describe("detectProductFamily — Sapphire family gap detection", () => {
     }
   });
 });
+
+describe("detectProductFamily — CF-FAMILY-VIA-PARALLEL fallback", () => {
+  // The query parser routes bare "Sapphire" to the parallel field, not
+  // product. These tests lock in the fallback branch that catches that.
+
+  it("detects Sapphire on the parallel field when product is neutral", () => {
+    const r = detectProductFamily("Bowman", "Sapphire");
+    expect(r).not.toBeNull();
+    expect(r!.familyName).toBe("Sapphire");
+    // effectiveParallel is empty ("Sapphire" stripped → nothing left),
+    // caller falls back to input parallel.
+    expect(r!.effectiveParallel).toBeNull();
+  });
+
+  it("detects Sapphire on 'Black Sapphire' parallel and strips it to 'Black'", () => {
+    const r = detectProductFamily("Bowman", "Black Sapphire");
+    expect(r).not.toBeNull();
+    expect(r!.familyName).toBe("Sapphire");
+    // Owen Carey Black Sapphire case: caller uses "Black" for the print-
+    // run inference so the /10 floor applies.
+    expect(r!.effectiveParallel).toBe("Black");
+  });
+
+  it("prefers the product signal when BOTH product and parallel carry the family", () => {
+    // product "2026 Bowman Sapphire" wins; parallel unchanged.
+    const r = detectProductFamily("2026 Bowman Sapphire", "Black");
+    expect(r).not.toBeNull();
+    expect(r!.parentProduct).toBe("2026 Bowman Chrome Prospects");
+    expect(r!.effectiveParallel).toBeNull();
+  });
+
+  it("returns null when neither product nor parallel matches a family", () => {
+    expect(detectProductFamily("Bowman Chrome", "Black")).toBeNull();
+    expect(detectProductFamily(null, "Refractor")).toBeNull();
+  });
+});

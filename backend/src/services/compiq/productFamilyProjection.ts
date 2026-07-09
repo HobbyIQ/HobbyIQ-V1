@@ -36,6 +36,16 @@ export interface ProductFamilyProjection {
   familyMultiplier: number;
   /** Short human-readable attribution — surfaces on the iOS card panel. */
   attribution: string;
+  /**
+   * CF-FAMILY-VIA-PARALLEL (2026-07-09): the parallel string with the
+   * family marker stripped, so downstream `inferPrintRun` gets a clean
+   * parallel to score. Example: parallel input "Black Sapphire" →
+   * effectiveParallel "Black" (which maps to /10 via existing rules).
+   * Null when the input parallel didn't carry the family marker (the
+   * family was detected via the product string alone) — in that case
+   * the caller uses the input parallel unchanged.
+   */
+  effectiveParallel: string | null;
 }
 
 interface FamilyRule {
@@ -90,30 +100,80 @@ const FAMILY_RULES: FamilyRule[] = [
 ];
 
 /**
- * Detect whether the parsed product string maps to a known family gap.
- * Returns null when no family rewrite applies (in which case the caller
- * should fall through to its normal catalog-miss handling).
+ * Detect whether the parsed query maps to a known product-family gap.
+ *
+ * CF-FAMILY-VIA-PARALLEL (2026-07-09, Drew — Owen Carey Black Sapphire):
+ * the query parser routes bare "Sapphire" to the parallel field, not the
+ * product field, so the initial ship of this function (product-only) never
+ * fired on "2026 bowman owen carey black sapphire". Accepts both signals
+ * and unions them: match the product first (more specific), fall back to
+ * the parallel. When the family marker lives on the parallel, strip it
+ * so downstream inferPrintRun scores the clean parallel token (e.g.
+ * "Black Sapphire" → effectiveParallel="Black" → /10 floor).
+ *
+ * Returns null when no family rewrite applies (caller falls through to
+ * its normal catalog-miss handling).
  */
 export function detectProductFamily(
   product: string | null | undefined,
+  parallel?: string | null | undefined,
 ): ProductFamilyProjection | null {
-  if (!product || typeof product !== "string") return null;
-  const trimmed = product.trim();
-  if (!trimmed) return null;
-  for (const rule of FAMILY_RULES) {
-    if (rule.match(trimmed)) {
-      const parentProduct = rule.rewrite(trimmed);
-      // Guard: reject rewrites that failed to actually change the product.
-      // Without this, an infinite-loop retry could happen if the same
-      // string kept matching the same rule.
-      if (parentProduct.toLowerCase() === trimmed.toLowerCase()) continue;
-      return {
-        familyName: rule.familyName,
-        parentProduct,
-        familyMultiplier: rule.multiplier,
-        attribution: rule.attribution,
-      };
+  const productStr =
+    typeof product === "string" ? product.trim() : "";
+  const parallelStr =
+    typeof parallel === "string" ? parallel.trim() : "";
+
+  // Prefer the product field — it's the more specific signal when both
+  // exist (e.g. product="2026 Bowman Sapphire" AND parallel="Black").
+  if (productStr) {
+    for (const rule of FAMILY_RULES) {
+      if (rule.match(productStr)) {
+        const parentProduct = rule.rewrite(productStr);
+        if (parentProduct.toLowerCase() === productStr.toLowerCase()) continue;
+        return {
+          familyName: rule.familyName,
+          parentProduct,
+          familyMultiplier: rule.multiplier,
+          attribution: rule.attribution,
+          effectiveParallel: null, // parallel unchanged
+        };
+      }
     }
   }
+
+  // Fall back to the parallel field — the "Black Sapphire" case where the
+  // parser routed "Sapphire" to parallel and left the product neutral.
+  if (parallelStr) {
+    for (const rule of FAMILY_RULES) {
+      if (rule.match(parallelStr)) {
+        // Rewrite as if the parallel WERE the product string. This
+        // reuses the rule's rewrite table for consistent parent-product
+        // resolution — "Black Sapphire" → "Black Chrome Prospects".
+        // We only care about the parent product; the caller falls back
+        // to a default like "Bowman Chrome Prospects" when the product
+        // string is bare.
+        const parentProduct =
+          productStr && !rule.match(productStr)
+            ? productStr.replace(/^\s*(19|20)\d{2}\s+/, "").trim() ||
+              "Chrome Prospects"
+            : rule.rewrite(parallelStr);
+        // Strip the family marker from the parallel so the caller's
+        // print-run inference scores the remaining tokens ("Black"
+        // instead of "Black Sapphire").
+        const effectiveParallel = parallelStr
+          .replace(/\bsapphire\b/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        return {
+          familyName: rule.familyName,
+          parentProduct: parentProduct || "Chrome Prospects",
+          familyMultiplier: rule.multiplier,
+          attribution: rule.attribution,
+          effectiveParallel: effectiveParallel || null,
+        };
+      }
+    }
+  }
+
   return null;
 }
