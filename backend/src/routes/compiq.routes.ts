@@ -1147,9 +1147,24 @@ function extractParallelTierKey(
 ): { year: number | string; set: string; variant: string } | null {
   if (!identity || typeof identity !== "object") return null;
   const rec = identity as Record<string, unknown>;
-  const year = rec.year;
+  let year = rec.year as number | string | null | undefined;
   const set = typeof rec.set === "string" ? rec.set.trim() : "";
   const variant = typeof rec.variant === "string" ? rec.variant.trim() : "";
+
+  // CF-YEAR-FALLBACK-FROM-SET (2026-07-08, Drew): CH's card-details
+  // endpoint occasionally returns identity.year = null while the set
+  // string clearly contains the year (e.g. "2025 Bowman Draft Chrome
+  // Baseball"). Falling to null here would kill sibling fallback for
+  // any card with no direct comps — concrete case: Hartshorn Gum Ball
+  // Auto (year null, set contains "2025"). Extract a 4-digit year
+  // from the set as a defensible fallback.
+  if (!year && set) {
+    const yearMatch = set.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) {
+      year = parseInt(yearMatch[0], 10);
+    }
+  }
+
   if (!year || !set || !variant) return null;
   return { year: year as string | number, set, variant };
 }
