@@ -3091,12 +3091,42 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
     }
     const { buildObservedGradeCurve } = await import("../services/compiq/observedGradeCurve.service.js");
     // Meta-cache lookup for player name so the trajectory pass fires.
-    // If meta cache is cold, we just return the curve without trajectory
-    // enrichment — the sibling /card-panel does the full identity dance.
-    const meta = await getCardMetaById(cardId.trim());
+    let meta: unknown = await getCardMetaById(cardId.trim());
+    // CF-COLD-META-FALLBACK (2026-07-09, Drew — Owen Carey Black): when
+    // the meta cache is cold (card never surfaced through search), fall
+    // back to a live CH card-details fetch so playerName /
+    // parallelTierKey / cardClass still populate. Without this, iOS
+    // opening a card by direct cardId gets all-null grade-curve entries
+    // and no sibling fallback — every field renders "unavailable" even
+    // though the card exists in CH and its siblings have prices.
+    //
+    // Same-shape fields: CardHedgeCard carries player / set / number /
+    // variant / subset / description which are exactly what
+    // extractParallelTierKey + extractCardClass read (year is
+    // recovered from the set string by the existing regex fallback in
+    // extractParallelTierKey). getCardDetailsById is itself 6h-cached,
+    // so this adds at most one CH call per cardId per 6h.
+    if (
+      !meta ||
+      typeof (meta as { player?: unknown }).player !== "string" ||
+      (meta as { player: string }).player.trim().length === 0
+    ) {
+      const chDetails = await getCardDetailsById(cardId.trim());
+      if (chDetails && typeof chDetails.player === "string" && chDetails.player.trim().length > 0) {
+        meta = chDetails;
+        console.log(JSON.stringify({
+          event: "observed_grade_curve_cold_meta_recovered",
+          source: "compiq.observed-grade-curve",
+          cardId: cardId.trim(),
+          player: chDetails.player,
+          set: chDetails.set ?? null,
+          variant: chDetails.variant ?? null,
+        }));
+      }
+    }
     const playerName =
-      meta && typeof (meta as any).player === "string"
-        ? (meta as any).player
+      meta && typeof (meta as { player?: unknown }).player === "string"
+        ? (meta as { player: string }).player
         : null;
     // CF-PARALLEL-TIER-TREND (2026-07-05): pass tier key so trajectory
     // can fall through to same-parallel-tier trend when matched-cohort
