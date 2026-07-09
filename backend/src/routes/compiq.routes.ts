@@ -2951,6 +2951,18 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
         totalSampleCount: gradeCurve.totalSampleCount,
         computedAt: gradeCurve.computedAt,
         entries: gradeCurve.entries,
+        // CF-CARD-PANEL-LINEAGE-PASSTHROUGH (2026-07-08, Drew): the
+        // buildObservedGradeCurve service already computes these three
+        // fields (siblingFallback lineage block, per-week rate, signal
+        // source) but the /card-panel wrapper was dropping them. That's
+        // why iOS saw `siblingFallback: null` even when entries had
+        // `estimatedFrom: "sibling-card"` — the lineage was populated
+        // internally but never made it to the wire, so the "Est. via
+        // similar card" badge couldn't render. All three are additive
+        // — older iOS decoders ignore unknown fields cleanly.
+        ratePerWeek: gradeCurve.ratePerWeek,
+        signalSource: gradeCurve.signalSource,
+        siblingFallback: gradeCurve.siblingFallback,
       },
       referencePrices: referenceRows.map((r) => ({
         grade: r.grade,
@@ -3151,6 +3163,13 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
       totalSampleCount: curve.totalSampleCount,
       computedAt: curve.computedAt,
       entries: curve.entries,
+      // CF-CARD-PANEL-LINEAGE-PASSTHROUGH (2026-07-08, Drew): same
+      // three fields the /card-panel wrapper now surfaces — kept in
+      // sync so iOS can render lineage badges consistently across
+      // both entry points.
+      ratePerWeek: curve.ratePerWeek,
+      signalSource: curve.signalSource,
+      siblingFallback: curve.siblingFallback,
     });
   } catch (err) {
     return next(err);
