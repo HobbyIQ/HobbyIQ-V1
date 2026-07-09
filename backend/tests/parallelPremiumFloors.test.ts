@@ -95,6 +95,57 @@ describe("CF-GUM-BALL-BUBBLEGUM — snackpack /5 parallel + hobby aliases", () =
   });
 });
 
+describe("CF-RETAIL-SNACKPACK-SIBLINGS — Peanuts / Sunflower Seeds /5", () => {
+  it("recognizes Peanuts Refractor as /5 tier", () => {
+    expect(inferPrintRun("Peanuts Refractor")).toBe(5);
+    expect(inferPrintRun("Peanuts")).toBe(5);
+    const r = applyPrintRunFloor(1, "Peanuts Refractor");
+    expect(r.effective).toBe(40);
+    expect(r.inferredPrintRun).toBe(5);
+  });
+
+  it("recognizes Sunflower Seeds Refractor as /5 tier", () => {
+    expect(inferPrintRun("Sunflower Seeds Refractor")).toBe(5);
+    expect(inferPrintRun("Sunflower Seeds")).toBe(5);
+    const r = applyPrintRunFloor(1, "Sunflower Seeds Refractor");
+    expect(r.effective).toBe(40);
+  });
+});
+
+describe("CF-BOWMAN-LOGOFRACTOR — /35 new tier", () => {
+  it("recognizes Bowman Logofractor as /35", () => {
+    expect(inferPrintRun("Bowman Logofractor")).toBe(35);
+    expect(inferPrintRun("Logofractor")).toBe(35);
+    expect(inferPrintRun("Logo Fractor")).toBe(35);
+  });
+
+  it("applies 12× floor for /35 tier", () => {
+    const r = applyPrintRunFloor(1, "Bowman Logofractor");
+    expect(r.effective).toBe(12);
+    expect(r.inferredPrintRun).toBe(35);
+  });
+});
+
+describe("CF-BLACK-XFRACTOR — /10 tier via 30× floor", () => {
+  it("recognizes Black X-Fractor and Black Refractor as /10", () => {
+    expect(inferPrintRun("Black X-Fractor")).toBe(10);
+    expect(inferPrintRun("Black XFractor")).toBe(10);
+    expect(inferPrintRun("Black Refractor")).toBe(10);
+    expect(inferPrintRun("Black")).toBe(10);
+  });
+
+  it("applies 30× floor for /10 tier (Black X-Fractor)", () => {
+    const r = applyPrintRunFloor(1, "Black X-Fractor");
+    expect(r.effective).toBe(30);
+    expect(r.inferredPrintRun).toBe(10);
+  });
+
+  it("does NOT collide with Black Prizm (which is Panini /1)", () => {
+    // Black Prizm hits the Panini rule earlier in the list → /1
+    expect(inferPrintRun("Black Prizm")).toBe(1);
+  });
+});
+
 describe("CF-PARALLEL-PREMIUM-FLOOR — applyPrintRunFloor", () => {
   it("lifts to floor when empirical is below (Willits Orange Auto case)", () => {
     // Empirical median 4.364 (from 2025 Bowman Chrome Prospects Orange

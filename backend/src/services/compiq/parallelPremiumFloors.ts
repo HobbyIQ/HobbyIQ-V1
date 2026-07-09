@@ -78,14 +78,30 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   // Bowman / Topps refractor family (baseball). Kept AFTER Panini so
   // "Gold Prizm" doesn't hit the generic "gold" rule.
   // ═══════════════════════════════════════════════════════════════════
-  // ── Bowman Draft Chrome retail-exclusive /5 parallels ──────────────
-  // CF-GUM-BALL-BUBBLEGUM (2026-07-08, Drew): "Gum Ball Refractor" is
-  // the CH catalog name for the Bowman Draft Chrome retail "snackpack"
-  // parallel. Users search for it as "Bubblegum" or "Bubble Gum" (the
-  // hobby vernacular). Print run /5, same tier as Red Refractor →
-  // 40× floor. Aliases handled here so any of the four spellings maps
-  // to the /5 tier.
+  // ── Bowman Draft Chrome retail-exclusive parallels ─────────────────
+  // CF-GUM-BALL-BUBBLEGUM (2026-07-08, Drew) — "snackpack" family.
+  // "Gum Ball Refractor" is the CH catalog name; users search as
+  // "Bubblegum" / "Bubble Gum" / "Snackpack". Same tier as Red /5.
   { match: (n) => n.includes("gum ball") || n.includes("bubblegum") || n.includes("bubble gum") || n.includes("snackpack"), printRun: 5 },
+  // CF-RETAIL-SNACKPACK-SIBLINGS (2026-07-08, Drew audit follow-up):
+  // Peanuts Refractor and Sunflower Seeds Refractor are the other
+  // retail snackpack /5 parallels in the same Bowman Draft Chrome
+  // family. Empirical medians support the /5 tier assignment:
+  //   Peanuts Refractor 28.57× (n=29, 2025 BDC)
+  //   Sunflower Seeds Refractor 23.43× (n=30, 2025 BDC)
+  { match: (n) => n.includes("peanuts"), printRun: 5 },
+  { match: (n) => n.includes("sunflower seeds") || n.includes("sunflower seed"), printRun: 5 },
+  // CF-BOWMAN-LOGOFRACTOR (2026-07-08, Drew): /35 print run. Requires
+  // a new /35 tier in PRINT_RUN_TO_FLOOR below.
+  { match: (n) => n.includes("logofractor") || n.includes("logo fractor"), printRun: 35 },
+  // CF-BLACK-XFRACTOR (2026-07-08, Drew): /10 print run. Fits the
+  // existing /10 tier alongside Orange Shimmer.
+  //
+  // Order matters here — this rule must sit BEFORE the color-only
+  // "Blue" / "Green" / etc. generic rules further down so "Black
+  // X-Fractor" doesn't get swallowed by a generic Black rule.
+  { match: (n) => n.includes("black x-fractor") || n.includes("black xfractor"), printRun: 10 },
+  { match: (n) => n === "black" || (n.startsWith("black ") && n.includes("refractor")), printRun: 10 },
   // ── /5 or less (Red family) ────────────────────────────────────────
   { match: (n) => n === "red" || n.startsWith("red "), printRun: 5 },
   { match: (n) => n.includes("red refractor") || n.includes("red x-fractor"), printRun: 5 },
@@ -116,8 +132,13 @@ const PARALLEL_TO_PRINT_RUN: Array<{
 const PRINT_RUN_TO_FLOOR: Array<{ maxPrintRun: number; floor: number }> = [
   { maxPrintRun: 1,   floor: 100 },  // 1/1s
   { maxPrintRun: 5,   floor: 40  },  // Red /5
-  { maxPrintRun: 10,  floor: 30  },  // Orange Shimmer /10
+  { maxPrintRun: 10,  floor: 30  },  // Orange Shimmer /10, Black X-Fractor /10
   { maxPrintRun: 25,  floor: 15  },  // Orange /25
+  // CF-PR-35-TIER (2026-07-08, Drew): Bowman Logofractor sits at /35 —
+  // a print run tier we didn't previously have. 12× floor is the
+  // midpoint between /25 (15×) and /50 (8×) — logofractor tends to
+  // trade closer to the /25 tier for hot prospects.
+  { maxPrintRun: 35,  floor: 12  },  // Bowman Logofractor /35
   { maxPrintRun: 50,  floor: 8   },  // Gold /50
   { maxPrintRun: 75,  floor: 5   },  // Aqua /75
   { maxPrintRun: 150, floor: 3   },  // Blue /150
