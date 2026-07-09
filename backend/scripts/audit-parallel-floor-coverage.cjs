@@ -40,7 +40,7 @@ function inferPrintRun(parallelName) {
   if (n === "hyper prizm" || n === "hyper") return 275;
   if (n === "red prizm" || (n.startsWith("red ") && n.includes("prizm"))) return 299;
   if (n === "silver prizm" || n === "silver") return 500;
-  if (n === "green prizm" || n === "green") return 500;
+  if (n === "green prizm") return 500;
   // Bowman/Topps retail snackpack family
   if (n.includes("gum ball") || n.includes("bubblegum") || n.includes("bubble gum") || n.includes("snackpack")) return 5;
   if (n.includes("peanuts")) return 5;
@@ -48,6 +48,12 @@ function inferPrintRun(parallelName) {
   if (n.includes("logofractor") || n.includes("logo fractor")) return 35;
   if (n.includes("black x-fractor") || n.includes("black xfractor")) return 10;
   if (n === "black" || (n.startsWith("black ") && n.includes("refractor"))) return 10;
+  // Batch 3 (2026-07-08): Bowman single-color autos + Mini-Diamond + Sparkle + Speckle
+  if (n === "green") return 99;
+  if (n === "purple") return 250;
+  if (n === "mini-diamond" || n === "mini diamond" || n.includes("mini-diamond refractor") || n.includes("mini diamond refractor")) return 100;
+  if (n === "sparkle" || n.includes("sparkle refractor")) return 299;
+  if (n === "speckle" || n.includes("speckle refractor")) return 299;
   // Bowman/Topps refractor family
   if (n === "red" || n.startsWith("red ")) return 5;
   if (n.includes("red refractor") || n.includes("red x-fractor")) return 5;
