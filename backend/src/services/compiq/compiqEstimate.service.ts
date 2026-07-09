@@ -3737,8 +3737,21 @@ export async function computeEstimate(
             familyGap.effectiveParallel ??
             (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
           const printRun = parallelName ? inferPrintRun(parallelName) : null;
+          // CF-FAMILY-PROJECTION-CLASS-AWARE-FLOOR (2026-07-09, Drew —
+          // Owen Carey Padparadscha Sapphire): mirror the parallel-floor-
+          // projection path (#344). Sapphire is a paper product line, so
+          // non-auto queries should get the base-tier floor (1.8× the
+          // auto floor) not the auto floor. Pre-fix, Padparadscha /1
+          // Sapphire projected at $462.50 (auto floor 100×); post-fix
+          // it projects at $832.50 (base floor 180×) which is closer
+          // to hobby reality for a 1/1 non-auto Sapphire parallel.
+          const cardClass: "auto" | "base" =
+            queryContext.isAuto === true ? "auto" : "base";
           const parallelFloor =
-            printRun !== null ? floorForPrintRun(printRun) : null;
+            printRun !== null
+              ? floorForPrintRunByClass(printRun, cardClass) ??
+                floorForPrintRun(printRun)
+              : null;
           const parallelMultiplier = parallelFloor ?? 1;
           const projectedFmv =
             Math.round(
