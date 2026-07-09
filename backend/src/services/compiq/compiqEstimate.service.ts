@@ -3592,6 +3592,70 @@ export async function computeEstimate(
   //     query OR file as catalog gap
   //   - no-recent-comps: pricing might appear once a sale lands; OK to
   //     refresh later
+  // CF-RARE-PARALLEL-VARIANT-MISMATCH-DEMOTE (2026-07-09, Drew — Owen
+  // Carey Black BCP-69): when the user asked for a rare parallel (print
+  // run ≤ 50) but resolveChCardId returned a card with a different
+  // variant (typically "Base" as the closest catalog hit), the main
+  // pipeline happily prices with base-card comps and returns $2 for a
+  // card the user asked to be priced as Black /10.
+  //
+  // The tier-ladder variant-mismatch guard at ~L4527 catches this in some
+  // configurations but not when the resolved base card has enough loose
+  // comps to pass a lower tier. This guard runs earlier: if the resolved
+  // variant is clearly different from the requested rare parallel, we
+  // null out fetched.card + comps so the catalog-miss branch below fires
+  // and the CF-PARALLEL-FLOOR-PROJECTION path can produce an honest
+  // print-run-anchored estimate.
+  //
+  // Only fires when the requested parallel is on the rare bracket
+  // (inferPrintRun ≤ 50). Common parallels (Refractor, Base) don't
+  // trip this because their whole point is a broader pool.
+  if (
+    !body.cardId &&
+    fetched.card !== null &&
+    typeof queryContext.parallel === "string" &&
+    queryContext.parallel.trim().length > 0
+  ) {
+    const requestedParallelLower = queryContext.parallel.trim().toLowerCase();
+    const resolvedVariantLower =
+      typeof fetched.card.variant === "string"
+        ? fetched.card.variant.trim().toLowerCase()
+        : "";
+    const requestedPrintRun = inferPrintRun(requestedParallelLower);
+    const isRareRequested =
+      requestedPrintRun !== null && requestedPrintRun <= 50;
+    // Narrow demote: ONLY when the resolver returned an explicit "Base"
+    // (or empty variant that CH sometimes emits on unindexed SKUs). Any
+    // other non-matching variant (Refractor / X-Fractor / colored parallels
+    // that just happen to differ) is handled by the existing tier-ladder
+    // variant-mismatch guard downstream, which produces a `variant-
+    // mismatch` source with priceSource metadata. We only intercept the
+    // pathological "Black BCP-69 request → resolver returned the plain
+    // Base BCP-69 card" case where the existing guard would over-price
+    // with base-card comps.
+    // Only literal "base" — null/empty variant means "resolver didn't tell
+    // us" and the tier ladder downstream is designed to handle it. Literal
+    // "base" is CH's explicit "this is the base card" signal, which is
+    // exactly the pathological case (base BCP-69 returned for a Black
+    // BCP-69 request).
+    const resolvedIsExplicitBase = resolvedVariantLower === "base";
+    if (isRareRequested && resolvedIsExplicitBase) {
+      console.log(
+        JSON.stringify({
+          event: "rare_parallel_variant_mismatch_demote",
+          source: "compiq.computeEstimate",
+          query: cardTitle,
+          requestedParallel: queryContext.parallel,
+          resolvedVariant: fetched.card.variant ?? null,
+          resolvedCardId: fetched.card.card_id,
+          requestedPrintRun,
+          compsCount: fetched.comps.length,
+        }),
+      );
+      fetched = { ...fetched, card: null, comps: [] };
+    }
+  }
+
   // Skip on the pinned cardId path — that path already resolved
   // a catalog entry by id; if no comps, it's definitionally no-recent-comps
   // not a catalog miss.
