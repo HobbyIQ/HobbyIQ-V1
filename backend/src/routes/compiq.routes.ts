@@ -3148,6 +3148,62 @@ router.get("/observed-grade-curve/:cardId", requireSession, requireRateLimited("
 // designed to slot in a direct GemRate/PSA/BGS integration later without
 // touching consumers.
 // ─────────────────────────────────────────────────────────────────────────────
+// CF-SEARCH-SELECTION-LOG (2026-07-08, Drew): POST /log-selection
+// iOS calls this fire-and-forget after a user selects a card from
+// any search-generated list (suggest-corrections chip, search-results
+// tap, card-panel siblings carousel, manual-identity submit). Feeds
+// the nightly learned-alias promotion job + selection-weighted
+// ranking. Never fails hard — always returns 200 so iOS can safely
+// invoke without blocking user flow.
+router.post(
+  "/log-selection",
+  requireSession,
+  async (req, res, _next) => {
+    try {
+      const { query, selectedCardId, resolvedPlayer, resolvedVariant, resolvedSet, resolvedYear, source } =
+        req.body || {};
+      if (typeof query !== "string" || typeof selectedCardId !== "string") {
+        // Silently accept — don't reject iOS for bad shape; just don't log.
+        return res.json({ success: true, logged: false });
+      }
+      const validSources = new Set([
+        "suggest-corrections",
+        "search-results",
+        "card-panel-siblings",
+        "manual-identity",
+        "typeahead",
+      ]);
+      const src = typeof source === "string" && validSources.has(source) ? source : "search-results";
+      const userId = (req as unknown as { userId?: string }).userId;
+
+      const { logSelection } = await import(
+        "../repositories/searchSelections.repository.js"
+      );
+      // Fire and don't await — response returns immediately, Cosmos
+      // write completes in background.
+      void logSelection({
+        query,
+        selectedCardId,
+        resolvedPlayer: typeof resolvedPlayer === "string" ? resolvedPlayer : undefined,
+        resolvedVariant: typeof resolvedVariant === "string" ? resolvedVariant : undefined,
+        resolvedSet: typeof resolvedSet === "string" ? resolvedSet : undefined,
+        resolvedYear: typeof resolvedYear === "number" ? resolvedYear : undefined,
+        source: src as
+          | "suggest-corrections"
+          | "search-results"
+          | "card-panel-siblings"
+          | "manual-identity"
+          | "typeahead",
+        userId,
+      });
+      return res.json({ success: true, logged: true });
+    } catch (err) {
+      console.warn("[compiq.log-selection] failed:", (err as Error)?.message ?? err);
+      return res.json({ success: true, logged: false });
+    }
+  },
+);
+
 // CF-SUGGEST-CORRECTIONS (2026-07-08, Drew): POST /suggest-corrections
 // iOS calls this when the primary search returns zero (or thin) results.
 // Given a raw query, suggests close-match player names via Levenshtein
@@ -3239,14 +3295,46 @@ router.post(
           scored.push({ playerName: name, distance });
         }
       }
-      scored.sort((a, b) => a.distance - b.distance);
-      const top = scored.slice(0, 6);
+
+      // CF-SELECTION-WEIGHTED-RANKING (2026-07-08, Drew): fetch the
+      // selection history for this query and blend it into the ranking
+      // so previously-selected corrections rank higher than pure
+      // Levenshtein winners. score = 1/(distance+1) + log(1+selections).
+      // Silently degrades to distance-only when Cosmos is unavailable.
+      const { getSelectionCountsForQuery, normalizeSearchQuery } = await import(
+        "../repositories/searchSelections.repository.js"
+      );
+      const queryNorm = normalizeSearchQuery(rawQuery);
+      const selectionHistory = await getSelectionCountsForQuery(queryNorm, 90).catch(() => []);
+      const selectionByPlayer = new Map<string, number>();
+      for (const h of selectionHistory) {
+        selectionByPlayer.set(h.resolvedPlayer.toLowerCase(), h.selections);
+      }
+
+      const finalScored = scored.map((s) => {
+        const selections = selectionByPlayer.get(s.playerName.toLowerCase()) ?? 0;
+        const distancePart = 1 / (s.distance + 1);
+        const selectionBoost = Math.log(1 + selections);
+        return {
+          ...s,
+          selections,
+          score: distancePart + selectionBoost,
+        };
+      });
+      // Higher score first; ties broken by lower distance.
+      finalScored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.distance - b.distance;
+      });
+      const top = finalScored.slice(0, 6);
 
       const suggestions = top.map((s) => {
         const info = uniquePlayers.get(s.playerName.toLowerCase());
         return {
           playerName: s.playerName,
           distance: s.distance,
+          priorSelections: s.selections,
+          rankScore: Math.round(s.score * 1000) / 1000,
           sampleCardId: info?.cardId ?? null,
           sampleCardVariant: info?.variant ?? null,
         };

@@ -27,6 +27,10 @@ import alertsAdvancedRoutes from "./routes/alerts.advanced.routes.js";
 import accountRoutes from "./routes/account.routes.js";
 import opsRoutes from "./routes/ops.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+// CF-SEARCH-ADMIN-ROUTES (2026-07-08, Drew): admin surface for the
+// Cosmos-backed alias store — add/correct/reload aliases without a
+// code deploy. Gated by ADMIN_API_TOKEN via requireAdmin middleware.
+import searchAdminRoutes from "./routes/searchAdmin.routes.js";
 import entitlementsRoutes from "./routes/entitlements.routes.js";
 import subscriptionsRoutes from "./routes/subscriptions.routes.js";
 import rateLimit from "express-rate-limit";
@@ -87,6 +91,9 @@ app.use("/api/alerts/advanced", alertsAdvancedRoutes);
 app.use("/api/alerts", alertsRoutes);
 app.use("/api/ops", opsRoutes);
 app.use("/api/search", searchRoutes);
+// CF-SEARCH-ADMIN (2026-07-08, Drew): mount admin surface after the
+// user-facing /api/search so path resolution can't shadow user routes.
+app.use("/api/admin", searchAdminRoutes);
 app.use("/api/entitlements", entitlementsRoutes);
 app.use("/api/subscriptions", subscriptionsRoutes);
 // CF-ACCOUNT-DELETION (2026-06-04): Apple Guideline 5.1.1(v) compliance.
