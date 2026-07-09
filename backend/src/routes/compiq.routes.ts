@@ -1148,21 +1148,35 @@ function extractParallelTierKey(
   if (!identity || typeof identity !== "object") return null;
   const rec = identity as Record<string, unknown>;
   let year = rec.year as number | string | null | undefined;
-  const set = typeof rec.set === "string" ? rec.set.trim() : "";
+  let set = typeof rec.set === "string" ? rec.set.trim() : "";
   const variant = typeof rec.variant === "string" ? rec.variant.trim() : "";
 
   // CF-YEAR-FALLBACK-FROM-SET (2026-07-08, Drew): CH's card-details
   // endpoint occasionally returns identity.year = null while the set
   // string clearly contains the year (e.g. "2025 Bowman Draft Chrome
-  // Baseball"). Falling to null here would kill sibling fallback for
-  // any card with no direct comps — concrete case: Hartshorn Gum Ball
-  // Auto (year null, set contains "2025"). Extract a 4-digit year
-  // from the set as a defensible fallback.
+  // Baseball"). Extract a 4-digit year from the set as a defensible
+  // fallback — otherwise sibling fallback silently skips.
   if (!year && set) {
     const yearMatch = set.match(/\b(19|20)\d{2}\b/);
-    if (yearMatch) {
-      year = parseInt(yearMatch[0], 10);
-    }
+    if (yearMatch) year = parseInt(yearMatch[0], 10);
+  }
+
+  // CF-SET-STRIP-YEAR-AND-CATEGORY (2026-07-08, Drew): CH returns the
+  // set field WITH the year prefix + trailing sport category
+  // (e.g. "2025 Bowman Draft Chrome Baseball"). The empirical
+  // parallel-premiums table stores sets WITHOUT year or category
+  // ("Bowman Draft Chrome"). Downstream also constructs search text
+  // as `${year} ${set}` which double-inserts the year when the year
+  // is already in the set. Normalize the set to the canonical
+  // brand+product form so both lookups line up.
+  if (set) {
+    set = set
+      .replace(/^\s*(19|20)\d{2}\s+/, "")   // strip leading year
+      .replace(/\s+baseball$/i, "")           // strip trailing category
+      .replace(/\s+basketball$/i, "")
+      .replace(/\s+football$/i, "")
+      .replace(/\s+soccer$/i, "")
+      .trim();
   }
 
   if (!year || !set || !variant) return null;
