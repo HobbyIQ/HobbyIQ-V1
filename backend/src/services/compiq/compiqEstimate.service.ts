@@ -96,6 +96,11 @@ import { inferPrintRunForYearAndParallel } from "./bowmanParallelsDataset.js";
 // container has no match. See referenceCatalogLookup.ts for the ops
 // safety analysis and rollback lever.
 import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
+// CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10, Drew): product-year cross-
+// player median anchor used as the FALLBACK when parallel-floor-projection
+// has zero player-scoped comps (Hartman-class prospects). See
+// productYearAnchor.ts for design + handoff discipline.
+import { fetchProductYearMedianAnchor } from "./productYearAnchor.js";
 
 /**
  * Small helper — prefer the year-aware dataset when we have a year,
@@ -4065,6 +4070,104 @@ export async function computeEstimate(
             gradeUsed: cardHedgeGrade,
             marketDNA: { trend: "flat", speed: "Normal" },
           } as Record<string, unknown>;
+        }
+        // CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10): parent-player pool
+        // is empty (Hartman-class — the specific player has never sold on
+        // CH yet). The ladder floor is still meaningful; fall through to
+        // a broader product-year cross-player anchor. Widened range +
+        // downgraded confidence reflect the coarser anchor. Gated by
+        // COMPIQ_PRODUCT_YEAR_ANCHOR_ENABLED (default false).
+        if (parentRawPrices.length === 0) {
+          const pyAnchor = await fetchProductYearMedianAnchor(
+            queryContext.product,
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : null,
+          );
+          if (pyAnchor) {
+            const cardClass: "auto" | "base" =
+              queryContext.isAuto === true ? "auto" : "base";
+            const parallelMultiplier =
+              floorForPrintRunByClass(parallelPrintRun, cardClass) ??
+              floorForPrintRun(parallelPrintRun) ??
+              1;
+            const projectedFmv =
+              Math.round(pyAnchor.median * parallelMultiplier * 100) / 100;
+            console.log(
+              JSON.stringify({
+                event: "scarcity_prior_floor_applied",
+                source: "compiq.computeEstimate",
+                query: cardTitle,
+                player: queryContext.playerName,
+                product: queryContext.product,
+                parallel: parallelForFloor,
+                inferredPrintRun: parallelPrintRun,
+                cardClass,
+                parallelMultiplier,
+                productYearMedian: pyAnchor.median,
+                anchorComps: pyAnchor.compCount,
+                anchorDistinctCards: pyAnchor.distinctCardIds,
+                projectedFmv,
+              }),
+            );
+            emitPredictionToCorpus({
+              cardIdentity: null,
+              body,
+              fairMarketValue: projectedFmv,
+              fmvMechanism: "parallel-floor-projection",
+              predictedPrice: projectedFmv,
+              predictedPriceRange: {
+                low: Math.round(projectedFmv * 0.6 * 100) / 100,
+                high: Math.round(projectedFmv * 1.4 * 100) / 100,
+              },
+              predictedPriceMechanism: "parallel-floor-projection",
+              callContext,
+            });
+            return {
+              source: "scarcity-prior-floor",
+              cardIdentity: {
+                card_id: "",
+                title: null,
+                player: queryContext.playerName,
+                set: queryContext.product ?? null,
+                release: queryContext.product ?? null,
+                year:
+                  typeof queryContext.cardYear === "number"
+                    ? queryContext.cardYear
+                    : null,
+                number: queryContext.cardNumber ?? null,
+                variant: parallelForFloor,
+              },
+              fairMarketValue: projectedFmv,
+              fairMarketValueLow: Math.round(projectedFmv * 0.6 * 100) / 100,
+              fairMarketValueHigh: Math.round(projectedFmv * 1.4 * 100) / 100,
+              marketValue: projectedFmv,
+              predictedPrice: projectedFmv,
+              predictedPriceRange: {
+                low: Math.round(projectedFmv * 0.6 * 100) / 100,
+                high: Math.round(projectedFmv * 1.4 * 100) / 100,
+              },
+              predictedPriceAttribution: {
+                mechanism: "scarcity-prior-floor",
+                parallelMultiplier,
+                productYearMedian: pyAnchor.median,
+                anchorComps: pyAnchor.compCount,
+                anchorDistinctCards: pyAnchor.distinctCardIds,
+                inferredPrintRun: parallelPrintRun,
+                cardClass,
+              },
+              quickSaleValue: Math.round(projectedFmv * 0.85 * 100) / 100,
+              premiumValue: Math.round(projectedFmv * 1.2 * 100) / 100,
+              compsUsed: pyAnchor.compCount,
+              compsAvailable: pyAnchor.compCount,
+              recentComps: [],
+              variantWarning: [],
+              confidence: { pricingConfidence: 40 },
+              verdict: `Structural floor — this player has no direct sales yet; anchored on ${pyAnchor.compCount} product-year comps × /${parallelPrintRun} parallel floor`,
+              gradeUsed: cardHedgeGrade,
+              marketDNA: { trend: "flat", speed: "Normal" },
+            } as Record<string, unknown>;
+          }
         }
       } catch (err) {
         console.warn(
