@@ -38,9 +38,12 @@ const HEADER_ALIASES: Record<string, string> = {
   autograph: "auto",
   confidence: "confidence",
   notes: "notes",
+  "key notes": "notes",
   // Vintage set catalog columns
   "year text": "yearText",
   yeartext: "yearText",
+  "year(s)": "yearText",
+  years: "yearText",
   "set name": "setName",
   setname: "setName",
   manufacturer: "manufacturer",
@@ -227,7 +230,11 @@ export function parseSetsWorkbook(
 
   for (const row of rows) {
     const yearText = String(row.yearText ?? row.year ?? "").trim();
-    const setName = String(row.setName ?? row.set ?? "").trim();
+    // "Set" column normalizes to `cardSet` via the shared alias map (parallels
+    // workbooks use "Card Set"). Vintage catalog uses just "Set" — read either.
+    const setName = String(
+      row.setName ?? row.set ?? row.cardSet ?? "",
+    ).trim();
     if (!yearText || !setName) {
       skipped++;
       continue;

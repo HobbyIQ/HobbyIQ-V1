@@ -178,6 +178,32 @@ describe("parseSetsWorkbook", () => {
     expect(s.productKey).toBe("t206");
   });
 
+  it("accepts the vintage-catalog header variants (Year(s) / Set / Key Notes)", () => {
+    // Header regression: production vintage_set_catalog_1887_1988.xlsx uses
+    // "Year(s)" (not "Year Text"), bare "Set" (not "Set Name"), and "Key
+    // Notes" (not "Notes"). The initial dry-run skipped 158/158 rows
+    // because the alias map missed these.
+    const buf = buildSetsXlsx([
+      {
+        "Year(s)": 1887,
+        Set: "N172 Old Judge",
+        Manufacturer: "Goodwin & Co.",
+        Type: "Tobacco",
+        "Set Size": "",
+        Format: "Sepia photo cards",
+        "Key Notes": "500+ subjects; no definitive set size",
+        Confidence: "High",
+      },
+    ]);
+    const { docs, skipped, sheetRowCount } = parseSetsWorkbook(buf, { now: NOW });
+    expect(sheetRowCount).toBe(1);
+    expect(skipped).toBe(0);
+    expect(docs).toHaveLength(1);
+    expect(docs[0].setName).toBe("N172 Old Judge");
+    expect(docs[0].yearText).toBe("1887");
+    expect(docs[0].notes).toContain("500+ subjects");
+  });
+
   it("sortYear extracts first 4-digit year from multi-year yearText", () => {
     const buf = buildSetsXlsx([
       { "Year Text": "1949-52", "Set Name": "Bowman Baseball", Manufacturer: "Bowman", Type: "Major", "Set Size": 240, Format: "Card", Notes: "", Confidence: "High" },
