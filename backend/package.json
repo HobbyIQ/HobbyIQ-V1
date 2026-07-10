@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "tsc && node scripts/write-build-info.cjs",
+    "build": "tsc && node scripts/copy-static-data-to-dist.cjs && node scripts/write-build-info.cjs",
     "zip": "node ../zip.js",
     "ocr:report": "node scripts/ocr-quality-report.js",
     "ocr:readiness": "node scripts/ocr-release-readiness.js",
