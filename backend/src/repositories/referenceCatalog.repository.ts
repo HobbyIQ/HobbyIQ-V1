@@ -105,36 +105,80 @@ export async function bulkUpsertReferenceDocs(
     errors: [],
   };
 
-  const CHUNK = 100;
+  // CF-INGEST-RATE-LIMIT-BACKOFF (2026-07-10): the reference-catalog
+  // container is auto-created at default 400 RU/s. Bulk-100 saturates
+  // that budget instantly and Cosmos returns HTTP 429 per item. The SDK
+  // does NOT auto-retry per-item 429s on bulk operations (that's for
+  // single-item ops). So we retry any 429s in-place with exponential
+  // backoff — cheap, correct, avoids touching container throughput.
+  // At default 400 RU/s shared throughput, a bulk-100 batch (~1000 RU)
+  // requires ~2.5s of RU recovery. Smaller batches + more retries +
+  // inter-batch throttle drain cleanly without touching container config.
+  const CHUNK = 25;
+  const MAX_RETRIES = 30;
+  const INTER_BATCH_MS = 250;
   for (let i = 0; i < docs.length; i += CHUNK) {
+    if (i > 0) await new Promise((r) => setTimeout(r, INTER_BATCH_MS));
     const batch = docs.slice(i, i + CHUNK);
-    const ops = batch.map((doc) => ({
-      operationType: "Upsert" as const,
-      partitionKey: doc.productKey,
-      resourceBody: doc as unknown as JSONObject,
-    }));
-    try {
-      const results = await container.items.bulk(ops);
-      for (let j = 0; j < results.length; j++) {
-        const r = results[j];
-        if (r.statusCode >= 200 && r.statusCode < 300) {
-          outcome.succeeded++;
-        } else {
-          outcome.failed++;
-          outcome.errors.push({
-            id: batch[j].id,
-            message: `HTTP ${r.statusCode}`,
-          });
+    let pending: typeof batch = batch;
+    let attempt = 0;
+    while (pending.length > 0 && attempt <= MAX_RETRIES) {
+      const ops = pending.map((doc) => ({
+        operationType: "Upsert" as const,
+        partitionKey: doc.productKey,
+        resourceBody: doc as unknown as JSONObject,
+      }));
+      try {
+        const results = await container.items.bulk(ops);
+        const nextPending: typeof pending = [];
+        let maxRetryAfterMs = 0;
+        for (let j = 0; j < results.length; j++) {
+          const r = results[j];
+          if (r.statusCode >= 200 && r.statusCode < 300) {
+            outcome.succeeded++;
+          } else if (r.statusCode === 429) {
+            // Rate-limited — queue for retry.
+            nextPending.push(pending[j]);
+            const ra = (r as { retryAfterMilliseconds?: number })
+              .retryAfterMilliseconds;
+            if (typeof ra === "number" && ra > maxRetryAfterMs) {
+              maxRetryAfterMs = ra;
+            }
+          } else {
+            outcome.failed++;
+            outcome.errors.push({
+              id: pending[j].id,
+              message: `HTTP ${r.statusCode}`,
+            });
+          }
         }
+        pending = nextPending;
+        if (pending.length === 0) break;
+        attempt++;
+        // Server-honored retry-after when present, else exponential backoff
+        // capped at 10s. Higher cap gives a fully-saturated 400 RU/s
+        // container time to fully recover before we hit it again.
+        const backoff =
+          maxRetryAfterMs > 0
+            ? maxRetryAfterMs
+            : Math.min(500 * Math.pow(1.5, attempt), 10000);
+        await new Promise((r) => setTimeout(r, backoff));
+      } catch (err: unknown) {
+        const msg = (err as Error)?.message ?? String(err);
+        for (const doc of pending) {
+          outcome.failed++;
+          outcome.errors.push({ id: doc.id, message: msg });
+        }
+        pending = [];
       }
-    } catch (err: unknown) {
-      // Whole-batch failure. Attribute the error to every id in the batch
-      // so the CLI can report a clean count.
-      const msg = (err as Error)?.message ?? String(err);
-      for (const doc of batch) {
-        outcome.failed++;
-        outcome.errors.push({ id: doc.id, message: msg });
-      }
+    }
+    // Anything still pending after MAX_RETRIES → tally as failed.
+    for (const doc of pending) {
+      outcome.failed++;
+      outcome.errors.push({
+        id: doc.id,
+        message: `HTTP 429 (exhausted ${MAX_RETRIES} retries)`,
+      });
     }
   }
   return outcome;
