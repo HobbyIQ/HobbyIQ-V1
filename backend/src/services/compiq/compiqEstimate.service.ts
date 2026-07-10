@@ -82,6 +82,33 @@ import {
   floorForPrintRun,
   floorForPrintRunByClass,
 } from "./parallelPremiumFloors.js";
+// CF-BOWMAN-PARALLELS-DATASET (2026-07-09, Drew): year-aware print-run
+// lookup against Drew's 1,849-row Bowman reference workbook. The
+// hand-coded parallelPremiumFloors rules assume single-tier values
+// ("Blue Refractor" is always /150) which is wrong pre-2015. This
+// dataset-first, rules-fallback pattern gives us correct floors for
+// old cards without discarding the fallback safety net.
+import { inferPrintRunForYearAndParallel } from "./bowmanParallelsDataset.js";
+
+/**
+ * Small helper — prefer the year-aware dataset when we have a year,
+ * otherwise fall back to the single-tier hand-coded rules. When the
+ * dataset returns null (unnumbered parallel like Camo) also fall
+ * back to the rules — they may still recognize the name.
+ */
+function inferPrintRunYearFirst(
+  parallelName: string,
+  year: number | null | undefined,
+  isAuto: boolean | undefined,
+): number | null {
+  if (year && Number.isFinite(year)) {
+    const hit = inferPrintRunForYearAndParallel(year, parallelName, {
+      isAuto: isAuto === true,
+    });
+    if (hit && hit.printRun !== null) return hit.printRun;
+  }
+  return inferPrintRun(parallelName);
+}
 import {
   computeCardTrajectory,
   computeSegmentTrajectory,
@@ -3736,7 +3763,18 @@ export async function computeEstimate(
           const parallelName =
             familyGap.effectiveParallel ??
             (typeof queryContext.parallel === "string" ? queryContext.parallel : "");
-          const printRun = parallelName ? inferPrintRun(parallelName) : null;
+          // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware lookup
+          // first, hand-coded rules as fallback. Bowman family only —
+          // the dataset scope is documented in bowmanParallelsDataset.ts.
+          const printRun = parallelName
+            ? inferPrintRunYearFirst(
+                parallelName,
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+                queryContext.isAuto,
+              )
+            : null;
           // CF-FAMILY-PROJECTION-CLASS-AWARE-FLOOR (2026-07-09, Drew —
           // Owen Carey Padparadscha Sapphire): mirror the parallel-floor-
           // projection path (#344). Sapphire is a paper product line, so
@@ -3877,8 +3915,16 @@ export async function computeEstimate(
       typeof queryContext.parallel === "string"
         ? queryContext.parallel.trim()
         : "";
+    // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware first, hand-
+    // coded rules fallback. Same pattern the family-projection path uses.
     const parallelPrintRun = parallelForFloor
-      ? inferPrintRun(parallelForFloor)
+      ? inferPrintRunYearFirst(
+          parallelForFloor,
+          typeof queryContext.cardYear === "number"
+            ? queryContext.cardYear
+            : null,
+          queryContext.isAuto,
+        )
       : null;
     if (
       parallelPrintRun !== null &&
