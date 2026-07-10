@@ -89,24 +89,51 @@ import {
 // dataset-first, rules-fallback pattern gives us correct floors for
 // old cards without discarding the fallback safety net.
 import { inferPrintRunForYearAndParallel } from "./bowmanParallelsDataset.js";
+// CF-PHASE5-LADDER-TO-COSMOS (2026-07-10, Drew): Cosmos reference-catalog
+// as the highest-priority data source when the flag is on — extends the
+// ladder from Bowman-only to the whole hobby. Falls through to the
+// existing Bowman JSON + hand-coded rules when the flag is off or the
+// container has no match. See referenceCatalogLookup.ts for the ops
+// safety analysis and rollback lever.
+import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
 
 /**
  * Small helper — prefer the year-aware dataset when we have a year,
  * otherwise fall back to the single-tier hand-coded rules. When the
  * dataset returns null (unnumbered parallel like Camo) also fall
  * back to the rules — they may still recognize the name.
+ *
+ * CF-PHASE5-LADDER-TO-COSMOS: async so the Cosmos-backed reference-
+ * catalog can be consulted FIRST. Both call sites are inside async
+ * pipeline functions, so the await is free.
  */
-function inferPrintRunYearFirst(
+async function inferPrintRunYearFirst(
   parallelName: string,
   year: number | null | undefined,
   isAuto: boolean | undefined,
-): number | null {
+  product: string | null | undefined,
+): Promise<number | null> {
+  // Cosmos reference-catalog first (env-flag gated). When populated (PR C+)
+  // and the flag is on, this covers every product family the workbook
+  // curates, not just Bowman. When empty or flag-off, this is a NO-OP.
+  if (product) {
+    const catalogHit = await inferPrintRunFromReferenceCatalog(
+      product,
+      year,
+      parallelName,
+      { isAuto: isAuto === true },
+    );
+    if (catalogHit && catalogHit.printRun !== null) return catalogHit.printRun;
+  }
+  // Bowman JSON — authoritative for 2011-2026 Bowman-family products.
   if (year && Number.isFinite(year)) {
     const hit = inferPrintRunForYearAndParallel(year, parallelName, {
       isAuto: isAuto === true,
     });
     if (hit && hit.printRun !== null) return hit.printRun;
   }
+  // Hand-coded rules — single-tier fallback covering common well-known
+  // parallels across all products.
   return inferPrintRun(parallelName);
 }
 import {
@@ -3767,12 +3794,15 @@ export async function computeEstimate(
           // first, hand-coded rules as fallback. Bowman family only —
           // the dataset scope is documented in bowmanParallelsDataset.ts.
           const printRun = parallelName
-            ? inferPrintRunYearFirst(
+            ? await inferPrintRunYearFirst(
                 parallelName,
                 typeof queryContext.cardYear === "number"
                   ? queryContext.cardYear
                   : null,
                 queryContext.isAuto,
+                typeof queryContext.product === "string"
+                  ? queryContext.product
+                  : null,
               )
             : null;
           // CF-FAMILY-PROJECTION-CLASS-AWARE-FLOOR (2026-07-09, Drew —
@@ -3918,12 +3948,15 @@ export async function computeEstimate(
     // CF-BOWMAN-PARALLELS-DATASET (2026-07-09): year-aware first, hand-
     // coded rules fallback. Same pattern the family-projection path uses.
     const parallelPrintRun = parallelForFloor
-      ? inferPrintRunYearFirst(
+      ? await inferPrintRunYearFirst(
           parallelForFloor,
           typeof queryContext.cardYear === "number"
             ? queryContext.cardYear
             : null,
           queryContext.isAuto,
+          typeof queryContext.product === "string"
+            ? queryContext.product
+            : null,
         )
       : null;
     if (
