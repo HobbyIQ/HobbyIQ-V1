@@ -221,11 +221,15 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         ),
         "utf8",
       );
-      // 1 helper definition + 7 callsites = 8 hits total.
-      // CF-LAUNCH-HARDENING (2026-06-02) added 2 new short-circuit emits:
-      // pre-modern (out-of-scope) + catalog-miss.
+      // 1 helper definition + 9 callsites = 10 hits total.
+      // Historical additions:
+      //   CF-LAUNCH-HARDENING (2026-06-02): pre-modern + catalog-miss → 7
+      //   CF-FAMILY-PROJECTION (#348-#350, 2026-07-09): product-family
+      //     projection emit → 8
+      //   CF-PARALLEL-FLOOR (#344, 2026-07-09): parallel-floor projection
+      //     emit → 9
       const matches = text.match(/emitPredictionToCorpus\s*[({]/g);
-      expect(matches?.length ?? 0).toBe(8);
+      expect(matches?.length ?? 0).toBe(10);
     });
 
     it("each fallback path tags fmvMechanism appropriately", async () => {
@@ -257,13 +261,15 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       // immediately above its own `return { ... }`. The control-flow
       // structure (early return at each fallback) guarantees exactly one
       // helper invocation per request:
-      //   pre-modern:        emit -> return (function exit)  [NEW 2026-06-02]
-      //   catalog-miss:      emit -> return (function exit)  [NEW 2026-06-02]
-      //   unsupported_sport: emit -> return (function exit)
-      //   variant-mismatch:  emit -> return (function exit)
-      //   sibling-pool:      emit -> return (function exit)
-      //   no-recent-comps:   emit -> return (function exit)
-      //   main success:      emit -> return (function exit)
+      //   pre-modern:               emit -> return (function exit)  [2026-06-02]
+      //   catalog-miss:             emit -> return (function exit)  [2026-06-02]
+      //   unsupported_sport:        emit -> return (function exit)
+      //   variant-mismatch:         emit -> return (function exit)
+      //   sibling-pool:             emit -> return (function exit)
+      //   no-recent-comps:          emit -> return (function exit)
+      //   main success:             emit -> return (function exit)
+      //   product-family-projection: emit -> return (function exit) [#348-#350, 2026-07-09]
+      //   parallel-floor-projection: emit -> return (function exit) [#344, 2026-07-09]
       // Source-level documentation test — guards against a future refactor
       // accidentally inserting an emit inside a loop or a non-returning
       // branch.
@@ -275,8 +281,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         "utf8",
       );
       const emitCalls = (text.match(/emitPredictionToCorpus\({/g) ?? []).length;
-      // 7 call sites; declaration uses different syntax (parens, not brace).
-      expect(emitCalls).toBe(7);
+      // 9 call sites (see enumeration above); declaration uses parens, not brace.
+      expect(emitCalls).toBe(9);
     });
   });
 
