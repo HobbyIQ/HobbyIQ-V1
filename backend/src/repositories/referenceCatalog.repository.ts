@@ -212,16 +212,27 @@ export async function listParallelsByProductYear(
 ): Promise<ParallelDoc[]> {
   const container = await getContainer();
   if (!container) return [];
+  // CF-REFERENCE-CATALOG-ORDERBY-HOTFIX (2026-07-10): auto-created
+  // container has default indexing policy without composite indexes,
+  // so multi-column ORDER BY fails with "The order by query does not
+  // have a corresponding composite index" — SDK then retries, hangs
+  // the request for 60-90s. Sort client-side instead; buckets are
+  // small (max ~400 rows for the largest productKey).
   const { resources } = await container.items
     .query<ParallelDoc>({
       query:
-        "SELECT * FROM c WHERE c.productKey = @pk AND c.docType = 'parallel' AND c.year = @y ORDER BY c.cardSet ASC, c.parallel ASC",
+        "SELECT * FROM c WHERE c.productKey = @pk AND c.docType = 'parallel' AND c.year = @y",
       parameters: [
         { name: "@pk", value: productKey },
         { name: "@y", value: year },
       ],
     })
     .fetchAll();
+  resources.sort((a, b) => {
+    const setCmp = (a.cardSet ?? "").localeCompare(b.cardSet ?? "");
+    if (setCmp !== 0) return setCmp;
+    return (a.parallel ?? "").localeCompare(b.parallel ?? "");
+  });
   return resources;
 }
 
