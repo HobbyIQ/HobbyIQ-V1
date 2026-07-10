@@ -221,15 +221,17 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         ),
         "utf8",
       );
-      // 1 helper definition + 9 callsites = 10 hits total.
+      // 1 helper definition + 10 callsites = 11 hits total.
       // Historical additions:
       //   CF-LAUNCH-HARDENING (2026-06-02): pre-modern + catalog-miss → 7
       //   CF-FAMILY-PROJECTION (#348-#350, 2026-07-09): product-family
       //     projection emit → 8
       //   CF-PARALLEL-FLOOR (#344, 2026-07-09): parallel-floor projection
       //     emit → 9
+      //   CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10): scarcity-prior-floor
+      //     projection emit (fires when parent-player pool empty) → 10
       const matches = text.match(/emitPredictionToCorpus\s*[({]/g);
-      expect(matches?.length ?? 0).toBe(10);
+      expect(matches?.length ?? 0).toBe(11);
     });
 
     it("each fallback path tags fmvMechanism appropriately", async () => {
@@ -270,6 +272,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       //   main success:             emit -> return (function exit)
       //   product-family-projection: emit -> return (function exit) [#348-#350, 2026-07-09]
       //   parallel-floor-projection: emit -> return (function exit) [#344, 2026-07-09]
+      //   scarcity-prior-floor:      emit -> return (function exit) [#357, 2026-07-10]
       // Source-level documentation test — guards against a future refactor
       // accidentally inserting an emit inside a loop or a non-returning
       // branch.
@@ -281,8 +284,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         "utf8",
       );
       const emitCalls = (text.match(/emitPredictionToCorpus\({/g) ?? []).length;
-      // 9 call sites (see enumeration above); declaration uses parens, not brace.
-      expect(emitCalls).toBe(9);
+      // 10 call sites (see enumeration above); declaration uses parens, not brace.
+      expect(emitCalls).toBe(10);
     });
   });
 
