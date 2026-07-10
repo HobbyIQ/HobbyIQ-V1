@@ -1,0 +1,4040 @@
+{
+  "generatedAt": "2026-07-10T16:51:14.882Z",
+  "totals": {
+    "parallels": 4902,
+    "sets": 158,
+    "productKeys": 68,
+    "anomalies": 162,
+    "confidence": {
+      "Verified": 160,
+      "High": 1596,
+      "Medium": 3146
+    }
+  },
+  "triagePriority": [
+    {
+      "productKey": "bowman-platinum",
+      "product": "Bowman Platinum",
+      "total": 231,
+      "mediumRows": 231,
+      "mediumPct": 100
+    },
+    {
+      "productKey": "topps-finest",
+      "product": "Topps Finest",
+      "total": 283,
+      "mediumRows": 194,
+      "mediumPct": 69
+    },
+    {
+      "productKey": "topps-chrome",
+      "product": "Topps Chrome",
+      "total": 368,
+      "mediumRows": 166,
+      "mediumPct": 45
+    },
+    {
+      "productKey": "bowmans-best",
+      "product": "Bowman's Best",
+      "total": 160,
+      "mediumRows": 160,
+      "mediumPct": 100
+    },
+    {
+      "productKey": "topps-triple-threads",
+      "product": "Topps Triple Threads",
+      "total": 126,
+      "mediumRows": 126,
+      "mediumPct": 100
+    },
+    {
+      "productKey": "bowman",
+      "product": "Bowman",
+      "total": 426,
+      "mediumRows": 120,
+      "mediumPct": 28
+    },
+    {
+      "productKey": "leaf-metal-draft",
+      "product": "Leaf Metal Draft",
+      "total": 117,
+      "mediumRows": 117,
+      "mediumPct": 100
+    },
+    {
+      "productKey": "bowman-inception",
+      "product": "Bowman Inception",
+      "total": 98,
+      "mediumRows": 98,
+      "mediumPct": 100
+    },
+    {
+      "productKey": "bowman-chrome-sapphire",
+      "product": "Bowman Chrome Sapphire",
+      "total": 105,
+      "mediumRows": 93,
+      "mediumPct": 89
+    },
+    {
+      "productKey": "stadium-club",
+      "product": "Stadium Club",
+      "total": 100,
+      "mediumRows": 87,
+      "mediumPct": 87
+    },
+    {
+      "productKey": "topps-tribute",
+      "product": "Topps Tribute",
+      "total": 102,
+      "mediumRows": 85,
+      "mediumPct": 83
+    },
+    {
+      "productKey": "bowman-chrome-mega-box",
+      "product": "Bowman Chrome Mega Box",
+      "total": 102,
+      "mediumRows": 84,
+      "mediumPct": 82
+    },
+    {
+      "productKey": "topps-museum-collection",
+      "product": "Topps Museum Collection",
+      "total": 90,
+      "mediumRows": 75,
+      "mediumPct": 83
+    },
+    {
+      "productKey": "topps-heritage",
+      "product": "Topps Heritage",
+      "total": 100,
+      "mediumRows": 74,
+      "mediumPct": 74
+    },
+    {
+      "productKey": "gypsy-queen",
+      "product": "Gypsy Queen",
+      "total": 80,
+      "mediumRows": 64,
+      "mediumPct": 80
+    },
+    {
+      "productKey": "topps-flagship-update",
+      "product": "Topps (flagship + Update)",
+      "total": 188,
+      "mediumRows": 63,
+      "mediumPct": 34
+    },
+    {
+      "productKey": "bowman-draft",
+      "product": "Bowman Draft",
+      "total": 218,
+      "mediumRows": 61,
+      "mediumPct": 28
+    },
+    {
+      "productKey": "topps-five-star",
+      "product": "Topps Five Star",
+      "total": 75,
+      "mediumRows": 60,
+      "mediumPct": 80
+    },
+    {
+      "productKey": "topps-archives",
+      "product": "Topps Archives",
+      "total": 75,
+      "mediumRows": 60,
+      "mediumPct": 80
+    },
+    {
+      "productKey": "topps-clearly-authentic",
+      "product": "Topps Clearly Authentic",
+      "total": 70,
+      "mediumRows": 60,
+      "mediumPct": 86
+    }
+  ],
+  "anomalies": [
+    {
+      "type": "A2",
+      "id": "aec86c00dc341b1543d46bde2cec6feb5b616115",
+      "productKey": "bowman",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "448dc05311d3488a1dac04df6149431caf975383",
+      "productKey": "bowman",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "519737a8b15216747125e50aac32699f060eb9f1",
+      "productKey": "bowman",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "34dfe57225fa58d7e98decab9c92d0537d504809",
+      "productKey": "bowman",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "bc7b93b572c4a68c8ef7b3fcede4e855aa5fabe8",
+      "productKey": "bowman-chrome",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "d59499f6ef38533e9c94251e8f3fd50dc54b8950",
+      "productKey": "bowman-high-tek",
+      "year": 2015,
+      "parallel": "Base Tek Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "594f29605a06438e3609ed4238bbd9725348f226",
+      "productKey": "bowman",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "aa9fccef5801ee1e8113a5589d0cb5e7f07fc281",
+      "productKey": "bowman",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ce0b9771f41ef3469ff5418d3fb28cd1d7970665",
+      "productKey": "bowman",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "45f1a217be51985a1afc51ecdfaa65236e4eec6b",
+      "productKey": "bowman-chrome",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "933f2eb3efaaded134c61fad7b7a3c0345a9319a",
+      "productKey": "bowman-chrome",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "793fd6e96477856c1f6aea00e6bb9a1c0f0d545c",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2018,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "32580e22097995ea0271adba2e43c88c36f23501",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2019,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f305f6f1d446740ecd4e6cfbdc1fdedc8a690035",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2020,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "c4141c091e1d2d7175c502fba2fc85d3d76a0951",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2021,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "8bf3ff65ba04c8ffe5e0d196f04a38a3654f3faa",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2020,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a822db754fb095808f7677793495c83f667f70f9",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2021,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "cb61602cf2e12644f35927514de169516576f0b3",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2026,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "faf3b15e98a2133819845c168b8ab4b7fd4a3c35",
+      "productKey": "bowman-draft",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "39a479b24ada80567ca4f39d45d4fdc568fdbaba",
+      "productKey": "bowman-draft",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "debe6eb42c97a2387d4f719007797d9e03742bbc",
+      "productKey": "bowman-draft",
+      "year": 2026,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ead9d5ef46ef1f48004e5eeaba3c875770146f5e",
+      "productKey": "bowman-high-tek",
+      "year": 2016,
+      "parallel": "Base Tek Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "3dc3f6616d07e0ecc2e3e0b5d70ceebf59c41f72",
+      "productKey": "bowman-high-tek",
+      "year": 2017,
+      "parallel": "Base Tek Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "4a2ba1b205921a66631e4a3988a2398962b5e5dc",
+      "productKey": "bowman-inception",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "75b105386cc6a465d6fe67f5e895630ec69ea2cb",
+      "productKey": "bowman-inception",
+      "year": 2025,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "bb2f806057d2563acc1fcdf442a730b450c4dab4",
+      "productKey": "bowman-inception",
+      "year": 2026,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "2912910bf46c2c007c26bb416b31d49af1cb81dd",
+      "productKey": "bowman-platinum",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "cae2a6837d805186f1acfd01d951eb31e2743cf3",
+      "productKey": "bowman-platinum",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "97f4d072ec7458db9d0ec5e39063420da7a0e38e",
+      "productKey": "bowmans-best",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "26251dd3451305e66d4b002fc50c3057123353b1",
+      "productKey": "bowmans-best",
+      "year": 2016,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0bb10daf62b1b414da85806e8394600b6afeecf1",
+      "productKey": "bowmans-best",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "06ab4976dbabbf5b348dba3ac4eb4d6b606380c8",
+      "productKey": "bowmans-best",
+      "year": 2022,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "52c7252db4641437c88d51a52354e0c1b610ece8",
+      "productKey": "topps-chrome-black",
+      "year": 2020,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "72988e02a05ea0c90dab675d7f71a1f32405d6d5",
+      "productKey": "topps-chrome-black",
+      "year": 2021,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "df20ee118ce1ba9514f27669526d290dc646ad0c",
+      "productKey": "topps-chrome-black",
+      "year": 2022,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "b1cd1dc4f2af3eabfe6fab169f404adeb95f6c6a",
+      "productKey": "leaf-metal-draft",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "89677ba5964089585ec612208bae5fbc8fa0dcbe",
+      "productKey": "leaf-metal-draft",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "eab924fccd8680ff1dab22e2fc38c27554dedb38",
+      "productKey": "bowman",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "35d791d47cbae3d20720c31a22ff2341fb166ca5",
+      "productKey": "bowman",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "6395cf10bd139115422d975a1bc97cadae9d30da",
+      "productKey": "bowman",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "1820b5a509d6534e6087ca98701e10e624c24978",
+      "productKey": "bowman",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "144c70c2469e95d35ce131229b375507aba7ff75",
+      "productKey": "bowman",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "e0c12d9eb609b28a08a29fc7558ca31383886cb3",
+      "productKey": "bowman",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "601223efa0214c13a58d7667b2da85ddae52dc58",
+      "productKey": "bowman",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "682e20527028c760de3066aac77da6ea8d8259c2",
+      "productKey": "bowman",
+      "year": 2025,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "21270b80e44af0294accefdd015939c63925f5da",
+      "productKey": "bowman",
+      "year": 2026,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "55556156ff0870397d691eb1afc27fd765c6a674",
+      "productKey": "bowman-chrome",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "4115314d29838cc60a81cee952c8a4282f46cd26",
+      "productKey": "bowman-chrome",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "b9505822522bcbd544fa2169f95ffb077deea13e",
+      "productKey": "bowman-chrome",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a46bc298fb7c21b0a555d772901d497a0e908462",
+      "productKey": "bowman-chrome",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "df030a2b003bfeec3f2445d6f8b985c6681c07bf",
+      "productKey": "bowman-chrome",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5465aca3913e961871bbab07cf647c00a1fe6932",
+      "productKey": "bowman-chrome",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "98fa1c39f8966100ce32c6627ab2f34c58fa8446",
+      "productKey": "bowman-chrome",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "11143772d90a07890a053b93c1448dedd6239feb",
+      "productKey": "bowman-chrome",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9722f8f8808eff3f20220fd31d86fbd283ece8cb",
+      "productKey": "bowman-chrome",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "05a9b9e2277f28f212ab5fa69a8dd3bbd11b5996",
+      "productKey": "bowman-chrome",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "03d68c8315cf83f60f247a64502df8a351a745bc",
+      "productKey": "bowman-chrome",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "939e5955e806acea553e80b2eb77f86473a07d43",
+      "productKey": "bowman-chrome",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "3a054e6f4095e1312de9ac2a45400619d3728583",
+      "productKey": "bowman-chrome",
+      "year": 2025,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "44a98b985329240129d64c1532bf55057512d0c9",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2017,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "6d205f6fc3f38852a61b2bec694e3c0422ee0905",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2022,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "d44f8989bb4279c3be174cdd0abcf26a2b9cc528",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2023,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "8440ee699b45d497afc48b27f741168a0686c47b",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2024,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "4019017901c8c07b14a0309de6b2d63a2c88b7eb",
+      "productKey": "bowman-chrome-mega-box",
+      "year": 2025,
+      "parallel": "Mojo Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "53eb76969356a10fcd25955f2c8144b55b422b49",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2022,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f864803d7b6c92faa8b5dffb98cc6a739ddc4b6f",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2023,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "1fe6cac7b6ae4cdfb67f44414d03f3ce14cfb9ca",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2024,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "81569f51e8c6cffd27570ec814b95eb239485717",
+      "productKey": "bowman-chrome-sapphire",
+      "year": 2025,
+      "parallel": "Base Sapphire Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ca32eb9b074ceec281aede9d425a61cfa2949493",
+      "productKey": "bowman-draft",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "034b8972f6337c78ad8f451d329250f1af352e96",
+      "productKey": "bowman-draft",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "57b153fb30966769ca4abea999718afed04076b0",
+      "productKey": "bowman-draft",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "4df502a3313e84db01cedee1b57b30bbac7bf20d",
+      "productKey": "bowman-draft",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "d86a5ebff1a34a8fdce3ca0043d6a50a7d3cc2e4",
+      "productKey": "bowman-draft",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9236e4c771b1a08b8891d91be009ee6269372676",
+      "productKey": "bowman-draft",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "c7a115f6c1a998560d85ab48c5c72ac0c6ca7c09",
+      "productKey": "bowman-draft",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "52878648367cea1cbbecbc4e328a32ae31479ef4",
+      "productKey": "bowman-draft",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "2c43565dc8899132aa6caa0245f47c7ed9751828",
+      "productKey": "bowman-draft",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "619e50177fe4de7e5f3b98e0d2a7c6746c00043d",
+      "productKey": "bowman-draft",
+      "year": 2025,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "8a4af06ae82273da9526748dc0ebc62ccbd7a1ce",
+      "productKey": "bowman-draft-picks-prospects",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "82a33790b30d1b0732dece1efb77e423dfda2623",
+      "productKey": "bowman-draft-picks-prospects",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9eaa318dedf524e39ffa1b8ea93ca77422dde404",
+      "productKey": "bowman-draft-picks-prospects",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "e9214ee82c6a8720fdcceaf36e26b9aeeea43df8",
+      "productKey": "bowman-draft-sapphire",
+      "year": 2021,
+      "parallel": "Base Sapphire",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "14dc4db5f09cd86afd0b1b64569ad8c81759f533",
+      "productKey": "bowman-draft-sapphire",
+      "year": 2022,
+      "parallel": "Base Sapphire",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "7fa51b888cfaefb9dee432ae581218a4c171f1b1",
+      "productKey": "bowman-draft-sapphire",
+      "year": 2023,
+      "parallel": "Base Sapphire",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a1bb6466ca4d94a4c3c309fe180a0ab50e0f8bec",
+      "productKey": "bowman-draft-sapphire",
+      "year": 2024,
+      "parallel": "Base Sapphire",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f460374002ae34a640ada9eae887f3693018d016",
+      "productKey": "bowman-draft-sapphire",
+      "year": 2025,
+      "parallel": "Base Sapphire",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "73f3995e026bc1072635116d1dbe985c0d227228",
+      "productKey": "bowman-inception",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "10e4d607205b09af596ef43ce32dc78063ed934f",
+      "productKey": "bowman-inception",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "616188fd3f5579773b5d2960929650c8e9488c5e",
+      "productKey": "bowman-inception",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "534c3e9f2e15a365d969ba069c7ee522c53ee4e1",
+      "productKey": "bowman-inception",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "43f8ee3aded49cc4bcc614c718cd7d871dfd4a23",
+      "productKey": "bowman-inception",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "098916c0fc4bfda83d0edd93ee3c3672f83f06b7",
+      "productKey": "bowman-inception",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "fbfc148649dc9671c8c7d17c65cedf020ecde750",
+      "productKey": "bowman-inception",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "6b8de23488cadbcf0d93368094cb828907567c70",
+      "productKey": "bowman-inception",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a2a5962bce83756a223d54e67a8a60cc5a2a9af2",
+      "productKey": "bowman-inception",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "dbc554cf5066eaf1ab0831dbfe96dbfe5da35719",
+      "productKey": "bowman-inception",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5117f3bcbab84d4e74d7388f338f27f5fde8834e",
+      "productKey": "bowman-inception",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "60cfc62e77e213dcdad9fe34c9221305e34c6643",
+      "productKey": "bowman-platinum",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0b64b573f6716524e953706f003ca2789185e4e4",
+      "productKey": "bowman-platinum",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "eec325828732d8b86f5fb389b774f42f6e92203a",
+      "productKey": "bowman-platinum",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f6f9a2f16da8570de4867bbe8255f04d1631ded7",
+      "productKey": "bowman-platinum",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "38292c44adb729a32babb564824a3508b93c06d5",
+      "productKey": "bowman-platinum",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "1584067fc76bd6acd523edda8906d6f335a47c3d",
+      "productKey": "bowman-platinum",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "fbcbade298a8e4dd19dcb5b00b41d9ccde25f0ad",
+      "productKey": "bowman-platinum",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "b5f0920af8cf015772fe6b2dcb685b2bc67fd907",
+      "productKey": "bowman-platinum",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9d0e0db18c38d74b007e804e1efe9f22a4dc9ac6",
+      "productKey": "bowman-platinum",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "b4a72cda7016fcdfde3c25cc5f3eb37fd0a5e7b3",
+      "productKey": "bowman-platinum",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "7a8be591ca95dce4994f55aff78547d9aea9c29b",
+      "productKey": "bowman-platinum",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ffc31c63c7ec4f9d832a243254609406e2592ee8",
+      "productKey": "bowman-platinum",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "169097679119225a9dcf16f5c08b71dbe80550b7",
+      "productKey": "bowman-platinum",
+      "year": 2025,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ec239cf7d285f0dbf8cefc8f2590bba26e6002bb",
+      "productKey": "bowman-sterling",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "65f07053697aa1024ccb688e83871d4f1c6b0d9c",
+      "productKey": "bowman-sterling",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "7eb181a5c4d43964639dc6171e0682d92567b3cd",
+      "productKey": "bowman-sterling",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "92a9c21fd6850c916612ec89fb048171730e1727",
+      "productKey": "bowman-sterling",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0e6ab6c68a4e716c039a516149a4329ca570271b",
+      "productKey": "bowman-sterling",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "2bebb8d412fa868b5080c1bd552adaa3045428bb",
+      "productKey": "bowman-sterling",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "38b7465ca48808d67047a8d9437d37808661ce6f",
+      "productKey": "bowmans-best",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "aa3f1192f03713bda13a6d7e482230553c66a511",
+      "productKey": "bowmans-best",
+      "year": 2015,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0f3aadb01139ad67a8cacfc1bbd6b57ebbd90b35",
+      "productKey": "bowmans-best",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0e747496f0510a817b6f2855edad0485543cc1e7",
+      "productKey": "bowmans-best",
+      "year": 2017,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5210ee1bf34fe629cfb09445b9741aa4c07bdc03",
+      "productKey": "bowmans-best",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a3f9025eb58c837009e36a848f0a431c5cb4228f",
+      "productKey": "bowmans-best",
+      "year": 2018,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "de939522320f7209080c76f9518c9b5994ab970c",
+      "productKey": "bowmans-best",
+      "year": 2019,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f47c4ee1d0d007a11d0c5c3732152e686f56bb38",
+      "productKey": "bowmans-best",
+      "year": 2019,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "70e0def259b9b8afe790d0122eb5e96b82092aba",
+      "productKey": "bowmans-best",
+      "year": 2020,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "dd46cca4a68f3a32523dbf28ab6f35fbd151ef30",
+      "productKey": "bowmans-best",
+      "year": 2020,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9c9dfc108a6db5d7f84a3de922b151e1587e6dff",
+      "productKey": "bowmans-best",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5e5f6f407f853e8d5f63258e6402054ea00a2bce",
+      "productKey": "bowmans-best",
+      "year": 2021,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "68b3828f053cc49e73c343eab4b98c38cb0accd2",
+      "productKey": "bowmans-best",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "618362de7bdf8ed666bd34e7d201cb7ada944672",
+      "productKey": "bowmans-best",
+      "year": 2023,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "6a1ec45bcff63e97cc555908ee66bf29d36f1665",
+      "productKey": "bowmans-best",
+      "year": 2024,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "df81be6be8bff4371d832a0aa27e8b0f9ac02a94",
+      "productKey": "bowmans-best",
+      "year": 2024,
+      "parallel": "Atomic Refractor",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "2be746d426e8ad208dd2c6094ce962eef7be9ea3",
+      "productKey": "topps-chrome-black",
+      "year": 2023,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "79e41893fa9dc34a6f69a4c2d7e7c9eb6312679c",
+      "productKey": "topps-chrome-black",
+      "year": 2024,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a5a922236f4ba665fb200555505bd326d265339d",
+      "productKey": "topps-chrome-black",
+      "year": 2025,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "011768b21f104377736328a2e300aee89711a095",
+      "productKey": "topps-chrome-black",
+      "year": 2026,
+      "parallel": "Base",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f80b851ad5519ea5b59b15c2d6f0fdd6c7e62755",
+      "productKey": "topps-clearly-authentic",
+      "year": 2017,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a285ee59815af8ea73debbe2ba6a7d757145db8f",
+      "productKey": "topps-clearly-authentic",
+      "year": 2018,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0cd3c9670ec11a3464f88bf58e30d40bb65c1f7b",
+      "productKey": "topps-clearly-authentic",
+      "year": 2019,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "01c045d31c7c3ae19977ba52e5c6bae7d26eecf3",
+      "productKey": "topps-clearly-authentic",
+      "year": 2020,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "61ddd5a883d0e22c7ada228fe39fe5c53330192a",
+      "productKey": "topps-clearly-authentic",
+      "year": 2021,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "9d12a7746ac5d4a0da20e06674d492b94a6217c1",
+      "productKey": "topps-clearly-authentic",
+      "year": 2022,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ee59ca7f826ca6350a54d334e24b548564a7d17c",
+      "productKey": "topps-clearly-authentic",
+      "year": 2023,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "f0cb5dbbb1eae8e8b9d57660a3288e877e568beb",
+      "productKey": "topps-clearly-authentic",
+      "year": 2024,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "df03efd4364946f88a9aabb359b00206ece572a0",
+      "productKey": "topps-clearly-authentic",
+      "year": 2025,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "258a932e50a846a1fd10509d4fd2beff8e489dfe",
+      "productKey": "topps-clearly-authentic",
+      "year": 2026,
+      "parallel": "Base Acetate Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "84234fdae28776fc4084cba36011f98ccd4e153e",
+      "productKey": "leaf-metal-draft",
+      "year": 2011,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "3ffed6098d8f0d91de969a9627bb1be22abff565",
+      "productKey": "leaf-metal-draft",
+      "year": 2012,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ca73f8bd7aa501df1dccaa7a062d32f78a3c88fc",
+      "productKey": "leaf-metal-draft",
+      "year": 2013,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "043af362f81db5fd036ccbd5318924c785c75988",
+      "productKey": "leaf-metal-draft",
+      "year": 2014,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "76a0a1cc61da92391c2ee7830faf7d590e21a1a3",
+      "productKey": "leaf-metal-draft",
+      "year": 2015,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a18fab4f7b5852ad4812384e021ef4defbff7c1a",
+      "productKey": "leaf-metal-draft",
+      "year": 2016,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "ab1e12add1e02a6a4edca8fe7862c817e614217f",
+      "productKey": "leaf-metal-draft",
+      "year": 2017,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "0ab2e4e494324f8e80734067fc7d2ee2b43931d5",
+      "productKey": "leaf-metal-draft",
+      "year": 2018,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "bc94ab7769c5f13b21566a8974739adc917b21c1",
+      "productKey": "leaf-metal-draft",
+      "year": 2021,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "43aded11a1b46fc5b5da2866648b511712140452",
+      "productKey": "leaf-metal-draft",
+      "year": 2022,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "a3fe534479a7b3466c4a664455c6a4f9811cb19d",
+      "productKey": "leaf-metal-draft",
+      "year": 2023,
+      "parallel": "Base Autograph",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "8130b72d5ae3b51e029b6fbc162433938c0ee444",
+      "productKey": "onyx",
+      "year": 2018,
+      "parallel": "Blue Ink",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5453553954a7cbc9a236179dfc972c23fd8f7515",
+      "productKey": "onyx",
+      "year": 2019,
+      "parallel": "Blue Ink",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "d9d78a1336358a39a372e4e91902192b276c2695",
+      "productKey": "onyx",
+      "year": 2020,
+      "parallel": "Blue Ink",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "86a9a19740b8d0e8ed3cfb9d5f451bb139aa4e77",
+      "productKey": "onyx",
+      "year": 2021,
+      "parallel": "Blue Ink",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    },
+    {
+      "type": "A2",
+      "id": "5cf8e8706328e452eb3714dfd21111b157607bcf",
+      "productKey": "onyx",
+      "year": 2022,
+      "parallel": "Blue Ink",
+      "reason": "auto=true + printRun=null (autographs are typically numbered)"
+    }
+  ],
+  "perProductKey": [
+    {
+      "productKey": "bowman-platinum",
+      "product": "Bowman Platinum",
+      "total": 231,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 231
+      },
+      "auto": {
+        "true": 108,
+        "false": 123
+      },
+      "licensed": {
+        "true": 231,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 30,
+        "/5": 30,
+        "/10": 0,
+        "/25": 30,
+        "/50": 30,
+        "/75": 0,
+        "/99": 18,
+        "/150": 18,
+        "/299": 30,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 45,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2025
+      }
+    },
+    {
+      "productKey": "topps-finest",
+      "product": "Topps Finest",
+      "total": 283,
+      "confidence": {
+        "Verified": 0,
+        "High": 89,
+        "Medium": 194
+      },
+      "auto": {
+        "true": 70,
+        "false": 213
+      },
+      "licensed": {
+        "true": 283,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 47,
+        "/5": 28,
+        "/10": 0,
+        "/25": 28,
+        "/50": 47,
+        "/75": 0,
+        "/99": 33,
+        "/150": 14,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 52,
+        "perCardRun": 1,
+        "unnumbered": 33,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1993,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-chrome",
+      "product": "Topps Chrome",
+      "total": 368,
+      "confidence": {
+        "Verified": 0,
+        "High": 202,
+        "Medium": 166
+      },
+      "auto": {
+        "true": 147,
+        "false": 221
+      },
+      "licensed": {
+        "true": 368,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 42,
+        "/5": 35,
+        "/10": 7,
+        "/25": 42,
+        "/50": 42,
+        "/75": 7,
+        "/99": 14,
+        "/150": 21,
+        "/299": 14,
+        "/500+": 0,
+        "runVaries": 56,
+        "perCardRun": 0,
+        "unnumbered": 67,
+        "other": 21
+      },
+      "yearRange": {
+        "min": 1996,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowmans-best",
+      "product": "Bowman's Best",
+      "total": 160,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 160
+      },
+      "auto": {
+        "true": 70,
+        "false": 90
+      },
+      "licensed": {
+        "true": 160,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 20,
+        "/5": 0,
+        "/10": 20,
+        "/25": 20,
+        "/50": 20,
+        "/75": 0,
+        "/99": 10,
+        "/150": 20,
+        "/299": 10,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 40,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2015,
+        "max": 2024
+      }
+    },
+    {
+      "productKey": "topps-triple-threads",
+      "product": "Topps Triple Threads",
+      "total": 126,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 126
+      },
+      "auto": {
+        "true": 0,
+        "false": 126
+      },
+      "licensed": {
+        "true": 126,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 21,
+        "/5": 0,
+        "/10": 0,
+        "/25": 21,
+        "/50": 0,
+        "/75": 0,
+        "/99": 42,
+        "/150": 0,
+        "/299": 21,
+        "/500+": 0,
+        "runVaries": 21,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2006,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman",
+      "product": "Bowman",
+      "total": 426,
+      "confidence": {
+        "Verified": 9,
+        "High": 297,
+        "Medium": 120
+      },
+      "auto": {
+        "true": 136,
+        "false": 290
+      },
+      "licensed": {
+        "true": 426,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 51,
+        "/5": 47,
+        "/10": 0,
+        "/25": 47,
+        "/50": 47,
+        "/75": 9,
+        "/99": 36,
+        "/150": 57,
+        "/299": 43,
+        "/500+": 10,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 43,
+        "other": 36
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "leaf-metal-draft",
+      "product": "Leaf Metal Draft",
+      "total": 117,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 117
+      },
+      "auto": {
+        "true": 117,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 117
+      },
+      "printRunTiers": {
+        "/1": 13,
+        "/5": 26,
+        "/10": 13,
+        "/25": 26,
+        "/50": 26,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 13,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2023
+      }
+    },
+    {
+      "productKey": "bowman-inception",
+      "product": "Bowman Inception",
+      "total": 98,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 98
+      },
+      "auto": {
+        "true": 98,
+        "false": 0
+      },
+      "licensed": {
+        "true": 98,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 14,
+        "/5": 14,
+        "/10": 0,
+        "/25": 14,
+        "/50": 14,
+        "/75": 14,
+        "/99": 14,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 14,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2013,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman-chrome-sapphire",
+      "product": "Bowman Chrome Sapphire",
+      "total": 105,
+      "confidence": {
+        "Verified": 12,
+        "High": 0,
+        "Medium": 93
+      },
+      "auto": {
+        "true": 49,
+        "false": 56
+      },
+      "licensed": {
+        "true": 105,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 14,
+        "/5": 14,
+        "/10": 14,
+        "/25": 14,
+        "/50": 14,
+        "/75": 7,
+        "/99": 14,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 14,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2020,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "stadium-club",
+      "product": "Stadium Club",
+      "total": 100,
+      "confidence": {
+        "Verified": 0,
+        "High": 13,
+        "Medium": 87
+      },
+      "auto": {
+        "true": 0,
+        "false": 100
+      },
+      "licensed": {
+        "true": 100,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 13,
+        "/25": 0,
+        "/50": 13,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 24,
+        "perCardRun": 0,
+        "unnumbered": 50,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1993,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-tribute",
+      "product": "Topps Tribute",
+      "total": 102,
+      "confidence": {
+        "Verified": 0,
+        "High": 17,
+        "Medium": 85
+      },
+      "auto": {
+        "true": 0,
+        "false": 102
+      },
+      "licensed": {
+        "true": 102,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 17,
+        "/5": 0,
+        "/10": 17,
+        "/25": 17,
+        "/50": 17,
+        "/75": 0,
+        "/99": 34,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2010,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman-chrome-mega-box",
+      "product": "Bowman Chrome Mega Box",
+      "total": 102,
+      "confidence": {
+        "Verified": 0,
+        "High": 18,
+        "Medium": 84
+      },
+      "auto": {
+        "true": 45,
+        "false": 57
+      },
+      "licensed": {
+        "true": 102,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 18,
+        "/5": 18,
+        "/10": 0,
+        "/25": 18,
+        "/50": 18,
+        "/75": 0,
+        "/99": 0,
+        "/150": 9,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 21,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2017,
+        "max": 2025
+      }
+    },
+    {
+      "productKey": "topps-museum-collection",
+      "product": "Topps Museum Collection",
+      "total": 90,
+      "confidence": {
+        "Verified": 0,
+        "High": 15,
+        "Medium": 75
+      },
+      "auto": {
+        "true": 0,
+        "false": 90
+      },
+      "licensed": {
+        "true": 90,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 15,
+        "/5": 0,
+        "/10": 0,
+        "/25": 15,
+        "/50": 15,
+        "/75": 0,
+        "/99": 15,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 15,
+        "perCardRun": 0,
+        "unnumbered": 15,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2012,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-heritage",
+      "product": "Topps Heritage",
+      "total": 100,
+      "confidence": {
+        "Verified": 0,
+        "High": 26,
+        "Medium": 74
+      },
+      "auto": {
+        "true": 0,
+        "false": 100
+      },
+      "licensed": {
+        "true": 100,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 26,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 15,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 59,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2001,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "gypsy-queen",
+      "product": "Gypsy Queen",
+      "total": 80,
+      "confidence": {
+        "Verified": 0,
+        "High": 16,
+        "Medium": 64
+      },
+      "auto": {
+        "true": 0,
+        "false": 80
+      },
+      "licensed": {
+        "true": 80,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 16,
+        "/5": 0,
+        "/10": 16,
+        "/25": 0,
+        "/50": 16,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 16,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 16,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-flagship-update",
+      "product": "Topps (flagship + Update)",
+      "total": 188,
+      "confidence": {
+        "Verified": 0,
+        "High": 125,
+        "Medium": 63
+      },
+      "auto": {
+        "true": 0,
+        "false": 188
+      },
+      "licensed": {
+        "true": 188,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 17,
+        "/5": 0,
+        "/10": 10,
+        "/25": 11,
+        "/50": 28,
+        "/75": 20,
+        "/99": 27,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 25,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 42,
+        "other": 8
+      },
+      "yearRange": {
+        "min": 1984,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman-draft",
+      "product": "Bowman Draft",
+      "total": 218,
+      "confidence": {
+        "Verified": 0,
+        "High": 157,
+        "Medium": 61
+      },
+      "auto": {
+        "true": 103,
+        "false": 115
+      },
+      "licensed": {
+        "true": 218,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 26,
+        "/5": 26,
+        "/10": 0,
+        "/25": 26,
+        "/50": 26,
+        "/75": 6,
+        "/99": 24,
+        "/150": 30,
+        "/299": 13,
+        "/500+": 1,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 16,
+        "other": 24
+      },
+      "yearRange": {
+        "min": 2014,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-five-star",
+      "product": "Topps Five Star",
+      "total": 75,
+      "confidence": {
+        "Verified": 0,
+        "High": 15,
+        "Medium": 60
+      },
+      "auto": {
+        "true": 75,
+        "false": 0
+      },
+      "licensed": {
+        "true": 75,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 15,
+        "/5": 0,
+        "/10": 15,
+        "/25": 15,
+        "/50": 15,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 15,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2012,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-archives",
+      "product": "Topps Archives",
+      "total": 75,
+      "confidence": {
+        "Verified": 0,
+        "High": 15,
+        "Medium": 60
+      },
+      "auto": {
+        "true": 0,
+        "false": 75
+      },
+      "licensed": {
+        "true": 75,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 15,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 15,
+        "/75": 15,
+        "/99": 15,
+        "/150": 0,
+        "/299": 15,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2012,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-clearly-authentic",
+      "product": "Topps Clearly Authentic",
+      "total": 70,
+      "confidence": {
+        "Verified": 0,
+        "High": 10,
+        "Medium": 60
+      },
+      "auto": {
+        "true": 70,
+        "false": 0
+      },
+      "licensed": {
+        "true": 70,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 10,
+        "/5": 10,
+        "/10": 0,
+        "/25": 10,
+        "/50": 10,
+        "/75": 10,
+        "/99": 10,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 10,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2017,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-tier-one",
+      "product": "Topps Tier One",
+      "total": 64,
+      "confidence": {
+        "Verified": 0,
+        "High": 16,
+        "Medium": 48
+      },
+      "auto": {
+        "true": 64,
+        "false": 0
+      },
+      "licensed": {
+        "true": 64,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 16,
+        "/5": 0,
+        "/10": 16,
+        "/25": 16,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 16,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "panini-prizm",
+      "product": "Panini Prizm",
+      "total": 56,
+      "confidence": {
+        "Verified": 0,
+        "High": 8,
+        "Medium": 48
+      },
+      "auto": {
+        "true": 0,
+        "false": 56
+      },
+      "licensed": {
+        "true": 0,
+        "false": 56
+      },
+      "printRunTiers": {
+        "/1": 8,
+        "/5": 0,
+        "/10": 8,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 24,
+        "perCardRun": 0,
+        "unnumbered": 16,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2012,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "panini-donruss",
+      "product": "Panini Donruss",
+      "total": 54,
+      "confidence": {
+        "Verified": 0,
+        "High": 9,
+        "Medium": 45
+      },
+      "auto": {
+        "true": 0,
+        "false": 54
+      },
+      "licensed": {
+        "true": 0,
+        "false": 54
+      },
+      "printRunTiers": {
+        "/1": 9,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 36,
+        "perCardRun": 0,
+        "unnumbered": 9,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2014,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "topps-gold-label",
+      "product": "Topps Gold Label",
+      "total": 55,
+      "confidence": {
+        "Verified": 0,
+        "High": 11,
+        "Medium": 44
+      },
+      "auto": {
+        "true": 0,
+        "false": 55
+      },
+      "licensed": {
+        "true": 55,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 11,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 11,
+        "/99": 0,
+        "/150": 11,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 11,
+        "perCardRun": 0,
+        "unnumbered": 11,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2016,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "allen-ginter",
+      "product": "Allen & Ginter",
+      "total": 147,
+      "confidence": {
+        "Verified": 0,
+        "High": 105,
+        "Medium": 42
+      },
+      "auto": {
+        "true": 0,
+        "false": 147
+      },
+      "licensed": {
+        "true": 147,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 42,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 21,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 21,
+        "perCardRun": 0,
+        "unnumbered": 63,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2006,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-chrome-sapphire",
+      "product": "Topps Chrome Sapphire",
+      "total": 56,
+      "confidence": {
+        "Verified": 0,
+        "High": 14,
+        "Medium": 42
+      },
+      "auto": {
+        "true": 0,
+        "false": 56
+      },
+      "licensed": {
+        "true": 56,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 7,
+        "/5": 7,
+        "/10": 7,
+        "/25": 7,
+        "/50": 7,
+        "/75": 0,
+        "/99": 7,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 7,
+        "perCardRun": 0,
+        "unnumbered": 7,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2020,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-chrome-black",
+      "product": "Topps Chrome Black",
+      "total": 49,
+      "confidence": {
+        "Verified": 0,
+        "High": 7,
+        "Medium": 42
+      },
+      "auto": {
+        "true": 49,
+        "false": 0
+      },
+      "licensed": {
+        "true": 49,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 7,
+        "/5": 7,
+        "/10": 0,
+        "/25": 7,
+        "/50": 7,
+        "/75": 0,
+        "/99": 7,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 7,
+        "perCardRun": 0,
+        "unnumbered": 7,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2020,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "panini-select",
+      "product": "Panini Select",
+      "total": 40,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 40
+      },
+      "auto": {
+        "true": 0,
+        "false": 40
+      },
+      "licensed": {
+        "true": 0,
+        "false": 40
+      },
+      "printRunTiers": {
+        "/1": 10,
+        "/5": 0,
+        "/10": 10,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 10,
+        "perCardRun": 0,
+        "unnumbered": 10,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2013,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "elite-extra-edition",
+      "product": "Elite Extra Edition",
+      "total": 48,
+      "confidence": {
+        "Verified": 0,
+        "High": 9,
+        "Medium": 39
+      },
+      "auto": {
+        "true": 48,
+        "false": 0
+      },
+      "licensed": {
+        "true": 48,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 9,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 9,
+        "/75": 0,
+        "/99": 0,
+        "/150": 9,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 21,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2004,
+        "max": 2018
+      }
+    },
+    {
+      "productKey": "bowman-draft-picks-prospects",
+      "product": "Bowman Draft Picks & Prospects",
+      "total": 39,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 39
+      },
+      "auto": {
+        "true": 21,
+        "false": 18
+      },
+      "licensed": {
+        "true": 39,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 6,
+        "/5": 6,
+        "/10": 0,
+        "/25": 6,
+        "/50": 6,
+        "/75": 0,
+        "/99": 0,
+        "/150": 4,
+        "/299": 2,
+        "/500+": 3,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 6,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2013
+      }
+    },
+    {
+      "productKey": "bowman-sterling",
+      "product": "Bowman Sterling",
+      "total": 36,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 36
+      },
+      "auto": {
+        "true": 36,
+        "false": 0
+      },
+      "licensed": {
+        "true": 36,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 6,
+        "/5": 6,
+        "/10": 0,
+        "/25": 6,
+        "/50": 6,
+        "/75": 0,
+        "/99": 0,
+        "/150": 2,
+        "/299": 4,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 6,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2021
+      }
+    },
+    {
+      "productKey": "sp-authentic",
+      "product": "SP Authentic",
+      "total": 36,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 36
+      },
+      "auto": {
+        "true": 36,
+        "false": 0
+      },
+      "licensed": {
+        "true": 36,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 36,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1999,
+        "max": 2010
+      }
+    },
+    {
+      "productKey": "bowman-draft-sapphire",
+      "product": "Bowman Draft Sapphire",
+      "total": 35,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 35
+      },
+      "auto": {
+        "true": 35,
+        "false": 0
+      },
+      "licensed": {
+        "true": 35,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 5,
+        "/5": 5,
+        "/10": 5,
+        "/25": 5,
+        "/50": 5,
+        "/75": 0,
+        "/99": 5,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 5,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2021,
+        "max": 2025
+      }
+    },
+    {
+      "productKey": "pacific",
+      "product": "Pacific",
+      "total": 32,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 32
+      },
+      "auto": {
+        "true": 0,
+        "false": 32
+      },
+      "licensed": {
+        "true": 32,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 16,
+        "perCardRun": 0,
+        "unnumbered": 16,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1994,
+        "max": 2001
+      }
+    },
+    {
+      "productKey": "topps-luminaries",
+      "product": "Topps Luminaries",
+      "total": 30,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 30
+      },
+      "auto": {
+        "true": 30,
+        "false": 0
+      },
+      "licensed": {
+        "true": 30,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 10,
+        "/5": 10,
+        "/10": 0,
+        "/25": 10,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2017,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman-chrome",
+      "product": "Bowman Chrome",
+      "total": 358,
+      "confidence": {
+        "Verified": 139,
+        "High": 190,
+        "Medium": 29
+      },
+      "auto": {
+        "true": 145,
+        "false": 213
+      },
+      "licensed": {
+        "true": 358,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 57,
+        "/5": 38,
+        "/10": 7,
+        "/25": 42,
+        "/50": 40,
+        "/75": 2,
+        "/99": 26,
+        "/150": 34,
+        "/299": 35,
+        "/500+": 7,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 48,
+        "other": 22
+      },
+      "yearRange": {
+        "min": 2011,
+        "max": 2025
+      }
+    },
+    {
+      "productKey": "topps-chrome-update",
+      "product": "Topps Chrome Update",
+      "total": 115,
+      "confidence": {
+        "Verified": 0,
+        "High": 87,
+        "Medium": 28
+      },
+      "auto": {
+        "true": 0,
+        "false": 115
+      },
+      "licensed": {
+        "true": 115,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 10,
+        "/5": 10,
+        "/10": 0,
+        "/25": 10,
+        "/50": 10,
+        "/75": 3,
+        "/99": 10,
+        "/150": 0,
+        "/299": 10,
+        "/500+": 0,
+        "runVaries": 15,
+        "perCardRun": 0,
+        "unnumbered": 37,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2017,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "topps-big-league",
+      "product": "Topps Big League",
+      "total": 45,
+      "confidence": {
+        "Verified": 0,
+        "High": 18,
+        "Medium": 27
+      },
+      "auto": {
+        "true": 0,
+        "false": 45
+      },
+      "licensed": {
+        "true": 45,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 9,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 9,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 18,
+        "perCardRun": 0,
+        "unnumbered": 9,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2018,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "panini-immaculate",
+      "product": "Panini Immaculate",
+      "total": 36,
+      "confidence": {
+        "Verified": 0,
+        "High": 9,
+        "Medium": 27
+      },
+      "auto": {
+        "true": 36,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 36
+      },
+      "printRunTiers": {
+        "/1": 9,
+        "/5": 9,
+        "/10": 0,
+        "/25": 9,
+        "/50": 0,
+        "/75": 0,
+        "/99": 9,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2014,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "donruss",
+      "product": "Donruss",
+      "total": 25,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 25
+      },
+      "auto": {
+        "true": 0,
+        "false": 25
+      },
+      "licensed": {
+        "true": 25,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 25,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1994,
+        "max": 2005
+      }
+    },
+    {
+      "productKey": "topps-definitive",
+      "product": "Topps Definitive",
+      "total": 32,
+      "confidence": {
+        "Verified": 0,
+        "High": 8,
+        "Medium": 24
+      },
+      "auto": {
+        "true": 32,
+        "false": 0
+      },
+      "licensed": {
+        "true": 32,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 8,
+        "/5": 0,
+        "/10": 8,
+        "/25": 8,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 8,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2019,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "panini-contenders",
+      "product": "Panini Contenders",
+      "total": 24,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 24
+      },
+      "auto": {
+        "true": 24,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 24
+      },
+      "printRunTiers": {
+        "/1": 8,
+        "/5": 0,
+        "/10": 0,
+        "/25": 8,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 8,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2015,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "leaf-trinity",
+      "product": "Leaf Trinity",
+      "total": 33,
+      "confidence": {
+        "Verified": 0,
+        "High": 11,
+        "Medium": 22
+      },
+      "auto": {
+        "true": 33,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 33
+      },
+      "printRunTiers": {
+        "/1": 11,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 22,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2013,
+        "max": 2023
+      }
+    },
+    {
+      "productKey": "panini-national-treasures",
+      "product": "Panini National Treasures",
+      "total": 28,
+      "confidence": {
+        "Verified": 0,
+        "High": 7,
+        "Medium": 21
+      },
+      "auto": {
+        "true": 28,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 28
+      },
+      "printRunTiers": {
+        "/1": 7,
+        "/5": 7,
+        "/10": 0,
+        "/25": 7,
+        "/50": 0,
+        "/75": 0,
+        "/99": 7,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2016,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "panini-flawless",
+      "product": "Panini Flawless",
+      "total": 28,
+      "confidence": {
+        "Verified": 0,
+        "High": 7,
+        "Medium": 21
+      },
+      "auto": {
+        "true": 28,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 28
+      },
+      "printRunTiers": {
+        "/1": 7,
+        "/5": 7,
+        "/10": 0,
+        "/25": 7,
+        "/50": 0,
+        "/75": 0,
+        "/99": 7,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2016,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "onyx",
+      "product": "Onyx",
+      "total": 20,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 20
+      },
+      "auto": {
+        "true": 20,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 20
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 15,
+        "perCardRun": 0,
+        "unnumbered": 5,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2018,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "bowman-chrome-mini",
+      "product": "Bowman Chrome Mini",
+      "total": 18,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 18
+      },
+      "auto": {
+        "true": 0,
+        "false": 18
+      },
+      "licensed": {
+        "true": 18,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 3,
+        "/5": 3,
+        "/10": 0,
+        "/25": 3,
+        "/50": 3,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 6,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2013,
+        "max": 2017
+      }
+    },
+    {
+      "productKey": "bowman-high-tek",
+      "product": "Bowman High Tek",
+      "total": 18,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 18
+      },
+      "auto": {
+        "true": 18,
+        "false": 0
+      },
+      "licensed": {
+        "true": 18,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 3,
+        "/5": 3,
+        "/10": 0,
+        "/25": 3,
+        "/50": 3,
+        "/75": 0,
+        "/99": 3,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 3,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2015,
+        "max": 2017
+      }
+    },
+    {
+      "productKey": "upper-deck",
+      "product": "Upper Deck",
+      "total": 18,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 18
+      },
+      "auto": {
+        "true": 0,
+        "false": 18
+      },
+      "licensed": {
+        "true": 18,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 7,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 9,
+        "perCardRun": 0,
+        "unnumbered": 2,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1995,
+        "max": 2009
+      }
+    },
+    {
+      "productKey": "fleer-ex",
+      "product": "Fleer EX",
+      "total": 16,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 16
+      },
+      "auto": {
+        "true": 0,
+        "false": 16
+      },
+      "licensed": {
+        "true": 16,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 16,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1997,
+        "max": 2004
+      }
+    },
+    {
+      "productKey": "tristar-prospects-plus",
+      "product": "TRISTAR Prospects Plus",
+      "total": 20,
+      "confidence": {
+        "Verified": 0,
+        "High": 5,
+        "Medium": 15
+      },
+      "auto": {
+        "true": 20,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 20
+      },
+      "printRunTiers": {
+        "/1": 5,
+        "/5": 0,
+        "/10": 0,
+        "/25": 5,
+        "/50": 5,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 5,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2008,
+        "max": 2012
+      }
+    },
+    {
+      "productKey": "panini-diamond-kings",
+      "product": "Panini Diamond Kings",
+      "total": 21,
+      "confidence": {
+        "Verified": 0,
+        "High": 7,
+        "Medium": 14
+      },
+      "auto": {
+        "true": 0,
+        "false": 21
+      },
+      "licensed": {
+        "true": 0,
+        "false": 21
+      },
+      "printRunTiers": {
+        "/1": 7,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 14,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2016,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "fleer-ultra",
+      "product": "Fleer Ultra",
+      "total": 24,
+      "confidence": {
+        "Verified": 0,
+        "High": 13,
+        "Medium": 11
+      },
+      "auto": {
+        "true": 0,
+        "false": 24
+      },
+      "licensed": {
+        "true": 24,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 11,
+        "perCardRun": 0,
+        "unnumbered": 13,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1995,
+        "max": 2007
+      }
+    },
+    {
+      "productKey": "topps-sterling",
+      "product": "Topps Sterling",
+      "total": 15,
+      "confidence": {
+        "Verified": 0,
+        "High": 5,
+        "Medium": 10
+      },
+      "auto": {
+        "true": 15,
+        "false": 0
+      },
+      "licensed": {
+        "true": 15,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 5,
+        "/5": 0,
+        "/10": 5,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 5,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2006,
+        "max": 2010
+      }
+    },
+    {
+      "productKey": "ud-collectors-choice",
+      "product": "UD Collector's Choice",
+      "total": 10,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 10
+      },
+      "auto": {
+        "true": 0,
+        "false": 10
+      },
+      "licensed": {
+        "true": 10,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 10,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1994,
+        "max": 1998
+      }
+    },
+    {
+      "productKey": "donruss-elite",
+      "product": "Donruss Elite",
+      "total": 10,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 10
+      },
+      "auto": {
+        "true": 0,
+        "false": 10
+      },
+      "licensed": {
+        "true": 10,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 10,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2001,
+        "max": 2005
+      }
+    },
+    {
+      "productKey": "tristar-obak",
+      "product": "TRISTAR Obak",
+      "total": 9,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 9
+      },
+      "auto": {
+        "true": 9,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 9
+      },
+      "printRunTiers": {
+        "/1": 3,
+        "/5": 3,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 3,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2009,
+        "max": 2011
+      }
+    },
+    {
+      "productKey": "topps-chrome-platinum-anniversary",
+      "product": "Topps Chrome Platinum Anniversary",
+      "total": 12,
+      "confidence": {
+        "Verified": 0,
+        "High": 4,
+        "Medium": 8
+      },
+      "auto": {
+        "true": 0,
+        "false": 12
+      },
+      "licensed": {
+        "true": 12,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 2,
+        "/5": 2,
+        "/10": 0,
+        "/25": 2,
+        "/50": 2,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 2,
+        "perCardRun": 0,
+        "unnumbered": 2,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2021,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "panini-mosaic",
+      "product": "Panini Mosaic",
+      "total": 8,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 8
+      },
+      "auto": {
+        "true": 0,
+        "false": 8
+      },
+      "licensed": {
+        "true": 0,
+        "false": 8
+      },
+      "printRunTiers": {
+        "/1": 2,
+        "/5": 0,
+        "/10": 2,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 2,
+        "perCardRun": 0,
+        "unnumbered": 2,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2021,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "pinnacle",
+      "product": "Pinnacle",
+      "total": 8,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 8
+      },
+      "auto": {
+        "true": 0,
+        "false": 8
+      },
+      "licensed": {
+        "true": 8,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 8,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1993,
+        "max": 1997
+      }
+    },
+    {
+      "productKey": "flair-showcase",
+      "product": "Flair Showcase",
+      "total": 6,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 6
+      },
+      "auto": {
+        "true": 0,
+        "false": 6
+      },
+      "licensed": {
+        "true": 6,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 3,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 3,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1997,
+        "max": 1999
+      }
+    },
+    {
+      "productKey": "panini-chronicles",
+      "product": "Panini Chronicles",
+      "total": 6,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 6
+      },
+      "auto": {
+        "true": 6,
+        "false": 0
+      },
+      "licensed": {
+        "true": 0,
+        "false": 6
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 6,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2017,
+        "max": 2022
+      }
+    },
+    {
+      "productKey": "select-certified",
+      "product": "Select Certified",
+      "total": 6,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 6
+      },
+      "auto": {
+        "true": 0,
+        "false": 6
+      },
+      "licensed": {
+        "true": 6,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 6,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1995,
+        "max": 1996
+      }
+    },
+    {
+      "productKey": "score",
+      "product": "Score",
+      "total": 5,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 5
+      },
+      "auto": {
+        "true": 0,
+        "false": 5
+      },
+      "licensed": {
+        "true": 5,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 5,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1994,
+        "max": 1998
+      }
+    },
+    {
+      "productKey": "fleer",
+      "product": "Fleer",
+      "total": 3,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 3
+      },
+      "auto": {
+        "true": 0,
+        "false": 3
+      },
+      "licensed": {
+        "true": 3,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 3,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1987,
+        "max": 1989
+      }
+    },
+    {
+      "productKey": "upper-deck-sp",
+      "product": "Upper Deck SP",
+      "total": 3,
+      "confidence": {
+        "Verified": 0,
+        "High": 0,
+        "Medium": 3
+      },
+      "auto": {
+        "true": 0,
+        "false": 3
+      },
+      "licensed": {
+        "true": 3,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 3,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 1993,
+        "max": 1995
+      }
+    },
+    {
+      "productKey": "topps-dynasty",
+      "product": "Topps Dynasty",
+      "total": 26,
+      "confidence": {
+        "Verified": 0,
+        "High": 26,
+        "Medium": 0
+      },
+      "auto": {
+        "true": 26,
+        "false": 0
+      },
+      "licensed": {
+        "true": 26,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 13,
+        "/5": 0,
+        "/10": 13,
+        "/25": 0,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2014,
+        "max": 2026
+      }
+    },
+    {
+      "productKey": "bowman-black",
+      "product": "Bowman Black",
+      "total": 5,
+      "confidence": {
+        "Verified": 0,
+        "High": 5,
+        "Medium": 0
+      },
+      "auto": {
+        "true": 5,
+        "false": 0
+      },
+      "licensed": {
+        "true": 5,
+        "false": 0
+      },
+      "printRunTiers": {
+        "/1": 0,
+        "/5": 0,
+        "/10": 0,
+        "/25": 5,
+        "/50": 0,
+        "/75": 0,
+        "/99": 0,
+        "/150": 0,
+        "/299": 0,
+        "/500+": 0,
+        "runVaries": 0,
+        "perCardRun": 0,
+        "unnumbered": 0,
+        "other": 0
+      },
+      "yearRange": {
+        "min": 2012,
+        "max": 2016
+      }
+    }
+  ]
+}
