@@ -58,25 +58,89 @@ function normalizeParallel(s: string): string {
     .trim();
 }
 
+// Empty dataset used when the JSON blob can't be located at runtime.
+// Every lookup on this empty dataset returns null; the caller then
+// falls back to the hand-coded parallelPremiumFloors rules. This is
+// the same behavior as if the dataset had never been added — safe.
+const EMPTY_DATASET: BundledDataset = {
+  generatedAt: "n/a",
+  source: "not-found (defensive fallback)",
+  scope: "empty",
+  yearRange: { min: 0, max: 0 },
+  entryCount: 0,
+  productCounts: {},
+  entries: [],
+};
+
 function loadDataset(): BundledDataset {
   if (_dataset) return _dataset;
-  // Bundled with the dist output; resolved relative to this compiled file.
-  // The dist path lives at .../dist/services/compiq/bowmanParallelsDataset.js,
-  // and the JSON is copied into .../dist/data/bowman-parallels.json by
-  // the build step (see below). At dev time (tsx / vitest), the source
-  // path .../src/services/compiq/bowmanParallelsDataset.ts uses the
-  // sibling backend/data/bowman-parallels.json.
-  //
-  // We try the dist location first (production) then fall back to the
-  // repo layout (dev / tests).
-  let json: BundledDataset;
-  try {
-    json = require("../../../data/bowman-parallels.json") as BundledDataset;
-  } catch {
-    json = require("../../../../backend/data/bowman-parallels.json") as BundledDataset;
+
+  // CF-BOWMAN-DATASET-DEFENSIVE-LOAD (2026-07-10, prod-hotfix): the
+  // original loader threw when `require()` couldn't resolve the JSON
+  // path, taking down every year-aware search (500 on first request).
+  // A missing blob is not a fatal condition — the year-aware lookup is
+  // additive on top of the hand-coded rules — so the loader now:
+  //   1. Tries the compiled-output relative path (prod)
+  //   2. Falls back to the source-tree relative path (dev / vitest)
+  //   3. Falls back to fs.readFileSync at process.cwd()-based
+  //      absolute paths (Azure App Service can be quirky about
+  //      require() resolution across working-directory changes)
+  //   4. Returns the empty dataset — every lookup returns null,
+  //      callers seamlessly fall back to hand-coded rules
+  // Ordered require attempts.
+  const requirePaths = [
+    "../../../data/bowman-parallels.json",
+    "../../../../backend/data/bowman-parallels.json",
+  ];
+  for (const p of requirePaths) {
+    try {
+      const json = require(p) as BundledDataset;
+      _dataset = json;
+      console.log(
+        `[bowmanParallelsDataset] loaded via require: ${p} (${json.entryCount} entries)`,
+      );
+      return json;
+    } catch {
+      // continue to next path
+    }
   }
-  _dataset = json;
-  return json;
+
+  // Absolute-path fallback via fs. Compiled __dirname sits at
+  // .../dist/services/compiq/ at prod; try known-good sibling paths.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs: typeof import("node:fs") = require("node:fs");
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path: typeof import("node:path") = require("node:path");
+    const abs = [
+      path.join(__dirname, "..", "..", "..", "data", "bowman-parallels.json"),
+      path.join(process.cwd(), "dist", "data", "bowman-parallels.json"),
+      path.join(process.cwd(), "backend", "dist", "data", "bowman-parallels.json"),
+      path.join(process.cwd(), "backend", "data", "bowman-parallels.json"),
+    ];
+    for (const p of abs) {
+      try {
+        if (fs.existsSync(p)) {
+          const json = JSON.parse(fs.readFileSync(p, "utf-8")) as BundledDataset;
+          _dataset = json;
+          console.log(
+            `[bowmanParallelsDataset] loaded via fs: ${p} (${json.entryCount} entries)`,
+          );
+          return json;
+        }
+      } catch {
+        // continue
+      }
+    }
+  } catch {
+    // fs / path unavailable — very unusual, fall through to empty
+  }
+
+  console.warn(
+    "[bowmanParallelsDataset] JSON blob not found at any known path — year-aware lookups will return null (falling back to hand-coded rules)",
+  );
+  _dataset = EMPTY_DATASET;
+  return EMPTY_DATASET;
 }
 
 function ensureIndex(): Map<string, RawEntry[]> {
