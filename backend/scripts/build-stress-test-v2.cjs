@@ -111,19 +111,40 @@ const BWD_AUTOS = [
   { parallel: "SuperFractor", printRun: 1, auto: true, cardSet: "Chrome Autographs" },
 ];
 
-// Per-year overrides for parallels that vary year-to-year.
-const YEAR_OVERRIDES = {
-  "Bowman Chrome": {
-    2022: { drop: ["Reptillian Blue Refractor", "Green Grass Refractor"] },
-    2023: { drop: ["Reptillian Blue Refractor"] },
-    2024: {},
-    2025: { add: [{ parallel: "Reptillian Blue Refractor", printRun: 150, auto: false }] },
-  },
-};
+// ─── 2022 Bowman Chrome uses SHIMMER scheme, not RayWave (introduced 2023) ─
+const BWC_PROSPECTS_2022 = [
+  { parallel: "Refractor", printRun: 499, auto: false },
+  { parallel: "Speckle Refractor", printRun: 299, auto: false },
+  { parallel: "Purple Shimmer Refractor", printRun: 250, auto: false },
+  { parallel: "Purple Refractor", printRun: 250, auto: false },
+  { parallel: "Fuchsia Shimmer Refractor", printRun: 199, auto: false },
+  { parallel: "Blue Refractor", printRun: 150, auto: false },
+  { parallel: "Aqua Refractor", printRun: 125, auto: false },
+  { parallel: "Green Shimmer Refractor", printRun: 99, auto: false },
+  { parallel: "Green Refractor", printRun: 99, auto: false },
+  { parallel: "Yellow Refractor", printRun: 75, auto: false },
+  { parallel: "Gold Shimmer Refractor", printRun: 50, auto: false },
+  { parallel: "Gold Refractor", printRun: 50, auto: false },
+  { parallel: "Orange Shimmer Refractor", printRun: 25, auto: false },
+  { parallel: "Orange Refractor", printRun: 25, auto: false },
+  { parallel: "Red Shimmer Refractor", printRun: 5, auto: false },
+  { parallel: "Red Refractor", printRun: 5, auto: false },
+  { parallel: "Black Shimmer Refractor", printRun: 1, auto: false },
+  { parallel: "SuperFractor", printRun: 1, auto: false },
+];
 
-function schemeFor(product, cardSet) {
-  if (product === "Bowman" && cardSet === "Base") return FLAGSHIP_BOWMAN_BASE.map((p) => ({ ...p, cardSet: "Base" }));
-  if (product === "Bowman Chrome" && cardSet === "Chrome Prospects") return BWC_PROSPECTS.map((p) => ({ ...p, cardSet: "Chrome Prospects" }));
+// ─── 2022 flagship Bowman didn't have Pink (introduced 2023) ─────────────
+const FLAGSHIP_BOWMAN_BASE_2022 = FLAGSHIP_BOWMAN_BASE.filter((p) => p.parallel !== "Pink");
+
+function schemeFor(product, cardSet, year) {
+  if (product === "Bowman" && cardSet === "Base") {
+    const scheme = year === 2022 ? FLAGSHIP_BOWMAN_BASE_2022 : FLAGSHIP_BOWMAN_BASE;
+    return scheme.map((p) => ({ ...p, cardSet: "Base" }));
+  }
+  if (product === "Bowman Chrome" && cardSet === "Chrome Prospects") {
+    const scheme = year === 2022 ? BWC_PROSPECTS_2022 : BWC_PROSPECTS;
+    return scheme.map((p) => ({ ...p, cardSet: "Chrome Prospects" }));
+  }
   if (product === "Bowman Chrome" && cardSet === "Chrome Prospect Autographs") return BWC_PROSPECT_AUTOS.map((p) => ({ ...p, cardSet: "Chrome Prospect Autographs" }));
   if (product === "Bowman Draft" && cardSet === "Chrome Prospects") return BWD_PROSPECTS.map((p) => ({ ...p, cardSet: "Chrome Prospects" }));
   if (product === "Bowman Draft" && cardSet === "Chrome Autographs") return BWD_AUTOS.map((p) => ({ ...p }));
@@ -185,7 +206,7 @@ const MATRIX = [
 const allCards = [];
 const parallelInventory = [];
 for (const [year, product, cardSet] of MATRIX) {
-  const scheme = schemeFor(product, cardSet);
+  const scheme = schemeFor(product, cardSet, year);
   if (scheme.length === 0) continue;
   const cards = synthesizeCards(year, product, cardSet, scheme);
   allCards.push(...cards);
