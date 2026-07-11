@@ -160,6 +160,42 @@ describe("inferPrintRunFromReferenceCatalog", () => {
     expect(res).toBeNull();
   });
 
+  it("suffix-fuzz: 'Blue' matches 'Blue Refractor' when exact key misses", async () => {
+    // CF-STRESS-TEST-SUFFIX-FUZZ (2026-07-10): stress-test surfaced
+    // that user queries often say "Blue" for what the catalog stores
+    // as "Blue Refractor" in Chrome-family sets.
+    process.env.COMPIQ_REFERENCE_CATALOG_ENABLED = "true";
+    listParallelsByProductYearMock.mockResolvedValue([
+      doc({
+        parallel: "Blue Refractor",
+        parallelKey: "blue-refractor",
+        printRun: 150,
+      }),
+    ]);
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const res = await inferPrintRunFromReferenceCatalog(
+      "Bowman Chrome",
+      2022,
+      "Blue",
+    );
+    expect(res).not.toBeNull();
+    expect(res!.printRun).toBe(150);
+    expect(res!.parallel).toBe("Blue Refractor");
+  });
+
+  it("suffix-fuzz: exact match beats suffix-augmented match", async () => {
+    // In Bowman flagship, plain "Blue" is a legitimate /150 parallel
+    // separate from "Blue Refractor". Exact hit MUST win.
+    process.env.COMPIQ_REFERENCE_CATALOG_ENABLED = "true";
+    listParallelsByProductYearMock.mockResolvedValue([
+      doc({ parallel: "Blue", parallelKey: "blue", printRun: 150, confidence: "High" }),
+      doc({ parallel: "Blue Refractor", parallelKey: "blue-refractor", printRun: 150, confidence: "High" }),
+    ]);
+    const { inferPrintRunFromReferenceCatalog } = await load();
+    const res = await inferPrintRunFromReferenceCatalog("Bowman", 2022, "Blue");
+    expect(res!.parallel).toBe("Blue"); // exact hit wins over fuzz
+  });
+
   it("canonicalizes product + parallel via slug() before matching", async () => {
     process.env.COMPIQ_REFERENCE_CATALOG_ENABLED = "true";
     listParallelsByProductYearMock.mockResolvedValue([

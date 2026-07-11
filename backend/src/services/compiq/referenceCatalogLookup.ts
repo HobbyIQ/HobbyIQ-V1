@@ -158,7 +158,29 @@ export async function inferPrintRunFromReferenceCatalog(
     return null;
   }
 
-  const candidates = bucket.byParallelKey.get(parallelKey);
+  // CF-STRESS-TEST-SUFFIX-FUZZ (2026-07-10): the stress-test surfaced
+  // that Chrome-family SKUs are typically named by color alone in the
+  // wild ("Blue"), while the reference catalog stores full names with
+  // the Refractor suffix ("Blue Refractor"). Try exact first; on miss,
+  // fall through to a canonical suffix-augmented lookup so callers
+  // don't have to know which naming convention lives in Cosmos.
+  //
+  // Order matters — exact first so plain-color parallels in flagship
+  // Bowman ("Blue" /150) win over the Chrome refractor version when
+  // the caller genuinely means the flagship parallel.
+  let candidates = bucket.byParallelKey.get(parallelKey);
+  if (!candidates || candidates.length === 0) {
+    for (const suffix of ["-refractor", "-foil", "-prizm"]) {
+      const suffixKey = parallelKey.endsWith(suffix)
+        ? parallelKey
+        : `${parallelKey}${suffix}`;
+      const suffixHit = bucket.byParallelKey.get(suffixKey);
+      if (suffixHit && suffixHit.length > 0) {
+        candidates = suffixHit;
+        break;
+      }
+    }
+  }
   if (!candidates || candidates.length === 0) return null;
 
   const best = selectBest(candidates, opts?.isAuto);
