@@ -168,12 +168,14 @@ describe("computeReferenceCatalogBaseline", () => {
       productKey: "bowman-chrome",
       year: 2020,
       cardClass: "base",
-      medianSale: 20,
-      p25Sale: 12,
-      p75Sale: 35,
+      currentValue: 20,
+      predictedValue: 22,
+      trendPct: 0.1,
+      trendDirection: "up",
       sampleSize: 87,
+      currentRange: { low: 10, high: 40 },
       computedAt: "2026-07-11T00:00:00Z",
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
     const { computeReferenceCatalogBaseline } = await load();
     const r = await computeReferenceCatalogBaseline({
@@ -183,9 +185,13 @@ describe("computeReferenceCatalogBaseline", () => {
       cardClass: "base",
     });
     expect(r).not.toBeNull();
-    expect(r!.eraBaseline).toBe(20); // Cosmos median, not static 12
+    expect(r!.eraBaseline).toBe(20); // Cosmos currentValue, not static 12
     expect(r!.baselineSource).toBe("era-baselines-cosmos");
     expect(r!.sampleSize).toBe(87);
+    // Forward-looking fields propagated from the era-baseline doc.
+    expect(r!.predictedFloor).toBe(Math.round(22 * r!.tierMultiplier * 100) / 100);
+    expect(r!.trendPct).toBe(0.1);
+    expect(r!.trendDirection).toBe("up");
   });
 
   it("falls back to static table when Cosmos returns null", async () => {

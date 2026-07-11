@@ -151,6 +151,19 @@ export interface ReferenceCatalogBaselineResult {
   baselineSource: "static-table" | "era-baselines-cosmos";
   /** Sample size from Cosmos (undefined for static-table). */
   sampleSize?: number;
+  /**
+   * 7-day forward-projected floor (predictedValue × tierMultiplier).
+   * Undefined when using the static table (no trend info) or when
+   * predictedValue is missing from the Cosmos doc.
+   */
+  predictedFloor?: number;
+  /**
+   * Signed % change from currentValue → predictedValue. Positive = up.
+   * Undefined on static-table fallback.
+   */
+  trendPct?: number;
+  /** "up" / "down" / "flat" from the era-baseline doc. */
+  trendDirection?: "up" | "down" | "flat";
 }
 
 /**
@@ -212,12 +225,21 @@ export async function computeReferenceCatalogBaseline(input: {
   let eraBaseline: number | null = null;
   let baselineSource: "static-table" | "era-baselines-cosmos" = "static-table";
   let sampleSize: number | undefined;
+  // NEW: forward-looking fields from the era-baselines Cosmos doc.
+  // Static-table path leaves these undefined (no trend info available).
+  let predictedValue: number | undefined;
+  let trendPct: number | undefined;
+  let trendDirection: "up" | "down" | "flat" | undefined;
   try {
     const cosmosDoc = await getEraBaseline(productKey, input.year, input.cardClass);
-    if (cosmosDoc && cosmosDoc.medianSale > 0) {
-      eraBaseline = cosmosDoc.medianSale;
+    if (cosmosDoc && cosmosDoc.currentValue > 0) {
+      // Use CURRENT value as the era baseline for the floor calc.
+      eraBaseline = cosmosDoc.currentValue;
       baselineSource = "era-baselines-cosmos";
       sampleSize = cosmosDoc.sampleSize;
+      predictedValue = cosmosDoc.predictedValue;
+      trendPct = cosmosDoc.trendPct;
+      trendDirection = cosmosDoc.trendDirection;
     }
   } catch (err) {
     // Never let Cosmos block the fallback — log and try static.
@@ -237,8 +259,14 @@ export async function computeReferenceCatalogBaseline(input: {
     baselineSource = "static-table";
   }
 
-  // Step 3: compute floor + range.
+  // Step 3: compute floor + range from currentValue.
   const floor = Math.round(eraBaseline * tierMultiplier * 100) / 100;
+  // When we have a forward-looking predictedValue from Cosmos, compute
+  // the predicted floor too. Static-table path leaves this undefined.
+  const predictedFloor =
+    predictedValue !== undefined
+      ? Math.round(predictedValue * tierMultiplier * 100) / 100
+      : undefined;
   return {
     floor,
     range: {
@@ -252,5 +280,9 @@ export async function computeReferenceCatalogBaseline(input: {
     cardSet: catalogHit.cardSet,
     baselineSource,
     sampleSize,
+    // Forward-looking fields (populated only when Cosmos era-baseline is used).
+    predictedFloor,
+    trendPct,
+    trendDirection,
   };
 }

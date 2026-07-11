@@ -73,25 +73,29 @@ describe("getEraBaseline", () => {
     expect(readMock).not.toHaveBeenCalled();
   });
 
-  it("returns the doc on a successful read", async () => {
+  it("returns the doc on a successful read (v2 forward-looking schema)", async () => {
     readMock.mockResolvedValue({
       resource: {
         id: "abc",
         productKey: "bowman-chrome",
         year: 2020,
         cardClass: "base",
-        medianSale: 15,
-        p25Sale: 8,
-        p75Sale: 25,
+        currentValue: 15,
+        predictedValue: 16.5,
+        trendPct: 0.1,
+        trendDirection: "up",
         sampleSize: 42,
+        currentRange: { low: 7.5, high: 30 },
         computedAt: "2026-07-11T00:00:00Z",
-        schemaVersion: 1,
+        schemaVersion: 2,
       },
     });
     const { getEraBaseline } = await load();
     const doc = await getEraBaseline("bowman-chrome", 2020, "base");
     expect(doc).not.toBeNull();
-    expect(doc!.medianSale).toBe(15);
+    expect(doc!.currentValue).toBe(15);
+    expect(doc!.predictedValue).toBe(16.5);
+    expect(doc!.trendDirection).toBe("up");
     expect(doc!.sampleSize).toBe(42);
   });
 
@@ -111,12 +115,14 @@ describe("getEraBaseline", () => {
         productKey: "bowman-chrome",
         year: 2020,
         cardClass: "base",
-        medianSale: 15,
-        p25Sale: 8,
-        p75Sale: 25,
+        currentValue: 15,
+        predictedValue: 16.5,
+        trendPct: 0.1,
+        trendDirection: "up",
         sampleSize: 42,
+        currentRange: { low: 7.5, high: 30 },
         computedAt: "2026-07-11T00:00:00Z",
-        schemaVersion: 1,
+        schemaVersion: 2,
       },
     });
     const { getEraBaseline } = await load();
