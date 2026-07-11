@@ -4474,6 +4474,20 @@ export async function sellHolding(req: Request, res: Response) {
     notes: notes && notes.length ? notes : undefined,
     gradingCost,
     suppliesCost,
+    // CF-MANUAL-SELL-EXPLICIT-SOURCE (2026-07-11, Drew): emit source:"manual"
+    // explicitly instead of relying on absent-means-manual reader defaults.
+    // The interface comment at line 464 states readers MUST treat absent as
+    // manual — that's still true — but explicitly stamping the field makes:
+    //   - Cosmos queries filter/group cleanly without OR-null clauses
+    //   - App Insights ledger telemetry human-readable
+    //   - iOS-side debugging show a positive marker instead of an
+    //     absence (which is impossible to distinguish from "field
+    //     dropped by a schema-narrowing decode")
+    // Behavioral equivalent to absent: isReconciled + accumulate + all
+    // groupKeyFor cases already returned "manual" for absent source, so
+    // existing readers see no change. Backfill on legacy absent-source
+    // entries is NOT done here — pure write-side change.
+    source: "manual",
     // CF-ERP-EXPANSION-#1 + #6: manual entries are reconciled-by-definition.
     // The user IS the authoritative source for their own manual sale.
     reconciledVia: "manual_entry",
