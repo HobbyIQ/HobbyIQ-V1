@@ -101,6 +101,15 @@ import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
 // has zero player-scoped comps (Hartman-class prospects). See
 // productYearAnchor.ts for design + handoff discipline.
 import { fetchProductYearMedianAnchor } from "./productYearAnchor.js";
+// CF-NO-NULL-PRICING (2026-07-11, Drew — Tier 6 fallback): reference-
+// catalog baseline. Fires when both player and cross-player anchors are
+// empty but the ladder has a ParallelDoc. Env flag gated.
+// See docs/design/no-null-pricing-architecture.md
+import { computeReferenceCatalogBaseline } from "./referenceCatalogBaseline.js";
+// CF-NO-NULL-PRICING PR 3 (2026-07-11, Drew — Tier 7 fallback): era-typed
+// SetDoc baseline. Fires at "unavailable" emit sites when we can identify
+// (year, product) but nothing else. Deepest fallback before returning null.
+import { maybeTier7Fallback } from "./tier7SetDocFallback.js";
 
 /**
  * Small helper — prefer the year-aware dataset when we have a year,
@@ -4169,6 +4178,91 @@ export async function computeEstimate(
             } as Record<string, unknown>;
           }
         }
+        // CF-NO-NULL-PRICING (2026-07-11, Drew — Tier 6): both player and
+        // cross-player anchors are empty, but the ladder still has a
+        // ParallelDoc for this parallel. Fall through to the reference-
+        // catalog baseline (era baseline × ladder tier). This is a
+        // structural floor from era knowledge alone — no market signal.
+        // See docs/design/no-null-pricing-architecture.md for the full
+        // tier chain. Env-flag gated (default off).
+        const refCatBaseline = await computeReferenceCatalogBaseline({
+          product: queryContext.product,
+          year:
+            typeof queryContext.cardYear === "number"
+              ? queryContext.cardYear
+              : null,
+          parallel: parallelForFloor,
+          cardClass:
+            queryContext.isAuto === true ? "auto" : "base",
+        });
+        if (refCatBaseline) {
+          const projectedFmv = refCatBaseline.floor;
+          console.log(
+            JSON.stringify({
+              event: "reference_catalog_baseline_applied",
+              source: "compiq.computeEstimate",
+              query: cardTitle,
+              player: queryContext.playerName,
+              product: queryContext.product,
+              parallel: parallelForFloor,
+              inferredPrintRun: refCatBaseline.printRun,
+              tierMultiplier: refCatBaseline.tierMultiplier,
+              eraBaseline: refCatBaseline.eraBaseline,
+              baselineSource: refCatBaseline.baselineSource,
+              projectedFmv,
+            }),
+          );
+          emitPredictionToCorpus({
+            cardIdentity: null,
+            body,
+            fairMarketValue: projectedFmv,
+            fmvMechanism: "parallel-floor-projection",
+            predictedPrice: projectedFmv,
+            predictedPriceRange: refCatBaseline.range,
+            predictedPriceMechanism: "parallel-floor-projection",
+            callContext,
+          });
+          return {
+            source: "reference-catalog-baseline",
+            pricingTier: "reference-catalog-baseline",
+            cardIdentity: {
+              card_id: "",
+              title: null,
+              player: queryContext.playerName,
+              set: queryContext.product ?? null,
+              release: queryContext.product ?? null,
+              year:
+                typeof queryContext.cardYear === "number"
+                  ? queryContext.cardYear
+                  : null,
+              number: queryContext.cardNumber ?? null,
+              variant: parallelForFloor,
+            },
+            fairMarketValue: projectedFmv,
+            fairMarketValueLow: refCatBaseline.range.low,
+            fairMarketValueHigh: refCatBaseline.range.high,
+            marketValue: projectedFmv,
+            predictedPrice: projectedFmv,
+            predictedPriceRange: refCatBaseline.range,
+            predictedPriceAttribution: {
+              mechanism: "reference-catalog-baseline",
+              eraBaseline: refCatBaseline.eraBaseline,
+              tierMultiplier: refCatBaseline.tierMultiplier,
+              inferredPrintRun: refCatBaseline.printRun,
+              baselineSource: refCatBaseline.baselineSource,
+            },
+            quickSaleValue: Math.round(projectedFmv * 0.75 * 100) / 100,
+            premiumValue: Math.round(projectedFmv * 1.3 * 100) / 100,
+            compsUsed: 0,
+            compsAvailable: 0,
+            recentComps: [],
+            variantWarning: [],
+            confidence: { pricingConfidence: 25 },
+            verdict: `Era baseline — no sales data yet for this card; structural minimum from ${refCatBaseline.parallel} tier × era baseline`,
+            gradeUsed: cardHedgeGrade,
+            marketDNA: { trend: "flat", speed: "Normal" },
+          } as Record<string, unknown>;
+        }
       } catch (err) {
         console.warn(
           `[compiq.computeEstimate] parallel-floor projection threw: ${(err as Error)?.message ?? err}`,
@@ -4258,6 +4352,73 @@ export async function computeEstimate(
     // If we still have no card (either canSyntheticRescue was false or the
     // probe returned empty), fall back to the original catalog-miss return.
     if (fetched.card === null) {
+      // CF-NO-NULL-PRICING PR 3 (2026-07-11, Drew — Tier 7 at catalog-miss).
+      // Highest-value wire-up point: this is where "Can't estimate yet"
+      // fires for cards the catalog can't resolve. If we can at least
+      // identify (year, product) from queryContext, emit an era-typed
+      // baseline instead of null. Env-flag gated.
+      const t7 = await maybeTier7Fallback({
+        product: queryContext.product,
+        year:
+          typeof queryContext.cardYear === "number"
+            ? queryContext.cardYear
+            : null,
+      });
+      if (t7) {
+        console.log(
+          JSON.stringify({
+            event: "tier7_setdoc_baseline_applied",
+            source: "compiq.computeEstimate",
+            query: cardTitle,
+            product: queryContext.product,
+            year: queryContext.cardYear,
+            setName: t7.setName,
+            era: t7.era,
+            setTypeKey: t7.setTypeKey,
+            baseline: t7.baseline,
+            floor: t7.floor,
+          }),
+        );
+        emitPredictionToCorpus({
+          cardIdentity: null,
+          body,
+          fairMarketValue: t7.floor,
+          fmvMechanism: "unavailable",
+          predictedPrice: t7.floor,
+          predictedPriceRange: t7.range,
+          predictedPriceMechanism: "unavailable",
+          callContext,
+        });
+        return {
+          source: "setdoc-baseline",
+          pricingTier: "setdoc-baseline",
+          cardIdentity: null,
+          fairMarketValue: t7.floor,
+          fairMarketValueLow: t7.range.low,
+          fairMarketValueHigh: t7.range.high,
+          marketValue: t7.floor,
+          predictedPrice: t7.floor,
+          predictedPriceRange: t7.range,
+          predictedPriceAttribution: {
+            mechanism: "setdoc-baseline",
+            baseline: t7.baseline,
+            era: t7.era,
+            setTypeKey: t7.setTypeKey,
+            setName: t7.setName,
+            manufacturer: t7.manufacturer,
+          },
+          quickSaleValue: Math.round(t7.floor * 0.6 * 100) / 100,
+          premiumValue: Math.round(t7.floor * 1.5 * 100) / 100,
+          compsUsed: 0,
+          compsAvailable: 0,
+          recentComps: [],
+          variantWarning: [],
+          confidence: { pricingConfidence: 15 },
+          verdict: t7.verdict,
+          gradeUsed: cardHedgeGrade,
+          marketDNA: { trend: "flat", speed: "Normal" },
+        } as Record<string, unknown>;
+      }
       emitPredictionToCorpus({
         cardIdentity: null,
         body,
