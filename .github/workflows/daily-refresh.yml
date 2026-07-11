@@ -170,3 +170,34 @@ jobs:
           MLB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('mlb',[])))" 2>/dev/null || echo "?")
           MILB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('milb',[])))" 2>/dev/null || echo "?")
           echo "Daily brief warmed — MLB: $MLB_COUNT performers, MiLB: $MILB_COUNT performers"
+
+      # CF-NO-NULL-PRICING PR 5 (2026-07-11): refresh era-baselines Cosmos
+      # container. Aggregates recent-weighted currentValue + 7-day predicted
+      # per (productKey, year, cardClass) from CH sales. Tier 6 fallback
+      # reads these for forward-looking pricing baselines when comps at
+      # every higher tier are empty. See docs/design/no-null-pricing-
+      # architecture.md.
+      #
+      # Fetches COSMOS_CONNECTION_STRING + CARD_HEDGE_API_KEY from HobbyIQ3
+      # App Service settings via the already-authenticated Azure CLI so
+      # nothing sensitive lives in the workflow file. Same credential-
+      # loading pattern used by ingest-reference.cjs runs.
+      - name: Refresh era-baselines
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          CARD_HEDGE_API_KEY=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='CARD_HEDGE_API_KEY'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "COSMOS_CONNECTION_STRING empty from App Service — skipping era-baselines refresh"
+            exit 0
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          CARD_HEDGE_API_KEY="$CARD_HEDGE_API_KEY" \
+          COSMOS_DATABASE=hobbyiq \
+          node scripts/refresh-era-baselines.cjs || true
+          echo "era-baselines refresh finished"
