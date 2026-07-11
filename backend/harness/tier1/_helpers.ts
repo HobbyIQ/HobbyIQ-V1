@@ -507,6 +507,16 @@ const ALLOWED_SOURCES = new Set([
   // vendor (CardHedge, eBay) exceeds its budget. Distinct from the
   // caller-timeout / 5xx path.
   "upstream-timeout",
+  // CF-NO-NULL-PRICING (2026-07-11): the 8-tier fallback stack introduced
+  // 5 new source enum values. Josh Hammond / Gage Wood / Josiah Hartshorn /
+  // Caleb Bonemer Gold Wave / Red Lava / Gold Auto Bowman Draft Chrome
+  // SKUs all route to parallel-floor-projection in prod as of PR #364.
+  // Harness was rejecting them as malformed until this list caught up.
+  "product-family-projection",    // Tier 3 — parent-product median × family multiplier
+  "parallel-floor-projection",    // Tier 4 — parent median × parallel print-run floor
+  "scarcity-prior-floor",         // Tier 5 — product-year cross-player anchor × parallel floor
+  "reference-catalog-baseline",   // Tier 6 — era baseline × ladder tier
+  "setdoc-baseline",              // Tier 7 — era × set-type baseline (last resort)
 ]);
 
 export function expectWellFormed(
