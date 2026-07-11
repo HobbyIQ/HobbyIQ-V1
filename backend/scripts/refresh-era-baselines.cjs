@@ -135,9 +135,16 @@ async function main() {
         product: bucket.product,
         cardYear: bucket.year,
       });
+      // CF-ERA-BASELINES-FIELD-NAME-FIX (2026-07-11, Drew — Padparadscha
+      // smoke-test followup): fetchCompsByPlayer returns CompByPlayer[]
+      // where each row has `.date` (see compsByPlayer.service.ts:263).
+      // Original script read `.saleDate ?? .dateOfSale` — both undefined,
+      // so `.filter((c) => c.saleDate)` dropped 100% of comps and the
+      // 11:05 UTC daily-refresh run computed 0 out of 1630 buckets (log
+      // in run 29150385040). Read the field the interface actually emits.
       const comps = (pool?.comps ?? [])
         .filter((c) => Number.isFinite(c.price) && c.price > 0)
-        .map((c) => ({ price: c.price, saleDate: c.saleDate ?? c.dateOfSale }))
+        .map((c) => ({ price: c.price, saleDate: c.date }))
         .filter((c) => c.saleDate);
       if (comps.length < 3) {
         summary.skipped++;
