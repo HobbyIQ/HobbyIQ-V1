@@ -59,6 +59,8 @@ import {
   type TimeseriesBucket,
 } from "../services/portfolioiq/erpAnalytics.service.js";
 import { buildValuation } from "../services/portfolioiq/erpValuation.service.js";
+import { composeErpSummary } from "../services/portfolioiq/erpSummary.service.js";
+import { readValueHistory } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import {
   getTaxFiling,
   upsertTaxFiling,
@@ -217,6 +219,31 @@ router.get("/valuation", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /valuation failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to compute valuation" });
+  }
+});
+
+// CF-ERP-SUMMARY (2026-07-11, Drew): one-call dashboard aggregation.
+// Composes valuation + YTD P&L + value history + top movers so iOS
+// home screen doesn't have to fan out 4 separate calls. Pure composition
+// over primitives already used by the individual routes. See
+// erpSummary.service.ts for the shape + tie-break rules.
+router.get("/summary", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const entries = (doc.ledger ?? []) as unknown as LedgerEntryForErp[];
+    const valueHistory = await readValueHistory(userId, {});
+    const result = composeErpSummary(
+      Object.values(doc.holdings ?? {}),
+      entries,
+      doc.holdings ?? {},
+      valueHistory,
+      Date.now(),
+    );
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /summary failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compose summary" });
   }
 });
 

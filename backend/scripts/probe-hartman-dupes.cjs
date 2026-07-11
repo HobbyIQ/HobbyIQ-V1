@@ -73,6 +73,12 @@ async function main() {
           console.log(`           cardId: ${h.cardHedgeCardId ?? h.cardId ?? "(none)"}`);
         }
       }
+      // CF-FINANCE-AUDIT: also report ledger + trade counts for finance-side coverage
+      const ledgerLen = Array.isArray(d.ledger) ? d.ledger.length : 0;
+      const tradeLen = Array.isArray(d.trades) ? d.trades.length : 0;
+      const pxHistKeys = Object.keys(d.priceHistoryByHolding ?? {}).length;
+      const alertsLen = Array.isArray(d.alerts) ? d.alerts.length : 0;
+      console.log(`      finance surface: ledger=${ledgerLen}  trades=${tradeLen}  priceHistoryKeys=${pxHistKeys}  alerts=${alertsLen}`);
       // Scan for ANY dupes in this user (same cardId, or same year+player+parallel signature)
       if (totalHoldings > 20) {
         const byCardId = new Map();
