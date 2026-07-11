@@ -157,7 +157,7 @@ const MISSING_PRODUCTS_TO_ADD = [
 (async () => {
   console.log("[audit] querying Cosmos for coverage matrix...");
   const { resources: allDocs } = await c.items.query({
-    query: "SELECT c.productKey, c.year, c.docType FROM c",
+    query: "SELECT c.productKey, c.year, c.sortYear, c.docType FROM c",
   }).fetchAll();
 
   const coverageByPk = new Map();
@@ -165,6 +165,13 @@ const MISSING_PRODUCTS_TO_ADD = [
   for (const d of allDocs) {
     if (d.docType === "set") {
       setDocKeys.add(d.productKey);
+      // Also count set-doc years so audit doesn't flag them as gaps.
+      const y = d.year ?? d.sortYear;
+      if (y) {
+        const bucket = coverageByPk.get(d.productKey) ?? new Map();
+        bucket.set(y, (bucket.get(y) ?? 0) + 1);
+        coverageByPk.set(d.productKey, bucket);
+      }
       continue;
     }
     const bucket = coverageByPk.get(d.productKey) ?? new Map();
