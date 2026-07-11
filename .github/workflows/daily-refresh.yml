@@ -144,11 +144,37 @@ jobs:
             exit 1
           fi
 
+      # CF-DAILY-REFRESH-WARM-AUTH (2026-07-11, Drew): CF-FINALIZE
+      # (2026-06-03) hard-gated /players/top/* + /brief behind
+      # requireSession + requireEntitlement("dailyIQBriefs"), so the
+      # pre-existing unauthenticated curl warms started returning 401
+      # and silently no-op'd. Cache stayed cold until the first live
+      # investor+ user hit the endpoint. Fix: reuse the TIER1_HARNESS_
+      # TOKEN bypass in requireSession (auth as synthetic pro_seller
+      # harness user) — same pattern as the Tier 1 Production Harness
+      # workflow. Token pulled from App Service settings so it never
+      # lives in the workflow file. Fail-closed: if the token is empty,
+      # the curls still 401 and we log a workflow warning.
+      - name: Fetch TIER1_HARNESS_TOKEN for warm auth
+        if: steps.et-gate.outputs.should_run == 'true'
+        id: harness-token
+        run: |
+          TOKEN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='TIER1_HARNESS_TOKEN'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::TIER1_HARNESS_TOKEN empty from App Service — DailyIQ warms will 401"
+          fi
+          # Mask so the value never lands in any subsequent step's log.
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
       # Force a fresh DailyIQ pull from MLB Stats API — pre-warms cache for users
       - name: Warm DailyIQ cache (MLB)
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "x-session-id: ${{ steps.harness-token.outputs.token }}" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/mlb?limit=25&fresh=true")
           echo "MLB warm status: $STATUS"
 
@@ -156,6 +182,7 @@ jobs:
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "x-session-id: ${{ steps.harness-token.outputs.token }}" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/milb?limit=25&fresh=true")
           echo "MiLB warm status: $STATUS"
 
@@ -166,6 +193,7 @@ jobs:
           # Cosmos; without it the route returns the in-memory _briefCache and
           # skips persistence entirely (root cause of issue #80).
           RESPONSE=$(curl -s \
+            -H "x-session-id: ${{ steps.harness-token.outputs.token }}" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief?fresh=true")
           MLB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('mlb',[])))" 2>/dev/null || echo "?")
           MILB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('milb',[])))" 2>/dev/null || echo "?")
@@ -201,3 +229,19 @@ jobs:
           COSMOS_DATABASE=hobbyiq \
           node scripts/refresh-era-baselines.cjs || true
           echo "era-baselines refresh finished"
+
+      # CF-SMOKE-TEST-CI-GATE (2026-07-11, Drew): post-deploy tier-
+      # classification smoke test. Hits /api/compiq/price with 8 cases
+      # (1 per tier) and asserts non-null FMV on tiers 1-7. If ANY of
+      # the 7 mustNotNull cases returns null, the workflow fails —
+      # catches parser gaps + null-FMV regressions (like the 2026-07-11
+      # Padparadscha + Panini Origins smoke findings) before the next
+      # day. Uses TIER1_HARNESS_TOKEN for auth. Non-blocking on the
+      # deploy itself (deploy + warms + era-baselines already ran); this
+      # is the post-deploy validation.
+      - name: Smoke test pricing tiers
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: |
+          TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}" \
+          node scripts/smoke-test-pricing-tiers.cjs
