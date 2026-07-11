@@ -947,6 +947,61 @@ function recordCHReferenceTelemetry(opts: {
 }
 
 /**
+ * CF-PRICING-TIER-TELEMETRY (2026-07-11, Drew).
+ *
+ * Emits ONE unified `pricing_tier_hit` App Insights event per priced
+ * response, keyed by `est.source`. Purpose: measure the real distribution
+ * of tier hits in prod BEFORE iOS ships per-tier disclosure.
+ *
+ * Question this answers (KQL):
+ *   traces
+ *   | where message contains "pricing_tier_hit"
+ *   | extend d = parse_json(substring(message, indexof(message, "{")))
+ *   | summarize count() by tostring(d.tier)
+ *
+ * Before this event, we had no direct measurement of how often Tier 4/5/
+ * 6/7 fire in prod. Each existing per-tier event (product_family_
+ * projection_applied etc.) has DIFFERENT fields so they can't be
+ * grouped by a single query. One unified event solves that.
+ *
+ * Fire-and-forget. Never blocks the response. Guarded — a bad payload
+ * console.log doesn't take the request down.
+ */
+function recordPricingTierHit(opts: {
+  route: "search" | "price" | "price-by-id";
+  tier: string | null;
+  mechanism: string | null;
+  fmv: number | null;
+  compsUsed: number | null;
+  player: string | null;
+  product: string | null;
+  year: number | null;
+  cardId: string | null;
+  query: string | null;
+}): void {
+  try {
+    console.log(
+      JSON.stringify({
+        event: "pricing_tier_hit",
+        source: `compiq.${opts.route}`,
+        tier: opts.tier ?? "(unset)",
+        mechanism: opts.mechanism ?? null,
+        fmv: opts.fmv,
+        fmvNull: opts.fmv === null,
+        compsUsed: opts.compsUsed,
+        player: opts.player,
+        product: opts.product,
+        year: opts.year,
+        cardId: opts.cardId,
+        query: opts.query,
+      }),
+    );
+  } catch {
+    // Never throw from telemetry.
+  }
+}
+
+/**
  * CF-PLAYER-MOMENTUM-THIN-COMP-PROJECTION (2026-07-01):
  * Fire-and-forget telemetry that evaluates the momentum projection
  * against the just-served response and logs the result. Runs alongside
@@ -2197,6 +2252,28 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
     });
+    recordPricingTierHit({
+      route: "search",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      query: query.trim(),
+    });
     res.json(result);
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
@@ -2674,6 +2751,28 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
+    });
+    recordPricingTierHit({
+      route: "price",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
+      query: query.trim(),
     });
     res.json(result);
     // Telemetry â€” see /search for rationale.
@@ -4608,6 +4707,28 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       cardId: resolvedCardId,
       player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
       result: result as Record<string, unknown>,
+    });
+    recordPricingTierHit({
+      route: "price-by-id",
+      tier: ((result as any).source as string | undefined) ?? null,
+      mechanism:
+        ((result as any).predictedPriceAttribution?.mechanism as string | undefined) ?? null,
+      fmv:
+        typeof (result as any).fairMarketValue === "number"
+          ? ((result as any).fairMarketValue as number)
+          : null,
+      compsUsed:
+        typeof (result as any).compsUsed === "number"
+          ? ((result as any).compsUsed as number)
+          : null,
+      player: ((result as any).cardIdentity?.player as string | undefined) ?? null,
+      product: ((result as any).cardIdentity?.set as string | undefined) ?? null,
+      year:
+        typeof (result as any).cardIdentity?.year === "number"
+          ? ((result as any).cardIdentity.year as number)
+          : null,
+      cardId: resolvedCardId,
+      query: null,
     });
 
     // CF-CH-NEAREST-GRADED-ANCHOR (2026-06-28): surface the best graded
