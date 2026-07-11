@@ -111,12 +111,20 @@ async function main() {
 
   const uniqueProductKeys = new Set([...tuples.values()].map((t) => t.productKey));
   const cosmosDocs = [];
+  // Year range derived from workbook — no hardcoded years (was 2022-2026,
+  // broke on Topps 2020-2021 rows).
+  const yearMin = Math.min(...[...tuples.values()].map((t) => t.year));
+  const yearMax = Math.max(...[...tuples.values()].map((t) => t.year));
   for (const pk of uniqueProductKeys) {
     const { resources } = await container.items
       .query({
         query:
-          "SELECT * FROM c WHERE c.productKey = @pk AND c.docType = 'parallel' AND c.year >= 2022 AND c.year <= 2026",
-        parameters: [{ name: "@pk", value: pk }],
+          "SELECT * FROM c WHERE c.productKey = @pk AND c.docType = 'parallel' AND c.year >= @ymin AND c.year <= @ymax",
+        parameters: [
+          { name: "@pk", value: pk },
+          { name: "@ymin", value: yearMin },
+          { name: "@ymax", value: yearMax },
+        ],
       })
       .fetchAll();
     cosmosDocs.push(...resources);
