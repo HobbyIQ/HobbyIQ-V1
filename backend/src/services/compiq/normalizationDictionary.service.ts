@@ -53,9 +53,28 @@ const SET_NAME_SYNONYMS: Record<string, string[]> = {
   "topps heritage": ["th", "topps heritage"],
   "topps stadium club": ["tsc", "topps stadium club", "stadium club"],
   "panini prizm": ["pp", "panini prizm", "prizm"],
+  "panini prizm draft picks": ["ppdp", "prizm draft picks", "prizm draft"],
   "panini select": ["ps", "panini select", "select"],
   "panini mosaic": ["pm", "panini mosaic", "mosaic"],
+  "panini donruss": ["pdon", "panini donruss", "donruss"],
   "donruss optic": ["do", "donruss optic", "optic"],
+  // CF-NO-NULL-PRICING FOLLOWUP (2026-07-11): modern Panini SetDocs — the
+  // reference-catalog carries these but SET_NAME_SYNONYMS didn't. Adding
+  // both the "panini X" and bare "X" aliases so parser normalization,
+  // CH resolution, and cardsearch matcher all see the same canonical.
+  "panini origins": ["porig", "panini origins", "origins"],
+  "panini absolute": ["pabs", "panini absolute", "absolute"],
+  "panini playbook": ["pplay", "panini playbook", "playbook"],
+  "panini three and two": ["ptat", "panini three and two", "three and two"],
+  "panini prospect edition": ["ppe", "panini prospect edition", "prospect edition"],
+  "panini chronicles": ["pc", "panini chronicles", "chronicles"],
+  "panini diamond kings": ["pdk", "panini diamond kings", "diamond kings"],
+  "panini immaculate": ["pim", "panini immaculate", "immaculate"],
+  "panini impeccable": ["pimp", "panini impeccable", "impeccable"],
+  "panini contenders": ["pcnt", "panini contenders", "contenders"],
+  "panini national treasures": ["pnt", "panini national treasures", "national treasures"],
+  "panini flawless": ["pfl", "panini flawless", "flawless"],
+  "panini usa baseball stars & stripes": ["pusa", "panini usa baseball", "stars and stripes"],
 };
 
 /**
