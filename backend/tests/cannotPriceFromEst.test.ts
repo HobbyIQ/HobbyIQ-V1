@@ -100,4 +100,87 @@ describe("cannotPriceFromEst", () => {
       ),
     ).toBe(true);
   });
+
+  // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY-EXTEND (2026-07-11) — bypass the
+  // compsUsed<3 gate for projection + Tier 6/7 fallback sources. The user-
+  // visible bug: Padparadscha Sapphire routed through product-family-
+  // projection, engine returned fairMarketValue=$120, but response builder
+  // nulled it because the parent product only had 1 comp. Same class as
+  // the title-match-recovered pool bypass — the projection is derived from
+  // math (parent median × family multiplier × parallel floor), not the
+  // sub-threshold count itself.
+  describe("projection-source bypass for compsUsed<3", () => {
+    for (const src of [
+      "product-family-projection",
+      "parallel-floor-projection",
+      "scarcity-prior-floor",
+      "reference-catalog-baseline",
+      "setdoc-baseline",
+    ]) {
+      it(`false when source = "${src}" and compsUsed=1 with valid FMV`, () => {
+        expect(
+          cannotPriceFromEst(
+            est({
+              source: src,
+              fairMarketValue: 120,
+              compsUsed: 1,
+              trendIQ: { coverage: "no_segment" },
+            }),
+          ),
+        ).toBe(false);
+      });
+
+      it(`false when source = "${src}" and compsUsed=0 with valid FMV (Tier 6/7 by design)`, () => {
+        expect(
+          cannotPriceFromEst(
+            est({
+              source: src,
+              fairMarketValue: 45,
+              compsUsed: 0,
+              trendIQ: { coverage: "no_segment" },
+            }),
+          ),
+        ).toBe(false);
+      });
+
+      it(`true when source = "${src}" but fairMarketValue is null (fmv guard still fires)`, () => {
+        expect(
+          cannotPriceFromEst(
+            est({
+              source: src,
+              fairMarketValue: null,
+              compsUsed: 1,
+            }),
+          ),
+        ).toBe(true);
+      });
+
+      it(`true when source = "${src}" but fairMarketValue is 0 (fmv guard still fires)`, () => {
+        expect(
+          cannotPriceFromEst(
+            est({
+              source: src,
+              fairMarketValue: 0,
+              compsUsed: 1,
+            }),
+          ),
+        ).toBe(true);
+      });
+    }
+
+    it("Padparadscha exact reproduction — family-projection, parent 1 comp, FMV $120", () => {
+      const padparadscha = {
+        source: "product-family-projection",
+        fairMarketValue: 120,
+        fairMarketValueLow: 90,
+        fairMarketValueHigh: 150,
+        marketValue: 120,
+        compsUsed: 1,
+        compsAvailable: 1,
+        confidence: { pricingConfidence: 55 },
+        trendIQ: { coverage: "no_segment" },
+      } as Record<string, unknown>;
+      expect(cannotPriceFromEst(padparadscha)).toBe(false);
+    });
+  });
 });

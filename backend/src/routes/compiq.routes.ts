@@ -676,6 +676,15 @@ const APPROXIMATE_SOURCES: ReadonlySet<string> = new Set([
   // no direct comps. Same "approximate" disclosure semantics as
   // sibling-pool + family projection.
   "parallel-floor-projection",
+  // CF-NO-NULL-PRICING (2026-07-11): scarcity-prior-floor +
+  // reference-catalog-baseline + setdoc-baseline are the new lower-
+  // tier fallbacks. All are structural floors (no direct comps on the
+  // SKU), so mark them approximate so iOS renders the "estimated"
+  // disclosure. Each tier ALSO returns its own confidence value
+  // (55/40/25/20 respectively) that iOS can use for finer-grained UI.
+  "scarcity-prior-floor",
+  "reference-catalog-baseline",
+  "setdoc-baseline",
 ]);
 const LOW_CONFIDENCE_THRESHOLD = 0.5;
 
@@ -725,11 +734,32 @@ function cannotPriceFromEst(est: Record<string, unknown>): boolean {
   const isRecoveryIsolatedPool =
     priceSourceInternal === "title-matched-parallel"
     || priceSourceInternal === "title-match-low-sample";
+  // CF-FAMILY-PROJECTION-COMPS-USED-HONESTY-EXTEND (2026-07-11, Drew —
+  // Padparadscha Sapphire smoke test): projection sources ALREADY anchor
+  // on the parent product's real comps × math floor (not the target
+  // SKU's comps). PR #341 flipped `compsUsed` to the parent count for
+  // honesty, but this gate still nulled the price when the parent had
+  // 1-2 comps (which is normal for niche parent products). Bypass the
+  // <3 gate for projection + no-null-pricing fallback sources — they
+  // carry their own approximate flag (APPROXIMATE_SOURCES) so iOS still
+  // discloses the uncertainty; nulling would drop a defensible number.
+  //
+  // Extended for CF-NO-NULL-PRICING (2026-07-11) Tier 6/7: reference-
+  // catalog-baseline and setdoc-baseline set compsUsed=0 by design —
+  // they're pure structural floors. Same bypass rationale.
+  const source = typeof est.source === "string" ? est.source : null;
+  const isProjectionSource =
+    source === "product-family-projection"
+    || source === "parallel-floor-projection"
+    || source === "scarcity-prior-floor"
+    || source === "reference-catalog-baseline"
+    || source === "setdoc-baseline";
   const compsUsed = est.compsUsed;
   if (
     typeof compsUsed === "number"
     && compsUsed < 3
     && !isRecoveryIsolatedPool
+    && !isProjectionSource
   ) {
     return true;
   }
