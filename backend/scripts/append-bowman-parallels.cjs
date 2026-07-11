@@ -187,14 +187,86 @@ const bwd2023 = [
   row(2023, "Bowman Draft", "Chrome Prospects", "SuperFractor", 1, "N"),
 ];
 
+// ─── Round 2 additions (post-v2 stress test findings) ────────────────────
+
+// ─── Bowman Chrome 2022 — uses Shimmer variants (not RayWave/Lava) ─────
+const bwc2022 = [
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Purple Shimmer Refractor", 250, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Fuchsia Shimmer Refractor", 199, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Aqua Refractor", 125, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Green Shimmer Refractor", 99, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Gold Shimmer Refractor", 50, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Orange Shimmer Refractor", 25, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Red Shimmer Refractor", 5, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Black Shimmer Refractor", 1, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospect Autographs", "Gold Shimmer Refractor", 50, "Y"),
+  row(2022, "Bowman Chrome", "Chrome Prospect Autographs", "Orange Shimmer Refractor", 25, "Y"),
+  row(2022, "Bowman Chrome", "Chrome Prospect Autographs", "Red Shimmer Refractor", 5, "Y"),
+  row(2022, "Bowman Chrome", "Chrome Prospect Autographs", "Speckle Refractor", 299, "Y"),
+];
+// ─── Speckle Refractor Autos for 2023, 2024 ──────────────────────────────
+const bwcSpeckleAutoFill = [
+  row(2023, "Bowman Chrome", "Chrome Prospect Autographs", "Speckle Refractor", 299, "Y"),
+  row(2024, "Bowman Chrome", "Chrome Prospect Autographs", "Speckle Refractor", 299, "Y"),
+];
+
+// ─── Flagship Bowman 2022 — same core scheme as 2023-2025 (no Pink) ────
+const bwFlag2022 = [
+  row(2022, "Bowman", "Base", "Sky Blue", 499, "N"),
+  row(2022, "Bowman", "Base", "Neon Green", 399, "N"),
+  row(2022, "Bowman", "Base", "Fuchsia", 299, "N"),
+  row(2022, "Bowman", "Base", "Purple Pattern", 199, "N"),
+  row(2022, "Bowman", "Base", "Blue Pattern", 150, "N"),
+  row(2022, "Bowman", "Base", "Green Pattern", 99, "N"),
+];
+
+// ─── Yellow Refractor (auto + non-auto) for years missing it ───────────
+const yellowRefractorFill = [
+  row(2022, "Bowman Chrome", "Chrome Prospects", "Yellow Refractor", 75, "N"),
+  row(2022, "Bowman Chrome", "Chrome Prospect Autographs", "Yellow Refractor", 75, "Y"),
+  row(2023, "Bowman Chrome", "Chrome Prospects", "Yellow Refractor", 75, "N"),
+  row(2023, "Bowman Chrome", "Chrome Prospect Autographs", "Yellow Refractor", 75, "Y"),
+  row(2025, "Bowman Chrome", "Chrome Prospects", "Yellow Refractor", 75, "N"),
+  row(2025, "Bowman Chrome", "Chrome Prospect Autographs", "Yellow Refractor", 75, "Y"),
+];
+
+// ─── 2023 Bowman Draft Chrome Prospects — Aqua Lava Refractor /199 ────
+const bwd2023AquaLava = [
+  row(2023, "Bowman Draft", "Chrome Prospects", "Aqua Lava Refractor", 199, "N"),
+];
+
+// ─── Flagship Bowman 2026 — released May 2026 per BCP ─────────────────
+const bwFlag2026 = [
+  row(2026, "Bowman", "Base", "Sky Blue", 499, "N"),
+  row(2026, "Bowman", "Base", "Neon Green", 399, "N"),
+  row(2026, "Bowman", "Base", "Fuchsia", 299, "N"),
+  row(2026, "Bowman", "Base", "Purple", 250, "N"),
+  row(2026, "Bowman", "Base", "Purple Pattern", 250, "N"),
+  row(2026, "Bowman", "Base", "Pink", 175, "N"),
+  row(2026, "Bowman", "Base", "Blue", 150, "N"),
+  row(2026, "Bowman", "Base", "Blue Pattern", 150, "N"),
+  row(2026, "Bowman", "Base", "Green Pattern", 99, "N"),
+  row(2026, "Bowman", "Base", "Yellow Pattern", 75, "N"),
+  row(2026, "Bowman", "Base", "Gold Pattern", 50, "N"),
+  row(2026, "Bowman", "Base", "Orange Pattern", 25, "N"),
+  row(2026, "Bowman", "Base", "Black", 10, "N"),
+  row(2026, "Bowman", "Base", "Black Pattern", 10, "N"),
+];
+
 const allNew = [
   ...bwc,
+  ...bwc2022,
   ...bwc2023,
   ...bwc2024,
   ...bwc2025,
+  ...bwcSpeckleAutoFill,
+  ...yellowRefractorFill,
   ...bwFlag,
+  ...bwFlag2022,
+  ...bwFlag2026,
   ...bwd2022,
   ...bwd2023,
+  ...bwd2023AquaLava,
 ];
 
 let appended = 0;

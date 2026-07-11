@@ -37,7 +37,7 @@ const FLAGSHIP_BOWMAN_BASE = [
   { parallel: "Purple Pattern", printRun: 199, auto: false },
   { parallel: "Pink", printRun: 175, auto: false },
   { parallel: "Blue", printRun: 150, auto: false },
-  { parallel: "Blue Pattern", printRun: 125, auto: false },
+  { parallel: "Blue Pattern", printRun: 150, auto: false }, // /150 per BCP 2022, 2025, 2026 (2023,2024 was /125)
   { parallel: "Green", printRun: 99, auto: false },
   { parallel: "Green Pattern", printRun: 99, auto: false },
   { parallel: "Yellow", printRun: 75, auto: false },
