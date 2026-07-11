@@ -5,10 +5,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const inferPrintRunFromReferenceCatalogMock = vi.fn();
+const getEraBaselineMock = vi.fn();
 
 vi.mock("../src/services/compiq/referenceCatalogLookup.js", () => ({
   inferPrintRunFromReferenceCatalog: (...args: unknown[]) =>
     inferPrintRunFromReferenceCatalogMock(...args),
+}));
+
+vi.mock("../src/repositories/eraBaselines.repository.js", () => ({
+  getEraBaseline: (...args: unknown[]) => getEraBaselineMock(...args),
 }));
 
 async function load() {
@@ -51,6 +56,10 @@ describe("lookupEraBaselineStatic", () => {
 describe("computeReferenceCatalogBaseline", () => {
   beforeEach(() => {
     inferPrintRunFromReferenceCatalogMock.mockReset();
+    getEraBaselineMock.mockReset();
+    // Default: Cosmos era-baselines returns null (empty container) so
+    // static fallback is used unless a specific test overrides.
+    getEraBaselineMock.mockResolvedValue(null);
     delete process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED;
   });
 
@@ -145,6 +154,77 @@ describe("computeReferenceCatalogBaseline", () => {
       cardClass: "base",
     });
     expect(r).toBeNull();
+  });
+
+  it("uses Cosmos era-baseline as PRIMARY when populated", async () => {
+    process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED = "true";
+    inferPrintRunFromReferenceCatalogMock.mockResolvedValue({
+      printRun: 150,
+      parallel: "Blue Refractor",
+      cardSet: "Chrome Prospects",
+    });
+    getEraBaselineMock.mockResolvedValue({
+      id: "abc",
+      productKey: "bowman-chrome",
+      year: 2020,
+      cardClass: "base",
+      medianSale: 20,
+      p25Sale: 12,
+      p75Sale: 35,
+      sampleSize: 87,
+      computedAt: "2026-07-11T00:00:00Z",
+      schemaVersion: 1,
+    });
+    const { computeReferenceCatalogBaseline } = await load();
+    const r = await computeReferenceCatalogBaseline({
+      product: "Bowman Chrome",
+      year: 2020,
+      parallel: "Blue Refractor",
+      cardClass: "base",
+    });
+    expect(r).not.toBeNull();
+    expect(r!.eraBaseline).toBe(20); // Cosmos median, not static 12
+    expect(r!.baselineSource).toBe("era-baselines-cosmos");
+    expect(r!.sampleSize).toBe(87);
+  });
+
+  it("falls back to static table when Cosmos returns null", async () => {
+    process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED = "true";
+    inferPrintRunFromReferenceCatalogMock.mockResolvedValue({
+      printRun: 150,
+      parallel: "Blue Refractor",
+      cardSet: "Chrome Prospects",
+    });
+    getEraBaselineMock.mockResolvedValue(null);
+    const { computeReferenceCatalogBaseline } = await load();
+    const r = await computeReferenceCatalogBaseline({
+      product: "Bowman Chrome",
+      year: 2020,
+      parallel: "Blue Refractor",
+      cardClass: "base",
+    });
+    expect(r!.baselineSource).toBe("static-table");
+    expect(r!.eraBaseline).toBe(12); // static for bowman-chrome 2020 base
+    expect(r!.sampleSize).toBeUndefined();
+  });
+
+  it("falls back to static when Cosmos throws (never blocks caller)", async () => {
+    process.env.COMPIQ_REFERENCE_CATALOG_BASELINE_ENABLED = "true";
+    inferPrintRunFromReferenceCatalogMock.mockResolvedValue({
+      printRun: 150,
+      parallel: "Blue Refractor",
+      cardSet: "Chrome Prospects",
+    });
+    getEraBaselineMock.mockRejectedValue(new Error("cosmos down"));
+    const { computeReferenceCatalogBaseline } = await load();
+    const r = await computeReferenceCatalogBaseline({
+      product: "Bowman Chrome",
+      year: 2020,
+      parallel: "Blue Refractor",
+      cardClass: "base",
+    });
+    expect(r!.baselineSource).toBe("static-table");
+    expect(r!.eraBaseline).toBe(12);
   });
 
   it("returns null for productKey/year outside static-table coverage", async () => {

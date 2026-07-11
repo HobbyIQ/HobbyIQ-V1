@@ -36,6 +36,10 @@ import {
   floorForPrintRun,
 } from "./parallelPremiumFloors.js";
 import { inferPrintRunFromReferenceCatalog } from "./referenceCatalogLookup.js";
+// CF-NO-NULL-PRICING PR 2 (2026-07-11): Cosmos-backed era-baselines
+// as PRIMARY source. Static table below is the fallback when the
+// container is empty (fresh deploy pre-daily-refresh) or unreachable.
+import { getEraBaseline } from "../../repositories/eraBaselines.repository.js";
 
 // ─── Static era-baseline fallback ─────────────────────────────────────────
 //
@@ -145,6 +149,8 @@ export interface ReferenceCatalogBaselineResult {
   cardSet: string;
   /** Fallback path taken — static table vs Cosmos era-baselines. */
   baselineSource: "static-table" | "era-baselines-cosmos";
+  /** Sample size from Cosmos (undefined for static-table). */
+  sampleSize?: number;
 }
 
 /**
@@ -195,18 +201,41 @@ export async function computeReferenceCatalogBaseline(input: {
     1;
 
   // Step 2: get the era baseline for this productKey/year/class.
+  // PRIMARY: Cosmos-backed `era-baselines` container (refreshed by PR 4's
+  // daily background job). FALLBACK: hand-curated static table.
   const productKey = input.product
     .normalize("NFKD")
     .toLowerCase()
     .replace(/['’‘"`]+/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  const eraBaseline = lookupEraBaselineStatic(
-    productKey,
-    input.year,
-    input.cardClass,
-  );
-  if (eraBaseline === null) return null;
+  let eraBaseline: number | null = null;
+  let baselineSource: "static-table" | "era-baselines-cosmos" = "static-table";
+  let sampleSize: number | undefined;
+  try {
+    const cosmosDoc = await getEraBaseline(productKey, input.year, input.cardClass);
+    if (cosmosDoc && cosmosDoc.medianSale > 0) {
+      eraBaseline = cosmosDoc.medianSale;
+      baselineSource = "era-baselines-cosmos";
+      sampleSize = cosmosDoc.sampleSize;
+    }
+  } catch (err) {
+    // Never let Cosmos block the fallback — log and try static.
+    console.warn(
+      `[referenceCatalogBaseline] era-baselines Cosmos read failed:`,
+      (err as Error)?.message ?? err,
+    );
+  }
+  if (eraBaseline === null) {
+    const staticBaseline = lookupEraBaselineStatic(
+      productKey,
+      input.year,
+      input.cardClass,
+    );
+    if (staticBaseline === null) return null;
+    eraBaseline = staticBaseline;
+    baselineSource = "static-table";
+  }
 
   // Step 3: compute floor + range.
   const floor = Math.round(eraBaseline * tierMultiplier * 100) / 100;
@@ -221,6 +250,7 @@ export async function computeReferenceCatalogBaseline(input: {
     printRun,
     parallel: catalogHit.parallel,
     cardSet: catalogHit.cardSet,
-    baselineSource: "static-table",
+    baselineSource,
+    sampleSize,
   };
 }
