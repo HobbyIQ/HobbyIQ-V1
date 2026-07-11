@@ -221,7 +221,7 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         ),
         "utf8",
       );
-      // 1 helper definition + 10 callsites = 11 hits total.
+      // 1 helper definition + 11 callsites = 12 hits total.
       // Historical additions:
       //   CF-LAUNCH-HARDENING (2026-06-02): pre-modern + catalog-miss → 7
       //   CF-FAMILY-PROJECTION (#348-#350, 2026-07-09): product-family
@@ -230,8 +230,10 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
       //     emit → 9
       //   CF-PHASE5-V2-ZERO-COMP-ANCHOR (2026-07-10): scarcity-prior-floor
       //     projection emit (fires when parent-player pool empty) → 10
+      //   CF-NO-NULL-PRICING (2026-07-11): reference-catalog-baseline
+      //     (Tier 6 fallback, era baseline × ladder tier) → 11
       const matches = text.match(/emitPredictionToCorpus\s*[({]/g);
-      expect(matches?.length ?? 0).toBe(11);
+      expect(matches?.length ?? 0).toBe(12);
     });
 
     it("each fallback path tags fmvMechanism appropriately", async () => {
@@ -284,8 +286,8 @@ describe("CF-PREDICTION-CORPUS-EMISSION-COVERAGE", () => {
         "utf8",
       );
       const emitCalls = (text.match(/emitPredictionToCorpus\({/g) ?? []).length;
-      // 10 call sites (see enumeration above); declaration uses parens, not brace.
-      expect(emitCalls).toBe(10);
+      // 11 call sites (see enumeration above); declaration uses parens, not brace.
+      expect(emitCalls).toBe(11);
     });
   });
 
