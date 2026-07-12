@@ -30,19 +30,26 @@ import {
 
 /** Fields the user can edit during confirm. Superset of the fields the
  *  parser/Browse enrich. Every field is optional; only present fields
- *  patch the holding. */
+ *  patch the holding.
+ *
+ *  CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): to explicitly CLEAR a field
+ *  (e.g. "this is Raw" → clear gradeCompany + gradeValue), send `null`.
+ *  Omitting the field leaves the existing value alone. Sending an actual
+ *  value overwrites — even if it equals the parsed value, because the
+ *  user is asserting canonical truth (needed for downstream comp
+ *  bucketing to trust the row). */
 export interface ConfirmHoldingEdits {
-  playerName?: string;
-  cardYear?: number;
-  setName?: string;
-  parallel?: string;
-  cardNumber?: string;
-  gradeCompany?: "PSA" | "BGS" | "SGC" | "CGC" | string;
-  gradeValue?: number;
-  isAuto?: boolean;
-  team?: string;
-  sport?: string;
-  cardId?: string;
+  playerName?: string | null;
+  cardYear?: number | null;
+  setName?: string | null;
+  parallel?: string | null;
+  cardNumber?: string | null;
+  gradeCompany?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
+  gradeValue?: number | null;
+  isAuto?: boolean | null;
+  team?: string | null;
+  sport?: string | null;
+  cardId?: string | null;
   // Purchase-side corrections don't belong here — the user edits the
   // linked purchase separately. Cost basis stays untouched by confirm.
 }
@@ -127,36 +134,94 @@ export async function confirmHoldingReview(
     parseConfidence: (holding as any).parseConfidence,
   };
 
+  // CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): three-way semantics.
+  //   undefined  → field not in edits → leave alone
+  //   null       → CLEAR the field (e.g. "this is Raw" clears grade)
+  //   any value  → OVERWRITE, even if equal to parsed. User picked
+  //                canonical catalog data; downstream comps must trust
+  //                the row was affirmed clean. lastUpdated will bump.
+  //
+  // Corrections are only logged when the value actually changed (avoid
+  // polluting the training corpus with no-op writes on same-value picks).
   const corrections: FieldCorrection[] = [];
   const applyEdit = <K extends keyof ConfirmHoldingEdits>(
     field: K,
     write: (h: PortfolioHolding & Record<string, unknown>, v: NonNullable<ConfirmHoldingEdits[K]>) => void,
+    clear: (h: PortfolioHolding & Record<string, unknown>) => void,
   ) => {
+    if (!(field in edits)) return;
     const v = edits[field];
-    if (v === undefined) return;
-    const before = (autoParsed as any)[field] ?? (holding as any)[field];
-    if (before === v) return;
+    const before = (autoParsed as any)[field] ?? (holding as any)[field] ?? null;
+    if (v === null) {
+      clear(holding);
+      if (before !== null) {
+        corrections.push({ field: String(field), before, after: null });
+      }
+      return;
+    }
+    if (v === undefined) return;   // defensive; `in` check above already caught it
     write(holding, v as any);
-    corrections.push({ field: String(field), before: before ?? null, after: v });
+    if (before !== v) {
+      corrections.push({ field: String(field), before, after: v });
+    }
   };
 
-  applyEdit("playerName", (h, v) => { h.playerName = v; });
-  applyEdit("cardYear", (h, v) => { h.cardYear = v; });
-  applyEdit("setName", (h, v) => {
-    h.setName = v;
-    h.product = v;
-  });
-  applyEdit("parallel", (h, v) => { h.parallel = v; });
-  applyEdit("cardNumber", (h, v) => { h.cardNumber = v; });
-  applyEdit("gradeCompany", (h, v) => {
-    h.gradeCompany = v as any;
-    (h as any).gradingCompany = v;
-  });
-  applyEdit("gradeValue", (h, v) => { h.gradeValue = v; });
-  applyEdit("isAuto", (h, v) => { h.isAuto = v; });
-  applyEdit("team", (h, v) => { (h as any).team = v; });
-  applyEdit("sport", (h, v) => { (h as any).sport = v; });
-  applyEdit("cardId", (h, v) => { (h as any).cardId = v; });
+  applyEdit(
+    "playerName",
+    (h, v) => { h.playerName = v; },
+    (h) => { delete h.playerName; },
+  );
+  applyEdit(
+    "cardYear",
+    (h, v) => { h.cardYear = v; },
+    (h) => { delete h.cardYear; },
+  );
+  applyEdit(
+    "setName",
+    (h, v) => { h.setName = v; h.product = v; },
+    (h) => { delete h.setName; delete h.product; },
+  );
+  applyEdit(
+    "parallel",
+    (h, v) => { h.parallel = v; },
+    (h) => { delete h.parallel; },
+  );
+  applyEdit(
+    "cardNumber",
+    (h, v) => { h.cardNumber = v; },
+    (h) => { delete h.cardNumber; },
+  );
+  applyEdit(
+    "gradeCompany",
+    (h, v) => { h.gradeCompany = v as any; (h as any).gradingCompany = v; },
+    // Clearing gradeCompany is the "Raw" signal — also clear gradeValue.
+    (h) => { delete h.gradeCompany; delete (h as any).gradingCompany; delete h.gradeValue; },
+  );
+  applyEdit(
+    "gradeValue",
+    (h, v) => { h.gradeValue = v; },
+    (h) => { delete h.gradeValue; },
+  );
+  applyEdit(
+    "isAuto",
+    (h, v) => { h.isAuto = v; },
+    (h) => { delete h.isAuto; },
+  );
+  applyEdit(
+    "team",
+    (h, v) => { (h as any).team = v; },
+    (h) => { delete (h as any).team; },
+  );
+  applyEdit(
+    "sport",
+    (h, v) => { (h as any).sport = v; },
+    (h) => { delete (h as any).sport; },
+  );
+  applyEdit(
+    "cardId",
+    (h, v) => { (h as any).cardId = v; },
+    (h) => { delete (h as any).cardId; },
+  );
 
   // Promote to active + clear needsReview.
   (holding as any).cardStatus = "active";
