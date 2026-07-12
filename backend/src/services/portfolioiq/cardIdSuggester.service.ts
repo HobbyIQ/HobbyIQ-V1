@@ -16,9 +16,25 @@
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { searchCards, type CardHedgeCard } from "../compiq/cardhedge.client.js";
 
+/**
+ * CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): buckets iOS keys on
+ * for the progressive-review UX. "high" → bulk auto-approve tier;
+ * "medium" → quick individual review; "low" → manual catalog search.
+ * Backend owns the thresholds so iOS stays semantic.
+ */
+export type SuggestionConfidenceTier = "high" | "medium" | "low";
+
 export interface CardIdSuggestion {
   cardId: string;
   confidence: number;   // 0.0 - 1.0
+  confidenceTier: SuggestionConfidenceTier;
+  /** Per-field alignment score breakdown — surfaces to iOS as a
+   *  transparency layer ("we matched 4 of 5 fields"). */
+  matchBreakdown: {
+    fieldsChecked: number;
+    fieldsMatched: number;
+    mismatchedFields: string[];
+  };
   candidate: {
     title?: string;
     set?: string;
@@ -27,6 +43,17 @@ export interface CardIdSuggestion {
     variant?: string;
     image?: string;
   };
+}
+
+// CF-CARDID-SUGGESTER-CONFIDENCE-TIERING thresholds. iOS reads
+// `confidenceTier` — never depend on raw confidence numbers.
+const TIER_HIGH_THRESHOLD = 0.85;
+const TIER_MEDIUM_THRESHOLD = 0.6;
+
+export function tierForConfidence(confidence: number): SuggestionConfidenceTier {
+  if (confidence >= TIER_HIGH_THRESHOLD) return "high";
+  if (confidence >= TIER_MEDIUM_THRESHOLD) return "medium";
+  return "low";
 }
 
 /**
@@ -45,43 +72,128 @@ function buildQuery(holding: PortfolioHolding): string {
 }
 
 /**
- * Score a CH candidate against the holding. Higher = better match. Used to
- * derive a confidence when CH returns multiple hits.
+ * CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): field-alignment
+ * scorer produces a NORMALIZED confidence (0.0-1.0) by dividing matched
+ * weight by the total weight of fields we could actually check (fields
+ * present on the holding). A holding without cardYear can still reach
+ * confidence 1.0 by matching everything else — the denominator adapts.
  *
- * Fields weighted:
- *   year match       — 30
- *   card # match     — 30
- *   parallel/variant — 10
- *   set substring    — 20
- *   player substring — 10
+ * Weights sum to 100 when every field is present:
+ *   year          — 20
+ *   card number   — 25
+ *   set           — 20
+ *   parallel      — 10
+ *   player        — 15
+ *   auto/rookie   — 10 (aligned = holding.isAuto matches candidate signals)
  */
-function scoreCandidate(candidate: CardHedgeCard, holding: PortfolioHolding): number {
-  let score = 0;
+interface FieldMatchResult {
+  /** Total weight of fields present on holding (denominator for score). */
+  weightChecked: number;
+  /** Total weight of matched fields (numerator). */
+  weightMatched: number;
+  /** Count of distinct fields we tried to match (present on holding). */
+  fieldsChecked: number;
+  /** Count of distinct fields that matched. */
+  fieldsMatched: number;
+  /** Normalized alignment score = weightMatched / weightChecked. */
+  score: number;
+  /** Human-readable list of fields that WERE checked but didn't match. */
+  mismatched: string[];
+}
+
+function scoreCandidate(candidate: CardHedgeCard, holding: PortfolioHolding): FieldMatchResult {
+  const weights = {
+    year: 20,
+    cardNumber: 25,
+    setName: 20,
+    parallel: 10,
+    playerName: 15,
+    autoFlag: 10,
+  } as const;
+
+  let weightChecked = 0;
+  let weightMatched = 0;
+  let fieldsChecked = 0;
+  let fieldsMatched = 0;
+  const mismatched: string[] = [];
+
+  const check = (
+    fieldName: string,
+    weight: number,
+    isPresent: boolean,
+    isMatch: boolean,
+  ) => {
+    if (!isPresent) return;
+    weightChecked += weight;
+    fieldsChecked += 1;
+    if (isMatch) {
+      weightMatched += weight;
+      fieldsMatched += 1;
+    } else {
+      mismatched.push(fieldName);
+    }
+  };
+
+  // year
   const cYear = Number(candidate.year);
-  if (holding.cardYear && Number.isFinite(cYear) && cYear === holding.cardYear) {
-    score += 30;
-  }
-  if (holding.cardNumber && candidate.number) {
+  check("cardYear", weights.year, !!holding.cardYear,
+    !!holding.cardYear && Number.isFinite(cYear) && cYear === holding.cardYear);
+
+  // cardNumber
+  const cardNumberMatch = (() => {
+    if (!holding.cardNumber || !candidate.number) return false;
     const a = String(holding.cardNumber).toLowerCase();
     const b = String(candidate.number).toLowerCase();
-    if (a === b || a.includes(b) || b.includes(a)) score += 30;
-  }
-  if (holding.parallel && candidate.variant) {
-    const a = String(holding.parallel).toLowerCase();
-    const b = String(candidate.variant).toLowerCase();
-    if (a === b || a.includes(b) || b.includes(a)) score += 10;
-  }
-  if (holding.setName && candidate.set) {
+    return a === b || a.includes(b) || b.includes(a);
+  })();
+  check("cardNumber", weights.cardNumber, !!holding.cardNumber, cardNumberMatch);
+
+  // set
+  const setMatch = (() => {
+    if (!holding.setName || !candidate.set) return false;
     const a = String(holding.setName).toLowerCase();
     const b = String(candidate.set).toLowerCase();
-    if (a === b || a.includes(b) || b.includes(a)) score += 20;
-  }
-  if (holding.playerName && (candidate.name || candidate.title)) {
-    const a = String(holding.playerName).toLowerCase();
-    const b = String(candidate.name ?? candidate.title ?? "").toLowerCase();
-    if (b.includes(a)) score += 10;
-  }
-  return score;
+    return a === b || a.includes(b) || b.includes(a);
+  })();
+  check("setName", weights.setName, !!holding.setName, setMatch);
+
+  // parallel/variant
+  const parallelMatch = (() => {
+    if (!holding.parallel || !candidate.variant) return false;
+    const a = String(holding.parallel).toLowerCase();
+    const b = String(candidate.variant).toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  })();
+  check("parallel", weights.parallel, !!holding.parallel, parallelMatch);
+
+  // player
+  const playerMatch = (() => {
+    if (!holding.playerName) return false;
+    const candidateText = String(candidate.name ?? candidate.title ?? "").toLowerCase();
+    return candidateText.includes(String(holding.playerName).toLowerCase());
+  })();
+  check("playerName", weights.playerName, !!holding.playerName, playerMatch);
+
+  // isAuto — infer from candidate title/variant when CH shape doesn't
+  // carry a dedicated flag. Title/variant contains "Auto"/"Autograph" →
+  // candidate is an auto.
+  const autoMatch = (() => {
+    if (typeof holding.isAuto !== "boolean") return false;
+    const candidateText = String(candidate.variant ?? candidate.title ?? "").toLowerCase();
+    const candidateIsAuto = /\b(auto|autograph)\b/.test(candidateText);
+    return candidateIsAuto === holding.isAuto;
+  })();
+  check("isAuto", weights.autoFlag, typeof holding.isAuto === "boolean", autoMatch);
+
+  const score = weightChecked === 0 ? 0 : weightMatched / weightChecked;
+  return {
+    weightChecked,
+    weightMatched,
+    fieldsChecked,
+    fieldsMatched,
+    score,
+    mismatched,
+  };
 }
 
 /**
@@ -131,23 +243,22 @@ export async function suggestCardIdForHolding(
   if (!candidates || candidates.length === 0) return null;
 
   const scored = candidates
-    .map((c) => ({ candidate: c, score: scoreCandidate(c, holding) }))
-    .sort((a, b) => b.score - a.score);
+    .map((c) => ({ candidate: c, match: scoreCandidate(c, holding) }))
+    .sort((a, b) => b.match.score - a.match.score);
 
   const top = scored[0];
   if (!top.candidate.card_id) return null;
 
-  let confidence: number;
-  if (scored.length === 1) {
-    confidence = top.score >= 50 ? 0.9 : 0.6;
-  } else {
-    const raw = top.score / 100;
-    confidence = Math.min(0.95, Math.max(0.4, raw));
-  }
-
+  const confidence = Math.round(top.match.score * 100) / 100;
   return {
     cardId: top.candidate.card_id,
-    confidence: Math.round(confidence * 100) / 100,
+    confidence,
+    confidenceTier: tierForConfidence(confidence),
+    matchBreakdown: {
+      fieldsChecked: top.match.fieldsChecked,
+      fieldsMatched: top.match.fieldsMatched,
+      mismatchedFields: top.match.mismatched,
+    },
     candidate: {
       title: top.candidate.title ?? top.candidate.name,
       set: top.candidate.set,
@@ -215,6 +326,8 @@ export async function generateCardIdSuggestions(
         (h as any).suggestedCardId = suggestion.cardId;
         (h as any).suggestionConfidence = suggestion.confidence;
         (h as any).suggestionCandidate = suggestion.candidate;
+        (h as any).suggestionConfidenceTier = suggestion.confidenceTier;
+        (h as any).suggestionMatchBreakdown = suggestion.matchBreakdown;
         (h as any).suggestionUpdatedAt = new Date().toISOString();
         (h as any).lastUpdated = new Date().toISOString();
         summary.suggested += 1;
