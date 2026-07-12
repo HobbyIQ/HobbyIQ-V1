@@ -35,6 +35,7 @@ const EXCLUDED_STATUS = new Set([
   "watchlist",
   "tradepending",
   "trade pending",
+  "pending-review",   // CF-EBAY-REVIEW-QUEUE (2026-07-12)
 ]);
 
 export interface PortfolioValueSnapshot {

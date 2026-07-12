@@ -66,6 +66,10 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): pending eBay auto-created holdings
+// awaiting user confirmation. iOS renders this as the review queue.
+router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
+
 // CF-EXPORT-BE (2026-06-21): GET /api/portfolio/export?format=xlsx|csv
 //   - format defaults to xlsx; "csv" supported (RFC-4180-ish).
 //   - Reads holdings via the same composePortfolioListResponse wire path

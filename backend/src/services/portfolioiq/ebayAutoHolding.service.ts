@@ -134,7 +134,12 @@ function buildHoldingFromParse(
     // written via the Record<string, unknown> escape hatch so we don't
     // need a type migration to ship the ebay-auto marker set.
     addedAt: purchase.purchaseDate,
-    cardStatus: "active",
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): auto-imports land in the review
+    // queue, not live inventory. The user confirms each row (with any
+    // corrections) via POST /erp/holdings/:id/confirm before it becomes
+    // active. This is the trust boundary: parser + Browse are best-effort,
+    // the user is ground truth. Corrections train the backend.
+    cardStatus: "pending-review",
     source: "ebay-auto",
     sourcePurchaseId: purchase.id,
     parseConfidence: parsed.parseConfidence,
@@ -252,23 +257,37 @@ export function applyBrowseEnrichment(
     holding.isAuto = yes;
   }
 
-  // ── Aspects we can backfill onto structured fields ────────────────
-  if (!holding.playerName && aspects["Player"]) holding.playerName = aspects["Player"];
-  if (!holding.playerName && aspects["Player/Athlete"]) holding.playerName = aspects["Player/Athlete"];
-  if (aspects["Team"] && !(holding as any).team) (holding as any).team = aspects["Team"];
-  if (aspects["Sport"] && !(holding as any).sport) (holding as any).sport = aspects["Sport"];
-  if (aspects["Season"] && !holding.cardYear) {
+  // ── Structured aspects: Browse is AUTHORITATIVE, not backfill ──────
+  //
+  // The title parser scrapes free-text ("2020 Panini Prizm Mookie Betts
+  // #275") and gets things like "Baseball Owen Carey" or "Ernie Banks
+  // Chicago Cubs" — team names, sport names, and vertical markers leak
+  // into playerName because the title's word order is unpredictable.
+  // Browse's structured Player aspect is what the SELLER typed into the
+  // eBay item-specifics form: it's clean.
+  //
+  // Policy: when Browse has the structured field, override the title-
+  // parsed value. Title parse is the FALLBACK, not the truth.
+  //
+  // Undecorated exception: cardNumber. Browse "Card Number" is often
+  // just the base number (e.g., "14") when the parallel-specific code
+  // ("BCP-14") is what the title carries — preserve title's when present.
+  if (aspects["Player"]) holding.playerName = aspects["Player"];
+  else if (aspects["Player/Athlete"]) holding.playerName = aspects["Player/Athlete"];
+  if (aspects["Team"]) (holding as any).team = aspects["Team"];
+  if (aspects["Sport"]) (holding as any).sport = aspects["Sport"];
+  if (aspects["Season"]) {
     const y = Number(aspects["Season"]);
     if (Number.isFinite(y) && y >= 1900) holding.cardYear = y;
   }
-  if (aspects["Set"] && !holding.setName) {
+  if (aspects["Set"]) {
     holding.setName = aspects["Set"];
-    holding.product = holding.product ?? aspects["Set"];
+    holding.product = aspects["Set"];
   }
-  if (aspects["Manufacturer"] && !(holding as any).manufacturer) {
+  if (aspects["Manufacturer"]) {
     (holding as any).manufacturer = aspects["Manufacturer"];
   }
-  if (aspects["Parallel/Variety"] && !holding.parallel) {
+  if (aspects["Parallel/Variety"]) {
     holding.parallel = aspects["Parallel/Variety"];
   }
   if (aspects["Card Number"] && !holding.cardNumber) {

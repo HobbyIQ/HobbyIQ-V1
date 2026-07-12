@@ -133,7 +133,9 @@ describe("runtime-path Browse enrichment (fresh purchase with ebayItemId)", () =
     expect(bfill.body.holdingsBrowseEnriched).toBeGreaterThanOrEqual(1);
 
     // Assert the resulting holding carries the enrichment fields.
-    const holdings = await request(app).get("/api/portfolio/holdings").set("x-session-id", session);
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): pending-review holdings are
+    // opt-in on /holdings; iOS reads /holdings/pending-review instead.
+    const holdings = await request(app).get("/api/portfolio/holdings?includePendingReview=true").set("x-session-id", session);
     const created = holdings.body.holdings.find(
       (h: any) => h.playerName === "Mookie Betts" && h.sourcePurchaseId === purchaseId,
     );
@@ -204,7 +206,9 @@ describe("runtime-path Browse enrichment (fresh purchase with ebayItemId)", () =
     // Created via title parse alone
     expect(bfill.body.holdingsCreated).toBeGreaterThanOrEqual(1);
 
-    const holdings = await request(app).get("/api/portfolio/holdings").set("x-session-id", session);
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): pending-review holdings are
+    // opt-in on /holdings; iOS reads /holdings/pending-review instead.
+    const holdings = await request(app).get("/api/portfolio/holdings?includePendingReview=true").set("x-session-id", session);
     const created = holdings.body.holdings.find(
       (h: any) => h.sourcePurchaseId === purchaseId,
     );

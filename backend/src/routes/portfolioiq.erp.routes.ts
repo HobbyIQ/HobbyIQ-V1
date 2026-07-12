@@ -1165,6 +1165,56 @@ router.post("/sales/:id/enrich-from-ebay", async (req: Request, res: Response) =
   }
 });
 
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): confirm-before-commit gate for
+// auto-created holdings. Ships as a first-class review queue on iOS.
+router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const holdingId = String(req.params.id ?? "").trim();
+    if (!holdingId) return res.status(400).json({ success: false, error: "id is required" });
+    const { confirmHoldingReview } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const edits: Record<string, unknown> = {};
+    for (const field of [
+      "playerName", "cardYear", "setName", "parallel", "cardNumber",
+      "gradeCompany", "gradeValue", "isAuto", "team", "sport", "cardId",
+    ]) {
+      if (body[field] !== undefined) edits[field] = body[field];
+    }
+    const result = await confirmHoldingReview(userId, holdingId, edits as any);
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "not-pending" ? 409 :
+      result.status === "error" ? 500 : 200;
+    res.status(statusCode).json({ success: statusCode === 200, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/:id/confirm failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Confirm failed" });
+  }
+});
+
+router.post("/holdings/:id/reject", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const holdingId = String(req.params.id ?? "").trim();
+    if (!holdingId) return res.status(400).json({ success: false, error: "id is required" });
+    const { rejectHoldingReview } = await import(
+      "../services/portfolioiq/ebayReviewQueue.service.js"
+    );
+    const result = await rejectHoldingReview(userId, holdingId);
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "not-pending" ? 409 :
+      result.status === "error" ? 500 : 200;
+    res.status(statusCode).json({ success: statusCode === 200, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /holdings/:id/reject failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Reject failed" });
+  }
+});
+
 router.patch("/purchases/:id/link-holdings", async (req: Request, res: Response) => {
   try {
     const userId = userIdFrom(req);

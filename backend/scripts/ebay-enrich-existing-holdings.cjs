@@ -51,9 +51,12 @@ async function main() {
   const purchases = Array.isArray(doc.purchases) ? doc.purchases : [];
   const purchaseById = new Map(purchases.map((p) => [p.id, p]));
 
-  // Candidate set: ebay-auto holdings we haven't enriched yet.
+  // Candidate set: ebay-auto holdings. When --force, re-enrich even
+  // already-flagged rows (e.g. after a merger-policy change like Browse-
+  // authoritative playerName).
+  const force = process.argv.includes("--force");
   const candidates = Object.values(holdingsMap).filter(
-    (h) => h.source === "ebay-auto" && !h.enrichedFromEbay,
+    (h) => h.source === "ebay-auto" && (force || !h.enrichedFromEbay),
   );
   console.log(`▶ ${candidates.length} ebay-auto holdings to enrich`);
 
