@@ -43,13 +43,24 @@ const EBAY_IDENTITY_API = SANDBOX
   ? "https://apiz.sandbox.ebay.com"
   : "https://apiz.ebay.com";
 
-// Scopes needed for fixed-price sell listings
+// Scopes needed for fixed-price sell listings + finances reconciliation
 const REQUIRED_SCOPES = [
   "https://api.ebay.com/oauth/api_scope",
   "https://api.ebay.com/oauth/api_scope/sell.inventory",
   "https://api.ebay.com/oauth/api_scope/sell.marketing",
   "https://api.ebay.com/oauth/api_scope/sell.account",
   "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
+  // CF-EBAY-FINANCES-SCOPE (2026-07-12, Drew — live E2E on prod): without
+  // `sell.finances` the /sell/finances/v1/transaction endpoint returns 404
+  // for every request, blocking the ENTIRE fee-enrichment pipeline. All
+  // eBay-sourced ledger entries stay stuck at needsReconciliation=true
+  // forever because the finances job can't find any transactions to
+  // enrich. Verified live 2026-07-12 against Drew's justtheboysandcards
+  // account: without this scope, `/finances/v1/transaction` +
+  // `/finances/v1/payout` + `/finances/v1/seller_funds_summary` all 404'd
+  // with empty body. Adding this scope + user reconnection unblocks the
+  // whole /erp/pnl pipeline for eBay-sourced sales.
+  "https://api.ebay.com/oauth/api_scope/sell.finances",
   "https://api.ebay.com/oauth/api_scope/commerce.identity.readonly",
 ].join(" ");
 
