@@ -187,6 +187,20 @@ export interface PortfolioHoldingWire {
   // setName duplicated on the wire alongside product because the auto-
   // parser fills both, and iOS existing screens may key off either.
   setName?: string | null;
+  // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): Browse API item-specifics
+  // populated when the auto-import fetched full item details from eBay.
+  // Foundation for iOS eBay relisting flow + future sold-comp matching.
+  ebayImageUrl?: string | null;
+  ebayShortDescription?: string | null;
+  ebayItemAspects?: Record<string, string> | null;
+  ebayCategoryPath?: string | null;
+  ebaySeller?: { username: string; feedbackScore: number | null } | null;
+  enrichedFromEbay?: boolean | null;
+  // Auxiliary aspect fields we backfilled from Browse (team, sport,
+  // manufacturer) — always optional so old holdings still decode.
+  team?: string | null;
+  sport?: string | null;
+  manufacturer?: string | null;
   // Cert
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
@@ -413,6 +427,16 @@ export function composeHoldingWireShape(
     parseConfidence: (holding as any).parseConfidence,
     needsReview: (holding as any).needsReview,
     setName: (holding as any).setName,
+    // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
+    ebayImageUrl: (holding as any).ebayImageUrl,
+    ebayShortDescription: (holding as any).ebayShortDescription,
+    ebayItemAspects: (holding as any).ebayItemAspects,
+    ebayCategoryPath: (holding as any).ebayCategoryPath,
+    ebaySeller: (holding as any).ebaySeller,
+    enrichedFromEbay: (holding as any).enrichedFromEbay,
+    team: (holding as any).team,
+    sport: (holding as any).sport,
+    manufacturer: (holding as any).manufacturer,
     // Cert
     certNumber: holding.certNumber,
     certGrader: holding.certGrader,

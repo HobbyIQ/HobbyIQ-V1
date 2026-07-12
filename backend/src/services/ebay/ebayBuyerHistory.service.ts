@@ -20,6 +20,7 @@ import {
 import {
   autoCreateHoldingForPurchase,
 } from "../portfolioiq/ebayAutoHolding.service.js";
+import { fetchEbayItemDetailsBatch } from "./ebayItemDetails.service.js";
 
 const TRADING_API_URL = "https://api.ebay.com/ws/api.dll";
 const COMPATIBILITY_LEVEL = "1349";
@@ -250,6 +251,9 @@ export interface EbayImportSummary {
   holdingsNeedingReview: number;
   /** Purchases with parseConfidence <0.70 (couldn't auto-create). */
   holdingsSkipped: number;
+  /** CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): how many auto-created holdings
+   *  received Browse API item-specifics enrichment. */
+  holdingsBrowseEnriched: number;
 }
 
 export async function importEbayPurchaseHistory(
@@ -272,6 +276,7 @@ export async function importEbayPurchaseHistory(
     holdingsCreated: 0,
     holdingsNeedingReview: 0,
     holdingsSkipped: 0,
+    holdingsBrowseEnriched: 0,
   };
 
   for (const p of purchases) {
@@ -293,6 +298,7 @@ export async function importEbayPurchaseHistory(
         notes: p.title,
         ebayOrderId: p.ebayOrderLineItemId,   // idempotency key
         ebayTransactionId: p.ebayTransactionId ?? undefined,
+        ebayItemId: p.ebayItemId ?? undefined,   // for Browse API enrichment
       });
       if (result.replay) summary.replayHits += 1;
       else summary.imported += 1;
@@ -325,6 +331,7 @@ export async function importEbayPurchaseHistory(
     summary.holdingsCreated = batchSummary.created;
     summary.holdingsNeedingReview = batchSummary.needsReview;
     summary.holdingsSkipped = batchSummary.skipped;
+    summary.holdingsBrowseEnriched = batchSummary.browseEnriched;
   } catch (err) {
     console.warn(
       JSON.stringify({
@@ -343,9 +350,17 @@ export async function importEbayPurchaseHistory(
 export interface AutoHoldingBatchSummary {
   processed: number;
   created: number;
+  /** Auto-created holdings whose parseConfidence stayed <0.90 (still need
+   *  iOS review). When Browse enrichment succeeds, needsReview drops to
+   *  false — so this count reflects "created but not enriched by Browse". */
   needsReview: number;
   needsAttribution: number;
   skipped: number;
+  /** CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): how many auto-created holdings
+   *  received Browse API item-specifics enrichment (grader/grade/aspects/
+   *  images). Rest of `created` fell back to title-parse only (either
+   *  Browse 404'd or the itemId couldn't be extracted). */
+  browseEnriched: number;
 }
 
 /**
@@ -367,17 +382,54 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
     needsReview: 0,
     needsAttribution: 0,
     skipped: 0,
+    browseEnriched: 0,
   };
+
+  // ── CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): prefetch item details for
+  // every candidate purchase in ONE parallel batch (concurrency cap 8).
+  // Cheap when there's nothing to enrich; the Browse API is fast (~200ms
+  // per call, 8-in-flight → ~10 sec for 40 items). Errors on individual
+  // items are silent nulls so a bad item doesn't take the batch down.
+  //
+  // itemId derivation: prefer explicit purchase.ebayItemId (populated by
+  // fresh imports post-#382); fall back to extracting from
+  // ebayOrderLineItemID ("itemId-txnId" format) for older purchases.
+  const candidates = purchases
+    .map((p, idx) => ({ p, idx }))
+    .filter(({ p }) => p.source === "ebay" && p.holdingIds.length === 0);
+  const itemIds: string[] = candidates.map(({ p }) => extractItemId(p) ?? "");
+  const detailsList = itemIds.some((id) => id.length > 0)
+    ? await fetchEbayItemDetailsBatch(userId, itemIds, 8).catch((err) => {
+        console.warn(
+          JSON.stringify({
+            event: "ebay_browse_prefetch_error",
+            source: "ebayBuyerHistory.service",
+            userId,
+            error: (err as Error)?.message ?? String(err),
+          }),
+        );
+        return new Array(itemIds.length).fill(null);
+      })
+    : new Array(itemIds.length).fill(null);
+  const detailsByPurchaseIdx = new Map<number, Awaited<ReturnType<typeof fetchEbayItemDetailsBatch>>[number]>();
+  candidates.forEach(({ idx }, i) => detailsByPurchaseIdx.set(idx, detailsList[i]));
+
   let mutated = false;
-  for (const p of purchases) {
+  for (let i = 0; i < purchases.length; i++) {
+    const p = purchases[i];
     if (p.source !== "ebay") continue;
     summary.processed += 1;
-    const result = autoCreateHoldingForPurchase(doc, p);
+    const details = detailsByPurchaseIdx.get(i) ?? null;
+    const result = autoCreateHoldingForPurchase(doc, p, details);
     switch (result.status) {
       case "created":
         summary.created += 1;
-        // parseConfidence < 0.90 → also flag as needsReview for iOS badge
-        if (result.parsed.parseConfidence < 0.9) summary.needsReview += 1;
+        if (result.enriched) summary.browseEnriched += 1;
+        // parseConfidence < 0.90 → flag as needsReview for iOS badge.
+        // Enrichment bumps confidence to 0.95 so enriched holdings won't
+        // count here (which is the point — Browse-confirmed data doesn't
+        // need review).
+        if ((result.holding as any).parseConfidence < 0.9) summary.needsReview += 1;
         mutated = true;
         break;
       case "needs-attribution":
@@ -397,4 +449,18 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
     await writeUserDoc(userId, doc);
   }
   return summary;
+}
+
+/**
+ * Extract a legacy itemId from a purchase — either the explicit field or
+ * derived from the OrderLineItemID "itemId-transactionId" format. Returns
+ * null when neither is present (rare — older manually-created purchases).
+ */
+function extractItemId(p: PortfolioPurchaseEntry): string | null {
+  if (p.ebayItemId && p.ebayItemId.trim()) return p.ebayItemId.trim();
+  if (p.ebayOrderId && p.ebayOrderId.includes("-")) {
+    const first = p.ebayOrderId.split("-")[0].trim();
+    return first || null;
+  }
+  return null;
 }
