@@ -64,6 +64,7 @@ import {
   type TimeseriesBucket,
 } from "../services/portfolioiq/erpAnalytics.service.js";
 import { buildValuation } from "../services/portfolioiq/erpValuation.service.js";
+import { buildInventoryAnalytics } from "../services/portfolioiq/inventoryAnalytics.service.js";
 import { composeErpSummary } from "../services/portfolioiq/erpSummary.service.js";
 import { readValueHistory } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import {
@@ -225,6 +226,30 @@ router.get("/analytics/timeseries", async (req: Request, res: Response) => {
 });
 
 // ─── CF-ERP-EXPANSION-#3 Valuation ─────────────────────────────────────────
+
+// CF-INVENTORY-TURNOVER-AGING (2026-07-12): inventory-side analytics
+// counterpart to /valuation. Returns aging buckets, avg/median days-on-hand,
+// oldest holdings (top 10), and a coarse turnover proxy based on window-
+// scoped costBasisSold vs current inventory cost. Documented as PROXY —
+// true turnover ratio would need per-holding historical timeline we don't
+// track. See inventoryAnalytics.service.ts for full math.
+router.get("/inventory-analytics", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const doc = await readUserDoc(userId);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const analytics = buildInventoryAnalytics(
+      doc.holdings ?? {},
+      (doc.ledger ?? []) as unknown as LedgerEntryForErp[],
+      { from, to },
+    );
+    res.json({ success: true, ...analytics });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /inventory-analytics failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to compute inventory analytics" });
+  }
+});
 
 router.get("/valuation", async (req: Request, res: Response) => {
   try {
