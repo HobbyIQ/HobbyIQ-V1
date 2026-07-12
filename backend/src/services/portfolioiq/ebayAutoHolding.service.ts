@@ -33,6 +33,7 @@ import {
 import type {
   PortfolioPurchaseEntry,
 } from "./portfolioStore.service.js";
+import type { EbayItemDetails } from "../ebay/ebayItemDetails.service.js";
 
 /**
  * Threshold at which we auto-create a holding from a purchase.
@@ -46,7 +47,7 @@ export const NEEDS_ATTRIBUTION_MIN = 0.4;
 export const NEEDS_REVIEW_MAX = 0.9;
 
 export type AutoHoldingResult =
-  | { status: "created"; holding: PortfolioHolding; parsed: ParsedListingTitle }
+  | { status: "created"; holding: PortfolioHolding; parsed: ParsedListingTitle; enriched: boolean }
   | { status: "needs-attribution"; parsed: ParsedListingTitle }
   | { status: "skipped-low-confidence"; parsed: ParsedListingTitle }
   | { status: "skipped-already-linked"; parsed: ParsedListingTitle };
@@ -62,10 +63,15 @@ export interface AutoHoldingDocShape {
  * Try to auto-create a holding for a single purchase. Mutates `doc` in place
  * when it does (or when it links to an existing holding). NEVER writes to
  * Cosmos itself — caller batches and writes once.
+ *
+ * When `details` is provided (from a Browse API prefetch), Browse-side data
+ * is merged AUTHORITATIVELY over the title-parse for grader/grade/aspects/
+ * images. Absent `details` → title-parse only (current-day behavior).
  */
 export function autoCreateHoldingForPurchase(
   doc: AutoHoldingDocShape,
   purchase: PortfolioPurchaseEntry,
+  details?: EbayItemDetails | null,
 ): AutoHoldingResult {
   if (purchase.holdingIds.length > 0) {
     return {
@@ -83,12 +89,13 @@ export function autoCreateHoldingForPurchase(
   }
 
   const holding = buildHoldingFromParse(purchase, parsed);
+  if (details) applyBrowseEnrichment(holding, details);
   doc.holdings[holding.id] = holding;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
   const merged = new Set([...purchase.holdingIds, holding.id]);
   purchase.holdingIds = [...merged];
 
-  return { status: "created", holding, parsed };
+  return { status: "created", holding, parsed, enriched: !!details };
 }
 
 // ─── Holding construction ──────────────────────────────────────────────────
@@ -96,7 +103,7 @@ export function autoCreateHoldingForPurchase(
 function buildHoldingFromParse(
   purchase: PortfolioPurchaseEntry,
   parsed: ParsedListingTitle,
-): PortfolioHolding {
+): PortfolioHolding & Record<string, unknown> {
   // Per-item cost: split the full totalCost across the eBay Quantity. For
   // single-item transactions (most eBay purchases of individual cards),
   // quantity = 1 and this collapses to purchase.totalCost.
@@ -175,4 +182,134 @@ function buildCardTitle(parsed: ParsedListingTitle): string | undefined {
 function extractGradeValue(grade: string): number | undefined {
   const m = grade.match(/([\d.]+)$/);
   return m ? Number(m[1]) : undefined;
+}
+
+// ─── CF-EBAY-BROWSE-ENRICHMENT (2026-07-12) ────────────────────────────────
+//
+// Merge Browse API item detail data into a title-parsed holding. Browse data
+// is AUTHORITATIVE for grader / grade / autograph flag / condition (structured
+// item specifics beat title-string parsing). Aspects the parser couldn't get
+// are backfilled here. Images + description are added for iOS render + future
+// eBay-relisting flow.
+
+const NORMALIZED_GRADER_MAP: Record<string, "PSA" | "BGS" | "SGC" | "CGC"> = {
+  psa: "PSA",
+  "professional sports authenticator (psa)": "PSA",
+  "professional sports authenticator": "PSA",
+  bgs: "BGS",
+  "beckett grading services (bgs)": "BGS",
+  "beckett grading services": "BGS",
+  beckett: "BGS",
+  sgc: "SGC",
+  "sports guaranty company": "SGC",
+  "sports guaranty co (sgc)": "SGC",
+  cgc: "CGC",
+  "certified guaranty company (cgc)": "CGC",
+};
+
+function normalizeGraderCompany(s: string | null): "PSA" | "BGS" | "SGC" | "CGC" | null {
+  if (!s) return null;
+  const lower = s.toLowerCase().trim();
+  return NORMALIZED_GRADER_MAP[lower] ?? null;
+}
+
+function parseGradeValueLoose(s: string | null): number | undefined {
+  if (!s) return undefined;
+  const m = s.match(/([\d.]+)/);
+  return m ? Number(m[1]) : undefined;
+}
+
+export function applyBrowseEnrichment(
+  holding: PortfolioHolding & Record<string, unknown>,
+  details: EbayItemDetails,
+): void {
+  const aspects = details.aspects ?? {};
+
+  // ── Grader + grade: authoritative from Browse if present ──────────
+  const grader = normalizeGraderCompany(details.grader) ?? normalizeGraderCompany(aspects["Professional Grader"] ?? null);
+  const graded = grader !== null || (details.condition ?? "").toLowerCase() === "graded";
+  if (grader) {
+    holding.gradeCompany = grader;
+    holding.gradingCompany = grader;   // legacy alias
+  }
+  const gradeVal = parseGradeValueLoose(details.grade) ?? parseGradeValueLoose(aspects["Grade"] ?? null);
+  if (gradeVal !== undefined) {
+    holding.gradeValue = gradeVal;
+  }
+  // If Browse says Ungraded explicitly, clear a title-parsed grade so we
+  // don't lie about it. Title regex sometimes picks up spurious "PSA 10"
+  // in seller marketing copy that isn't a real slab.
+  if (!graded && details.condition && details.condition.toLowerCase().includes("ungraded")) {
+    holding.gradeCompany = undefined;
+    holding.gradingCompany = undefined;
+    holding.gradeValue = undefined;
+  }
+
+  // ── Autograph: Browse aspect authoritative ────────────────────────
+  const autoAspect = aspects["Autographed"] ?? aspects["Autograph"];
+  if (autoAspect !== undefined) {
+    const yes = /^(y|yes|true)$/i.test(autoAspect);
+    holding.isAuto = yes;
+  }
+
+  // ── Aspects we can backfill onto structured fields ────────────────
+  if (!holding.playerName && aspects["Player"]) holding.playerName = aspects["Player"];
+  if (!holding.playerName && aspects["Player/Athlete"]) holding.playerName = aspects["Player/Athlete"];
+  if (aspects["Team"] && !(holding as any).team) (holding as any).team = aspects["Team"];
+  if (aspects["Sport"] && !(holding as any).sport) (holding as any).sport = aspects["Sport"];
+  if (aspects["Season"] && !holding.cardYear) {
+    const y = Number(aspects["Season"]);
+    if (Number.isFinite(y) && y >= 1900) holding.cardYear = y;
+  }
+  if (aspects["Set"] && !holding.setName) {
+    holding.setName = aspects["Set"];
+    holding.product = holding.product ?? aspects["Set"];
+  }
+  if (aspects["Manufacturer"] && !(holding as any).manufacturer) {
+    (holding as any).manufacturer = aspects["Manufacturer"];
+  }
+  if (aspects["Parallel/Variety"] && !holding.parallel) {
+    holding.parallel = aspects["Parallel/Variety"];
+  }
+  if (aspects["Card Number"] && !holding.cardNumber) {
+    holding.cardNumber = aspects["Card Number"];
+  }
+
+  // ── Images: primary + additionals into holding.photos[] ───────────
+  const imageUrls = [details.images.primary, ...details.images.additional].filter(
+    (u): u is string => !!u,
+  );
+  if (imageUrls.length > 0) {
+    // Backend already treats `photos` as the canonical image list.
+    (holding as any).photos = imageUrls;
+    (holding as any).ebayImageUrl = imageUrls[0];
+  }
+
+  // ── Description + item specifics for iOS + eBay relisting flow ────
+  if (details.shortDescription) {
+    (holding as any).ebayShortDescription = details.shortDescription;
+  }
+  if (Object.keys(aspects).length > 0) {
+    (holding as any).ebayItemAspects = aspects;
+  }
+  if (details.categoryPath) {
+    (holding as any).ebayCategoryPath = details.categoryPath;
+  }
+  if (details.seller) {
+    (holding as any).ebaySeller = details.seller;
+  }
+
+  // ── Bump the parse confidence + drop needs-review when Browse data ──
+  // provided the grader/grade/aspects the title couldn't. Confidence 0.95
+  // is the "eBay confirmed" tier — the browse data is structured, not
+  // parsed — so iOS's needs-review prompt drops away.
+  const gotStructuredData = Object.keys(aspects).length > 0 || grader !== null || gradeVal !== undefined;
+  if (gotStructuredData) {
+    const priorConf = (holding as any).parseConfidence as number | undefined;
+    (holding as any).parseConfidence = Math.max(priorConf ?? 0, 0.95);
+    (holding as any).needsReview = false;
+    (holding as any).enrichedFromEbay = true;
+  }
+
+  holding.lastUpdated = new Date().toISOString();
 }

@@ -197,10 +197,15 @@ export interface PortfolioPurchaseEntry {
   notes?: string;
 
   // ─── eBay-specific provenance (source==="ebay") ─────────────────────
-  /** eBay's order ID for the purchase. Idempotency key for import. */
+  /** eBay's order ID for the purchase. Idempotency key for import.
+   *  Populated from OrderLineItemID, format "itemId-transactionId". */
   ebayOrderId?: string;
   /** eBay Finances transactionId (distinct from orderId). */
   ebayTransactionId?: string;
+  /** CF-EBAY-BROWSE-ENRICHMENT (2026-07-12): the listing's item id.
+   *  Extractable from ebayOrderId (split on "-") but stored explicitly so
+   *  the Browse API lookup + future sold-comps queries don't need to reparse. */
+  ebayItemId?: string;
 
   createdAt: string;
   updatedAt?: string;
@@ -5075,6 +5080,7 @@ export interface RecordPurchaseInput {
   notes?: string;
   ebayOrderId?: string;
   ebayTransactionId?: string;
+  ebayItemId?: string;
 }
 
 /**
@@ -5130,6 +5136,7 @@ export async function recordPurchase(
     ...(input.notes ? { notes: input.notes } : {}),
     ...(input.ebayOrderId ? { ebayOrderId: input.ebayOrderId } : {}),
     ...(input.ebayTransactionId ? { ebayTransactionId: input.ebayTransactionId } : {}),
+    ...(input.ebayItemId ? { ebayItemId: input.ebayItemId } : {}),
     createdAt: now,
   };
 

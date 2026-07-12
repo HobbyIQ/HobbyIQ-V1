@@ -149,7 +149,9 @@ export async function handleCallback(code: string, state: string): Promise<EbayT
     });
     const idText = await idRes.text();
     console.log("[eBayAuth] Identity API status ->", idRes.status);
-    console.log("[eBayAuth] Identity API body ->", idText);
+    // Identity body carries username + accountId — treat as sensitive PII
+    // and don't stream it to stdout; parse silently. On failure the status
+    // code is enough for debugging.
     if (idRes.ok) {
       const idData = JSON.parse(idText) as { username?: string; userId?: string };
       ebayUserId = idData.username ?? idData.userId ?? "unknown";
@@ -254,9 +256,11 @@ async function fetchEbayToken(body: URLSearchParams): Promise<EbayTokenResponse>
   const credentials  = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const url = `${EBAY_BASE_API}/identity/v1/oauth2/token`;
+  // NEVER echo body / access-tokens / refresh-tokens / clientId to stdout —
+  // stdout is the leak surface (per memory feedback_secrets_never_to_stdout,
+  // 2026-07-12 CF-EBAY-BROWSE-ENRICHMENT). Diagnostic scalars only.
   console.log("[eBayAuth] fetchEbayToken →", url);
-  console.log("[eBayAuth] body →", body.toString().replace(/code=[^&]+/, "code=REDACTED"));
-  console.log("[eBayAuth] clientId →", clientId);
+  console.log("[eBayAuth] clientId length →", clientId.length);
   console.log("[eBayAuth] clientSecret length →", clientSecret.length);
 
   const res = await fetch(url, {
@@ -270,8 +274,9 @@ async function fetchEbayToken(body: URLSearchParams): Promise<EbayTokenResponse>
 
   const text = await res.text();
   console.log("[eBayAuth] token response status →", res.status);
-  console.log("[eBayAuth] token response body →", text);
-
+  // NEVER echo raw response body — contains access_token + refresh_token
+  // in cleartext on success. On failure eBay returns a JSON error object
+  // with no secret, so it's safe to surface via the throw.
   if (!res.ok) {
     throw new Error(`eBay token request failed (${res.status}): ${text}`);
   }
