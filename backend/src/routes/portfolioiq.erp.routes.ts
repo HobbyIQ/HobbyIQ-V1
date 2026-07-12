@@ -1292,19 +1292,39 @@ router.post("/holdings/:id/confirm", async (req: Request, res: Response) => {
       "../services/portfolioiq/ebayReviewQueue.service.js"
     );
     const body = (req.body ?? {}) as Record<string, unknown>;
+    // CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): use `in` check so explicit
+    // null (clear signal) is preserved; only truly-omitted fields are
+    // dropped. Prior loop dropped both.
     const edits: Record<string, unknown> = {};
     for (const field of [
       "playerName", "cardYear", "setName", "parallel", "cardNumber",
       "gradeCompany", "gradeValue", "isAuto", "team", "sport", "cardId",
     ]) {
-      if (body[field] !== undefined) edits[field] = body[field];
+      if (field in body) edits[field] = body[field];
     }
     const result = await confirmHoldingReview(userId, holdingId, edits as any);
     const statusCode =
       result.status === "not-found" ? 404 :
       result.status === "not-pending" ? 409 :
       result.status === "error" ? 500 : 200;
-    res.status(statusCode).json({ success: statusCode === 200, ...result });
+    // Response envelope: preserve legacy `holding` at top level (existing
+    // consumers) + add nested `entry.holding` for the iOS decoder that
+    // reads response.entry.holding. Both point at the same object.
+    const envelope: Record<string, unknown> = { success: statusCode === 200, ...result };
+    if (result.status === "confirmed") {
+      envelope.entry = { holding: (result as any).holding, correctionCount: (result as any).correctionCount };
+      // CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): fire-and-forget reprice on
+      // confirm — user sees fresh pricing without waiting 6h. Only fires
+      // when a cardId is present (that's what makes CompIQ trust the row).
+      const confirmedHolding = (result as any).holding;
+      if (confirmedHolding?.cardId) {
+        const { repriceOneHolding } = await import(
+          "../services/portfolioiq/portfolioStore.service.js"
+        );
+        void repriceOneHolding(userId, confirmedHolding.id).catch(() => {});
+      }
+    }
+    res.status(statusCode).json(envelope);
   } catch (err: any) {
     console.error("[portfolio.erp] /holdings/:id/confirm failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: err?.message ?? "Confirm failed" });

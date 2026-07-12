@@ -5567,6 +5567,39 @@ export interface RepriceOptions {
 const _lastRepriceAt = new Map<string, number>();
 
 /**
+ * CF-REVIEW-QUEUE-CLEAN-DATA (2026-07-12): reprice ONE holding immediately.
+ * Called fire-and-forget after a review-queue confirm with a picked cardId
+ * so the user sees the clean data reflected in inventory pricing without
+ * waiting for the next scheduled batch reprice (6h cadence).
+ *
+ * Fails silently — the scheduled job is the guaranteed catch-all. Returns
+ * boolean for callers that want to log success/failure.
+ */
+export async function repriceOneHolding(userId: string, holdingId: string): Promise<boolean> {
+  if (!userId || !holdingId) return false;
+  const doc = await readUserDoc(userId);
+  const holding = doc.holdings?.[holdingId];
+  if (!holding) return false;
+  try {
+    const priced = await autoPriceHolding(doc, holding, undefined, "refresh", userId);
+    doc.holdings[holdingId] = priced;
+    await writeUserDoc(userId, doc);
+    return true;
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "reprice_one_holding_error",
+        source: "portfolioStore.service",
+        userId,
+        holdingId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+    return false;
+  }
+}
+
+/**
  * Reprice every holding for a single user. Used both by the HTTP batch-reprice
  * endpoint and by the scheduled portfolio-reprice background job.
  *
