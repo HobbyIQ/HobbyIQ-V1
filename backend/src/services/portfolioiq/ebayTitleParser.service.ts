@@ -130,6 +130,23 @@ const GRADE_PATTERNS: readonly RegExp[] = [
 const ROOKIE_MARKERS = /\b(rc|rookie|1st\s+bowman|1st|rookie\s+card|first\s+bowman)\b/i;
 
 /**
+ * Autograph signal — "AUTO", "AUTOGRAPH(ED)", "SIGNED", "SIGNATURE" as whole
+ * words. Deliberately conservative (word-bounded) so we don't match "automatic"
+ * or product tokens like "AUTOMATIC" that could show up in stray descriptions.
+ * Also matches the common "1st Bowman Auto" / "Rookie Auto" tail patterns.
+ */
+const AUTO_MARKERS = /\b(autos?|autographs?|autographed|signed|signatures?)\b/i;
+/**
+ * Card-number code patterns that imply an autograph — the code prefix itself
+ * signals the auto insert (CPA-, BCPA-, TCRA-, TRA-, TEK-, USA-, HSA-, etc.).
+ * We only trust this when the code was actually extracted upstream.
+ */
+const AUTO_CARD_NUMBER_PREFIXES = new Set([
+  "CPA", "BCPA", "BDPA", "BDA", "CDA", "CPAR", "TCRA", "TRA",
+  "FCA", "TEK", "BCA", "HSA", "RRA", "PRV", "USA", "TCA", "BCRA",
+]);
+
+/**
  * Card number patterns — try in order:
  *  1. `#` or `No.` prefix followed by any alphanumeric-plus-dash chunk
  *  2. Recognized auto/prospect code prefix WITHOUT `#` (BCP-, CPA-, US###, TEK-, etc.)
@@ -237,6 +254,11 @@ export interface ParsedListingTitle {
   grade: string | null;
   gradeCompany: "PSA" | "BGS" | "SGC" | "CGC" | null;
   isRookie: boolean;
+  /** CF-EBAY-AUTO-DETECTION (2026-07-12) — true when the listing title
+   *  contains AUTO/AUTOGRAPHED/SIGNED/SIGNATURE as a whole word, OR when
+   *  the extracted card number's letter prefix is a known auto insert
+   *  code (CPA-, BCPA-, TCRA-, TRA-, TEK-, HSA-, RRA-, PRV-, USA-, etc.). */
+  isAuto: boolean;
   /** [0.0, 1.0]. See scoreParse() for weights. */
   parseConfidence: number;
 }
@@ -290,6 +312,12 @@ export function parseListingTitle(input: string | null | undefined): ParsedListi
   // ─── Rookie ──────────────────────────────────────────────────────────
   const isRookie = ROOKIE_MARKERS.test(raw);
 
+  // ─── Autograph ───────────────────────────────────────────────────────
+  const cardCodePrefix = cardNumber ? cardNumber.split(/[\d-]/, 1)[0].toUpperCase() : "";
+  const isAuto =
+    AUTO_MARKERS.test(raw) ||
+    (cardCodePrefix.length > 0 && AUTO_CARD_NUMBER_PREFIXES.has(cardCodePrefix));
+
   // ─── Player name ─────────────────────────────────────────────────────
   const playerName = extractPlayerName(raw, {
     year,
@@ -310,6 +338,7 @@ export function parseListingTitle(input: string | null | undefined): ParsedListi
     grade,
     cardNumber,
     isRookie,
+    isAuto,
     raw,
   });
 
@@ -322,6 +351,7 @@ export function parseListingTitle(input: string | null | undefined): ParsedListi
     grade,
     gradeCompany,
     isRookie,
+    isAuto,
     parseConfidence,
   };
 }
@@ -338,6 +368,7 @@ function emptyResult(): ParsedListingTitle {
     grade: null,
     gradeCompany: null,
     isRookie: false,
+    isAuto: false,
     parseConfidence: 0,
   };
 }
@@ -491,6 +522,7 @@ interface ScoreInput {
   grade: string | null;
   cardNumber: string | null;
   isRookie: boolean;
+  isAuto: boolean;
   raw: string;
 }
 
@@ -522,6 +554,9 @@ function scoreParse(input: ScoreInput): number {
   if (input.grade) score += 0.15;
   if (input.cardNumber) score += 0.1;
   if (input.isRookie) score += 0.05;
+  // CF-EBAY-AUTO-DETECTION (2026-07-12): small bump when autograph
+  // detected. Keeps overall score at cap 1.0.
+  if (input.isAuto) score += 0.05;
 
   // Penalties
   if (input.raw.includes("?")) score *= 0.6;

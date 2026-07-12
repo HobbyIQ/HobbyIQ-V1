@@ -151,8 +151,10 @@ function buildHoldingFromParse(
   }
   if (gradeValue !== undefined) holding.gradeValue = gradeValue;
   if (cardTitle) holding.cardTitle = cardTitle;
-  // Rookie signal preserved on notes; no dedicated boolean on the holding
-  // interface today.
+  // CF-EBAY-AUTO-DETECTION (2026-07-12): isAuto is a declared field on
+  // PortfolioHolding — populated when the parser flagged the title as
+  // an autograph. Rookie signal preserved on notes (no dedicated boolean).
+  if (parsed.isAuto) holding.isAuto = true;
   if (parsed.isRookie) {
     holding.notes = `${holding.notes} · rookie`;
   }

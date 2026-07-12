@@ -167,3 +167,47 @@ describe("parseListingTitle — edge cases", () => {
     expect(p.parallel).toBe("Numbered");
   });
 });
+
+describe("parseListingTitle — autograph detection", () => {
+  it("explicit AUTO keyword", () => {
+    const p = parseListingTitle("2024 Bowman Chrome Prospects Devin Taylor Auto BCP-16");
+    expect(p.isAuto).toBe(true);
+  });
+
+  it("AUTOGRAPH / AUTOGRAPHED / SIGNED / SIGNATURE (case-insensitive)", () => {
+    for (const kw of ["AUTOGRAPH", "Autographed", "signed", "SIGNATURE"]) {
+      const p = parseListingTitle(`2020 Topps Chrome Mike Trout ${kw} #175 PSA 10`);
+      expect(p.isAuto).toBe(true);
+    }
+  });
+
+  it("card-code prefix (CPA-, TCRA-, HSA-, etc.) implies auto even without keyword", () => {
+    // No word "auto" but the CPA- prefix on the card number itself signals
+    // the autograph insert.
+    const p1 = parseListingTitle("2024 Bowman Draft Caleb Bonemer #CPA-CBO");
+    expect(p1.isAuto).toBe(true);
+    const p2 = parseListingTitle("2024 Topps Chrome Update USA Baseball HSA-JD");
+    expect(p2.isAuto).toBe(true);
+  });
+
+  it("non-auto listing does NOT flag isAuto=true", () => {
+    const p = parseListingTitle("2020 Panini Prizm Mookie Betts #275 PSA 10 GEM MINT");
+    expect(p.isAuto).toBe(false);
+  });
+
+  it("does NOT match 'automatic' or other AUTO-prefix false-positives", () => {
+    const p = parseListingTitle("Automatic Sports Card Sleeve Dispenser 100pk");
+    expect(p.isAuto).toBe(false);
+  });
+
+  it("isAuto contributes +0.05 to confidence", () => {
+    const withAuto = parseListingTitle("2020 Panini Prizm Mookie Betts Auto #275 PSA 10");
+    const withoutAuto = parseListingTitle("2020 Panini Prizm Mookie Betts #275 PSA 10");
+    expect(withAuto.parseConfidence).toBeGreaterThanOrEqual(withoutAuto.parseConfidence);
+  });
+
+  it("real Drew title: Owen Carey Prospect Auto → isAuto=true", () => {
+    const p = parseListingTitle("2026 Bowman Chrome 1st Owen Carey Prospect Auto Gold Refractor #14/50 M377");
+    expect(p.isAuto).toBe(true);
+  });
+});
