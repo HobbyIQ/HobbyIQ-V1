@@ -87,6 +87,7 @@ export interface LedgerEntryForErp {
 
   // CF-ERP-EXPANSION-#6 audit + reconciliation provenance
   reconciledVia?: ReconciledVia;
+  reconciledAt?: string;
   feeAdjustments?: LedgerFeeAdjustment[];
   refetchRequestedAt?: string | null;
 
@@ -168,6 +169,7 @@ export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
  */
 export function tryFinalizeReconciliation(
   entry: LedgerEntryForErp,
+  nowIso: string = new Date().toISOString(),
 ): LedgerEntryForErp {
   if (entry.source !== "ebay") return entry;
   if (entry.needsReconciliation !== true) return entry;
@@ -183,24 +185,30 @@ export function tryFinalizeReconciliation(
     ...entry,
     needsReconciliation: false,
     reconciledVia: via,
+    reconciledAt: nowIso,
   };
 }
 
 /**
  * For unreconciled entries, surface which granular fee fields are NULL so
  * the iOS UX can show the user a precise to-do list per row.
+ *
+ * Loose `== null` catches both null AND undefined — legacy entries may have
+ * the field absent rather than explicitly null; iOS shouldn't need to know
+ * the difference. The reconciled-check gate short-circuits above so the
+ * empty-array return is a stable contract on finalized rows.
  */
 export function missingFeeFields(entry: LedgerEntryForErp): string[] {
   if (isReconciled(entry)) return [];
   if (entry.source !== "ebay") return [];
   const missing: string[] = [];
-  if (entry.finalValueFee === null) missing.push("finalValueFee");
-  if (entry.paymentProcessingFee === null) missing.push("paymentProcessingFee");
-  if (entry.promotedListingFee === null) missing.push("promotedListingFee");
-  if (entry.adFee === null) missing.push("adFee");
-  if (entry.otherFees === null) missing.push("otherFees");
-  if (entry.netPayout === null) missing.push("netPayout");
-  if (entry.actualShippingCost === null) missing.push("actualShippingCost");
+  if (entry.finalValueFee == null) missing.push("finalValueFee");
+  if (entry.paymentProcessingFee == null) missing.push("paymentProcessingFee");
+  if (entry.promotedListingFee == null) missing.push("promotedListingFee");
+  if (entry.adFee == null) missing.push("adFee");
+  if (entry.otherFees == null) missing.push("otherFees");
+  if (entry.netPayout == null) missing.push("netPayout");
+  if (entry.actualShippingCost == null) missing.push("actualShippingCost");
   return missing;
 }
 

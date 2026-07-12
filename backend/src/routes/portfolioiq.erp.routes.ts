@@ -95,9 +95,11 @@ import {
 } from "../repositories/portfolioExpenses.repository.js";
 import {
   applyFeeOverride,
+  applyFinalize,
   applySaveCosts,
   buildAging,
   validateFeeOverride,
+  validateFinalize,
   validateSaveCosts,
 } from "../services/portfolioiq/erpAgingOverride.service.js";
 import { computeLedgerFinancials } from "../services/portfolioiq/portfolioStore.service.js";
@@ -696,6 +698,101 @@ router.post("/unreconciled/:id/override", async (req: Request, res: Response) =>
   } catch (err: any) {
     console.error("[portfolio.erp] /unreconciled/:id/override failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to apply override" });
+  }
+});
+
+// ─── CF-RECONCILE-FINALIZE (2026-07-12) ──────────────────────────────────
+//
+// POST /api/portfolio/erp/unreconciled/:id/finalize
+// Body: { reason: string, netPayout?: number }
+//
+// User-forced finalize. Closes the row without waiting for eBay's fees
+// feed. Zero-fills only null granular fees (preserves any real value
+// Finances already wrote), sets userCostsProvidedAt if unset. Idempotent —
+// second call returns 409 { code: "ALREADY_FINALIZED" }.
+
+router.post("/unreconciled/:id/finalize", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ success: false, error: "id is required" });
+
+    const validated = validateFinalize(req.body);
+    if ("error" in validated) {
+      return res.status(400).json({
+        success: false,
+        error: validated.error,
+        code: validated.code,
+      });
+    }
+
+    const doc = await readUserDoc(userId);
+    const idx = doc.ledger.findIndex((e) => e.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Entry not found" });
+
+    const before = doc.ledger[idx] as unknown as LedgerEntryForErp;
+    if (before.source !== "ebay") {
+      return res.status(400).json({
+        success: false,
+        error: "finalize applies only to eBay entries; use PATCH /ledger/:id for manual entries",
+        code: "NOT_EBAY_ENTRY",
+      });
+    }
+    if (before.needsReconciliation !== true) {
+      return res.status(409).json({
+        success: false,
+        error: "Entry already finalized",
+        code: "ALREADY_FINALIZED",
+      });
+    }
+
+    const { entry: afterFinalize, adjustment } = applyFinalize(before, validated.ok, userId);
+
+    // Recompute financials. Same shape as /save-costs and /override — the
+    // three paths stay in lockstep. netPayoutOverride uses whatever ended
+    // up on the entry (preserved real value or the zero-filled fallback).
+    const granularSum =
+      (afterFinalize.finalValueFee ?? 0)
+      + (afterFinalize.paymentProcessingFee ?? 0)
+      + (afterFinalize.promotedListingFee ?? 0)
+      + (afterFinalize.adFee ?? 0)
+      + (afterFinalize.otherFees ?? 0)
+      + (afterFinalize.actualShippingCost ?? 0);
+    const financials = computeLedgerFinancials({
+      grossProceeds: afterFinalize.grossProceeds,
+      feesTotal: granularSum,
+      tax: 0,
+      shipping: 0,
+      gradingCost: afterFinalize.gradingCost ?? null,
+      suppliesCost: afterFinalize.suppliesCost ?? null,
+      costBasisSold: afterFinalize.costBasisSold,
+      netPayoutOverride: afterFinalize.netPayout ?? null,
+    });
+    const priorPnl = Number(before.realizedProfitLoss ?? 0);
+
+    const finalEntry = {
+      ...afterFinalize,
+      netProceeds: financials.netProceeds,
+      realizedProfitLoss: financials.realizedProfitLoss,
+      realizedProfitLossPct: financials.realizedProfitLossPct,
+    };
+    doc.ledger[idx] = finalEntry as unknown as typeof doc.ledger[number];
+    await writeUserDoc(userId, doc);
+
+    const delta = Math.round((financials.realizedProfitLoss - priorPnl) * 100) / 100;
+    res.json({
+      success: true,
+      entry: enrichEntryForClient(finalEntry as LedgerEntryForErp),
+      adjustment: {
+        reason: validated.ok.reason,
+        delta,
+        adjustmentId: adjustment.adjustmentId,
+        adjustedAt: adjustment.adjustedAt,
+      },
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /unreconciled/:id/finalize failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to finalize entry" });
   }
 });
 
