@@ -612,6 +612,11 @@ export interface PortfolioLedgerEntry {
   // reconciledVia identifies HOW the granular fees were established. CPAs
   // need to know which figures are processor-confirmed vs hand-entered.
   reconciledVia?: ReconciledVia;
+  // CF-RECONCILE-FINALIZE (2026-07-12): timestamp of the moment the two
+  // axes were satisfied and needsReconciliation flipped to false. Set by
+  // tryFinalizeReconciliation on the successful path. Present only on
+  // finalized rows — absent on rows still awaiting fees or costs.
+  reconciledAt?: string;
   // Append-only audit trail of manual fee overrides. Never overwritten —
   // each /unreconciled/:id/override push appends a row. Full prior-state
   // history reconstructable from this array.
@@ -709,9 +714,13 @@ export interface SaleLocation {
 // ── CF-ERP-EXPANSION-#6 ─────────────────────────────────────────────────────
 
 export type ReconciledVia =
-  | "ebay_finances"     // populated by the eBay Finances API enrichment path
-  | "manual_override"   // user supplied via POST /unreconciled/:id/override
-  | "manual_entry";     // user supplied at sale time (sellHolding manual path)
+  | "ebay_finances"        // populated by the eBay Finances API enrichment path
+  | "manual_override"      // user supplied via POST /unreconciled/:id/override
+  | "manual_entry"         // user supplied at sale time (sellHolding manual path)
+  | "manual_user_finalize"; // CF-RECONCILE-FINALIZE (2026-07-12): user chose
+                            // to close the row without waiting for eBay's
+                            // fees feed; distinguishes forced finalizes from
+                            // enrichment-driven ones in P&L audits.
 
 export interface LedgerFeeAdjustment {
   adjustmentId: string;

@@ -425,3 +425,138 @@ export function applySaveCosts(
 
   return { entry: merged, adjustment };
 }
+
+// ─── CF-RECONCILE-FINALIZE (2026-07-12) ────────────────────────────────────
+//
+// User-forced finalize. Closes the reconcile row without waiting for eBay's
+// Finances feed to land. Zero-fills only the null granular fee fields
+// (preserves any real value already written by the Finances enrichment),
+// sets userCostsProvidedAt if unset, and drives needsReconciliation to
+// false. reconciledVia="manual_user_finalize" distinguishes forced
+// finalizes from ebay_finances / manual_override paths in P&L audits.
+//
+// If Finances arrives AFTER a user-finalize, the enrichment path can log
+// a warning + not clobber — reconciledVia is the guard.
+
+export interface ValidatedFinalize {
+  reason: string;
+  netPayout?: number;
+}
+
+export function validateFinalize(body: unknown):
+  | { ok: ValidatedFinalize }
+  | { error: string; code: string } {
+  if (!body || typeof body !== "object") {
+    return { error: "body must be an object", code: "INVALID_VALUE" };
+  }
+  const b = body as Record<string, unknown>;
+  const reasonRaw = b.reason;
+  if (typeof reasonRaw !== "string" || !reasonRaw.trim()) {
+    return { error: "reason is required", code: "MISSING_REASON" };
+  }
+  const reason = reasonRaw.trim();
+  if (reason.length > 500) {
+    return { error: "reason must be ≤ 500 chars", code: "REASON_TOO_LONG" };
+  }
+  const out: ValidatedFinalize = { reason };
+  if ("netPayout" in b && b.netPayout !== null && b.netPayout !== undefined) {
+    const n = Number(b.netPayout);
+    if (!Number.isFinite(n) || n < 0) {
+      return { error: "netPayout must be a non-negative number", code: "INVALID_VALUE" };
+    }
+    out.netPayout = n;
+  }
+  return { ok: out };
+}
+
+export interface AppliedFinalize {
+  entry: LedgerEntryForErp;
+  adjustment: LedgerFeeAdjustment;
+}
+
+const FINALIZE_REASON_DEFAULT = "User-forced finalize (no fees data)";
+
+/**
+ * User-forced finalize. Zero-fills only null granular fee fields (preserves
+ * Finances-supplied real values), sets userCostsProvidedAt if unset, and
+ * drives needsReconciliation to false via tryFinalizeReconciliation with
+ * feeSource="manual_user_finalize".
+ *
+ * Caller MUST:
+ *   - reject already-finalized entries with 409 BEFORE calling
+ *   - re-run computeLedgerFinancials on the returned entry
+ *   - persist the result
+ *
+ * Pure. Throws nothing.
+ */
+export function applyFinalize(
+  entry: LedgerEntryForErp,
+  finalize: ValidatedFinalize,
+  userId: string,
+  nowIso: string = new Date().toISOString(),
+): AppliedFinalize {
+  const prior: LedgerFeeAdjustment["priorValues"] = {
+    finalValueFee: entry.finalValueFee ?? null,
+    paymentProcessingFee: entry.paymentProcessingFee ?? null,
+    promotedListingFee: entry.promotedListingFee ?? null,
+    adFee: entry.adFee ?? null,
+    otherFees: entry.otherFees ?? null,
+    netPayout: entry.netPayout ?? null,
+    actualShippingCost: entry.actualShippingCost ?? null,
+    needsReconciliation: entry.needsReconciliation === true,
+    reconciledVia: entry.reconciledVia,
+    gradingCost: entry.gradingCost ?? null,
+    suppliesCost: entry.suppliesCost ?? null,
+    userCostsProvidedAt: entry.userCostsProvidedAt ?? null,
+  };
+
+  // Zero-fill ONLY null granular fee fields; preserve real values. netPayout
+  // takes the existing value if present, then caller-supplied netPayout,
+  // then zero.
+  const withFees: LedgerEntryForErp = {
+    ...entry,
+    finalValueFee: entry.finalValueFee ?? 0,
+    paymentProcessingFee: entry.paymentProcessingFee ?? 0,
+    promotedListingFee: entry.promotedListingFee ?? 0,
+    adFee: entry.adFee ?? 0,
+    otherFees: entry.otherFees ?? 0,
+    actualShippingCost: entry.actualShippingCost ?? 0,
+    netPayout:
+      entry.netPayout != null
+        ? entry.netPayout
+        : finalize.netPayout != null
+          ? finalize.netPayout
+          : 0,
+    feeSource: "manual_user_finalize" as ReconciledVia,
+    userCostsProvidedAt: entry.userCostsProvidedAt ?? nowIso,
+    userCostsProvidedBy: entry.userCostsProvidedBy ?? userId,
+  };
+  const merged: LedgerEntryForErp = tryFinalizeReconciliation(withFees, nowIso);
+
+  const newValues: LedgerFeeAdjustment["newValues"] = {
+    finalValueFee: merged.finalValueFee ?? null,
+    paymentProcessingFee: merged.paymentProcessingFee ?? null,
+    promotedListingFee: merged.promotedListingFee ?? null,
+    adFee: merged.adFee ?? null,
+    otherFees: merged.otherFees ?? null,
+    netPayout: merged.netPayout ?? null,
+    actualShippingCost: merged.actualShippingCost ?? null,
+    needsReconciliation: merged.needsReconciliation === true,
+    reconciledVia: merged.reconciledVia,
+    gradingCost: merged.gradingCost ?? null,
+    suppliesCost: merged.suppliesCost ?? null,
+    userCostsProvidedAt: merged.userCostsProvidedAt ?? null,
+  };
+
+  const adjustment: LedgerFeeAdjustment = {
+    adjustmentId: randomUUID(),
+    adjustedAt: nowIso,
+    adjustedBy: userId,
+    reason: finalize.reason || FINALIZE_REASON_DEFAULT,
+    priorValues: prior,
+    newValues,
+  };
+  merged.feeAdjustments = [...(entry.feeAdjustments ?? []), adjustment];
+
+  return { entry: merged, adjustment };
+}
