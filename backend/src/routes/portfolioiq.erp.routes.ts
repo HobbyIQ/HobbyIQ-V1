@@ -68,6 +68,7 @@ import { buildInventoryAnalytics } from "../services/portfolioiq/inventoryAnalyt
 import {
   importEbayPurchaseHistory,
   MAX_DURATION_DAYS,
+  runAutoHoldingBatch,
 } from "../services/ebay/ebayBuyerHistory.service.js";
 import { composeErpSummary } from "../services/portfolioiq/erpSummary.service.js";
 import { readValueHistory } from "../services/portfolioiq/portfolioValueHistory.service.js";
@@ -1086,6 +1087,33 @@ router.post("/purchases/import/ebay", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /purchases/import/ebay failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: err?.message ?? "Import failed" });
+  }
+});
+
+// CF-EBAY-AUTO-HOLDING (2026-07-12): user-triggered one-shot to auto-attribute
+// pre-existing eBay purchases whose holdingIds is still empty. Unlocks the 39
+// (or however many) purchases already imported before the parser landed
+// without requiring a re-sync from eBay.
+//
+// Response: { processed, holdingsCreated, holdingsNeedingReview, skipped }
+// Idempotent — safe to re-run; purchases already linked to holdings are
+// silently skipped.
+router.post("/purchases/backfill-holdings", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const summary = await runAutoHoldingBatch(userId);
+    // Route response uses the same field names the import endpoint returns
+    // so iOS can share a decoder shape between the two calls.
+    res.json({
+      success: true,
+      processed: summary.processed,
+      holdingsCreated: summary.created,
+      holdingsNeedingReview: summary.needsReview,
+      skipped: summary.skipped,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/backfill-holdings failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Backfill failed" });
   }
 });
 

@@ -12,9 +12,14 @@ import {
   getAccessToken,
 } from "./ebayAuth.service.js";
 import {
+  readUserDoc,
   recordPurchase,
+  writeUserDoc,
   type PortfolioPurchaseEntry,
 } from "../portfolioiq/portfolioStore.service.js";
+import {
+  autoCreateHoldingForPurchase,
+} from "../portfolioiq/ebayAutoHolding.service.js";
 
 const TRADING_API_URL = "https://api.ebay.com/ws/api.dll";
 const COMPATIBILITY_LEVEL = "1349";
@@ -237,6 +242,14 @@ export interface EbayImportSummary {
   totalCost: number;
   ebayTotalReported: number | null;
   entries: PortfolioPurchaseEntry[];
+  // CF-EBAY-AUTO-HOLDING (2026-07-12): counts from the post-import
+  // batch pass that turns high-confidence purchases into holdings.
+  // Sum is <= imported+replayHits — some purchases may already be linked
+  // from a prior run (idempotent).
+  holdingsCreated: number;
+  holdingsNeedingReview: number;
+  /** Purchases with parseConfidence <0.70 (couldn't auto-create). */
+  holdingsSkipped: number;
 }
 
 export async function importEbayPurchaseHistory(
@@ -256,6 +269,9 @@ export async function importEbayPurchaseHistory(
     totalCost: 0,
     ebayTotalReported,
     entries: [],
+    holdingsCreated: 0,
+    holdingsNeedingReview: 0,
+    holdingsSkipped: 0,
   };
 
   for (const p of purchases) {
@@ -296,5 +312,89 @@ export async function importEbayPurchaseHistory(
     }
   }
   summary.totalCost = Math.round(summary.totalCost * 100) / 100;
+
+  // CF-EBAY-AUTO-HOLDING (2026-07-12): post-import batch pass.
+  // Reads the fresh user doc once, runs auto-create for every purchase
+  // whose holdingIds is still empty (both new imports and any older
+  // eBay purchases that pre-date this feature). One write at the end.
+  //
+  // Guardrail: idempotent — never touches a purchase already linked to
+  // holdings. Safe to run repeatedly.
+  try {
+    const batchSummary = await runAutoHoldingBatch(userId);
+    summary.holdingsCreated = batchSummary.created;
+    summary.holdingsNeedingReview = batchSummary.needsReview;
+    summary.holdingsSkipped = batchSummary.skipped;
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "ebay_auto_holding_batch_error",
+        source: "ebayBuyerHistory.service",
+        userId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+  }
+  return summary;
+}
+
+// ─── Auto-holding batch pass (shared by import + backfill) ─────────────────
+
+export interface AutoHoldingBatchSummary {
+  processed: number;
+  created: number;
+  needsReview: number;
+  needsAttribution: number;
+  skipped: number;
+}
+
+/**
+ * Walk every eBay-source purchase for the user, run the auto-create logic,
+ * write ONCE at the end. Idempotent — purchases with holdingIds already
+ * populated are silently skipped (see autoCreateHoldingForPurchase).
+ *
+ * Called by:
+ *   - importEbayPurchaseHistory (as post-import pass)
+ *   - POST /api/portfolio/erp/purchases/backfill-holdings (as user-triggered
+ *     one-shot to attribute pre-existing eBay purchases)
+ */
+export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBatchSummary> {
+  const doc = await readUserDoc(userId);
+  const purchases = doc.purchases ?? [];
+  const summary: AutoHoldingBatchSummary = {
+    processed: 0,
+    created: 0,
+    needsReview: 0,
+    needsAttribution: 0,
+    skipped: 0,
+  };
+  let mutated = false;
+  for (const p of purchases) {
+    if (p.source !== "ebay") continue;
+    summary.processed += 1;
+    const result = autoCreateHoldingForPurchase(doc, p);
+    switch (result.status) {
+      case "created":
+        summary.created += 1;
+        // parseConfidence < 0.90 → also flag as needsReview for iOS badge
+        if (result.parsed.parseConfidence < 0.9) summary.needsReview += 1;
+        mutated = true;
+        break;
+      case "needs-attribution":
+        summary.needsAttribution += 1;
+        summary.skipped += 1;
+        break;
+      case "skipped-low-confidence":
+        summary.skipped += 1;
+        break;
+      case "skipped-already-linked":
+        // Not counted — this is the "no-op re-run" case, not really "skipped
+        // due to low confidence." Left out of the count for shape clarity.
+        break;
+    }
+  }
+  if (mutated) {
+    await writeUserDoc(userId, doc);
+  }
   return summary;
 }
