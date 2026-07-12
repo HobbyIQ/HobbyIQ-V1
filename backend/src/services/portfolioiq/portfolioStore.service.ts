@@ -132,6 +132,78 @@ interface UserDoc {
   // CF-ERP-EXPANSION-#7: trade history. Atomic with ledger + holdings
   // mutations on POST /erp/trades.
   trades?: TradeTransaction[];
+  // CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12): buy-side counterpart to
+  // `ledger` (which tracks sales). Each PortfolioPurchaseEntry records
+  // an acquisition event (manual entry, eBay import, break, LCS trip) at
+  // the ORDER level — multiple holdings can share one purchase via the
+  // holdingIds[] back-reference. Optional so existing user docs load
+  // without migration.
+  purchases?: PortfolioPurchaseEntry[];
+}
+
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
+//
+// Buy-side counterpart to PortfolioLedgerEntry. Records acquisition events
+// at the ORDER level (one purchase → N holdings). Populated by:
+//   - Manual entry via POST /api/portfolio/erp/purchases
+//   - eBay import via /erp/purchases/import/ebay (walks /sell/finances/v1/
+//     transaction filtered on ORDER/SHIPPING_LABEL/PURCHASE)
+//   - Add-holding auto-fill (a future extension: if the user records a
+//     purchasePrice on POST /holdings, we can synthesize a stub purchase
+//     entry so the analytics stays complete)
+//
+// Design decisions matching PortfolioLedgerEntry (sale) semantics:
+//   - `source` marks provenance (manual | ebay | future: paypal, stripe)
+//   - Idempotency is on (userId, source, sourceOrderId) so replay is safe
+//   - Per-line costs stay on holdings (holding.purchasePrice); the entry
+//     aggregates for period totals + attribution
+//   - Non-line-item costs (shipping, tax, other) stay at the purchase
+//     level; caller-side allocation is deferred to a follow-up PR (COGS
+//     needs proportional allocation for accurate per-holding basis)
+export type PurchaseSource = "manual" | "ebay";
+
+export interface PortfolioPurchaseEntry {
+  id: string;
+  userId: string;
+  /** ISO. Source date the user actually paid — NOT when we recorded it. */
+  purchaseDate: string;
+  source: PurchaseSource;
+
+  // ─── Cost breakdown (dollars, positive) ─────────────────────────────
+  /** Sum of per-item costs (subtotal before order-level shipping/tax/fees). */
+  subtotal: number;
+  /** Sales tax collected at purchase. */
+  tax: number;
+  /** Shipping paid to receive the order. */
+  shipping: number;
+  /** Non-shipping non-tax non-item fees (buyer protection, currency conv, etc). */
+  otherFees: number;
+  /** subtotal + tax + shipping + otherFees. Reader authoritative field. */
+  totalCost: number;
+
+  // ─── Attribution (which holdings this purchase acquired) ────────────
+  /**
+   * holdingIds populated from this purchase. May be empty at creation
+   * time (e.g. eBay import lands before user catalogs the cards) and is
+   * appended-to as user adds the holdings.
+   */
+  holdingIds: string[];
+
+  // ─── Vendor / source metadata ───────────────────────────────────────
+  /** Free-text vendor name — "eBay seller X", LCS name, break company. */
+  vendor?: string;
+  /** Free-text invoice reference for user-side reconciliation. */
+  invoiceRef?: string;
+  notes?: string;
+
+  // ─── eBay-specific provenance (source==="ebay") ─────────────────────
+  /** eBay's order ID for the purchase. Idempotency key for import. */
+  ebayOrderId?: string;
+  /** eBay Finances transactionId (distinct from orderId). */
+  ebayTransactionId?: string;
+
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // CF-D1 (2026-06-20) — case-insensitive holding-key lookup.
@@ -4984,6 +5056,143 @@ export async function listTradesForUser(userId: string): Promise<TradeTransactio
 export async function getTradeForUser(userId: string, tradeId: string): Promise<TradeTransaction | null> {
   const doc = await readUserDoc(userId);
   return doc.trades?.find((t) => t.id === tradeId) ?? null;
+}
+
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ─────────────────────────────
+
+/** Input shape accepted by recordPurchase — subset of PortfolioPurchaseEntry
+ *  minus derived + server-owned fields (id, userId, createdAt, totalCost). */
+export interface RecordPurchaseInput {
+  purchaseDate: string;
+  source: PurchaseSource;
+  subtotal: number;
+  tax?: number;
+  shipping?: number;
+  otherFees?: number;
+  holdingIds?: string[];
+  vendor?: string;
+  invoiceRef?: string;
+  notes?: string;
+  ebayOrderId?: string;
+  ebayTransactionId?: string;
+}
+
+/**
+ * Idempotent purchase record. Idempotency key = (source, ebayOrderId) for
+ * source==="ebay"; manual entries are ALWAYS new inserts (users choose to
+ * record; caller-side dedup is out of scope).
+ *
+ * Returns the persisted entry PLUS a `replay` marker so the route can
+ * decide whether to 200-with-existing or 201-new. Never throws.
+ */
+export interface RecordPurchaseResult {
+  entry: PortfolioPurchaseEntry;
+  replay: boolean;
+}
+
+export async function recordPurchase(
+  userId: string,
+  input: RecordPurchaseInput,
+): Promise<RecordPurchaseResult> {
+  const doc = await readUserDoc(userId);
+  const purchases = doc.purchases ?? [];
+
+  // Idempotency on (source, ebayOrderId) for eBay imports.
+  if (input.source === "ebay" && input.ebayOrderId) {
+    const existing = purchases.find(
+      (p) => p.source === "ebay" && p.ebayOrderId === input.ebayOrderId,
+    );
+    if (existing) {
+      return { entry: existing, replay: true };
+    }
+  }
+
+  const now = new Date().toISOString();
+  const subtotal = Number(input.subtotal) || 0;
+  const tax = Number(input.tax ?? 0) || 0;
+  const shipping = Number(input.shipping ?? 0) || 0;
+  const otherFees = Number(input.otherFees ?? 0) || 0;
+  const totalCost = Math.round((subtotal + tax + shipping + otherFees) * 100) / 100;
+
+  const entry: PortfolioPurchaseEntry = {
+    id: randomUUID(),
+    userId,
+    purchaseDate: input.purchaseDate,
+    source: input.source,
+    subtotal: Math.round(subtotal * 100) / 100,
+    tax: Math.round(tax * 100) / 100,
+    shipping: Math.round(shipping * 100) / 100,
+    otherFees: Math.round(otherFees * 100) / 100,
+    totalCost,
+    holdingIds: Array.isArray(input.holdingIds) ? [...input.holdingIds] : [],
+    ...(input.vendor ? { vendor: input.vendor } : {}),
+    ...(input.invoiceRef ? { invoiceRef: input.invoiceRef } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.ebayOrderId ? { ebayOrderId: input.ebayOrderId } : {}),
+    ...(input.ebayTransactionId ? { ebayTransactionId: input.ebayTransactionId } : {}),
+    createdAt: now,
+  };
+
+  doc.purchases = [...purchases, entry];
+  await writeUserDoc(userId, doc);
+  return { entry, replay: false };
+}
+
+export async function listPurchasesForUser(
+  userId: string,
+  opts: { from?: string; to?: string; source?: PurchaseSource } = {},
+): Promise<PortfolioPurchaseEntry[]> {
+  const doc = await readUserDoc(userId);
+  const all = doc.purchases ?? [];
+  let filtered = all;
+  if (opts.from) {
+    const fromDate = opts.from.slice(0, 10);
+    filtered = filtered.filter((p) => p.purchaseDate.slice(0, 10) >= fromDate);
+  }
+  if (opts.to) {
+    const toDate = opts.to.slice(0, 10);
+    filtered = filtered.filter((p) => p.purchaseDate.slice(0, 10) <= toDate);
+  }
+  if (opts.source) {
+    filtered = filtered.filter((p) => p.source === opts.source);
+  }
+  // Newest first, matches sales ledger convention (listTradesForUser).
+  return [...filtered].sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate));
+}
+
+export async function getPurchaseForUser(
+  userId: string,
+  purchaseId: string,
+): Promise<PortfolioPurchaseEntry | null> {
+  const doc = await readUserDoc(userId);
+  return (doc.purchases ?? []).find((p) => p.id === purchaseId) ?? null;
+}
+
+/**
+ * Append holdingIds to an existing purchase's attribution array. Used when
+ * a user records a purchase FIRST (via /erp/purchases) and cataloges the
+ * cards later. Idempotent: existing holdingIds are not duplicated.
+ */
+export async function linkHoldingsToPurchase(
+  userId: string,
+  purchaseId: string,
+  holdingIds: string[],
+): Promise<PortfolioPurchaseEntry | null> {
+  const doc = await readUserDoc(userId);
+  const purchases = doc.purchases ?? [];
+  const idx = purchases.findIndex((p) => p.id === purchaseId);
+  if (idx === -1) return null;
+  const existing = purchases[idx];
+  const merged = new Set([...existing.holdingIds, ...holdingIds.filter(Boolean)]);
+  const updated: PortfolioPurchaseEntry = {
+    ...existing,
+    holdingIds: [...merged],
+    updatedAt: new Date().toISOString(),
+  };
+  purchases[idx] = updated;
+  doc.purchases = purchases;
+  await writeUserDoc(userId, doc);
+  return updated;
 }
 
 export async function refreshHolding(req: Request, res: Response) {
