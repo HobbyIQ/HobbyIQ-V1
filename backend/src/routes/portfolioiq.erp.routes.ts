@@ -31,10 +31,14 @@ import { Router, Request, Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { requireEntitlement } from "../middleware/requireEntitlement.js";
 import {
+  getPurchaseForUser,
   getTradeForUser,
+  linkHoldingsToPurchase,
+  listPurchasesForUser,
   listTradesForUser,
   parseSalesTrackingFields,
   readUserDoc,
+  recordPurchase,
   recordTradeTransaction,
   writeUserDoc,
   type PaymentMethod,
@@ -859,6 +863,178 @@ router.get("/trades/:id", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /trades/:id failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to load trade" });
+  }
+});
+
+// ─── CF-PURCHASE-LEDGER-FOUNDATION (2026-07-12) ───────────────────────────
+//
+// Buy-side counterpart to /trades + /pnl. Records acquisition events at
+// the ORDER level (one purchase → N holdings via holdingIds attribution).
+// See portfolioStore.service.ts PortfolioPurchaseEntry docstring for full
+// data-model rationale.
+//
+//   GET  /erp/purchases?from=&to=&source=          list, filtered
+//   GET  /erp/purchases/:id                        fetch one
+//   POST /erp/purchases                            record a purchase
+//   PATCH /erp/purchases/:id/link-holdings         append holdingIds
+
+router.get("/purchases", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const from = typeof req.query.from === "string" ? req.query.from : undefined;
+    const to = typeof req.query.to === "string" ? req.query.to : undefined;
+    const rawSource = typeof req.query.source === "string" ? req.query.source.trim() : undefined;
+    const source =
+      rawSource === "manual" || rawSource === "ebay" ? rawSource : undefined;
+    const purchases = await listPurchasesForUser(userId, { from, to, source });
+    // Aggregate totals for the filtered window — cheap and useful for
+    // any period-scoped iOS view.
+    const totals = {
+      count: purchases.length,
+      subtotal: purchases.reduce((s, p) => s + (p.subtotal ?? 0), 0),
+      tax: purchases.reduce((s, p) => s + (p.tax ?? 0), 0),
+      shipping: purchases.reduce((s, p) => s + (p.shipping ?? 0), 0),
+      otherFees: purchases.reduce((s, p) => s + (p.otherFees ?? 0), 0),
+      totalCost: purchases.reduce((s, p) => s + (p.totalCost ?? 0), 0),
+    };
+    // Round for display cleanliness.
+    totals.subtotal = Math.round(totals.subtotal * 100) / 100;
+    totals.tax = Math.round(totals.tax * 100) / 100;
+    totals.shipping = Math.round(totals.shipping * 100) / 100;
+    totals.otherFees = Math.round(totals.otherFees * 100) / 100;
+    totals.totalCost = Math.round(totals.totalCost * 100) / 100;
+    res.json({
+      success: true,
+      window: { from: from ?? null, to: to ?? null },
+      source: source ?? null,
+      purchases,
+      totals,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases list failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to list purchases" });
+  }
+});
+
+router.get("/purchases/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const purchaseId = String(req.params.id ?? "").trim();
+    if (!purchaseId) return res.status(400).json({ success: false, error: "id is required" });
+    const purchase = await getPurchaseForUser(userId, purchaseId);
+    if (!purchase) return res.status(404).json({ success: false, error: "Purchase not found" });
+    res.json({ success: true, purchase });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/:id failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to load purchase" });
+  }
+});
+
+router.post("/purchases", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    // ─── validation ─────────────────────────────────────────────────
+    const purchaseDateRaw =
+      typeof body.purchaseDate === "string" ? body.purchaseDate.trim() : "";
+    if (!purchaseDateRaw) {
+      return res.status(400).json({ success: false, error: "purchaseDate is required" });
+    }
+    const purchaseDateMs = Date.parse(purchaseDateRaw);
+    if (!Number.isFinite(purchaseDateMs)) {
+      return res.status(400).json({ success: false, error: "purchaseDate is not a valid ISO date" });
+    }
+    const source = body.source === "ebay" ? "ebay" : "manual";
+    const toNum = (v: unknown, label: string): number => {
+      if (v === undefined || v === null || v === "") return 0;
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`${label} must be a non-negative number`);
+      }
+      return n;
+    };
+    let subtotal: number;
+    let tax: number;
+    let shipping: number;
+    let otherFees: number;
+    try {
+      subtotal = toNum(body.subtotal, "subtotal");
+      tax = toNum(body.tax, "tax");
+      shipping = toNum(body.shipping, "shipping");
+      otherFees = toNum(body.otherFees, "otherFees");
+    } catch (e: any) {
+      return res.status(400).json({ success: false, error: e.message });
+    }
+    if (subtotal <= 0) {
+      return res.status(400).json({ success: false, error: "subtotal must be > 0" });
+    }
+    const holdingIdsRaw = Array.isArray(body.holdingIds) ? body.holdingIds : [];
+    const holdingIds = holdingIdsRaw
+      .map((h) => (typeof h === "string" ? h.trim() : ""))
+      .filter((h) => h.length > 0);
+    const vendor =
+      typeof body.vendor === "string" && body.vendor.trim() ? body.vendor.trim().slice(0, 200) : undefined;
+    const invoiceRef =
+      typeof body.invoiceRef === "string" && body.invoiceRef.trim() ? body.invoiceRef.trim().slice(0, 200) : undefined;
+    const notes =
+      typeof body.notes === "string" && body.notes.trim() ? body.notes.trim().slice(0, 500) : undefined;
+    const ebayOrderId =
+      typeof body.ebayOrderId === "string" && body.ebayOrderId.trim()
+        ? body.ebayOrderId.trim()
+        : undefined;
+    const ebayTransactionId =
+      typeof body.ebayTransactionId === "string" && body.ebayTransactionId.trim()
+        ? body.ebayTransactionId.trim()
+        : undefined;
+
+    const result = await recordPurchase(userId, {
+      purchaseDate: new Date(purchaseDateMs).toISOString(),
+      source,
+      subtotal,
+      tax,
+      shipping,
+      otherFees,
+      holdingIds,
+      vendor,
+      invoiceRef,
+      notes,
+      ebayOrderId,
+      ebayTransactionId,
+    });
+    // Idempotent replay for eBay imports returns 200 with existing entry;
+    // fresh insert returns 201. Matches the /subscriptions/verify replay
+    // idiom on the payments side.
+    res.status(result.replay ? 200 : 201).json({
+      success: true,
+      purchase: result.entry,
+      replay: result.replay,
+    });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases create failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Failed to record purchase" });
+  }
+});
+
+router.patch("/purchases/:id/link-holdings", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const purchaseId = String(req.params.id ?? "").trim();
+    if (!purchaseId) return res.status(400).json({ success: false, error: "id is required" });
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const holdingIdsRaw = Array.isArray(body.holdingIds) ? body.holdingIds : [];
+    const holdingIds = holdingIdsRaw
+      .map((h) => (typeof h === "string" ? h.trim() : ""))
+      .filter((h) => h.length > 0);
+    if (holdingIds.length === 0) {
+      return res.status(400).json({ success: false, error: "holdingIds must contain at least one non-empty string" });
+    }
+    const updated = await linkHoldingsToPurchase(userId, purchaseId, holdingIds);
+    if (!updated) return res.status(404).json({ success: false, error: "Purchase not found" });
+    res.json({ success: true, purchase: updated });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/:id/link-holdings failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: "Failed to link holdings" });
   }
 });
 
