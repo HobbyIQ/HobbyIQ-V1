@@ -51,8 +51,37 @@ import {
   findHoldingByEbayOfferIdAcrossUsers,
   markHoldingSoldFromEbay,
 } from "../services/portfolioiq/portfolioStore.service.js";
+import { enrichSaleFromBrowse } from "../services/portfolioiq/ebaySaleEnrichment.service.js";
 
 const router = Router();
+
+// CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12): fire-and-forget Browse
+// enrichment for a freshly-marked sale. Swallows every error — the
+// webhook must return 200 fast, and enrichment is best-effort.
+async function enrichSaleSoftly(userId: string, ledgerEntryId: string): Promise<void> {
+  try {
+    const r = await enrichSaleFromBrowse(userId, ledgerEntryId);
+    console.log(
+      JSON.stringify({
+        event: "ebay_webhook_sale_enrichment",
+        source: "ebayWebhook.routes",
+        userId,
+        ledgerEntryId,
+        status: r.status,
+      }),
+    );
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "ebay_webhook_sale_enrichment_error",
+        source: "ebayWebhook.routes",
+        userId,
+        ledgerEntryId,
+        error: (err as Error)?.message ?? String(err),
+      }),
+    );
+  }
+}
 
 /**
  * Compute the eBay challenge response per the marketplace-account-deletion
@@ -322,6 +351,15 @@ async function handleItemSold(
     console.log(
       `[ebayWebhook] ITEM_SOLD: status=${result.status} userId=${match.userId} holdingId=${match.holdingId} ebayOrderId=${ebayOrderId} notificationId=${notificationId}`,
     );
+    // CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12): snapshot the listing's
+    // Browse item-specifics onto the ledger entry NOW, while the listing
+    // is fresh. Fire-and-forget so webhook response isn't blocked on the
+    // Browse fetch; eBay treats any non-2xx as a delivery failure so we
+    // must return 200 fast. Enrichment failure is silent — the entry is
+    // still a valid sale, just without the sold-comp aspects.
+    if (result.status === "marked-sold" && result.entry?.ebayListingId) {
+      void enrichSaleSoftly(match.userId, result.entry.id);
+    }
     return { matched: true, result: result.status };
   }
 
