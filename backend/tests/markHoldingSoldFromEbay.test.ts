@@ -160,7 +160,7 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     expect(h.currentValue).toBe(300);
   });
 
-  it("NULL-not-zero: omitting all eBay fee fields stores null, not 0; netProceeds === grossProceeds; needsReconciliation=true", async () => {
+  it("NULL-not-zero on FEE fields: omitting all eBay fee fields stores null; needsReconciliation=true", async () => {
     const { sessionId, userId } = await signIn();
     const holdingId = "ebay-sale-null";
     await addHolding(sessionId, holdingId);
@@ -176,6 +176,8 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     if (result.status !== "marked-sold") return;
 
     const e = result.entry;
+    // Fee fields (eBay-side): still NULL-not-zero — those come from the
+    // Finances API and NULL faithfully represents "unknown."
     expect(e.finalValueFee).toBeNull();
     expect(e.paymentProcessingFee).toBeNull();
     expect(e.promotedListingFee).toBeNull();
@@ -183,11 +185,53 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     expect(e.otherFees).toBeNull();
     expect(e.actualShippingCost).toBeNull();
     expect(e.netPayout).toBeNull();
-    expect(e.suppliesCost).toBeNull();
-    expect(e.gradingCost).toBeNull();
+    // CF-AUTO-RECONCILE-LAYER-1 (2026-07-12): user costs (grading/supplies)
+    // auto-zero-fill on the safe path (no heldExpenses, no prior regrade).
+    // The `userCostsProvidedAt` marker + `userCostsProvidedBy` provenance
+    // distinguish auto-zero from user-set — audit trail stays clean.
+    expect(e.suppliesCost).toBe(0);
+    expect(e.gradingCost).toBe(0);
+    expect((e as any).userCostsProvidedBy).toBe("system:auto-zero-costs");
+    expect((e as any).userCostsProvidedAt).toMatch(/^\d{4}-/);
+    // Entry stays needsReconciliation=true because axis 1 (fees) is
+    // completely empty — Layer 2's netPayout+shipping shortcut isn't
+    // satisfied either. Finances arrival will finalize automatically.
+    expect(e.needsReconciliation).toBe(true);
     expect(e.netProceeds).toBe(250);
     expect(e.grossProceeds).toBe(250);
-    expect(e.needsReconciliation).toBe(true);
+  });
+
+  // CF-AUTO-RECONCILE (2026-07-12): the partial-Finances case Drew hit
+  // pre-#389 — netPayout + shipping arrive but the granular breakdown
+  // stays null. With Layer 1 auto-zero-costs + Layer 2 relaxed fees axis,
+  // this shape now auto-closes the moment the webhook fires.
+  it("Layer 1 + 2: partial Finances (netPayout + shipping only) + fresh holding → auto-closes on write", async () => {
+    const { sessionId, userId } = await signIn();
+    const holdingId = "ebay-sale-partial-auto-close";
+    await addHolding(sessionId, holdingId);
+
+    const result = await markHoldingSoldFromEbay(userId, holdingId, {
+      ebayOrderId: "ORDER-AUTO-CLOSE-1",
+      saleConfirmedAt: "2026-07-01T00:00:00Z",
+      quantitySold: 1,
+      unitSalePrice: 250,
+      netPayout: 220,
+      actualShippingCost: 5,
+      // Granular breakdown deliberately omitted — the shape Drew's 4
+      // stuck entries had.
+    });
+    expect(result.status).toBe("marked-sold");
+    if (result.status !== "marked-sold") return;
+    const e = result.entry;
+    // Auto-closed on webhook write — no user action needed.
+    expect(e.needsReconciliation).toBe(false);
+    expect(e.reconciledVia).toBe("ebay_finances");
+    // Auto-zero-costs marker
+    expect(e.gradingCost).toBe(0);
+    expect(e.suppliesCost).toBe(0);
+    expect((e as any).userCostsProvidedBy).toBe("system:auto-zero-costs");
+    // Financials from netPayout
+    expect(e.netProceeds).toBe(220);
   });
 
   it("netPayout is authoritative: overrides what granular fees would imply", async () => {

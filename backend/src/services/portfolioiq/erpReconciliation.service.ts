@@ -158,6 +158,21 @@ export function allGranularFeesKnown(e: LedgerEntryForErp): boolean {
 }
 
 /**
+ * CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): fees axis is satisfied for
+ * reconciliation purposes when EITHER the granular breakdown is complete
+ * (audit-grade) OR the eBay Finances API has supplied the authoritative
+ * netPayout + shipping. netPayout IS the P&L number — the granular
+ * breakdown matters for tax audits but not for closing the reconcile.
+ *
+ * Partial-Finances entries (Drew's 4 stuck cases pre-#389) now close
+ * automatically instead of stalling on granular fees that may never come.
+ */
+export function feesAxisSatisfied(e: LedgerEntryForErp): boolean {
+  if (allGranularFeesKnown(e)) return true;
+  return e.netPayout != null && e.actualShippingCost != null;
+}
+
+/**
  * Two-axis finalize. Returns the entry mutated to needsReconciliation=false
  * + reconciledVia derived from feeSource IFF both axes are satisfied.
  *
@@ -173,7 +188,7 @@ export function tryFinalizeReconciliation(
 ): LedgerEntryForErp {
   if (entry.source !== "ebay") return entry;
   if (entry.needsReconciliation !== true) return entry;
-  if (!allGranularFeesKnown(entry)) return entry;
+  if (!feesAxisSatisfied(entry)) return entry;
   if (!entry.userCostsProvidedAt) return entry;
   // Both axes met. Derive reconciledVia from the fee provenance marker.
   // feeSource is set by applyFeeEnrichment / applyFeeOverride when they
@@ -197,10 +212,16 @@ export function tryFinalizeReconciliation(
  * the field absent rather than explicitly null; iOS shouldn't need to know
  * the difference. The reconciled-check gate short-circuits above so the
  * empty-array return is a stable contract on finalized rows.
+ *
+ * CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): also returns [] when
+ * feesAxisSatisfied succeeds via the netPayout+shipping shortcut — those
+ * entries are ready to close (waiting only on axis 2), so iOS should render
+ * a "ready to save" affordance instead of a "waiting on fees" list.
  */
 export function missingFeeFields(entry: LedgerEntryForErp): string[] {
   if (isReconciled(entry)) return [];
   if (entry.source !== "ebay") return [];
+  if (feesAxisSatisfied(entry)) return [];
   const missing: string[] = [];
   if (entry.finalValueFee == null) missing.push("finalValueFee");
   if (entry.paymentProcessingFee == null) missing.push("paymentProcessingFee");
