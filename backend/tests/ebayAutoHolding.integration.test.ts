@@ -66,7 +66,10 @@ describe("POST /api/portfolio/erp/purchases/backfill-holdings", () => {
     expect(pDetail.body.purchase.holdingIds.length).toBe(1);
 
     // Holding visible on GET /api/portfolio/holdings
-    const holdings = await request(app).get("/api/portfolio/holdings").set("x-session-id", session);
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): auto-created holdings land in
+    // pending-review; use ?includePendingReview=true to see them via the
+    // main list. Prod iOS reads from /holdings/pending-review instead.
+    const holdings = await request(app).get("/api/portfolio/holdings?includePendingReview=true").set("x-session-id", session);
     const created = holdings.body.holdings.find((h: any) => h.playerName === "Mookie Betts" && h.cardYear === 2020);
     expect(created).toBeTruthy();
     expect(created.gradeCompany).toBe("PSA");
@@ -159,7 +162,10 @@ describe("POST /api/portfolio/erp/purchases/backfill-holdings", () => {
     expect(r.status).toBe(200);
     const p = await request(app).get(`/api/portfolio/erp/purchases/${purchaseId}`).set("x-session-id", session);
     expect(p.body.purchase.holdingIds.length).toBe(1);
-    const holdings = await request(app).get("/api/portfolio/holdings").set("x-session-id", session);
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): auto-created holdings land in
+    // pending-review; use ?includePendingReview=true to see them via the
+    // main list. Prod iOS reads from /holdings/pending-review instead.
+    const holdings = await request(app).get("/api/portfolio/holdings?includePendingReview=true").set("x-session-id", session);
     const created = holdings.body.holdings.find((h: any) => h.playerName === "Owen Carey");
     expect(created).toBeTruthy();
     expect(created.cardYear).toBe(2026);

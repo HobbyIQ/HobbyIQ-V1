@@ -2754,9 +2754,33 @@ export async function getHoldings(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
   const doc = await readUserDoc(auth.userId);
-  const items = Object.values(doc.holdings);
-  // CF-PORTFOLIOHOLDING-FIELD-PRUNE Phase B: route through anti-corruption
-  // layer; explicit wire-shape per contract_freeze_v1 §1.3.
+  const allItems = Object.values(doc.holdings);
+  // CF-EBAY-REVIEW-QUEUE (2026-07-12): filter pending-review out of the
+  // main /holdings response — those aren't real inventory yet. iOS reads
+  // them separately via GET /erp/holdings/pending-review + user confirms
+  // each one before it lands here. ?includePendingReview=true opts in
+  // for admin/debug tools.
+  const includePending = String(req.query.includePendingReview ?? "").trim() === "true";
+  const items = includePending
+    ? allItems
+    : allItems.filter((h) => (h as any).cardStatus !== "pending-review");
+  const holdings = composePortfolioListResponse(items);
+  res.json({ userId: auth.userId, count: holdings.length, holdings });
+}
+
+/**
+ * CF-EBAY-REVIEW-QUEUE (2026-07-12): return the auto-created holdings
+ * that are waiting for user confirmation. Same wire shape as /holdings —
+ * iOS decodes the same PortfolioHolding shape and renders the review
+ * queue UX with parseConfidence + browseAspects + photos in view.
+ */
+export async function getPendingReviewHoldings(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const doc = await readUserDoc(auth.userId);
+  const items = Object.values(doc.holdings).filter(
+    (h) => (h as any).cardStatus === "pending-review",
+  );
   const holdings = composePortfolioListResponse(items);
   res.json({ userId: auth.userId, count: holdings.length, holdings });
 }
@@ -2802,12 +2826,18 @@ export interface PortfolioSummary {
   observedGainLossPct: number | null;
 }
 
+// CF-EBAY-REVIEW-QUEUE (2026-07-12): "pending-review" is the eBay-auto
+// commit-gate status. Auto-created holdings start here; the user promotes
+// them to "active" via POST /erp/holdings/:id/confirm after reviewing the
+// parser+Browse extraction. Excluded from all portfolio value / P&L /
+// reprice paths until confirmed.
 const EXCLUDED_STATUS = new Set([
   "sold",
   "archived",
   "watchlist",
   "tradepending",
   "trade pending",
+  "pending-review",
 ]);
 
 function round2(v: number): number {
@@ -5548,6 +5578,20 @@ export async function repriceHoldingsForUser(
   const updates: BatchRepriceResult["updates"] = [];
 
   for (const holding of candidates) {
+    // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
+    // aren't real inventory yet — pricing them would fire the CompIQ
+    // engine with polluted / unconfirmed inputs, exactly what the review
+    // gate exists to prevent.
+    if ((holding as any).cardStatus === "pending-review") {
+      skipped += 1;
+      updates.push({
+        id: holding.id,
+        status: "skipped",
+        reason: "pending-review (awaiting user confirmation)",
+        cardId: null,
+      });
+      continue;
+    }
     // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): defense-in-depth
     // safety net. After the validation gate at addHolding/updateHolding, no
     // NEW null-identity rows can be persisted. But legacy/edge rows that

@@ -119,18 +119,29 @@ describe("applyBrowseEnrichment — backfills missing structured fields", () => 
     expect((h as any).manufacturer).toBe("Topps");
   });
 
-  it("does NOT overwrite a title-parsed field when already populated", () => {
+  it("Browse is AUTHORITATIVE — overrides polluted title-parsed player/set/parallel", () => {
+    // Title parser produced messy values ("Baseball Owen Carey" is a real
+    // 2026-07-12 example from Drew's data — parser grabbed the vertical
+    // marker as part of the name). Browse's structured Player aspect
+    // must win.
     const h = makeHolding({
-      playerName: "Should Stay",
-      setName: "Existing Set",
-      cardNumber: "999",
+      playerName: "Baseball Owen Carey",       // polluted by title parser
+      setName: "Some Old Set",
+      parallel: "wrong-parallel",
     });
     applyBrowseEnrichment(h, makeDetails());
-    expect(h.playerName).toBe("Should Stay");
-    expect(h.setName).toBe("Existing Set");
-    expect(h.cardNumber).toBe("999");
-    // But still merges what was empty:
+    expect(h.playerName).toBe("CJ Kayfus");         // Browse wins
+    expect(h.setName).toBe("Bowman Chrome");        // Browse wins
+    expect(h.parallel).toBe("Blue Refractor");      // Browse wins
     expect((h as any).team).toBe("Cleveland Guardians");
+  });
+
+  it("cardNumber is the ONE exception — title's coded form is preserved", () => {
+    // Title carries "BCP-14" (parallel-specific code); Browse aspect
+    // often has "14" alone. Preserving title here is intentional.
+    const h = makeHolding({ cardNumber: "BCP-14" });
+    applyBrowseEnrichment(h, makeDetails());
+    expect(h.cardNumber).toBe("BCP-14");
   });
 
   it("backfills cardYear from Season aspect when missing", () => {
