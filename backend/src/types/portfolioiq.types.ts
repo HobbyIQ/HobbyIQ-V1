@@ -11,6 +11,30 @@
 // drops (gated on production probes Q1/Q2/Q3), Zod 4xx escalation
 // (gated on 1-week strip-and-warn monitor). `purchasePrice` ->
 // `acquisitionCost` rename is its own CF.
+// CF-HELD-EXPENSES (2026-07-12) — expenses accrued on a card WHILE it's
+// still in inventory. Distinct from purchasePrice (paid at acquisition) and
+// from the sale-side gradingCost/suppliesCost on ledger entries (captured
+// at sale time). Each write appends here + adds to holding.totalCostBasis
+// so realized-P&L math on the eventual sale reflects the full-cost basis.
+export type HeldExpenseKind =
+  | "grading"          // sent to PSA/BGS/SGC/CGC
+  | "supplies"         // sleeves, top loaders, cases
+  | "shipping_to_grader"
+  | "insurance"
+  | "storage"
+  | "other";
+
+export interface HoldingHeldExpense {
+  id: string;
+  kind: HeldExpenseKind;
+  amount: number;             // dollars, positive
+  incurredAt: string;         // ISO — WHEN the expense was paid
+  createdAt: string;          // when we recorded it
+  notes?: string;
+  /** Optional external receipt/invoice ref. */
+  invoiceRef?: string;
+}
+
 export interface PortfolioHolding {
   id: string;
   playerName?: string;
@@ -62,6 +86,11 @@ export interface PortfolioHolding {
   graderStatus?: "available" | "at_psa" | "pending_redemption" | "in_route";
   purchaseDate?: string | number;
   purchaseSource?: string;
+  // CF-HELD-EXPENSES (2026-07-12): expenses accrued while holding the card
+  // (grading, supplies, storage). Each write also increments totalCostBasis
+  // so realized-P&L math on the eventual sale reflects true all-in cost.
+  // Managed through POST/DELETE /api/portfolio/holdings/:id/expenses.
+  heldExpenses?: HoldingHeldExpense[];
   listingUrl?: string;
   listingPrice?: number;
   fairMarketValue?: number;
