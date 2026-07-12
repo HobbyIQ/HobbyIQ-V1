@@ -70,6 +70,38 @@ router.get("/holdings", portfolio.getHoldings);
 // awaiting user confirmation. iOS renders this as the review queue.
 router.get("/holdings/pending-review", portfolio.getPendingReviewHoldings);
 
+// CF-EBAY-SOLD-COMPS-QUERY (2026-07-12): market intelligence from our own
+// sold pool. Query by year/set/parallel/grade/player/cardNumber/isAuto/
+// cardId; returns matches ranked by aspect density + recency + aggregate
+// stats (min/max/median/mean). iOS renders on card detail as "recent
+// comps."
+router.get("/sold-comps", async (req, res, next) => {
+  try {
+    const { querySoldComps } = await import(
+      "../services/portfolioiq/ebaySoldComps.service.js"
+    );
+    const q = req.query as Record<string, string | undefined>;
+    const parsedYear = q.year ? parseInt(q.year, 10) : undefined;
+    const parsedLimit = q.limit ? parseInt(q.limit, 10) : undefined;
+    const parsedIsAuto =
+      q.isAuto === "true" ? true : q.isAuto === "false" ? false : undefined;
+    const result = await querySoldComps({
+      year: Number.isFinite(parsedYear) ? parsedYear : undefined,
+      set: q.set,
+      parallel: q.parallel,
+      grade: q.grade,
+      playerName: q.playerName,
+      cardNumber: q.cardNumber,
+      isAuto: parsedIsAuto,
+      cardId: q.cardId,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    next(err);
+  }
+});
+
 // CF-EXPORT-BE (2026-06-21): GET /api/portfolio/export?format=xlsx|csv
 //   - format defaults to xlsx; "csv" supported (RFC-4180-ish).
 //   - Reads holdings via the same composePortfolioListResponse wire path
