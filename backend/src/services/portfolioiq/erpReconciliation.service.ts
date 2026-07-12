@@ -391,6 +391,128 @@ function accumulate(acc: PnlTotals, e: LedgerEntryForErp): void {
   acc.entryCount += 1;
 }
 
+// ─── CF-PNL-COGS-INTEGRATION (2026-07-12) ──────────────────────────────────
+//
+// Purchase + inventory metrics that complement the sale-side PnlTotals.
+// Window-scoped fields (purchase*) filter on purchaseDate; snapshot fields
+// (inventory*) reflect the current portfolio at request time and are NOT
+// window-scoped — asking "what was I holding on 2026-05-15" would require
+// point-in-time history we don't track (portfolio_value_history covers
+// total dollars, not per-holding).
+
+export interface PurchaseSpendTotals {
+  purchaseSpend: number;         // sum of totalCost in window
+  purchaseCount: number;
+  purchaseSubtotal: number;      // sum of subtotals (items only, ex tax/ship/fees)
+  purchaseTax: number;
+  purchaseShipping: number;
+  purchaseOtherFees: number;
+}
+
+export interface InventoryOnHand {
+  inventoryOnHandCost: number;   // sum of totalCostBasis across currently-held holdings
+  inventoryOnHandCount: number;
+}
+
+export interface PnlCogs
+  extends PurchaseSpendTotals,
+    InventoryOnHand {
+  cashFlow: number;              // grossProceeds - purchaseSpend (window-scoped)
+  grossMarginPct: number | null; // realizedProfitLoss / netProceeds; null when netProceeds<=0
+}
+
+interface PurchaseEntryLite {
+  purchaseDate: string;
+  totalCost?: number;
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  otherFees?: number;
+}
+
+interface HoldingLite {
+  purchasePrice?: number;
+  totalCostBasis?: number;
+  quantity?: number;
+}
+
+function purchaseInWindow(p: PurchaseEntryLite, fromIso: string | null, toIso: string | null): boolean {
+  const datePart = p.purchaseDate.slice(0, 10);
+  if (fromIso && datePart < fromIso) return false;
+  if (toIso && datePart > toIso) return false;
+  return true;
+}
+
+function costBasisForHolding(h: HoldingLite): number {
+  if (typeof h.totalCostBasis === "number" && Number.isFinite(h.totalCostBasis)) {
+    return h.totalCostBasis;
+  }
+  const price = typeof h.purchasePrice === "number" && Number.isFinite(h.purchasePrice) ? h.purchasePrice : 0;
+  const qty = typeof h.quantity === "number" && h.quantity > 0 ? h.quantity : 1;
+  return price * qty;
+}
+
+/**
+ * Combine purchase-side and inventory-snapshot metrics with the sale-side
+ * PnlTotals into a single CogsView. Windowing rules:
+ *   - Purchases:  purchaseDate in [from, to]
+ *   - Inventory:  ALWAYS current snapshot (holdings still on hand at req time)
+ *   - Cash flow / margin: derived from the same window as pnlTotals
+ */
+export function buildCogsView(
+  pnlTotals: PnlTotals,
+  purchases: ReadonlyArray<PurchaseEntryLite>,
+  holdingsById: Record<string, HoldingLite | undefined>,
+  options: { from?: string; to?: string },
+): PnlCogs {
+  const fromIso = parseDateInput(options.from);
+  const toIso = parseDateInput(options.to);
+
+  let purchaseSpend = 0;
+  let purchaseCount = 0;
+  let purchaseSubtotal = 0;
+  let purchaseTax = 0;
+  let purchaseShipping = 0;
+  let purchaseOtherFees = 0;
+  for (const p of purchases) {
+    if (!purchaseInWindow(p, fromIso, toIso)) continue;
+    purchaseSpend += p.totalCost ?? 0;
+    purchaseSubtotal += p.subtotal ?? 0;
+    purchaseTax += p.tax ?? 0;
+    purchaseShipping += p.shipping ?? 0;
+    purchaseOtherFees += p.otherFees ?? 0;
+    purchaseCount += 1;
+  }
+
+  let inventoryOnHandCost = 0;
+  let inventoryOnHandCount = 0;
+  for (const h of Object.values(holdingsById)) {
+    if (!h) continue;
+    inventoryOnHandCost += costBasisForHolding(h);
+    inventoryOnHandCount += 1;
+  }
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const cashFlow = r2(pnlTotals.grossProceeds - purchaseSpend);
+  const grossMarginPct =
+    pnlTotals.netProceeds > 0
+      ? r2((pnlTotals.realizedProfitLoss / pnlTotals.netProceeds) * 100)
+      : null;
+
+  return {
+    purchaseSpend: r2(purchaseSpend),
+    purchaseCount,
+    purchaseSubtotal: r2(purchaseSubtotal),
+    purchaseTax: r2(purchaseTax),
+    purchaseShipping: r2(purchaseShipping),
+    purchaseOtherFees: r2(purchaseOtherFees),
+    inventoryOnHandCost: r2(inventoryOnHandCost),
+    inventoryOnHandCount,
+    cashFlow,
+    grossMarginPct,
+  };
+}
+
 function roundTotals(t: PnlTotals): PnlTotals {
   const r2 = (n: number) => Math.round(n * 100) / 100;
   return {
