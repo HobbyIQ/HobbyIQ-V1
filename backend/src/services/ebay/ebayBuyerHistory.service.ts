@@ -448,6 +448,31 @@ export async function runAutoHoldingBatch(userId: string): Promise<AutoHoldingBa
   if (mutated) {
     await writeUserDoc(userId, doc);
   }
+
+  // CF-CARDID-SUGGESTER (2026-07-12): fire-and-forget cardId suggestions on
+  // the pending-review holdings we just created. Uses CardHedge search with
+  // structured filters (playerName + setName) — a suggestion NEVER auto-
+  // commits, it just lands on the holding for the user to accept in review.
+  // Errors are swallowed; the review queue still works without suggestions.
+  if (mutated) {
+    void (async () => {
+      try {
+        const { generateCardIdSuggestions } = await import(
+          "../portfolioiq/cardIdSuggester.service.js"
+        );
+        await generateCardIdSuggestions(userId);
+      } catch (err) {
+        console.warn(
+          JSON.stringify({
+            event: "card_id_suggestions_error",
+            source: "ebayBuyerHistory.service",
+            userId,
+            error: (err as Error)?.message ?? String(err),
+          }),
+        );
+      }
+    })();
+  }
   return summary;
 }
 
