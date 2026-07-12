@@ -459,8 +459,12 @@ interface PortfolioLedgerEntry {
   notes?: string;
 
   // ----- eBay sale provenance (PR D.6, populated only for ITEM_SOLD path) -----
-  // Manual entries OMIT all of these. Readers MUST treat absent `source` as
-  // "manual" and absent `needsReconciliation` as false.
+  // Manual entries emit `source: "manual"` explicitly (CF-MANUAL-SELL-EXPLICIT-
+  // SOURCE, PR #373). All other eBay fields (ebayOrderId, ebayOfferId, etc.)
+  // are still omitted on manual entries. Legacy entries written before
+  // PR #373 may have `source` absent — readers MUST tolerate absent as
+  // synonymous with "manual" and absent `needsReconciliation` as false, so
+  // pre-#373 rows aggregate correctly.
   source?: "manual" | "ebay";
   ebayOrderId?: string;
   ebayOfferId?: string | null;
