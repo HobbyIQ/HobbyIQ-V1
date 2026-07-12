@@ -65,6 +65,10 @@ import {
 } from "../services/portfolioiq/erpAnalytics.service.js";
 import { buildValuation } from "../services/portfolioiq/erpValuation.service.js";
 import { buildInventoryAnalytics } from "../services/portfolioiq/inventoryAnalytics.service.js";
+import {
+  importEbayPurchaseHistory,
+  MAX_DURATION_DAYS,
+} from "../services/ebay/ebayBuyerHistory.service.js";
 import { composeErpSummary } from "../services/portfolioiq/erpSummary.service.js";
 import { readValueHistory } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import {
@@ -1056,6 +1060,32 @@ router.post("/purchases", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("[portfolio.erp] /purchases create failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: err?.message ?? "Failed to record purchase" });
+  }
+});
+
+// CF-EBAY-BUYER-HISTORY (2026-07-12): pull purchase history from the legacy
+// Trading API (GetMyeBayBuying) and idempotently import each item as a
+// PortfolioPurchaseEntry. Configurable window; caps at MAX_DURATION_DAYS
+// per eBay's server-side limit.
+router.post("/purchases/import/ebay", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const daysRaw = req.body?.days ?? req.query.days;
+    const days = Number(daysRaw ?? 30);
+    if (!Number.isFinite(days) || days < 1) {
+      return res.status(400).json({ success: false, error: "days must be a positive integer (1-90)" });
+    }
+    if (days > MAX_DURATION_DAYS) {
+      return res.status(400).json({
+        success: false,
+        error: `days must be ≤ ${MAX_DURATION_DAYS} (eBay Trading API cap)`,
+      });
+    }
+    const summary = await importEbayPurchaseHistory(userId, days);
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /purchases/import/ebay failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Import failed" });
   }
 });
 
