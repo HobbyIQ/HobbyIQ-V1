@@ -14,7 +14,23 @@
 
 import { getAccessToken } from "./ebayAuth.service.js";
 
-const FINANCES_BASE_URL = "https://api.ebay.com/sell/finances/v1";
+// CF-EBAY-FINANCES-HOSTNAME (2026-07-12, Drew — live E2E on prod).
+// The Sell Finances API lives on apiz.ebay.com, NOT api.ebay.com. Same
+// pattern as Commerce Identity (see ebayAuth.service.ts:41). Verified
+// live 2026-07-12:
+//   api.ebay.com/sell/finances/v1/transaction  → 404 with empty body
+//   apiz.ebay.com/sell/finances/v1/transaction → 200 with real data
+// The 404 was not a scope failure — sell.finances IS granted — it was
+// pure routing: eBay's edge returns 404 for any /sell/finances path
+// hitting the api.ebay.com hostname. Sandbox mirrors this: api.sandbox.
+// ebay.com/sell/finances also 404s; apiz.sandbox.ebay.com/sell/finances
+// serves. See eBay docs "Base URL" section on the Sell Finances API.
+const FINANCES_BASE_URL_PROD = "https://apiz.ebay.com/sell/finances/v1";
+const FINANCES_BASE_URL_SANDBOX = "https://apiz.sandbox.ebay.com/sell/finances/v1";
+const FINANCES_BASE_URL =
+  (process.env.EBAY_ENV ?? "sandbox") === "production"
+    ? FINANCES_BASE_URL_PROD
+    : FINANCES_BASE_URL_SANDBOX;
 const MARKETPLACE_HEADER = "EBAY_US";
 const MAX_PAGES = 10; // safety cap; Finances rarely returns more than 1-2 pages per order
 const PAGE_LIMIT = 50;
