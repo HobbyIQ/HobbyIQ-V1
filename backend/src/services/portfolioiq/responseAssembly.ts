@@ -175,6 +175,18 @@ export interface PortfolioHoldingWire {
   ebayOfferId?: string | null;
   ebayListingId?: string | null;
   ebayListingPublishedAt?: string | null;
+  // CF-EBAY-AUTO-HOLDING (2026-07-12): provenance markers for holdings
+  // created by the auto-import path (POST /erp/purchases/import/ebay or
+  // POST /erp/purchases/backfill-holdings). iOS uses these to render a
+  // "Auto-imported from eBay" badge + a "Confirm details" prompt when
+  // parseConfidence < 0.90.
+  source?: string | null;
+  sourcePurchaseId?: string | null;
+  parseConfidence?: number | null;
+  needsReview?: boolean | null;
+  // setName duplicated on the wire alongside product because the auto-
+  // parser fills both, and iOS existing screens may key off either.
+  setName?: string | null;
   // Cert
   certNumber?: string | null;
   certGrader?: "PSA" | "BGS" | "SGC" | "CGC" | string | null;
@@ -393,6 +405,14 @@ export function composeHoldingWireShape(
     ebayOfferId: holding.ebayOfferId,
     ebayListingId: holding.ebayListingId,
     ebayListingPublishedAt: holding.ebayListingPublishedAt,
+    // CF-EBAY-AUTO-HOLDING (2026-07-12): auto-import provenance. Fields
+    // are stored on the holding doc via `as any` at write time and
+    // surfaced here so iOS gets the "auto-imported" markers.
+    source: (holding as any).source,
+    sourcePurchaseId: (holding as any).sourcePurchaseId,
+    parseConfidence: (holding as any).parseConfidence,
+    needsReview: (holding as any).needsReview,
+    setName: (holding as any).setName,
     // Cert
     certNumber: holding.certNumber,
     certGrader: holding.certGrader,
