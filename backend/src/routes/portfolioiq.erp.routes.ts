@@ -1035,6 +1035,10 @@ router.post("/purchases", async (req: Request, res: Response) => {
       typeof body.ebayTransactionId === "string" && body.ebayTransactionId.trim()
         ? body.ebayTransactionId.trim()
         : undefined;
+    const ebayItemId =
+      typeof body.ebayItemId === "string" && body.ebayItemId.trim()
+        ? body.ebayItemId.trim()
+        : undefined;
 
     const result = await recordPurchase(userId, {
       purchaseDate: new Date(purchaseDateMs).toISOString(),
@@ -1049,6 +1053,7 @@ router.post("/purchases", async (req: Request, res: Response) => {
       notes,
       ebayOrderId,
       ebayTransactionId,
+      ebayItemId,
     });
     // Idempotent replay for eBay imports returns 200 with existing entry;
     // fresh insert returns 201. Matches the /subscriptions/verify replay
@@ -1109,11 +1114,54 @@ router.post("/purchases/backfill-holdings", async (req: Request, res: Response) 
       processed: summary.processed,
       holdingsCreated: summary.created,
       holdingsNeedingReview: summary.needsReview,
+      holdingsBrowseEnriched: summary.browseEnriched,
       skipped: summary.skipped,
     });
   } catch (err: any) {
     console.error("[portfolio.erp] /purchases/backfill-holdings failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: err?.message ?? "Backfill failed" });
+  }
+});
+
+// CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12): sale-side Browse enrichment.
+// Snapshots the eBay listing's item-specifics onto the ledger sale entry
+// so every completed sale becomes a first-class sold-comp for future
+// downstream matching. Foundation for market-comp queries later.
+router.post("/sales/backfill-enrichment", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const { backfillSalesEnrichment } = await import(
+      "../services/portfolioiq/ebaySaleEnrichment.service.js"
+    );
+    const summary = await backfillSalesEnrichment(userId);
+    res.json({ success: true, ...summary });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /sales/backfill-enrichment failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Sale enrichment failed" });
+  }
+});
+
+router.post("/sales/:id/enrich-from-ebay", async (req: Request, res: Response) => {
+  try {
+    const userId = userIdFrom(req);
+    const ledgerEntryId = String(req.params.id ?? "").trim();
+    if (!ledgerEntryId) {
+      return res.status(400).json({ success: false, error: "id is required" });
+    }
+    const { enrichSaleFromBrowse } = await import(
+      "../services/portfolioiq/ebaySaleEnrichment.service.js"
+    );
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const force = body.force === true;
+    const result = await enrichSaleFromBrowse(userId, ledgerEntryId, { force });
+    const statusCode =
+      result.status === "not-found" ? 404 :
+      result.status === "no-listing-id" ? 400 :
+      result.status === "error" ? 500 : 200;
+    res.status(statusCode).json({ success: statusCode === 200, ...result });
+  } catch (err: any) {
+    console.error("[portfolio.erp] /sales/:id/enrich-from-ebay failed:", err?.message ?? err);
+    res.status(500).json({ success: false, error: err?.message ?? "Sale enrichment failed" });
   }
 });
 
