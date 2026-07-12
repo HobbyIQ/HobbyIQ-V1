@@ -516,7 +516,7 @@ export async function deletePortfolioDocForUser(
   return summary;
 }
 
-interface PortfolioLedgerEntry {
+export interface PortfolioLedgerEntry {
   id: string;
   userId: string;
   holdingId: string;
@@ -648,6 +648,26 @@ interface PortfolioLedgerEntry {
   // ledger entry title.
   regradeFromGrade?: string;
   regradeToGrade?: string;
+
+  // ----- CF-EBAY-SOLD-COMPS-FOUNDATION (2026-07-12) --------------------------
+  // Enriched snapshot of the eBay listing at the moment of sale — captured
+  // ONCE at ITEM_SOLD time (or on manual reconcile), before the listing
+  // ends and Browse API may 404. This is the foundation for our own sold-
+  // comps pool: every sale we complete gives us a market data point tied
+  // to the same structured aspects downstream matching will key on.
+  //
+  // enrichedFromEbay=true means the fields below were populated from
+  // Browse; absent/false means title-parse only or manual entry with no
+  // listing.
+  enrichedFromEbay?: boolean;
+  // Same shape as the buy-side enrichment fields on PortfolioHolding so
+  // iOS + analytics share decoders.
+  ebayItemAspects?: Record<string, string>;
+  ebayImageUrl?: string | null;
+  ebaySoldImages?: string[] | null;
+  ebayShortDescription?: string | null;
+  ebayCategoryPath?: string | null;
+  ebaySellerUsername?: string | null;
 }
 
 // ── CF-ERP-EXPANSION-#1 enums + structured location ─────────────────────────
