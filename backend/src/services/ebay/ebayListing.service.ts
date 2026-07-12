@@ -40,6 +40,11 @@ export interface HoldingListingInput {
   isPatch: boolean;
   isRookie: boolean;
   variation?: string;
+  /** CF-EBAY-REVIEW-QUEUE (2026-07-12): Team surfaces on eBay Browse
+   *  aspects for graded/raw cards. When present, we forward it as an
+   *  item specific so relisted cards carry the same "Team" the buyer
+   *  originally saw. Silent skip when empty. */
+  team?: string;
   // Graded
   grade?: string;
   gradingCompany?: string;
@@ -340,6 +345,7 @@ function buildItemAspects(i: HoldingListingInput): Record<string, string[]> {
 
   aspects["Sport"] = [i.sport ?? "Baseball"];
   if (i.playerName)   aspects["Player"] = [i.playerName];
+  if (i.team)         aspects["Team"] = [i.team];
   if (i.cardYear)     aspects["Year"] = [String(i.cardYear)];
   if (i.brand)        aspects["Manufacturer"] = [i.brand];
   if (i.setName)      aspects["Set"] = [i.setName];
