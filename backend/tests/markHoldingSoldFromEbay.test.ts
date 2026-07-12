@@ -353,7 +353,7 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     expect(noHolding.status).toBe("invalid-input");
   });
 
-  it("manual sellHolding flow is unaffected: produces ledger entry with NO source field and default fees=0", async () => {
+  it("manual sellHolding flow is unaffected: emits source='manual' + no eBay fields + default fees=0", async () => {
     const { sessionId } = await signIn();
     const holdingId = "manual-sale-untouched";
     const add = await request(app)
@@ -381,10 +381,12 @@ describe("markHoldingSoldFromEbay (PR D.6)", () => {
     const ledger = await getLedger(sessionId);
     const entry = ledger.find((e) => e.holdingId === holdingId);
     expect(entry).toBeDefined();
-    // F1 tighter assertion: source field is ABSENT (not "manual"), per
-    // the agreed convention that manual entries omit it and readers
-    // default `source ?? "manual"`.
-    expect(Object.prototype.hasOwnProperty.call(entry, "source")).toBe(false);
+    // CF-MANUAL-SELL-EXPLICIT-SOURCE (2026-07-11, PR #373): manual entries
+    // now emit source='manual' explicitly (was omitted; readers still
+    // default absent → 'manual' for legacy entries). The write-side change
+    // gives Cosmos queries a positive marker to filter on without OR-null
+    // clauses and gives iOS a positive value to assert against.
+    expect(entry.source).toBe("manual");
     expect(Object.prototype.hasOwnProperty.call(entry, "ebayOrderId")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(entry, "needsReconciliation")).toBe(false);
     // Manual flow still defaults fee aggregates to 0.
