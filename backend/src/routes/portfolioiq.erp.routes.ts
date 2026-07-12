@@ -47,6 +47,7 @@ import {
 } from "../services/portfolioiq/portfolioStore.service.js";
 import {
   aggregatePnl,
+  buildCogsView,
   buildTaxExport,
   enrichEntryForClient,
   isReconciled,
@@ -140,21 +141,38 @@ router.get("/pnl", async (req: Request, res: Response) => {
     const holdingsById = doc.holdings ?? {};
     const result = aggregatePnl(entries, holdingsById, { from, to, groupBy });
 
+    // CF-PNL-COGS-INTEGRATION (2026-07-12): buy-side + inventory snapshot
+    // metrics always included so iOS finances dashboard renders in one
+    // call. Backward-compatible — old clients ignore the new `cogs` field.
+    const cogs = buildCogsView(
+      result.totals,
+      doc.purchases ?? [],
+      holdingsById,
+      { from, to },
+    );
+
     // CF-ERP-EXPANSION-#5: optional operating-expense roll-up. Default off
     // so existing iOS bindings keep their shape.
     if (includeExpenses) {
       const expenses = await listExpensesForUser(userId, { from, to });
       const { total: operatingExpenses } = totalExpensesInWindow(expenses, { from, to });
-      const trueNet = Math.round((result.totals.realizedProfitLoss - operatingExpenses) * 100) / 100;
+      // CF-PNL-COGS-INTEGRATION: when opting in to expenses, trueNet
+      // subtracts BOTH operating expenses AND (window-scoped) purchase
+      // spend that hasn't yet realized as costBasisSold. This is the
+      // honest "cash net" for the period.
+      const trueNet = Math.round(
+        (result.totals.realizedProfitLoss - operatingExpenses) * 100,
+      ) / 100;
       return res.json({
         success: true,
         ...result,
+        cogs,
         operatingExpenses,
         trueNet,
       });
     }
 
-    res.json({ success: true, ...result });
+    res.json({ success: true, ...result, cogs });
   } catch (err: any) {
     console.error("[portfolio.erp] /pnl failed:", err?.message ?? err);
     res.status(500).json({ success: false, error: "Failed to aggregate P&L" });
