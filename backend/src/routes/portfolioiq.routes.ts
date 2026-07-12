@@ -264,6 +264,14 @@ router.post("/holdings/regrade-batch", portfolio.regradeHoldingsBatch);
 // (consumes 1 priceChecksPerDay slot; free=5/day, paid tiers unlimited).
 router.post("/holdings/:id/refresh", requireRateLimited("priceChecksPerDay"), portfolio.refreshHolding);
 
+// CF-HELD-EXPENSES (2026-07-12): expenses incurred WHILE holding a card
+// (grading, supplies, storage). Each write rolls into totalCostBasis so
+// realized-P&L math on the eventual sale reflects true all-in cost. Same
+// integer-math pattern as the existing regrade flow.
+router.get("/holdings/:id/expenses", portfolio.listHeldExpensesHandler);
+router.post("/holdings/:id/expenses", portfolio.addHeldExpenseHandler);
+router.delete("/holdings/:id/expenses/:expenseId", portfolio.deleteHeldExpenseHandler);
+
 // CF-PAYMENTS-A: per-holding eBay surfaces — investor+ via ebayIntegration.
 router.post(
   "/holdings/:id/ebay/draft",

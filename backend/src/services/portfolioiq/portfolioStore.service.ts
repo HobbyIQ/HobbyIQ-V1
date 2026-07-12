@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { getUserBySession } from "../authService.js";
-import { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { PortfolioHolding, type HoldingHeldExpense, type HeldExpenseKind } from "../../types/portfolioiq.types.js";
 import type { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
 // CF-GRADED-RAIL-WIRE-IN (2026-06-14): assemble the same gradedEstimates
@@ -5193,6 +5193,207 @@ export async function linkHoldingsToPurchase(
   doc.purchases = purchases;
   await writeUserDoc(userId, doc);
   return updated;
+}
+
+// ─── CF-HELD-EXPENSES (2026-07-12) ─────────────────────────────────────────
+
+const VALID_HELD_EXPENSE_KINDS: ReadonlySet<HeldExpenseKind> = new Set([
+  "grading",
+  "supplies",
+  "shipping_to_grader",
+  "insurance",
+  "storage",
+  "other",
+]);
+
+export interface AddHeldExpenseInput {
+  kind: HeldExpenseKind;
+  amount: number;             // positive dollars
+  incurredAt?: string;        // ISO; defaults to now
+  notes?: string;
+  invoiceRef?: string;
+}
+
+export interface AddHeldExpenseResult {
+  status: "added" | "holding-not-found" | "invalid-input";
+  reason?: string;
+  holding?: PortfolioHolding;
+  expense?: HoldingHeldExpense;
+  newTotalCostBasis?: number;
+}
+
+/**
+ * Append an expense to a held card and roll the amount into totalCostBasis
+ * so the eventual sale's realizedProfitLoss reflects true all-in cost.
+ *
+ * Same integer-math pattern as regradeHolding's gradingCost roll-in
+ * (portfolioStore.service.ts:3729-3735):
+ *
+ *   new totalCostBasis = old + expense.amount
+ *   purchasePrice is NOT touched (that's per-unit acquisition price)
+ *
+ * Idempotency: NONE. Same expense recorded twice = two separate entries
+ * (matches the audit-trail intent — a re-grading really did happen twice).
+ * If callers need dedup they can pass an invoiceRef and check against
+ * existing entries client-side before POSTing.
+ */
+export async function addHeldExpense(
+  userId: string,
+  holdingId: string,
+  input: AddHeldExpenseInput,
+): Promise<AddHeldExpenseResult> {
+  if (!VALID_HELD_EXPENSE_KINDS.has(input.kind)) {
+    return { status: "invalid-input", reason: `kind must be one of: ${[...VALID_HELD_EXPENSE_KINDS].join(", ")}` };
+  }
+  const amount = Number(input.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { status: "invalid-input", reason: "amount must be a positive number" };
+  }
+  const doc = await readUserDoc(userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return { status: "holding-not-found" };
+  const holding = doc.holdings[canonicalId];
+
+  const nowIso = new Date().toISOString();
+  const incurredAt = input.incurredAt
+    ? new Date(input.incurredAt).toISOString()
+    : nowIso;
+
+  const expense: HoldingHeldExpense = {
+    id: randomUUID(),
+    kind: input.kind,
+    amount: Math.round(amount * 100) / 100,
+    incurredAt,
+    createdAt: nowIso,
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.invoiceRef ? { invoiceRef: input.invoiceRef } : {}),
+  };
+
+  const priorCostBasis = toNumber(holding.totalCostBasis, toNumber(holding.purchasePrice, 0) * toNumber(holding.quantity, 1));
+  const newCostBasis = Math.round((priorCostBasis + expense.amount) * 100) / 100;
+
+  const updated: PortfolioHolding = {
+    ...holding,
+    heldExpenses: [...(holding.heldExpenses ?? []), expense],
+    totalCostBasis: newCostBasis,
+    lastUpdated: nowIso,
+  };
+  doc.holdings[canonicalId] = updated;
+  await writeUserDoc(userId, doc);
+  return {
+    status: "added",
+    holding: updated,
+    expense,
+    newTotalCostBasis: newCostBasis,
+  };
+}
+
+export interface DeleteHeldExpenseResult {
+  status: "deleted" | "holding-not-found" | "expense-not-found";
+  holding?: PortfolioHolding;
+  newTotalCostBasis?: number;
+}
+
+/**
+ * Remove an expense entry and reverse its cost-basis contribution. Same
+ * integer-math treatment as addHeldExpense in reverse. If the reversal
+ * would push totalCostBasis below the sum of remaining expenses + the
+ * base acquisition cost, we clamp to a floor of zero (defense — this
+ * shouldn't happen with clean writes, but a mismatched delete after
+ * hand-edited data shouldn't corrupt further math).
+ */
+export async function deleteHeldExpense(
+  userId: string,
+  holdingId: string,
+  expenseId: string,
+): Promise<DeleteHeldExpenseResult> {
+  const doc = await readUserDoc(userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return { status: "holding-not-found" };
+  const holding = doc.holdings[canonicalId];
+  const expenses = holding.heldExpenses ?? [];
+  const idx = expenses.findIndex((e) => e.id === expenseId);
+  if (idx === -1) return { status: "expense-not-found" };
+
+  const removed = expenses[idx];
+  const remaining = expenses.filter((_, i) => i !== idx);
+  const priorCostBasis = toNumber(holding.totalCostBasis, 0);
+  const newCostBasis = Math.max(0, Math.round((priorCostBasis - removed.amount) * 100) / 100);
+
+  const updated: PortfolioHolding = {
+    ...holding,
+    heldExpenses: remaining,
+    totalCostBasis: newCostBasis,
+    lastUpdated: new Date().toISOString(),
+  };
+  doc.holdings[canonicalId] = updated;
+  await writeUserDoc(userId, doc);
+  return { status: "deleted", holding: updated, newTotalCostBasis: newCostBasis };
+}
+
+// HTTP handlers wrap the pure service above.
+
+export async function addHeldExpenseHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const kindRaw = typeof body.kind === "string" ? body.kind : "";
+  const amount = typeof body.amount === "number" ? body.amount : Number(body.amount);
+  const incurredAt = typeof body.incurredAt === "string" ? body.incurredAt : undefined;
+  const notes = typeof body.notes === "string" && body.notes.trim() ? body.notes.trim().slice(0, 500) : undefined;
+  const invoiceRef = typeof body.invoiceRef === "string" && body.invoiceRef.trim() ? body.invoiceRef.trim().slice(0, 200) : undefined;
+
+  const result = await addHeldExpense(auth.userId, holdingId, {
+    kind: kindRaw as HeldExpenseKind,
+    amount,
+    incurredAt,
+    notes,
+    invoiceRef,
+  });
+  if (result.status === "holding-not-found") {
+    return res.status(404).json({ success: false, error: "Holding not found" });
+  }
+  if (result.status === "invalid-input") {
+    return res.status(400).json({ success: false, error: result.reason });
+  }
+  res.status(201).json({
+    success: true,
+    expense: result.expense,
+    holding: result.holding,
+    newTotalCostBasis: result.newTotalCostBasis,
+  });
+}
+
+export async function deleteHeldExpenseHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const expenseId = String(req.params.expenseId ?? "").trim();
+  const result = await deleteHeldExpense(auth.userId, holdingId, expenseId);
+  if (result.status === "holding-not-found") {
+    return res.status(404).json({ success: false, error: "Holding not found" });
+  }
+  if (result.status === "expense-not-found") {
+    return res.status(404).json({ success: false, error: "Expense not found" });
+  }
+  res.json({
+    success: true,
+    holding: result.holding,
+    newTotalCostBasis: result.newTotalCostBasis,
+  });
+}
+
+export async function listHeldExpensesHandler(req: Request, res: Response) {
+  const auth = await requireUser(req, res);
+  if (!auth) return;
+  const holdingId = String(req.params.id ?? "").trim();
+  const doc = await readUserDoc(auth.userId);
+  const canonicalId = findHoldingKey(doc, holdingId);
+  if (!canonicalId) return res.status(404).json({ success: false, error: "Holding not found" });
+  const expenses = doc.holdings[canonicalId].heldExpenses ?? [];
+  const total = Math.round(expenses.reduce((s, e) => s + e.amount, 0) * 100) / 100;
+  res.json({ success: true, expenses, total });
 }
 
 export async function refreshHolding(req: Request, res: Response) {
