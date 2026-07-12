@@ -66,19 +66,30 @@ async function hydratePhotosFromHolding(
   userId: string,
   input: Partial<HoldingListingInput>,
 ): Promise<Partial<HoldingListingInput>> {
+  // CF-EBAY-REVIEW-QUEUE (2026-07-12): hydration now also pulls `team`
+  // from the holding when iOS didn't override — Browse enrichment writes
+  // team on the holding, and eBay item specifics accept it as a field.
   const hasExplicitPhotos =
     Array.isArray(input.photos) ||
     typeof input.imageFrontUrl === "string" ||
     typeof input.imageBackUrl === "string";
-  if (hasExplicitPhotos) return input;
+  const needsTeamHydration = typeof input.team !== "string" || !input.team.trim();
+  const needsAnyHydration = !hasExplicitPhotos || needsTeamHydration;
+  if (!needsAnyHydration) return input;
   if (typeof input.holdingId !== "string" || !input.holdingId.trim()) return input;
 
   try {
     const doc = await readUserDoc(userId);
-    const holding = doc.holdings[input.holdingId];
-    if (holding && Array.isArray(holding.photos) && holding.photos.length > 0) {
-      return { ...input, photos: [...holding.photos] };
+    const holding = doc.holdings[input.holdingId] as unknown as Record<string, unknown> | undefined;
+    if (!holding) return input;
+    const patch: Partial<HoldingListingInput> = { ...input };
+    if (!hasExplicitPhotos && Array.isArray(holding.photos) && holding.photos.length > 0) {
+      patch.photos = [...(holding.photos as string[])];
     }
+    if (needsTeamHydration && typeof holding.team === "string" && holding.team.trim()) {
+      patch.team = (holding.team as string).trim();
+    }
+    return patch;
   } catch (err) {
     console.warn(
       `[ebay.hydratePhotos] readUserDoc failed for ${userId}/${input.holdingId}: ${
