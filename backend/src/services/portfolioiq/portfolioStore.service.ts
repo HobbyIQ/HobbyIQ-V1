@@ -4787,11 +4787,36 @@ export async function markHoldingSoldFromEbay(
   const allGranularKnown = Object.values(granularFees).every((v) => v !== null);
 
   // Unknown (null) fees contribute 0 to the sum here, but `needsReconciliation`
-  // is set true so downstream readers know the number is incomplete.
+  // starts true so downstream readers know the number is incomplete until
+  // the axis check completes below (may auto-close via tryFinalizeReconciliation).
   const knownFeeSum = Object.values(granularFees).reduce<number>(
     (acc, v) => acc + (v ?? 0),
     0,
   );
+
+  // CF-AUTO-RECONCILE-LAYER-1 (2026-07-12): detect the "no user costs" case
+  // and auto-stamp the axis-2 marker. The vast majority of eBay sales are
+  // buy-and-flip — no grading events, no supplies expenses recorded — and
+  // making the user click Save with $0/$0 on every one adds silent friction.
+  //
+  // Safe when:
+  //   - the holding has no heldExpenses[] entries (nothing user recorded)
+  //   - AND no prior regrade action exists on the ledger for this holdingId
+  //     (regrade sales cost the user grading fees; unsafe to zero)
+  //
+  // Distinguished from user-set by userCostsProvidedBy="system:auto-zero-costs".
+  const heldExpensesCount = Array.isArray((holding as any).heldExpenses)
+    ? (holding as any).heldExpenses.length
+    : 0;
+  const priorRegradeForHolding = doc.ledger.some(
+    (e) => e.holdingId === canonicalHoldingId && (e as any).action === "regrade",
+  );
+  const autoZeroCostsSafe = heldExpensesCount === 0 && !priorRegradeForHolding;
+
+  const initialGradingCost = data.gradingCost ?? (autoZeroCostsSafe ? 0 : null);
+  const initialSuppliesCost = data.suppliesCost ?? (autoZeroCostsSafe ? 0 : null);
+  const autoUserCostsProvidedAt = autoZeroCostsSafe ? new Date().toISOString() : undefined;
+  const autoUserCostsProvidedBy = autoZeroCostsSafe ? "system:auto-zero-costs" : undefined;
 
   const needsReconciliation = netPayout === null && !allGranularKnown;
 
@@ -4800,13 +4825,16 @@ export async function markHoldingSoldFromEbay(
   // cash-out costs that reduce returned proceeds). eBay-authoritative
   // netPayout is the post-platform-fee baseline; user-side costs (grading,
   // supplies) still subtract on top because eBay doesn't see them.
+  //
+  // CF-AUTO-RECONCILE-LAYER-1: `initialGradingCost` / `initialSuppliesCost`
+  // are $0 when the auto-zero-costs heuristic fired above; null otherwise.
   const financials = computeLedgerFinancials({
     grossProceeds,
     feesTotal: knownFeeSum,
     tax: 0,
     shipping: 0,
-    gradingCost: data.gradingCost ?? null,
-    suppliesCost: data.suppliesCost ?? null,
+    gradingCost: initialGradingCost,
+    suppliesCost: initialSuppliesCost,
     costBasisSold,
     netPayoutOverride: netPayout,
   });
@@ -4843,9 +4871,12 @@ export async function markHoldingSoldFromEbay(
     otherFees: granularFees.otherFees,
     netPayout,
     actualShippingCost: granularFees.actualShippingCost,
-    suppliesCost: data.suppliesCost ?? null,
-    gradingCost: data.gradingCost ?? null,
+    suppliesCost: initialSuppliesCost,
+    gradingCost: initialGradingCost,
     needsReconciliation,
+    // CF-AUTO-RECONCILE-LAYER-1: auto-stamp axis-2 marker when safe.
+    userCostsProvidedAt: autoUserCostsProvidedAt,
+    userCostsProvidedBy: autoUserCostsProvidedBy,
     // CF-ERP-EXPANSION-#1 + #6: eBay webhook auto-populates the
     // sales-tracking axes. reconciledVia is "ebay_finances" only when the
     // Finances API has actually delivered the granular fees (i.e.
@@ -4855,7 +4886,17 @@ export async function markHoldingSoldFromEbay(
     salesChannel: "ebay",
     paymentMethod: "ebay_managed",
     reconciledVia: needsReconciliation ? undefined : "ebay_finances",
+    feeSource: needsReconciliation ? undefined : "ebay_finances",
   };
+
+  // CF-AUTO-RECONCILE-LAYER-2 (2026-07-12): run tryFinalizeReconciliation on
+  // the fresh entry. Closes it now if BOTH axes are met — Finances fees +
+  // auto-stamped user costs are the common path. Recomputed needsReconciliation
+  // flows through to the persist below.
+  const finalizedEntry = tryFinalizeReconciliation(
+    ledgerEntry as unknown as LedgerEntryForErp,
+  ) as unknown as PortfolioLedgerEntry;
+  Object.assign(ledgerEntry, finalizedEntry);
 
   // 6. Mutate holding state (mirrors sellHolding).
   const remainingQty = quantityOwned - quantitySold;
