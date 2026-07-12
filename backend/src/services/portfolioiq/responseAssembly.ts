@@ -196,6 +196,21 @@ export interface PortfolioHoldingWire {
   ebayCategoryPath?: string | null;
   ebaySeller?: { username: string; feedbackScore: number | null } | null;
   enrichedFromEbay?: boolean | null;
+  // CF-CARDID-SUGGESTER (2026-07-12): pending-review holdings carry a
+  // proposed canonical cardId + confidence + candidate summary. iOS shows
+  // the suggestion prominently on the review sheet — Accept sends
+  // { cardId: suggestedCardId } in the confirm edits body.
+  suggestedCardId?: string | null;
+  suggestionConfidence?: number | null;
+  suggestionCandidate?: {
+    title?: string;
+    set?: string;
+    year?: number | string;
+    number?: string;
+    variant?: string;
+    image?: string;
+  } | null;
+  suggestionUpdatedAt?: string | null;
   // Auxiliary aspect fields we backfilled from Browse (team, sport,
   // manufacturer) — always optional so old holdings still decode.
   team?: string | null;
@@ -427,6 +442,11 @@ export function composeHoldingWireShape(
     parseConfidence: (holding as any).parseConfidence,
     needsReview: (holding as any).needsReview,
     setName: (holding as any).setName,
+    // CF-CARDID-SUGGESTER (2026-07-12)
+    suggestedCardId: (holding as any).suggestedCardId,
+    suggestionConfidence: (holding as any).suggestionConfidence,
+    suggestionCandidate: (holding as any).suggestionCandidate,
+    suggestionUpdatedAt: (holding as any).suggestionUpdatedAt,
     // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
     ebayImageUrl: (holding as any).ebayImageUrl,
     ebayShortDescription: (holding as any).ebayShortDescription,
