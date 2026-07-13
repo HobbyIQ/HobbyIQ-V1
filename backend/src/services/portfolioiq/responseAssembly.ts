@@ -167,6 +167,16 @@ export interface PortfolioHoldingWire {
   notes?: string;
   photos?: string[];
   clientId?: string;
+  // CF-HELD-EXPENSES (2026-07-12): explicit on the wire shape so mutation
+  // routes returning composed holdings still surface the array iOS renders.
+  heldExpenses?: Array<{
+    id: string;
+    kind: string;
+    amount: number;
+    incurredAt?: string;
+    notes?: string;
+    invoiceRef?: string;
+  }>;
   // MLB resolution
   playerId?: string;
   playerIdConfidence?: "high" | "medium" | "low" | "ambiguous";
@@ -438,6 +448,10 @@ export function composeHoldingWireShape(
     notes: holding.notes,
     photos: holding.photos,
     clientId: holding.clientId,
+    // CF-HELD-EXPENSES (2026-07-12): the expense array iOS renders and the
+    // per-expense breakdown users edit. Must live on the wire shape so
+    // mutation routes (POST/DELETE /holdings/:id/expenses) can return it.
+    heldExpenses: (holding as any).heldExpenses,
     // MLB resolution
     playerId: holding.playerId,
     playerIdConfidence: holding.playerIdConfidence,
