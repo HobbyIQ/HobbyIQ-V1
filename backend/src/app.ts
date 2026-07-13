@@ -42,6 +42,17 @@ import rateLimit from "express-rate-limit";
 const config = getConfig();
 const app = express();
 
+// CF-CATALOG-RESOLVER (2026-07-13): register vendor sources at startup so
+// resolveCard has plugins available on first call. Order matters —
+// listVendorSources returns in registration order, and reconciliation logs
+// list vendors in the same order. CH stays primary; sold-comps is the
+// coverage-gap plug (see PR #397).
+import { registerVendorSource } from "./services/compiq/catalogResolver.service.js";
+import { cardhedgeVendorSource } from "./services/compiq/cardhedgeVendorSource.js";
+import { soldCompsVendorSource } from "./services/compiq/soldCompsVendorSource.js";
+registerVendorSource(cardhedgeVendorSource);
+registerVendorSource(soldCompsVendorSource);
+
 // Rate limiting — 200 req/min per IP
 app.use("/api/", rateLimit({
   windowMs: 60 * 1000,

@@ -2413,6 +2413,64 @@ async function autoPriceHolding(
     });
   }
 
+  // CF-CATALOG-RESOLVER-FALLBACK (2026-07-13): when CH could not price this
+  // holding (fairMarketValue AND estimatedValue both null → truly nothing),
+  // ask the multi-source resolver. Sold-comps may have priced this exact
+  // SKU via our own users' completed sales even when CH doesn't index it
+  // (the CPA-EHA Blue Refractor Auto case). On a resolver hit, stamp the
+  // winning vendor + write the FMV.
+  //
+  // Kept narrow: only fires on true CH catalog-miss cases. Any successful
+  // CH pricing (observed or estimated) is left as authoritative — the
+  // resolver is a coverage-gap plug, not a price arbiter.
+  const chHadNothing =
+    (updated.fairMarketValue === null || updated.fairMarketValue === undefined) &&
+    (updated.estimatedValue === null || updated.estimatedValue === undefined);
+  if (chHadNothing) {
+    try {
+      const { resolveCard } = await import("../compiq/catalogResolver.service.js");
+      const resolution = await resolveCard({
+        playerName: updated.playerName,
+        cardYear: updated.cardYear,
+        setName: updated.setName ?? (updated as any).product,
+        parallel: updated.parallel,
+        cardNumber: updated.cardNumber,
+        gradeCompany: updated.gradeCompany,
+        gradeValue: updated.gradeValue,
+        isAuto: updated.isAuto,
+        cardId: (updated as any).cardId,
+      });
+      if (
+        resolution.winner &&
+        resolution.winner.vendor !== "cardhedge" &&
+        typeof resolution.winner.fairMarketValue === "number" &&
+        resolution.winner.fairMarketValue > 0
+      ) {
+        (updated as any).fairMarketValue = resolution.winner.fairMarketValue;
+        (updated as any).valuationStatus = "estimated";
+        (updated as any).isEstimate = true;
+        (updated as any).estimateBasis = `${resolution.winner.compCount} comp(s) via ${resolution.winner.vendor}`;
+        (updated as any).sourceVendor = resolution.winner.vendor;
+        (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
+        console.log(JSON.stringify({
+          event: "catalog_resolver_fallback_hit",
+          source: "portfolioStore.autoPriceHolding",
+          holdingId: holding.id,
+          vendor: resolution.winner.vendor,
+          fairMarketValue: resolution.winner.fairMarketValue,
+          compCount: resolution.winner.compCount,
+        }));
+      }
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "catalog_resolver_fallback_error",
+        source: "portfolioStore.autoPriceHolding",
+        holdingId: holding.id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
   evaluateHoldingAlerts(doc, previous, updated);
   doc.holdings[holding.id] = updated;
   return updated;
