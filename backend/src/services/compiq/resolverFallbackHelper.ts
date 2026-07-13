@@ -24,6 +24,12 @@ export interface FallbackResult {
   vendor: string;
   compCount: number;
   estimateBasis: string;
+  /**
+   * Underlying resolver record for callers that need the per-record
+   * comp arrays (PR #407 trend / prediction on rescue paths). Never
+   * surfaced on the wire — internal wiring only.
+   */
+  resolution?: CardResolution;
 }
 
 /**
@@ -51,6 +57,7 @@ export async function tryResolverFallback(query: CardQuery): Promise<FallbackRes
         vendor: w.vendor,
         compCount: w.compCount,
         estimateBasis: `${w.compCount} comp(s) via ${w.vendor}`,
+        resolution: w,
       };
     }
   } catch (err) {
@@ -128,6 +135,36 @@ export async function overlayResolverRescue(
   if (response.marketTier && typeof response.marketTier === "object") {
     response.marketTier.value = fallback.fairMarketValue;
   }
+
+  // CF-RESCUE-TREND-PREDICTION (Drew, 2026-07-13, PR #407): when the
+  // resolution came with raw comps, run our own trajectory + prediction
+  // math over the pooled records and overlay iOS' trendIQ +
+  // predictedPrice fields. Wire keys unchanged — same shape iOS already
+  // decodes from CH-covered SKUs; the rescue path just fills them from
+  // Cardsight's records now instead of null.
+  const raw = fallback.resolution?.rawComps ?? [];
+  if (raw.length > 0) {
+    const trend = computePooledTrend(raw);
+    if (trend) {
+      // Only overlay trend when CH didn't already produce one.
+      if (!response.trendIQ || typeof response.trendIQ !== "object") {
+        response.trendIQ = pooledTrendToTrendIQShape(trend);
+      }
+      const prediction = computePooledPrediction(fallback.fairMarketValue, trend);
+      if (prediction) {
+        if (response.predictedPrice == null) {
+          response.predictedPrice = prediction.predictedPrice;
+        }
+        if (response.predictedPriceRange == null) {
+          response.predictedPriceRange = prediction.predictedPriceRange;
+        }
+        if (response.predictedPriceAttribution == null) {
+          response.predictedPriceAttribution = prediction.attribution;
+        }
+      }
+    }
+  }
+
   // Vendor attribution logged to KQL only — NOT on the wire (iOS shape lock).
   console.log(JSON.stringify({
     event: "catalog_resolver_route_rescue",
@@ -135,6 +172,8 @@ export async function overlayResolverRescue(
     vendor: fallback.vendor,
     fairMarketValue: fallback.fairMarketValue,
     compCount: fallback.compCount,
+    rawCompsCount: raw.length,
+    trendComputed: raw.length > 0 && computePooledTrend(raw) !== null,
     query: {
       playerName: query.playerName,
       cardYear: query.cardYear,
@@ -143,6 +182,163 @@ export async function overlayResolverRescue(
     },
   }));
   return response;
+}
+
+// ─── Pooled-comps trend + prediction (PR #407) ────────────────────────────
+
+/**
+ * A minimal trend read from pooled raw records: recent 14d vs older 15-45d
+ * median. Mirrors the card-trajectory layer of TrendIQ so a rescued response
+ * carries the same directional signal iOS' Card Detail trend badge decodes.
+ *
+ * NOT a full TrendIQ replacement — player-momentum and segment-trajectory
+ * layers need cross-card data the resolver rescue doesn't have. This is the
+ * one layer computable from a single card's pooled records.
+ */
+export interface PooledTrendRead {
+  /** Signed % change (recent vs older median), clamped ±50. */
+  pctChange: number;
+  /** Multiplier centered on 1.0: clamp(0.70, 1.50, 1 + pctChange/100). */
+  multiplier: number;
+  /** "up" / "flat" / "down" — ±3% deadband, matching TrendIQ. */
+  direction: "up" | "flat" | "down";
+  recentMedian: number;
+  olderMedian: number;
+  recentCount: number;
+  olderCount: number;
+}
+
+const RECENT_WINDOW_DAYS = 14;
+const OLDER_WINDOW_START_DAYS = 15;
+const OLDER_WINDOW_END_DAYS = 45;
+const TREND_DEADBAND_PCT = 3;
+
+function ageDays(saleDate: string | null, now: number): number | null {
+  if (!saleDate) return null;
+  const t = Date.parse(saleDate);
+  if (!Number.isFinite(t)) return null;
+  return (now - t) / 86_400_000;
+}
+
+/**
+ * Compute a card-trajectory-style trend from pooled raw comps. Returns null
+ * when neither window has at least 2 records — trend is meaningless below
+ * that threshold and the iOS badge should render "no data" (or fall through
+ * to a lower-confidence source, downstream's choice).
+ */
+export function computePooledTrend(
+  rawComps: ResolverComp[],
+  nowMs: number = Date.now(),
+): PooledTrendRead | null {
+  if (rawComps.length === 0) return null;
+  const recent: number[] = [];
+  const older: number[] = [];
+  for (const c of rawComps) {
+    if (c.price <= 0) continue;
+    const age = ageDays(c.saleDate, nowMs);
+    if (age === null) continue;
+    if (age < 0) continue;   // future-dated, drop
+    if (age <= RECENT_WINDOW_DAYS) recent.push(c.price);
+    else if (age >= OLDER_WINDOW_START_DAYS && age <= OLDER_WINDOW_END_DAYS) {
+      older.push(c.price);
+    }
+  }
+  if (recent.length < 2 || older.length < 2) return null;
+  const rMed = median(recent)!;
+  const oMed = median(older)!;
+  if (oMed <= 0) return null;
+  const rawPct = ((rMed - oMed) / oMed) * 100;
+  const pctChange = Math.max(-50, Math.min(50, rawPct));
+  const multiplier = Math.max(0.70, Math.min(1.50, 1 + pctChange / 100));
+  const direction: "up" | "flat" | "down" =
+    Math.abs(pctChange) < TREND_DEADBAND_PCT ? "flat" : pctChange > 0 ? "up" : "down";
+  return {
+    pctChange: Math.round(pctChange * 10) / 10,
+    multiplier: Math.round(multiplier * 1000) / 1000,
+    direction,
+    recentMedian: Math.round(rMed * 100) / 100,
+    olderMedian: Math.round(oMed * 100) / 100,
+    recentCount: recent.length,
+    olderCount: older.length,
+  };
+}
+
+/**
+ * Simple 30d-forward prediction: FMV × trend multiplier. Range is ±spread
+ * where the spread widens on low-sample-count trends (uncertainty).
+ * Returns null when trend is unavailable or FMV is non-positive.
+ */
+export interface PooledPrediction {
+  predictedPrice: number;
+  predictedPriceRange: { low: number; high: number };
+  attribution: {
+    method: "pooled-comp-trend";
+    trendPct: number;
+    windowRecentDays: number;
+    windowOlderDays: number;
+  };
+}
+
+export function computePooledPrediction(
+  fmv: number,
+  trend: PooledTrendRead | null,
+): PooledPrediction | null {
+  if (!Number.isFinite(fmv) || fmv <= 0) return null;
+  if (!trend) return null;
+  const predicted = fmv * trend.multiplier;
+  const totalCount = trend.recentCount + trend.olderCount;
+  const spreadPct =
+    totalCount >= 20 ? 0.10 :
+    totalCount >= 10 ? 0.15 :
+    totalCount >= 5 ? 0.22 :
+    0.30;
+  const low = Math.round(predicted * (1 - spreadPct));
+  const high = Math.round(predicted * (1 + spreadPct));
+  return {
+    predictedPrice: Math.round(predicted),
+    predictedPriceRange: { low, high },
+    attribution: {
+      method: "pooled-comp-trend",
+      trendPct: trend.pctChange,
+      windowRecentDays: RECENT_WINDOW_DAYS,
+      windowOlderDays: OLDER_WINDOW_END_DAYS - OLDER_WINDOW_START_DAYS + 1,
+    },
+  };
+}
+
+/**
+ * Shape the pooled trend into iOS' TrendIQ-compatible wire object. Only the
+ * card-trajectory layer is populated — player-momentum and segment-trajectory
+ * stay null, coverage is "card_only" (an already-defined TrendIQ coverage
+ * tier from trendIQ.types.ts).
+ */
+export function pooledTrendToTrendIQShape(trend: PooledTrendRead): any {
+  return {
+    composite: trend.multiplier,
+    direction: trend.direction,
+    impliedPct: Math.round(trend.pctChange * 10) / 10,
+    lastUpdated: new Date().toISOString(),
+    components: {
+      playerMomentum: null,
+      cardTrajectory: {
+        multiplier: trend.multiplier,
+        pctChange: trend.pctChange,
+        recentMedian: trend.recentMedian,
+        olderMedian: trend.olderMedian,
+        recentCount: trend.recentCount,
+        olderCount: trend.olderCount,
+        windowRecentDays: RECENT_WINDOW_DAYS,
+        windowOlderDays: OLDER_WINDOW_END_DAYS - OLDER_WINDOW_START_DAYS + 1,
+      },
+      segmentTrajectory: null,
+    },
+    weights: {
+      playerMomentum: 0,
+      cardTrajectory: 1,
+      segmentTrajectory: 0,
+    },
+    coverage: "card_only",
+  };
 }
 
 // ─── /card-panel graded rescue (PR #406) ───────────────────────────────────
