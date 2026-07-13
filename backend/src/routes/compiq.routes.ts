@@ -4132,6 +4132,48 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
         ? parallel
         : undefined;
 
+    // CF-CARDSIGHT-UUID-NATIVE (Drew, 2026-07-13, PR #412): if the cardId
+    // is a UUID that resolves against Cardsight's /v1 catalog, route the
+    // whole request to Cardsight-direct pricing. Downstream CH pipeline
+    // doesn't recognize Cardsight UUIDs (returns garbage sales from
+    // adjacent cards + fabricated FMV — verified 2026-07-13 on
+    // befe9bcc-... where CH echoed Josh Jung, Dan Marino, Ben Rice
+    // sales). This branch fires ahead of the CH path so those cardIds
+    // never reach the CH pipeline.
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRe.test(resolvedCardId)) {
+      try {
+        const { priceByCardsightUuid } = await import(
+          "../services/compiq/cardsightUuidPriceRouter.js"
+        );
+        const csResponse = await priceByCardsightUuid({
+          cardId: resolvedCardId,
+          parallelId: resolvedParallelId ?? null,
+          gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
+          gradeValue: typeof gradeValue === "number" ? gradeValue : null,
+        });
+        if (csResponse) {
+          console.log(JSON.stringify({
+            event: "price_by_id_cardsight_uuid_route",
+            source: "compiq.routes.price-by-id",
+            cardId: resolvedCardId,
+            parallelId: resolvedParallelId ?? null,
+            rawSalesCount: csResponse.compsAvailable,
+            fmv: csResponse.fairMarketValueLive,
+          }));
+          return res.json(csResponse);
+        }
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "price_by_id_cardsight_uuid_error",
+          source: "compiq.routes.price-by-id",
+          cardId: resolvedCardId,
+          error: (err as Error)?.message ?? String(err),
+        }));
+        // Fall through to CH path — better degraded than empty.
+      }
+    }
+
     const cacheKey = normalizeCacheKey(
       "compiq:price-by-id:v4",
       // parallelId on the cache key so a Gold parallel and a base sit
