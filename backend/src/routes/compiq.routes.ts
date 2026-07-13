@@ -1589,10 +1589,25 @@ router.post("/cardsearch", async (req, res, next) => {
         );
         continue;
       }
-      // Legacy Cardsight uuid path (returns 404 today; stays for shape
-      // compatibility while iOS migrates off any lingering references).
+      // CF-CARDSIGHT-UUID-IMAGE (Drew, 2026-07-13, PR #414): the /cardsearch
+      // handler already patches Cardsight-native candidates to route their
+      // images through our proxy. Two candidate-id shapes need coverage:
+      //   1. Base UUID: `cardsight:{parentUuid}`
+      //   2. Exploded compound: `cardsight:{parentUuid}::{parallelUuid}`
+      // Per Cardsight's API design, parallels don't have their own images
+      // (parallel IDs return 404 on /images/cards/); every variant renders
+      // the parent card's image. So both shapes proxy the PARENT's cardId.
       const cid: string | undefined =
         typeof c?.candidateId === "string" ? c.candidateId : undefined;
+      // Compound shape first — the `::` separator is unambiguous.
+      const compoundM = cid?.match(
+        /^cardsight:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})::[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+      if (compoundM) {
+        c.imageUrl = absoluteApiUrl(req, `/api/compiq/card-image/${compoundM[1]}`);
+        continue;
+      }
+      // Legacy Cardsight uuid + bubble-io path (proxy for both).
       const m = cid?.match(/^cardsight:([0-9a-f-]+)$/i);
       const csId = m?.[1];
       if (csId && CARDSIGHT_CARD_ID_RE.test(csId)) {
