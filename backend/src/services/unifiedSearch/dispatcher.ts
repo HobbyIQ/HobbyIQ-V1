@@ -726,7 +726,7 @@ async function dispatchFreetextMode(
  * always carries the year in its set string ("2025 Bowman Chrome Baseball"),
  * so a regex fallback is reliable as a secondary source.
  */
-function extractYearFromSetText(setStr: string | undefined | null): number | null {
+export function extractYearFromSetText(setStr: string | undefined | null): number | null {
   if (!setStr) return null;
   const m = String(setStr).match(/\b(19|20)\d{2}\b/);
   return m ? Number(m[0]) : null;
@@ -741,21 +741,63 @@ function extractYearFromSetText(setStr: string | undefined | null): number | nul
  * `cardsight:` candidateId prefix is retained as the stable wire
  * contract the iOS decoder strips before calling /price-by-id.
  */
+// CF-WIRE-SET-YEAR-DEDUPE (Drew, 2026-07-13): CH + Cardsight catalog rows
+// carry the year baked into the set string ("2026 Bowman Baseball",
+// "1998 Leaf Rookies and Stars Baseball"). When iOS' header composer
+// prepends `year` to `setName`, it renders "2026 2026 Bowman…". Strip
+// the leading YYYY (and any surrounding whitespace) from setName when we
+// have a year from either the structured field OR extracted from the
+// same set string. Idempotent — running on "Bowman Baseball" is a no-op.
+export function stripLeadingYear(setStr: string | null | undefined): string | null {
+  if (typeof setStr !== "string") return null;
+  const trimmed = setStr.trim();
+  if (trimmed.length === 0) return null;
+  const stripped = trimmed.replace(/^\s*(19|20)\d{2}(?:\s+|$)/, "").trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
+// CF-WIRE-VARIANT-AUTO-DEDUPE (Drew, 2026-07-13): CH catalog variant
+// strings sometimes carry an "Auto" suffix ("True Blue Refractor Auto",
+// "Blue Refractor Auto /150"). iOS composes `[variant, "Auto"]` when
+// `isAuto` is true, producing "…Auto…Auto". Strip standalone auto
+// tokens from the variant so iOS' single Auto pill wins. Preserves
+// serial suffixes like "/150" and any other non-auto tokens.
+export function stripAutoFromVariant(variant: string | null | undefined): string | null {
+  if (typeof variant !== "string") return null;
+  const trimmed = variant.trim();
+  if (trimmed.length === 0) return null;
+  const stripped = trimmed
+    .replace(/\b(auto(?:graph(?:ed)?)?)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped.length > 0 ? stripped : null;
+}
+
 function routedCardToIdentity(
   card: RoutedCard,
   index: number,
   total: number,
   attributionOverride?: "ai-matched",
 ): CardIdentity {
-  const yearNum =
+  // CF-WIRE-YEAR-EXTRACT (Drew, 2026-07-13): Cardsight catalog rows have
+  // `card.year = null` with the year embedded in `card.set` ("2026 Bowman
+  // Baseball"). Extract as a fallback so the wire's `year` is populated
+  // AND the set-name year-prefix stripping below has a signal to fire on.
+  const structuredYear =
     card.year != null && Number.isFinite(Number(card.year))
       ? Number(card.year)
       : null;
+  const extractedYear =
+    structuredYear == null ? extractYearFromSetText(card.set) : null;
+  const yearNum = structuredYear ?? extractedYear;
+
+  const dedupedSetName = yearNum != null ? stripLeadingYear(card.set) : (card.set ?? null);
+  const dedupedVariant = stripAutoFromVariant(card.variant);
 
   const composedTitle =
     card.title?.trim() ||
     card.name?.trim() ||
-    [card.year, card.set, card.player, card.number, card.variant]
+    [yearNum, dedupedSetName, card.player, card.number, dedupedVariant]
       .map((p) => (p == null ? "" : String(p).trim()))
       .filter((p) => p.length > 0)
       .join(" ");
@@ -785,9 +827,9 @@ function routedCardToIdentity(
     player: card.player ?? null,
     year: yearNum,
     brand: null,
-    setName: card.set ?? null,
+    setName: dedupedSetName,
     cardNumber: card.number != null ? String(card.number) : null,
-    parallel: card.variant ?? null,
+    parallel: dedupedVariant,
     variation: null,
     // CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): derive isAuto from the
     // card_number prefix. CardHedge's API doesn't expose an isAuto field,

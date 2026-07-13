@@ -4147,8 +4147,21 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // result. The direct-call path produces a guaranteed-fresh response
     // and the validator decides whether to re-cache it.
     const producePriceByIdResponse = async () => {
+      // CF-PRICE-BY-ID-CARDID-AS-PLAYER (Drew, 2026-07-13): when iOS pins a
+      // candidate it sends `query: null` on purpose (see APIService.swift
+      // priceByCardId's CF-PRICE-BY-ID-ROUTE guard). The prior fallback to
+      // `resolvedCardId` here stuffed a UUID (or Cardsight bubble id) into
+      // `body.playerName`, which then flowed through queryContext into
+      // `cardIdentity.player` on the response — iOS' headerPrimaryTitle
+      // prefers cardIdentity.player over hit.player and rendered the raw
+      // cardId as the "player name" whenever CH had no metadata for the
+      // pinned card. Fix: pass undefined and let the engine + the CH
+      // card-details enrichment block below populate identity from the
+      // pinned cardId's canonical metadata.
+      const rawQuery = typeof query === "string" ? query.trim() : "";
+      const playerNameForEngine = rawQuery.length > 0 ? rawQuery : undefined;
       const body: CompIQEstimateRequest = {
-        playerName: typeof query === "string" ? query.trim() : resolvedCardId,
+        playerName: playerNameForEngine,
         cardId: resolvedCardId,
         gradeCompany: typeof gradeCompany === "string" ? gradeCompany : undefined,
         gradeValue: typeof gradeValue === "number" ? gradeValue : undefined,
