@@ -43,20 +43,23 @@ afterEach(() => {
 });
 
 describe("fetchCardsightUuidNativeCandidates", () => {
-  it("emits ONE candidate per parent card with the full parallels[] tree", async () => {
+  // CF-EXPLODE-CARDSIGHT-PARALLELS (Drew, 2026-07-13, PR #413): each
+  // parent now explodes into N candidates (one per parallel). The
+  // per-parallel emission is exhaustively tested in
+  // explodeCardsightParallels.test.ts; this test guards the parent-to-
+  // multiple-candidates contract at the top of the pipeline.
+  it("emits N candidates per parent card (one per parallel)", async () => {
     vi.spyOn(slim, "isCardsightConfigured").mockReturnValue(true);
     vi.spyOn(slim, "searchCatalog").mockResolvedValue([HARTMAN_HIT] as any);
     vi.spyOn(slim, "getCardDetail").mockResolvedValue(HARTMAN_DETAIL as any);
     const candidates = await fetchCardsightUuidNativeCandidates("eric hartman");
-    expect(candidates).toHaveLength(1);
-    const c = candidates[0];
-    expect(c.candidateId).toBe("cardsight:befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
-    expect(c.player).toBe("Eric Hartman");
-    expect(c.cardNumber).toBe("CPA-EHA");
-    expect(c.parallels).toHaveLength(3);
-    expect(c.parallels!.map((p) => p.name)).toContain("Blue Refractor");
-    expect(c.parallels!.map((p) => p.name)).toContain("Blue X-Fractor");
-    expect(c.isAuto).toBe(true);   // CPA-* prefix detected
+    expect(candidates).toHaveLength(3);   // HARTMAN_DETAIL has 3 parallels
+    expect(candidates.every((c) => c.player === "Eric Hartman")).toBe(true);
+    expect(candidates.every((c) => c.cardNumber === "CPA-EHA")).toBe(true);
+    expect(candidates.every((c) => c.isAuto === true)).toBe(true);
+    const names = candidates.map((c) => c.parallel).sort();
+    expect(names).toContain("Blue Refractor");
+    expect(names).toContain("Blue X-Fractor");
   });
 
   it("no-ops when Cardsight is unconfigured (graceful)", async () => {
@@ -72,7 +75,7 @@ describe("fetchCardsightUuidNativeCandidates", () => {
     expect(candidates).toEqual([]);
   });
 
-  it("skips hits whose detail fails (partial results are still emitted)", async () => {
+  it("skips hits whose detail fails (still explodes the parents that succeed)", async () => {
     vi.spyOn(slim, "isCardsightConfigured").mockReturnValue(true);
     vi.spyOn(slim, "searchCatalog").mockResolvedValue([
       HARTMAN_HIT,
@@ -84,8 +87,9 @@ describe("fetchCardsightUuidNativeCandidates", () => {
       return null;
     });
     const candidates = await fetchCardsightUuidNativeCandidates("eric hartman");
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0].candidateId).toBe("cardsight:befe9bcc-e7e8-458c-9cd8-ce831848b9a1");
+    // 3 parallels from HARTMAN_HIT, 0 from the failed detail
+    expect(candidates).toHaveLength(3);
+    expect(candidates.every((c) => c.candidateId.startsWith("cardsight:befe9bcc-"))).toBe(true);
   });
 });
 
