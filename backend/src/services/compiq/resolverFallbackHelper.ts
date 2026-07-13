@@ -79,18 +79,23 @@ export function shouldTryFallback(estimate: {
  * marketValue are both null (CH catalog gap), attempt the resolver fallback
  * and overlay the rescue vendor's FMV.
  *
- * Response fields overlaid on rescue:
+ * DESIGN CONSTRAINT (Drew, 2026-07-13): iOS response shape stays identical
+ * to the pre-fallback contract. The overlay only fills EXISTING fields that
+ * CH would have populated on a successful pricing — no new keys iOS would
+ * see. sourceVendor / vendor attribution is emitted to structured logs
+ * only (for internal audit), never on the wire.
+ *
+ * Overlaid fields (all pre-existing on the response shape):
  *   fairMarketValueLive → resolver FMV
  *   marketValue         → resolver FMV
- *   sourceVendor        → "sold-comps" | "cardsight"
- *   estimateBasis       → "N comp(s) via <vendor>"
- *   approximate         → true (rescue is inherently an estimate)
- *   marketTier.value    → resolver FMV (for iOS's tier band display)
+ *   marketTier.value    → resolver FMV (nested tier band)
+ *   estimateBasis       → "N comp(s) via <vendor>" (CH also uses this key)
+ *   approximate         → true (bool CH already flips)
  *
- * Other pipeline fields (comps[], trendIQ, predictedPrice, etc.) are NOT
- * synthesized — they stay null. iOS should render the base price with the
- * "via cardsight" attribution and skip the trend/prediction blocks for
- * rescue responses.
+ * Pipeline fields (comps[], trendIQ, predictedPrice, etc.) are NOT
+ * synthesized — they stay null. iOS renders the base price + skips the
+ * trend/prediction blocks for null-signal responses just as it does for
+ * a CH low-confidence result today.
  *
  * Idempotent + safe: returns the original response object mutated in-place.
  * Never throws.
@@ -112,12 +117,12 @@ export async function overlayResolverRescue(
 
   response.fairMarketValueLive = fallback.fairMarketValue;
   response.marketValue = fallback.fairMarketValue;
-  response.sourceVendor = fallback.vendor;
   response.estimateBasis = fallback.estimateBasis;
   response.approximate = true;
   if (response.marketTier && typeof response.marketTier === "object") {
     response.marketTier.value = fallback.fairMarketValue;
   }
+  // Vendor attribution logged to KQL only — NOT on the wire (iOS shape lock).
   console.log(JSON.stringify({
     event: "catalog_resolver_route_rescue",
     source: "resolverFallbackHelper.overlayResolverRescue",

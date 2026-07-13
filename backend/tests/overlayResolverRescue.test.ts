@@ -51,9 +51,11 @@ describe("overlayResolverRescue — CH-null path gets rescued", () => {
     expect(response.fairMarketValueLive).toBe(1899.99);
     expect(response.marketValue).toBe(1899.99);
     expect(response.marketTier.value).toBe(1899.99);
-    expect(response.sourceVendor).toBe("cardsight");
     expect(response.estimateBasis).toBe("1 comp(s) via cardsight");
     expect(response.approximate).toBe(true);
+    // iOS shape lock (Drew 2026-07-13): vendor attribution stays out of
+    // the wire — logged to KQL only. sourceVendor MUST NOT appear here.
+    expect(response.sourceVendor).toBeUndefined();
   });
 });
 
@@ -68,16 +70,11 @@ describe("overlayResolverRescue — no-op when CH already has FMV", () => {
       confidence: "high",
     }));
 
-    const response: any = {
-      fairMarketValueLive: 200,
-      marketValue: 200,
-      sourceVendor: undefined,
-    };
+    const response: any = { fairMarketValueLive: 200, marketValue: 200 };
     await overlayResolverRescue(response, { playerName: "Mookie", cardYear: 2020 });
     // Original values preserved
     expect(response.fairMarketValueLive).toBe(200);
     expect(response.marketValue).toBe(200);
-    expect(response.sourceVendor).toBeUndefined();
   });
 
   it("does NOT overlay when response.marketValue is set even if fairMarketValueLive is null", async () => {
@@ -101,15 +98,10 @@ describe("overlayResolverRescue — resolver returns null → response unchanged
     registerVendorSource(mockSource("cardhedge", null));
     registerVendorSource(mockSource("cardsight", null));
 
-    const response: any = {
-      fairMarketValueLive: null,
-      marketValue: null,
-      sourceVendor: undefined,
-    };
+    const response: any = { fairMarketValueLive: null, marketValue: null };
     await overlayResolverRescue(response, { playerName: "Nobody", cardYear: 2099 });
     expect(response.fairMarketValueLive).toBeNull();
     expect(response.marketValue).toBeNull();
-    expect(response.sourceVendor).toBeUndefined();
   });
 });
 
@@ -128,7 +120,6 @@ describe("overlayResolverRescue — cardhedge winner not overlaid (fallback cont
     await overlayResolverRescue(response, { playerName: "Mookie", cardYear: 2020 });
     // CH is filtered out; no non-CH vendor answered → no overlay
     expect(response.fairMarketValueLive).toBeNull();
-    expect(response.sourceVendor).toBeUndefined();
   });
 });
 
