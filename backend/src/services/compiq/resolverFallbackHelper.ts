@@ -71,3 +71,65 @@ export function shouldTryFallback(estimate: {
   const hasEstimated = typeof estimate.estimatedValue === "number" && estimate.estimatedValue > 0;
   return !hasFmv && !hasEstimated;
 }
+
+/**
+ * CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): overlay helper for the
+ * compiq/search + /price + /price-by-id routes. Called at the tail of each
+ * route right before res.json. If the response's fairMarketValueLive AND
+ * marketValue are both null (CH catalog gap), attempt the resolver fallback
+ * and overlay the rescue vendor's FMV.
+ *
+ * Response fields overlaid on rescue:
+ *   fairMarketValueLive → resolver FMV
+ *   marketValue         → resolver FMV
+ *   sourceVendor        → "sold-comps" | "cardsight"
+ *   estimateBasis       → "N comp(s) via <vendor>"
+ *   approximate         → true (rescue is inherently an estimate)
+ *   marketTier.value    → resolver FMV (for iOS's tier band display)
+ *
+ * Other pipeline fields (comps[], trendIQ, predictedPrice, etc.) are NOT
+ * synthesized — they stay null. iOS should render the base price with the
+ * "via cardsight" attribution and skip the trend/prediction blocks for
+ * rescue responses.
+ *
+ * Idempotent + safe: returns the original response object mutated in-place.
+ * Never throws.
+ */
+export async function overlayResolverRescue(
+  response: any,
+  query: CardQuery,
+): Promise<any> {
+  if (!response || typeof response !== "object") return response;
+
+  // Skip when CH already produced a real FMV.
+  const hasFmv =
+    (typeof response.fairMarketValueLive === "number" && response.fairMarketValueLive > 0) ||
+    (typeof response.marketValue === "number" && response.marketValue > 0);
+  if (hasFmv) return response;
+
+  const fallback = await tryResolverFallback(query);
+  if (!fallback) return response;
+
+  response.fairMarketValueLive = fallback.fairMarketValue;
+  response.marketValue = fallback.fairMarketValue;
+  response.sourceVendor = fallback.vendor;
+  response.estimateBasis = fallback.estimateBasis;
+  response.approximate = true;
+  if (response.marketTier && typeof response.marketTier === "object") {
+    response.marketTier.value = fallback.fairMarketValue;
+  }
+  console.log(JSON.stringify({
+    event: "catalog_resolver_route_rescue",
+    source: "resolverFallbackHelper.overlayResolverRescue",
+    vendor: fallback.vendor,
+    fairMarketValue: fallback.fairMarketValue,
+    compCount: fallback.compCount,
+    query: {
+      playerName: query.playerName,
+      cardYear: query.cardYear,
+      parallel: query.parallel,
+      cardNumber: query.cardNumber,
+    },
+  }));
+  return response;
+}
