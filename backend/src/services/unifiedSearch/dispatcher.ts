@@ -729,17 +729,29 @@ async function dispatchFreetextMode(
       "../compiq/cardsightUuidSource.js"
     );
     const cardsightNative = await fetchCardsightUuidNativeCandidates(input);
+    // CF-DEDUP-INCLUDES-PARALLEL (Drew, 2026-07-13, PR #415): after PR
+    // #413 exploded Cardsight UUID parents into per-parallel rows, the
+    // (player, setName, cardNumber) key collided for every parallel of
+    // the same parent — all 40 Hartman CPA-EHA parallels shared one
+    // key, so only the first survived the merge (verified via KQL
+    // `cardsightUuidCount:123 totalAfterMerge:54`). Adding parallel to
+    // the key makes each variant distinct while still correctly deduping
+    // the intended case (same physical card in both vendors).
     const seenKey = (c: CardIdentity) =>
       [
         (c.player ?? "").toLowerCase().trim(),
         (c.setName ?? "").toLowerCase().trim(),
         (c.cardNumber ?? "").toLowerCase().trim(),
+        (c.parallel ?? "").toLowerCase().trim(),
       ].join("::");
     const seen = new Set(candidates.map(seenKey));
+    let dedupedCount = 0;
     for (const cs of cardsightNative) {
       if (!seen.has(seenKey(cs))) {
         candidates.push(cs);
         seen.add(seenKey(cs));
+      } else {
+        dedupedCount++;
       }
     }
     if (cardsightNative.length > 0) {
@@ -749,6 +761,7 @@ async function dispatchFreetextMode(
         input,
         chCandidateCount: orderedCards.length,
         cardsightUuidCount: cardsightNative.length,
+        dedupedCount,
         totalAfterMerge: candidates.length,
       }));
     }
