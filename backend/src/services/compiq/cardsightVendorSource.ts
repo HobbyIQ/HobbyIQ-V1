@@ -17,6 +17,7 @@ import type {
 import {
   searchCatalog,
   getPricing,
+  getCardDetail,
   isCardsightConfigured,
   type CardsightCatalogHit,
 } from "./cardsightSlim.client.js";
@@ -151,13 +152,49 @@ export const cardsightVendorSource: VendorSource = {
     const top = scored[0];
     if (!top.hit.id) return null;
 
-    // Get pricing for the top match
+    // CF-CARDSIGHT-PARALLEL-FILTER (2026-07-13): resolve the query's
+    // parallel string against the catalog card's parallels list, then
+    // filter pricing by that parallelId. Without this, aggregated pricing
+    // mixes every variant (base + all colors + refractors) and produces
+    // misleading medians for graded/high-end parallels — Drew's real
+    // example: CPA-EHA Blue Refractor is ~$500-$1900 sales, but aggregated
+    // pool median is ~$150 due to cheap base auto sales dragging it down.
+    let parallelId: string | undefined;
+    let parallelMatchedName: string | undefined;
+    if (query.parallel) {
+      try {
+        const detail = await getCardDetail(top.hit.id);
+        if (detail && Array.isArray(detail.parallels)) {
+          const qp = String(query.parallel).toLowerCase().trim();
+          const exact = detail.parallels.find(
+            (p) => String(p.name).toLowerCase() === qp,
+          );
+          const partial = exact ?? detail.parallels.find(
+            (p) => String(p.name).toLowerCase().includes(qp) ||
+                   qp.includes(String(p.name).toLowerCase()),
+          );
+          if (partial) {
+            parallelId = partial.id;
+            parallelMatchedName = partial.name;
+          }
+        }
+      } catch {
+        // Detail fetch failed — fall back to unfiltered pricing
+      }
+    }
+
+    // Get pricing for the top match, with parallel filter when available
     let pricing;
     try {
-      pricing = await getPricing(top.hit.id);
+      pricing = await getPricing(top.hit.id, { parallelId });
+      // Fallback: if parallel_id returned 0 comps, retry unfiltered so
+      // we at least surface the pooled pricing signal (this matches the
+      // pre-cutover client's fallback behavior).
+      const noComps = (pricing.raw?.count ?? 0) === 0 && (pricing.graded?.length ?? 0) === 0;
+      if (parallelId && noComps && !pricing.notFound) {
+        pricing = await getPricing(top.hit.id);
+      }
     } catch {
-      // Even if pricing errored, still return the catalog hit — signals
-      // to the resolver that Cardsight KNOWS this card (which CH may not).
       return {
         vendor: "cardsight",
         cardId: top.hit.id,
@@ -169,6 +206,18 @@ export const cardsightVendorSource: VendorSource = {
       };
     }
     const { fmv, compCount, lastSale } = extractFmv(pricing, query);
+    if (parallelMatchedName) {
+      console.log(JSON.stringify({
+        event: "cardsight_pricing_filtered_by_parallel",
+        source: "cardsightVendorSource",
+        cardId: top.hit.id,
+        queryParallel: query.parallel,
+        matchedParallel: parallelMatchedName,
+        parallelId,
+        compCount,
+        fmv,
+      }));
+    }
 
     return {
       vendor: "cardsight",

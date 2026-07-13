@@ -41,6 +41,23 @@ export interface CardsightCatalogHit {
   player?: string;
 }
 
+export interface CardsightParallel {
+  id: string;
+  name: string;
+  numberedTo?: number | null;
+}
+
+export interface CardsightCardDetail {
+  id: string;
+  name: string;
+  number: string;
+  releaseName: string;
+  setName: string;
+  year: number;
+  parallels: CardsightParallel[];
+  notFound?: boolean;
+}
+
 export interface CardsightPricingResponse {
   card?: {
     card_id?: string;
@@ -114,13 +131,54 @@ export async function searchCatalog(
   }
 }
 
+// ─── Card detail (needed for parallelId lookup) ────────────────────────────
+
+/**
+ * Fetch a card's full catalog metadata including its parallel list. Used
+ * by the vendor plugin to match a query's parallel string against the
+ * catalog card's parallels, then filter pricing by that parallelId.
+ * Aggregated pricing without parallelId mixes every variant's sales and
+ * produces misleading medians (base + Refractor + colors together).
+ */
+export async function getCardDetail(cardId: string): Promise<CardsightCardDetail | null> {
+  const key = apiKey();
+  if (!key || !cardId) return null;
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const res = await fetch(`${BASE_URL}/catalog/cards/${encodeURIComponent(cardId)}`, {
+      headers: { "X-API-Key": key, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as CardsightCardDetail;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Pricing ───────────────────────────────────────────────────────────────
 
 /**
  * Pricing for a resolved card_id. Returns notFound=true on miss or empty
  * shape when no key. Never throws — errors → notFound.
+ *
+ * When `parallelId` is set, Cardsight filters comps to that specific
+ * parallel — crucial for accurate pricing. Without it, the response
+ * pools every variant of the card together (base + all colors) and the
+ * median is misleading for graded/high-end parallels.
+ *
+ * Fallback semantic: when parallel_id is supplied but Cardsight returns
+ * 0 comps (empirical quirk noted in the original client 2026-05-27),
+ * caller should retry without the filter to get the unified pool as a
+ * last-resort signal.
  */
-export async function getPricing(cardId: string): Promise<CardsightPricingResponse> {
+export async function getPricing(
+  cardId: string,
+  opts: { parallelId?: string } = {},
+): Promise<CardsightPricingResponse> {
   const empty: CardsightPricingResponse = {
     raw: { count: 0, records: [] },
     graded: [],
@@ -131,10 +189,14 @@ export async function getPricing(cardId: string): Promise<CardsightPricingRespon
   if (!key) return empty;
   if (!cardId) return empty;
 
+  const params = new URLSearchParams();
+  if (opts.parallelId) params.set("parallel_id", opts.parallelId);
+  const qs = params.toString();
+  const url = `${BASE_URL}/pricing/${encodeURIComponent(cardId)}${qs ? `?${qs}` : ""}`;
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
-    const res = await fetch(`${BASE_URL}/pricing/${encodeURIComponent(cardId)}`, {
+    const res = await fetch(url, {
       headers: { "X-API-Key": key, Accept: "application/json" },
       signal: controller.signal,
     });
