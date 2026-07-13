@@ -13,6 +13,8 @@ import type {
   CardResolution,
   VendorSource,
   ResolutionConfidence,
+  ResolverComp,
+  ResolverGradedComp,
 } from "./catalogResolver.service.js";
 import {
   searchCatalog,
@@ -206,6 +208,39 @@ export const cardsightVendorSource: VendorSource = {
       };
     }
     const { fmv, compCount, lastSale } = extractFmv(pricing, query);
+
+    // CF-RESOLVER-RAW-COMPS (Drew, 2026-07-13): flatten Cardsight's pricing
+    // response into the resolver's per-record shape. Downstream engine
+    // paths (graded projection, prediction, market read) operate on pooled
+    // records, not vendor-derived aggregates, so we emit every real sale
+    // — the engine decides how to bucket / weight / project from there.
+    // Records with non-positive prices are dropped at this boundary so
+    // engine math never has to defend against invalid data.
+    const rawComps: ResolverComp[] = !pricing.notFound
+      ? pricing.raw.records
+          .filter((r) => typeof r.price === "number" && r.price > 0)
+          .map((r) => ({ saleDate: r.date ?? null, price: r.price }))
+      : [];
+
+    const gradedComps: ResolverGradedComp[] = !pricing.notFound
+      ? pricing.graded.flatMap((company) => {
+          const canonicalCompany = normalizeGradeCompany(company.company_name);
+          if (!canonicalCompany) return [];
+          return company.grades.flatMap((grade) => {
+            const gradeNum = Number(grade.grade_value);
+            if (!Number.isFinite(gradeNum) || gradeNum <= 0) return [];
+            return grade.records
+              .filter((r) => typeof r.price === "number" && r.price > 0)
+              .map((r) => ({
+                saleDate: r.date ?? null,
+                price: r.price,
+                gradeCompany: canonicalCompany,
+                gradeValue: gradeNum,
+              }));
+          });
+        })
+      : [];
+
     if (parallelMatchedName) {
       console.log(JSON.stringify({
         event: "cardsight_pricing_filtered_by_parallel",
@@ -215,6 +250,8 @@ export const cardsightVendorSource: VendorSource = {
         matchedParallel: parallelMatchedName,
         parallelId,
         compCount,
+        rawCompsCount: rawComps.length,
+        gradedCompsCount: gradedComps.length,
         fmv,
       }));
     }
@@ -226,7 +263,27 @@ export const cardsightVendorSource: VendorSource = {
       compCount,
       freshestSaleDate: lastSale,
       confidence: tierFromScore(top.score),
+      rawComps,
+      gradedComps,
       raw: { hit: top.hit, pricing },
     };
   },
 };
+
+/**
+ * CF-RESOLVER-RAW-COMPS (Drew, 2026-07-13): normalize Cardsight's raw
+ * `company_name` (which can vary in casing / spacing) to the canonical
+ * uppercase form the engine's graded-projection code expects. Returns
+ * null for empty or unrecognized companies — those records are dropped
+ * so downstream engine math never has to handle a "?"-tier bucket.
+ */
+function normalizeGradeCompany(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const upper = raw.trim().toUpperCase();
+  if (upper.length === 0) return null;
+  if (upper.includes("PSA")) return "PSA";
+  if (upper.includes("BGS") || upper.includes("BECKETT")) return "BGS";
+  if (upper.includes("SGC")) return "SGC";
+  if (upper.includes("CGC")) return "CGC";
+  return null;
+}
