@@ -4036,10 +4036,17 @@ export async function regradeHolding(req: Request, res: Response) {
     void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
   }
 
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): standardize response envelope
+  // across all mutation routes. `updatedHolding` preserved for existing
+  // consumers; `holding` + `entry.holding` are the new parity fields
+  // matching PATCH /holdings and confirm/reject flows.
+  const regradedWire = composeHoldingWireShape(doc.holdings[id]);
   return res.json({
     message: "Holding regraded",
     id,
     updatedHolding: doc.holdings[id],
+    holding: regradedWire,
+    entry: { holding: regradedWire },
   });
 }
 
@@ -4716,11 +4723,18 @@ export async function sellHolding(req: Request, res: Response) {
   doc.ledger.push(ledgerEntry);
   await writeUserDoc(auth.userId, doc);
 
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the partial-quantity
+  // remaining holding when qty remains so iOS reflects the new state
+  // without a refetch. holdingRemoved=true means the row is gone — no
+  // holding field then.
+  const remainingHolding = remainingQty > 0 ? composeHoldingWireShape(doc.holdings[id]) : null;
   return res.json({
     message: "Holding sale recorded",
     sold: ledgerEntry,
     holdingRemoved: remainingQty <= 0,
     remainingQuantity: Math.max(0, remainingQty),
+    holding: remainingHolding,
+    entry: remainingHolding ? { holding: remainingHolding } : undefined,
   });
 }
 
@@ -5523,10 +5537,13 @@ export async function addHeldExpenseHandler(req: Request, res: Response) {
   if (result.status === "invalid-input") {
     return res.status(400).json({ success: false, error: result.reason });
   }
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
   res.status(201).json({
     success: true,
     expense: result.expense,
-    holding: result.holding,
+    holding: holdingWire,
+    entry: holdingWire ? { holding: holdingWire } : undefined,
     newTotalCostBasis: result.newTotalCostBasis,
   });
 }
@@ -5543,9 +5560,12 @@ export async function deleteHeldExpenseHandler(req: Request, res: Response) {
   if (result.status === "expense-not-found") {
     return res.status(404).json({ success: false, error: "Expense not found" });
   }
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): entry.holding for iOS decoder.
+  const holdingWire = result.holding ? composeHoldingWireShape(result.holding) : null;
   res.json({
     success: true,
-    holding: result.holding,
+    holding: holdingWire,
+    entry: holdingWire ? { holding: holdingWire } : undefined,
     newTotalCostBasis: result.newTotalCostBasis,
   });
 }
@@ -5581,7 +5601,15 @@ export async function refreshHolding(req: Request, res: Response) {
     doc.holdings[id].lastUpdated = new Date().toISOString();
   }
   await writeUserDoc(auth.userId, doc);
-  res.json({ message: "Holding refreshed", id });
+  // CF-MUTATION-ENVELOPE-PARITY (2026-07-12): return the refreshed holding
+  // so iOS shows the new price without a refetch.
+  const refreshedWire = composeHoldingWireShape(doc.holdings[id]);
+  res.json({
+    message: "Holding refreshed",
+    id,
+    holding: refreshedWire,
+    entry: { holding: refreshedWire },
+  });
 }
 
 export interface BatchRepriceResult {
