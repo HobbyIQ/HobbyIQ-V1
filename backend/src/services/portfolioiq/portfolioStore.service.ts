@@ -3646,10 +3646,12 @@ export async function addHolding(req: Request, res: Response) {
   );
   // CF-INVENTORY-RAW-CLEAR (2026-07-12): same Raw normalization iOS uses
   // on PATCH. On ADD, a "Raw" create sends gradeCompany in one of the
-  // clear-signal shapes; we drop those fields entirely from the persisted
-  // holding so downstream reads see native-Raw shape.
+  // clear-signal shapes; normalize the signal but DO NOT drop fields —
+  // the "add-with-explicit-null-cert" contract (W4 wire) uses null to
+  // mean "explicit absence" and must round-trip through GET as null.
+  // Only the PATCH path drops (there we're actively clearing existing
+  // values on the persisted holding).
   normalizeRawGradeClearSignal(incoming);
-  dropClearedGradeFields(incoming);
   const { id, ...rest } = incoming;
   let holding: PortfolioHolding = {
     ...(rest as Omit<PortfolioHolding, "id">),
