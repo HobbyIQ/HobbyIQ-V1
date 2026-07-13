@@ -1405,6 +1405,51 @@ function stripDeprecatedHoldingKeys(
   return clean;
 }
 
+// CF-INVENTORY-RAW-CLEAR (2026-07-12): "user picked Raw" normalizer.
+//
+// iOS can send any of {null, "", "Raw"} to mean "clear the grade."
+// Downstream readers (pricing, comps, iOS decoders) all want a truly
+// absent field on a Raw holding — no dangling gradeCompany: null.
+//
+// TWO steps:
+//   1. normalizeRawGradeClearSignal — before the {...previous, ...body}
+//      spread, convert every clear-signal shape to explicit null AND
+//      cascade to gradeValue + gradingCompany + certGrader + certNumber
+//      so the next holding shape sees a consistent "grade cleared" state.
+//   2. dropClearedGradeFields — after the spread, delete keys whose
+//      merged value is null so the persisted shape matches a native
+//      Raw holding (never sent grade at all).
+//
+// undefined is preserved — that's the "don't touch this field" signal
+// and must NOT trigger the clear.
+
+const GRADE_CLEAR_FIELDS = [
+  "gradeCompany",
+  "gradingCompany",
+  "gradeValue",
+  "certGrader",
+  "certNumber",
+] as const;
+
+function isRawClearSignal(v: unknown): boolean {
+  if (v === null) return true;
+  if (typeof v !== "string") return false;
+  const trimmed = v.trim();
+  return trimmed === "" || trimmed.toLowerCase() === "raw";
+}
+
+function normalizeRawGradeClearSignal(body: Record<string, unknown>): void {
+  if ("gradeCompany" in body && isRawClearSignal(body.gradeCompany)) {
+    for (const k of GRADE_CLEAR_FIELDS) body[k] = null;
+  }
+}
+
+function dropClearedGradeFields(holding: Record<string, unknown>): void {
+  for (const k of GRADE_CLEAR_FIELDS) {
+    if (holding[k] === null) delete holding[k];
+  }
+}
+
 // CF-INVENTORYIQ-R1 — write-side normalizer for `cardId`.
 // Applied by addHolding + updateHolding so the stored form is always
 // the bare Cardsight UUID regardless of which shape the client sends.
@@ -3599,6 +3644,12 @@ export async function addHolding(req: Request, res: Response) {
     (req.body ?? {}) as Record<string, unknown>,
     res,
   );
+  // CF-INVENTORY-RAW-CLEAR (2026-07-12): same Raw normalization iOS uses
+  // on PATCH. On ADD, a "Raw" create sends gradeCompany in one of the
+  // clear-signal shapes; we drop those fields entirely from the persisted
+  // holding so downstream reads see native-Raw shape.
+  normalizeRawGradeClearSignal(incoming);
+  dropClearedGradeFields(incoming);
   const { id, ...rest } = incoming;
   let holding: PortfolioHolding = {
     ...(rest as Omit<PortfolioHolding, "id">),
@@ -3706,7 +3757,9 @@ export async function updateHolding(req: Request, res: Response) {
     (req.body ?? {}) as Record<string, unknown>,
     res,
   );
+  normalizeRawGradeClearSignal(cleanBody);
   let next = { ...doc.holdings[id], ...(cleanBody as Partial<PortfolioHolding>), id };
+  dropClearedGradeFields(next);
   next = normalizeR1CardsightCardId(
     next,
     id,
@@ -3758,7 +3811,13 @@ export async function updateHolding(req: Request, res: Response) {
     void subscribeHoldingToDeltaPoll(auth.userId, doc.holdings[id]!);
   }
 
-  res.json({ message: "Holding updated", id });
+  // CF-PATCH-HOLDING-RETURN-STATE (2026-07-12): return the fully-persisted
+  // holding via composeHoldingWireShape so iOS can verify the round-trip
+  // matches what it sent. Prevents "I changed to Raw but it still shows
+  // PSA 10" symptoms where iOS was relying on a refetch that raced or
+  // never fired. Legacy {message, id} still present for existing consumers.
+  const holdingWire = composeHoldingWireShape(doc.holdings[id]);
+  res.json({ message: "Holding updated", id, holding: holdingWire, entry: { holding: holdingWire } });
 }
 
 /**
