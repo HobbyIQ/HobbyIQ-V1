@@ -714,6 +714,52 @@ async function dispatchFreetextMode(
     ),
   );
 
+  // CF-CARDSIGHT-UUID-NATIVE (Drew, 2026-07-13, PR #412): also query
+  // Cardsight's UUID-native /v1 catalog directly. CH's snapshot uses
+  // legacy bubble.io IDs and doesn't include the parallels[] tree,
+  // so a card like Eric Hartman CPA-EHA lands with only its Blue
+  // X-Fractor variant on the wire — the Blue Refractor / Speckle /
+  // Purple / etc. never appear. Merging Cardsight-native hits gives
+  // iOS the full 40-parallel picker so users can pick the exact
+  // variant they own. Cardsight hits are deduped against CH by
+  // (player, setName, cardNumber) — CH-canonical wins when both
+  // vendors have the card, so we don't double-emit.
+  try {
+    const { fetchCardsightUuidNativeCandidates } = await import(
+      "../compiq/cardsightUuidSource.js"
+    );
+    const cardsightNative = await fetchCardsightUuidNativeCandidates(input);
+    const seenKey = (c: CardIdentity) =>
+      [
+        (c.player ?? "").toLowerCase().trim(),
+        (c.setName ?? "").toLowerCase().trim(),
+        (c.cardNumber ?? "").toLowerCase().trim(),
+      ].join("::");
+    const seen = new Set(candidates.map(seenKey));
+    for (const cs of cardsightNative) {
+      if (!seen.has(seenKey(cs))) {
+        candidates.push(cs);
+        seen.add(seenKey(cs));
+      }
+    }
+    if (cardsightNative.length > 0) {
+      console.log(JSON.stringify({
+        event: "cardsight_uuid_native_merged",
+        source: "unifiedSearch.dispatcher",
+        input,
+        chCandidateCount: orderedCards.length,
+        cardsightUuidCount: cardsightNative.length,
+        totalAfterMerge: candidates.length,
+      }));
+    }
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_uuid_native_error",
+      source: "unifiedSearch.dispatcher",
+      error: (err as Error)?.message ?? String(err),
+    }));
+  }
+
   return {
     input: { raw: input, detectedMode: "freetext" },
     candidates,
