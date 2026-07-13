@@ -94,6 +94,22 @@ export interface PortfolioHolding {
   listingUrl?: string;
   listingPrice?: number;
   fairMarketValue?: number;
+  // CF-SOURCE-VENDOR (2026-07-13): provenance of the current fairMarketValue.
+  // Foundation for multi-vendor pricing (CH + Cardsight + eBay-direct sold
+  // comps). Every priced holding stamps this so downstream (iOS attribution,
+  // per-vendor accuracy audits, source-preference tuning) knows where the
+  // number came from.
+  //
+  //   "cardhedge"  — CH API (current primary)
+  //   "cardsight"  — Cardsight API (returning for coverage gaps)
+  //   "ebay"       — direct from eBay sold-comps pool (our own sales +
+  //                  Marketplace Insights)
+  //   "manual"     — user-entered override
+  //
+  // Absent → legacy pre-CF holding, treat as unknown provenance.
+  sourceVendor?: "cardhedge" | "cardsight" | "ebay" | "manual";
+  /** ISO timestamp the sourceVendor was last written. */
+  sourceVendorUpdatedAt?: string;
   // CF-NEXT-SALE-PREDICTION-LAYER (design d531939) — forward-looking
   // predicted price (FMV × TrendIQ-derived bounded factor). Mechanism
   // attribution distinguishes trendiq-projection (success path) from

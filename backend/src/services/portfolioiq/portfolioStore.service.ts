@@ -2172,6 +2172,9 @@ async function autoPriceHolding(
         confidence: preEarlyLadderResult.confidence,
       },
       lastUpdated: new Date().toISOString(),
+      // CF-SOURCE-VENDOR (2026-07-13): ladder result is CH-derived.
+      sourceVendor: "cardhedge",
+      sourceVendorUpdatedAt: new Date().toISOString(),
     };
     doc.holdings[holding.id] = hydrated;
     return hydrated;
@@ -2379,6 +2382,12 @@ async function autoPriceHolding(
     verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
     recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
     lastUpdated: now,
+    // CF-SOURCE-VENDOR (2026-07-13): stamp CH provenance. Foundation for
+    // multi-vendor pricing (Cardsight + eBay-direct coming). When the
+    // dual-source resolver goes live, this stamps the winning vendor
+    // instead of hardcoded "cardhedge".
+    sourceVendor: "cardhedge",
+    sourceVendorUpdatedAt: now,
     // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: writer no longer stamps
     // currentValue / totalProfitLoss / totalProfitLossPct / quickSaleValue /
     // premiumValue / suggestedListPrice. The wire computes all 6 at response
@@ -5884,6 +5893,9 @@ export async function repriceHoldingsForUser(
           verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
           recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
           lastUpdated: t3Now,
+          // CF-SOURCE-VENDOR (2026-07-13): T3 base-auto floor estimate is CH-derived.
+          sourceVendor: "cardhedge",
+          sourceVendorUpdatedAt: t3Now,
         };
         evaluateHoldingAlerts(doc, t3Previous, t3Updated);
         doc.holdings[holding.id] = t3Updated;
@@ -6011,6 +6023,9 @@ export async function repriceHoldingsForUser(
               verdict: "Estimated",
               recommendation: "Hold",
               lastUpdated: now,
+              // CF-SOURCE-VENDOR (2026-07-13): grade-ladder fallback is CH-derived.
+              sourceVendor: "cardhedge",
+              sourceVendorUpdatedAt: now,
             };
             repriced += 1;
             updates.push({ id: holding.id, status: "repriced", reason: "grade-ladder-fallback" });
@@ -6128,6 +6143,9 @@ export async function repriceHoldingsForUser(
         verdict: String((estimate as any)?.verdict ?? holding.verdict ?? "Hold"),
         recommendation: String((estimate as any)?.action ?? holding.recommendation ?? "Hold"),
         lastUpdated: now,
+        // CF-SOURCE-VENDOR (2026-07-13): batch-reprice success path.
+        sourceVendor: "cardhedge",
+        sourceVendorUpdatedAt: now,
         // CF-CURRENTVALUE-DIMENSION-CANONICALIZE C2: currentValue / P&L
         // (3 fields) and quickSale / premium / suggestedList (3 fields)
         // no longer stamped — wire computes them via composeHoldingWireShape.
