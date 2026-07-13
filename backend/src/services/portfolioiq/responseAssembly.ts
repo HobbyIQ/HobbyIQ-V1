@@ -210,6 +210,18 @@ export interface PortfolioHoldingWire {
     variant?: string;
     image?: string;
   } | null;
+  /** CF-CARDID-SUGGESTER-CONFIDENCE-TIERING (2026-07-12): iOS keys on this
+   *  to bucket the review queue into high/medium/low review tiers. Backend
+   *  owns the thresholds; iOS should never depend on the raw confidence
+   *  number for tier decisions. */
+  suggestionConfidenceTier?: "high" | "medium" | "low" | null;
+  /** Transparency layer: which structured fields aligned + which didn't,
+   *  so iOS can render "Matched 5 of 6 (mismatch: parallel)". */
+  suggestionMatchBreakdown?: {
+    fieldsChecked: number;
+    fieldsMatched: number;
+    mismatchedFields: string[];
+  } | null;
   suggestionUpdatedAt?: string | null;
   // Auxiliary aspect fields we backfilled from Browse (team, sport,
   // manufacturer) — always optional so old holdings still decode.
@@ -446,6 +458,8 @@ export function composeHoldingWireShape(
     suggestedCardId: (holding as any).suggestedCardId,
     suggestionConfidence: (holding as any).suggestionConfidence,
     suggestionCandidate: (holding as any).suggestionCandidate,
+    suggestionConfidenceTier: (holding as any).suggestionConfidenceTier,
+    suggestionMatchBreakdown: (holding as any).suggestionMatchBreakdown,
     suggestionUpdatedAt: (holding as any).suggestionUpdatedAt,
     // CF-EBAY-BROWSE-ENRICHMENT (2026-07-12)
     ebayImageUrl: (holding as any).ebayImageUrl,

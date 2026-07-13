@@ -120,47 +120,134 @@ describe("suggestCardIdForHolding", () => {
   });
 });
 
-describe("suggestCardIdForHolding — confidence bands", () => {
-  it("single low-score hit → 0.6 confidence", async () => {
+describe("suggestCardIdForHolding — normalized confidence + tiers", () => {
+  it("single low-score hit → confidence is fraction of fields matched", async () => {
+    // Everything wrong: 0/5 fields matched (year mismatch, cardNumber mismatch,
+    // set mismatch, parallel mismatch, no player match) → confidence very low
     vi.mocked(searchCards).mockResolvedValue([
       {
         card_id: "ch-weak",
         title: "some card",
         set: "different set",
-        year: 2019,    // wrong year → -30
-        number: "999", // wrong number → -30
+        year: 2019,
+        number: "999",
         variant: "different",
-        // no player match either
       },
     ]);
     const r = await suggestCardIdForHolding(makeHolding());
     expect(r).not.toBeNull();
-    expect(r!.confidence).toBe(0.6);
+    // isAuto=false aligned with candidate (no auto in title) = 10/100 matched.
+    // Everything else mismatched. Confidence 0.1, tier="low".
+    expect(r!.confidence).toBe(0.1);
+    expect(r!.confidenceTier).toBe("low");
   });
 
-  it("multi-hit confidence stays in [0.4, 0.95] range", async () => {
+  it("perfect match → confidence 1.0, tier=high", async () => {
     vi.mocked(searchCards).mockResolvedValue([
-      // 100/100 possible → top score 100 → 1.0 → clamped to 0.95
       {
-        card_id: "ch-max",
-        title: "Mookie Betts 2020",
+        card_id: "ch-perfect",
+        title: "Mookie Betts 2020 Panini Prizm",
         set: "Panini Prizm",
         year: 2020,
         number: "275",
         variant: "Silver",
         name: "Mookie Betts",
       },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r!.cardId).toBe("ch-perfect");
+    expect(r!.confidence).toBe(1);
+    expect(r!.confidenceTier).toBe("high");
+  });
+
+  it("year mismatch on otherwise-perfect match drops confidence into medium tier", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
       {
-        card_id: "ch-partial",
-        title: "Someone Else",
-        set: "Different",
-        year: 2020,   // year only match
-        number: "999",
-        variant: "other",
+        card_id: "ch-year-mismatch",
+        title: "Mookie Betts Panini Prizm",
+        set: "Panini Prizm",
+        year: 2019,   // holding is 2020 → mismatch
+        number: "275",
+        variant: "Silver",
+        name: "Mookie Betts",
       },
     ]);
     const r = await suggestCardIdForHolding(makeHolding());
-    expect(r!.cardId).toBe("ch-max");
-    expect(r!.confidence).toBe(0.95);
+    // Weight: year(20) miss, cardNumber(25), set(20), parallel(10), player(15),
+    // auto(10 aligned as not-auto). Matched = 25+20+10+15+10 = 80/100 = 0.80
+    expect(r!.confidence).toBe(0.8);
+    expect(r!.confidenceTier).toBe("medium");
+    expect(r!.matchBreakdown.mismatchedFields).toContain("cardYear");
+  });
+
+  it("matchBreakdown reports fields checked + matched counts", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-perfect",
+        title: "Mookie Betts Panini Prizm",
+        set: "Panini Prizm",
+        year: 2020,
+        number: "275",
+        variant: "Silver",
+        name: "Mookie Betts",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding());
+    expect(r!.matchBreakdown.fieldsChecked).toBe(6);   // year, cardNum, set, parallel, player, auto
+    expect(r!.matchBreakdown.fieldsMatched).toBe(6);
+    expect(r!.matchBreakdown.mismatchedFields).toEqual([]);
+  });
+
+  it("holding without cardYear normalizes score over reduced denominator", async () => {
+    // Holding is missing cardYear → we shouldn't check it → denominator drops
+    // → 100% of remaining fields matched = confidence 1.0
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-partial-holding",
+        title: "Mookie Betts Panini Prizm",
+        set: "Panini Prizm",
+        year: 2019,   // year mismatch WOULD normally hurt but holding.cardYear undefined
+        number: "275",
+        variant: "Silver",
+        name: "Mookie Betts",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding({ cardYear: undefined }));
+    expect(r!.matchBreakdown.fieldsChecked).toBe(5);  // year skipped
+    expect(r!.confidence).toBe(1);
+    expect(r!.confidenceTier).toBe("high");
+  });
+
+  it("auto flag alignment: holding.isAuto=true, candidate title contains 'Auto' → aligned", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-auto",
+        title: "Mookie Betts Auto",
+        set: "Panini Prizm",
+        year: 2020,
+        number: "275",
+        variant: "Silver Auto",
+        name: "Mookie Betts",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding({ isAuto: true }));
+    expect(r!.matchBreakdown.mismatchedFields).not.toContain("isAuto");
+  });
+
+  it("auto flag misalignment drops confidence", async () => {
+    vi.mocked(searchCards).mockResolvedValue([
+      {
+        card_id: "ch-no-auto",
+        title: "Mookie Betts",   // no "Auto"
+        set: "Panini Prizm",
+        year: 2020,
+        number: "275",
+        variant: "Silver",
+        name: "Mookie Betts",
+      },
+    ]);
+    const r = await suggestCardIdForHolding(makeHolding({ isAuto: true }));
+    expect(r!.matchBreakdown.mismatchedFields).toContain("isAuto");
+    expect(r!.confidence).toBeLessThan(1);
   });
 });
