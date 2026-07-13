@@ -3007,17 +3007,24 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     // safely on null, so callers don't need extra branching.
     const parallelTierKey = extractParallelTierKey(identity);
 
-    // CF-BETTER-ESTIMATED-GRADE-MATH (2026-07-05): fetch reference prices
-    // FIRST so we can thread them into buildObservedGradeCurve as a
-    // preferred fallback for estimated grades. Adds one sequenced CH
-    // call (~200ms warm-cache) vs the parallel fanout — but it changes
-    // "PSA 10 est. = Raw × 8 = $4000" to "PSA 10 est. = <third-party
-    // reference> = $2500", which is materially closer to real market
-    // for the specific card.
-    const referenceRows = await getAllPricesByCard(id);
-    const referencePriceByGrade = new Map<string, number>(
-      referenceRows.map((r) => [r.grade, r.price]),
-    );
+    // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the wire
+    // used to receive CH's third-party reference-price model as an
+    // "estimated" fallback for thin-observed grades. Per Drew's
+    // "self-reliant engine" direction (their-data-as-fuel, not their-
+    // derived-signals-on-wire), reference prices are removed from the
+    // wire path entirely. Grade projection now falls through:
+    //   1. Our own pooled records (via PR #406's grade rescue)
+    //   2. Raw × class-aware grade multiplier (already in the service)
+    //   3. Sibling-card fallback (already opted in)
+    // Backwards-compat: the referencePrices[] array is still emitted on
+    // the wire as an empty array; iOS decoders that expect the key
+    // continue to work.
+    const referenceRows: Array<{
+      grade: string;
+      grader: string;
+      price: number;
+      display_order: number;
+    }> = [];
     // CF-SAME-PLAYER-SIBLINGS (2026-07-08, Drew): also fetch the same
     // player's other variants in the same set so iOS can render a
     // "similar cards" surface. Runs concurrently with grade curve —
@@ -3026,7 +3033,6 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
     const [gradeCurve, samePlayerSiblings] = await Promise.all([
       buildObservedGradeCurve(id, {
         playerName: identityPlayer,
-        referencePriceByGrade,
         parallelTierKey,
         // CF-SIBLING-CARD-FALLBACK (2026-07-06): user-facing route → opt
         // in so thin-market cards get an estimate rather than a gray pill.
@@ -3075,21 +3081,14 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
           gradeCurveSampleCount: gradeCurve?.totalSampleCount ?? 0,
           referenceRowCount: referenceRows.length,
         });
-        // Bonus: the /card-panel call already loaded a full gradeCurve
-        // and full referencePrices for this card. Persist BOTH here so a
-        // single hit on the consolidated route builds three corpus rows
-        // in Cosmos instead of one.
-        persistReferencePrices({
-          source: "compiq.card-panel",
-          cardId: id,
-          player: (identity as any)?.player ?? null,
-          grades: referenceRows.map((r) => ({
-            grade: r.grade,
-            grader: r.grader,
-            referencePrice: r.price,
-            displayOrder: r.display_order,
-          })),
-        });
+        // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the
+        // reference-price corpus row is skipped here now that /card-panel
+        // no longer fetches CH reference prices. Other routes that still
+        // persist reference prices (/all-grade-prices, dedicated audit
+        // endpoints) are unchanged. If the corpus needs a per-card
+        // reference-price row for calibration, a separate offline job
+        // can hit CH once per day rather than piggybacking on user
+        // /card-panel hits.
         // CF-CORPUS-TRAJECTORY-FIELDS (2026-07-05): persist ratePerWeek
         // + signalSource + per-grade trajectory predictions so the corpus
         // has enough surface area to compute prediction error against

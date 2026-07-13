@@ -115,10 +115,12 @@ describe("CF-CARD-PANEL — GET /api/compiq/card-panel/:cardId", () => {
     expect(res.body.gradeCurve.entries).toHaveLength(14);
     expect(res.body.gradeCurve.totalSampleCount).toBe(0);
 
-    // Reference prices from mock
-    expect(res.body.referencePrices).toHaveLength(2);
-    expect(res.body.referencePrices[0]).toMatchObject({ grade: "Raw", grader: "Raw", referencePrice: 130 });
-    expect(res.body.referencePrices[1]).toMatchObject({ grade: "PSA 10", grader: "PSA", referencePrice: 900 });
+    // CF-KILL-VENDOR-REFERENCE-PRICES (Drew, 2026-07-13, PR #409): the wire
+    // no longer emits CH-derived reference prices. `referencePrices` stays
+    // on the shape as an empty array for backwards-compat with older iOS
+    // decoders. The wire is now 100% engine-owned; no vendor "market read"
+    // shows up here.
+    expect(res.body.referencePrices).toEqual([]);
   });
 
   it("400 when cardId path param is empty (guard)", async () => {
