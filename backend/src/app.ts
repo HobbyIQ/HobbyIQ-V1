@@ -50,8 +50,22 @@ const app = express();
 import { registerVendorSource } from "./services/compiq/catalogResolver.service.js";
 import { cardhedgeVendorSource } from "./services/compiq/cardhedgeVendorSource.js";
 import { soldCompsVendorSource } from "./services/compiq/soldCompsVendorSource.js";
+import { cardsightVendorSource } from "./services/compiq/cardsightVendorSource.js";
+import { isCardsightConfigured } from "./services/compiq/cardsightSlim.client.js";
 registerVendorSource(cardhedgeVendorSource);
 registerVendorSource(soldCompsVendorSource);
+// CF-CARDSIGHT-RESTORE (2026-07-13): Cardsight registers unconditionally;
+// its resolveCard returns null immediately when CARDSIGHT_API_KEY is
+// unset. Once the key lands in App Service settings, the plugin
+// activates on next restart. Log the config state at startup for
+// operational visibility.
+registerVendorSource(cardsightVendorSource);
+console.log(JSON.stringify({
+  event: "catalog_resolver_startup",
+  source: "app",
+  vendors: ["cardhedge", "sold-comps", "cardsight"],
+  cardsightConfigured: isCardsightConfigured(),
+}));
 
 // Rate limiting — 200 req/min per IP
 app.use("/api/", rateLimit({
