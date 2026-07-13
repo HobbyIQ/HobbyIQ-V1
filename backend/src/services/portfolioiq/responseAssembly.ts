@@ -167,11 +167,11 @@ export interface PortfolioHoldingWire {
   notes?: string;
   photos?: string[];
   clientId?: string;
-  // CF-SOURCE-VENDOR (2026-07-13): provenance of the current fairMarketValue.
-  // iOS renders a small vendor attribution ("via CH" / "via Cardsight" /
-  // "via eBay" / "manual"). Backend owns the enum values.
-  sourceVendor?: "cardhedge" | "cardsight" | "ebay" | "manual" | null;
-  sourceVendorUpdatedAt?: string | null;
+  // CF-SOURCE-VENDOR-WIRE-STRIP (Drew, 2026-07-13): sourceVendor +
+  // sourceVendorUpdatedAt REMOVED from the wire shape per iOS shape lock —
+  // the fields still write to the persisted holding (backend audit + KQL)
+  // but never surface to iOS. Restore this block only when iOS explicitly
+  // opts in to vendor attribution rendering.
   // CF-HELD-EXPENSES (2026-07-12): explicit on the wire shape so mutation
   // routes returning composed holdings still surface the array iOS renders.
   heldExpenses?: Array<{
@@ -457,9 +457,8 @@ export function composeHoldingWireShape(
     // per-expense breakdown users edit. Must live on the wire shape so
     // mutation routes (POST/DELETE /holdings/:id/expenses) can return it.
     heldExpenses: (holding as any).heldExpenses,
-    // CF-SOURCE-VENDOR (2026-07-13)
-    sourceVendor: (holding as any).sourceVendor,
-    sourceVendorUpdatedAt: (holding as any).sourceVendorUpdatedAt,
+    // CF-SOURCE-VENDOR-WIRE-STRIP (2026-07-13): sourceVendor +
+    // sourceVendorUpdatedAt intentionally NOT surfaced to iOS.
     // MLB resolution
     playerId: holding.playerId,
     playerIdConfidence: holding.playerIdConfidence,

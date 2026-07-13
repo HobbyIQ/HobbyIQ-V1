@@ -2274,6 +2274,28 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
       cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
       query: query.trim(),
     });
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): when CH returned no
+    // usable FMV (catalog gap), consult the multi-source resolver +
+    // overlay any non-CH vendor's price onto the response before iOS reads
+    // it. Cardsight rescue is the common case; sold-comps rescues when
+    // our own users' sales pool has the card.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const pq = (result as any).parsedQuery ?? {};
+      await overlayResolverRescue(result, {
+        playerName: pq.playerName ?? undefined,
+        cardYear: typeof pq.year === "number" ? pq.year : undefined,
+        setName: pq.set ?? undefined,
+        parallel: pq.parallel ?? undefined,
+        cardNumber: pq.cardNumber ?? undefined,
+        gradeCompany: pq.gradingCompany ?? undefined,
+        gradeValue: typeof pq.grade === "number" ? pq.grade : undefined,
+        isAuto: pq.isAuto ?? undefined,
+        cardId: (result as any).cardIdentity?.card_id ?? undefined,
+      });
+    }
     res.json(result);
     // Telemetry â€” fire-and-forget. Drives BOTH compiq_corpus (ML
     // training table) and comp_logs (operational/cohort table) from a
@@ -2774,6 +2796,25 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
       cardId: ((result as any).cardIdentity?.card_id as string | undefined) ?? null,
       query: query.trim(),
     });
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
+    // as /search — when CH catalog-misses, try the resolver.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const pq = (result as any).parsedQuery ?? {};
+      await overlayResolverRescue(result, {
+        playerName: pq.playerName ?? undefined,
+        cardYear: typeof pq.year === "number" ? pq.year : undefined,
+        setName: pq.set ?? undefined,
+        parallel: pq.parallel ?? undefined,
+        cardNumber: pq.cardNumber ?? undefined,
+        gradeCompany: pq.gradingCompany ?? undefined,
+        gradeValue: typeof pq.grade === "number" ? pq.grade : undefined,
+        isAuto: pq.isAuto ?? undefined,
+        cardId: (result as any).cardIdentity?.card_id ?? undefined,
+      });
+    }
     res.json(result);
     // Telemetry â€” see /search for rationale.
     writeTelemetryEntries({
@@ -4835,6 +4876,24 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
       );
     }
 
+    // CF-RESOLVER-FALLBACK-COMPIQ-ROUTES (2026-07-13): same rescue overlay
+    // as /search + /price — CH sometimes recognizes the cardId but has
+    // no comps; Cardsight/sold-comps may rescue.
+    {
+      const { overlayResolverRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      const ci = (result as any).cardIdentity ?? {};
+      await overlayResolverRescue(result, {
+        playerName: ci.player ?? undefined,
+        cardYear: typeof ci.year === "number" ? ci.year : undefined,
+        setName: ci.set ?? undefined,
+        parallel: ci.parallel ?? undefined,
+        cardNumber: ci.number ?? undefined,
+        isAuto: ci.isAuto ?? undefined,
+        cardId: ci.card_id ?? undefined,
+      });
+    }
     res.json(result);
     // Corpus collector â€” fire-and-forget, gated by COMPIQ_CORPUS_DISABLED
     // and COMPIQ_CORPUS_SAMPLE_RATE. querySource rule: if the request

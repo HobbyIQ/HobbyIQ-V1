@@ -230,9 +230,32 @@ export interface ResolveCardResult {
 export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> {
   const now = Date.now();
   const key = canonicalCacheKey(query);
+
+  // Layer 1: in-memory LRU (5ms hit path).
   const cached = cacheGet(key, now);
   if (cached) {
     return { winner: cached, responses: [cached], fromCache: true };
+  }
+
+  // Layer 2 (CF-VENDOR-PRICING-CACHE, Drew 2026-07-13): Cosmos persistent
+  // cache. Survives process restarts + shared across App Service instances.
+  // Adds ~20ms vs pure in-memory but saves 200-800ms vendor calls +
+  // preserves the Cardsight 100k/mo quota. Read-through: warm the
+  // in-memory LRU on Cosmos hit so subsequent same-process calls skip
+  // Cosmos entirely.
+  try {
+    const { getCachedResolution } = await import("./vendorPricingCache.service.js");
+    const persisted = await getCachedResolution(key, query.cardId ?? null);
+    if (persisted) {
+      cacheSet(key, persisted, now);
+      return { winner: persisted, responses: [persisted], fromCache: true };
+    }
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "catalog_resolver_persistent_cache_read_error",
+      source: "catalogResolver.service",
+      error: (err as Error)?.message ?? String(err),
+    }));
   }
 
   if (registeredSources.length === 0) {
@@ -273,6 +296,23 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
     }
   });
 
+  // Write-through helper for both branches — fire-and-forget so vendor
+  // latency isn't paid by the user twice.
+  const writeThrough = (resolution: CardResolution | null) => {
+    void (async () => {
+      try {
+        const { putCachedResolution } = await import("./vendorPricingCache.service.js");
+        await putCachedResolution(key, resolution);
+      } catch (err) {
+        console.warn(JSON.stringify({
+          event: "catalog_resolver_persistent_cache_write_error",
+          source: "catalogResolver.service",
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+    })();
+  };
+
   if (earlyWinner) {
     // Return immediately; reconcile fire-and-forget when the rest settle.
     void Promise.allSettled(promises).then((settled) => {
@@ -280,6 +320,7 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
       logReconciliation(query, responses);
     });
     cacheSet(key, earlyWinner, now);
+    writeThrough(earlyWinner);
     return { winner: earlyWinner, responses: [earlyWinner], fromCache: false };
   }
 
@@ -292,5 +333,8 @@ export async function resolveCard(query: CardQuery): Promise<ResolveCardResult> 
   logReconciliation(query, responses);
   const best = pickBest(responses);
   if (best) cacheSet(key, best, now);
+  // Cache the result — including null — to prevent hammering vendors on
+  // repeated queries for genuinely-missing cards.
+  writeThrough(best);
   return { winner: best, responses, fromCache: false };
 }
