@@ -1,0 +1,162 @@
+// CF-CARDSIGHT-RESTORE (2026-07-13): slim Cardsight client — minimal
+// surface for the VendorSource plugin (search + pricing only).
+//
+// The pre-cutover client (removed 2026-06-27 at 08c24f3) was 1080 lines
+// covering catalog search, autocomplete, images, pricing, grade taxonomy,
+// budget tracking, retries, cache warming, and more. This slim rebuild
+// covers ONLY what the multi-source resolver needs: given a structured
+// card query, find the top-matching catalog entry and its pricing.
+//
+// Everything else (autocomplete UI, image proxying, grade-id resolver,
+// budget tracking) stays retired — those callers were already migrated
+// to the catalogSource seam and none of them route back through this
+// module.
+//
+// API: https://api.cardsight.ai/v1
+// Auth: X-API-Key header from CARDSIGHT_API_KEY env var
+// When key is absent: every function returns empty/null. Silent no-op —
+// the vendor plugin can register safely even without a key configured.
+
+const BASE_URL = "https://api.cardsight.ai/v1";
+const DEFAULT_TIMEOUT_MS = 8_000;
+
+function apiKey(): string | null {
+  const key = process.env.CARDSIGHT_API_KEY;
+  return key && key.trim() ? key.trim() : null;
+}
+
+export function isCardsightConfigured(): boolean {
+  return apiKey() !== null;
+}
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface CardsightCatalogHit {
+  id: string;
+  name: string;
+  number: string;
+  releaseName: string;
+  setName: string;
+  year: number;
+  player?: string;
+}
+
+export interface CardsightPricingResponse {
+  card?: {
+    card_id?: string;
+    name?: string;
+    number?: string;
+    set?: { name?: string; year?: string; release?: string };
+  };
+  raw: { count: number; records: Array<{ price: number; date: string | null }> };
+  graded: Array<{
+    company_name: string;
+    grades: Array<{
+      grade_value: string;
+      count: number;
+      records: Array<{ price: number; date: string | null }>;
+    }>;
+  }>;
+  meta: { total_records: number; last_sale_date: string | null };
+  notFound?: boolean;
+}
+
+// ─── Search ────────────────────────────────────────────────────────────────
+
+/**
+ * Free-text catalog search. Returns top matches or empty on miss / no key.
+ * `year` filter improves precision when the query is otherwise noisy.
+ */
+export async function searchCatalog(
+  query: string,
+  opts: { year?: number; take?: number } = {},
+): Promise<CardsightCatalogHit[]> {
+  const key = apiKey();
+  if (!key) return [];
+  const q = query.trim();
+  if (!q) return [];
+
+  const params = new URLSearchParams({
+    q,
+    type: "card",
+    segment: "baseball",
+    take: String(opts.take ?? 10),
+  });
+  if (opts.year !== undefined) params.set("year", String(opts.year));
+
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const res = await fetch(`${BASE_URL}/catalog/search?${params}`, {
+      headers: { "X-API-Key": key, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) {
+      console.warn(JSON.stringify({
+        event: "cardsight_search_http_error",
+        source: "cardsightSlim.client",
+        status: res.status,
+        query: q,
+      }));
+      return [];
+    }
+    const body = await res.json();
+    return Array.isArray(body?.results) ? body.results as CardsightCatalogHit[] : [];
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_search_error",
+      source: "cardsightSlim.client",
+      query: q,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return [];
+  }
+}
+
+// ─── Pricing ───────────────────────────────────────────────────────────────
+
+/**
+ * Pricing for a resolved card_id. Returns notFound=true on miss or empty
+ * shape when no key. Never throws — errors → notFound.
+ */
+export async function getPricing(cardId: string): Promise<CardsightPricingResponse> {
+  const empty: CardsightPricingResponse = {
+    raw: { count: 0, records: [] },
+    graded: [],
+    meta: { total_records: 0, last_sale_date: null },
+    notFound: true,
+  };
+  const key = apiKey();
+  if (!key) return empty;
+  if (!cardId) return empty;
+
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+    const res = await fetch(`${BASE_URL}/pricing/${encodeURIComponent(cardId)}`, {
+      headers: { "X-API-Key": key, Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    if (res.status === 404) return empty;
+    if (!res.ok) {
+      console.warn(JSON.stringify({
+        event: "cardsight_pricing_http_error",
+        source: "cardsightSlim.client",
+        status: res.status,
+        cardId,
+      }));
+      return empty;
+    }
+    return (await res.json()) as CardsightPricingResponse;
+  } catch (err) {
+    console.warn(JSON.stringify({
+      event: "cardsight_pricing_error",
+      source: "cardsightSlim.client",
+      cardId,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return empty;
+  }
+}
