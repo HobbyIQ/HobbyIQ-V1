@@ -46,6 +46,40 @@ export interface CardQuery {
 /** Confidence tiers determine early-return behavior. */
 export type ResolutionConfidence = "high" | "medium" | "low";
 
+/**
+ * A single sale record from a vendor's pool. The engine treats these as the
+ * atomic unit of "real data" — every downstream signal (median, momentum,
+ * grade projection, prediction) is computed over pooled records, never over
+ * vendor-derived aggregates.
+ *
+ * CF-RESOLVER-RAW-COMPS (Drew, 2026-07-13): expanded from the FMV-only
+ * CardResolution shape so the graded-projection engine, prediction pipeline,
+ * and market read can consume pooled raw comps from CH + Cardsight + eBay
+ * uniformly. Vendor plugins normalize into this shape; the engine never
+ * touches vendor-specific record types.
+ */
+export interface ResolverComp {
+  /** ISO 8601 date of the sale. Nullable when the vendor omits it. */
+  saleDate: string | null;
+  /** Sale price in USD. Must be > 0; records with non-positive prices
+   *  should be filtered by the vendor plugin before emission. */
+  price: number;
+  /** Optional free-form marker if the vendor exposes it ("auction",
+   *  "fixed", "best-offer"). Not consumed by the engine yet — reserved. */
+  saleType?: string;
+}
+
+/**
+ * A graded sale record — same shape as ResolverComp plus the grade markers.
+ * `gradeCompany` is normalized to canonical uppercase ("PSA", "BGS", "SGC",
+ * "CGC") by the vendor plugin. `gradeValue` is a number so downstream
+ * projection math doesn't have to parse "PSA 9.5" strings.
+ */
+export interface ResolverGradedComp extends ResolverComp {
+  gradeCompany: string;
+  gradeValue: number;
+}
+
 /** Unified vendor response shape. */
 export interface CardResolution {
   vendor: SourceVendor;
@@ -54,6 +88,19 @@ export interface CardResolution {
   compCount: number;
   freshestSaleDate: string | null;
   confidence: ResolutionConfidence;
+  /**
+   * Pooled raw sales (ungraded). Populated by vendor plugins that expose
+   * per-record data. Absent when the vendor only gives us a median.
+   * Callers should treat undefined as "vendor doesn't support record-level
+   * data" and empty-array as "vendor supports it but had no records here".
+   */
+  rawComps?: ResolverComp[];
+  /**
+   * Pooled graded sales. One entry per record, NOT one entry per grade
+   * bucket — the engine buckets by (gradeCompany, gradeValue) itself so
+   * pooled cross-vendor records can be aggregated cleanly.
+   */
+  gradedComps?: ResolverGradedComp[];
   /** Vendor-native response payload — callers may extract vendor-specific
    *  fields when they need to (avoids re-fetching). Never surfaced to iOS. */
   raw?: unknown;
