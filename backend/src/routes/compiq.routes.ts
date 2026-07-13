@@ -4140,15 +4140,33 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
     // befe9bcc-... where CH echoed Josh Jung, Dan Marino, Ben Rice
     // sales). This branch fires ahead of the CH path so those cardIds
     // never reach the CH pipeline.
+    //
+    // CF-EXPLODE-CARDSIGHT-PARALLELS (Drew, 2026-07-13, PR #413): search
+    // now emits per-parallel candidates with a compound candidateId
+    // `cardsight:{parentId}::{parallelId}`. iOS strips the prefix and
+    // sends the rest as the cardId. Parse the `::` separator so the
+    // parent + parallel routing works transparently.
     const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRe.test(resolvedCardId)) {
+    let uuidRouteCardId = resolvedCardId;
+    let uuidRouteParallelId: string | null = resolvedParallelId ?? null;
+    const compoundMatch = resolvedCardId.match(
+      /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})::([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    );
+    if (compoundMatch) {
+      uuidRouteCardId = compoundMatch[1];
+      // Prefer the body's explicit parallelId when both are present (iOS
+      // may pin a parallel for a base-row tap); otherwise use the id
+      // encoded in the compound cardId.
+      uuidRouteParallelId = uuidRouteParallelId ?? compoundMatch[2];
+    }
+    if (uuidRe.test(uuidRouteCardId)) {
       try {
         const { priceByCardsightUuid } = await import(
           "../services/compiq/cardsightUuidPriceRouter.js"
         );
         const csResponse = await priceByCardsightUuid({
-          cardId: resolvedCardId,
-          parallelId: resolvedParallelId ?? null,
+          cardId: uuidRouteCardId,
+          parallelId: uuidRouteParallelId,
           gradeCompany: typeof gradeCompany === "string" ? gradeCompany : null,
           gradeValue: typeof gradeValue === "number" ? gradeValue : null,
         });
@@ -4156,8 +4174,9 @@ router.post("/price-by-id", requireSession, requireRateLimited("priceChecksPerDa
           console.log(JSON.stringify({
             event: "price_by_id_cardsight_uuid_route",
             source: "compiq.routes.price-by-id",
-            cardId: resolvedCardId,
-            parallelId: resolvedParallelId ?? null,
+            cardId: uuidRouteCardId,
+            parallelId: uuidRouteParallelId,
+            compound: !!compoundMatch,
             rawSalesCount: csResponse.compsAvailable,
             fmv: csResponse.fairMarketValueLive,
           }));
