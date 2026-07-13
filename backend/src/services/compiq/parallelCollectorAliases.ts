@@ -40,18 +40,19 @@ export interface ParallelAlias {
 // Curated aliases — add rows here as they're confirmed by user reports.
 // Each entry MUST include at least one cardNumberPrefix so the rewrite
 // is scoped, never blanket.
-const COLLECTOR_ALIASES: readonly ParallelAlias[] = [
-  {
-    // 2026 Bowman Chrome autographs (CPA-*): Cardsight uses "Blue
-    // X-Fractor" for the /150 blue variant; collectors call it
-    // "Blue Refractor" (the traditional Bowman naming). Confirmed via
-    // Drew's Hartman CPA-EHA holding routing bug, 2026-07-13.
-    cardNumberPrefixes: ["CPA-", "BCPA-"],
-    cardsightName: "Blue X-Fractor",
-    collectorName: "Blue Refractor",
-    reason: "Bowman CPA-* /150 blue variant — collectors say 'Blue Refractor', Cardsight indexes as 'Blue X-Fractor'",
-  },
-];
+//
+// EMPTY BY DESIGN AS OF 2026-07-13 revert (Drew): the previous alias row
+// mapped Cardsight "Blue X-Fractor" → collector "Blue Refractor" for
+// CPA-* card numbers, on the assumption that Cardsight was using a
+// different name for the same physical card. Drew confirmed these are
+// TWO DISTINCT VARIANTS in 2026 Bowman Chrome CPA-EHA:
+//   - Blue Refractor lives on CardHedge (cardId befe9bcc-e7e8-…)
+//   - Blue X-Fractor lives on Cardsight (cardId 1778542140951x…)
+// Aliasing between them would show users the wrong variant with the
+// right-sounding name — a materially worse UX than the label confusion
+// the alias was meant to fix. Table is intentionally empty until we
+// find a case where two vendors use different names for THE SAME card.
+const COLLECTOR_ALIASES: readonly ParallelAlias[] = [];
 
 /**
  * Normalize a search-hit's parallel label from Cardsight-canonical to

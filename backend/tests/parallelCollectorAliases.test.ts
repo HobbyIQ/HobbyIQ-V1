@@ -11,34 +11,15 @@ import {
   _listCollectorAliases,
 } from "../src/services/compiq/parallelCollectorAliases.js";
 
-describe("applyCollectorAlias — CPA-* Blue X-Fractor → Blue Refractor", () => {
-  it("rewrites for CPA-EHA (the reported case)", () => {
+describe("applyCollectorAlias — Blue X-Fractor / Blue Refractor are DISTINCT (2026-07-13 revert)", () => {
+  it("does NOT rewrite Blue X-Fractor on CPA-* (they're different cards, not aliases)", () => {
+    // Blue Refractor lives on CardHedge (befe9bcc-...); Blue X-Fractor
+    // lives on Cardsight (1778542140951...). Two physical variants,
+    // NOT two names for one variant. Aliasing would show users the
+    // wrong card with the right-sounding label.
     const r = applyCollectorAlias("Blue X-Fractor", "CPA-EHA");
-    expect(r.aliased).toBe(true);
-    expect(r.parallel).toBe("Blue Refractor");
-    expect(r.alias?.reason).toContain("Bowman");
-  });
-
-  it("rewrites for other CPA-* card numbers", () => {
-    expect(applyCollectorAlias("Blue X-Fractor", "CPA-JJ").aliased).toBe(true);
-    expect(applyCollectorAlias("Blue X-Fractor", "CPA-DBA").aliased).toBe(true);
-  });
-
-  it("rewrites for BCPA-* card numbers (variant Bowman naming)", () => {
-    expect(applyCollectorAlias("Blue X-Fractor", "BCPA-EHA").aliased).toBe(true);
-  });
-
-  it("case-insensitive on parallel name", () => {
-    expect(applyCollectorAlias("blue x-fractor", "CPA-EHA").aliased).toBe(true);
-    expect(applyCollectorAlias("BLUE X-FRACTOR", "CPA-EHA").aliased).toBe(true);
-  });
-
-  it("case-insensitive on cardNumber", () => {
-    expect(applyCollectorAlias("Blue X-Fractor", "cpa-eha").aliased).toBe(true);
-  });
-
-  it("trims whitespace on both inputs", () => {
-    expect(applyCollectorAlias("  Blue X-Fractor  ", "  CPA-EHA  ").aliased).toBe(true);
+    expect(r.aliased).toBe(false);
+    expect(r.parallel).toBe("Blue X-Fractor");
   });
 });
 
@@ -69,14 +50,10 @@ describe("applyCollectorAlias — no-match cases", () => {
   });
 });
 
-describe("expandCollectorQuery — reverse-direction search expansion", () => {
-  it("expands 'Blue Refractor' → 'Blue X-Fractor' expansion", () => {
+describe("expandCollectorQuery — no expansions while alias table is empty", () => {
+  it("returns empty expansions for the previously-aliased Blue Refractor case", () => {
     const r = expandCollectorQuery("eric hartman blue refractor auto");
-    expect(r.expansions).toContain("Blue X-Fractor");
-  });
-
-  it("is case-insensitive on the query", () => {
-    expect(expandCollectorQuery("BLUE REFRACTOR").expansions).toContain("Blue X-Fractor");
+    expect(r.expansions).toEqual([]);
   });
 
   it("returns empty expansions when the query has no aliased phrase", () => {
@@ -90,11 +67,16 @@ describe("expandCollectorQuery — reverse-direction search expansion", () => {
   });
 });
 
-describe("_listCollectorAliases — audit shape", () => {
-  it("every alias row has non-empty prefixes, both names, and a reason", () => {
-    const aliases = _listCollectorAliases();
-    expect(aliases.length).toBeGreaterThan(0);
-    for (const a of aliases) {
+describe("_listCollectorAliases — currently empty by design", () => {
+  it("table is empty after the 2026-07-13 revert", () => {
+    // Kept as an infrastructure hook: shape validation runs on every row
+    // when we add one. Until we find two vendors using different names
+    // for THE SAME card, the table stays empty.
+    expect(_listCollectorAliases()).toEqual([]);
+  });
+
+  it("shape invariant on any future rows: non-empty prefixes + names + reason", () => {
+    for (const a of _listCollectorAliases()) {
       expect(a.cardNumberPrefixes.length).toBeGreaterThan(0);
       expect(a.cardsightName.length).toBeGreaterThan(0);
       expect(a.collectorName.length).toBeGreaterThan(0);
