@@ -3124,7 +3124,12 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       }
     })();
 
-    res.json({
+    // CF-CARD-PANEL-GRADE-RESCUE (Drew, 2026-07-13, PR #406): when CH's
+    // grade curve is empty (Cardsight-only SKU, or a CH SKU with a data
+    // gap), pull the resolver's pooled raw + graded records and synthesize
+    // grade-rail entries from them. Preserves the iOS wire shape — same
+    // `gradeCurve.entries[]` array iOS already decodes.
+    const cardPanelResponse: any = {
       success: true,
       cardId: id,
       identity: identity
@@ -3167,7 +3172,42 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
       // Empty array when identity was thin or the CH search failed;
       // never null so iOS decoders can rely on the shape.
       samePlayerSiblings,
-    });
+    };
+
+    try {
+      const { overlayGradeRescue } = await import(
+        "../services/compiq/resolverFallbackHelper.js"
+      );
+      await overlayGradeRescue(cardPanelResponse, {
+        cardId: id,
+        playerName: identityPlayer ?? undefined,
+        cardYear:
+          typeof (identity as any)?.year === "number"
+            ? (identity as any).year
+            : Number.parseInt(String((identity as any)?.year ?? ""), 10) || undefined,
+        setName:
+          typeof (identity as any)?.set === "string"
+            ? (identity as any).set
+            : undefined,
+        cardNumber:
+          typeof (identity as any)?.number === "string"
+            ? (identity as any).number
+            : undefined,
+        parallel:
+          typeof (identity as any)?.variant === "string"
+            ? (identity as any).variant
+            : undefined,
+      });
+    } catch (err) {
+      console.warn(JSON.stringify({
+        event: "card_panel_grade_rescue_failed",
+        source: "compiq.routes.card-panel",
+        cardId: id,
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+
+    res.json(cardPanelResponse);
   } catch (err) {
     return next(err);
   }
