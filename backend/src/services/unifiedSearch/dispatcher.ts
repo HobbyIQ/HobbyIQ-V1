@@ -58,6 +58,7 @@ import {
   getCardDetailsById,
   type CardSearchFilters,
 } from "../compiq/cardhedge.client.js";
+import { applyCollectorAlias } from "../compiq/parallelCollectorAliases.js";
 
 // CF-CH-FREETEXT-TAKE-100 (2026-06-28): bumped 30 → 100 to widen the
 // CardHedge search window. The 30-result default was missing specific
@@ -793,6 +794,24 @@ function routedCardToIdentity(
 
   const dedupedSetName = yearNum != null ? stripLeadingYear(card.set) : (card.set ?? null);
   const dedupedVariant = stripAutoFromVariant(card.variant);
+  // CF-PARALLEL-COLLECTOR-ALIASES (Drew, 2026-07-13, PR #410): rewrite
+  // Cardsight-canonical parallel labels to the names collectors use
+  // (e.g. "Blue X-Fractor" → "Blue Refractor" for CPA-* /150 autos).
+  // Underlying cardId is unchanged — only the display-facing string
+  // shifts. Aliased hits log so we can track hit rate.
+  const cardNumberStr = card.number != null ? String(card.number) : null;
+  const aliasResult = applyCollectorAlias(dedupedVariant, cardNumberStr);
+  const wireVariant = aliasResult.parallel;
+  if (aliasResult.aliased) {
+    console.log(JSON.stringify({
+      event: "parallel_collector_alias_applied",
+      source: "unifiedSearch.dispatcher",
+      cardId: card.card_id,
+      cardNumber: cardNumberStr,
+      cardsightName: aliasResult.alias?.cardsightName,
+      collectorName: aliasResult.alias?.collectorName,
+    }));
+  }
 
   const composedTitle =
     card.title?.trim() ||
@@ -828,8 +847,8 @@ function routedCardToIdentity(
     year: yearNum,
     brand: null,
     setName: dedupedSetName,
-    cardNumber: card.number != null ? String(card.number) : null,
-    parallel: dedupedVariant,
+    cardNumber: cardNumberStr,
+    parallel: wireVariant,
     variation: null,
     // CF-CH-AUTO-FROM-CARDNUMBER (2026-06-28): derive isAuto from the
     // card_number prefix. CardHedge's API doesn't expose an isAuto field,
