@@ -2423,50 +2423,39 @@ async function autoPriceHolding(
   // Kept narrow: only fires on true CH catalog-miss cases. Any successful
   // CH pricing (observed or estimated) is left as authoritative — the
   // resolver is a coverage-gap plug, not a price arbiter.
-  const chHadNothing =
-    (updated.fairMarketValue === null || updated.fairMarketValue === undefined) &&
-    (updated.estimatedValue === null || updated.estimatedValue === undefined);
-  if (chHadNothing) {
-    try {
-      const { resolveCard } = await import("../compiq/catalogResolver.service.js");
-      const resolution = await resolveCard({
-        playerName: updated.playerName,
-        cardYear: updated.cardYear,
-        setName: updated.setName ?? (updated as any).product,
-        parallel: updated.parallel,
-        cardNumber: updated.cardNumber,
-        gradeCompany: updated.gradeCompany,
-        gradeValue: updated.gradeValue,
-        isAuto: updated.isAuto,
-        cardId: (updated as any).cardId,
-      });
-      if (
-        resolution.winner &&
-        resolution.winner.vendor !== "cardhedge" &&
-        typeof resolution.winner.fairMarketValue === "number" &&
-        resolution.winner.fairMarketValue > 0
-      ) {
-        (updated as any).fairMarketValue = resolution.winner.fairMarketValue;
-        (updated as any).valuationStatus = "estimated";
-        (updated as any).isEstimate = true;
-        (updated as any).estimateBasis = `${resolution.winner.compCount} comp(s) via ${resolution.winner.vendor}`;
-        (updated as any).sourceVendor = resolution.winner.vendor;
-        (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
-        console.log(JSON.stringify({
-          event: "catalog_resolver_fallback_hit",
-          source: "portfolioStore.autoPriceHolding",
-          holdingId: holding.id,
-          vendor: resolution.winner.vendor,
-          fairMarketValue: resolution.winner.fairMarketValue,
-          compCount: resolution.winner.compCount,
-        }));
-      }
-    } catch (err) {
-      console.warn(JSON.stringify({
-        event: "catalog_resolver_fallback_error",
+  // CF-RESOLVER-FALLBACK-EVERYWHERE (2026-07-13): consolidated helper used
+  // by both autoPriceHolding + repriceHoldingsForUser. Only fires when CH
+  // truly had nothing. On non-CH winner: stamp FMV + sourceVendor +
+  // valuationStatus. See resolverFallbackHelper.ts for the shared contract.
+  const { tryResolverFallback, shouldTryFallback } = await import(
+    "../compiq/resolverFallbackHelper.js"
+  );
+  if (shouldTryFallback({ fairMarketValue: updated.fairMarketValue, estimatedValue: updated.estimatedValue })) {
+    const fallback = await tryResolverFallback({
+      playerName: updated.playerName,
+      cardYear: updated.cardYear,
+      setName: updated.setName ?? (updated as any).product,
+      parallel: updated.parallel,
+      cardNumber: updated.cardNumber,
+      gradeCompany: updated.gradeCompany,
+      gradeValue: updated.gradeValue,
+      isAuto: updated.isAuto,
+      cardId: (updated as any).cardId,
+    });
+    if (fallback) {
+      (updated as any).fairMarketValue = fallback.fairMarketValue;
+      (updated as any).valuationStatus = "estimated";
+      (updated as any).isEstimate = true;
+      (updated as any).estimateBasis = fallback.estimateBasis;
+      (updated as any).sourceVendor = fallback.vendor;
+      (updated as any).sourceVendorUpdatedAt = new Date().toISOString();
+      console.log(JSON.stringify({
+        event: "catalog_resolver_fallback_hit",
         source: "portfolioStore.autoPriceHolding",
         holdingId: holding.id,
-        error: (err as Error)?.message ?? String(err),
+        vendor: fallback.vendor,
+        fairMarketValue: fallback.fairMarketValue,
+        compCount: fallback.compCount,
       }));
     }
   }
@@ -6090,6 +6079,63 @@ export async function repriceHoldingsForUser(
             continue;
           }
         }
+        // CF-RESOLVER-FALLBACK-EVERYWHERE (2026-07-13): before falling
+        // through to the "low confidence / insufficient" persist, ask the
+        // multi-source resolver. Cardsight often indexes SKUs CH doesn't
+        // (2026 CPA-EHA Blue Refractor Auto is the canonical example).
+        // On resolver hit, stamp FMV + winning vendor + continue as a
+        // successful reprice.
+        try {
+          const { tryResolverFallback } = await import("../compiq/resolverFallbackHelper.js");
+          const fallback = await tryResolverFallback({
+            playerName: holding.playerName,
+            cardYear: shimmedCardYear(holding) ?? undefined,
+            setName: holding.setName ?? (holding as any).product,
+            parallel: holding.parallel,
+            cardNumber: holding.cardNumber,
+            gradeCompany: holding.gradeCompany,
+            gradeValue: holding.gradeValue,
+            isAuto: holding.isAuto,
+            cardId: (holding as any).cardId,
+          });
+          if (fallback) {
+            const now = new Date().toISOString();
+            const rescued: PortfolioHolding = {
+              ...holding,
+              ...repriceIdentityPatch,
+              fairMarketValue: fallback.fairMarketValue,
+              estimatedValue: null,
+              isEstimate: true,
+              valuationStatus: "estimated",
+              estimateBasis: fallback.estimateBasis,
+              verdict: "Estimated",
+              recommendation: "Hold",
+              lastUpdated: now,
+              sourceVendor: fallback.vendor as any,
+              sourceVendorUpdatedAt: now,
+            };
+            doc.holdings[holding.id] = rescued;
+            repriced += 1;
+            updates.push({ id: holding.id, status: "repriced", reason: `resolver-fallback:${fallback.vendor}` });
+            console.log(JSON.stringify({
+              event: "catalog_resolver_fallback_hit",
+              source: "portfolioStore.repriceHoldingsForUser",
+              holdingId: holding.id,
+              vendor: fallback.vendor,
+              fairMarketValue: fallback.fairMarketValue,
+              compCount: fallback.compCount,
+            }));
+            continue;
+          }
+        } catch (err) {
+          console.warn(JSON.stringify({
+            event: "resolver_fallback_error",
+            source: "portfolioStore.repriceHoldingsForUser",
+            holdingId: holding.id,
+            error: (err as Error)?.message ?? String(err),
+          }));
+        }
+
         skipped += 1;
         const failed: string[] = [];
         if (confidence < minPricingConfidence) failed.push(`confidence=${Math.round(confidence)}<${minPricingConfidence}`);
