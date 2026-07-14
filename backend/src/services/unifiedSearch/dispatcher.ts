@@ -794,6 +794,52 @@ async function dispatchFreetextMode(
     }));
   }
 
+  // CF-UNIFIED-SEARCH-RANK (Drew, 2026-07-14): sort the merged CH + CS
+  // pool by unified intent score so the user's actually-intended variant
+  // ranks at the top regardless of which vendor sourced it. AI-matched
+  // candidates keep their position 0 lock (they're already high-signal
+  // semantic matches; the scoring here is a coarser fallback).
+  //
+  // Confidence gets re-emitted from the sorted index using the same
+  // linear decay routedCardToIdentity uses (see :929). This keeps the
+  // iOS picker's existing "sort by confidence desc" a no-op for the
+  // reordered list.
+  if (candidates.length > 1) {
+    const scored = candidates.map((c, originalIndex) => ({
+      c,
+      originalIndex,
+      // AI-matched candidates are pinned to the top with a synthetic
+      // large score so they stay at index 0 after sorting.
+      score: c.attribution === "ai-matched"
+        ? Number.POSITIVE_INFINITY
+        : scoreIdentityForIntent({
+            candidate: {
+              isAuto: c.isAuto,
+              parallel: c.parallel,
+              title: c.title,
+              year: c.year,
+            },
+            intentTokens,
+            intentWantsAuto,
+            intentYear: parsed.year,
+            intentParallel: parsed.parallel,
+          }),
+    }));
+    // Stable sort: score desc, tiebreak on original index.
+    scored.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+    const total = scored.length;
+    const denom = Math.max(1, total - 1);
+    for (let i = 0; i < scored.length; i++) {
+      const entry = scored[i];
+      // AI-matched keeps confidence 1.0 (already set by routedCardToIdentity).
+      if (entry.c.attribution !== "ai-matched") {
+        entry.c.confidence = Math.max(0.3, 1 - (i / denom) * 0.6);
+      }
+    }
+    // Write the sorted order back.
+    for (let i = 0; i < scored.length; i++) candidates[i] = scored[i].c;
+  }
+
   return {
     input: { raw: input, detectedMode: "freetext" },
     candidates,
@@ -828,6 +874,83 @@ export function normalizeParallelForDedup(parallel: string | null | undefined): 
     .replace(/[-_/]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * CF-UNIFIED-SEARCH-RANK (Drew, 2026-07-14): score a resolved CardIdentity
+ * against parsed query intent so CH candidates and Cardsight-exploded
+ * parallels can be ranked in a single pool. Pre-fix, Cardsight rows were
+ * appended after CH's re-ranked list without ever being scored — so a
+ * user-searched "Eric Hartman 2026 Blue Refractor Auto" landed the correct
+ * SKU at the BOTTOM of the picker (past all 100 CH rows) because CH's
+ * snapshot doesn't carry that parallel and the CS-exploded row got no
+ * relevance signal.
+ *
+ * Score composition, all additive:
+ *   - Base score from scoreCandidateForIntent (isAuto ± 3, parallel-token
+ *     overlap × 2, year match ± 5). Same math CH candidates already use.
+ *   - Title-token overlap × 1: intent tokens present in candidate.title
+ *     that DIDN'T already match the parallel field. Catches "Blue" /
+ *     "Refractor" when a CH candidate lacks a `variant` string but the
+ *     title carries the parallel words. Bounded at +4 to avoid a long
+ *     descriptive title dominating.
+ *   - Exact-parallel bonus +5: normalized(candidate.parallel) === parsed
+ *     parallel (both normalized via normalizeParallelForDedup). This
+ *     pins the intended variant when the user typed the exact parallel
+ *     name, regardless of which vendor the candidate came from.
+ */
+export function scoreIdentityForIntent(opts: {
+  candidate: {
+    isAuto: boolean;
+    parallel: string | null | undefined;
+    title: string | null | undefined;
+    year: number | string | null | undefined;
+  };
+  intentTokens: ReadonlyArray<string>;
+  intentWantsAuto: boolean;
+  intentYear?: number | null;
+  intentParallel?: string | null | undefined;
+}): number {
+  let score = scoreCandidateForIntent({
+    isAuto: opts.candidate.isAuto,
+    parallel: opts.candidate.parallel,
+    intentTokens: opts.intentTokens,
+    intentWantsAuto: opts.intentWantsAuto,
+    intentYear: opts.intentYear,
+    candidateYear: opts.candidate.year,
+  });
+  // Title-token overlap, bounded — only credit tokens the parallel field
+  // didn't already claim, so parallel matches aren't double-counted.
+  const parallelTokenSet = new Set(
+    String(opts.candidate.parallel ?? "")
+      .toLowerCase()
+      .replace(/-/g, " ")
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3),
+  );
+  const titleTokenSet = new Set(
+    String(opts.candidate.title ?? "")
+      .toLowerCase()
+      .replace(/-/g, " ")
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length >= 3),
+  );
+  let titleBonus = 0;
+  for (const t of opts.intentTokens) {
+    if (parallelTokenSet.has(t)) continue;   // already counted by parallel branch
+    if (titleTokenSet.has(t)) titleBonus += 1;
+    if (titleBonus >= 4) break;
+  }
+  score += titleBonus;
+  // Exact-parallel bonus.
+  if (opts.intentParallel) {
+    const wantParallel = normalizeParallelForDedup(opts.intentParallel);
+    const haveParallel = normalizeParallelForDedup(opts.candidate.parallel);
+    if (wantParallel && haveParallel && wantParallel === haveParallel) {
+      score += 5;
+    }
+  }
+  return score;
 }
 
 /**
