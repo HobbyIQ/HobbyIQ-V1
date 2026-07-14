@@ -66,6 +66,26 @@ router.get("/grading-tiers", portfolio.getGradingTiers);
 
 router.get("/holdings", portfolio.getHoldings);
 
+// CF-SIGNAL-WEIGHTED-TOTALS (Drew, 2026-07-13, PR #430): three portfolio
+// valuations side-by-side (gross MV / trend-adjusted / fees-adjusted) +
+// breakdown by verdict class (bull / static / bear).
+router.get("/signal-weighted-totals", async (req, res, next) => {
+  try {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "no session userId" });
+      return;
+    }
+    const { buildSignalWeightedTotals } = await import(
+      "../services/portfolioiq/signalWeightedTotals.service.js"
+    );
+    const result = await buildSignalWeightedTotals(userId);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // CF-WATCHLIST-BULL-CANDIDATES (Drew, 2026-07-13, PR #429): surface
 // watchlisted players whose supply signal is bullish so users see a
 // "buy candidates" list right in the app.
