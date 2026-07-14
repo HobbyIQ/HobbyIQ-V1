@@ -300,6 +300,74 @@ function isMercyEnabled(): boolean {
 }
 
 /**
+ * CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14, PR-B): normalize a parallel
+ * string for cross-variant collision. Mirrors normalizeParallelForDedup in
+ * unifiedSearch/dispatcher — same rules, inlined here to keep this file free
+ * of a cross-service import.
+ */
+export function normalizeParallelForVariantGuard(parallel: string | null | undefined): string {
+  if (!parallel) return "";
+  return parallel
+    .toLowerCase()
+    .replace(/[-_/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14, PR-B): decide whether a CH
+ * AI-matcher result is a variant-honest match for the requested identity.
+ *
+ * PROBLEM: CH's /cards/card-match returns a card_id even when the closest
+ * catalog SKU differs from the user's intended parallel — e.g. the user asks
+ * for Hartman CPA-EHA Blue Refractor Auto (real card, ~$1800) but CH's
+ * catalog has ZERO "Blue Refractor" under CPA-EHA. CH's AI picks the nearest
+ * variant (CPA-EHA Blue X-Fractor or CPA-EHA Refractor) or the closest card
+ * number (BCP-102 Blue Refractor, a NON-auto base card). Either way, the
+ * bridge pins the wrong card_id and downstream comps come from the wrong
+ * sub-market (Drew saw ~$420 instead of $1800).
+ *
+ * GUARD: when the identity carries both a parallel AND a match includes a
+ * variant, both must normalize to the same string OR one must be a strict
+ * substring of the other (allows CH's "Refractor" to accept when user only
+ * said "Refractor" — but rejects when user said "Blue Refractor" and CH
+ * returned "Refractor"). Same for card_number: if identity.number is set
+ * and match.number differs case-insensitively, reject.
+ *
+ * Returns { ok: true } when the match honors the identity's variant
+ * signals; { ok: false, reason } otherwise. Callers should treat !ok as
+ * "no match" and fall through to structured mercy fallback (which uses
+ * pickBestByParallel — variant-aware — and returns null when nothing fits).
+ */
+export function matchHonorsIdentity(
+  match: { card_id?: string | null; variant?: string | null; number?: string | null } | null,
+  identity: { parallel?: string | null; number?: string | null },
+): { ok: true } | { ok: false; reason: "card_number_mismatch" | "parallel_mismatch"; wanted: string; got: string } {
+  if (!match) return { ok: true };  // no match to guard against
+  // Card number guard first — cheap and definitive.
+  if (identity.number && match.number) {
+    const wantNum = String(identity.number).toLowerCase().trim();
+    const gotNum = String(match.number).toLowerCase().trim();
+    if (wantNum && gotNum && wantNum !== gotNum) {
+      return { ok: false, reason: "card_number_mismatch", wanted: wantNum, got: gotNum };
+    }
+  }
+  // Parallel guard — normalize both sides and require EXACT equality. Any
+  // widening ("Refractor" request → "Blue Refractor" catalog) or narrowing
+  // ("Blue Refractor" request → "Refractor" catalog) is a different SKU
+  // with its own sub-market price band. Only a byte-identical normalized
+  // parallel is safe to bridge.
+  if (identity.parallel && match.variant) {
+    const want = normalizeParallelForVariantGuard(identity.parallel);
+    const got = normalizeParallelForVariantGuard(match.variant);
+    if (want && got && want !== got) {
+      return { ok: false, reason: "parallel_mismatch", wanted: want, got };
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Structured-search mercy fallback. Only fires when identity has both
  * playerName and parallel. Returns a card_id + synthetic confidence
  * (0.75 — below the AI matcher's 0.80 threshold but above zero) or null.
@@ -373,6 +441,38 @@ async function resolveChCardId(
           return JSON.stringify(rescued);
         }
         log.info("router.bridge_low_confidence", { query, confidence: match.confidence });
+        return "";
+      }
+      // CF-CH-BRIDGE-VARIANT-GUARD (Drew, 2026-07-14): even at high
+      // confidence CH's AI matcher may return a card whose variant/number
+      // differs from the user's ask when the requested SKU isn't in CH's
+      // catalog. Verify variant + number honesty before accepting. On
+      // mismatch, fall through to structured mercy fallback (which is
+      // variant-aware via pickBestByParallel and returns null on nothing
+      // fits — i.e. no CH bridge, no wrong-variant comps).
+      const guard = matchHonorsIdentity(match, identity);
+      if (!guard.ok) {
+        log.warn("router.bridge_variant_guard_reject", {
+          player: identity.playerName,
+          parallel: identity.parallel,
+          identityNumber: identity.number,
+          matchCardId: match.card_id,
+          matchVariant: match.variant,
+          matchNumber: match.number,
+          reason: guard.reason,
+          wanted: guard.wanted,
+          got: guard.got,
+        });
+        const rescued = await structuredMercyFallback(identity);
+        if (rescued) {
+          log.info("router.bridge_rescued_via_structured", {
+            chCardId: rescued.chCardId,
+            player: identity.playerName,
+            parallel: identity.parallel,
+            reason: `variant_guard_${guard.reason}`,
+          });
+          return JSON.stringify(rescued);
+        }
         return "";
       }
       return JSON.stringify({ chCardId: match.card_id, confidence: match.confidence });
