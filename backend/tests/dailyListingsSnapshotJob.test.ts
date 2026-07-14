@@ -8,6 +8,7 @@ import * as portfolio from "../src/services/portfolioiq/portfolioStore.service.j
 import * as ebay from "../src/services/ebay/ebayListingSearch.service.js";
 import * as store from "../src/services/portfolioiq/listingsSnapshotStore.service.js";
 import * as priority from "../src/services/portfolioiq/priorityWatchlist.service.js";
+import * as topMovers from "../src/services/portfolioiq/chTopMoverPlayers.service.js";
 
 // Fake Cosmos container that returns pre-canned user docs
 function fakeContainer(docs: any[]) {
@@ -32,10 +33,11 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("runDailyListingsSnapshotJob", () => {
   beforeEach(() => {
-    // Priority-list union is tested separately (priorityWatchlistSnapshot.test.ts).
-    // Here we're pinning USER-derived aggregation behavior, so isolate
-    // from the shipped priority-watchlist.json.
+    // Priority + CH-mover unions are tested separately (priorityWatchlistSnapshot,
+    // chTopMoverPlayersUnion). Pin USER-derived aggregation behavior by
+    // isolating from both universes.
     vi.spyOn(priority, "loadPriorityPlayers").mockResolvedValue([]);
+    vi.spyOn(topMovers, "loadTopMoverPlayers").mockResolvedValue([]);
   });
   it("aggregates player counts across all portfolios, ranks by count, snapshots top-N", async () => {
     vi.spyOn(portfolio, "getPortfolioContainer").mockResolvedValue(
