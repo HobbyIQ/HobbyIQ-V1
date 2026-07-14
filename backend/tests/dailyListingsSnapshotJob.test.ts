@@ -2,11 +2,12 @@
 // enumeration + ranking + per-player call pattern of the snapshot job.
 // Doesn't touch real Cosmos or eBay — fakes both.
 
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { runDailyListingsSnapshotJob } from "../src/services/compiq/dailyListingsSnapshotJob.service.js";
 import * as portfolio from "../src/services/portfolioiq/portfolioStore.service.js";
 import * as ebay from "../src/services/ebay/ebayListingSearch.service.js";
 import * as store from "../src/services/portfolioiq/listingsSnapshotStore.service.js";
+import * as priority from "../src/services/portfolioiq/priorityWatchlist.service.js";
 
 // Fake Cosmos container that returns pre-canned user docs
 function fakeContainer(docs: any[]) {
@@ -30,6 +31,12 @@ function fakeContainer(docs: any[]) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("runDailyListingsSnapshotJob", () => {
+  beforeEach(() => {
+    // Priority-list union is tested separately (priorityWatchlistSnapshot.test.ts).
+    // Here we're pinning USER-derived aggregation behavior, so isolate
+    // from the shipped priority-watchlist.json.
+    vi.spyOn(priority, "loadPriorityPlayers").mockResolvedValue([]);
+  });
   it("aggregates player counts across all portfolios, ranks by count, snapshots top-N", async () => {
     vi.spyOn(portfolio, "getPortfolioContainer").mockResolvedValue(
       fakeContainer([
